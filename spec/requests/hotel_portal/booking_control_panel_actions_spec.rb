@@ -121,7 +121,7 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
     expect(response).to have_http_status(:not_found)
   end
 
-  it "renders, previews, and applies selected-child group billing routes for authorized staff" do
+  it "renders and applies billing routes for the selected group child booking" do
     allow(BookingRedesign).to receive(:enabled?).and_return(true)
     role.permissions << manage_folio_movements
     group = create(:group_booking, hotel: hotel)
@@ -133,37 +133,50 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
       create(:booking_folio, booking: child, hotel: hotel, is_primary: true,
         booking_billing_party: guest.booking_billing_party)
     end
-    arrangement = create(:group_billing_arrangement, :company, group_booking: group, hotel: hotel)
+    party = create(:booking_billing_party, :company, booking: sibling, hotel: hotel)
+    target = create(:booking_folio, :secondary, booking: sibling, hotel: hotel, booking_billing_party: party,
+      payer_type: "company", hotel_corporate_account: party.hotel_corporate_account, name: "Sibling Company Folio")
     code = create(:transaction_code, hotel: hotel, code: "ROOMBULK", category: "accommodation")
 
-    get group_billing_routes_hotel_booking_control_panel_path(hotel, booking)
+    get billing_routes_hotel_booking_control_panel_path(hotel, booking, route_booking_id: sibling.id)
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Change Group Billing Routes", booking.formatted_reservation_number, sibling.formatted_reservation_number)
+    expect(response.body).to include("Change Billing Routes", booking.formatted_reservation_number, sibling.formatted_reservation_number, "Sibling Company Folio")
 
-    draft = { group_billing_arrangement_id: arrangement.id, booking_ids: [ booking.id ],
-      charge_categories: [ "accommodation" ], idempotency_key: "group-request" }
-    post preview_group_billing_routes_hotel_booking_control_panel_path(hotel, booking), params: draft
-    expect(response).to have_http_status(:success)
-    token = Nokogiri::HTML(response.body).at_css('input[name="freshness_token"]')["value"]
+    post apply_billing_routes_hotel_booking_control_panel_path(hotel, booking), params: {
+      route_booking_id: sibling.id,
+      idempotency_key: "selected-child-request",
+      confirmation: "future_only",
+      reason: "Approved child payer",
+      routes: { code.id.to_s => { billing_party_id: party.id.to_s, target_folio_id: target.id.to_s } }
+    }
 
-    post apply_group_billing_routes_hotel_booking_control_panel_path(hotel, booking), params: draft.merge(
-      freshness_token: token, confirmation: "future_only", reason: "Approved group payer")
-
-    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking,
-      tab: "billing_preferences", billing_scope: "group", scope: "group"))
-    expect(booking.folio_routing_rules.active.find_by(transaction_code: code)).to be_present
-    expect(sibling.folio_routing_rules.active.where(transaction_code: code)).to be_empty
+    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, sibling, tab: "billing_preferences"))
+    expect(sibling.folio_routing_rules.active.find_by(transaction_code: code)).to be_present
+    expect(booking.folio_routing_rules.active.where(transaction_code: code)).to be_empty
   end
 
-  it "requires folio movement permission for group route preview" do
+  it "requires folio movement permission for group-context route preview" do
     allow(BookingRedesign).to receive(:enabled?).and_return(true)
     group = create(:group_booking, hotel: hotel)
     booking.update!(group_booking: group, group_position: 1)
 
-    post preview_group_billing_routes_hotel_booking_control_panel_path(hotel, booking), params: {}
+    post preview_billing_routes_hotel_booking_control_panel_path(hotel, booking), params: {}
 
     expect(response).to have_http_status(:found)
     expect(response).to redirect_to(root_path)
+  end
+
+  it "offers a guest-primary folio option for tax attachment routing" do
+    role.permissions << manage_folio_movements
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    guest = create(:booking_guest, booking: booking, is_primary: true)
+    create(:booking_folio, booking: booking, hotel: hotel, is_primary: true,
+      booking_billing_party: guest.booking_billing_party)
+
+    get billing_routes_hotel_booking_control_panel_path(hotel, booking)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Keep in Guest Primary Folio")
   end
 
   it "renders the create folio window offcanvas from billing parties" do
@@ -274,6 +287,63 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
     expect(flash[:alert]).to eq("Select an active billing party for this booking.")
   end
 
+  it "edits a folio window through the control panel" do
+    role.permissions << manage_folio_windows
+    folio = create(:booking_folio, booking: booking, hotel: hotel, name: "Original Folio")
+
+    get edit_folio_window_hotel_booking_control_panel_path(hotel, booking, folio)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Edit Folio Window", "Original Folio")
+
+    patch update_folio_window_hotel_booking_control_panel_path(hotel, booking, folio), params: {
+      booking_folio: { name: "Updated Folio", folio_type: folio.folio_type, payer_type: folio.payer_type }
+    }
+
+    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", folio_id: folio.id))
+    expect(folio.reload.name).to eq("Updated Folio")
+  end
+
+  it "closes and reopens a settled folio through the control panel" do
+    role.permissions << manage_folio_windows
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+
+    post close_folio_window_hotel_booking_control_panel_path(hotel, booking, folio), params: {
+      booking_folio: { reason: "Window no longer needed" }
+    }
+
+    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", folio_id: folio.id))
+    expect(folio.reload).to be_closed
+
+    post reopen_folio_window_hotel_booking_control_panel_path(hotel, booking, folio), params: {
+      booking_folio: { reason: "Correction required" }
+    }
+
+    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", folio_id: folio.id))
+    expect(folio.reload).to be_open
+  end
+
+  it "moves a forecast only between folios on the selected booking" do
+    role.permissions << manage_folio_movements
+    source = create(:booking_folio, booking: booking, hotel: hotel)
+    target = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+    forecast = create(:folio_forecasted_charge, booking_folio: source)
+
+    post move_forecast_hotel_booking_control_panel_path(hotel, booking, forecast), params: {
+      folio_operation: { target_folio_id: target.id, reason: "Company will settle" }
+    }
+
+    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", folio_id: target.id))
+    expect(forecast.reload.booking_folio).to eq(target)
+
+    outsider = create(:booking, hotel: hotel)
+    outsider_folio = create(:booking_folio, booking: outsider, hotel: hotel)
+    post move_forecast_hotel_booking_control_panel_path(hotel, booking, forecast), params: {
+      folio_operation: { target_folio_id: outsider_folio.id, reason: "Invalid target" }
+    }
+    expect(response).to have_http_status(:not_found)
+  end
+
   it "adds and edits a company billing party through inline Billing Preferences actions" do
     account = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
 
@@ -341,22 +411,6 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
     expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences"))
     expect(flash[:alert]).to eq("Billing parties with folios cannot be archived.")
     expect(party.reload.archived_at).to be_nil
-  end
-
-  it "creates a group billing arrangement inline without creating routing rules" do
-    allow(BookingRedesign).to receive(:enabled?).and_return(true)
-    group = create(:group_booking, hotel: hotel)
-    booking.update!(group_booking: group, group_position: 1)
-    account = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
-
-    expect do
-      post create_group_billing_arrangement_hotel_booking_control_panel_path(hotel, booking), params: {
-        group_billing_arrangement: { name: "Acme rooms", payer_type: "company", hotel_corporate_account_id: account.id,
-          settlement_type: "city_ledger", status: "active", charge_categories: [ "accommodation" ] }
-      }
-    end.not_to change(FolioRoutingRule, :count)
-
-    expect(group.group_billing_arrangements.sole).to have_attributes(name: "Acme rooms", coverage: { "accommodation" => true })
   end
 
   it "collects and releases booking-level security deposits" do

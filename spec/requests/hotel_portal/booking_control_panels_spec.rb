@@ -178,11 +178,10 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response.body).not_to include("Advanced Billing Rules", "Billing Instructions")
     end
 
-    it "renders booking-local billing parties before group assignment controls for a child booking" do
+    it "renders booking-local billing parties for a child booking" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
       create(:booking, hotel: hotel, group_booking: group, group_position: 2)
-      create(:group_billing_arrangement, group_booking: group, hotel: hotel, name: "Group accommodation payer")
 
       guest = create(:guest, name: "Child Booking Guest")
       create(:booking_guest, booking: booking, guest: guest, is_primary: true)
@@ -197,9 +196,8 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       document = Nokogiri::HTML(response.body)
       text = document.text
       expect(text).to include("Billing parties", "Child Booking Guest", account.corporate_account.name,
-        "Child Corporate Folio", "+ Add billing party", "Edit terms", "Booking-local billing exception",
-        "Group accommodation payer")
-      expect(text.index("Billing parties")).to be < text.index("Booking-local billing exception")
+        "Child Corporate Folio", "+ Add billing party", "Edit terms")
+      expect(text).not_to include("Booking-local billing exception", "Group accommodation payer")
     end
 
     it "renders billing-party creation inline without an offcanvas target" do
@@ -338,6 +336,32 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response.body).to include("Room requests and complaints for this booking")
     end
 
+    it "renders the complete lifecycle action set with control-panel return context" do
+      role.permissions << manage_bookings
+      expected_actions = {
+        "confirmed" => [ "Check-in", "Cancel" ],
+        "review_no_show" => [ "Backdated Check-in", "Mark No-show", "Cancel" ],
+        "no_show" => [ "Reinstate" ],
+        "checked_in" => [ "Check-out", "Edit Check-In" ],
+        "review_due_out" => [ "Review Late Checkout" ],
+        "checkout_required" => [ "Complete Checkout" ]
+      }
+
+      expected_actions.each do |status, labels|
+        booking.update_columns(status: status)
+        path = hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
+        get path
+
+        expect(response).to have_http_status(:success)
+        document = Nokogiri::HTML(response.body)
+        labels.each do |label|
+          link = document.at_xpath("//a[normalize-space()='#{label}']")
+          expect(link).to be_present, "expected #{label} for #{status}"
+          expect(CGI.parse(URI.parse(link["href"]).query.to_s)["return_to"]).to eq([ path ])
+        end
+      end
+    end
+
     it "renders only the workspace frame for workspace turbo requests" do
       room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "208", quantity: 1)
@@ -459,7 +483,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-layout-mode="left_and_center"')
       expect(response.body).to include("Bookings / Room Rate")
-      expect(response.body).to include("#{sibling.booking_rooms.first.room_type.name} - #{sibling.guest_name}")
+      expect(response.body).to include(hotel_booking_control_panel_path(hotel, sibling, tab: "room_and_rate"))
     end
 
     it "renders security deposits and requests with persistent standalone context" do
@@ -491,13 +515,13 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-layout-mode="left_and_center"')
       expect(response.body).to include("Bookings / Requests")
-      expect(response.body).to include("#{sibling.booking_rooms.first.room_type.name} - #{sibling.guest_name}")
+      expect(Nokogiri::HTML(response.body).text).to include("#{sibling.booking_rooms.first.room_type.name} - #{sibling.guest_name}")
 
       get hotel_booking_control_panel_path(hotel, booking, tab: "security_deposits")
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-layout-mode="left_and_center"')
       expect(response.body).to include("Bookings / Deposits")
-      expect(response.body).to include("#{sibling.booking_rooms.first.room_type.name} - #{sibling.guest_name}")
+      expect(Nokogiri::HTML(response.body).text).to include("#{sibling.booking_rooms.first.room_type.name} - #{sibling.guest_name}")
     end
 
     it "renders overview and booking rows as chevron navigation without a group identity block" do
@@ -543,7 +567,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expected_markers = {
         "booking_details" => "Conference Group",
         "security_deposits" => sibling.formatted_reservation_number,
-        "billing_preferences" => "Default payers and settlement methods for the group",
+        "billing_preferences" => "Register billing parties and settlement terms",
         "room_and_rate" => "Group Room &amp; Rate",
         "source_details" => "Group Source",
         "housekeeping_requests" => "Group overview towels",
@@ -650,20 +674,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(panel.text).to include("Group Deposits", "GROUP-DEP-450", "MYR 450.00")
     end
 
-    it "renders group arrangement creation inline" do
-      group = create(:group_booking, hotel: hotel)
-      booking.update!(group_booking: group, group_position: 1)
-      corporate_account = create(:account, :corporate, name: "Group Account")
-      create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_account)
-
-      get hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences", scope: "group", billing_editor: "new_arrangement")
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Arrangement name", "Group Account", "Default coverage", "Create arrangement")
-      expect(Nokogiri::HTML(response.body).at_css("form[action*='create_group_billing_arrangement']")).to be_present
-    end
-
-    it "keeps the group overview focused on arrangements rather than child billing parties" do
+    it "keeps group billing preferences focused on billing parties" do
       group = create(:group_booking, hotel: hotel, name: "Overview Group")
       booking.update!(group_booking: group, group_position: 1)
       create(:booking_guest, booking: booking, guest: create(:guest, name: "Child-only payer"), is_primary: true)
@@ -672,8 +683,8 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
 
       expect(response).to have_http_status(:success)
       panel = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="billing-preferences-heading"]')
-      expect(panel.text).to include("Default payers and settlement methods for the group", "+ Add arrangement")
-      expect(panel.text).not_to include("Billing parties", "+ Add billing party", "Child-only payer")
+      expect(panel.text).to include("Register billing parties", "Billing parties", "+ Add billing party", "Child-only payer")
+      expect(panel.text).not_to include("Arrangement name", "+ Add arrangement")
     end
 
     it "renders a directed empty state for a booking without a room" do
@@ -691,14 +702,5 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response).to have_http_status(:redirect)
     end
 
-    it "leaves the legacy booking and folio pages reachable" do
-      create(:booking_folio, booking: booking, hotel: hotel)
-
-      get hotel_booking_path(hotel, booking)
-      expect(response).to have_http_status(:success)
-
-      get hotel_folio_path(hotel, booking)
-      expect(response).to have_http_status(:success)
-    end
   end
 end

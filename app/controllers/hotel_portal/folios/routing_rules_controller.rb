@@ -165,10 +165,11 @@ module HotelPortal
       end
 
       def folio_path_for_billing
-        hotel_folio_path(
+        hotel_booking_control_panel_path(
           current_hotel,
           @booking,
-          **folio_origin_params.merge(tab: "billing_instructions", active_folio_id: params[:active_folio_id].presence).compact
+          tab: "billing_preferences",
+          folio_id: params[:active_folio_id].presence
         )
       end
 

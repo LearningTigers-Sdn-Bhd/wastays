@@ -171,17 +171,25 @@ module FolioRouting
             next
           end
           choice = attrs["billing_party_choice"].presence
-          mode = choice.present? ? (choice == "inherit" ? "inherit" : "exception") : attrs["mode"].to_s
+          mode = choice.present? ? (choice.in?(%w[inherit guest_primary_folio]) ? choice : "exception") : attrs["mode"].to_s
           party_id = choice&.delete_prefix("party:").presence || attrs["billing_party_id"].presence
           parent_party_id = attributes.to_h["billing_party_id"].to_s
           mode = "inherit" if party_id.to_s == parent_party_id
-          unless mode.in?(%w[inherit exception])
+          unless mode.in?(%w[inherit exception guest_primary_folio])
             @error = "Choose whether the attached item follows its parent or uses an exception."
             next
           end
           if mode == "inherit"
             next unless child.rule
             { row:, child:, mode:, folio: row.target_folio }
+          elsif mode == "guest_primary_folio"
+            folio = @booking.booking_folio
+            unless folio&.open?
+              @error = "Guest primary folio must be open."
+              next
+            end
+            next if child.target_folio&.id == folio.id
+            { row:, child:, mode: "exception", folio: }
           else
             folio = folios[attrs["target_folio_id"].to_s]
             unless folio&.open?

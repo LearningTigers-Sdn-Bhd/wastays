@@ -21,6 +21,16 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
     role.permissions << permission unless role.permissions.exists?(permission.id)
   end
 
+  def booking_details_path(**params)
+    hotel_booking_control_panel_path(hotel, booking, { tab: "booking_details" }.merge(params))
+  end
+
+  def folio_operations_path(folio_id = nil, **params)
+    query = { tab: "folio_operations" }.merge(params)
+    query[:folio_id] = folio_id if folio_id.present?
+    hotel_booking_control_panel_path(hotel, booking, query)
+  end
+
   def post_transaction(params)
     post hotel_folio_transactions_path(hotel, booking), params: { folio_transaction: params }
   end
@@ -57,7 +67,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash payment", posting_date: Date.current)
       }.to change { folio.folio_transactions.payment.count }.by(1)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(folio.folio_transactions.last.category).to eq("cash")
     end
 
@@ -77,7 +87,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         )
       }.to change { target_folio.folio_transactions.payment.count }.by(1)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(folio.folio_transactions.payment.count).to eq(primary_payment_count)
       expect(target_folio.folio_transactions.last.category).to eq("cash")
     end
@@ -225,7 +235,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         }
       }.to change { folio.folio_transactions.payment.count }.by(1)
 
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios", active_folio_id: folio.id))
+      expect(response).to redirect_to(folio_operations_path(folio.id))
     end
 
     it "completes the offcanvas after a Turbo Stream folio transaction post" do
@@ -246,7 +256,9 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       expect(response.media_type).to eq("text/vnd.turbo-stream.html")
       expect(response.body).to include(%(action="complete_offcanvas"))
       expect(response.body).to include(%(target="offcanvas_drawer"))
-      expect(response.body).to include(hotel_folio_path(hotel, booking, active_folio_id: folio.id))
+      expect(response.body).to include(hotel_booking_control_panel_path(hotel, booking))
+      expect(response.body).to include("folio_id=#{folio.id}")
+      expect(response.body).to include("tab=folio_operations")
     end
 
     it "posts an other charge" do
@@ -298,7 +310,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         }
       }.to change(FolioTransaction, :count).by(2)
 
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id))
+      expect(response).to redirect_to(folio_operations_path(folio.id))
       parent = folio.folio_transactions.find_by!(transaction_code: code)
       tax = folio.folio_transactions.where(category: "tax").sole
       expect(parent.category).to eq("fb")
@@ -346,7 +358,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         post_transaction(transaction_type: "payment", category: "refund", amount: "50.00", description: "Refund", posting_date: Date.current)
       }.not_to change(FolioTransaction, :count)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(flash[:alert]).to eq("Refund source is required.")
     end
 
@@ -355,7 +367,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         post_transaction(transaction_type: "payment", category: "refund", refund_source: "crypto_wallet", amount: "50.00", description: "Refund", posting_date: Date.current)
       }.not_to change(FolioTransaction, :count)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(flash[:alert]).to eq("Refund source is not valid.")
     end
 
@@ -367,7 +379,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         post_transaction(transaction_type: "payment", category: "refund", payment_source: "cash", amount: "50.00", description: "Refund", posting_date: Date.current)
       }.not_to change(FolioTransaction, :count)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(flash[:alert]).to include("permission")
 
       grant_permission("execute_folio_refunds")
@@ -376,7 +388,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         post_transaction(transaction_type: "payment", category: "refund", payment_source: "cash", amount: "50.00", description: "Refund", posting_date: Date.current)
       }.not_to change(FolioTransaction, :count)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(flash[:alert]).to eq("Refund source is required.")
     end
 
@@ -426,7 +438,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         post_transaction(transaction_type: "charge", category: "tax", amount: "10.00", description: "Tax", posting_date: Date.current)
       }.not_to change(FolioTransaction, :count)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(flash[:alert]).to eq("Transaction code is required for manual charges.")
     end
 
@@ -437,7 +449,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         post_transaction(transaction_type: "charge", transaction_code_id: code.id, amount: "10.00", description: "Cash", posting_date: Date.current)
       }.not_to change(FolioTransaction, :count)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(flash[:alert]).to eq("Transaction code must be a charge code.")
     end
 
@@ -469,7 +481,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         post_transaction(transaction_type: "charge", transaction_code_id: code.id, amount: "25.00", description: "Lost key", posting_date: Date.current)
       }.not_to change(FolioTransaction, :count)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(flash[:alert]).to include("currently in night audit")
     end
 
@@ -481,7 +493,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         post_transaction(transaction_type: "charge", transaction_code_id: code.id, amount: "25.00", description: "Lost key", posting_date: Date.current)
       }.not_to change(FolioTransaction, :count)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(flash[:alert]).to include("blocked by night audit")
     end
 
@@ -492,7 +504,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         reverse_transaction(transaction, correction_reason: "Posting error", correction_note: "Wrong booking", posting_date: Date.current)
       }.to change { folio.folio_transactions.adjustment.count }.by(1)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(flash[:notice]).to eq("Folio transaction reversed.")
       reversal = folio.folio_transactions.order(:id).last
       expect(reversal.reversal_of_transaction).to eq(transaction)
@@ -508,7 +520,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         reverse_transaction(transaction, correction_reason: "Posting error", correction_note: "Wrong booking", posting_date: Date.current)
       }.not_to change(FolioTransaction, :count)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(flash[:alert]).to include("currently in night audit")
     end
 
@@ -520,7 +532,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         reverse_transaction(transaction, correction_reason: "Posting error", correction_note: "Wrong booking", posting_date: Date.current)
       }.not_to change(FolioTransaction, :count)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(flash[:alert]).to include("blocked by night audit")
     end
 
@@ -539,7 +551,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         reverse_transaction(parent, correction_reason: "Posting error", correction_note: "Wrong taxable charge")
       }.to change(FolioTransaction, :count).by(2)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(parent.reload.voided_by_transaction).to be_present
       expect(tax.reload.voided_by_transaction).to be_present
     end
@@ -559,7 +571,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         reverse_transaction(tax, correction_reason: "Posting error", correction_note: "Tax only")
       }.not_to change(FolioTransaction, :count)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path)
       expect(flash[:alert]).to eq("Generated tax rows reverse with their parent charge.")
     end
 
@@ -578,7 +590,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         }
       }.to change { folio.folio_transactions.adjustment.count }.by(1)
 
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios", active_folio_id: folio.id))
+      expect(response).to redirect_to(folio_operations_path(folio.id))
     end
 
     it "reverses a payment posted on a secondary company folio" do
@@ -595,7 +607,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         }
       }.to change { company_folio.folio_transactions.payment.where(category: "refund").count }.by(1)
 
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: company_folio.id))
+      expect(response).to redirect_to(folio_operations_path(company_folio.id))
       reversal = company_folio.folio_transactions.order(:id).last
       expect(reversal.reversal_of_transaction).to eq(transaction)
       expect(reversal.amount).to eq(-100.to_d)
@@ -613,7 +625,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         }
       }.not_to change(FolioTransaction, :count)
 
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id))
+      expect(response).to redirect_to(folio_operations_path(folio.id))
       expect(flash[:alert]).to include("permission")
     end
 
@@ -634,7 +646,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       expect(moved.amount).to eq(100.to_d)
       expect(moved.moved_from_transaction).to eq(transaction)
       expect(transaction.reload.voided_by_transaction).to be_present
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: target_folio.id))
+      expect(response).to redirect_to(folio_operations_path(target_folio.id))
     end
 
     it "renders the move offcanvas with attached tax folio selectors" do
@@ -727,7 +739,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       expect(source_remainder.amount).to eq(60.to_d)
       expect(target_split.amount).to eq(40.to_d)
       expect(transaction.reload.voided_by_transaction).to be_present
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: target_folio.id))
+      expect(response).to redirect_to(folio_operations_path(target_folio.id))
     end
 
     it "rejects reversal without a correction reason" do
@@ -775,7 +787,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
     }.not_to change(FolioTransaction, :count)
 
-    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(response).to redirect_to(booking_details_path)
     expect(flash[:alert]).to include("permission")
   end
 
@@ -784,7 +796,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
 
     get new_hotel_folio_transaction_path(hotel, booking, transaction_type: "payment", active_folio_id: folio.id)
 
-    expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id))
+    expect(response).to redirect_to(folio_operations_path(folio.id))
     expect(flash[:alert]).to include("permission")
   end
 
@@ -796,7 +808,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
     }.not_to change(FolioTransaction, :count)
 
-    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(response).to redirect_to(booking_details_path)
     expect(flash[:alert]).to include("permission")
   end
 
@@ -808,7 +820,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       reverse_transaction(transaction, correction_reason: "Posting error", correction_note: "Wrong booking", posting_date: Date.current)
     }.not_to change(FolioTransaction, :count)
 
-    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(response).to redirect_to(booking_details_path)
     expect(flash[:alert]).to include("permission")
   end
 
@@ -820,7 +832,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       post_transaction(transaction_type: "payment", category: "refund", amount: "50.00", description: "Refund", posting_date: Date.current)
     }.not_to change(FolioTransaction, :count)
 
-    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(response).to redirect_to(booking_details_path)
     expect(flash[:alert]).to include("permission")
   end
 
@@ -832,7 +844,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       post_transaction(transaction_type: "adjustment", category: "write_off", amount: "50.00", description: "Write-off", posting_date: Date.current)
     }.not_to change(FolioTransaction, :count)
 
-    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(response).to redirect_to(booking_details_path)
     expect(flash[:alert]).to include("permission")
   end
 
@@ -854,7 +866,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       }
     }.not_to change(FolioTransaction, :count)
 
-    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(response).to redirect_to(booking_details_path)
     expect(flash[:alert]).to include("Folio is closed")
   end
 
@@ -874,7 +886,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       )
     }.not_to change(FolioTransaction, :count)
 
-    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(response).to redirect_to(booking_details_path)
     expect(flash[:alert]).to include("override_financial_date_lock")
   end
 
@@ -883,7 +895,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
 
     post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash", posting_date: Date.current)
 
-    expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+    expect(response).to redirect_to(booking_details_path)
     expect(flash[:alert]).to eq("Booking has no folio.")
   end
 end

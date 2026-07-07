@@ -1,30 +1,10 @@
-<% arrangements = booking.group_booking&.group_billing_arrangements&.to_a || [] %>
 <section aria-labelledby="billing-preferences-heading">
   <header class="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
-    <div><p class="text-xs font-semibold text-slate-500">Booking No. <%= presenter.group_overview? ? presenter.group_booking_number : presenter.booking_number %></p><h2 id="billing-preferences-heading" class="mt-1 text-lg font-bold text-slate-950">Billing Preferences</h2><p class="mt-1 text-sm text-slate-600"><%= presenter.group_overview? ? "Default payers and settlement methods for the group." : "Who may be billed and the terms used for settlement. Routing is managed separately." %></p></div>
-    <% if presenter.group_overview? %><div class="flex gap-2"><%= link_to "Change Billing Routes", group_billing_routes_hotel_booking_control_panel_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "wide-right" }, class: "rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" %><%= link_to "+ Add arrangement", presenter.billing_preferences_path(scope: "group", billing_editor: "new_arrangement"), data: { turbo_frame: "booking_control_panel_workspace", turbo_action: "advance" }, class: "rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white" %></div><% end %>
+    <div><p class="text-xs font-semibold text-slate-500">Booking No. <%= presenter.group_overview? ? presenter.group_booking_number : presenter.booking_number %></p><h2 id="billing-preferences-heading" class="mt-1 text-lg font-bold text-slate-950">Billing Preferences</h2><p class="mt-1 text-sm text-slate-600">Register billing parties and settlement terms. Routing is managed separately.</p></div>
+    <% if current_user.has_permission?("manage_folio_movements", hotel: current_hotel) %><%= link_to "Change Billing Routes", billing_routes_hotel_booking_control_panel_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" %><% end %>
   </header>
 
-  <% if presenter.group_overview? %>
-    <div class="space-y-4 p-5">
-      <% if presenter.billing_editor_open?("new_arrangement") %><%= render "hotel_portal/booking_control_panels/billing_preferences/group_arrangement_form", arrangement: booking.group_booking.group_billing_arrangements.build, booking: booking, presenter: presenter %><% end %>
-      <% arrangements.each do |arrangement| %>
-        <article class="rounded-lg border border-slate-200 p-4">
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><div class="flex items-center gap-2"><h3 class="font-bold text-slate-950"><%= arrangement.name %></h3><span class="rounded bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-600"><%= arrangement.status %></span></div><p class="mt-1 text-sm text-slate-600"><%= arrangement.hotel_corporate_account&.corporate_account&.name || "Primary guest per booking" %> · <%= arrangement.settlement_type.humanize %></p><p class="mt-1 text-xs text-slate-500"><%= arrangement.coverage.to_h.keys.map { |key| key == "fb" ? "Food & Beverage" : key.humanize }.to_sentence.presence || "No default coverage" %></p></div><div class="flex gap-3"><%= link_to "Edit", presenter.billing_preferences_path(scope: "group", billing_editor: "arrangement", arrangement_id: arrangement.id), data: { turbo_frame: "booking_control_panel_workspace" }, class: "text-sm font-semibold text-blue-700" %><% if arrangement.status == "active" %><%= button_to "Deactivate", deactivate_group_billing_arrangement_hotel_booking_control_panel_path(current_hotel, booking), method: :patch, params: { group_billing_arrangement_id: arrangement.id }, class: "text-sm font-semibold text-rose-700", form_class: "inline" %><% end %></div></div>
-          <% if presenter.billing_editor_open?("arrangement", arrangement) %><div class="mt-4"><%= render "hotel_portal/booking_control_panels/billing_preferences/group_arrangement_form", arrangement: arrangement, booking: booking, presenter: presenter %></div><% end %>
-        </article>
-      <% end %>
-      <% if arrangements.empty? && !presenter.billing_editor_open?("new_arrangement") %><p class="py-8 text-center text-sm text-slate-500">No group billing arrangements have been configured.</p><% end %>
-      <% if arrangements.any? %><%= render "hotel_portal/booking_control_panels/billing_preferences/assignment_form", booking: booking, presenter: presenter, arrangements: arrangements %><% end %>
-    </div>
-  <% elsif presenter.group_context_enabled? %>
-    <div class="space-y-5 p-5">
-      <%= render "hotel_portal/booking_control_panels/billing_preferences/party_list", booking: booking, presenter: presenter %>
-      <%= render "hotel_portal/booking_control_panels/billing_preferences/assignment_form", booking: booking, presenter: presenter, arrangements: arrangements %>
-    </div>
-  <% else %>
-    <div class="p-5">
-      <%= render "hotel_portal/booking_control_panels/billing_preferences/party_list", booking: booking, presenter: presenter %>
-    </div>
-  <% end %>
+  <div class="p-5">
+    <%= render "hotel_portal/booking_control_panels/billing_preferences/party_list", booking: booking, presenter: presenter %>
+  </div>
 </section>

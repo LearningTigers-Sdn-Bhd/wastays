@@ -22,7 +22,7 @@ module HotelPortal
 
     def new
       @active_folio = sheet_folio
-      return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no open folio." if @active_folio.blank?
+      return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations"), alert: "Booking has no open folio." if @active_folio.blank?
 
       @open_folios = @booking.booking_folios.open.order(is_primary: :desc, folio_sequence: :asc, folio_number: :asc, id: :asc).to_a
       @transaction_type = params[:transaction_type].to_s
@@ -32,7 +32,7 @@ module HotelPortal
       @redirect_to_checkout = params[:redirect_to_checkout] == "true"
       @folio_origin = params[:folio_origin].presence
       assign_sheet_config
-      return redirect_to hotel_folio_path(current_hotel, @booking, active_folio_id: @active_folio.id), alert: "You do not have permission to post this folio transaction." unless allowed_to_view_posting_sheet?
+      return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations", folio_id: @active_folio.id), alert: "You do not have permission to post this folio transaction." unless allowed_to_view_posting_sheet?
 
       render "hotel_portal/folios/transactions/offcanvas"
     end
@@ -80,7 +80,7 @@ module HotelPortal
 
     def reverse
       unless @booking.booking_folio
-        return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio."
+        return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations"), alert: "Booking has no folio."
       end
 
       transaction = booking_transaction_scope.find(params[:id])
@@ -154,9 +154,9 @@ module HotelPortal
       elsif params[:folio_origin] == "booking_control_panel"
         hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations", folio_id: active_folio_id)
       elsif params[:redirect_to_folio] == "true"
-        hotel_folio_path(current_hotel, @booking, folio_origin_params.merge(active_folio_id: active_folio_id).compact)
+        hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations", folio_id: active_folio_id)
       else
-        hotel_booking_path(current_hotel, @booking)
+        hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details")
       end
 
       respond_to do |format|

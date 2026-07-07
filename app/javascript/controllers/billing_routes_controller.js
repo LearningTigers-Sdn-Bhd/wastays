@@ -48,6 +48,12 @@ export default class extends Controller {
     const selectedPartyId = choice?.value.replace("party:", "")
 
     if (!choice || !folio) return
+    if (choice.value === "guest_primary_folio") {
+      folio.disabled = true
+      folio.value = row.dataset.primaryFolioId || ""
+      return
+    }
+
     if (choice.value === "inherit" || selectedPartyId === parentParty?.value) {
       choice.value = "inherit"
       folio.disabled = true

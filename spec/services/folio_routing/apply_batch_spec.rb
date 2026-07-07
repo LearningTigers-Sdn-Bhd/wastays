@@ -98,6 +98,31 @@ RSpec.describe FolioRouting::ApplyBatch do
     expect(booking.folio_routing_rules.active.find_by(transaction_code: sst_code)).to be_nil
   end
 
+  it "routes an attached item to the guest primary folio with the dedicated choice" do
+    booking = create(:booking)
+    actor = create(:user, account: booking.hotel.account)
+    guest = create(:booking_guest, booking:)
+    guest_folio = create(:booking_folio, booking:, hotel: booking.hotel, is_primary: true,
+      booking_billing_party: guest.booking_billing_party)
+    company_party = create(:booking_billing_party, :company, booking:, hotel: booking.hotel)
+    company_folio = create(:booking_folio, :secondary, booking:, hotel: booking.hotel,
+      booking_billing_party: company_party, payer_type: "company", hotel_corporate_account: company_party.hotel_corporate_account)
+    parent_code = booking.hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    sst_code = booking.hotel.transaction_codes.find_by!(system_key: "sst_tax")
+
+    result = described_class.call(booking:, actor:, confirmation: "future_only", reason: "Keep tax with guest",
+      idempotency_key: SecureRandom.uuid, routes: {
+        parent_code.id.to_s => {
+          "billing_party_id" => company_party.id.to_s,
+          "target_folio_id" => company_folio.id.to_s,
+          "children" => { "primary:sst_tax" => { "billing_party_choice" => "guest_primary_folio" } }
+        }
+      })
+
+    expect(result).to be_success
+    expect(booking.folio_routing_rules.active.find_by!(transaction_code: sst_code).target_folio).to eq(guest_folio)
+  end
+
   it "previews booking-local inclusion changes even without a parent route change" do
     booking = create(:booking)
     parent_folio = create(:booking_folio, booking:, hotel: booking.hotel, is_primary: true)

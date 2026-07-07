@@ -366,16 +366,15 @@ Rails.application.routes.draw do
         patch :update_room_rate, controller: :booking_control_panel_actions
         get :new_folio_window, controller: :booking_control_panel_actions
         post :create_folio_window, controller: :booking_control_panel_actions
+        get "folio_windows/:folio_id/edit", action: :edit_folio_window, controller: :booking_control_panel_actions, as: :edit_folio_window
+        patch "folio_windows/:folio_id", action: :update_folio_window, controller: :booking_control_panel_actions, as: :update_folio_window
+        post "folio_windows/:folio_id/close", action: :close_folio_window, controller: :booking_control_panel_actions, as: :close_folio_window
+        post "folio_windows/:folio_id/reopen", action: :reopen_folio_window, controller: :booking_control_panel_actions, as: :reopen_folio_window
+        post "forecasts/:forecast_id/move", action: :move_forecast, controller: :booking_control_panel_actions, as: :move_forecast
         post :apply_billing, controller: :booking_control_panel_actions
-        get :group_billing_routes, controller: :booking_control_panel_actions
-        post :preview_group_billing_routes, controller: :booking_control_panel_actions
-        post :apply_group_billing_routes, controller: :booking_control_panel_actions
         post :add_billing_party, controller: :booking_control_panel_actions
         patch :update_billing_terms, controller: :booking_control_panel_actions
         patch :archive_billing_party, controller: :booking_control_panel_actions
-        post :create_group_billing_arrangement, controller: :booking_control_panel_actions
-        patch :update_group_billing_arrangement, controller: :booking_control_panel_actions
-        patch :deactivate_group_billing_arrangement, controller: :booking_control_panel_actions
         post :apply_routing, controller: :booking_control_panel_actions
         get :billing_routes, controller: :booking_control_panel_actions
         post :preview_billing_routes, controller: :booking_control_panel_actions
