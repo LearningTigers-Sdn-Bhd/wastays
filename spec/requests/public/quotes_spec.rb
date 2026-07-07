@@ -80,6 +80,27 @@ RSpec.describe "Public::Quotes", type: :request do
       expect(body["guest_details"]).to eq({})
     end
 
+    it "returns blacklisted response when email belongs to blacklisted guest" do
+      Guest.create!(
+        name: "Banned Guest",
+        email: "banned@example.com",
+        phone: "+60123456789",
+        government_id: "A999999",
+        gender: "male",
+        country: "Malaysia",
+        document_type: "ic",
+        date_of_birth: Date.new(1990, 5, 20),
+        blacklisted: true
+      )
+
+      get guest_lookup_quote_path(quote.token), params: { email: "banned@example.com" }
+
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body["blacklisted"]).to eq(true)
+      expect(body["message"]).to eq("You are blacklisted from booking this hotel.")
+    end
+
     it "returns validation error when email is blank" do
       get guest_lookup_quote_path(quote.token), params: { email: "  " }
 

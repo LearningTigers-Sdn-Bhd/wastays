@@ -32,6 +32,12 @@
               <% if booking.vip? %>
                 <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
               <% end %>
+              <% if booking.blacklisted? %>
+                <div class="relative size-4 flex items-center justify-center shrink-0">
+                  <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 text-rose-600" %>
+                  <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
+                </div>
+              <% end %>
             </div>
           </td>
           <td class="px-4 py-3 align-top">
@@ -66,6 +72,12 @@
                 <p class="font-semibold text-slate-950"><%= guest.name %></p>
                 <% if guest.vip? %>
                   <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 shrink-0" %>
+                <% end %>
+                <% if guest.blacklisted? %>
+                  <div class="relative size-4 flex items-center justify-center shrink-0">
+                    <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 text-rose-600" %>
+                    <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
+                  </div>
                 <% end %>
               </div>
             </td>

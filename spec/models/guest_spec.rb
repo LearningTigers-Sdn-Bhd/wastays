@@ -180,4 +180,29 @@ RSpec.describe Guest, type: :model do
         .and change { booking2.reload.vip }.from(true).to(false)
     end
   end
+
+  describe 'blacklisted?' do
+    let!(:banned_guest) { create(:guest, name: "John Doe", email: "john@example.com", blacklisted: true) }
+    let!(:regular_guest) { create(:guest, name: "Jane Smith", email: "jane@example.com", blacklisted: false) }
+
+    it 'returns true if the email matches a blacklisted guest' do
+      expect(Guest.blacklisted?(email: "john@example.com")).to be(true)
+      expect(Guest.blacklisted?(email: "JOHN@EXAMPLE.COM")).to be(true)
+    end
+
+    it 'returns true if the name matches a blacklisted guest case-insensitively' do
+      expect(Guest.blacklisted?(name: "John Doe")).to be(true)
+      expect(Guest.blacklisted?(name: "john doe")).to be(true)
+    end
+
+    it 'returns false if the email/name matches a non-blacklisted guest' do
+      expect(Guest.blacklisted?(email: "jane@example.com")).to be(false)
+      expect(Guest.blacklisted?(name: "Jane Smith")).to be(false)
+    end
+
+    it 'returns false for unmatched email or name' do
+      expect(Guest.blacklisted?(email: "other@example.com")).to be(false)
+      expect(Guest.blacklisted?(name: "Other Guest")).to be(false)
+    end
+  end
 end

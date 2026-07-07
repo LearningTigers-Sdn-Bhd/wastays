@@ -37,6 +37,23 @@ class Guest < ApplicationRecord
 
   after_update :propagate_vip_status, if: :saved_change_to_vip?
 
+  def self.blacklisted?(email: nil, name: nil)
+    return false if email.blank? && name.blank?
+
+    query = Guest.where(blacklisted: true)
+    subqueries = []
+    subqueries << query.where(email: email.strip.downcase) if email.present?
+    subqueries << query.where("LOWER(name) = ?", name.strip.downcase) if name.present?
+
+    if subqueries.size == 2
+      subqueries[0].or(subqueries[1]).exists?
+    elsif subqueries.size == 1
+      subqueries[0].exists?
+    else
+      false
+    end
+  end
+
   def discard
     update(discarded_at: Time.current)
   end

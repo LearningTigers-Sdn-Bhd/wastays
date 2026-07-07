@@ -64,6 +64,12 @@ export default class extends Controller {
           return
         }
 
+        if (payload.blacklisted) {
+          this.setDetailsUnlocked(false)
+          this.setFeedback(payload.message || "You are blacklisted from booking this hotel.", "error")
+          return
+        }
+
         this.setDetailsUnlocked(true)
 
         if (payload.found) {

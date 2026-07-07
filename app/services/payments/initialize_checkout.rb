@@ -20,6 +20,12 @@ module Payments
     def call
       return failure("Invalid parameters") unless valid?
 
+      email = guest_details[:email].to_s
+      name = guest_details[:name].to_s
+      if Guest.blacklisted?(email: email, name: name)
+        return failure("You are blacklisted from booking this hotel.")
+      end
+
       if (restriction_msg = quote.stay_restriction_error_message).present?
         return failure(restriction_msg)
       end

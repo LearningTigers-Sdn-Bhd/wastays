@@ -84,6 +84,10 @@ class Booking < ApplicationRecord
     booking_guests.find_by(is_primary: true)&.guest
   end
 
+  def blacklisted?
+    primary_guest&.blacklisted? || false
+  end
+
   validates :guest_name, :guest_email, :guest_phone, presence: true
   validates :check_in, :check_out, :adults, :total_amount, :confirmation_token, presence: true
   validates :confirmation_token, uniqueness: true

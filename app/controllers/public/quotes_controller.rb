@@ -35,7 +35,9 @@ class Public::QuotesController < ApplicationController
       return render json: { found: false, message: "Email is required." }, status: :unprocessable_content
     end
 
-
+    if Guest.blacklisted?(email: email)
+      return render json: { blacklisted: true, message: "You are blacklisted from booking this hotel." }
+    end
 
     guest = Guest.find_by(email: email)
     found = guest.present?

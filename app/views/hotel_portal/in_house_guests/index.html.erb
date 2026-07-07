@@ -83,6 +83,12 @@
                         <% if booking.vip? %>
                           <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
                         <% end %>
+                        <% if booking.blacklisted? %>
+                          <div class="relative size-4 flex items-center justify-center shrink-0">
+                            <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 text-rose-600" %>
+                            <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
+                          </div>
+                        <% end %>
                       </div>
                       <% if booking.status == "review_due_out" %>
                         <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 uppercase tracking-wider">Late</span>
@@ -168,6 +174,12 @@
                     <p class="text-sm font-semibold text-slate-900"><%= booking.guest_name %></p>
                     <% if booking.vip? %>
                       <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+                    <% end %>
+                    <% if booking.blacklisted? %>
+                      <div class="relative size-4 flex items-center justify-center shrink-0">
+                        <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 text-rose-600" %>
+                        <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
+                      </div>
                     <% end %>
                   </div>
                   <p class="mt-1 text-xs font-mono text-slate-500"><%= booking.confirmation_token %></p>

@@ -113,6 +113,15 @@
                               VIP
                             </span>
                           <% end %>
+                          <% if guest.blacklisted? %>
+                            <span class="inline-flex items-center gap-x-1 rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">
+                              <div class="relative size-3.5 flex items-center justify-center shrink-0">
+                                <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3 translate-x-0.3 text-rose-500" %>
+                                <%= cached_icon "ban", class: "absolute inset-0 size-3.5 translate-y-0.3 text-rose-500" %>
+                              </div>
+                              Banned
+                            </span>
+                          <% end %>
                         </div>
                         <span class="text-xs text-slate-500">
                           <%= presenter.formatted_gender %>
@@ -215,6 +224,15 @@
                         <span class="inline-flex items-center gap-x-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20 whitespace-nowrap">
                           <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-3.5 text-amber-500 fill-amber-500" %>
                           VIP
+                        </span>
+                      <% end %>
+                      <% if guest.blacklisted? %>
+                        <span class="inline-flex items-center gap-x-1 rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">
+                          <div class="relative size-3.5 flex items-center justify-center shrink-0">
+                            <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3 translate-x-0.3 text-rose-500" %>
+                            <%= cached_icon "ban", class: "absolute inset-0 size-3.5 translate-y-0.3 text-rose-500" %>
+                          </div>
+                          Banned
                         </span>
                       <% end %>
                     </div>

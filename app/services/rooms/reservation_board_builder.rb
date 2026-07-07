@@ -154,6 +154,7 @@ module Rooms
           booking: booking,
           guest_name: booking.guest_name,
           vip: booking.vip?,
+          blacklisted: booking.blacklisted?,
           status: booking.status,
           check_in: booking.check_in.to_date,
           check_out: booking.check_out.to_date,

@@ -8,6 +8,12 @@
       <% if block[:vip] %>
         <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-3 text-amber-500 fill-amber-500 shrink-0" %>
       <% end %>
+      <% if block[:blacklisted] %>
+        <div class="relative size-3 flex items-center justify-center shrink-0">
+          <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3 text-rose-600" %>
+          <%= cached_icon "ban", class: "absolute inset-0 size-3 text-rose-600" %>
+        </div>
+      <% end %>
     </div>
   </div>
 

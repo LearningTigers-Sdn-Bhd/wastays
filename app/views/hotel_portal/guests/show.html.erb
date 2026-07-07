@@ -16,6 +16,22 @@
         <% end %>
       <% end %>
 
+      <%= button_to toggle_blacklist_hotel_guest_path(current_hotel, @guest), method: :patch, class: "inline-flex items-center gap-x-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 w-fit" do %>
+        <% if @guest.blacklisted? %>
+          <div class="relative size-4 flex items-center justify-center shrink-0">
+            <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-rose-600" %>
+            <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-rose-600" %>
+          </div>
+          Remove Blacklist
+        <% else %>
+          <div class="relative size-4 flex items-center justify-center shrink-0">
+            <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-slate-400" %>
+            <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-slate-400" %>
+          </div>
+          Blacklist Guest
+        <% end %>
+      <% end %>
+
       <%= link_to edit_hotel_guest_path(current_hotel, @guest), class: "inline-flex items-center gap-x-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 w-fit" do %>
         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
         Edit Profile
@@ -30,6 +46,12 @@
           <h1 class="text-xl font-bold text-neutral-text-primary"><%= @presenter.name %></h1>
           <% if @guest.vip? %>
             <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-5 text-amber-500 fill-amber-500 shrink-0" %>
+          <% end %>
+          <% if @guest.blacklisted? %>
+            <div class="relative size-5 flex items-center justify-center shrink-0">
+              <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-5 translate-x-0.5 text-rose-600" %>
+              <%= cached_icon "ban", class: "absolute inset-0 size-6 -translate-y-0.5 text-rose-600" %>
+            </div>
           <% end %>
         </div>
         <p class="text-xs uppercase tracking-widest text-neutral-text-secondary">Guest Profile</p>

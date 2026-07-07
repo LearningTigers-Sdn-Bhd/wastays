@@ -471,6 +471,7 @@ Rails.application.routes.draw do
       end
       member do
         patch :toggle_vip
+        patch :toggle_blacklist
       end
     end
     resources :in_house_guests, only: [ :index ]

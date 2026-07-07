@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_07_103000) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -749,6 +749,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_103000) do
     t.datetime "discarded_at"
     t.date "date_of_birth"
     t.boolean "vip", default: false, null: false
+    t.boolean "blacklisted", default: false, null: false
+    t.index ["blacklisted"], name: "index_guests_on_blacklisted"
     t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["discarded_at"], name: "index_guests_on_discarded_at"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
