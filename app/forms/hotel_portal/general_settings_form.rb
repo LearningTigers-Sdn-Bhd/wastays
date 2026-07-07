@@ -22,6 +22,13 @@ module HotelPortal
           policy.update!(property_policy_params)
         end
       end
+
+      if (hotel.saved_changes.keys & %w[name city country default_currency amenities]).any?
+        if hotel.preferred_channel_manager.present? && hotel.channel_mapping.present?
+          ChannelManagers::SyncStructureJob.perform_later("Hotel", hotel.id, "sync")
+        end
+      end
+
       true
     rescue ActiveRecord::RecordInvalid, FrozenError
       false

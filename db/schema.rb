@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_03_054820) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -350,6 +350,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
     t.datetime "payout_at"
     t.string "payout_reference"
     t.string "payout_batch_id"
+    t.string "source", default: "internal"
+    t.string "external_reference"
+    t.string "channel_manager_reference"
+    t.integer "revision_number", default: 0
     t.jsonb "tax_lines", default: [], null: false
     t.integer "reservation_number"
     t.integer "receipt_number"
@@ -362,14 +366,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
     t.datetime "check_in", null: false
     t.datetime "check_out", null: false
     t.date "no_show_review_business_date"
-    t.text "special_requests"
-    t.string "guest_city"
     t.boolean "tourism_tax_collected", default: false, null: false
-    t.string "source", default: "internal"
-    t.string "fund_collector", default: "unknown", null: false
-    t.string "external_reference"
-    t.string "channel_manager_reference"
-    t.integer "revision_number", default: 0
+    t.text "special_requests"
     t.string "folio_account_reference"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id_unique", unique: true, where: "(booking_quote_id IS NOT NULL)"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
@@ -378,7 +376,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
     t.index ["corporate_entity_id"], name: "index_bookings_on_corporate_entity_id"
     t.index ["external_reference"], name: "index_bookings_on_external_reference"
-    t.index ["fund_collector"], name: "index_bookings_on_fund_collector"
     t.index ["hotel_id", "folio_account_reference"], name: "idx_bookings_on_hotel_folio_account_reference", unique: true, where: "(folio_account_reference IS NOT NULL)"
     t.index ["hotel_id", "status", "no_show_review_business_date"], name: "index_bookings_on_hotel_status_no_show_review_date"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
@@ -749,7 +746,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
     t.datetime "last_signed_in_at"
     t.bigint "created_by_hotel_id"
     t.datetime "discarded_at"
-    t.string "city"
     t.date "date_of_birth"
     t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["discarded_at"], name: "index_guests_on_discarded_at"
@@ -774,7 +770,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
     t.index ["hotel_id", "business_date", "status"], name: "idx_on_hotel_id_business_date_status_38d59d82f8"
     t.index ["hotel_id", "business_date"], name: "index_hotel_business_dates_on_hotel_id_and_business_date", unique: true
     t.index ["hotel_id", "status"], name: "index_hotel_business_dates_on_hotel_id_and_status"
-    t.index ["hotel_id"], name: "idx_one_current_business_date_per_hotel", unique: true, where: "((status)::text = ANY (ARRAY[('open'::character varying)::text, ('audit_running'::character varying)::text, ('audit_blocked'::character varying)::text]))"
+    t.index ["hotel_id"], name: "idx_one_current_business_date_per_hotel", unique: true, where: "((status)::text = ANY ((ARRAY['open'::character varying, 'audit_running'::character varying, 'audit_blocked'::character varying])::text[]))"
     t.index ["hotel_id"], name: "index_hotel_business_dates_on_hotel_id"
   end
 
@@ -1463,6 +1459,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
     t.index ["user_id"], name: "index_room_blocks_on_user_id"
   end
 
+  create_table "room_groups", force: :cascade do |t|
+    t.bigint "hotel_id", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_room_groups_on_hotel_id"
+  end
+
   create_table "room_inventories", force: :cascade do |t|
     t.bigint "room_type_id", null: false
     t.date "date", null: false
@@ -1571,7 +1575,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
     t.jsonb "amenities", default: [], null: false
     t.boolean "smoking_allowed", default: false, null: false
     t.boolean "pets_allowed", default: false, null: false
+    t.bigint "room_group_id"
     t.index ["hotel_id"], name: "index_room_types_on_hotel_id"
+    t.index ["room_group_id"], name: "index_room_types_on_room_group_id"
   end
 
   create_table "salespeople", force: :cascade do |t|
@@ -1837,6 +1843,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
   add_foreign_key "room_blocks", "hotels"
   add_foreign_key "room_blocks", "room_types"
   add_foreign_key "room_blocks", "users"
+  add_foreign_key "room_groups", "hotels"
   add_foreign_key "room_inventories", "room_types"
   add_foreign_key "room_locks", "hotels"
   add_foreign_key "room_locks", "room_types"
@@ -1851,6 +1858,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_02_090000) do
   add_foreign_key "room_statuses", "room_types"
   add_foreign_key "room_statuses", "users", column: "last_changed_by_id"
   add_foreign_key "room_types", "hotels"
+  add_foreign_key "room_types", "room_groups"
   add_foreign_key "salesperson_hotels", "salespeople"
   add_foreign_key "transaction_code_taxes", "hotel_taxes"
   add_foreign_key "transaction_code_taxes", "transaction_codes"

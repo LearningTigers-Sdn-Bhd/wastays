@@ -42,6 +42,7 @@ class Hotel < ApplicationRecord
   has_one :property_policy, dependent: :destroy
   accepts_nested_attributes_for :property_policy
   has_many :room_types, dependent: :destroy
+  has_many :room_groups, dependent: :destroy
   has_many :knowledge_documents, class_name: "HotelKnowledgeDocument", dependent: :destroy
   has_many :knowledge_diagnostics, class_name: "HotelKnowledgeDiagnostic", dependent: :destroy
   has_many :nearby_attractions, dependent: :destroy
@@ -78,10 +79,6 @@ class Hotel < ApplicationRecord
   has_many :notification_configs, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
 
-  after_create :ensure_default_gl_maps
-  after_create :ensure_default_transaction_codes
-  after_create :ensure_current_business_date
-  after_update :sync_primary_tax_transaction_codes, if: :saved_change_to_primary_tax_settings?
 
   validates :name, presence: true
   validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true,
@@ -607,7 +604,6 @@ class Hotel < ApplicationRecord
     name_changed? || slug.blank?
   end
 
-  after_commit :sync_with_channel_manager, on: :update, if: :saved_changes_to_synced_attributes?
 
   private
 
@@ -648,20 +644,14 @@ class Hotel < ApplicationRecord
     base.length >= PREFIX_MIN_LENGTH ? base : base.ljust(PREFIX_MIN_LENGTH, "X")
   end
 
-  def saved_changes_to_synced_attributes?
-    (saved_changes.keys & %w[name city country default_currency amenities]).any?
-  end
-
-  def sync_with_channel_manager
-    return if preferred_channel_manager.blank? || channel_mapping.blank?
-
-    ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
+  def self.allowed_amenity_slugs
+    @allowed_amenity_slugs ||= Amenity.hotel.pluck(:slug)
   end
 
   def amenities_must_be_from_list
     return if amenities.blank?
 
-    allowed_ids = Amenity.hotel.pluck(:slug)
+    allowed_ids = self.class.allowed_amenity_slugs
     invalid_amenities = amenities - allowed_ids
 
     if invalid_amenities.any?
@@ -691,8 +681,6 @@ class Hotel < ApplicationRecord
       onboarding_sessions.where(notes: "FINAL_ONBOARDING_COMPLETION").order(updated_at: :desc).first
   end
 
-  private
-
   def extract_coordinate(prefix, fallback_regex)
     return nil if google_map_link.blank?
 
@@ -700,25 +688,5 @@ class Hotel < ApplicationRecord
     return matches.last.to_f if matches.any?
 
     google_map_link[fallback_regex, 1]&.to_f
-  end
-
-  def ensure_current_business_date
-    HotelBusinessDate.initialize_for_hotel!(hotel: self, date: business_date_for(Time.current))
-  end
-
-  def ensure_default_gl_maps
-    Financials::EnsureDefaultGlMaps.call(self)
-  end
-
-  def ensure_default_transaction_codes
-    Financials::EnsureDefaultTransactionCodes.call(self)
-  end
-
-  def saved_change_to_primary_tax_settings?
-    saved_change_to_sst_enabled? || saved_change_to_tourism_tax_enabled?
-  end
-
-  def sync_primary_tax_transaction_codes
-    Financials::EnsureDefaultTransactionCodes.call(self)
   end
 end

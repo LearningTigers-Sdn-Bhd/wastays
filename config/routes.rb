@@ -320,6 +320,8 @@ Rails.application.routes.draw do
       end
     end
 
+    resources :room_groups, except: [ :show ]
+
     resources :nearby_attractions, except: [ :show ]
     resource :taxes_fees, only: [ :show, :update ], path: "taxes-fees"
     get "transaction-codes", to: "transaction_codes#show", as: :transaction_codes

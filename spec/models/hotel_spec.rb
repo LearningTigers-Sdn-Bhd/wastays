@@ -5,6 +5,7 @@ RSpec.describe Hotel, type: :model do
     it { should belong_to(:account) }
     it { should have_many(:user_hotel_accesses).dependent(:destroy) }
     it { should have_many(:users).through(:user_hotel_accesses) }
+    it { should have_many(:room_groups).dependent(:destroy) }
   end
 
   describe 'validations' do
@@ -67,12 +68,14 @@ RSpec.describe Hotel, type: :model do
     it 'syncs SST and tourism tax code active state when settings change' do
       hotel = create(:hotel, sst_enabled: true, tourism_tax_enabled: true)
 
-      hotel.update!(sst_enabled: false, tourism_tax_enabled: false)
+      form = HotelPortal::TaxSettingsForm.new(hotel, ActionController::Parameters.new(hotel: { sst_enabled: false, tourism_tax_enabled: false }))
+      form.save
 
       expect(hotel.transaction_codes.find_by!(system_key: 'sst_tax')).not_to be_active
       expect(hotel.transaction_codes.find_by!(system_key: 'tourism_tax')).not_to be_active
 
-      hotel.update!(sst_enabled: true, tourism_tax_enabled: true)
+      form = HotelPortal::TaxSettingsForm.new(hotel, ActionController::Parameters.new(hotel: { sst_enabled: true, tourism_tax_enabled: true }))
+      form.save
 
       expect(hotel.transaction_codes.find_by!(system_key: 'sst_tax')).to be_active
       expect(hotel.transaction_codes.find_by!(system_key: 'tourism_tax')).to be_active
