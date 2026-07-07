@@ -190,7 +190,7 @@
                                 <div class="text-left md:text-right border-t border-slate-50 pt-4 md:border-0 md:pt-0">
                                   <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Net Settlement</p>
                                   <p class="text-xl font-bold text-slate-950">MYR <%= number_with_precision(booking.net_amount, precision: 2) %></p>
-                                  <%= link_to hotel_booking_path(current_hotel, booking), class: "mt-4 inline-flex items-center text-xs font-bold text-slate-900 uppercase tracking-widest border-b-2 border-slate-900 pb-0.5 hover:text-blue-600 hover:border-blue-600 transition-all", data: { turbo: false } do %>
+                                  <%= link_to hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"), class: "mt-4 inline-flex items-center text-xs font-bold text-slate-900 uppercase tracking-widest border-b-2 border-slate-900 pb-0.5 hover:text-blue-600 hover:border-blue-600 transition-all", data: { turbo: false } do %>
                                     Details
                                     <svg class="ms-1 size-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                                   <% end %>

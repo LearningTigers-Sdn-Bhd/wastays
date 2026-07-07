@@ -75,7 +75,12 @@
           <div class="border-b border-slate-100 px-6 py-5">
             <h3 class="text-lg font-bold text-slate-900">Move Upcoming Charge</h3>
           </div>
-          <%= form_with url: move_forecast_hotel_folio_path(hotel, booking, row.forecast_id), method: :post, local: true, class: "space-y-4 p-6" do %>
+          <% move_forecast_path = if folio_origin == "booking_control_panel"
+            move_forecast_hotel_booking_control_panel_path(hotel, booking, row.forecast_id)
+          else
+            move_forecast_hotel_folio_path(hotel, booking, row.forecast_id)
+          end %>
+          <%= form_with url: move_forecast_path, method: :post, local: true, class: "space-y-4 p-6" do %>
             <% if folio_origin.present? %>
               <%= hidden_field_tag "folio_origin", folio_origin %>
             <% end %>

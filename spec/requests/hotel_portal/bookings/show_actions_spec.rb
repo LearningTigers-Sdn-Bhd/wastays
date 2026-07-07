@@ -212,7 +212,7 @@ RSpec.describe "HotelPortal booking show actions", type: :request do
     view_permission = Permission.find_by(slug: "view_bookings") || create(:permission, slug: "view_bookings", name: "View Bookings")
     create(:role_permission, role: role, permission: view_permission)
 
-    get hotel_booking_path(hotel, booking)
+    get hotel_booking_control_panel_path(hotel, booking)
 
     expect(response).to have_http_status(:success)
     expect(response.body).not_to include(hotel_booking_show_action_manage_guest_path(hotel, booking))
@@ -235,6 +235,6 @@ RSpec.describe "HotelPortal booking show actions", type: :request do
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include("complete_offcanvas")
-    expect(response.body).to include(hotel_booking_path(hotel, booking))
+    expect(response.body).to include(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
   end
 end

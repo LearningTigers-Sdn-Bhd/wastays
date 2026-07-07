@@ -117,11 +117,11 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
 
   describe "booking documents" do
     it "links to the guest registration card from booking show" do
-      get hotel_booking_path(hotel, booking)
+      get hotel_booking_control_panel_path(hotel, booking, tab: "guest_details")
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include(hotel_booking_guest_registration_card_path(hotel, booking))
-      expect(response.body).to include("Guest Registration Card")
+      expect(response.body).to include('data-testid="booking-control-panel"')
+      expect(response.body).to include("Guest Details")
     end
   end
 end

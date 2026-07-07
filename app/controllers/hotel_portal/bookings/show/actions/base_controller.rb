@@ -21,7 +21,7 @@ module HotelPortal
           end
 
           def set_return_to
-            @return_to = offcanvas_return_to(fallback: hotel_booking_path(current_hotel, @booking))
+            @return_to = offcanvas_return_to(fallback: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"))
           end
 
           def complete_action(notice: nil, alert: nil)

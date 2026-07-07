@@ -24,16 +24,16 @@ class HotelPortal::Bookings::GuestsController < HotelPortal::BaseController
         new_value: guest.attributes.slice("name", "email", "phone", "country", "gender", "document_type")
       )
     end
-    redirect_to hotel_booking_path(current_hotel, @booking), notice: "Guest added."
+    redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "guest_details"), notice: "Guest added."
   rescue ActiveRecord::RecordInvalid => e
-    redirect_to hotel_booking_path(current_hotel, @booking), alert: e.message
+    redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "guest_details"), alert: e.message
   end
 
   def destroy
     @booking = current_hotel.bookings.find(params[:id])
     bg = @booking.booking_guests.find_by!(id: params[:guest_id], is_primary: false)
     result = ::BookingGuests::Remove.call(booking_guest: bg, actor: current_user)
-    redirect_to hotel_booking_path(current_hotel, @booking),
+    redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "guest_details"),
       result.success? ? { notice: "Guest removed." } : { alert: result.error }
   end
 

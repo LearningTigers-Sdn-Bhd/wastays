@@ -51,7 +51,7 @@
       </div>
       <div class="bg-white px-4 py-2.5">
         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Source Booking</p>
-        <%= link_to(hotel_booking_path(current_hotel, ar_invoice.booking),
+        <%= link_to(hotel_booking_control_panel_path(current_hotel, ar_invoice.booking, tab: "booking_details"),
                     class: "mt-0.5 inline-flex items-center gap-1 text-sm font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2 transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2") do %>
           <%= presenter.booking_reference %>
           <%= cached_icon "arrow-up-right", class: "size-3.5", aria: { hidden: true } %>
@@ -59,7 +59,7 @@
       </div>
       <div class="bg-white px-4 py-2.5">
         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Source Folio</p>
-        <%= link_to(hotel_folio_path(current_hotel, ar_invoice.booking, active_folio_id: ar_invoice.booking_folio_id),
+        <%= link_to(hotel_booking_control_panel_path(current_hotel, ar_invoice.booking, tab: "folio_operations", folio_id: ar_invoice.booking_folio_id),
                     class: "mt-0.5 inline-flex items-center gap-1 text-sm font-semibold text-slate-900 underline decoration-slate-300 underline-offset-2 transition hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2") do %>
           <%= presenter.folio_reference %>
           <%= cached_icon "arrow-up-right", class: "size-3.5", aria: { hidden: true } %>
