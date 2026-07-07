@@ -277,7 +277,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
 
       # Old date inventory should be released (back to 10)
       expect(room_type.room_inventories.find_by(date: Date.current).quantity).to eq(10)

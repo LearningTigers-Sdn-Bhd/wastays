@@ -1,8 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["rows", "row", "template", "checkIn", "checkOut", "nights", "bookingType", "backdateFields", "corporate", "roomTotal", "grandTotal"]
-  static values = { availabilityUrl: String, rateOptionsUrl: String, initialRows: Array }
+  static targets = ["rows", "row", "template", "checkIn", "checkOut", "nights", "bookingType", "backdateFields", "corporate", "guestCountry", "roomTotal", "taxTotal", "tourismTaxRow", "tourismTaxTotal", "grandTotal"]
+  static values = { availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, initialRows: Array }
 
   connect() {
     this.nextIndex = this.rowTargets.length
@@ -44,14 +44,20 @@ export default class extends Controller {
   }
 
   roomTypeChanged(event) {
-    this.loadRow(event.currentTarget.closest("[data-booking-room-rows-target~='row']"))
+    const row = event.currentTarget.closest("[data-booking-room-rows-target~='row']")
+    this.resetRowTotals(row)
+    this.loadRow(row)
   }
 
   async loadRow(row, preserved = {}) {
     const roomTypeId = row.querySelector("[data-role='room-type']").value
     const roomSelect = row.querySelector("[data-role='room-number']")
     const rateSelect = row.querySelector("[data-role='rate-plan']")
-    if (!roomTypeId || !this.checkInTarget.value || !this.checkOutTarget.value) return
+    if (!roomTypeId || !this.checkInTarget.value || !this.checkOutTarget.value) {
+      this.resetRowTotals(row)
+      return
+    }
+    this.resetRowTotals(row)
 
     roomSelect.disabled = true
     roomSelect.innerHTML = '<option value="">Checking rooms…</option>'
@@ -97,7 +103,27 @@ export default class extends Controller {
   rateChanged(event) {
     const row = event.currentTarget.closest("[data-booking-room-rows-target~='row']")
     const selected = event.currentTarget.selectedOptions[0]
-    row.querySelector("[data-role='rate']").textContent = Number(selected?.dataset.total || 0).toFixed(2)
+    const fallbackTotal = Number(selected?.dataset.total || 0)
+    row.dataset.roomTotal = fallbackTotal.toFixed(2)
+    row.dataset.taxTotal = "0.00"
+    row.dataset.tourismTaxTotal = "0.00"
+    row.dataset.grandTotal = fallbackTotal.toFixed(2)
+    row.querySelector("[data-role='rate']").textContent = fallbackTotal.toFixed(2)
+    this.updateTotals()
+    this.loadRowPrice(row)
+  }
+
+  guestCountryChanged() {
+    this.rowTargets.forEach((row) => this.loadRowPrice(row))
+  }
+
+  resetRowTotals(row) {
+    row.dataset.roomTotal = "0.00"
+    row.dataset.taxTotal = "0.00"
+    row.dataset.tourismTaxTotal = "0.00"
+    row.dataset.grandTotal = "0.00"
+    row.dataset.priceRequestKey = ""
+    row.querySelector("[data-role='rate']").textContent = "0.00"
     this.updateTotals()
   }
 
@@ -142,9 +168,59 @@ export default class extends Controller {
   }
 
   updateTotals() {
-    const total = this.rowTargets.reduce((sum, row) => sum + Number(row.querySelector("[data-role='rate']").textContent || 0), 0)
-    if (this.hasRoomTotalTarget) this.roomTotalTarget.textContent = total.toFixed(2)
-    if (this.hasGrandTotalTarget) this.grandTotalTarget.textContent = total.toFixed(2)
+    const roomTotal = this.rowTargets.reduce((sum, row) => sum + Number(row.dataset.roomTotal || 0), 0)
+    const taxTotal = this.rowTargets.reduce((sum, row) => sum + Number(row.dataset.taxTotal || 0), 0)
+    const tourismTaxTotal = this.rowTargets.reduce((sum, row) => sum + Number(row.dataset.tourismTaxTotal || 0), 0)
+    const grandTotal = this.rowTargets.reduce((sum, row) => sum + Number(row.dataset.grandTotal || row.querySelector("[data-role='rate']").textContent || 0), 0)
+
+    this.roomTotalTargets.forEach((target) => { target.textContent = roomTotal.toFixed(2) })
+    this.taxTotalTargets.forEach((target) => { target.textContent = taxTotal.toFixed(2) })
+    this.tourismTaxTotalTargets.forEach((target) => { target.textContent = tourismTaxTotal.toFixed(2) })
+    this.grandTotalTargets.forEach((target) => { target.textContent = grandTotal.toFixed(2) })
+    this.tourismTaxRowTargets.forEach((target) => target.classList.toggle("hidden", tourismTaxTotal <= 0))
+    this.tourismTaxRowTargets.forEach((target) => target.classList.toggle("flex", tourismTaxTotal > 0))
+  }
+
+  async loadRowPrice(row) {
+    if (!this.hasPriceUrlValue) return
+
+    const roomTypeId = row.querySelector("[data-role='room-type']")?.value
+    if (!roomTypeId || !this.checkInTarget.value || !this.checkOutTarget.value) return
+
+    const params = new URLSearchParams({
+      room_type_id: roomTypeId,
+      check_in: this.checkInTarget.value,
+      check_out: this.checkOutTarget.value
+    })
+
+    const ratePlanId = row.querySelector("[data-role='rate-plan']")?.value
+    if (ratePlanId) params.set("rate_plan_id", ratePlanId)
+    if (this.hasGuestCountryTarget && this.guestCountryTarget.value) params.set("guest_country", this.guestCountryTarget.value)
+
+    const requestKey = params.toString()
+    row.dataset.priceRequestKey = requestKey
+
+    try {
+      const response = await fetch(`${this.priceUrlValue}?${params}`)
+      if (!response.ok) throw new Error("Price could not be loaded")
+
+      const data = await response.json()
+      if (row.dataset.priceRequestKey !== requestKey) return
+
+      const roomTotal = Number(data.room_total || 0)
+      const taxTotal = Number(data.tax_total || 0)
+      const tourismTaxTotal = Number(data.tourism_tax_total || 0)
+      const grandTotal = Number(data.total_amount || roomTotal + taxTotal)
+
+      row.dataset.roomTotal = roomTotal.toFixed(2)
+      row.dataset.taxTotal = taxTotal.toFixed(2)
+      row.dataset.tourismTaxTotal = tourismTaxTotal.toFixed(2)
+      row.dataset.grandTotal = grandTotal.toFixed(2)
+      row.querySelector("[data-role='rate']").textContent = grandTotal.toFixed(2)
+      this.updateTotals()
+    } catch (error) {
+      console.error("Row price calculation failed:", error)
+    }
   }
 
   updateRemoveButtons() {
