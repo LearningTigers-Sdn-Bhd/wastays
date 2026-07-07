@@ -29,6 +29,7 @@ RSpec.describe "Booking room readiness assignment", type: :request do
     }
 
     expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("Room 101 is not available for these dates: Dirty")
     expect(booking_room.reload.room_number).to be_nil
   end
 end

@@ -1,33 +1,114 @@
 <%= form_with url: apply_billing_routes_hotel_booking_control_panel_path(current_hotel, @booking), method: :post, class: "flex min-h-0 flex-1 flex-col", data: { turbo_frame: "offcanvas_drawer" } do %>
   <%= hidden_field_tag :idempotency_key, @batch_key %>
+  <%= hidden_field_tag :route_booking_id, @routing_booking.id if @routing_booking != @booking %>
   <% @route_draft.each do |code_id, attrs| %><%= hidden_field_tag "routes[#{code_id}][billing_party_id]", attrs["billing_party_id"] %><%= hidden_field_tag "routes[#{code_id}][target_folio_id]", attrs["target_folio_id"] %><% attrs.fetch("taxes", {}).each do |key, value| %><%= hidden_field_tag "routes[#{code_id}][taxes][#{key}]", value %><% end %><% attrs.fetch("children", {}).each do |key, child| %><% child.each do |field, value| %><%= hidden_field_tag "routes[#{code_id}][children][#{key}][#{field}]", value %><% end %><% end %><% end %>
   <div class="min-h-0 flex-1 overflow-y-auto p-6">
-    <div class="rounded-lg border border-amber-200 bg-amber-50 p-4"><p class="text-xs font-bold uppercase tracking-wider text-amber-700">Existing charge impact</p><p class="mt-1 text-2xl font-black text-amber-950"><%= @batch_preview.count %> transactions · <%= number_to_currency(@batch_preview.amount, unit: "#{@booking.currency} ") %></p></div>
-    <table class="mt-5 w-full text-left text-sm"><thead class="text-xs uppercase text-slate-500"><tr class="border-b"><th class="py-2">Code</th><th>From</th><th>To billing party / folio</th><th class="text-right">Transactions</th><th class="text-right">Amount</th></tr></thead><tbody class="divide-y">
-      <% @batch_preview.impacts.each do |impact| %><% change = impact[:change] %><tr><td class="py-3 font-mono font-bold"><%= change[:row].code.code %></td><td><%= change[:row].target_folio&.display_name %></td><td><%= change[:folio].booking_billing_party&.display_name || "Unassigned" %> / <%= change[:folio].display_name %></td><td class="text-right"><%= impact[:preview].count %></td><td class="text-right"><%= number_to_currency(impact[:preview].amount, unit: "#{@booking.currency} ") %></td></tr><% end %>
-    </tbody></table>
+    <div class="overflow-hidden border border-slate-200">
+      <table class="w-full table-fixed text-left text-sm">
+        <thead class="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+          <tr class="border-b border-slate-200">
+            <th class="px-4 py-3">Impact</th>
+            <th class="w-40 px-4 py-3 text-right">Count</th>
+            <th class="w-44 px-4 py-3 text-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          <tr>
+            <td class="px-4 py-3 font-semibold text-slate-950">Existing charge impact</td>
+            <td class="px-4 py-3 text-right font-semibold text-slate-700"><%= pluralize(@batch_preview.count, "transaction") %></td>
+            <td class="px-4 py-3 text-right font-bold text-slate-950"><%= number_to_currency(@batch_preview.amount, unit: "#{@routing_booking.currency} ") %></td>
+          </tr>
+          <tr>
+            <td class="px-4 py-3 font-semibold text-slate-950">Upcoming charge impact</td>
+            <td class="px-4 py-3 text-right font-semibold text-slate-700"><%= pluralize(@batch_preview.upcoming_count, "forecast") %></td>
+            <td class="px-4 py-3 text-right font-bold text-slate-950"><%= number_to_currency(@batch_preview.upcoming_amount, unit: "#{@routing_booking.currency} ") %></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-5 overflow-hidden border border-slate-200">
+      <table class="w-full table-fixed text-left text-sm">
+        <thead class="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+          <tr class="border-b border-slate-200">
+            <th class="w-24 px-4 py-3">Code</th>
+            <th class="px-4 py-3">From</th>
+            <th class="px-4 py-3">To billing party / folio</th>
+            <th class="w-32 px-4 py-3 text-right">Transactions</th>
+            <th class="w-36 px-4 py-3 text-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          <% if @batch_preview.impacts.any? %>
+            <% @batch_preview.impacts.each do |impact| %>
+              <% change = impact[:change] %>
+              <tr>
+                <td class="px-4 py-3 font-mono font-bold text-slate-900"><%= change[:row].code.code %></td>
+                <td class="px-4 py-3 text-slate-700"><%= change[:row].target_folio&.display_name || "Unassigned" %></td>
+                <td class="px-4 py-3 text-slate-700"><%= change[:folio].booking_billing_party&.display_name || "Unassigned" %> / <%= change[:folio].display_name %></td>
+                <td class="px-4 py-3 text-right text-slate-700"><%= impact[:preview].count %></td>
+                <td class="px-4 py-3 text-right font-semibold text-slate-950"><%= number_to_currency(impact[:preview].amount, unit: "#{@routing_booking.currency} ") %></td>
+              </tr>
+            <% end %>
+          <% else %>
+            <tr>
+              <td colspan="5" class="px-4 py-6 text-center text-sm font-semibold text-slate-400">No existing posted transactions will move.</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
     <% if @batch_preview.tax_changes.any? %>
-      <div class="mt-5 rounded-lg border border-violet-200 bg-violet-50 p-4">
-        <p class="text-xs font-bold uppercase tracking-wider text-violet-700">Tax inclusion changes</p>
-        <div class="mt-3 space-y-2">
+      <div class="mt-5 overflow-hidden border border-slate-200">
+        <table class="w-full table-fixed text-left text-sm">
+          <thead class="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <tr class="border-b border-slate-200">
+              <th class="px-4 py-3">Tax inclusion changes</th>
+              <th class="w-32 px-4 py-3 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
           <% @batch_preview.tax_changes.each do |change| %>
             <% child = change[:row].children.find { |item| item.key == change[:key] } %>
-            <div class="flex items-center justify-between gap-4 rounded-md bg-white/70 px-3 py-2 text-sm">
-              <span>
-                <span class="font-mono font-bold text-slate-900"><%= change[:row].code.code %></span>
-                <span class="mx-1 text-slate-400">/</span>
-                <span class="font-semibold text-slate-800"><%= child&.label || change[:key] %></span>
-              </span>
-              <span class="rounded-full px-2.5 py-1 text-xs font-bold <%= change[:included] ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700" %>">
-                <%= change[:included] ? "Include" : "Exclude" %>
-              </span>
-            </div>
+            <tr>
+              <td class="px-4 py-3"><span class="font-mono font-bold text-slate-900"><%= change[:row].code.code %></span><span class="mx-1 text-slate-400">/</span><span class="font-semibold text-slate-800"><%= child&.label || change[:key] %></span></td>
+              <td class="px-4 py-3 text-right font-bold <%= change[:included] ? "text-emerald-700" : "text-rose-700" %>"><%= change[:included] ? "Include" : "Exclude" %></td>
+            </tr>
           <% end %>
-        </div>
+          </tbody>
+        </table>
       </div>
     <% end %>
-    <div class="mt-5 rounded-lg border border-blue-200 bg-blue-50 p-4"><p class="text-xs font-bold uppercase tracking-wider text-blue-700">Upcoming charge impact</p><p class="mt-1 text-xl font-black text-blue-950"><%= @batch_preview.upcoming_count %> forecasts · <%= number_to_currency(@batch_preview.upcoming_amount, unit: "#{@booking.currency} ") %></p></div>
-    <div class="mt-6 space-y-3"><% if @batch_preview.count.positive? %><label class="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3"><%= radio_button_tag :confirmation, "existing_and_future", true %><span><strong>Move existing eligible charges</strong><span class="block text-xs text-slate-600">Move eligible posted charges and route future postings.</span></span></label><label class="flex gap-3 rounded-lg border border-slate-200 p-3"><%= radio_button_tag :confirmation, "future_only", false %><span><strong>Leave existing charges</strong><span class="block text-xs text-slate-600">Leave posted transactions where they are.</span></span></label><% end %><% if @batch_preview.upcoming_count.positive? %><label class="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3"><%= radio_button_tag :forecast_confirmation, "reconcile_upcoming", true %><span><strong>Reconcile upcoming forecasts</strong><span class="block text-xs text-slate-600">Supersede and recreate unposted forecasts using these changes.</span></span></label><label class="flex gap-3 rounded-lg border border-slate-200 p-3"><%= radio_button_tag :forecast_confirmation, "leave_upcoming", false %><span><strong>Leave upcoming forecasts</strong><span class="block text-xs text-slate-600">Preserve current unposted forecast rows.</span></span></label><% end %><div><%= label_tag :reason, "Reason", class: "mb-1 block text-xs font-bold text-slate-600" %><%= text_field_tag :reason, nil, required: true, class: "w-full rounded-md border-slate-300 text-sm" %></div></div>
+
+    <% if @batch_preview.count.positive? || @batch_preview.upcoming_count.positive? %>
+      <div class="mt-5 space-y-3">
+        <% if @batch_preview.count.positive? %>
+          <label class="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
+            <%= radio_button_tag :confirmation, "existing_and_future", true %>
+            <span><strong class="text-slate-950">Move existing eligible charges</strong><span class="block text-xs text-slate-600">Move eligible posted charges and route future postings.</span></span>
+          </label>
+          <label class="flex gap-3 rounded-lg border border-slate-200 bg-white p-3 text-sm">
+            <%= radio_button_tag :confirmation, "future_only", false %>
+            <span><strong class="text-slate-950">Leave existing charges</strong><span class="block text-xs text-slate-600">Leave posted transactions where they are.</span></span>
+          </label>
+        <% end %>
+        <% if @batch_preview.upcoming_count.positive? %>
+          <label class="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
+            <%= radio_button_tag :forecast_confirmation, "reconcile_upcoming", true %>
+            <span><strong class="text-slate-950">Reconcile upcoming forecasts</strong><span class="block text-xs text-slate-600">Supersede and recreate unposted forecasts using these changes.</span></span>
+          </label>
+          <label class="flex gap-3 rounded-lg border border-slate-200 bg-white p-3 text-sm">
+            <%= radio_button_tag :forecast_confirmation, "leave_upcoming", false %>
+            <span><strong class="text-slate-950">Leave upcoming forecasts</strong><span class="block text-xs text-slate-600">Preserve current unposted forecast rows.</span></span>
+          </label>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="mt-5">
+      <%= label_tag :reason, "Reason", class: "booking-form__label" %>
+      <%= text_field_tag :reason, nil, required: true, class: "booking-form__control" %>
+    </div>
   </div>
   <div class="sticky bottom-0 z-30 flex shrink-0 justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4 pointer-events-auto"><%= link_to "Back", billing_routes_hotel_booking_control_panel_path(current_hotel, @booking), data: { turbo_frame: "offcanvas_drawer" }, class: "rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold pointer-events-auto" %><%= submit_tag "Confirm and apply", class: "rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white pointer-events-auto" %></div>
 <% end %>

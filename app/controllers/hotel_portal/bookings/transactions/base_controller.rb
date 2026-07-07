@@ -5,6 +5,7 @@ module HotelPortal
     module Transactions
       class BaseController < HotelPortal::BaseController
         include OffcanvasTransactionCompletion
+        include GroupLifecycleTargeting
 
         before_action :authorize_manage_bookings!
         before_action :set_transaction_source
@@ -22,7 +23,7 @@ module HotelPortal
 
         def complete_existing_booking(booking, notice:)
           offcanvas_transaction_response(
-            destination: offcanvas_return_to(fallback: hotel_booking_path(current_hotel, booking)),
+            destination: offcanvas_return_to(fallback: hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details")),
             notice: notice
           )
         end
@@ -140,7 +141,7 @@ module HotelPortal
         def booking_params
           params.fetch(:booking, {}).permit(
             :guest_name, :guest_email, :guest_phone, :checked_in_at,
-            :guest_country, :guest_gender, :guest_document_type, :guest_government_id, :guest_update_intent,
+            :guest_country, :guest_gender, :guest_document_type, :guest_government_id, :guest_date_of_birth, :guest_update_intent,
             :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
             :record_payment, :payment_method, :payment_amount, :payment_reference,
             :id_front, :id_back, :source, :internal_notes, :manual_rate_override, :existing_guest_id,

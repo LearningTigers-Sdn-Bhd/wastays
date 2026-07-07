@@ -3,12 +3,15 @@
 class HotelPortal::Bookings::CheckInsController < HotelPortal::BaseController
   include BookingAuditable
   include OffcanvasTransactionCompletion
+  include GroupLifecycleTargeting
 
   before_action :authorize_manage_bookings!
 
   def create
     @booking = current_hotel.bookings.find(params[:id])
     timestamp = transition_timestamp(:checked_in_at)
+
+    return batch_check_in(timestamp) if selected_lifecycle_batch?(@booking)
 
     options = {}
     if params[:booking].present?
@@ -48,19 +51,48 @@ class HotelPortal::Bookings::CheckInsController < HotelPortal::BaseController
           if booking_timeline_board_request?
             render turbo_stream: turbo_stream.append("booking_timeline_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
           else
-            flash.now[:alert] = result.error
-            render "hotel_portal/bookings/show", formats: [ :html ], status: :unprocessable_content
+            flash[:alert] = result.error
+            render_offcanvas_completion(check_in_success_path)
           end
         end
         format.html do
-          flash.now[:alert] = result.error
-          render "hotel_portal/bookings/show", status: :unprocessable_content
+          redirect_to check_in_success_path, alert: result.error, status: :see_other
         end
       end
     end
   end
 
   private
+
+  def batch_check_in(timestamp)
+    bookings = selected_lifecycle_bookings(fallback_booking: @booking, action: :check_in)
+    options = {}
+    if params[:override_night_audit] == "1"
+      options[:override_night_audit] = true
+      options[:reason] = params[:retroactive_reason]
+    end
+
+    ActiveRecord::Base.transaction do
+      bookings.each do |booking|
+        result = Bookings::TransitionStatus.new(
+          booking: booking,
+          status: "checked_in",
+          timestamp: timestamp.presence || Time.current,
+          user: current_user,
+          options: options
+        ).call
+        raise BatchTargetError, result.error unless result.success?
+      end
+    end
+
+    bookings.each { |booking| release_room_locks(booking) }
+    offcanvas_transaction_response(
+      destination: offcanvas_return_to(fallback: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details")),
+      notice: batch_lifecycle_notice(bookings, "checked in")
+    )
+  rescue BatchTargetError => e
+    redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: e.message, status: :see_other
+  end
 
   def transition_timestamp(attribute)
     params[attribute].presence || booking_params[attribute].presence
@@ -94,7 +126,7 @@ class HotelPortal::Bookings::CheckInsController < HotelPortal::BaseController
   end
 
   def check_in_success_path
-    fallback = hotel_booking_path(current_hotel, @booking)
+    fallback = hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details")
     return offcanvas_return_to(fallback: fallback) if params[:return_to].present?
     return board_hotel_bookings_path(current_hotel) if booking_timeline_board_request?
 

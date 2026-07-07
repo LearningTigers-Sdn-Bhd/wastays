@@ -16,14 +16,28 @@
       </div>
     </div>
 
+    <% return_to = request.fullpath %>
     <div class="flex flex-wrap items-center gap-2">
       <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
         <% if booking.status == "confirmed" %>
-          <%= link_to "Check-in", hotel_booking_transaction_check_in_reservation_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+          <%= link_to "Check-in", hotel_booking_transaction_check_in_reservation_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+          <%= link_to "Cancel", hotel_booking_transaction_cancel_booking_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-700 shadow-sm transition hover:bg-red-50" %>
+        <% elsif booking.status == "review_no_show" %>
+          <%= link_to "Backdated Check-in", hotel_booking_transaction_booking_backdated_check_in_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+          <%= link_to "Mark No-show", hotel_booking_transaction_mark_no_show_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg border border-rose-200 bg-white px-4 py-2 text-sm font-bold text-rose-700 shadow-sm transition hover:bg-rose-50" %>
+          <%= link_to "Cancel", hotel_booking_transaction_cancel_booking_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-700 shadow-sm transition hover:bg-red-50" %>
+        <% elsif booking.status == "no_show" %>
+          <%= link_to "Reinstate", hotel_booking_transaction_reinstate_no_show_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700" %>
+          <% if current_user.has_permission?("post_folio_corrections", hotel: current_hotel) && Bookings::RepairNoShowTourismTax.needed?(booking) %>
+            <%= link_to "Repair No-show Folio", hotel_booking_transaction_repair_no_show_folio_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg border border-amber-200 bg-white px-4 py-2 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-amber-50" %>
+          <% end %>
         <% elsif booking.status == "checked_in" %>
-          <%= link_to "Check-out", hotel_booking_transaction_check_out_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+          <%= link_to "Check-out", hotel_booking_transaction_check_out_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+          <%= link_to "Edit Check-In", hotel_booking_transaction_check_in_reservation_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" %>
+        <% elsif booking.status == "review_due_out" %>
+          <%= link_to "Review Late Checkout", hotel_booking_transaction_late_checkout_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700" %>
         <% elsif booking.status == "checkout_required" %>
-          <%= link_to "Complete Checkout", hotel_booking_transaction_check_out_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+          <%= link_to "Complete Checkout", hotel_booking_transaction_check_out_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
         <% end %>
       <% end %>
     </div>

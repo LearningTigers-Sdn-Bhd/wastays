@@ -147,7 +147,7 @@
                     <span class="text-sm font-black text-slate-900"><%= booking_presenter.formatted_currency_total %></span>
                   </td>
                   <td class="sticky right-0 z-10 px-6 py-3 text-right border-l border-slate-100 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] <%= booking.blacklisted? ? 'bg-rose-100' : 'bg-white group-hover:bg-slate-50 transition-colors' %>">
-                    <%= link_to hotel_booking_path(current_hotel, booking), class: "group inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50 active:scale-95", data: { turbo_frame: "_top" } do %>
+                    <%= link_to hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"), class: "group inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50 active:scale-95", data: { turbo_frame: "_top" } do %>
                       Open
                       <%= cached_icon "arrow-right", stroke_width: 2.5, class: "size-3 text-slate-400 group-hover:text-slate-800 transition-colors" %>
                     <% end %>
@@ -225,7 +225,7 @@
                   <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stay Dates</span>
                   <p class="text-xs font-bold text-slate-800"><%= booking_presenter.check_in_short %> – <%= booking_presenter.check_out_date_year %></p>
                 </div>
-                <%= link_to hotel_booking_path(current_hotel, booking), class: "group inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50 active:scale-95", data: { turbo_frame: "_top" } do %>
+                <%= link_to hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"), class: "group inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50 active:scale-95", data: { turbo_frame: "_top" } do %>
                   Open
                   <%= cached_icon "arrow-right", stroke_width: 2.5, class: "size-3 text-slate-400 group-hover:text-slate-800 transition-colors" %>
                 <% end %>

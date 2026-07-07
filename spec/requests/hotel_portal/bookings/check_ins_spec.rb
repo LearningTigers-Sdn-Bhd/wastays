@@ -39,7 +39,7 @@ RSpec.describe "HotelPortal::Bookings::CheckIns", type: :request do
       }.to change(FolioTransaction.payment, :count).by(1)
 
       payment = booking.reload.booking_folio.folio_transactions.payment.sole
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
       expect(booking.status).to eq("checked_in")
       expect(booking.tourism_tax_collected).to be true
       expect(booking.tourism_tax_amount).to eq(20.00) # Remains unchanged
