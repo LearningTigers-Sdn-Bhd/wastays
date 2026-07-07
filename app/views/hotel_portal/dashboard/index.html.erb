@@ -180,6 +180,9 @@
                                 <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
                               </div>
                             <% end %>
+                            <% if booking.repeat? %>
+                              <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500 shrink-0" %>
+                            <% end %>
                           </div>
                           <p class="text-xs font-medium text-slate-500"><%= booking.booking_rooms.first&.room_type&.name || 'Room' %></p>
                         </div>
@@ -223,6 +226,9 @@
                                 <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 text-rose-600" %>
                                 <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
                               </div>
+                            <% end %>
+                            <% if booking.repeat? %>
+                              <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500 shrink-0" %>
                             <% end %>
                           </div>
                           <p class="text-xs font-medium text-slate-500"><%= booking.booking_rooms.first&.room_type&.name || 'Room' %></p>

@@ -36,7 +36,7 @@ class Public::QuotesController < ApplicationController
     end
 
     if Guest.blacklisted?(email: email)
-      return render json: { blacklisted: true, message: "You are blacklisted from booking this hotel." }
+      return render json: { blacklisted: true, message: "You are blacklisted from booking this hotel. Please contact the hotel directly if you believe this is a mistake or need further assistance." }
     end
 
     guest = Guest.find_by(email: email)

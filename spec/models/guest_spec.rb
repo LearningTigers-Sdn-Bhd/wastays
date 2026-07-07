@@ -205,4 +205,31 @@ RSpec.describe Guest, type: :model do
       expect(Guest.blacklisted?(name: "Other Guest")).to be(false)
     end
   end
+
+  describe 'repeat?' do
+    let(:guest) { create(:guest) }
+    let(:booking) { create(:booking) }
+
+    it 'returns false if there are no completed bookings' do
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+      booking.update_columns(status: 'confirmed', check_in: Date.current, check_out: Date.current + 2)
+      expect(guest.repeat?).to be(false)
+      expect(booking.repeat?).to be(false)
+    end
+
+    it 'returns true if there is at least one completed booking and want to book again' do
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+      booking.update_columns(status: 'completed', check_in: 3.days.ago, check_out: 2.days.ago)
+
+      expect(guest.repeat?).to be(false) # only 1 completed booking, no second booking yet
+      expect(booking.repeat?).to be(false) # first booking itself is not a repeat booking
+
+      second_booking = create(:booking)
+      create(:booking_guest, booking: second_booking, guest: guest, is_primary: true)
+      second_booking.update_columns(status: 'confirmed', check_in: 1.day.ago, check_out: Date.current)
+
+      expect(guest.repeat?).to be(true) # now has second booking
+      expect(second_booking.repeat?).to be(true) # second booking is a repeat booking
+    end
+  end
 end

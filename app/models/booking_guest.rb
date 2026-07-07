@@ -4,7 +4,7 @@ class BookingGuest < ApplicationRecord
 
   validates :is_primary, inclusion: { in: [ true, false ] }
 
-  after_commit :sync_booking_vip_status, on: [:create, :update]
+  after_commit :sync_booking_vip_status, on: [ :create, :update ]
 
   private
 

@@ -98,7 +98,7 @@ RSpec.describe "Public::Quotes", type: :request do
       expect(response).to have_http_status(:ok)
       body = JSON.parse(response.body)
       expect(body["blacklisted"]).to eq(true)
-      expect(body["message"]).to eq("You are blacklisted from booking this hotel.")
+      expect(body["message"]).to eq("You are blacklisted from booking this hotel. Please contact the hotel directly if you believe this is a mistake or need further assistance.")
     end
 
     it "returns validation error when email is blank" do

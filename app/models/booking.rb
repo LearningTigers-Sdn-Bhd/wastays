@@ -88,6 +88,14 @@ class Booking < ApplicationRecord
     primary_guest&.blacklisted? || false
   end
 
+  def repeat?
+    return false unless primary_guest && check_in
+    primary_guest.bookings
+      .where(status: "completed")
+      .where("check_out <= ?", check_in)
+      .exists?
+  end
+
   validates :guest_name, :guest_email, :guest_phone, presence: true
   validates :check_in, :check_out, :adults, :total_amount, :confirmation_token, presence: true
   validates :confirmation_token, uniqueness: true

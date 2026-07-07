@@ -81,6 +81,9 @@
                           <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
                         </div>
                       <% end %>
+                      <% if booking.repeat? %>
+                        <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500 shrink-0" %>
+                      <% end %>
                     </div>
                     <span class="text-xs font-mono text-slate-500"><%= booking.confirmation_token %></span>
                   </div>
@@ -156,6 +159,9 @@
                       <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 text-rose-600" %>
                       <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
                     </div>
+                  <% end %>
+                  <% if booking.repeat? %>
+                    <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500 shrink-0" %>
                   <% end %>
                 </div>
                 <p class="mt-1 text-xs font-mono text-slate-500"><%= booking.confirmation_token %></p>

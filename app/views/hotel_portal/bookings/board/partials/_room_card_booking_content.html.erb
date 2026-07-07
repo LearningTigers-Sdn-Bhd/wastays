@@ -14,6 +14,9 @@
           <%= cached_icon "ban", class: "absolute inset-0 size-3 text-rose-600" %>
         </div>
       <% end %>
+      <% if block[:repeat] %>
+        <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-3 text-blue-500 shrink-0" %>
+      <% end %>
     </div>
   </div>
 

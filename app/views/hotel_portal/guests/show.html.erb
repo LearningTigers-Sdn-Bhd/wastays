@@ -53,6 +53,9 @@
               <%= cached_icon "ban", class: "absolute inset-0 size-6 -translate-y-0.5 text-rose-600" %>
             </div>
           <% end %>
+          <% if @guest.repeat? %>
+            <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-5 text-blue-500 shrink-0" %>
+          <% end %>
         </div>
         <p class="text-xs uppercase tracking-widest text-neutral-text-secondary">Guest Profile</p>
       </div>

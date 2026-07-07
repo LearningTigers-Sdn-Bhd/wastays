@@ -122,6 +122,12 @@
                               Banned
                             </span>
                           <% end %>
+                          <% if guest.repeat? %>
+                            <span class="inline-flex items-center gap-x-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-600/20 whitespace-nowrap">
+                              <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-3.5 text-blue-500" %>
+                              Repeat
+                            </span>
+                          <% end %>
                         </div>
                         <span class="text-xs text-slate-500">
                           <%= presenter.formatted_gender %>
@@ -233,6 +239,12 @@
                             <%= cached_icon "ban", class: "absolute inset-0 size-3.5 translate-y-0.3 text-rose-500" %>
                           </div>
                           Banned
+                        </span>
+                      <% end %>
+                      <% if guest.repeat? %>
+                        <span class="inline-flex items-center gap-x-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-600/20 whitespace-nowrap">
+                          <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-3.5 text-blue-500" %>
+                          Repeat
                         </span>
                       <% end %>
                     </div>

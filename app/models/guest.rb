@@ -54,6 +54,10 @@ class Guest < ApplicationRecord
     end
   end
 
+  def repeat?
+    bookings.where(status: "completed").exists? && bookings.count > 1
+  end
+
   def discard
     update(discarded_at: Time.current)
   end
