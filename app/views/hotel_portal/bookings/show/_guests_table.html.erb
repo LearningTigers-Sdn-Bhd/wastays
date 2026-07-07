@@ -27,7 +27,12 @@
       <tbody class="divide-y divide-slate-100 bg-white">
         <tr>
           <td class="px-4 py-3 align-top">
-            <p class="font-semibold text-slate-950"><%= presenter.primary_guest_name %></p>
+            <div class="flex items-center gap-x-1">
+              <p class="font-semibold text-slate-950"><%= presenter.primary_guest_name %></p>
+              <% if booking.vip? %>
+                <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+              <% end %>
+            </div>
           </td>
           <td class="px-4 py-3 align-top">
             <span class="mt-1 inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Primary</span>
@@ -57,7 +62,12 @@
           <% guest = booking_guest.guest %>
           <tr>
             <td class="px-4 py-3 align-top">
-              <p class="font-semibold text-slate-950"><%= guest.name %></p>
+              <div class="flex items-center gap-x-1">
+                <p class="font-semibold text-slate-950"><%= guest.name %></p>
+                <% if guest.vip? %>
+                  <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 shrink-0" %>
+                <% end %>
+              </div>
             </td>
             <td class="px-4 py-3 align-top">
               <span class="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">Additional</span>

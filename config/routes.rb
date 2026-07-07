@@ -469,6 +469,9 @@ Rails.application.routes.draw do
         get :search
         delete :bulk_destroy
       end
+      member do
+        patch :toggle_vip
+      end
     end
     resources :in_house_guests, only: [ :index ]
     get "settings", to: "settings#index", as: :settings

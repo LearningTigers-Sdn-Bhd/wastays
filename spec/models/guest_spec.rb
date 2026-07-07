@@ -153,4 +153,31 @@ RSpec.describe Guest, type: :model do
       expect(record.magic_token_expires_at).to be_nil
     end
   end
+
+  describe 'VIP propagation' do
+    let(:guest) { create(:guest, vip: false) }
+    let(:booking1) { create(:booking) }
+    let(:booking2) { create(:booking) }
+
+    before do
+      create(:booking_guest, booking: booking1, guest: guest, is_primary: true)
+      create(:booking_guest, booking: booking2, guest: guest, is_primary: false)
+    end
+
+    it 'propagates VIP status to all bookings when marked as VIP' do
+      expect { guest.update!(vip: true) }
+        .to change { booking1.reload.vip }.from(false).to(true)
+        .and change { booking2.reload.vip }.from(false).to(true)
+    end
+
+    it 'propagates non-VIP status to all bookings when VIP status is removed' do
+      guest.update!(vip: true)
+      expect(booking1.reload.vip).to be(true)
+      expect(booking2.reload.vip).to be(true)
+
+      expect { guest.update!(vip: false) }
+        .to change { booking1.reload.vip }.from(true).to(false)
+        .and change { booking2.reload.vip }.from(true).to(false)
+    end
+  end
 end

@@ -6,9 +6,9 @@ module HotelPortal
 
     before_action -> { require_feature!("unified_guest_profile") }
     before_action :authorize_view_guest_records!, only: %i[index show]
-    before_action :authorize_manage_bookings!, only: %i[search new create edit update]
+    before_action :authorize_manage_bookings!, only: %i[search new create edit update toggle_vip]
     before_action :authorize_delete_guest_record!, only: %i[destroy bulk_destroy]
-    before_action :set_guest, only: [ :show, :edit, :update, :destroy ]
+    before_action :set_guest, only: [ :show, :edit, :update, :destroy, :toggle_vip ]
     before_action :set_breadcrumbs, only: [ :show, :new, :create, :edit, :update ]
 
     def index
@@ -66,6 +66,11 @@ module HotelPortal
       else
         render :edit, status: :unprocessable_content
       end
+    end
+
+    def toggle_vip
+      @guest.update!(vip: !@guest.vip)
+      redirect_to hotel_guest_path(current_hotel, @guest), notice: "Guest VIP status updated."
     end
 
     def destroy

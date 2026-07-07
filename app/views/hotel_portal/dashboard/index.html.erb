@@ -169,7 +169,12 @@
                           <%= booking.guest_name[0] %>
                         </div>
                         <div>
-                          <p class="text-sm font-semibold text-slate-900"><%= booking.guest_name %></p>
+                          <div class="flex items-center gap-x-1.5">
+                            <p class="text-sm font-semibold text-slate-900"><%= booking.guest_name %></p>
+                            <% if booking.vip? %>
+                              <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+                            <% end %>
+                          </div>
                           <p class="text-xs font-medium text-slate-500"><%= booking.booking_rooms.first&.room_type&.name || 'Room' %></p>
                         </div>
                       </div>
@@ -202,7 +207,12 @@
                           <%= booking.guest_name[0] %>
                         </div>
                         <div>
-                          <p class="text-sm font-semibold text-slate-900"><%= booking.guest_name %></p>
+                          <div class="flex items-center gap-x-1.5">
+                            <p class="text-sm font-semibold text-slate-900"><%= booking.guest_name %></p>
+                            <% if booking.vip? %>
+                              <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 shrink-0" %>
+                            <% end %>
+                          </div>
                           <p class="text-xs font-medium text-slate-500"><%= booking.booking_rooms.first&.room_type&.name || 'Room' %></p>
                         </div>
                       </div>

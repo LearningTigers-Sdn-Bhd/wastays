@@ -35,6 +35,8 @@ class Guest < ApplicationRecord
   before_validation :normalize_guest_data
   before_validation :populate_date_of_birth_from_malaysian_ic
 
+  after_update :propagate_vip_status, if: :saved_change_to_vip?
+
   def discard
     update(discarded_at: Time.current)
   end
@@ -154,5 +156,9 @@ class Guest < ApplicationRecord
 
   def date_of_birth_required_message
     "is required for passport guests"
+  end
+
+  def propagate_vip_status
+    bookings.update_all(vip: vip)
   end
 end

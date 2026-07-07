@@ -1,9 +1,14 @@
 <%# locals: (block:) %>
 <div class="flex flex-col min-w-0">
   <div class="flex items-start justify-between gap-1.5">
-    <p class="truncate font-black text-xs text-slate-800 leading-tight">
-      <%= block[:guest_name] %>
-    </p>
+    <div class="flex items-center gap-x-1 min-w-0">
+      <span class="truncate font-black text-xs text-slate-800 leading-tight">
+        <%= block[:guest_name] %>
+      </span>
+      <% if block[:vip] %>
+        <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-3 text-amber-500 fill-amber-500 shrink-0" %>
+      <% end %>
+    </div>
   </div>
 
   <div class="mt-0.5 flex items-center justify-between text-[9px] font-semibold text-slate-500">

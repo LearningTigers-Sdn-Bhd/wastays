@@ -140,7 +140,12 @@
                   </td>
                   <td class="px-6 py-3">
                     <div class="flex flex-col">
-                      <span class="text-sm font-bold text-slate-900"><%= booking.guest_name %></span>
+                      <div class="flex items-center gap-x-1.5">
+                        <span class="text-sm font-bold text-slate-900"><%= booking.guest_name %></span>
+                        <% if booking.vip? %>
+                          <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+                        <% end %>
+                      </div>
                       <div class="flex items-center gap-2 mt-0.5">
                         <span class="text-[11px] font-medium text-slate-500"><%= booking.guest_email %></span>
                         <span class="size-1 rounded-full bg-slate-300"></span>
@@ -213,7 +218,12 @@
               <div class="mt-4 grid grid-cols-2 gap-4">
                 <div class="space-y-1">
                   <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Guest</span>
-                  <p class="text-sm font-bold text-slate-900 truncate"><%= booking.guest_name %></p>
+                  <div class="flex items-center gap-x-1.5 min-w-0">
+                    <p class="text-sm font-bold text-slate-900 truncate"><%= booking.guest_name %></p>
+                    <% if booking.vip? %>
+                      <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 shrink-0" %>
+                    <% end %>
+                  </div>
                   <p class="text-[10px] text-slate-500 truncate"><%= booking.guest_email %></p>
                   <p class="text-[10px] text-slate-500 font-mono"><%= booking.guest_phone %></p>
                 </div>
