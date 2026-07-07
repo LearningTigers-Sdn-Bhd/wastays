@@ -347,4 +347,23 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(ChannelAvailabilityRule.find_by(id: rule.id)).to be_nil
     end
   end
+
+  describe "GET /occupancy_details" do
+    it "renders guest bookings grouped by room type with target=_blank link to their booking" do
+      room_type = create(:room_type, hotel: hotel, name: "Luxury Suite")
+      booking = create(:booking, hotel: hotel, guest_name: "Alice Cooper", check_in: Date.current, check_out: Date.current + 2.days, status: "confirmed")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "502")
+
+      get occupancy_details_hotel_inventory_dashboards_path(hotel), params: { date: Date.current.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Alice Cooper")
+      expect(response.body).to include("Luxury Suite")
+      expect(response.body).to include("502")
+      expect(response.body).to include("href=\"/hotel/#{hotel.to_param}/bookings/#{booking.id}\"")
+      expect(response.body).to include("target=\"_blank\"")
+      expect(response.body).to include(Date.current.strftime("%b %-d"))
+      expect(response.body).to include("2 nights")
+    end
+  end
 end

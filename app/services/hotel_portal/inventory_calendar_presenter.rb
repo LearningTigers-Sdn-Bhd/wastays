@@ -95,14 +95,18 @@ module HotelPortal
       @rows ||= visible_room_types.flat_map do |room_type|
         inventory_row = Row.new(key: "room-#{room_type.id}-inventory", kind: :availability, room_type: room_type)
         
-        summary_rows = if connected_channels.any?
+        mapped_channels = connected_channels.select do |channel|
+          room_type_mapped_to_channel?(room_type, channel)
+        end
+
+        summary_rows = if mapped_channels.any?
           [ Row.new(key: "room-#{room_type.id}-summary", kind: :channel_summary, room_type: room_type) ]
         else
           []
         end
 
         # Collapsible connected OTAs under room inventory row
-        inventory_sub_rows = connected_channels.map do |channel|
+        inventory_sub_rows = mapped_channels.map do |channel|
           Row.new(
             key: "room-#{room_type.id}-inventory-channel-#{channel['id']}",
             kind: :channel_availability,
@@ -213,9 +217,12 @@ module HotelPortal
     end
 
     def channel_summary_cell(room_type, date)
-      total = connected_channels.size
+      mapped_channels = connected_channels.select do |channel|
+        room_type_mapped_to_channel?(room_type, channel)
+      end
+      total = mapped_channels.size
       open_count = 0
-      channels_status = connected_channels.map do |channel|
+      channels_status = mapped_channels.map do |channel|
         cell = channel_availability_cell(room_type, channel, date)
         is_open = !cell[:closed]
         open_count += 1 if is_open
@@ -269,6 +276,15 @@ module HotelPortal
     end
 
     private
+
+    def room_type_mapped_to_channel?(room_type, channel)
+      ext_rt_id = room_type.channel_mapping&.external_id
+      return false if ext_rt_id.blank? || ext_rt_id.to_s.start_with?("pending")
+
+      mapping_settings = channel.dig("attributes", "settings", "mappingSettings") || channel.dig("attributes", "settings", "mapping_settings") || {}
+      rooms = mapping_settings["rooms"] || mapping_settings[:rooms] || {}
+      rooms.values.include?(ext_rt_id)
+    end
 
     def has_walk_in_rates?(room_type)
       rate_plans_for(room_type).any? do |rp|

@@ -2,6 +2,7 @@
      data-controller="inventory-calendar inventory-row inventory-highlight"
      data-inventory-calendar-hotel-id-value="<%= current_hotel.id %>"
      data-inventory-calendar-batch-url-value="<%= batch_save_ari_hotel_inventory_dashboards_path(current_hotel) %>"
+     data-inventory-calendar-occupancy-details-url-value="<%= occupancy_details_hotel_inventory_dashboards_path(current_hotel) %>"
      data-inventory-calendar-default-mode-value="<%= @view_mode %>" 
      data-inventory-calendar-default-start-value="<%= @start_date %>" 
      data-inventory-calendar-default-end-value="<%= @end_date %>" 
@@ -313,4 +314,38 @@
       </div>
     </div>
   </dialog>
+
+  <!-- Occupancy Details Dialog -->
+  <dialog id="occupancy-details-dialog" class="fixed inset-0 m-auto max-h-[85vh] w-[min(94vw,40rem)] overflow-hidden rounded-2xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/60 transition-all">
+    <turbo-frame id="occupancy_details_frame" loading="lazy">
+      <div class="flex h-48 items-center justify-center bg-white">
+        <div class="text-slate-400 font-semibold">Loading details...</div>
+      </div>
+    </turbo-frame>
+  </dialog>
+
+  <!-- Focus Mode Floating Exit Button -->
+  <button type="button"
+          data-action="click->inventory-calendar#toggleFullscreen"
+          data-inventory-calendar-target="fullscreenRestoreBtn"
+          class="fixed bottom-6 right-6 z-[70] hidden flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl hover:bg-indigo-700 transition-all active:scale-95 cursor-pointer border border-indigo-500/30"
+          title="Exit Focus Mode (Show menus)">
+    <%= cached_icon "minimize-2", class: "size-5", stroke_width: 2.5 %>
+  </button>
+
+  <style>
+    body.hotel-portal-focus-mode header,
+    body.hotel-portal-focus-mode aside,
+    body.hotel-portal-focus-mode [id^="sidebar"],
+    body.hotel-portal-focus-mode .flex-none.bg-layer {
+      display: none !important;
+    }
+    body.hotel-portal-focus-mode main {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    body.hotel-portal-focus-mode main > div {
+      padding: 12px !important;
+    }
+  </style>
 </div>

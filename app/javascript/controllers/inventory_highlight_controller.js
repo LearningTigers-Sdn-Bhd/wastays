@@ -15,7 +15,8 @@ export default class extends Controller {
 
     // Highlight row header (Indigo contrast)
     if (rowHeader) {
-      rowHeader.classList.remove("bg-white")
+      const originalBg = rowHeader.dataset.originalColor || "bg-white"
+      originalBg.split(" ").forEach(c => rowHeader.classList.remove(c))
       rowHeader.classList.add("bg-indigo-600", "text-white", "ring-1", "ring-inset", "ring-indigo-700")
 
       // Update nested elements with original-color data attribute
@@ -37,8 +38,10 @@ export default class extends Controller {
 
     this.rowHeaderTargets.forEach(header => {
       header.classList.remove("bg-indigo-600", "text-white", "ring-1", "ring-inset", "ring-indigo-700")
-      // Keep sticky Room/Plan column opaque after hover clears.
-      header.classList.add("bg-white")
+      
+      // Keep sticky Room/Plan column opaque and restore original background color after hover clears.
+      const originalBg = header.dataset.originalColor || "bg-white"
+      originalBg.split(" ").forEach(c => header.classList.add(c))
 
       // Restore nested elements colors
       header.querySelectorAll("[data-original-color]").forEach(el => {
@@ -62,7 +65,7 @@ export default class extends Controller {
 
     // Reset dynamic classes from header
     header.classList.remove(
-      "bg-indigo-600", "bg-indigo-50/60", "bg-slate-50", 
+      "bg-indigo-600", "bg-indigo-50/60", "bg-indigo-100/70", "bg-slate-50", 
       "text-white", "ring-1", "ring-inset", "ring-indigo-700"
     )
 
@@ -77,8 +80,8 @@ export default class extends Controller {
       if (addClass) el.classList.add(addClass)
     }
 
-    const dayColors = ["text-indigo-200", "text-indigo-400", "text-slate-400"]
-    const numColors = ["text-white", "text-slate-700"]
+    const dayColors = ["text-indigo-200", "text-indigo-400", "text-indigo-600", "text-slate-400"]
+    const numColors = ["text-white", "text-indigo-700", "text-slate-700"]
     const monthColors = ["text-indigo-200", "text-white", "text-slate-400"]
 
     if (isActive) {
@@ -90,13 +93,14 @@ export default class extends Controller {
     } else {
       // Inactive state
       if (isWeekend) {
-        header.classList.add("bg-indigo-50/60")
-        setTextColor(dayLabel, dayColors, "text-indigo-400")
+        header.classList.add("bg-indigo-100/70")
+        setTextColor(dayLabel, dayColors, "text-indigo-600")
+        setTextColor(numLabel, numColors, "text-indigo-700")
       } else {
         header.classList.add("bg-slate-50")
         setTextColor(dayLabel, dayColors, "text-slate-400")
+        setTextColor(numLabel, numColors, "text-slate-700")
       }
-      setTextColor(numLabel, numColors, "text-slate-700")
       setTextColor(monthLabel, monthColors, "text-slate-400")
     }
   }

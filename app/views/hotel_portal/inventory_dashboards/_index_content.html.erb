@@ -9,7 +9,8 @@
     display_currency: @display_currency,
     room_type_id: @calendar.selected_room_type_id,
     tab: active_tab,
-    subtab: active_subtab
+    subtab: active_subtab,
+    days: @days
   }.compact
 %>
 
@@ -18,7 +19,7 @@
 <% end %>
 
 <!-- Top-Level Tabs -->
-<nav class="<%= dashboard_tab_container_classes %>" data-testid="inventory-tabs">
+<nav class="<%= dashboard_tab_container_classes %>" data-testid="inventory-tabs" data-inventory-calendar-target="topPanel">
   <div class="flex min-w-max items-center gap-1" role="tablist" aria-label="Rates and inventory sections">
     <button type="button"
             data-tabs-target="tab"
@@ -80,7 +81,7 @@
     <% end %>
 
     <!-- Page Header -->
-    <div class="mb-5 flex flex-wrap items-end justify-end gap-4">
+    <div class="mb-5 flex flex-wrap items-end justify-end gap-4 hidden" data-inventory-calendar-target="syncHeader">
       <div class="flex items-center gap-3.5">
         <div class="flex items-center gap-1">
           <span class="hidden text-xs text-slate-400 sm:block">
@@ -98,14 +99,14 @@
                 disabled
                 class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed">
           <%= cached_icon "refresh-cw", class: "size-4 shrink-0", stroke_width: 2.5 %>
-          <span>Sync channels</span>
+          <span>Confirm Update</span>
           <span data-inventory-calendar-target="syncCounter" class="hidden rounded-full bg-white/20 px-1.5 py-0.5 text-xs font-semibold tabular-nums">0</span>
         </button>
       </div>
     </div>
 
     <!-- Toolbar -->
-    <div class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+    <div class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm" data-inventory-calendar-target="topPanel">
       <!-- Date navigation -->
       <div class="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
         <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(start_date: @start_date - @days.days)),
@@ -136,44 +137,28 @@
 
       <!-- Days toggle -->
       <div class="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-1">
-        <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(days: 7)),
-                    class: "rounded-md px-3 py-1 text-sm font-medium transition-all #{@days == 7 ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}" do %>
-          7 days
-        <% end %>
         <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(days: 14)),
                     class: "rounded-md px-3 py-1 text-sm font-medium transition-all #{@days == 14 ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}" do %>
           14 days
+        <% end %>
+        <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(days: 21)),
+                    class: "rounded-md px-3 py-1 text-sm font-medium transition-all #{@days == 21 ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}" do %>
+          21 days
         <% end %>
       </div>
 
       <div class="mx-1 hidden h-6 w-px bg-slate-200 sm:block"></div>
 
       <!-- OTAs Toggle -->
-      <div class="flex items-center gap-2 select-none">
-        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">OTAs</span>
-        <div class="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-1">
-          <button type="button"
-                  data-action="click->inventory-calendar#setOtasMode"
-                  data-otas-mode="expanded"
-                  data-inventory-calendar-target="otasExpandedBtn"
-                  class="rounded-md px-3 py-1 text-sm font-medium transition-all text-slate-500 hover:text-slate-700">
-            Expanded
-          </button>
-          <button type="button"
-                  data-action="click->inventory-calendar#setOtasMode"
-                  data-otas-mode="compact"
-                  data-inventory-calendar-target="otasCompactBtn"
-                  class="rounded-md px-3 py-1 text-sm font-medium transition-all text-slate-500 hover:text-slate-700">
-            Compact
-          </button>
-          <button type="button"
-                  data-action="click->inventory-calendar#setOtasMode"
-                  data-otas-mode="hidden"
-                  data-inventory-calendar-target="otasHiddenBtn"
-                  class="rounded-md px-3 py-1 text-sm font-medium transition-all text-slate-500 hover:text-slate-700">
-            Hidden
-          </button>
-        </div>
+      <div class="flex items-center select-none">
+        <label class="relative inline-flex items-center cursor-pointer select-none">
+          <input type="checkbox"
+                 data-action="change->inventory-calendar#toggleOtas"
+                 data-inventory-calendar-target="otasToggleCheckbox"
+                 class="sr-only peer">
+          <div class="relative w-9 h-5 bg-slate-200 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+          <span class="ml-2.5 text-xs font-bold uppercase tracking-wider text-slate-400">Show OTAs</span>
+        </label>
       </div>
 
       <!-- Legend -->
@@ -187,13 +172,16 @@
         <span class="flex items-center gap-1.5">
           <span class="h-2 w-2 rounded-full bg-rose-400"></span> Sold out
         </span>
-        <span class="flex items-center gap-1.5">
-          <span class="h-2 w-2 rounded-sm bg-indigo-100"></span> Weekend
-        </span>
-        <span class="flex items-center gap-1.5">
-          <span class="h-2 w-2 rounded-full bg-indigo-500"></span> Edited rate
-        </span>
       </div>
+
+      <!-- Focus Mode Toggle -->
+      <button type="button"
+              data-action="click->inventory-calendar#toggleFullscreen"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-850 hover:border-slate-350 hover:shadow-sm active:scale-[0.98] cursor-pointer"
+              title="Focus Mode (Hide top panels)">
+        <%= cached_icon "maximize-2", class: "size-4 text-slate-500", stroke_width: 2.5 %>
+        <span>Expand</span>
+      </button>
     </div>
 
     <!-- Table Section -->
@@ -210,12 +198,12 @@
                   weekend = [5, 6].include?(date.wday)
                   
                   th_class = "min-w-[86px] border-b border-r border-slate-200 px-2 py-2 text-center last:border-r-0 transition-colors "
-                  th_class += weekend ? "bg-indigo-50/60" : "bg-slate-50"
+                  th_class += weekend ? "bg-indigo-100/70" : "bg-slate-50"
 
                   day_class = "text-[10px] font-semibold uppercase tracking-wide "
-                  day_class += weekend ? "text-indigo-400" : "text-slate-400"
+                  day_class += weekend ? "text-indigo-600 font-bold" : "text-slate-400"
 
-                  num_class = "text-sm font-semibold tabular-nums text-slate-700"
+                  num_class = weekend ? "text-sm font-bold tabular-nums text-indigo-700" : "text-sm font-semibold tabular-nums text-slate-700"
 
                   month_class = "ml-1 text-[12px] font-medium text-slate-400"
                 %>
@@ -245,9 +233,14 @@
                               data-collapsed="false"
                               class="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left transition-colors hover:bg-slate-50">
                         <%= cached_icon "chevron-down", class: "h-4 w-4 shrink-0 text-slate-400 transition-transform", stroke_width: 2, data: { original_color: "text-slate-400", highlight_color: "text-indigo-200" } %>
-                        <div class="min-w-0">
-                          <div class="truncate text-sm font-semibold text-slate-800" data-original-color="text-slate-800" data-highlight-color="text-white"><%= row.label %></div>
-                          <div class="text-[11px] text-slate-400" data-original-color="text-slate-400" data-highlight-color="text-indigo-200">
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-2 flex-wrap">
+                            <span class="truncate text-sm font-semibold text-slate-800" data-original-color="text-slate-800" data-highlight-color="text-white"><%= row.label %></span>
+                            <span class="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider select-none border border-slate-200/60">
+                              Base: <%= @hotel_base_currency %> <%= number_with_precision(row.room_type.base_price, precision: 2) %>
+                            </span>
+                          </div>
+                          <div class="text-[11px] text-slate-400 mt-0.5" data-original-color="text-slate-400" data-highlight-color="text-indigo-200">
                             <%= pluralize(row.room_type.quantity, "unit") %> · <%= @calendar.connected_channels.size %> channels
                           </div>
                         </div>
@@ -256,7 +249,7 @@
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
                       <% weekend = [5, 6].include?(date.wday) %>
-                      <td class="min-w-[86px] border-b border-r border-slate-100 px-2 py-2 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50/40' : '' %>">
+                      <td class="min-w-[86px] border-b border-r border-slate-100 px-2 py-2 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
                         <button type="button"
                                 class="w-full px-1 sm:px-2 py-2 text-center transition hover:bg-slate-50 rounded-lg group"
                                 data-testid="availability-cell-<%= row.room_type_id %>-<%= date %>"
@@ -413,7 +406,7 @@
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
                       <% weekend = [5, 6].include?(date.wday) %>
-                      <td class="min-w-[86px] border-b border-r border-slate-100 px-2 py-1.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50/30' : '' %>">
+                      <td class="min-w-[86px] border-b border-r border-slate-100 px-2 py-1.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
                         <button type="button"
                                 class="group relative mx-auto block rounded-md px-2 py-1 text-sm font-medium tabular-nums text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors w-full"
                                 data-testid="rate-cell-<%= row.room_type_id %>-<%= row.rate_plan_id %>-<%= date %>"
@@ -438,12 +431,9 @@
                             <% if cell[:conversion_missing] %>
                               <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
                             <% else %>
-                              <span class="block truncate text-xs sm:text-sm font-bold tabular-nums <%= cell[:is_modified] ? 'text-indigo-700 font-extrabold' : '' %>">
+                              <span class="block truncate text-xs sm:text-sm font-bold tabular-nums text-slate-700">
                                 <%= cell[:formatted_price] %>
                               </span>
-                            <% end %>
-                            <% if cell[:is_modified] %>
-                              <span class="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
                             <% end %>
                           </div>
                           <% if cell[:restriction_compact].present? %>
@@ -535,7 +525,7 @@
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
                       <% weekend = [5, 6].include?(date.wday) %>
-                      <td class="min-w-[86px] border-b border-r border-slate-100 px-2 py-1.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50/30' : '' %>">
+                      <td class="min-w-[86px] border-b border-r border-slate-100 px-2 py-1.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
                           <%
                             testid = case row.kind
                               when :walk_in then "walk-in-cell-#{row.room_type_id}-#{date}"
@@ -562,12 +552,9 @@
                               <% if cell[:conversion_missing] %>
                                 <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
                               <% else %>
-                                <span class="block truncate text-xs sm:text-sm font-bold tabular-nums <%= cell[:is_modified] ? 'text-indigo-700 font-extrabold' : '' %>">
+                                <span class="block truncate text-xs sm:text-sm font-bold tabular-nums text-slate-700">
                                   <%= cell[:formatted_price] %>
                                 </span>
-                              <% end %>
-                              <% if cell[:is_modified] %>
-                                <span class="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
                               <% end %>
                             </div>
                           </button>
@@ -576,6 +563,75 @@
                   </tr>
                 <% end %>
               <% end %>
+
+              <!-- Occupancy Rate Row -->
+              <tr class="border-t-2 border-b border-slate-300 bg-slate-50 font-semibold">
+                <td class="sticky left-0 z-20 border-b border-r border-slate-300 bg-slate-100 px-3 py-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60 font-extrabold text-slate-800" data-original-color="bg-slate-100">
+                  <div class="text-[11px] font-black uppercase tracking-wider text-slate-600">Occupancy Rate</div>
+                </td>
+                <% @calendar.dates.each do |date| %>
+                  <%
+                    total_sold = 0
+                    total_capacity = 0
+                    
+                    @calendar.rows.each do |row|
+                      next unless row.inventory_row?
+                      
+                      cell = inventory_calendar_cell(@calendar, row, date)
+                      capacity = row.room_type.quantity.to_i
+                      sold = cell[:sold_count].to_i
+                      
+                      if cell[:closed]
+                        sold = capacity
+                      end
+                      
+                      total_sold += sold
+                      total_capacity += capacity
+                    end
+                    
+                    rate = total_capacity > 0 ? (total_sold.to_f / total_capacity * 100).round : 0
+                    
+                    rate_text = if rate == 100
+                      "FULL"
+                    else
+                      "#{rate}%"
+                    end
+
+                    text_color = if rate == 100
+                      "text-rose-700 font-black tracking-wider"
+                    elsif rate >= 70
+                      "text-rose-600 font-extrabold"
+                    elsif rate >= 40
+                      "text-amber-600 font-bold"
+                    elsif rate > 0
+                      "text-emerald-600 font-semibold"
+                    else
+                      "text-slate-400 font-medium"
+                    end
+
+                    bg_color = if rate == 100
+                      "bg-rose-50"
+                    elsif rate >= 70
+                      "bg-rose-50/40"
+                    elsif rate >= 40
+                      "bg-amber-50/40"
+                    elsif rate > 0
+                      "bg-emerald-50/30"
+                    else
+                      "bg-slate-50/30"
+                    end
+                  %>
+                  <td class="min-w-[86px] border-b border-r border-slate-200 p-0 text-center last:border-r-0 <%= bg_color %> hover:bg-black/[0.02] active:bg-black/[0.04] transition-colors">
+                    <button type="button"
+                            class="w-full h-full px-2 py-3 flex flex-col items-center justify-center focus:outline-none cursor-pointer"
+                            data-action="click->inventory-calendar#openOccupancyDetails"
+                            data-date="<%= date %>">
+                      <span class="text-xs sm:text-sm tabular-nums font-bold leading-none <%= text_color %>"><%= rate_text %></span>
+                      <span class="text-[10px] text-slate-500 tabular-nums mt-1 font-semibold leading-none"><%= total_sold %>/<%= total_capacity %></span>
+                    </button>
+                  </td>
+                <% end %>
+              </tr>
             <% else %>
               <tr>
                 <td colspan="<%= @calendar.dates.count + 1 %>" class="px-6 py-16 text-center text-sm font-semibold text-slate-500">

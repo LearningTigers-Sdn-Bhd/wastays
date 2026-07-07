@@ -94,4 +94,47 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
       expect(sold_counts[room_type.id][start_date + 2.days]).to eq(0)
     end
   end
+
+  describe 'channel mapping rows filtering' do
+    let(:room_type_mapped) { create(:room_type, hotel: hotel, name: "Mapped Room") }
+    let(:room_type_unmapped) { create(:room_type, hotel: hotel, name: "Unmapped Room") }
+
+    let(:channel_data) do
+      {
+        "id" => "chan-123",
+        "type" => "channel",
+        "attributes" => {
+          "title" => "BookingCom",
+          "channel" => "BookingCom",
+          "settings" => {
+            "mappingSettings" => {
+              "rooms" => {
+                "ota_room_id" => "ext-rt-mapped"
+              }
+            }
+          }
+        }
+      }
+    end
+
+    before do
+      hotel.update!(preferred_channel_manager: "channex")
+      # Setup mapping for mapped room
+      create(:channel_mapping, mappable: room_type_mapped, provider: "channex", external_id: "ext-rt-mapped")
+      # Setup pending mapping for unmapped room
+      create(:channel_mapping, mappable: room_type_unmapped, provider: "channex", external_id: "pending-rt")
+    end
+
+    it 'only includes summary and availability rows for mapped room types' do
+      allow(presenter).to receive(:connected_channels).and_return([channel_data])
+
+      # Find summary rows
+      summary_rows = presenter.rows.select(&:channel_summary_row?)
+      expect(summary_rows.map(&:room_type_id)).to contain_exactly(room_type_mapped.id)
+
+      # Find availability rows
+      availability_rows = presenter.rows.select(&:channel_availability_row?)
+      expect(availability_rows.map(&:room_type_id)).to contain_exactly(room_type_mapped.id)
+    end
+  end
 end

@@ -269,9 +269,8 @@ module HotelOps
       end
 
       (start_date..end_date).each do |date|
-        target_currencies_for(rate_plan, date).each do |target_currency|
-          rate = rate_plan.room_rates.find_or_initialize_by(date: date, currency: target_currency)
-          rate.room_type = room_type
+        target_currencies_for(rate_plan, date, room_type: room_type).each do |target_currency|
+          rate = rate_plan.room_rates.find_or_initialize_by(date: date, currency: target_currency, room_type: room_type)
           old_values = {
             price: rate.price&.to_f,
             walk_in_price: rate.walk_in_price&.to_f,
@@ -348,13 +347,13 @@ module HotelOps
       end
     end
 
-    def target_currencies_for(rate_plan, date)
+    def target_currencies_for(rate_plan, date, room_type:)
       return [ currency ] if apply_rates?
       return [ currency ] unless apply_restrictions?
 
       # If we are applying restrictions, we must apply them to ALL currencies
       # that this hotel has ever used to avoid discrepancies between currency views.
-      existing_currencies = rate_plan.room_rates.where(date: date).distinct.pluck(:currency)
+      existing_currencies = rate_plan.room_rates.where(date: date, room_type: room_type).distinct.pluck(:currency)
       (existing_currencies + [ currency, rate_plan.currency ]).compact.uniq
     end
 

@@ -489,6 +489,7 @@ Rails.application.routes.draw do
     end
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
       collection do
+        get :occupancy_details
         post :apply_pricing_rules
         post :apply_availability_override
         post :bulk_save_ari

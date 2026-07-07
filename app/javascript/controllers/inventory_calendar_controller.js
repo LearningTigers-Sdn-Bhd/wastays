@@ -42,6 +42,7 @@ export default class extends Controller {
     "submitButton",
     "syncButton",
     "syncCounter",
+    "syncHeader",
     "reviewDialog",
     "reviewList",
     "finalSyncButton",
@@ -52,14 +53,15 @@ export default class extends Controller {
     "channelIdField",
     "channelRatePlanIdField",
     "paxFields",
-    "otasExpandedBtn",
-    "otasCompactBtn",
-    "otasHiddenBtn"
+    "otasToggleCheckbox",
+    "topPanel",
+    "fullscreenRestoreBtn"
   ]
 
   static values = {
     hotelId: String,
     batchUrl: String,
+    occupancyDetailsUrl: String,
     defaultMode: String,
     defaultStart: String,
     defaultEnd: String,
@@ -127,14 +129,16 @@ export default class extends Controller {
     }
   }
 
-  setOtasMode(event) {
-    if (event) event.preventDefault()
-    const btn = event.currentTarget
-    const mode = btn.dataset.otasMode
+  toggleOtas(event) {
+    const checked = event.currentTarget.checked
+    const mode = checked ? "expanded" : "hidden"
     this.updateOtasMode(mode)
   }
 
   updateOtasMode(mode) {
+    if (mode !== "hidden") {
+      mode = "expanded"
+    }
     this.otasMode = mode
     localStorage.setItem(`ari_otas_mode_${this.hotelIdValue}`, mode)
 
@@ -143,19 +147,37 @@ export default class extends Controller {
       grid.setAttribute('data-otas-mode', mode)
     }
 
-    const buttons = [
-      this.hasOtasExpandedBtnTarget ? this.otasExpandedBtnTarget : null,
-      this.hasOtasCompactBtnTarget ? this.otasCompactBtnTarget : null,
-      this.hasOtasHiddenBtnTarget ? this.otasHiddenBtnTarget : null
-    ].filter(Boolean)
+    if (this.hasOtasToggleCheckboxTarget) {
+      this.otasToggleCheckboxTarget.checked = (mode === "expanded")
+    }
+  }
 
-    buttons.forEach(btn => {
-      if (btn.dataset.otasMode === mode) {
-        btn.className = "rounded-md px-3 py-1 text-sm font-semibold bg-white text-slate-900 shadow-sm transition-all border border-slate-200"
-      } else {
-        btn.className = "rounded-md px-3 py-1 text-sm font-medium text-slate-500 hover:text-slate-700 transition-all"
-      }
+  openOccupancyDetails(event) {
+    if (event) event.preventDefault()
+    const date = event.currentTarget.dataset.date
+    const dialog = document.getElementById("occupancy-details-dialog")
+    const frame = document.getElementById("occupancy_details_frame")
+    if (dialog && frame && this.hasOccupancyDetailsUrlValue) {
+      frame.src = `${this.occupancyDetailsUrlValue}?date=${date}`
+      dialog.showModal()
+    }
+  }
+
+  toggleFullscreen() {
+    const isFocused = document.body.classList.toggle("hotel-portal-focus-mode")
+    this.element.classList.toggle("focus-mode", isFocused)
+    
+    this.topPanelTargets.forEach(el => {
+      el.classList.toggle("hidden", isFocused)
     })
+
+    if (this.hasFullscreenRestoreBtnTarget) {
+      this.fullscreenRestoreBtnTarget.classList.toggle("hidden", !isFocused)
+    }
+  }
+
+  disconnect() {
+    document.body.classList.remove("hotel-portal-focus-mode")
   }
 
   loadStagedChanges() {
@@ -514,6 +536,9 @@ export default class extends Controller {
     this.syncButtonTarget.disabled = count === 0
     this.syncCounterTarget.textContent = count
     this.syncCounterTarget.classList.toggle("hidden", count === 0)
+    if (this.hasSyncHeaderTarget) {
+      this.syncHeaderTarget.classList.toggle("hidden", count === 0)
+    }
   }
 
   highlightStagedCells(change) {

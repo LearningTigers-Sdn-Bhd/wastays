@@ -8,7 +8,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     authorize current_hotel, :update?, policy_class: HotelPolicy
 
     @days = (params[:days] || 14).to_i
-    @days = 14 unless [ 7, 14 ].include?(@days)
+    @days = 14 unless [ 14, 21 ].include?(@days)
     @start_date = (params[:start_date] || Date.current).to_date
     @end_date = @start_date + (@days - 1).days
     @view_mode = "combined"
@@ -38,6 +38,27 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
     set_active_tabs
     append_inventory_breadcrumbs
+  end
+
+  def occupancy_details
+    authorize current_hotel, :update?, policy_class: HotelPolicy
+
+    @date = begin
+      params[:date].present? ? params[:date].to_date : Date.current
+    rescue StandardError
+      Date.current
+    end
+
+    @booking_rooms = BookingRoom.joins(:booking)
+                                .includes(:room_type, :booking)
+                                .where(bookings: { hotel_id: current_hotel.id })
+                                .merge(Booking.revenue_generating)
+                                .where("bookings.check_in::date <= :date AND bookings.check_out::date > :date", date: @date)
+                                .order("booking_rooms.room_number ASC, bookings.guest_name ASC")
+
+    @grouped_booking_rooms = @booking_rooms.group_by(&:room_type).sort_by { |room_type, _| room_type.id }
+
+    render layout: false
   end
 
   def bulk_save_ari
@@ -156,7 +177,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     unless sync_result[:success]
       @start_date = Date.current
       @days = (params[:days] || 14).to_i
-      @days = 14 unless [ 7, 14 ].include?(@days)
+      @days = 14 unless [ 14, 21 ].include?(@days)
       @end_date = @start_date + (@days - 1).days
       @view_mode = "combined"
       @room_types = current_hotel.room_types.order(:id)
