@@ -34,10 +34,12 @@
           </label>
 
           <%= f.select :country, @country_options, { include_blank: "All Countries", selected: params[:country] }, class: "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->auto-submit#submit" } %>
+
+          <%= f.select :tag, [["VIP", "vip"], ["Repeat", "repeat"], ["Banned", "banned"]], { include_blank: "All Tags", selected: params[:tag] }, class: "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->auto-submit#submit" } %>
         </div>
 
         <div class="flex items-center gap-2">
-          <% if params[:query].present? || params[:country].present? %>
+          <% if params[:query].present? || params[:country].present? || params[:tag].present? %>
             <%= link_to "Clear", hotel_guests_path(current_hotel), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50", data: { turbo_frame: "guests_results" } %>
           <% end %>
         </div>

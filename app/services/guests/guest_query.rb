@@ -51,6 +51,19 @@ module Guests
     end
 
     scope = scope.where(country: @params[:country]) if @params[:country].present?
+
+    if @params[:tag].present?
+      case @params[:tag].to_s
+      when "vip"
+        scope = scope.where(vip: true)
+      when "banned"
+        scope = scope.where(blacklisted: true)
+      when "repeat"
+        scope = scope.where(id: BookingGuest.group(:guest_id).having("COUNT(booking_id) > 1").select(:guest_id))
+                     .where(id: BookingGuest.joins(:booking).where(bookings: { status: "completed" }).select(:guest_id))
+      end
+    end
+
     scope
   end
   end

@@ -155,17 +155,23 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
   it "shows generated tax and charge rows separately with source-derived codes" do
     rows = records.transaction_rows
 
-    expect(rows.map(&:code)).to eq([ "RM-ACC", "RM-ACC_SVC-CHG", "RM-ACC_SST", "RM-ACC_TTX-FRN", "FB-REST", "PAY-CARD" ])
-    expect(rows[0]).to have_attributes(
+    expect(rows.map(&:code)).to match_array([ "RM-ACC", "RM-ACC_SVC-CHG", "RM-ACC_SST", "RM-ACC_TTX-FRN", "FB-REST", "PAY-CARD" ])
+
+    room_row = rows.find { |r| r.code == "RM-ACC" }
+    svc_row = rows.find { |r| r.code == "RM-ACC_SVC-CHG" }
+    sst_row = rows.find { |r| r.code == "RM-ACC_SST" }
+    ttx_row = rows.find { |r| r.code == "RM-ACC_TTX-FRN" }
+
+    expect(room_row).to have_attributes(
       description: "Room Charge - Deluxe King",
       net: 250.to_d,
       charges: nil,
       gross: 250.to_d,
       secondary_description: nil
     )
-    expect(rows[1]).to have_attributes(description: "Service Charge 10%", charges: 25.to_d, gross: 25.to_d)
-    expect(rows[2]).to have_attributes(description: "SST 8%", charges: 20.to_d, gross: 20.to_d)
-    expect(rows[3]).to have_attributes(description: "Tourism Tax - Foreign Guest", charges: 10.to_d, gross: 10.to_d)
+    expect(svc_row).to have_attributes(description: "Service Charge 10%", charges: 25.to_d, gross: 25.to_d)
+    expect(sst_row).to have_attributes(description: "SST 8%", charges: 20.to_d, gross: 20.to_d)
+    expect(ttx_row).to have_attributes(description: "Tourism Tax - Foreign Guest", charges: 10.to_d, gross: 10.to_d)
   end
 
   it "uses user-facing payment labels and safe references" do

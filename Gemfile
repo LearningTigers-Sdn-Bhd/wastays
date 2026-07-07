@@ -102,4 +102,3 @@ end
 gem "openssl", "~> 4.0"
 gem "aws-sdk-s3", "~> 1.225"
 gem "nokogiri", ">= 1.19.3"
-gem "webrick", git: "https://github.com/ruby/webrick.git", branch: "master"

@@ -40,6 +40,32 @@ RSpec.describe Guests::GuestQuery do
       expect(results).to include(guest2)
       expect(results).not_to include(guest1)
     end
+
+    it "filters by VIP status tag" do
+      guest1.update!(vip: true)
+      query = described_class.new(hotel: hotel, params: { tag: "vip" })
+      results = query.call
+      expect(results).to include(guest1)
+      expect(results).not_to include(guest2)
+    end
+
+    it "filters by Banned status tag" do
+      guest1.update!(blacklisted: true)
+      query = described_class.new(hotel: hotel, params: { tag: "banned" })
+      results = query.call
+      expect(results).to include(guest1)
+      expect(results).not_to include(guest2)
+    end
+
+    it "filters by Repeat status tag" do
+      booking_c = create(:booking, hotel: hotel, status: "completed")
+      create(:booking_guest, booking: booking_c, guest: guest2)
+
+      query = described_class.new(hotel: hotel, params: { tag: "repeat" })
+      results = query.call
+      expect(results).to include(guest2)
+      expect(results).not_to include(guest1)
+    end
   end
 
   describe "#country_options" do

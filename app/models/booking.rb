@@ -81,7 +81,11 @@ class Booking < ApplicationRecord
   validates :deposit_status, inclusion: { in: DEPOSIT_STATUSES, allow_nil: true }
 
   def primary_guest
-    booking_guests.find_by(is_primary: true)&.guest
+    if booking_guests.loaded?
+      booking_guests.find { |bg| bg.is_primary? }&.guest
+    else
+      booking_guests.find_by(is_primary: true)&.guest
+    end
   end
 
   def blacklisted?
