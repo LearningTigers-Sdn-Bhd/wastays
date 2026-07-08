@@ -34,7 +34,9 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
     @setup_fee_currency = @active_setup_fee&.currency || SetupFeeRule::CURRENCY
     @setup_fee_source = @current_hotel.setup_fee_source
 
-    @recent_bookings = @current_hotel.bookings.order(created_at: :desc).limit(5)
+    @recent_bookings = @current_hotel.bookings.order(created_at: :desc).limit(5).includes(booking_guests: :guest)
+
+    @dashboard_presenter = HotelPortal::DashboardPresenter.new(@current_hotel, stats, @recent_bookings)
   end
 
   def submit_for_review

@@ -14,7 +14,6 @@ module Rooms
       @all_room_statuses = fetch_all_room_statuses
       @all_rates = fetch_all_rates
       @relevant_bookings_by_room = fetch_relevant_bookings_by_room
-      preload_completed_checkouts
       groups = room_groups
       {
         dates: dates,
@@ -25,23 +24,6 @@ module Rooms
     end
 
     private
-
-    def preload_completed_checkouts
-      bookings = @all_bookings.values.flatten.uniq(&:id)
-      guest_ids = bookings.map { |b| b.primary_guest&.id }.compact.uniq
-
-      @completed_checkouts_by_guest = if guest_ids.present?
-        Booking.joins(:booking_guests)
-          .where(booking_guests: { guest_id: guest_ids, is_primary: true })
-          .where(status: "completed")
-          .select("bookings.check_out, booking_guests.guest_id")
-          .to_a
-          .group_by(&:guest_id)
-          .transform_values { |bs| bs.map(&:check_out) }
-      else
-        {}
-      end
-    end
 
     def fetch_all_rates
       rate_plan_name = @filters[:rate_plan_name]
@@ -75,7 +57,7 @@ module Rooms
 
     def fetch_all_bookings
       scope = @hotel.bookings
-        .includes(booking_notes: :user, booking_rooms: :room_type, booking_guests: :guest)
+        .includes(booking_notes: :user, booking_rooms: :room_type)
         .joins(:booking_rooms)
         .where("bookings.check_in::date < ? AND bookings.check_out::date > ?", dates.last + 1.day, @start_date)
         .select("bookings.*, booking_rooms.room_number, booking_rooms.room_type_id")
@@ -89,7 +71,6 @@ module Rooms
       return {} unless dates.include?(Date.current)
 
       @hotel.bookings
-        .includes(booking_guests: :guest)
         .joins(:booking_rooms)
         .checking_out_between(Date.current, dates.last, @hotel.hotel_time_zone)
         .where.not(status: "cancelled")
@@ -172,9 +153,6 @@ module Rooms
           type: "booking",
           booking: booking,
           guest_name: booking.guest_name,
-          vip: booking.vip?,
-          blacklisted: booking.blacklisted?,
-          repeat: repeat_guest?(booking),
           status: booking.status,
           check_in: booking.check_in.to_date,
           check_out: booking.check_out.to_date,
@@ -191,14 +169,6 @@ module Rooms
           span: [ ([ booking.check_out.to_date, dates.last + 1.day ].min - [ booking.check_in.to_date, @start_date ].max).to_i, 1 ].max
         }
       end
-    end
-
-    def repeat_guest?(booking)
-      guest_id = booking.primary_guest&.id
-      return false if guest_id.blank?
-
-      checkouts = @completed_checkouts_by_guest[guest_id] || []
-      checkouts.any? { |check_out_date| check_out_date <= booking.check_in.to_date }
     end
 
     def bookings_for(room_type, room_number)

@@ -55,7 +55,11 @@ class Guest < ApplicationRecord
   end
 
   def repeat?
-    bookings.where(status: "completed").exists? && bookings.count > 1
+    if bookings.loaded?
+      bookings.any? { |b| b.status == "completed" } && bookings.size > 1
+    else
+      bookings.where(status: "completed").exists? && bookings.count > 1
+    end
   end
 
   def discard

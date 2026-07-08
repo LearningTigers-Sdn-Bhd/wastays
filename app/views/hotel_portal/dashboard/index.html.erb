@@ -18,25 +18,25 @@
     <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-4">
       <div class="p-6 md:border-r md:border-slate-200 md:p-8">
         <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Revenue <span class="text-[10px] font-medium text-slate-400">(This Month)</span></p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950">RM <%= number_with_delimiter(number_with_precision(@revenue_this_month || 0, precision: 2)) %></h2>
+        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @dashboard_presenter.revenue_this_month_formatted %></h2>
         <p class="mt-2 text-sm font-medium text-slate-600">Gross sales before commission</p>
       </div>
 
       <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
         <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Bookings <span class="text-[10px] font-medium text-slate-400">(This Month)</span></p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @bookings_this_month_count || 0 %></h2>
+        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @dashboard_presenter.bookings_this_month_count %></h2>
         <p class="mt-2 text-sm font-medium text-slate-600">Reservations processed</p>
       </div>
 
       <div class="p-6 md:border-r md:border-slate-200 md:p-8">
         <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Check-ins</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @today_arrivals.count %></h2>
+        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @dashboard_presenter.today_arrivals_count %></h2>
         <p class="mt-2 text-sm font-medium text-slate-600">Arriving today</p>
       </div>
 
       <div class="p-6 md:p-8">
         <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Check-outs</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @today_checkouts.count %></h2>
+        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @dashboard_presenter.today_checkouts_count %></h2>
         <p class="mt-2 text-sm font-medium text-slate-600">Departing today</p>
       </div>
     </div>
@@ -53,7 +53,7 @@
         <div class="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 class="mb-2 border-b border-slate-200 pb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Inventory <span class="text-[10px] font-medium text-slate-400">(Today)</span></h3>
           <div class="space-y-4">
-            <% @live_inventory.each do |item| %>
+            <% @dashboard_presenter.live_inventory_items.each do |item| %>
               <div>
                 <div class="flex justify-between items-start mb-1.5">
                   <div class="flex flex-col">
@@ -61,8 +61,8 @@
                     <span class="text-[10px] font-medium text-slate-500"><%= item[:total] %> Total Units</span>
                   </div>
                   <div class="flex flex-col items-end">
-                    <span class="text-xs font-black <%= item[:remaining] > 0 ? 'text-emerald-600' : 'text-rose-600' %>">
-                      <%= item[:remaining] %> <%= 'Room'.pluralize(item[:remaining]) %> Left
+                    <span class="text-xs font-black <%= item[:remaining_color_class] %>">
+                      <%= item[:remaining_label] %>
                     </span>
                     <span class="text-[10px] font-bold text-slate-400"><%= item[:sold] %> Sold</span>
                   </div>
@@ -82,12 +82,12 @@
         <div class="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 class="mb-2 border-b border-slate-200 pb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">7-Day Occupancy</h3>
           <div class="space-y-3">
-            <% @occupancy_snapshot.each do |day| %>
+            <% @dashboard_presenter.occupancy_snapshot_days.each do |day| %>
               <div>
                 <div class="flex justify-between items-center mb-1">
-                  <span class="text-xs font-medium text-slate-500"><%= day[:date].strftime("%a, %b %d") %></span>
+                  <span class="text-xs font-medium text-slate-500"><%= day[:date_label] %></span>
                   <span class="text-xs font-bold text-slate-900">
-                    <%= day[:percent] %>% (<%= day[:sold] %>/<%= day[:total] || 0 %>)
+                    <%= day[:percent] %>% (<%= day[:sold] %>/<%= day[:total] %>)
                   </span>
                 </div>
                 <div class="flex w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -104,20 +104,20 @@
         <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <h3 class="mb-4 border-b border-slate-200 pb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Action Required</h3>
 
-          <% if @pending_actions_count > 0 %>
+          <% if @dashboard_presenter.pending_actions_count > 0 %>
             <div class="p-4 bg-amber-50 rounded-xl border border-amber-100">
               <div class="flex items-center gap-x-2 text-amber-700 mb-1">
-                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <%= cached_icon "info", class: "size-4 text-amber-700" %>
                 <p class="text-[11px] font-bold uppercase tracking-[0.06em] text-amber-700">Pre-check-ins</p>
               </div>
               <p class="text-sm font-semibold leading-snug text-amber-950">
-                <%= pluralize(@pending_actions_count, "guest") %> pending review.
+                <%= @dashboard_presenter.pending_actions_label %>
               </p>
               <%= link_to "Review Arrivals", hotel_arrivals_path(@current_hotel), class: "mt-3 flex items-center justify-center w-full py-2 bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-amber-700 transition-colors shadow-sm" %>
             </div>
           <% else %>
             <div class="flex items-center gap-x-2 text-emerald-600">
-              <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <%= cached_icon "check-circle", class: "size-5 text-emerald-600" %>
               <p class="text-sm font-medium leading-relaxed text-slate-600">
                 All arrivals are ready.
               </p>
@@ -133,7 +133,7 @@
       <% if @current_hotel.onboarding? %>
         <div class="rounded-2xl border border-dashed border-slate-300 bg-white py-12 pl-12 pr-20 mr-90 text-center">
           <div class="flex size-16 items-center justify-center rounded-full bg-slate-50 text-slate-400 mb-4 mx-auto">
-            <svg class="size-8" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            <%= cached_icon "bar-chart-2", class: "size-8 text-slate-400" %>
           </div>
           <h3 class="text-lg font-bold text-slate-900">Your operational data will appear here</h3>
           <p class="mt-2 text-sm text-slate-500 max-w-md mx-auto">Once your hotel is approved and goes live, you will see arrivals, bookings, and occupancy trends in this section.</p>
@@ -152,7 +152,7 @@
           <div class="p-8">
             <nav class="flex space-x-6 border-b border-slate-200 mb-6" aria-label="Tabs" role="tablist">
               <button type="button" class="hs-tab-active:font-bold hs-tab-active:border-brand-primary hs-tab-active:text-brand-primary py-3 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-slate-500 hover:text-slate-800 active" id="tabs-arrivals-1" data-hs-tab="#tabs-arrivals-panel-1" aria-controls="tabs-arrivals-panel-1" role="tab">
-                Today <span class="ms-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700"><%= @today_arrivals.count %></span>
+                Today <span class="ms-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700"><%= @dashboard_presenter.today_arrivals_count %></span>
               </button>
               <button type="button" class="hs-tab-active:font-bold hs-tab-active:border-brand-primary hs-tab-active:text-brand-primary py-3 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-slate-500 hover:text-slate-800" id="tabs-arrivals-2" data-hs-tab="#tabs-arrivals-panel-2" aria-controls="tabs-arrivals-panel-2" role="tab">
                 Tomorrow <span class="ms-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700"><%= @tomorrow_arrivals.count %></span>
@@ -163,40 +163,38 @@
               <% if @today_arrivals.any? %>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <% @today_arrivals.limit(6).each do |booking| %>
+                    <% booking_presenter = HotelPortal::BookingPresenter.new(booking, @current_hotel) %>
                     <div class="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
                       <div class="flex items-center gap-x-3">
                         <div class="size-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600">
-                          <%= booking.guest_name[0] %>
+                          <%= booking_presenter.guest_name_initial %>
                         </div>
                         <div>
                           <div class="flex items-center gap-x-1.5">
-                            <p class="text-sm font-semibold text-slate-900"><%= booking.guest_name %></p>
-                            <% if booking.vip? %>
+                            <p class="text-sm font-semibold text-slate-900"><%= booking_presenter.guest_name %></p>
+                            <% if booking_presenter.vip? %>
                               <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
                             <% end %>
-                            <% if booking.blacklisted? %>
+                            <% if booking_presenter.blacklisted? %>
                               <div class="relative size-4 flex items-center justify-center shrink-0">
                                 <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 text-rose-600" %>
                                 <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
                               </div>
                             <% end %>
-                            <% if booking.repeat? %>
+                            <% if booking_presenter.repeat? %>
                               <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500 shrink-0" %>
                             <% end %>
                           </div>
-                          <p class="text-xs font-medium text-slate-500"><%= booking.booking_rooms.first&.room_type&.name || 'Room' %></p>
+                          <p class="text-xs font-medium text-slate-500"><%= booking_presenter.primary_room_type_name %></p>
                         </div>
                       </div>
                       <div class="flex items-center gap-x-3">
-                        <% precheckin = booking.pre_checkin %>
-                        <% if precheckin&.completed? %>
-                          <span class="inline-flex items-center rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-700 ring-1 ring-inset ring-emerald-600/20">Pre-checked</span>
-                        <% else %>
-                          <span class="inline-flex items-center rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-700 ring-1 ring-inset ring-amber-600/20">Pending</span>
+                        <span class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ring-1 ring-inset <%= booking_presenter.pre_checkin_badge_class %>">
+                          <%= booking_presenter.pre_checkin_badge_label %>
+                        </span>
+                        <%= link_to hotel_booking_path(@current_hotel, booking), class: "text-slate-400 hover:text-slate-900 transition-colors" do %>
+                          <%= cached_icon "chevron-right", class: "size-4" %>
                         <% end %>
-                        <a href="<%= hotel_booking_path(@current_hotel, booking) %>" class="text-slate-400 hover:text-slate-900 transition-colors">
-                          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                        </a>
                       </div>
                     </div>
                   <% end %>
@@ -210,34 +208,35 @@
               <% if @tomorrow_arrivals.any? %>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <% @tomorrow_arrivals.limit(6).each do |booking| %>
+                    <% booking_presenter = HotelPortal::BookingPresenter.new(booking, @current_hotel) %>
                     <div class="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
                       <div class="flex items-center gap-x-3">
                         <div class="size-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600">
-                          <%= booking.guest_name[0] %>
+                          <%= booking_presenter.guest_name_initial %>
                         </div>
                         <div>
                           <div class="flex items-center gap-x-1.5">
-                            <p class="text-sm font-semibold text-slate-900"><%= booking.guest_name %></p>
-                            <% if booking.vip? %>
+                            <p class="text-sm font-semibold text-slate-900"><%= booking_presenter.guest_name %></p>
+                            <% if booking_presenter.vip? %>
                               <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
                             <% end %>
-                            <% if booking.blacklisted? %>
+                            <% if booking_presenter.blacklisted? %>
                               <div class="relative size-4 flex items-center justify-center shrink-0">
                                 <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3.5 text-rose-600" %>
                                 <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
                               </div>
                             <% end %>
-                            <% if booking.repeat? %>
+                            <% if booking_presenter.repeat? %>
                               <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500 shrink-0" %>
                             <% end %>
                           </div>
-                          <p class="text-xs font-medium text-slate-500"><%= booking.booking_rooms.first&.room_type&.name || 'Room' %></p>
+                          <p class="text-xs font-medium text-slate-500"><%= booking_presenter.primary_room_type_name %></p>
                         </div>
                       </div>
                       <div class="flex items-center gap-x-3">
-                        <a href="<%= hotel_booking_path(@current_hotel, booking) %>" class="text-slate-400 hover:text-slate-900 transition-colors">
-                          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                        </a>
+                        <%= link_to hotel_booking_path(@current_hotel, booking), class: "text-slate-400 hover:text-slate-900 transition-colors" do %>
+                          <%= cached_icon "chevron-right", class: "size-4" %>
+                        <% end %>
                       </div>
                     </div>
                   <% end %>
@@ -274,36 +273,46 @@
               <tbody class="divide-y divide-slate-100 bg-white">
                 <% if @recent_bookings.any? %>
                   <% @recent_bookings.each do |booking| %>
+                    <% booking_presenter = HotelPortal::BookingPresenter.new(booking, @current_hotel) %>
                     <tr class="group transition-colors odd:bg-white even:bg-slate-50/60 hover:bg-slate-100/70">
                       <td class="whitespace-nowrap px-8 py-4">
-                        <span class="rounded border border-slate-200 bg-slate-100 px-2 py-1 font-mono text-sm font-semibold text-slate-800">#<%= booking.confirmation_token %></span>
+                        <span class="rounded border border-slate-200 bg-slate-100 px-2 py-1 font-mono text-sm font-semibold text-slate-800">#<%= booking_presenter.confirmation_token %></span>
                       </td>
                       <td class="whitespace-nowrap px-8 py-4">
-                        <span class="text-sm font-semibold text-slate-950"><%= booking.guest_name %></span>
-                      </td>
-                      <td class="whitespace-nowrap px-8 py-4">
-                        <div class="inline-flex items-center gap-x-2 text-sm font-medium text-slate-700">
-                          <span><%= booking.check_in.strftime("%b %d") %></span>
-                          <svg class="size-3 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
-                          <span><%= booking.check_out.strftime("%b %d") %></span>
+                        <div class="flex items-center gap-x-1.5">
+                          <span class="text-sm font-semibold text-slate-950"><%= booking_presenter.guest_name %></span>
+                          <% if booking_presenter.vip? %>
+                            <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+                          <% end %>
+                          <% if booking_presenter.blacklisted? %>
+                            <div class="relative size-4 flex items-center justify-center shrink-0">
+                              <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3.5 text-rose-600" %>
+                              <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
+                            </div>
+                          <% end %>
+                          <% if booking_presenter.repeat? %>
+                            <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500 shrink-0" %>
+                          <% end %>
                         </div>
                       </td>
                       <td class="whitespace-nowrap px-8 py-4">
-                        <% case booking.status %>
-                        <% when 'confirmed' %>
-                          <span class="inline-flex items-center rounded bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700 ring-1 ring-inset ring-emerald-600/20">Confirmed</span>
-                        <% when 'cancelled' %>
-                          <span class="inline-flex items-center rounded bg-red-50 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-red-700 ring-1 ring-inset ring-red-600/20">Cancelled</span>
-                        <% else %>
-                          <span class="inline-flex items-center rounded bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-700 ring-1 ring-inset ring-slate-500/20"><%= booking.status %></span>
-                        <% end %>
+                        <div class="inline-flex items-center gap-x-2 text-sm font-medium text-slate-700">
+                          <span><%= booking_presenter.formatted_check_in_date %></span>
+                          <span class="text-slate-400">—</span>
+                          <span><%= booking_presenter.formatted_check_out_date %></span>
+                        </div>
+                      </td>
+                      <td class="whitespace-nowrap px-8 py-4">
+                        <span class="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold uppercase tracking-widest ring-1 ring-inset <%= booking_presenter.dashboard_status_badge_class %>">
+                          <%= booking_presenter.dashboard_status_label %>
+                        </span>
                       </td>
                       <td class="whitespace-nowrap px-8 py-4 text-right">
-                        <span class="text-base font-semibold tabular-nums text-slate-950">RM <%= number_with_precision(booking.total_amount, precision: 2) %></span>
+                        <span class="text-base font-semibold tabular-nums text-slate-950"><%= booking_presenter.formatted_total_amount_dashboard %></span>
                       </td>
                       <td class="px-8 py-4 text-center">
                         <%= link_to hotel_booking_path(@current_hotel, booking), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-all group-hover:border-slate-900 hover:bg-slate-900 hover:text-white" do %>
-                          <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                          <%= cached_icon "eye", class: "size-3.5" %>
                           View
                         <% end %>
                       </td>

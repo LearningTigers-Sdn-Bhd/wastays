@@ -1,7 +1,7 @@
 <div class="space-y-6">
   <div class="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <%= link_to hotel_guests_path(current_hotel), class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-gray-500 hover:text-blue-600 focus:outline-none focus:text-blue-600" do %>
-      <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      <%= cached_icon "chevron-left", class: "flex-shrink-0 w-4 h-4" %>
       Back to Guest Records
     <% end %>
 
@@ -33,7 +33,7 @@
       <% end %>
 
       <%= link_to edit_hotel_guest_path(current_hotel, @guest), class: "inline-flex items-center gap-x-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 w-fit" do %>
-        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+        <%= cached_icon "pencil", class: "size-4" %>
         Edit Profile
       <% end %>
     </div>
@@ -87,12 +87,12 @@
       </div>
       <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Date of Birth</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= @guest.date_of_birth&.strftime("%d %b %Y") || "—" %></p>
+        <p class="text-sm font-semibold text-neutral-text-primary"><%= @presenter.date_of_birth_formatted %></p>
       </div>
       <div>
         <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Last Stay</p>
         <p class="text-sm font-semibold text-neutral-text-primary">
-          <%= @all_bookings.first&.check_out ? @all_bookings.first.check_out.strftime("%d %b %Y") : "—" %>
+          <%= @presenter.last_stay_checkout_date(@all_bookings) %>
         </p>
       </div>
       <div>
@@ -112,7 +112,7 @@
           <% @currency_totals.each do |currency, amount| %>
             <div class="flex items-center justify-between">
               <span class="text-sm font-medium text-neutral-text-secondary"><%= currency %></span>
-              <span class="text-sm font-semibold text-neutral-text-primary"><%= number_to_currency(amount, unit: currency == 'USD' ? 'USD ' : 'RM ', delimiter: ',') %></span>
+              <span class="text-sm font-semibold text-neutral-text-primary"><%= @presenter.formatted_currency_amount(amount, currency) %></span>
             </div>
           <% end %>
         <% else %>
@@ -132,13 +132,13 @@
   </div>
 
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-        <div>
-          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Booking History</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Timeline of this guest's stays at the property.</p>
-        </div>
-      <span class="text-sm font-medium text-slate-500">Stays <span class="font-semibold text-slate-900"><%= @all_bookings.count %></span></span>
+    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+      <div>
+        <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Booking History</h2>
+        <p class="mt-1 text-sm font-medium text-slate-600">Timeline of this guest's stays at the property.</p>
       </div>
+      <span class="text-sm font-medium text-slate-500">Stays <span class="font-semibold text-slate-900"><%= @all_bookings.count %></span></span>
+    </div>
 
     <% if @bookings.any? %>
       <div class="hidden md:block overflow-x-auto">
@@ -155,37 +155,38 @@
           </thead>
           <tbody class="divide-y divide-slate-200 bg-white">
             <% @bookings.each_with_index do |booking, index| %>
+              <% booking_presenter = Guests::BookingPresenter.new(booking) %>
               <tr class="transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900"><%= booking.confirmation_token %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900"><%= booking_presenter.confirmation_token %></td>
                 <td class="px-6 py-4 text-sm text-slate-700">
                   <div class="flex flex-col gap-0.5">
-                    <span><%= booking.check_in.strftime("%d %b %Y") %> - <%= booking.check_out.strftime("%d %b %Y") %></span>
+                    <span><%= booking_presenter.check_in_formatted %> - <%= booking_presenter.check_out_formatted %></span>
                     <span class="text-xs text-slate-500">
-                      <%= pluralize((booking.check_out.to_date - booking.check_in.to_date).to_i, "night") %>
+                      <%= booking_presenter.nights_label %>
                     </span>
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <%= booking_status_class(booking.status) %>">
-                    <%= booking.status.humanize %>
+                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <%= booking_status_class(booking_presenter.status) %>">
+                    <%= booking_presenter.status_humanized %>
                   </span>
                 </td>
                 <td class="px-6 py-4 text-sm font-medium text-slate-900">
                   <div class="flex flex-col gap-0.5">
-                    <span><%= booking.currency == "USD" ? "USD #{number_with_precision(booking.total_amount, precision: 2)}" : "RM #{number_with_precision(booking.total_amount, precision: 2)}" %></span>
-                    <% if booking.tourism_tax? %>
-                      <span class="text-xs text-slate-500">Tax RM <%= number_with_precision(booking.tourism_tax_amount, precision: 2) %></span>
+                    <span><%= booking_presenter.formatted_total_amount %></span>
+                    <% if booking_presenter.tourism_tax? %>
+                      <span class="text-xs text-slate-500"><%= booking_presenter.formatted_tourism_tax_amount %></span>
                     <% end %>
                   </div>
                 </td>
                 <td class="px-6 py-4 text-sm text-slate-700">
                   <div class="flex flex-col gap-0.5">
-                    <span><%= booking.created_at.strftime("%I:%M %p") %></span>
-                    <span class="text-xs text-slate-500"><%= booking.created_at.strftime("%d %b %Y") %></span>
+                    <span><%= booking_presenter.created_at_time_formatted %></span>
+                    <span class="text-xs text-slate-500"><%= booking_presenter.created_at_date_formatted %></span>
                   </div>
                 </td>
                 <td class="px-6 py-4 text-sm text-slate-600">
-                  <%= booking.pre_checkin_status&.humanize || "Pending" %>
+                  <%= booking_presenter.pre_checkin_status_label %>
                 </td>
               </tr>
             <% end %>
@@ -195,16 +196,17 @@
 
       <div class="space-y-4 p-4 md:hidden">
         <% @bookings.each do |booking| %>
+          <% booking_presenter = Guests::BookingPresenter.new(booking) %>
           <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
             <div class="flex items-start justify-between gap-3">
               <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Confirmation</p>
-                <p class="mt-1 text-sm font-semibold text-slate-900"><%= booking.confirmation_token %></p>
+                <p class="mt-1 text-sm font-semibold text-slate-900"><%= booking_presenter.confirmation_token %></p>
               </div>
               <div class="text-right">
                 <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Status</p>
-                <span class="inline-flex items-center rounded-full mt-1 px-2.5 py-0.5 text-xs font-medium <%= booking_status_class(booking.status) %>">
-                  <%= booking.status.humanize %>
+                <span class="inline-flex items-center rounded-full mt-1 px-2.5 py-0.5 text-xs font-medium <%= booking_status_class(booking_presenter.status) %>">
+                  <%= booking_presenter.status_humanized %>
                 </span>
               </div>
             </div>
@@ -212,24 +214,24 @@
             <dl class="mt-4 space-y-3 text-sm">
               <div>
                 <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Stay</dt>
-                <dd class="mt-1 text-slate-700"><%= booking.check_in.strftime("%d %b %Y") %> - <%= booking.check_out.strftime("%d %b %Y") %></dd>
+                <dd class="mt-1 text-slate-700"><%= booking_presenter.check_in_formatted %> - <%= booking_presenter.check_out_formatted %></dd>
               </div>
               <div class="flex items-start justify-between gap-3">
                 <div>
                   <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Amount</dt>
-                  <dd class="mt-1 text-slate-700"><%= booking.currency == "USD" ? "USD #{number_with_precision(booking.total_amount, precision: 2)}" : "RM #{number_with_precision(booking.total_amount, precision: 2)}" %></dd>
+                  <dd class="mt-1 text-slate-700"><%= booking_presenter.formatted_total_amount %></dd>
                 </div>
                 <div class="text-right">
                   <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Pre-Check-In</dt>
-                  <dd class="mt-1 text-slate-700"><%= booking.pre_checkin_status&.humanize || "Pending" %></dd>
+                  <dd class="mt-1 text-slate-700"><%= booking_presenter.pre_checkin_status_label %></dd>
                 </div>
               </div>
               <div>
                 <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Created At</dt>
                 <dd class="mt-1 text-slate-700">
                   <div class="flex flex-col gap-0.5">
-                    <span><%= booking.created_at.strftime("%I:%M %p") %></span>
-                    <span class="text-xs text-slate-500"><%= booking.created_at.strftime("%d %b %Y") %></span>
+                    <span><%= booking_presenter.created_at_time_formatted %></span>
+                    <span class="text-xs text-slate-500"><%= booking_presenter.created_at_date_formatted %></span>
                   </div>
                 </dd>
               </div>

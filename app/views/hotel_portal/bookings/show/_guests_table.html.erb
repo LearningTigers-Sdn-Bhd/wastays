@@ -1,8 +1,13 @@
 <section class="overflow-hidden rounded-lg border border-slate-200 bg-white">
   <div class="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
     <div>
-      <h2 class="inline-flex items-center gap-2 text-sm font-semibold text-slate-950"><span class="inline-flex size-6 items-center justify-center rounded-md bg-indigo-50 text-indigo-700"><%= cached_icon "users", class: "size-3.5" %></span> Guests</h2>
-      <p class="text-xs text-slate-500"><%= pluralize(presenter.registered_guest_count, "registered guest") %></p>
+      <h2 class="inline-flex items-center gap-2 text-sm font-semibold text-slate-950">
+        <span class="inline-flex size-6 items-center justify-center rounded-md bg-indigo-50 text-indigo-700">
+          <%= cached_icon "users", class: "size-3.5" %>
+        </span> 
+        Guests
+      </h2>
+      <p class="text-xs text-slate-500"><%= presenter.registered_guest_count_label %></p>
     </div>
     <% if presenter.can_add_guests?(current_user) %>
       <%= link_to hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: "add"), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50" do %>
@@ -47,11 +52,20 @@
             <span class="mt-1 inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Primary</span>
           </td>
           <td class="px-4 py-3 align-top text-slate-700">
-            <p class="flex min-w-0 items-start gap-1"><%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= presenter.primary_guest_email.presence || "—" %></span></p>
-            <p class="flex min-w-0 items-start gap-1 text-xs text-slate-500"><%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= presenter.primary_guest_phone.presence || "—" %></span></p>
+            <p class="flex min-w-0 items-start gap-1">
+              <%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-slate-400" %>
+              <span class="min-w-0 break-all"><%= presenter.primary_guest_email_display %></span>
+            </p>
+            <p class="flex min-w-0 items-start gap-1 text-xs text-slate-500">
+              <%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-slate-400" %>
+              <span class="min-w-0 break-all"><%= presenter.primary_guest_phone_display %></span>
+            </p>
           </td>
           <td class="px-4 py-3 align-top text-slate-700">
-            <p class="inline-flex items-center gap-1"><%= cached_icon "id-card", class: "size-3 text-slate-400" %><%= presenter.primary_guest_document_type.to_s.upcase %></p>
+            <p class="inline-flex items-center gap-1">
+              <%= cached_icon "id-card", class: "size-3 text-slate-400" %>
+              <%= presenter.primary_guest_document_type_display %>
+            </p>
             <p class="text-xs text-slate-500"><%= presenter.primary_guest_government_id %></p>
           </td>
           <td class="px-4 py-3 align-top text-slate-700"><%= booking.formatted_guest_registration_number || "—" %></td>
@@ -68,21 +82,21 @@
         </tr>
 
         <% presenter.additional_guests.each do |booking_guest| %>
-          <% guest = booking_guest.guest %>
+          <% guest_presenter = Guests::GuestPresenter.new(booking_guest.guest) %>
           <tr>
             <td class="px-4 py-3 align-top">
               <div class="flex items-center gap-x-1">
-                <p class="font-semibold text-slate-950"><%= guest.name %></p>
-                <% if guest.vip? %>
+                <p class="font-semibold text-slate-950"><%= guest_presenter.name %></p>
+                <% if guest_presenter.vip? %>
                   <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 shrink-0" %>
                 <% end %>
-                <% if guest.blacklisted? %>
+                <% if guest_presenter.blacklisted? %>
                   <div class="relative size-4 flex items-center justify-center shrink-0">
                     <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3.5 text-rose-600" %>
                     <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
                   </div>
                 <% end %>
-                <% if guest.repeat? %>
+                <% if guest_presenter.repeat? %>
                   <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500 shrink-0" %>
                 <% end %>
               </div>
@@ -91,15 +105,24 @@
               <span class="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">Additional</span>
             </td>
             <td class="px-4 py-3 align-top text-slate-700">
-              <p class="flex min-w-0 items-start gap-1"><%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= guest.email.presence || "—" %></span></p>
-              <p class="flex min-w-0 items-start gap-1 text-xs text-slate-500"><%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= guest.phone.presence || "—" %></span></p>
+              <p class="flex min-w-0 items-start gap-1">
+                <%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-slate-400" %>
+                <span class="min-w-0 break-all"><%= guest_presenter.email_display %></span>
+              </p>
+              <p class="flex min-w-0 items-start gap-1 text-xs text-slate-500">
+                <%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-slate-400" %>
+                <span class="min-w-0 break-all"><%= guest_presenter.phone_display %></span>
+              </p>
             </td>
             <td class="px-4 py-3 align-top text-slate-700">
-              <p class="inline-flex items-center gap-1"><%= cached_icon "id-card", class: "size-3 text-slate-400" %><%= guest.document_type.presence&.upcase || "IC/PASSPORT" %></p>
-              <p class="text-xs text-slate-500"><%= guest.government_id.presence || "—" %></p>
+              <p class="inline-flex items-center gap-1">
+                <%= cached_icon "id-card", class: "size-3 text-slate-400" %>
+                <%= guest_presenter.document_type_display %>
+              </p>
+              <p class="text-xs text-slate-500"><%= guest_presenter.government_id_display %></p>
             </td>
             <td class="px-4 py-3 align-top text-slate-700"><%= booking.formatted_guest_registration_number || "—" %></td>
-            <td class="px-4 py-3 align-top text-slate-700"><%= guest.country.presence || "—" %></td>
+            <td class="px-4 py-3 align-top text-slate-700"><%= guest_presenter.country_display %></td>
             <td class="sticky right-0 z-10 border-l border-slate-200 bg-white px-4 py-3 text-right align-top shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">
               <% if presenter.can_manage_bookings?(current_user) %>
                 <div class="flex justify-end gap-1.5">
@@ -123,7 +146,7 @@
   <% if presenter.missing_guest_record_count.positive? %>
     <div class="flex items-center gap-2 border-t border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
       <%= cached_icon "triangle-alert", class: "size-4 shrink-0" %>
-      <span>This booking has <%= pluralize(presenter.missing_guest_record_count, "guest") %> that have not been added to the guest records.</span>
+      <span><%= presenter.missing_guest_record_label %></span>
     </div>
   <% end %>
 

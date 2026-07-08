@@ -6,7 +6,7 @@ module HotelPortal
 
     before_action -> { require_feature!("unified_guest_profile") }
     before_action :authorize_view_guest_records!, only: %i[index show]
-    before_action :authorize_manage_bookings!, only: %i[search new create edit update toggle_vip toggle_blacklist]
+    before_action :authorize_manage_bookings!, only: %i[search check_banned new create edit update toggle_vip toggle_blacklist]
     before_action :authorize_delete_guest_record!, only: %i[destroy bulk_destroy]
     before_action :set_guest, only: [ :show, :edit, :update, :destroy, :toggle_vip, :toggle_blacklist ]
     before_action :set_breadcrumbs, only: [ :show, :new, :create, :edit, :update ]
@@ -32,7 +32,26 @@ module HotelPortal
 
     def search
       @guests = Guests::GuestQuery.new(hotel: current_hotel, params: { query: params[:q] }).call.limit(10)
-      render json: @guests.as_json(only: [ :id, :name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth ])
+      render json: @guests.as_json(only: [ :id, :name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth, :blacklisted ])
+    end
+
+    def check_banned
+      email = params[:email].to_s.strip.downcase.presence
+      phone = params[:phone].to_s.strip.presence
+      name = params[:name].to_s.strip.downcase.presence
+
+      is_banned = false
+      if email.present?
+        is_banned ||= Guest.where(blacklisted: true).where(email: email).exists?
+      end
+      if !is_banned && phone.present?
+        is_banned ||= Guest.where(blacklisted: true).where(phone: phone).exists?
+      end
+      if !is_banned && name.present?
+        is_banned ||= Guest.where(blacklisted: true).where("LOWER(name) = ?", name).exists?
+      end
+
+      render json: { banned: is_banned }
     end
 
     def show

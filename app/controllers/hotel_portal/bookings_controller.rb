@@ -7,7 +7,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   before_action :authorize_manage_bookings!, only: %i[update]
 
   def index
-    @bookings = current_hotel.bookings.recent_first.includes(:booking_folio)
+    @bookings = current_hotel.bookings.recent_first.includes(:booking_folio, booking_guests: :guest)
 
     @bookings = @bookings.search(params[:query]) if params[:query].present?
     @bookings = @bookings.where(status: params[:status]) if params[:status].present?

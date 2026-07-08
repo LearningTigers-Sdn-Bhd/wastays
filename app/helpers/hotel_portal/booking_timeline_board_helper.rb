@@ -267,5 +267,36 @@ module HotelPortal
     def board_view_icon(view_type)
       view_type.to_s == "stay" ? "calendar-days" : "layout-grid"
     end
+
+    def room_card_booking_stay_dates(block)
+      "#{block[:check_in].strftime('%b %-d')} → #{block[:check_out].strftime('%b %-d')}"
+    end
+
+    def room_card_booking_adults_title(booking)
+      pluralize(booking.adults, "Adult")
+    end
+
+    def room_card_booking_children_title(booking)
+      pluralize(booking.children.to_i, "Child")
+    end
+
+    def booking_block_margin_classes(can_manage_bookings, clipped_left, clipped_right)
+      classes = []
+      classes << "ml-4" if can_manage_bookings || !clipped_left
+      classes << "mr-4" if can_manage_bookings || !clipped_right
+      classes.join(" ")
+    end
+
+    def booking_block_status_label(block)
+      block[:status].to_s.humanize
+    end
+
+    def booking_block_dates_label(block)
+      "#{block[:check_in].strftime('%b %-d')} → #{block[:check_out].strftime('%b %-d, %Y')}"
+    end
+
+    def booking_block_payment_status_label(block)
+      block[:payment_status].to_s.humanize
+    end
   end
 end

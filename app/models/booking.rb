@@ -88,16 +88,16 @@ class Booking < ApplicationRecord
     end
   end
 
+  def vip?
+    primary_guest&.vip? || self[:vip] || false
+  end
+
   def blacklisted?
     primary_guest&.blacklisted? || false
   end
 
   def repeat?
-    return false unless primary_guest && check_in
-    primary_guest.bookings
-      .where(status: "completed")
-      .where("check_out <= ?", check_in)
-      .exists?
+    primary_guest&.repeat? || false
   end
 
   validates :guest_name, :guest_email, :guest_phone, presence: true

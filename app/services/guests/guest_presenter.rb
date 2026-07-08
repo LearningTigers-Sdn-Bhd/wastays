@@ -6,6 +6,18 @@ module Guests
     @guest = guest
   end
 
+  def vip?
+    @guest.vip?
+  end
+
+  def blacklisted?
+    @guest.blacklisted?
+  end
+
+  def repeat?
+    @guest.repeat?
+  end
+
   def name
     safe_attr(:name)
   end
@@ -60,6 +72,51 @@ module Guests
 
   def last_stay_present?
     @guest.try(:last_stay_at).present?
+  end
+
+  def date_of_birth_formatted
+    @guest.date_of_birth&.strftime("%d %b %Y") || "—"
+  end
+
+  def last_stay_checkout_date(all_bookings)
+    all_bookings.first&.check_out&.strftime("%d %b %Y") || "—"
+  end
+
+  def formatted_currency_amount(amount, currency)
+    unit = (currency == "USD" ? "USD " : "RM ")
+    ActionController::Base.helpers.number_to_currency(amount, unit: unit, delimiter: ",")
+  end
+
+  def formatted_stays_count(count)
+    ActionController::Base.helpers.pluralize(count, "stay")
+  end
+
+  def formatted_currency_totals(totals)
+    return [] if totals.blank?
+
+    totals.map do |currency, amount|
+      "#{currency} #{ActionController::Base.helpers.number_with_precision(amount, precision: 2)}"
+    end
+  end
+
+  def email_display
+    email.presence || "—"
+  end
+
+  def phone_display
+    phone.presence || "—"
+  end
+
+  def government_id_display
+    government_id.presence || "—"
+  end
+
+  def country_display
+    country.presence || "—"
+  end
+
+  def document_type_display
+    safe_attr(:document_type)&.upcase || "IC/PASSPORT"
   end
 
   private
