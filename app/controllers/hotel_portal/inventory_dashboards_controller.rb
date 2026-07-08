@@ -7,10 +7,19 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   def index
     authorize current_hotel, :update?, policy_class: HotelPolicy
 
-    @days = (params[:days] || 14).to_i
-    @days = 14 unless [ 14, 21 ].include?(@days)
-    @start_date = (params[:start_date] || Date.current).to_date
-    @end_date = @start_date + (@days - 1).days
+    @range_mode = params[:days] == "month" ? "month" : "days"
+
+    if @range_mode == "month"
+      @month = parsed_month(params[:month]) || (params[:start_date].presence&.to_date || Date.current).beginning_of_month
+      @start_date = @month.beginning_of_month
+      @end_date = @month.end_of_month
+      @days = (@end_date - @start_date).to_i + 1
+    else
+      @days = (params[:days] || 14).to_i
+      @days = 14 unless [ 14, 21 ].include?(@days)
+      @start_date = (params[:start_date] || Date.current).to_date
+      @end_date = @start_date + (@days - 1).days
+    end
     @view_mode = "combined"
 
     # Handle multiple view currencies
@@ -179,6 +188,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       @days = (params[:days] || 14).to_i
       @days = 14 unless [ 14, 21 ].include?(@days)
       @end_date = @start_date + (@days - 1).days
+      @range_mode = "days"
       @view_mode = "combined"
       @room_types = current_hotel.room_types.order(:id)
 
@@ -444,12 +454,21 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     )
   end
 
+  def parsed_month(value)
+    return nil if value.blank?
+
+    Date.strptime(value.to_s, "%Y-%m").beginning_of_month
+  rescue ArgumentError, TypeError
+    nil
+  end
+
   def redirect_query_params
     permitted_selection = selection_update_params
 
     {
       start_date: params[:start_date] || permitted_selection[:start_date],
       days: params[:days],
+      month: params[:month],
       view_currencies: params[:view_currencies] || permitted_selection[:view_currencies],
       display_currency: params[:display_currency],
       room_type_id: Array(permitted_selection[:room_type_ids]).reject(&:blank?).first || params[:room_type_id],

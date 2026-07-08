@@ -47,6 +47,7 @@ export default class extends Controller {
     "reviewList",
     "finalSyncButton",
     "navStartDate",
+    "navMonth",
     "navRoomType",
     "successDialog",
     "info",
@@ -1069,6 +1070,39 @@ export default class extends Controller {
     if (currentParams.has("subtab")) url.searchParams.set("subtab", currentParams.get("subtab"))
 
     // Clear legacy multi-select params so "All room types" is not pinned by stale query state.
+    url.searchParams.delete("room_type_ids")
+    url.searchParams.delete("room_type_ids[]")
+
+    const frame = document.getElementById("inventory_calendar_frame")
+    if (frame) {
+      frame.src = url.toString()
+    } else {
+      window.location.href = url.toString()
+    }
+  }
+
+  navigateMonth(event) {
+    if (event) event.preventDefault()
+
+    const month = this.navMonthTarget.value
+    if (!month) return
+
+    const roomTypeId = this.hasNavRoomTypeTarget ? this.navRoomTypeTarget.value : null
+
+    const url = new URL(window.location.href)
+    url.searchParams.set("month", month)
+    url.searchParams.set("days", "month")
+    url.searchParams.delete("start_date")
+    if (roomTypeId) {
+      url.searchParams.set("room_type_id", roomTypeId)
+    } else {
+      url.searchParams.delete("room_type_id")
+    }
+
+    const currentParams = new URLSearchParams(window.location.search)
+    if (currentParams.has("tab")) url.searchParams.set("tab", currentParams.get("tab"))
+    if (currentParams.has("subtab")) url.searchParams.set("subtab", currentParams.get("subtab"))
+
     url.searchParams.delete("room_type_ids")
     url.searchParams.delete("room_type_ids[]")
 
