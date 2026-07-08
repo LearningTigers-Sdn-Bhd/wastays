@@ -842,7 +842,7 @@ module HotelPortal
     end
 
     def posted_transactions
-      @posted_transactions ||= folio&.folio_transactions&.includes(:transaction_code, :user)&.order(posting_date: :asc, created_at: :asc)&.to_a || []
+      @posted_transactions ||= folio&.folio_transactions&.includes(:transaction_code, :user)&.order(posting_date: :asc, created_at: :asc, id: :asc)&.to_a || []
     end
 
     def posted_row(transaction, effect, balance)

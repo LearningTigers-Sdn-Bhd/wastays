@@ -4,6 +4,8 @@ module HotelPortal
   class BookingPresenter
     attr_reader :booking, :hotel
 
+    delegate :vip?, :blacklisted?, :repeat?, to: :booking
+
     def initialize(booking, hotel)
       @booking = booking
       @hotel = hotel
@@ -40,11 +42,11 @@ module HotelPortal
     end
 
     def check_in_formatted
-      booking.check_in.strftime("%d %b %Y")
+      view_context.format_date(booking.check_in)
     end
 
     def check_out_formatted
-      booking.check_out.strftime("%d %b %Y")
+      view_context.format_date(booking.check_out)
     end
 
     def nights_count
@@ -136,17 +138,6 @@ module HotelPortal
       booking.guest_phone
     end
 
-    def vip?
-      booking.vip?
-    end
-
-    def blacklisted?
-      booking.blacklisted?
-    end
-
-    def repeat?
-      booking.repeat?
-    end
 
     def primary_guest_name
       primary_guest&.name.presence || booking.guest_name
@@ -502,7 +493,7 @@ module HotelPortal
     end
 
     def created_at_date
-      booking.created_at.strftime("%d %b %Y")
+      view_context.format_date(booking.created_at)
     end
 
     def status_variant_class
@@ -531,7 +522,7 @@ module HotelPortal
     end
 
     def check_out_date_year
-      booking.check_out.strftime("%d %b %Y")
+      view_context.format_date(booking.check_out)
     end
 
     def formatted_currency_total
@@ -553,7 +544,11 @@ module HotelPortal
     end
 
     def view_context
-      ActionController::Base.helpers
+      @view_context ||= begin
+        h = ApplicationController.helpers
+        h.extend(ApplicationHelper) unless h.respond_to?(:format_date)
+        h
+      end
     end
   end
 end

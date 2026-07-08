@@ -110,13 +110,13 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(result.booking.booking_folio).to be_present
     end
 
-    it 'fails when the guest is blacklisted' do
+    it 'succeeds even when the guest is blacklisted' do
       create(:guest, email: 'jane@example.com', blacklisted: true)
 
       result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
 
-      expect(result.success?).to be(false)
-      expect(result.message).to eq('You are blacklisted from booking this hotel.')
+      expect(result.success?).to be(true)
+      expect(result.booking).to be_present
     end
 
     it 'fails for expired quote' do

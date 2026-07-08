@@ -2,21 +2,13 @@
 
 module Guests
   class GuestPresenter
-  def initialize(guest)
-    @guest = guest
-  end
+    attr_reader :guest
 
-  def vip?
-    @guest.vip?
-  end
+    delegate :vip?, :blacklisted?, :repeat?, to: :guest
 
-  def blacklisted?
-    @guest.blacklisted?
-  end
-
-  def repeat?
-    @guest.repeat?
-  end
+    def initialize(guest)
+      @guest = guest
+    end
 
   def name
     safe_attr(:name)

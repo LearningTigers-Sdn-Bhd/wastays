@@ -54,6 +54,27 @@ class Guest < ApplicationRecord
     end
   end
 
+  def self.banned?(email: nil, phone: nil, name: nil)
+    email_clean = email.to_s.strip.downcase.presence
+    phone_clean = phone.to_s.strip.presence
+    name_clean = name.to_s.strip.downcase.presence
+
+    return false if email_clean.blank? && phone_clean.blank? && name_clean.blank?
+
+    is_banned = false
+    if email_clean.present?
+      is_banned ||= where(blacklisted: true).where(email: email_clean).exists?
+    end
+    if !is_banned && phone_clean.present?
+      is_banned ||= where(blacklisted: true).where(phone: phone_clean).exists?
+    end
+    if !is_banned && name_clean.present?
+      is_banned ||= where(blacklisted: true).where("LOWER(name) = ?", name_clean).exists?
+    end
+
+    is_banned
+  end
+
   def repeat?
     if bookings.loaded?
       bookings.any? { |b| b.status == "completed" } && bookings.size > 1

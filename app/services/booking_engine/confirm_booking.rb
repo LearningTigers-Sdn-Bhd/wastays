@@ -16,12 +16,6 @@ module BookingEngine
           return OpenStruct.new(success?: true, booking: booking)
         end
 
-        email = @payment_details[:guest_email].to_s
-        name = @payment_details[:guest_name].to_s
-        if Guest.blacklisted?(email: email, name: name)
-          return OpenStruct.new(success?: false, message: "You are blacklisted from booking this hotel.")
-        end
-
         # 1. Double check quote haven't expired (though it should have been held)
         if quote_expired?
           expire_quote!

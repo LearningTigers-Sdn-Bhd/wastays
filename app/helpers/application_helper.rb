@@ -98,6 +98,14 @@ module ApplicationHelper
     status_class.gsub("bg-", "border-")
   end
 
+  def format_date(date)
+    return "" if date.blank?
+
+    date.respond_to?(:strftime) ? date.strftime("%d %b %Y") : Date.parse(date.to_s).strftime("%d %b %Y")
+  rescue ArgumentError, TypeError
+    date.to_s
+  end
+
   def display_housekeeping_date(value)
     return "Not provided" if value.blank?
 

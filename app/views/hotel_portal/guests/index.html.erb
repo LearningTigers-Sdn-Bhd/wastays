@@ -35,7 +35,7 @@
 
           <%= f.select :country, @country_options, { include_blank: "All Countries", selected: params[:country] }, class: "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->auto-submit#submit" } %>
 
-          <%= f.select :tag, [["VIP", "vip"], ["Repeat", "repeat"], ["Banned", "banned"]], { include_blank: "All Tags", selected: params[:tag] }, class: "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->auto-submit#submit" } %>
+          <%= f.select :tag, [["VIP", "vip"], ["Repeat", "repeat"], ["Blacklisted", "blacklisted"]], { include_blank: "All Tags", selected: params[:tag] }, class: "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->auto-submit#submit" } %>
         </div>
 
         <div class="flex items-center gap-2">
@@ -121,7 +121,7 @@
                                 <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3 translate-x-0.3 text-rose-500" %>
                                 <%= cached_icon "ban", class: "absolute inset-0 size-3.5 translate-y-0.3 text-rose-500" %>
                               </div>
-                              Banned
+                              Blacklisted
                             </span>
                           <% end %>
                           <% if guest.repeat? %>
@@ -241,7 +241,7 @@
                             <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3 translate-x-0.3 text-rose-500" %>
                             <%= cached_icon "ban", class: "absolute inset-0 size-3.5 translate-y-0.3 text-rose-500" %>
                           </div>
-                          Banned
+                          Blacklisted
                         </span>
                       <% end %>
                       <% if guest.repeat? %>

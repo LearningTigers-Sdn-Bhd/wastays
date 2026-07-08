@@ -2,6 +2,6 @@
 
 module HotelPortal::ArrivalsHelper
   def arrivals_header_date(date)
-    date.strftime("%d %b %Y")
+    format_date(date)
   end
 end

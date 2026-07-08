@@ -11,11 +11,11 @@ module Guests
     end
 
     def check_in_formatted
-      booking.check_in.strftime("%d %b %Y")
+      helpers.format_date(booking.check_in)
     end
 
     def check_out_formatted
-      booking.check_out.strftime("%d %b %Y")
+      helpers.format_date(booking.check_out)
     end
 
     def nights_count
@@ -32,11 +32,11 @@ module Guests
 
     def formatted_total_amount
       prefix = (currency == "USD" ? "USD" : "RM")
-      "#{prefix} #{ActionController::Base.helpers.number_with_precision(total_amount, precision: 2)}"
+      "#{prefix} #{helpers.number_with_precision(total_amount, precision: 2)}"
     end
 
     def formatted_tourism_tax_amount
-      "Tax RM #{ActionController::Base.helpers.number_with_precision(tourism_tax_amount, precision: 2)}"
+      "Tax RM #{helpers.number_with_precision(tourism_tax_amount, precision: 2)}"
     end
 
     def created_at_time_formatted
@@ -44,11 +44,21 @@ module Guests
     end
 
     def created_at_date_formatted
-      booking.created_at.strftime("%d %b %Y")
+      helpers.format_date(booking.created_at)
     end
 
     def pre_checkin_status_label
       pre_checkin_status&.humanize || "Pending"
+    end
+
+    private
+
+    def helpers
+      @helpers ||= begin
+        h = ApplicationController.helpers
+        h.extend(ApplicationHelper) unless h.respond_to?(:format_date)
+        h
+      end
     end
   end
 end

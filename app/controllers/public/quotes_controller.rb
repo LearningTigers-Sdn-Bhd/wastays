@@ -35,18 +35,21 @@ class Public::QuotesController < ApplicationController
       return render json: { found: false, message: "Email is required." }, status: :unprocessable_content
     end
 
-    if Guest.blacklisted?(email: email)
-      return render json: { blacklisted: true, message: "You are blacklisted from booking this hotel. Please contact the hotel directly if you believe this is a mistake or need further assistance." }
-    end
-
     guest = Guest.find_by(email: email)
     found = guest.present?
 
-    render json: {
+    payload = {
       found: found,
       guest_details: found ? guest_lookup_payload(guest) : {},
       quote_token: quote.token
     }
+
+    if Guest.blacklisted?(email: email)
+      payload[:blacklisted] = true
+      payload[:message] = "Please note that this reservation may require additional verification. Our team may contact you if further assistance is needed."
+    end
+
+    render json: payload
   end
 
   private

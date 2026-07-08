@@ -36,20 +36,11 @@ module HotelPortal
     end
 
     def check_banned
-      email = params[:email].to_s.strip.downcase.presence
-      phone = params[:phone].to_s.strip.presence
-      name = params[:name].to_s.strip.downcase.presence
-
-      is_banned = false
-      if email.present?
-        is_banned ||= Guest.where(blacklisted: true).where(email: email).exists?
-      end
-      if !is_banned && phone.present?
-        is_banned ||= Guest.where(blacklisted: true).where(phone: phone).exists?
-      end
-      if !is_banned && name.present?
-        is_banned ||= Guest.where(blacklisted: true).where("LOWER(name) = ?", name).exists?
-      end
+      is_banned = Guest.banned?(
+        email: params[:email],
+        phone: params[:phone],
+        name: params[:name]
+      )
 
       render json: { banned: is_banned }
     end
