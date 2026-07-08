@@ -42,11 +42,11 @@ module HotelPortal
     end
 
     def check_in_formatted
-      view_context.format_date(booking.check_in)
+      format_date(booking.check_in, :long)
     end
 
     def check_out_formatted
-      view_context.format_date(booking.check_out)
+      format_date(booking.check_out, :long)
     end
 
     def nights_count
@@ -58,7 +58,7 @@ module HotelPortal
     end
 
     def stay_summary
-      "#{nights_count} #{'night'.pluralize(nights_count)} · #{booking.check_in.strftime('%d %b')}–#{booking.check_out.strftime('%d %b')}"
+      "#{nights_count} #{'night'.pluralize(nights_count)} · #{check_in_short}–#{check_out_short}"
     end
 
     def guest_count_summary
@@ -452,11 +452,11 @@ module HotelPortal
     end
 
     def formatted_check_in_date
-      booking.check_in.strftime("%b %d")
+      format_date(booking.check_in, :short_month_day)
     end
 
     def formatted_check_out_date
-      booking.check_out.strftime("%b %d")
+      format_date(booking.check_out, :short_month_day)
     end
 
     def dashboard_status_badge_class
@@ -493,7 +493,7 @@ module HotelPortal
     end
 
     def created_at_date
-      view_context.format_date(booking.created_at)
+      format_date(booking.created_at, :long)
     end
 
     def status_variant_class
@@ -518,11 +518,15 @@ module HotelPortal
     end
 
     def check_in_short
-      booking.check_in.strftime("%d %b")
+      format_date(booking.check_in, :short_day_month)
+    end
+
+    def check_out_short
+      format_date(booking.check_out, :short_day_month)
     end
 
     def check_out_date_year
-      view_context.format_date(booking.check_out)
+      check_out_formatted
     end
 
     def formatted_currency_total
@@ -538,6 +542,21 @@ module HotelPortal
     end
 
     private
+
+    def format_date(date, style)
+      return "" if date.blank?
+
+      case style
+      when :long
+        view_context.format_date(date)
+      when :short_day_month
+        date.strftime("%d %b")
+      when :short_month_day
+        date.strftime("%b %d")
+      else
+        date.to_s
+      end
+    end
 
     def format_currency(amount)
       "#{currency} #{view_context.number_with_precision(amount, precision: 2)}"
