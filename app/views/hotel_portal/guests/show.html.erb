@@ -5,7 +5,8 @@
       Back to Guest Records
     <% end %>
 
-    <div class="flex items-center gap-x-3">
+    <%# Desktop Actions %>
+    <div class="hidden md:flex items-center gap-x-3">
       <%= button_to toggle_vip_hotel_guest_path(current_hotel, @guest), method: :patch, class: "inline-flex items-center gap-x-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 w-fit" do %>
         <% if @guest.vip? %>
           <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
@@ -37,10 +38,50 @@
         Edit Profile
       <% end %>
     </div>
+
+    <%# Mobile Actions (Three-lines dropdown) %>
+    <div class="md:hidden relative inline-block text-left self-end" data-controller="dropdown" data-dropdown-align="right">
+      <button data-action="click->dropdown#toggle click@window->dropdown#hide" type="button" class="inline-flex items-center justify-center size-10 rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:scale-95 transition-all" aria-label="Guest Actions">
+        <%= cached_icon "menu", class: "size-5" %>
+      </button>
+
+      <div data-dropdown-target="menu" class="hidden absolute right-0 mt-2 w-48 origin-top-right rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl z-50 focus:outline-none" role="menu">
+        <%= link_to edit_hotel_guest_path(current_hotel, @guest), class: "flex items-center gap-x-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition" do %>
+          <%= cached_icon "pencil", class: "size-4 text-slate-400" %>
+          Edit Profile
+        <% end %>
+
+        <%= button_to toggle_vip_hotel_guest_path(current_hotel, @guest), method: :patch, class: "flex w-full items-center gap-x-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 transition" do %>
+          <% if @guest.vip? %>
+            <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+            Remove VIP
+          <% else %>
+            <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-slate-400 shrink-0" %>
+            Mark as VIP
+          <% end %>
+        <% end %>
+
+        <%= button_to toggle_blacklist_hotel_guest_path(current_hotel, @guest), method: :patch, class: "flex w-full items-center gap-x-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 transition" do %>
+          <% if @guest.blacklisted? %>
+            <div class="relative size-4 flex items-center justify-center shrink-0">
+              <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-rose-600" %>
+              <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-rose-600" %>
+            </div>
+            Remove Blacklist
+          <% else %>
+            <div class="relative size-4 flex items-center justify-center shrink-0">
+              <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-slate-400" %>
+              <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-slate-400" %>
+            </div>
+            Blacklist Guest
+          <% end %>
+        <% end %>
+      </div>
+    </div>
   </div>
 
-  <div class="card">
-    <div class="p-4 border-b border-neutral-border">
+  <div class="card <%= @guest.blacklisted? ? 'border-rose-200 bg-rose-50/20' : '' %>">
+    <div class="p-4 border-b border-neutral-border <%= @guest.blacklisted? ? 'bg-rose-50/30 border-rose-200' : '' %>">
       <div>
         <div class="flex items-center gap-x-2">
           <h1 class="text-xl font-bold text-neutral-text-primary"><%= @presenter.name %></h1>

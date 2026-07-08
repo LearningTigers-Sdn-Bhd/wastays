@@ -75,8 +75,8 @@
           <% if @in_house_guests.any? %>
             <% @in_house_guests.each_with_index do |booking, index| %>
               <% presenter = HotelPortal::InHouseGuestPresenter.new(booking, current_user.time_zone) %>
-              <tr class="align-top transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
-                <td class="px-6 py-4 sm:px-8">
+              <tr class="align-top <%= presenter.blacklisted? ? 'bg-rose-100' : (index.even? ? 'bg-white hover:bg-slate-100/80 transition-colors' : 'bg-slate-50/55 hover:bg-slate-100/80 transition-colors') %>">
+                <td class="py-4 pr-6 sm:pr-8 <%= presenter.blacklisted? ? 'border-l-4 border-l-rose-600 pl-5 sm:pl-7' : 'pl-6 sm:pl-8' %>">
                   <div class="flex flex-col gap-1.5">
                     <div class="flex items-center gap-2">
                       <div class="flex items-center gap-x-1.5">
@@ -168,7 +168,7 @@
       <% if @in_house_guests.any? %>
         <% @in_house_guests.each do |booking| %>
           <% presenter = HotelPortal::InHouseGuestPresenter.new(booking, current_user.time_zone) %>
-          <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
+          <div class="rounded-2xl border border-slate-200 p-4 shadow-sm <%= presenter.blacklisted? ? 'bg-rose-100 border-t-4 border-t-rose-600 pt-3' : 'bg-slate-50/60' %>">
             <div class="flex items-start justify-between gap-3">
               <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Guest</p>

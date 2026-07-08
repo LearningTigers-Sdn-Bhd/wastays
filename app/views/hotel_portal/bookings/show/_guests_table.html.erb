@@ -30,8 +30,8 @@
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100 bg-white">
-        <tr>
-          <td class="px-4 py-3 align-top">
+        <tr class="<%= booking.blacklisted? ? 'bg-rose-100' : '' %>">
+          <td class="py-3 align-top <%= booking.blacklisted? ? 'border-l-4 border-l-rose-600 pl-3' : 'pl-4' %>">
             <div class="flex items-center gap-x-1">
               <p class="font-semibold text-slate-950"><%= presenter.primary_guest_name %></p>
               <% if booking.vip? %>
@@ -70,7 +70,7 @@
           </td>
           <td class="px-4 py-3 align-top text-slate-700"><%= booking.formatted_guest_registration_number || "—" %></td>
           <td class="px-4 py-3 align-top text-slate-700"><%= presenter.primary_guest_country %></td>
-          <td class="sticky right-0 z-10 border-l border-slate-200 bg-white px-4 py-3 text-right align-top shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">
+          <td class="sticky right-0 z-10 border-l border-slate-200 px-4 py-3 text-right align-top shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] <%= booking.blacklisted? ? 'bg-rose-100' : 'bg-white' %>">
             <% if presenter.can_manage_bookings?(current_user) %>
               <%= link_to hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: "edit_primary"), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100" do %>
                 <%= cached_icon "pencil", class: "size-3" %> Edit
@@ -83,12 +83,12 @@
 
         <% presenter.additional_guests.each do |booking_guest| %>
           <% guest_presenter = Guests::GuestPresenter.new(booking_guest.guest) %>
-          <tr>
-            <td class="px-4 py-3 align-top">
+          <tr class="<%= guest_presenter.blacklisted? ? 'bg-rose-100' : '' %>">
+            <td class="py-3 align-top <%= guest_presenter.blacklisted? ? 'border-l-4 border-l-rose-600 pl-3' : 'pl-4' %>">
               <div class="flex items-center gap-x-1">
                 <p class="font-semibold text-slate-950"><%= guest_presenter.name %></p>
                 <% if guest_presenter.vip? %>
-                  <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 shrink-0" %>
+                  <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
                 <% end %>
                 <% if guest_presenter.blacklisted? %>
                   <div class="relative size-4 flex items-center justify-center shrink-0">
@@ -123,7 +123,7 @@
             </td>
             <td class="px-4 py-3 align-top text-slate-700"><%= booking.formatted_guest_registration_number || "—" %></td>
             <td class="px-4 py-3 align-top text-slate-700"><%= guest_presenter.country_display %></td>
-            <td class="sticky right-0 z-10 border-l border-slate-200 bg-white px-4 py-3 text-right align-top shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">
+            <td class="sticky right-0 z-10 border-l border-slate-200 px-4 py-3 text-right align-top shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] <%= guest_presenter.blacklisted? ? 'bg-rose-100' : 'bg-white' %>">
               <% if presenter.can_manage_bookings?(current_user) %>
                 <div class="flex justify-end gap-1.5">
                   <%= link_to hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: "edit_additional", booking_guest_id: booking_guest.id), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100" do %>

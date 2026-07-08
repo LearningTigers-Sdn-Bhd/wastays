@@ -3,7 +3,7 @@
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8">
   
   <%# ─── PAGE TITLE ─── %>
-  <div class="px-4 md:px-0">
+  <div>
     <h1 class="text-3xl font-bold tracking-tight text-slate-950">Hotel Dashboard</h1>
     <p class="mt-1 text-sm font-medium text-slate-600">Welcome back <%= @current_hotel.name %> to your hotel management panel.</p>
   </div>
@@ -15,35 +15,37 @@
 
   <%# ─── TOP HEADER: OPERATIONS SUMMARY ─── %>
   <% unless @current_hotel.onboarding? %>
-    <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-4">
-      <div class="p-6 md:border-r md:border-slate-200 md:p-8">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Revenue <span class="text-[10px] font-medium text-slate-400">(This Month)</span></p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @dashboard_presenter.revenue_this_month_formatted %></h2>
-        <p class="mt-2 text-sm font-medium text-slate-600">Gross sales before commission</p>
-      </div>
+    <div>
+      <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-4">
+        <div class="p-6 border-b border-slate-100 md:border-b-0 md:border-r md:border-slate-200 md:p-8">
+          <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Revenue <span class="text-[10px] font-medium text-slate-400">(This Month)</span></p>
+          <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @dashboard_presenter.revenue_this_month_formatted %></h2>
+          <p class="mt-2 text-sm font-medium text-slate-600">Gross sales before commission</p>
+        </div>
 
-      <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Bookings <span class="text-[10px] font-medium text-slate-400">(This Month)</span></p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @dashboard_presenter.bookings_this_month_count %></h2>
-        <p class="mt-2 text-sm font-medium text-slate-600">Reservations processed</p>
-      </div>
+        <div class="bg-slate-50/30 p-6 border-b border-slate-100 md:border-b-0 md:border-r md:border-slate-200 md:p-8">
+          <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Bookings <span class="text-[10px] font-medium text-slate-400">(This Month)</span></p>
+          <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @dashboard_presenter.bookings_this_month_count %></h2>
+          <p class="mt-2 text-sm font-medium text-slate-600">Reservations processed</p>
+        </div>
 
-      <div class="p-6 md:border-r md:border-slate-200 md:p-8">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Check-ins</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @dashboard_presenter.today_arrivals_count %></h2>
-        <p class="mt-2 text-sm font-medium text-slate-600">Arriving today</p>
-      </div>
+        <div class="p-6 border-b border-slate-100 md:border-b-0 md:border-r md:border-slate-200 md:p-8">
+          <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Check-ins</p>
+          <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @dashboard_presenter.today_arrivals_count %></h2>
+          <p class="mt-2 text-sm font-medium text-slate-600">Arriving today</p>
+        </div>
 
-      <div class="p-6 md:p-8">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Check-outs</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @dashboard_presenter.today_checkouts_count %></h2>
-        <p class="mt-2 text-sm font-medium text-slate-600">Departing today</p>
+        <div class="p-6 md:p-8">
+          <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Check-outs</p>
+          <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @dashboard_presenter.today_checkouts_count %></h2>
+          <p class="mt-2 text-sm font-medium text-slate-600">Departing today</p>
+        </div>
       </div>
     </div>
   <% end %>
 
   <%# ─── MAIN CONTENT: SPLIT PANE ─── %>
-  <div class="grid lg:grid-cols-12 gap-8 px-4 md:px-0">
+  <div class="grid lg:grid-cols-12 gap-8">
     
     <%# SIDE PANE: STATUS & TOOLS %>
     <div class="lg:col-span-3 space-y-8">
@@ -141,7 +143,7 @@
       <% else %>
         <%# Arrivals Board %>
         <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm self-start">
-          <div class="flex items-center justify-between border-b border-slate-200 bg-slate-50/50 px-8 py-6">
+          <div class="flex flex-col gap-y-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 bg-slate-50/50 px-6 py-5 sm:px-8 sm:py-6">
             <div>
               <h3 class="text-xl font-bold tracking-tight text-slate-950">Arrival Board</h3>
               <p class="mt-1 text-sm font-medium text-slate-600">Guests checking in today and tomorrow.</p>
@@ -149,8 +151,8 @@
             <%= link_to "View full list", hotel_arrivals_path(@current_hotel), class: "text-sm font-semibold text-brand-primary hover:underline" %>
           </div>
           
-          <div class="p-8">
-            <nav class="flex space-x-6 border-b border-slate-200 mb-6" aria-label="Tabs" role="tablist">
+          <div class="p-6 sm:p-8">
+            <nav class="flex space-x-6 border-b border-slate-200 mb-6 overflow-x-auto whitespace-nowrap" aria-label="Tabs" role="tablist">
               <button type="button" class="hs-tab-active:font-bold hs-tab-active:border-brand-primary hs-tab-active:text-brand-primary py-3 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-slate-500 hover:text-slate-800 active" id="tabs-arrivals-1" data-hs-tab="#tabs-arrivals-panel-1" aria-controls="tabs-arrivals-panel-1" role="tab">
                 Today <span class="ms-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700"><%= @dashboard_presenter.today_arrivals_count %></span>
               </button>
@@ -164,52 +166,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <% @today_arrivals.limit(6).each do |booking| %>
                     <% booking_presenter = HotelPortal::BookingPresenter.new(booking, @current_hotel) %>
-                    <div class="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
-                      <div class="flex items-center gap-x-3">
-                        <div class="size-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600">
-                          <%= booking_presenter.guest_name_initial %>
-                        </div>
-                        <div>
-                          <div class="flex items-center gap-x-1.5">
-                            <p class="text-sm font-semibold text-slate-900"><%= booking_presenter.guest_name %></p>
-                            <% if booking_presenter.vip? %>
-                              <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
-                            <% end %>
-                            <% if booking_presenter.blacklisted? %>
-                              <div class="relative size-4 flex items-center justify-center shrink-0">
-                                <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 text-rose-600" %>
-                                <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
-                              </div>
-                            <% end %>
-                            <% if booking_presenter.repeat? %>
-                              <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500 shrink-0" %>
-                            <% end %>
-                          </div>
-                          <p class="text-xs font-medium text-slate-500"><%= booking_presenter.primary_room_type_name %></p>
-                        </div>
-                      </div>
-                      <div class="flex items-center gap-x-3">
-                        <span class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ring-1 ring-inset <%= booking_presenter.pre_checkin_badge_class %>">
-                          <%= booking_presenter.pre_checkin_badge_label %>
-                        </span>
-                        <%= link_to hotel_booking_path(@current_hotel, booking), class: "text-slate-400 hover:text-slate-900 transition-colors" do %>
-                          <%= cached_icon "chevron-right", class: "size-4" %>
-                        <% end %>
-                      </div>
-                    </div>
-                  <% end %>
-                </div>
-              <% else %>
-                <p class="text-sm font-medium italic text-slate-500 py-4">No arrivals today.</p>
-              <% end %>
-            </div>
-
-            <div id="tabs-arrivals-panel-2" class="hidden" role="tabpanel" aria-labelledby="tabs-arrivals-2">
-              <% if @tomorrow_arrivals.any? %>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <% @tomorrow_arrivals.limit(6).each do |booking| %>
-                    <% booking_presenter = HotelPortal::BookingPresenter.new(booking, @current_hotel) %>
-                    <div class="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
+                    <div class="flex flex-col gap-y-3 sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
                       <div class="flex items-center gap-x-3">
                         <div class="size-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600">
                           <%= booking_presenter.guest_name_initial %>
@@ -233,7 +190,52 @@
                           <p class="text-xs font-medium text-slate-500"><%= booking_presenter.primary_room_type_name %></p>
                         </div>
                       </div>
+                      <div class="flex items-center justify-between w-full sm:w-auto sm:justify-end gap-x-3 border-t border-slate-100 pt-3 sm:border-t-0 sm:pt-0">
+                        <span class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ring-1 ring-inset <%= booking_presenter.pre_checkin_badge_class %>">
+                          <%= booking_presenter.pre_checkin_badge_label %>
+                        </span>
+                        <%= link_to hotel_booking_path(@current_hotel, booking), class: "text-slate-400 hover:text-slate-900 transition-colors" do %>
+                          <%= cached_icon "chevron-right", class: "size-4" %>
+                        <% end %>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+              <% else %>
+                <p class="text-sm font-medium italic text-slate-500 py-4">No arrivals today.</p>
+              <% end %>
+            </div>
+
+            <div id="tabs-arrivals-panel-2" class="hidden" role="tabpanel" aria-labelledby="tabs-arrivals-2">
+              <% if @tomorrow_arrivals.any? %>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <% @tomorrow_arrivals.limit(6).each do |booking| %>
+                    <% booking_presenter = HotelPortal::BookingPresenter.new(booking, @current_hotel) %>
+                    <div class="flex flex-col gap-y-3 sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
                       <div class="flex items-center gap-x-3">
+                        <div class="size-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600">
+                          <%= booking_presenter.guest_name_initial %>
+                        </div>
+                        <div>
+                          <div class="flex items-center gap-x-1.5">
+                            <p class="text-sm font-semibold text-slate-900"><%= booking_presenter.guest_name %></p>
+                            <% if booking_presenter.vip? %>
+                              <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+                            <% end %>
+                            <% if booking_presenter.blacklisted? %>
+                              <div class="relative size-4 flex items-center justify-center shrink-0">
+                                <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3.5 text-rose-600" %>
+                                <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
+                              </div>
+                            <% end %>
+                            <% if booking_presenter.repeat? %>
+                              <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500 shrink-0" %>
+                            <% end %>
+                          </div>
+                          <p class="text-xs font-medium text-slate-500"><%= booking_presenter.primary_room_type_name %></p>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-end border-t border-slate-100 pt-3 sm:border-t-0 sm:pt-0">
                         <%= link_to hotel_booking_path(@current_hotel, booking), class: "text-slate-400 hover:text-slate-900 transition-colors" do %>
                           <%= cached_icon "chevron-right", class: "size-4" %>
                         <% end %>
@@ -250,7 +252,7 @@
 
         <%# Recent Bookings Table %>
         <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm self-start">
-          <div class="flex items-center justify-between border-b border-slate-200 bg-slate-50/50 px-8 py-6">
+          <div class="flex flex-col gap-y-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 bg-slate-50/50 px-6 py-5 sm:px-8 sm:py-6">
             <div>
               <h3 class="text-xl font-bold tracking-tight text-slate-950">Recent Bookings</h3>
               <p class="mt-1 text-sm font-medium text-slate-600">The latest reservations made at your property.</p>
@@ -258,7 +260,8 @@
             <%= link_to "View all bookings", hotel_bookings_path(@current_hotel), class: "text-sm font-semibold text-brand-primary hover:underline" %>
           </div>
 
-          <div class="overflow-x-auto">
+          <%# Desktop Table view %>
+          <div class="hidden lg:block overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200">
               <thead class="bg-slate-50">
                 <tr>
@@ -274,8 +277,8 @@
                 <% if @recent_bookings.any? %>
                   <% @recent_bookings.each do |booking| %>
                     <% booking_presenter = HotelPortal::BookingPresenter.new(booking, @current_hotel) %>
-                    <tr class="group transition-colors odd:bg-white even:bg-slate-50/60 hover:bg-slate-100/70">
-                      <td class="whitespace-nowrap px-8 py-4">
+                    <tr class="group <%= booking.blacklisted? ? 'bg-rose-100' : 'odd:bg-white even:bg-slate-50/60 hover:bg-slate-100/70 transition-colors' %>">
+                      <td class="whitespace-nowrap py-4 pr-8 <%= booking.blacklisted? ? 'border-l-4 border-l-rose-600 pl-7' : 'pl-8' %>">
                         <span class="rounded border border-slate-200 bg-slate-100 px-2 py-1 font-mono text-sm font-semibold text-slate-800">#<%= booking_presenter.confirmation_token %></span>
                       </td>
                       <td class="whitespace-nowrap px-8 py-4">
@@ -327,6 +330,60 @@
                 <% end %>
               </tbody>
             </table>
+          </div>
+
+          <%# Mobile Card view %>
+          <div class="block lg:hidden divide-y divide-slate-100 bg-white">
+            <% if @recent_bookings.any? %>
+              <% @recent_bookings.each do |booking| %>
+                <% booking_presenter = HotelPortal::BookingPresenter.new(booking, @current_hotel) %>
+                <div class="p-6 space-y-4 <%= booking.blacklisted? ? 'bg-rose-100 border-t-4 border-t-rose-600 pt-5' : '' %>">
+                  <div class="flex items-center justify-between">
+                    <span class="rounded border border-slate-200 bg-slate-100 px-2 py-1 font-mono text-sm font-semibold text-slate-800">#<%= booking_presenter.confirmation_token %></span>
+                    <span class="text-xs font-medium text-slate-500"><%= booking_presenter.created_at_date %></span>
+                  </div>
+                  
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-x-1.5">
+                      <span class="text-sm font-semibold text-slate-950"><%= booking_presenter.guest_name %></span>
+                      <% if booking_presenter.vip? %>
+                        <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+                      <% end %>
+                      <% if booking_presenter.blacklisted? %>
+                        <div class="relative size-4 flex items-center justify-center shrink-0">
+                          <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3.5 text-rose-600" %>
+                          <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
+                        </div>
+                      <% end %>
+                      <% if booking_presenter.repeat? %>
+                        <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500 shrink-0" %>
+                      <% end %>
+                    </div>
+                    <p class="text-xs text-slate-500">
+                      <%= booking_presenter.formatted_check_in_date %> — <%= booking_presenter.formatted_check_out_date %>
+                    </p>
+                  </div>
+
+                  <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+                    <span class="inline-flex items-center rounded px-2 py-1 text-[10px] font-bold uppercase tracking-widest ring-1 ring-inset <%= booking_presenter.dashboard_status_badge_class %>">
+                      <%= booking_presenter.dashboard_status_label %>
+                    </span>
+                    <span class="text-base font-semibold tabular-nums text-slate-950"><%= booking_presenter.formatted_total_amount_dashboard %></span>
+                  </div>
+
+                  <div class="pt-1">
+                    <%= link_to hotel_booking_path(@current_hotel, booking), class: "flex items-center justify-center gap-x-1.5 w-full rounded-lg border border-slate-200 bg-white py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" do %>
+                      <%= cached_icon "eye", class: "size-3.5" %>
+                      View Booking
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+            <% else %>
+              <div class="p-8 text-center">
+                <p class="text-sm font-medium italic text-slate-500">No bookings found.</p>
+              </div>
+            <% end %>
           </div>
         </div>
       <% end %>

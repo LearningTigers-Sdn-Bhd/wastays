@@ -6,24 +6,24 @@
         <p class="mt-1 text-sm font-medium text-slate-600">Track and manage guest arrivals for <%= arrivals_header_date(@date) %>.</p>
       </div>
 
-      <div class="flex items-center gap-2">
-        <div class="inline-flex bg-slate-100 rounded-xl p-1 shadow-sm border border-slate-200">
+      <div class="flex flex-col w-full gap-2 sm:flex-row sm:items-center sm:w-auto">
+        <div class="inline-flex w-full sm:w-auto bg-slate-100 rounded-xl p-1 shadow-sm border border-slate-200">
           <%= link_to hotel_arrivals_path(current_hotel, date: Date.today, q: @query.presence), 
-              class: "py-1.5 px-4 inline-flex items-center justify-center gap-x-2 text-sm font-semibold rounded-lg transition #{ @date == Date.today ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700' }" do %>
+              class: "flex-1 sm:flex-none py-1.5 px-4 inline-flex items-center justify-center gap-x-2 text-sm font-semibold rounded-lg transition #{ @date == Date.today ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700' }" do %>
             Today
             <span class="inline-flex items-center py-0.5 px-1.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700"><%= @today_count %></span>
           <% end %>
           <%= link_to hotel_arrivals_path(current_hotel, date: Date.tomorrow, q: @query.presence), 
-              class: "py-1.5 px-4 inline-flex items-center justify-center gap-x-2 text-sm font-semibold rounded-lg transition #{ @date == Date.tomorrow ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700' }" do %>
+              class: "flex-1 sm:flex-none py-1.5 px-4 inline-flex items-center justify-center gap-x-2 text-sm font-semibold rounded-lg transition #{ @date == Date.tomorrow ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700' }" do %>
             Tomorrow
             <span class="inline-flex items-center py-0.5 px-1.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700"><%= @tomorrow_count %></span>
           <% end %>
         </div>
         
-        <%= form_with url: hotel_arrivals_path(current_hotel), method: :get, class: "flex items-center" do |f| %>
+        <%= form_with url: hotel_arrivals_path(current_hotel), method: :get, class: "flex items-center w-full sm:w-auto" do |f| %>
           <%= f.hidden_field :q, value: @query %>
           <%= f.date_field :date, value: @date, onchange: "this.form.submit()", 
-              class: "rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+              class: "w-full sm:w-auto rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
         <% end %>
       </div>
     </div>
@@ -88,8 +88,8 @@
           <% if @arrivals.any? %>
             <% @arrivals.each_with_index do |booking, index| %>
               <% presenter = HotelPortal::ArrivalPresenter.new(booking, current_hotel) %>
-              <tr class="align-top transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
-                <td class="px-8 py-5">
+              <tr class="align-top <%= presenter.blacklisted? ? 'bg-rose-100' : (index.even? ? 'bg-white hover:bg-slate-100/80 transition-colors' : 'bg-slate-50/55 hover:bg-slate-100/80 transition-colors') %>">
+                <td class="py-5 pr-8 <%= presenter.blacklisted? ? 'border-l-4 border-l-rose-600 pl-7' : 'pl-8' %>">
                   <div class="flex flex-col gap-1.5">
                     <div class="flex items-center gap-x-1.5">
                       <span class="text-sm font-semibold text-slate-900"><%= presenter.guest_name %></span>
@@ -200,14 +200,14 @@
       <% if @arrivals.any? %>
         <% @arrivals.each do |booking| %>
           <% presenter = HotelPortal::ArrivalPresenter.new(booking, current_hotel) %>
-          <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm">
+          <div class="rounded-2xl border border-slate-200 p-5 shadow-sm <%= presenter.blacklisted? ? 'bg-rose-100 border-t-4 border-t-rose-600 pt-4' : 'bg-slate-50/60' %>">
             <div class="flex items-start justify-between gap-3">
               <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Guest</p>
                 <div class="flex items-center gap-x-1.5 mt-1">
                   <p class="text-sm font-semibold text-slate-900"><%= presenter.guest_name %></p>
                   <% if presenter.vip? %>
-                    <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 shrink-0" %>
+                    <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
                   <% end %>
                   <% if presenter.blacklisted? %>
                     <div class="relative size-4 flex items-center justify-center shrink-0">
