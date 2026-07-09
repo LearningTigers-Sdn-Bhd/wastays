@@ -74,7 +74,7 @@
                   <% room_no = room[:room_number] %>
                   <% resolved_status = room[:resolved_status] %>
                   <% active_booking = room[:active_booking] %>
-                  <% hk_request = room[:hk_request] %>
+                  <% hk_requests = room[:hk_requests] %>
                   <% room_type = room[:room_type] %>
 
                   <% display_status = resolved_status == "dirty" ? "Dirty Confirmed" : resolved_status.humanize.titleize %>
@@ -127,13 +127,16 @@
 
                     <!-- Assign To -->
                     <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
-                      <% if hk_request %>
-                        <%= form_with url: assign_hotel_housekeeping_task_path(current_hotel, hk_request), method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
-                          <%= f.select :assigned_to, options_from_collection_for_select(@staff_members, :id, :name, hk_request.metadata&.dig("assigned_to")), { include_blank: "Unassigned" }, class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
+                      <div class="py-1 min-h-[38px] flex items-center">
+                        <% first_req = hk_requests.first %>
+                        <% if first_req %>
+                          <%= form_with url: assign_hotel_housekeeping_task_path(current_hotel, first_req), method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
+                            <%= select_tag :assigned_to, options_for_select([["Unassigned", ""]] + @staff_members.map { |s| [s.name, s.id] }, first_req.metadata&.dig("assigned_to").to_s.presence&.to_i), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
+                          <% end %>
+                        <% else %>
+                          <span class="text-xs font-bold text-slate-400">-</span>
                         <% end %>
-                      <% else %>
-                        <span class="text-xs font-bold text-slate-400">-</span>
-                      <% end %>
+                      </div>
                     </td>
 
                     <!-- Room Status -->
@@ -165,25 +168,37 @@
 
                     <!-- Task Details -->
                     <td class="px-3 py-4">
-                      <% if hk_request && hk_request.request_details.present? && hk_request.request_details != "-" %>
-                        <p class="text-sm font-medium text-slate-700 line-clamp-2" title="<%= hk_request.request_details %>">
-                          <%= hk_request.request_details %>
-                        </p>
-                      <% else %>
-                        <span class="text-xs font-bold text-slate-400">-</span>
-                      <% end %>
+                      <div class="flex flex-col gap-2">
+                        <% hk_requests.each do |req| %>
+                          <div class="py-1 min-h-[38px] flex items-center">
+                            <% if req && req.request_details.present? && req.request_details != "-" %>
+                              <p class="text-sm font-medium text-slate-700 line-clamp-2" title="<%= req.request_details %>">
+                                <%= req.request_details %>
+                              </p>
+                            <% else %>
+                              <span class="text-xs font-bold text-slate-400">-</span>
+                            <% end %>
+                          </div>
+                        <% end %>
+                      </div>
                     </td>
 
                     <!-- Task Status -->
                     <td class="py-4 pl-3 pr-6 text-right whitespace-nowrap text-xs font-bold text-slate-900">
-                      <% if hk_request %>
-                        <%= form_with url: hotel_request_status_path(current_hotel, kind: "housekeeping", request_id: hk_request.id), method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
-                          <%= hidden_field_tag :redirect_to, request.original_url %>
-                          <%= select_tag :status, options_for_select([["No Task", "no_task"], ["New", "new"], ["Assigned", "assigned"], ["In Progress", "in_progress"], ["Completed", "completed"]], hk_request.status), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
+                      <div class="flex flex-col gap-2 items-end">
+                        <% hk_requests.each do |req| %>
+                          <div class="py-1 min-h-[38px] flex items-center">
+                            <% if req %>
+                              <%= form_with url: hotel_request_status_path(current_hotel, kind: "housekeeping", request_id: req.id), method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
+                                <%= hidden_field_tag :redirect_to, request.original_url %>
+                                <%= select_tag :status, options_for_select([["No Task", "no_task"], ["New", "new"], ["Assigned", "assigned"], ["In Progress", "in_progress"], ["Completed", "completed"]], req.status), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
+                              <% end %>
+                            <% else %>
+                              <span class="text-xs font-bold text-slate-400">No Task</span>
+                            <% end %>
+                          </div>
                         <% end %>
-                      <% else %>
-                        <span class="text-xs font-bold text-slate-400">No Task</span>
-                      <% end %>
+                      </div>
                     </td>
                   </tr>
                 <% end %>

@@ -6,7 +6,12 @@ module HotelPortal
     before_action -> { require_feature!("task_assignment_minibar_log") }
 
     def index
-      @staff_members = current_hotel.users.joins(:roles).where(roles: { slug: "housekeeper" }).order(:name).distinct
+      @staff_members = User.where(id: UserHotelAccess.active
+                                                     .where(hotel_id: current_hotel.id)
+                                                     .joins(:role)
+                                                     .where(roles: { slug: "housekeeper" })
+                                                     .select(:user_id))
+                           .order(:name)
 
       # Build room groups with resolved statuses, active bookings, and tasks
       @room_groups = current_hotel.room_types.order(:name).map do |room_type|
@@ -20,20 +25,22 @@ module HotelPortal
 
           active_booking = resolved.booking_details&.dig(:active)&.first || resolved.booking_details&.dig(:completed)&.first
 
-          hk_request = HousekeepingRequest.left_joins(booking: :booking_rooms)
-                                          .where("housekeeping_requests.hotel_id = :hotel_id OR bookings.hotel_id = :hotel_id", hotel_id: current_hotel.id)
-                                          .where(
-                                            "housekeeping_requests.room_number = :room_number OR (housekeeping_requests.room_number IS NULL AND booking_rooms.room_number = :room_number)",
-                                            room_number: room_number
-                                          )
-                                          .where.not(status: %w[pending completed failed cancelled])
-                                          .distinct
-                                          .to_a
-                                          .sort_by { |r| [ r.status == "no_task" ? 1 : 0, -r.created_at.to_i ] }
-                                          .first
- 
-          if hk_request.nil?
-            hk_request = HousekeepingRequest.create!(
+          hk_requests = HousekeepingRequest.left_joins(booking: :booking_rooms)
+                                           .where("housekeeping_requests.hotel_id = :hotel_id OR bookings.hotel_id = :hotel_id", hotel_id: current_hotel.id)
+                                           .where(
+                                             "housekeeping_requests.room_number = :room_number OR (housekeeping_requests.room_number IS NULL AND booking_rooms.room_number = :room_number)",
+                                             room_number: room_number
+                                           )
+                                           .where.not(status: %w[pending completed failed cancelled])
+                                           .distinct
+                                           .to_a
+                                           .sort_by { |r| [ r.status == "no_task" ? 1 : 0, -r.created_at.to_i ] }
+
+          real_requests = hk_requests.reject { |r| r.status == "no_task" }
+          if real_requests.any?
+            hk_requests = real_requests
+          elsif hk_requests.empty?
+            placeholder = HousekeepingRequest.create!(
               hotel: current_hotel,
               room_type: room_type,
               room_number: room_number,
@@ -42,6 +49,7 @@ module HotelPortal
               request_details: "-",
               requested_at: Time.current
             )
+            hk_requests = [ placeholder ]
           end
 
           {
@@ -49,7 +57,7 @@ module HotelPortal
             room_type: room_type,
             resolved_status: resolved.status,
             active_booking: active_booking,
-            hk_request: hk_request
+            hk_requests: hk_requests
           }
         end
 
@@ -88,33 +96,68 @@ module HotelPortal
                                     .find(params[:id])
 
       assigned_to = params[:assigned_to].presence
-      metadata = @request.metadata.to_h
-      target_status = @request.status
 
-      if assigned_to
-        staff = current_hotel.users.joins(:roles).where(roles: { slug: "housekeeper" }).find_by(id: assigned_to)
-        if staff
-          metadata["assigned_to"] = staff.id
-          metadata["assigned_to_name"] = staff.name
-          if target_status.in?(%w[new no_task])
-            target_status = "assigned"
-          end
-        else
-          metadata.delete("assigned_to")
-          metadata.delete("assigned_to_name")
-          if target_status == "assigned"
-            target_status = "new"
-          end
-        end
-      else
-        metadata.delete("assigned_to")
-        metadata.delete("assigned_to_name")
-        if target_status == "assigned"
-          target_status = "new"
-        end
+      # Resolve room number, falling back to the booking's rooms if the request doesn't have it directly
+      room_number = @request.room_number.presence
+      room_number ||= @request.booking&.booking_rooms&.where.not(room_number: [nil, ""])&.first&.room_number.presence
+
+      active_requests = []
+      if room_number.present?
+        active_requests = HousekeepingRequest.left_joins(booking: :booking_rooms)
+                                             .where("housekeeping_requests.hotel_id = :hotel_id OR bookings.hotel_id = :hotel_id", hotel_id: current_hotel.id)
+                                             .where(
+                                               "housekeeping_requests.room_number = :room_number OR (housekeeping_requests.room_number IS NULL AND booking_rooms.room_number = :room_number)",
+                                               room_number: room_number
+                                             )
+                                             .where.not(status: %w[pending completed failed cancelled])
+                                             .distinct
+                                             .to_a
       end
 
-      @request.update!(metadata: metadata, status: target_status)
+      if active_requests.empty?
+        active_requests = [@request]
+      end
+
+      # Reject any placeholder "no_task" requests if there are other active real requests
+      real_active = active_requests.reject { |r| r.status == "no_task" }
+      if real_active.any?
+        active_requests = real_active
+      end
+
+      active_requests.each do |req|
+        req_metadata = req.metadata.to_h
+        req_status = req.status
+
+        if assigned_to
+          staff = User.where(id: UserHotelAccess.active
+                                                 .where(hotel_id: current_hotel.id)
+                                                 .joins(:role)
+                                                 .where(roles: { slug: "housekeeper" })
+                                                 .select(:user_id))
+                      .find_by(id: assigned_to)
+          if staff
+            req_metadata["assigned_to"] = staff.id
+            req_metadata["assigned_to_name"] = staff.name
+            if req_status.in?(%w[new no_task])
+              req_status = "assigned"
+            end
+          else
+            req_metadata.delete("assigned_to")
+            req_metadata.delete("assigned_to_name")
+            if req_status == "assigned"
+              req_status = "new"
+            end
+          end
+        else
+          req_metadata.delete("assigned_to")
+          req_metadata.delete("assigned_to_name")
+          if req_status == "assigned"
+            req_status = "new"
+          end
+        end
+
+        req.update!(metadata: req_metadata, status: req_status)
+      end
 
       respond_to do |format|
         format.html { redirect_to hotel_room_status_board_path(current_hotel, tab: "housekeeping"), notice: "Task assigned successfully." }

@@ -382,6 +382,17 @@ module Bookings
           reason: nil,
           metadata: { "booking_id" => @booking.id }
         ).call
+
+        # Auto-create housekeeping request for checkout cleaning
+        HousekeepingRequest.create!(
+          hotel: @booking.hotel,
+          room_type: booking_room.room_type,
+          room_number: booking_room.room_number,
+          booking: @booking,
+          status: "new",
+          request_details: "Checkout Room Cleaning",
+          requested_at: Time.current
+        )
       end
     end
 

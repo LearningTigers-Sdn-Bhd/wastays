@@ -142,23 +142,37 @@ module HotelPortal
       end
 
       def mark_booking_rooms_ready(record)
+        hotel_id = record.hotel_id || record.booking&.hotel_id
         reason_text = record.request_details.presence || "Housekeeping completed"
-        if record.room_number.present?
-          r_status = RoomStatus.find_or_create_by!(
-            hotel: record.hotel || record.booking&.hotel,
-            room_type: record.room_type || record.booking&.booking_rooms&.first&.room_type,
-            room_number: record.room_number
-          )
 
-          Rooms::SetStatus.new(
-            room_status: r_status,
-            status: "ready",
-            user: nil,
-            booking: record.booking,
-            event_type: "room_status_changed",
-            reason: reason_text,
-            metadata: { "housekeeping_request_id" => record.id }
-          ).call
+        if record.room_number.present?
+          has_active = HousekeepingRequest.left_joins(booking: :booking_rooms)
+                                          .where("housekeeping_requests.hotel_id = :hotel_id OR bookings.hotel_id = :hotel_id", hotel_id: hotel_id)
+                                          .where(
+                                            "housekeeping_requests.room_number = :room_number OR (housekeeping_requests.room_number IS NULL AND booking_rooms.room_number = :room_number)",
+                                            room_number: record.room_number
+                                          )
+                                          .where(status: %w[new assigned in_progress])
+                                          .where.not(id: record.id)
+                                          .exists?
+
+          unless has_active
+            r_status = RoomStatus.find_or_create_by!(
+              hotel: record.hotel || record.booking&.hotel,
+              room_type: record.room_type || record.booking&.booking_rooms&.first&.room_type,
+              room_number: record.room_number
+            )
+
+            Rooms::SetStatus.new(
+              room_status: r_status,
+              status: "ready",
+              user: nil,
+              booking: record.booking,
+              event_type: "room_status_changed",
+              reason: reason_text,
+              metadata: { "housekeeping_request_id" => record.id }
+            ).call
+          end
         end
 
         return unless record.booking
@@ -166,21 +180,33 @@ module HotelPortal
         record.booking.booking_rooms.includes(:room_type).where.not(room_number: [ nil, "" ]).find_each do |booking_room|
           next if booking_room.room_number == record.room_number
 
-          room_status = RoomStatus.find_or_create_by!(
-            hotel: record.booking.hotel,
-            room_type: booking_room.room_type,
-            room_number: booking_room.room_number
-          )
+          has_active = HousekeepingRequest.left_joins(booking: :booking_rooms)
+                                          .where("housekeeping_requests.hotel_id = :hotel_id OR bookings.hotel_id = :hotel_id", hotel_id: hotel_id)
+                                          .where(
+                                            "housekeeping_requests.room_number = :room_number OR (housekeeping_requests.room_number IS NULL AND booking_rooms.room_number = :room_number)",
+                                            room_number: booking_room.room_number
+                                          )
+                                          .where(status: %w[new assigned in_progress])
+                                          .where.not(id: record.id)
+                                          .exists?
 
-          Rooms::SetStatus.new(
-            room_status: room_status,
-            status: "ready",
-            user: nil,
-            booking: record.booking,
-            event_type: "room_status_changed",
-            reason: reason_text,
-            metadata: { "housekeeping_request_id" => record.id }
-          ).call
+          unless has_active
+            room_status = RoomStatus.find_or_create_by!(
+              hotel: record.booking.hotel,
+              room_type: booking_room.room_type,
+              room_number: booking_room.room_number
+            )
+
+            Rooms::SetStatus.new(
+              room_status: room_status,
+              status: "ready",
+              user: nil,
+              booking: record.booking,
+              event_type: "room_status_changed",
+              reason: reason_text,
+              metadata: { "housekeeping_request_id" => record.id }
+            ).call
+          end
         end
       end
     end

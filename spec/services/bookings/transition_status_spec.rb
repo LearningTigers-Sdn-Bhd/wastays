@@ -446,6 +446,12 @@ RSpec.describe Bookings::TransitionStatus do
         expect(room_status.reload.active_dnd?).to be false
         expect(room_status.dnd).to be false
         expect(room_status.dnd_date).to be_nil
+
+        # Verify checkout housekeeping request is created
+        hk_req = HousekeepingRequest.find_by(booking: booking, room_number: "101")
+        expect(hk_req).to be_present
+        expect(hk_req.status).to eq("new")
+        expect(hk_req.request_details).to eq("Checkout Room Cleaning")
       end
     end
 
