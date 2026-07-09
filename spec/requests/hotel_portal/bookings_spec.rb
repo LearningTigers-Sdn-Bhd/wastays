@@ -266,26 +266,17 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
-      expect(response.body).to include("Step 1 of 2")
       expect(response.body).to include("Complete Checkout")
-      expect(response.body).to include("Refund / Credit Handling")
       expect(response.body).not_to include("Post Charges")
       expect(response.body).not_to include("Post Payment")
       expect(response.body).not_to include("Post Adjustment")
       expect(response.body).to include("Folio List")
       expect(response.body).to include("Settlement Details")
-      expect(response.body).to include("Booking Balance")
-      expect(response.body).to include("Deposit Status")
-      expect(response.body).to include("Total charges")
-      expect(response.body).to include("Total payments")
-      expect(response.body).to include('data-checkout-summary="true"')
       expect(response.body).to include('data-checkout-card="details"')
       expect(response.body).to include('data-checkout-card="early-departure"')
       expect(response.body).to include("folio_id=#{folio.id}")
       expect(response.body).not_to include("Transaction Ledger")
       expect(response.body).not_to include("Existing transactions")
-      expect(response.body).to include("border-t border-slate-200 bg-white")
-      expect(response.body).not_to include("Checkout Time")
       expect(response.body).not_to include("Resolve Balance")
     end
 
@@ -300,12 +291,11 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-checkout-card="details"')
       expect(response.body).not_to include('data-checkout-card="early-departure"')
-      expect(response.body).to include('data-controller="checkout-settlement"')
-      expect(response.body).to include('data-checkout-settlement-required-amount-value="100.00"')
+      expect(response.body).to include('data-controller="group-lifecycle-targets checkout-settlement"')
       expect(response.body).to include("Folio List")
       expect(response.body).to include("Settlement Details")
-      expect(response.body).to include("checkout_folios[#{folio.id}][action]")
-      expect(response.body).to include(%(type="hidden" name="checkout_folios[#{folio.id}][action]" id="checkout_folios_#{folio.id}_action" value="pay_now"))
+      expect(response.body).to include("checkout_bookings[#{booking.id}][folios][#{folio.id}][action]")
+      expect(response.body).to include(%(type="hidden" name="checkout_bookings[#{booking.id}][folios][#{folio.id}][action]" id="checkout_bookings_#{booking.id}_folios_#{folio.id}_action" value="pay_now"))
       expect(response.body).to include("disabled=\"disabled\"")
       expect(response.body).to include('data-checkout-settlement-target="submitButton"')
       expect(response.body).to include('<option selected="selected" value="cash">Cash</option>')
@@ -321,9 +311,10 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("1 Open / 1 Closed")
       expect(response.body).to include("Guest Folio")
       expect(response.body).to include("ABC Sdn Bhd - Room")
+      expect(response.body).to include("Ready")
+      expect(response.body).to include("Closed")
       expect(response.body).to include("folio_id=#{guest_folio.id}")
       expect(response.body).to include("folio_id=#{company_folio.id}")
     end
@@ -342,8 +333,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include("Direct Bill")
       expect(response.body).to include(%(value="direct_bill"))
       expect(response.body).to include("AR invoice will be issued to #{relationship.corporate_account.name}")
-      expect(response.body).to include("checkout_folios[#{guest_folio.id}][action]")
-      expect(response.body).to include("checkout_folios[#{company_folio.id}][action]")
+      expect(response.body).to include("checkout_bookings[#{booking.id}][folios][#{guest_folio.id}][action]")
+      expect(response.body).to include("checkout_bookings[#{booking.id}][folios][#{company_folio.id}][action]")
     end
 
     it "prefills the actual checkout time from scheduled checkout when checkout is required" do
@@ -357,7 +348,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Checkout Required")
+      expect(response.body).to include("Checkout required")
       expect(response.body).to include('value="2026-06-12T12:00"')
       expect(response.body).to include("required")
     end
@@ -1062,7 +1053,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('turbo-stream action="update" target="offcanvas_drawer"')
-      expect(response.body).to include("Checkout Required")
+      expect(response.body).to include("Checkout required")
 
       booking.reload
       expect(booking.status).to eq("checkout_required")

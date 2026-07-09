@@ -1,7 +1,8 @@
 <nav aria-label="<%= aria_label %>">
+  <% navigation_data = presenter.group_context_enabled? ? { turbo_frame: "_top", turbo_action: "advance" } : { turbo_frame: "booking_control_panel_workspace", turbo_action: "advance" } %>
   <% if local_assigns[:overview_path].present? %>
     <%= link_to overview_path,
-        data: { turbo_frame: "booking_control_panel_workspace", turbo_action: "advance" },
+        data: navigation_data,
         class: "flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 #{presenter.group_overview? ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}" do %>
       <span>Overview</span>
       <%= cached_icon "chevron-right", class: "size-4 shrink-0 opacity-70", aria: { hidden: true } %>
@@ -10,10 +11,15 @@
 
   <% rows.each do |row| %>
     <%= link_to row.href,
-        data: { turbo_frame: "booking_control_panel_workspace", turbo_action: "advance" },
+        data: navigation_data,
         class: "flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 #{row.active ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}" do %>
       <span class="min-w-0">
-        <span class="block truncate text-sm font-bold"><%= row.label %></span>
+        <span class="flex min-w-0 items-center gap-2 text-sm font-bold">
+          <% if presenter.group_context_enabled? && row.kind == "booking" && (badge = presenter.status_badge_for_booking_id(row.id)) %>
+            <span class="inline-flex shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide <%= status_badge_classes(badge[:tone], active: row.active) %>"><%= badge[:label] %></span>
+          <% end %>
+          <span class="truncate"><%= row.label %></span>
+        </span>
         <span class="mt-0.5 block truncate text-xs opacity-70"><%= row.description %></span>
       </span>
       <%= cached_icon "chevron-right", class: "size-4 shrink-0 opacity-70", aria: { hidden: true } %>

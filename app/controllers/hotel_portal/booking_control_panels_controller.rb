@@ -17,12 +17,10 @@ module HotelPortal
           :refund_request,
           :housekeeping_requests,
           :complaint_requests,
-          :booking_billing_assignments,
           booking_billing_parties: [ :billing_terms, { booking_guest: :guest }, { hotel_corporate_account: :corporate_account }, :booking_folios ],
           booking_notes: :user,
           group_booking: [
             { bookings: [ :deposits, :housekeeping_requests, :complaint_requests, :folio_operation_logs, :booking_rooms, { booking_guests: :guest }, { booking_folios: [ :group_deposit_allocations, :folio_forecasted_charges, { folio_transactions: [ :user, :transaction_code ] } ] } ] },
-            { group_billing_arrangements: { hotel_corporate_account: :corporate_account } },
             { group_deposits: :group_deposit_allocations }
           ],
           booking_folios: [ :ar_invoice, :group_deposit_allocations, :folio_forecasted_charges, { folio_transactions: [ :user, :transaction_code ] }, { hotel_corporate_account: :corporate_account } ],

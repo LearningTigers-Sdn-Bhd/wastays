@@ -5,12 +5,14 @@ module HotelPortal
     RoomRow = Data.define(:room_number, :room_type)
     Tab = Data.define(:key, :label)
     TreeRow = Data.define(:id, :label, :description, :kind, :active, :href)
-    TreeGroup = Data.define(:label, :description, :rows)
+    TreeGroup = Data.define(:label, :description, :rows, :booking_id)
     RoomRateRow = Data.define(:booking_reference, :date, :room_type, :room, :rate_plan, :nightly_rate, :rate_missing)
     RequestCard = Data.define(:id, :type, :title, :details, :room_label, :time_label, :status, :column, :record, :completed)
     RequestColumn = Data.define(:key, :label, :cards)
     BillingPartyRow = Data.define(:id, :kind, :label, :role, :description, :folio_count, :folio_labels, :record)
     FolioWindowBillingPartyOption = Data.define(:id, :group, :label, :description, :record)
+    SummaryAction = Data.define(:key, :label, :tone, :offcanvas_variant, :icon, :target_booking)
+    DocumentRow = Data.define(:booking, :room_type, :room_number, :guest_name, :invoice_available)
 
     TABS = [
       Tab.new("booking_details", "Booking Details"),
@@ -36,6 +38,24 @@ module HotelPortal
       "completed" => "Checked out",
       "overbooked" => "Overbooked",
       "no_show" => "No-show"
+    }.freeze
+    STATUS_BADGE_LABELS = STATUS_LABELS.merge(
+      "checked_in" => "In house",
+      "review_due_out" => "Due out",
+      "checkout_required" => "Checkout due",
+      "review_no_show" => "No-show review"
+    ).freeze
+    STATUS_BADGE_TONES = {
+      "pending" => "slate",
+      "confirmed" => "blue",
+      "review_no_show" => "amber",
+      "checked_in" => "emerald",
+      "review_due_out" => "amber",
+      "checkout_required" => "orange",
+      "cancelled" => "rose",
+      "completed" => "slate",
+      "overbooked" => "rose",
+      "no_show" => "rose"
     }.freeze
 
     attr_reader :booking
@@ -84,6 +104,79 @@ module HotelPortal
 
     def status_label
       STATUS_LABELS.fetch(booking.status, booking.status.to_s.humanize)
+    end
+
+    def status_badge_for_booking_id(booking_id)
+      child = child_bookings.find { |candidate| candidate.id.to_s == booking_id.to_s }
+      status_badge(child&.status)
+    end
+
+    def status_badge_for_tree_group(group)
+      return if group.booking_id.blank?
+
+      status_badge_for_booking_id(group.booking_id)
+    end
+
+    def status_badge(status)
+      value = status.to_s
+      return if value.blank?
+
+      {
+        label: STATUS_BADGE_LABELS.fetch(value, value.humanize),
+        tone: STATUS_BADGE_TONES.fetch(value, "slate")
+      }
+    end
+
+    def summary_actions
+      group_context_enabled? ? group_summary_actions : standalone_summary_actions
+    end
+
+    def group_summary_actions
+      return [] unless group_context_enabled?
+
+      [
+        group_summary_action(:check_in, "Check-in", :primary, "right", "log-in", %w[confirmed]),
+        group_summary_action(:check_out, "Check-out", :primary, "fullscreen-bottom", "log-out", %w[checked_in checkout_required]),
+        group_summary_action(:late_checkout, "Review Late Checkout", :warning, "right", "clock", %w[review_due_out]),
+        group_summary_action(:backdated_check_in, "Backdated Check-in", :primary, "right", "calendar-clock", %w[review_no_show]),
+        group_summary_action(:mark_no_show, "Mark No-show", :danger, "right", "user-x", %w[review_no_show]),
+        group_summary_action(:cancel, "Cancel", :danger, "right", "ban", %w[pending confirmed review_no_show overbooked]),
+        group_summary_action(:reinstate, "Reinstate", :primary, "right", "rotate-ccw", %w[no_show]),
+        group_summary_action(:edit_check_in, "Edit Check-In", :neutral, "right", "pencil", %w[checked_in]),
+        group_summary_action(:undo_check_in, "Undo Check-in", :warning, "right", "rotate-ccw", %w[checked_in])
+      ].compact
+    end
+
+    def standalone_summary_actions
+      case booking.status
+      when "pending", "overbooked"
+        [ standalone_summary_action(:cancel, "Cancel", :danger, "right", "ban") ]
+      when "confirmed"
+        [
+          standalone_summary_action(:check_in, "Check-in", :primary, "right", "log-in"),
+          standalone_summary_action(:cancel, "Cancel", :danger, "right", "ban")
+        ]
+      when "review_no_show"
+        [
+          standalone_summary_action(:backdated_check_in, "Backdated Check-in", :primary, "right", "calendar-clock"),
+          standalone_summary_action(:mark_no_show, "Mark No-show", :danger, "right", "user-x"),
+          standalone_summary_action(:cancel, "Cancel", :danger, "right", "ban")
+        ]
+      when "checked_in"
+        [
+          standalone_summary_action(:check_out, "Check-out", :primary, "fullscreen-bottom", "log-out"),
+          standalone_summary_action(:edit_check_in, "Edit Check-In", :neutral, "right", "pencil"),
+          standalone_summary_action(:undo_check_in, "Undo Check-in", :warning, "right", "rotate-ccw")
+        ]
+      when "review_due_out"
+        [ standalone_summary_action(:late_checkout, "Review Late Checkout", :warning, "right", "clock") ]
+      when "checkout_required"
+        [ standalone_summary_action(:check_out, "Complete Checkout", :primary, "fullscreen-bottom", "log-out") ]
+      when "no_show"
+        [ standalone_summary_action(:reinstate, "Reinstate", :primary, "right", "rotate-ccw") ]
+      else
+        []
+      end
     end
 
     def check_in_date
@@ -212,7 +305,7 @@ module HotelPortal
     end
 
     def drawer_open?
-      drawer.in?(%w[billing deposit])
+      drawer.in?(%w[deposit])
     end
 
     def group_booking?
@@ -485,6 +578,23 @@ module HotelPortal
       child_bookings.map(&:check_out).compact.max
     end
 
+    def document_rows
+      child_bookings.map do |child|
+        room = child.booking_rooms.first
+        DocumentRow.new(
+          child,
+          room_type_label_for(room),
+          room&.room_number.presence || "Unassigned",
+          document_guest_name(child),
+          child.status == "completed"
+        )
+      end
+    end
+
+    def document_row_groups
+      document_rows.group_by(&:room_type).sort_by { |room_type, _| room_type }
+    end
+
     def request_cards_for(child)
       housekeeping_cards = child.housekeeping_requests.reject(&:archived?).map do |request|
         RequestCard.new(
@@ -592,6 +702,11 @@ module HotelPortal
       end.sort_by { |row| [ row.date, row.room_type, row.room ] }
     end
 
+    def nightly_rate_label(child = booking)
+      row = room_rate_rows(child).find { |candidate| candidate.date == child.check_in.to_date }
+      row&.nightly_rate || "—"
+    end
+
     def room_rate_empty_message(child = booking)
       return "No room is attached to this booking." if child.booking_rooms.empty?
       return if room_rate_rows(child).any?
@@ -645,7 +760,7 @@ module HotelPortal
 
     def room_tree_groups
       booking.booking_rooms.group_by { |room| room_type_label(room) }.map do |room_type, rooms|
-        TreeGroup.new(room_type, pluralize_count(rooms.size, "room"), rooms.map { |room| room_tree_row(room) })
+        TreeGroup.new(room_type, pluralize_count(rooms.size, "room"), rooms.map { |room| room_tree_row(room) }, nil)
       end
     end
 
@@ -742,7 +857,7 @@ module HotelPortal
         TreeRow.new("complaints", "Complaints", pluralize_count(booking.complaint_requests.size, "request"), "request", request_row_active?("complaints"), nil)
       ]
 
-      [ TreeGroup.new("Requests", "Booking-level requests", request_rows) ] + room_tree_groups
+      [ TreeGroup.new("Requests", "Booking-level requests", request_rows, nil) ] + room_tree_groups
     end
 
     def audit_tree_groups
@@ -757,10 +872,10 @@ module HotelPortal
       end
 
       [
-        TreeGroup.new("All Activity", "Full booking timeline", [ TreeRow.new("all", "All Activity", booking_reference, "audit", audit_row_active?("all", nil), nil) ]),
-        TreeGroup.new("Rooms", pluralize_count(audit_room_rows.size, "room"), audit_room_rows),
-        TreeGroup.new("Folios", pluralize_count(audit_folio_rows.size, "folio"), audit_folio_rows),
-        TreeGroup.new("Guests", pluralize_count(guest_rows.size, "guest"), guest_rows)
+        TreeGroup.new("All Activity", "Full booking timeline", [ TreeRow.new("all", "All Activity", booking_reference, "audit", audit_row_active?("all", nil), nil) ], nil),
+        TreeGroup.new("Rooms", pluralize_count(audit_room_rows.size, "room"), audit_room_rows, nil),
+        TreeGroup.new("Folios", pluralize_count(audit_folio_rows.size, "folio"), audit_folio_rows, nil),
+        TreeGroup.new("Guests", pluralize_count(guest_rows.size, "guest"), guest_rows, nil)
       ]
     end
 
@@ -869,6 +984,17 @@ module HotelPortal
       booking.booking_guests.find(&:is_primary?)
     end
 
+    def group_summary_action(key, label, tone, offcanvas_variant, icon, eligible_statuses)
+      target = child_bookings.find { |child| child.status.in?(eligible_statuses) }
+      return unless target
+
+      SummaryAction.new(key, label, tone, offcanvas_variant, icon, target)
+    end
+
+    def standalone_summary_action(key, label, tone, offcanvas_variant, icon)
+      SummaryAction.new(key, label, tone, offcanvas_variant, icon, booking)
+    end
+
     def room_tree_row(room)
       TreeRow.new(
         room.id,
@@ -897,7 +1023,7 @@ module HotelPortal
     end
 
     def booking_entity_tree_group(child, rows)
-      TreeGroup.new(child_booking_label(child), child_booking_menu_description(child), rows)
+      TreeGroup.new(child_booking_label(child), child_booking_menu_description(child), rows, child.id)
     end
 
     def child_booking_number(child)
@@ -1011,6 +1137,17 @@ module HotelPortal
 
     def room_label(room)
       room.room_number.presence || "Unassigned room"
+    end
+
+    def room_type_label_for(room)
+      return "Unassigned" if room.blank?
+
+      room_type_label(room)
+    end
+
+    def document_guest_name(child)
+      record = child.booking_guests.find(&:primary?) || child.booking_guests.first
+      record&.name_snapshot.presence || record&.guest&.name.presence || child.guest_name
     end
 
     def room_type_label(room)

@@ -10,7 +10,6 @@
           <% if presenter.group_booking? %>
             <span class="rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-700">Group</span>
           <% end %>
-          <span class="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-700"><%= presenter.status_label %></span>
         </div>
         <p class="mt-0.5 text-xs font-semibold text-slate-500"><%= presenter.summary_subtitle %></p>
       </div>
@@ -19,25 +18,45 @@
     <% return_to = request.fullpath %>
     <div class="flex flex-wrap items-center gap-2">
       <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-        <% if booking.status == "confirmed" %>
-          <%= link_to "Check-in", hotel_booking_transaction_check_in_reservation_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
-          <%= link_to "Cancel", hotel_booking_transaction_cancel_booking_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-700 shadow-sm transition hover:bg-red-50" %>
-        <% elsif booking.status == "review_no_show" %>
-          <%= link_to "Backdated Check-in", hotel_booking_transaction_booking_backdated_check_in_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
-          <%= link_to "Mark No-show", hotel_booking_transaction_mark_no_show_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg border border-rose-200 bg-white px-4 py-2 text-sm font-bold text-rose-700 shadow-sm transition hover:bg-rose-50" %>
-          <%= link_to "Cancel", hotel_booking_transaction_cancel_booking_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-700 shadow-sm transition hover:bg-red-50" %>
-        <% elsif booking.status == "no_show" %>
-          <%= link_to "Reinstate", hotel_booking_transaction_reinstate_no_show_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700" %>
-          <% if current_user.has_permission?("post_folio_corrections", hotel: current_hotel) && Bookings::RepairNoShowTourismTax.needed?(booking) %>
-            <%= link_to "Repair No-show Folio", hotel_booking_transaction_repair_no_show_folio_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg border border-amber-200 bg-white px-4 py-2 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-amber-50" %>
-          <% end %>
-        <% elsif booking.status == "checked_in" %>
-          <%= link_to "Check-out", hotel_booking_transaction_check_out_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
-          <%= link_to "Edit Check-In", hotel_booking_transaction_check_in_reservation_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" %>
-        <% elsif booking.status == "review_due_out" %>
-          <%= link_to "Review Late Checkout", hotel_booking_transaction_late_checkout_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-amber-700" %>
-        <% elsif booking.status == "checkout_required" %>
-          <%= link_to "Complete Checkout", hotel_booking_transaction_check_out_path(current_hotel, booking, return_to: return_to), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }, class: "rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+        <% summary_actions = presenter.summary_actions %>
+        <% repair_no_show_available = !presenter.group_context_enabled? && booking.status == "no_show" && current_user.has_permission?("post_folio_corrections", hotel: current_hotel) && Bookings::RepairNoShowTourismTax.needed?(booking) %>
+        <% if summary_actions.any? || repair_no_show_available %>
+          <div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="end">
+            <button type="button" class="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 focus-visible:outline-none" aria-label="Booking actions" aria-expanded="false" aria-haspopup="menu" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown">
+              Actions
+              <%= cached_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
+            </button>
+            <div data-dropdown-target="menu" class="hidden w-56 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg" role="menu" tabindex="-1">
+              <% summary_actions.each do |summary_action| %>
+                <% action_booking = summary_action.target_booking %>
+                <% action_path = case summary_action.key
+                  when :check_in, :edit_check_in then hotel_booking_transaction_check_in_reservation_path(current_hotel, action_booking, return_to: return_to)
+                  when :cancel then hotel_booking_transaction_cancel_booking_path(current_hotel, action_booking, return_to: return_to)
+                  when :backdated_check_in then hotel_booking_transaction_booking_backdated_check_in_path(current_hotel, action_booking, return_to: return_to)
+                  when :mark_no_show then hotel_booking_transaction_mark_no_show_path(current_hotel, action_booking, return_to: return_to)
+                  when :check_out then hotel_booking_transaction_check_out_path(current_hotel, action_booking, return_to: return_to)
+                  when :undo_check_in then hotel_booking_transaction_undo_check_in_path(current_hotel, action_booking, return_to: return_to)
+                  when :late_checkout then hotel_booking_transaction_late_checkout_path(current_hotel, action_booking, return_to: return_to)
+                  when :reinstate then hotel_booking_transaction_reinstate_no_show_path(current_hotel, action_booking, return_to: return_to)
+                  end %>
+                <% action_class = case summary_action.tone
+                  when :danger then "text-rose-700 hover:bg-rose-50 focus-visible:bg-rose-50"
+                  when :warning then "text-amber-700 hover:bg-amber-50 focus-visible:bg-amber-50"
+                  else "text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100"
+                  end %>
+                <%= link_to action_path, role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: summary_action.offcanvas_variant }, class: "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold focus-visible:outline-none #{action_class}" do %>
+                  <%= cached_icon summary_action.icon, class: "size-4 shrink-0", aria: { hidden: true } %>
+                  <span><%= summary_action.label %></span>
+                <% end %>
+              <% end %>
+              <% if repair_no_show_available %>
+                <%= link_to hotel_booking_transaction_repair_no_show_folio_path(current_hotel, booking, return_to: return_to), role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-50 focus-visible:outline-none focus-visible:bg-amber-50" do %>
+                  <%= cached_icon "wrench", class: "size-4 shrink-0", aria: { hidden: true } %>
+                  <span>Repair No-show Folio</span>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
         <% end %>
       <% end %>
     </div>

@@ -106,6 +106,19 @@ module ApplicationHelper
     date.to_s
   end
 
+  def status_badge_classes(tone, active: false)
+    return "border-white/20 bg-white/15 text-white" if active
+
+    case tone.to_s
+    when "blue" then "border-blue-200 bg-blue-50 text-blue-700"
+    when "emerald" then "border-emerald-200 bg-emerald-50 text-emerald-700"
+    when "amber" then "border-amber-200 bg-amber-50 text-amber-700"
+    when "orange" then "border-orange-200 bg-orange-50 text-orange-700"
+    when "rose" then "border-rose-200 bg-rose-50 text-rose-700"
+    else "border-slate-200 bg-slate-50 text-slate-600"
+    end
+  end
+
   def display_housekeeping_date(value)
     return "Not provided" if value.blank?
 

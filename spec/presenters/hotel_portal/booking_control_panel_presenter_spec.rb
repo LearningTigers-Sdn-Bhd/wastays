@@ -36,6 +36,75 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
       expect(presenter.summary_subtitle).to eq("Booking No. #{group.formatted_reservation_number}")
       expect(presenter.summary_items).to include([ "Booking No.", group.formatted_reservation_number ])
     end
+
+    it "exposes group summary actions from eligible child booking statuses" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      booking.update_column(:status, "completed")
+      checkout_child = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      checkout_child.update_column(:status, "checked_in")
+      cancel_child = create(:booking, hotel: hotel, group_booking: group, group_position: 3)
+      cancel_child.update_column(:status, "confirmed")
+
+      actions = presenter.group_summary_actions
+
+      expect(actions.map(&:label)).to include("Check-in", "Check-out", "Cancel")
+      expect(actions.find { |action| action.key == :check_out }).to have_attributes(offcanvas_variant: "fullscreen-bottom", icon: "log-out", target_booking: checkout_child)
+    end
+
+    it "does not expose group summary actions for standalone bookings" do
+      booking.update_column(:status, "checked_in")
+
+      expect(presenter.group_summary_actions).to be_empty
+    end
+
+    it "exposes edit and undo check-in group summary actions for checked-in children" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      booking.update_column(:status, "confirmed")
+      checked_in_child = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      checked_in_child.update_column(:status, "checked_in")
+
+      actions = presenter.group_summary_actions
+
+      expect(actions.map(&:label)).to include("Edit Check-In", "Undo Check-in")
+      expect(actions.find { |action| action.key == :edit_check_in }).to have_attributes(tone: :neutral, icon: "pencil", offcanvas_variant: "right", target_booking: checked_in_child)
+      expect(actions.find { |action| action.key == :undo_check_in }).to have_attributes(tone: :warning, icon: "rotate-ccw", offcanvas_variant: "right", target_booking: checked_in_child)
+    end
+
+    it "exposes standalone summary actions from the booking status" do
+      booking.update_column(:status, "checked_in")
+
+      actions = presenter.summary_actions
+
+      expect(actions.map(&:label)).to eq([ "Check-out", "Edit Check-In", "Undo Check-in" ])
+      expect(actions.map(&:target_booking)).to all(eq(booking))
+      expect(actions.find { |action| action.key == :undo_check_in }).to have_attributes(icon: "rotate-ccw", offcanvas_variant: "right")
+    end
+
+    it "does not expose standalone summary actions for completed bookings" do
+      booking.update_column(:status, "completed")
+
+      expect(presenter.summary_actions).to be_empty
+    end
+
+    it "exposes group-aware actions on the group overview" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      booking.update_column(:status, "checked_in")
+
+      overview_presenter = described_class.new(booking, params: { scope: "group" })
+
+      expect(overview_presenter.group_summary_actions.map(&:label)).to include("Check-out")
+    end
+
+    it "returns compact status badge metadata for group child bookings" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      booking.update_column(:status, "checkout_required")
+
+      expect(presenter.status_badge_for_booking_id(booking.id)).to eq(label: "Checkout due", tone: "orange")
+    end
   end
 
   describe "primary guest" do
@@ -258,10 +327,12 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
     it "separates warning alerts from true editor drawers" do
       alert_presenter = described_class.new(booking, params: { tab: "room_and_rate", alert_action: "change_rate" })
       invalid_alert_presenter = described_class.new(booking, params: { tab: "room_and_rate", alert_action: "change_room" })
-      drawer_presenter = described_class.new(booking, params: { tab: "billing_preferences", drawer: "billing" })
+      removed_drawer_presenter = described_class.new(booking, params: { tab: "billing_preferences", drawer: "billing" })
+      drawer_presenter = described_class.new(booking, params: { tab: "folio_operations", drawer: "deposit" })
 
       expect(alert_presenter).to have_attributes(alert_action: "change_rate", alert_open?: true, layout_mode: "left_and_center", show_right_drawer?: false)
       expect(invalid_alert_presenter).to have_attributes(alert_action: nil, alert_open?: false)
+      expect(removed_drawer_presenter).to have_attributes(layout_mode: "left_and_center", show_right_drawer?: false)
       expect(drawer_presenter).to have_attributes(layout_mode: "left_center_right", show_right_drawer?: true)
     end
   end
