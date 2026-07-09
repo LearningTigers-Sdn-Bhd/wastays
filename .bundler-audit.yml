@@ -1,5 +1,6 @@
 ---
 ignore:
-  # Sourced from git master containing the merged fix (PR #199)
-  # Pending new release on RubyGems
+  # webrick has no patched release upstream (1.9.2 is latest as of 2026-07-09);
+  # it's a transitive test-only dependency pulled in by webmock, not used at
+  # runtime. Re-check periodically for a fixed release.
   - CVE-2026-38969

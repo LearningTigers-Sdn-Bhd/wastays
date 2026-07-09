@@ -53,7 +53,7 @@ module Folios
       return "Move reason can't be blank." if @reason.blank?
       return "Only posted charge transactions can be moved in this phase." unless @transaction.charge?
       return "Generated tax rows move with their parent charge." if generated_tax_child?(@transaction)
-      return "Source and target folios must be different." if @source_folio.id == @target_folio.id
+      return "Source and target folios must be different." if @source_folio.id == @target_folio.id && @tax_routes.empty?
       return "Source and target folios must belong to the same booking." unless @target_folio.booking_id == @booking.id
       return "Source and target folios must belong to the same hotel." unless @target_folio.hotel_id == @hotel.id
       return "Source folio must be open." unless @source_folio.open?

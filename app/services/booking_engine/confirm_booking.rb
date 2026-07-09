@@ -11,6 +11,10 @@ module BookingEngine
 
     def call
       @quote.with_lock do
+        if BookingRedesign.enabled? && multi_room_quote?
+          return BookingEngine::ConfirmGroupBooking.call(quote: @quote, payment_details: @payment_details)
+        end
+
         if (booking = existing_booking)
           initialize_folio(booking)
           return OpenStruct.new(success?: true, booking: booking)
@@ -141,6 +145,10 @@ module BookingEngine
     end
 
     private
+
+    def multi_room_quote?
+      @quote.booking_quote_items.sum(:quantity) > 1
+    end
 
     def existing_booking
       Booking.find_by(booking_quote_id: @quote.id)

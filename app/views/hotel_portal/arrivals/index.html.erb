@@ -164,7 +164,7 @@
                 </td>
                 <td class="px-8 py-5 text-right whitespace-nowrap sm:px-8">
                   <div class="inline-flex items-center gap-2">
-                    <%= link_to "View", hotel_booking_path(current_hotel, presenter.booking), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
+                    <%= link_to "View", hotel_booking_control_panel_path(current_hotel, presenter.booking, tab: "booking_details"), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
                     <% if presenter.status == 'confirmed' %>
                       <button type="button" onclick="document.getElementById('check-in-modal-<%= presenter.id %>').showModal();" class="inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-700">
                         Check In
@@ -263,7 +263,7 @@
             </dl>
 
             <div class="mt-6 flex items-center justify-end gap-2">
-              <%= link_to "View", hotel_booking_path(current_hotel, presenter.booking), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
+              <%= link_to "View", hotel_booking_control_panel_path(current_hotel, presenter.booking, tab: "booking_details"), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
               <% if presenter.status == 'confirmed' %>
                 <button type="button" onclick="document.getElementById('check-in-modal-<%= presenter.id %>-mob').showModal();" class="inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-700">
                   Check In Now

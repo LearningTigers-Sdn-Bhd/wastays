@@ -8,10 +8,10 @@ module HotelPortal
         before_action :set_booking
 
         def show
-          return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Only no-show bookings can have tourism tax repaired." unless @booking.status == "no_show"
+          return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: "Only no-show bookings can have tourism tax repaired." unless @booking.status == "no_show"
 
           @tourism_tax_charges = ::Bookings::RepairNoShowTourismTax.eligible_charges_for(@booking)
-          return redirect_to hotel_booking_path(current_hotel, @booking), alert: "This booking has no no-show tourism tax to repair." if @tourism_tax_charges.empty?
+          return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: "This booking has no no-show tourism tax to repair." if @tourism_tax_charges.empty?
 
           @tourism_tax_total = @tourism_tax_charges.sum(&:amount)
           @projected_balances = @tourism_tax_charges.group_by(&:booking_folio).to_h do |folio, charges|

@@ -1,9 +1,14 @@
 <% nights = (booking.check_out.to_date - booking.check_in.to_date).to_i %>
 <% suggested_charge = nights.positive? ? (booking.total_amount.to_d / nights).round(2) : 0 %>
+<% field_prefix = "early_departures[#{booking.id}]" %>
+<% visible = local_assigns.fetch(:visible, true) %>
 
-<section class="flex h-full flex-col border border-slate-200 bg-white"
+<section class="flex h-full flex-col bg-white <%= "hidden" unless visible %>"
          data-checkout-card="early-departure"
+         data-checkout-settlement-target="bookingRow"
+         data-booking-id="<%= booking.id %>"
          data-controller="early-departure"
+         data-early-departure-booking-id-value="<%= booking.id %>"
          data-early-departure-base-amount-value="<%= suggested_charge %>"
          data-early-departure-currency-value="<%= currency %>">
   <div class="flex items-center justify-between gap-2 border-b border-slate-200 px-4 py-2.5">
@@ -12,14 +17,19 @@
   </div>
   <div class="flex flex-1 flex-col p-4">
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <p class="text-[11px] text-slate-500">Scheduled checkout: <span class="font-semibold text-slate-700"><%= booking.check_out.strftime("%d %b %Y") %></span></p>
+      <p class="text-[11px] text-slate-500">
+        <% if booking.group_booking_id.present? %>
+          <span class="font-semibold text-slate-700"><%= booking.booking_rooms.first&.room_number.presence || "Unassigned room" %></span> ·
+        <% end %>
+        Scheduled checkout: <span class="font-semibold text-slate-700"><%= booking.check_out.strftime("%d %b %Y") %></span>
+      </p>
       <div class="grid grid-cols-2 gap-1.5">
         <label class="cursor-pointer rounded-md border border-slate-300 bg-white px-3 py-2 text-center transition has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-800">
-          <%= radio_button_tag :apply_charge, "false", true, class: "sr-only", data: { action: "change->early-departure#updateUI", early_departure_target: "chargeChoice" } %>
+          <%= radio_button_tag "#{field_prefix}[apply_charge]", "false", true, disabled: !visible, class: "sr-only", data: { action: "change->early-departure#updateUI", early_departure_target: "chargeChoice" } %>
           <span class="text-[11px] font-bold">No charge</span>
         </label>
         <label class="cursor-pointer rounded-md border border-slate-300 bg-white px-3 py-2 text-center transition has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-800">
-          <%= radio_button_tag :apply_charge, "true", false, class: "sr-only", data: { action: "change->early-departure#updateUI", early_departure_target: "chargeChoice" } %>
+          <%= radio_button_tag "#{field_prefix}[apply_charge]", "true", false, disabled: !visible, class: "sr-only", data: { action: "change->early-departure#updateUI", early_departure_target: "chargeChoice" } %>
           <span class="text-[11px] font-bold">Apply early departure charge</span>
         </label>
       </div>
@@ -30,13 +40,15 @@
       <div class="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_1fr_auto]">
         <div>
           <label class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-slate-500">Charge type</label>
-          <%= select_tag "early_departure[type]", options_for_select([["Fixed Amount", "amount"], ["Percentage (%)", "percentage"]], "amount"),
+          <%= select_tag "#{field_prefix}[type]", options_for_select([["Fixed Amount", "amount"], ["Percentage (%)", "percentage"]], "amount"),
+              disabled: !visible,
               class: "w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 focus:border-slate-500 focus:outline-none",
               data: { action: "change->early-departure#updateCalculation" } %>
         </div>
         <div>
           <label class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-slate-500">Value</label>
-          <%= number_field_tag "early_departure[value]", nil, step: 0.01, placeholder: "0.00",
+          <%= number_field_tag "#{field_prefix}[value]", nil, step: 0.01, placeholder: "0.00",
+              disabled: !visible,
               class: "w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 focus:border-slate-500 focus:outline-none",
               data: { action: "input->early-departure#updateCalculation" } %>
         </div>
@@ -45,7 +57,7 @@
           <p class="text-xs font-bold tabular-nums text-slate-900" data-early-departure-target="displayAmount"><%= currency %> 0.00</p>
         </div>
       </div>
-      <%= hidden_field_tag :charge_amount, 0, data: { early_departure_target: "amountInput" } %>
+      <%= hidden_field_tag "#{field_prefix}[charge_amount]", 0, disabled: !visible, data: { early_departure_target: "amountInput" } %>
     </div>
   </div>
 </section>

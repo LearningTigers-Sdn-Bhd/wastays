@@ -55,4 +55,29 @@ RSpec.describe Folios::UpdateFolio do
     expect(result).not_to be_success
     expect(result.error).to include("must belong to the folio hotel")
   end
+
+  it "promotes a primary only within the folio's room scope" do
+    booking_primary = create(:booking_folio, booking: booking, hotel: booking.hotel)
+    first_room = create(:booking_room, booking: booking)
+    second_room = create(:booking_room, booking: booking)
+    old_first_primary = create(:booking_folio, booking: booking, hotel: booking.hotel, booking_room: first_room)
+    new_first_primary = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, booking_room: first_room)
+    second_primary = create(:booking_folio, booking: booking, hotel: booking.hotel, booking_room: second_room)
+
+    result = described_class.call(
+      folio: new_first_primary,
+      user: user,
+      attributes: {
+        is_primary: true,
+        set_folio_as_primary_reason: "Guest changed payer"
+      }
+    )
+
+    expect(result).to be_success
+    expect(new_first_primary.reload).to be_is_primary
+    expect(old_first_primary.reload).not_to be_is_primary
+    expect(booking_primary.reload).to be_is_primary
+    expect(second_primary.reload).to be_is_primary
+    expect(FolioOperationLog.last.metadata["booking_room_id"]).to eq(first_room.id)
+  end
 end

@@ -53,7 +53,7 @@ RSpec.describe "Hotel AR invoices index", type: :system, js: true do
       click_link "View Booking"
     end
 
-    expect(page).to have_current_path(hotel_booking_path(hotel, booking))
+    expect(page).to have_current_path(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
   end
 
   it "opens the invoice when the mobile card is tapped or keyboard-activated" do

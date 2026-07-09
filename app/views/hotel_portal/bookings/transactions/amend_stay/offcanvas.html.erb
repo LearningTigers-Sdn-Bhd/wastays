@@ -5,7 +5,8 @@
     <%= form_with model: @booking, url: hotel_booking_transaction_amend_stay_path(current_hotel, @booking), method: :patch,
         class: "flex flex-col h-full",
         data: {
-          controller: "booking-calc",
+          controller: "booking-calc group-lifecycle-targets",
+          group_lifecycle_targets_selection_mode_value: "checkbox",
           booking_calc_availability_url_value: availability_hotel_bookings_path(current_hotel),
           booking_calc_price_url_value: stay_price_hotel_bookings_path(current_hotel),
           booking_calc_rate_options_url_value: rate_options_hotel_bookings_path(current_hotel),
@@ -17,7 +18,16 @@
                  subtitle: "Update booking dates and room assignment",
                  icon: cached_icon("pen-line", stroke_width: 2.5, class: "size-5") %>
 
-      <div class="flex-1 overflow-y-auto p-8">
+      <%# Modal Content %>
+      <div class="flex-1 <%= @booking.group_booking_id? ? 'grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none' : 'space-y-6 overflow-y-auto p-8 custom-scrollbar' %>">
+        <%= render "hotel_portal/bookings/transactions/shared/group_target_selector",
+          target_presenter: HotelPortal::BookingLifecycleTargetPresenter.new(booking: @booking, action: :amend_stay) %>
+
+        <% if @booking.group_booking_id? %>
+          <div class="min-h-0 overflow-y-auto custom-scrollbar">
+            <div class="space-y-6 p-8">
+        <% end %>
+
         <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
         
         <div class="grid sm:grid-cols-2 gap-6">
@@ -76,7 +86,7 @@
           <p class="text-[10px] font-bold text-slate-400 mt-2 italic uppercase tracking-wider">Only available rooms for the selected dates are shown.</p>
         </div>
 
-        <div class="mt-8 p-6 rounded-3xl bg-slate-50 border-2 border-slate-100">
+        <div class="mt-8 p-6 rounded-3xl bg-slate-50 border-2 border-slate-100" data-booking-calc-target="estimatedTotalSection">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Estimated Total</p>
@@ -88,6 +98,11 @@
           <%= f.hidden_field :manual_rate_override, data: { booking_calc_target: "rateOverrideFlag" } %>
           <%= f.hidden_field :guest_country, value: @booking.guest_country, data: { booking_calc_target: "guestCountry" } %>
         </div>
+
+        <% if @booking.group_booking_id? %>
+            </div>
+          </div>
+        <% end %>
       </div>
 
       <%# Modal Footer %>

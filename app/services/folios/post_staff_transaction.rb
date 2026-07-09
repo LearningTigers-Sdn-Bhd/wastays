@@ -316,7 +316,7 @@ module Folios
     end
 
     def active_tax_rules
-      @active_tax_rules ||= @transaction_code.transaction_code_taxes.includes(:hotel_tax).select(&:enabled_for_posting?)
+      @active_tax_rules ||= FolioRouting::EffectiveTaxRules.call(booking: @folio.booking, transaction_code: @transaction_code).select(&:enabled_for_posting?)
     end
 
     def tax_line(tax_rule, amount)

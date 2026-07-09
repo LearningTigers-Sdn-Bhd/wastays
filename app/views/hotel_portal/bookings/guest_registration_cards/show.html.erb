@@ -1,4 +1,8 @@
 <% terms = @card.signed? ? @card.terms_snapshot : @card.capture_terms_snapshot_preview %>
+<% primary_booking_guest = @booking.booking_guests.find(&:primary?) %>
+<% guest_name = primary_booking_guest&.name_snapshot.presence || @booking.guest_name %>
+<% guest_phone = primary_booking_guest&.phone_snapshot.presence || @booking.guest_phone %>
+<% guest_email = primary_booking_guest&.email_snapshot.presence || @booking.guest_email %>
 <% content_for :title, "Guest Registration Card #{ @booking.guest_registration_card_number_display }" %>
 
 <style>
@@ -48,9 +52,9 @@
           <div class="border-b border-slate-200 p-5 md:border-b-0 md:border-r">
             <h2 class="mb-4 text-sm font-bold uppercase text-slate-500">Guest</h2>
             <dl class="space-y-3">
-              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Name</dt><dd class="font-semibold text-slate-950 sm:text-right"><%= @booking.guest_name %></dd></div>
-              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Phone</dt><dd class="text-slate-800 sm:text-right"><%= @booking.guest_phone %></dd></div>
-              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Email</dt><dd class="break-all text-slate-800 sm:text-right"><%= @booking.guest_email %></dd></div>
+              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Name</dt><dd class="font-semibold text-slate-950 sm:text-right"><%= guest_name %></dd></div>
+              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Phone</dt><dd class="text-slate-800 sm:text-right"><%= guest_phone %></dd></div>
+              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Email</dt><dd class="break-all text-slate-800 sm:text-right"><%= guest_email %></dd></div>
               <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Guests</dt><dd class="text-slate-800 sm:text-right"><%= @booking.adults.to_i %> adult(s), <%= @booking.children.to_i %> child(ren)</dd></div>
             </dl>
           </div>
@@ -158,9 +162,9 @@
       <div class="border-b border-slate-300 p-5 sm:border-r">
         <p class="mb-3 text-xs font-bold uppercase text-slate-500">Guest details</p>
         <dl class="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2">
-          <dt class="font-semibold text-slate-500">Name</dt><dd class="font-semibold"><%= @booking.guest_name %></dd>
-          <dt class="font-semibold text-slate-500">Phone</dt><dd><%= @booking.guest_phone %></dd>
-          <dt class="font-semibold text-slate-500">Email</dt><dd><%= @booking.guest_email %></dd>
+          <dt class="font-semibold text-slate-500">Name</dt><dd class="font-semibold"><%= guest_name %></dd>
+          <dt class="font-semibold text-slate-500">Phone</dt><dd><%= guest_phone %></dd>
+          <dt class="font-semibold text-slate-500">Email</dt><dd><%= guest_email %></dd>
           <dt class="font-semibold text-slate-500">Guests</dt><dd><%= @booking.adults.to_i %> adult(s), <%= @booking.children.to_i %> child(ren)</dd>
         </dl>
       </div>

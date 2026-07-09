@@ -122,7 +122,7 @@ RSpec.describe "Hotel night audits", type: :system do
       within("[data-testid='blockers-table']") do
         expect(page).to have_content("Due out not checked out")
         expect(page).to have_content("Aisha Tan")
-        expect(page).to have_link("View Booking", href: hotel_booking_path(hotel, booking))
+        expect(page).to have_link("View Booking", href: hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations"))
       end
     end
 

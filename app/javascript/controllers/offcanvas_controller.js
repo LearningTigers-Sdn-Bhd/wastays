@@ -22,7 +22,7 @@ export default class extends Controller {
 
     // Listen for turbo frame loads to open the drawer
     this.element.addEventListener("turbo:frame-load", (event) => {
-      if (event.target.id === "offcanvas_drawer") {
+      if (event.target.id === this.frameTarget.id) {
         const variant = event.target.dataset.offcanvasVariant || this.pendingVariant || this.variantValue
         this.applyVariant(variant)
         this.open()
@@ -34,10 +34,11 @@ export default class extends Controller {
     document.removeEventListener("click", this.handleTriggerClick)
     clearTimeout(this.closeTimeout)
     clearTimeout(this.completeTimeout)
+    clearTimeout(this.openTimeout)
   }
 
   handleTriggerClick(event) {
-    const trigger = event.target.closest('[data-turbo-frame="offcanvas_drawer"]')
+    const trigger = event.target.closest(`[data-turbo-frame="${this.frameTarget.id}"]`)
     if (!trigger) return
 
     this.pendingVariant = trigger.dataset.offcanvasVariant || this.variantValue
@@ -46,13 +47,20 @@ export default class extends Controller {
 
   open() {
     clearTimeout(this.closeTimeout)
+    clearTimeout(this.openTimeout)
     window.dispatchEvent(new CustomEvent("offcanvas:open"))
     this.element.classList.replace(this.closedClass, this.openClass)
+    // Block interaction until the slide-in transition finishes, so a click during
+    // the animation can't land on a row that hasn't reached its final position yet.
+    this.panelTarget.classList.add("pointer-events-none")
     // Small delay to ensure display:block is applied before transition
     requestAnimationFrame(() => {
       this.panelTarget.classList.remove(this.closedTransformClass)
       this.panelTarget.classList.add(this.openTransformClass)
     })
+    this.openTimeout = setTimeout(() => {
+      this.panelTarget.classList.remove("pointer-events-none")
+    }, 300)
     document.body.classList.add("overflow-hidden")
   }
 

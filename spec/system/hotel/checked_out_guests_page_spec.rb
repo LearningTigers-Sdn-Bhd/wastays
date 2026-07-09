@@ -117,7 +117,7 @@ RSpec.describe "Hotel today's check-outs page", type: :system do
     expect(rows.first).to have_content(latest_checkout_booking.checked_in_at.in_time_zone(user.time_zone).strftime("%d %b %Y, %I:%M %p"))
     expect(rows.first).to have_content(latest_checkout_booking.checked_out_at.in_time_zone(user.time_zone).strftime("%d %b %Y, %I:%M %p"))
     expect(rows.first).to have_content("2x Suite Room")
-    expect(rows.first).to have_link("View booking", href: hotel_booking_path(hotel, latest_checkout_booking))
+    expect(rows.first).to have_link("View booking", href: hotel_booking_control_panel_path(hotel, latest_checkout_booking, tab: "booking_details"))
 
     expect(page).to have_content("Aisha Tan")
     expect(page).not_to have_content("Checked Out Earlier")
