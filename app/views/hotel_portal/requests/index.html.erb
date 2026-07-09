@@ -124,7 +124,7 @@
                         <%= cached_icon "cube", library: "phosphor", variant: "regular", class: "size-4" %>
                       <% end %>
                     <% elsif card[:kind] == "housekeeping" && card[:status] == "pending" %>
-                      <%= button_to card[:update_url], params: { status: "in_progress" }, method: :patch, class: "flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-blue-700 shadow-sm transition-all hover:border-blue-500 hover:bg-blue-500 hover:text-white", title: "Dispatch Request" do %>
+                      <%= button_to card[:update_url], params: { status: "new" }, method: :patch, class: "flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-blue-700 shadow-sm transition-all hover:border-blue-500 hover:bg-blue-500 hover:text-white", title: "Dispatch Request" do %>
                         <%= cached_icon "arrow-right", stroke_width: 3, class: "size-3.5" %>
                         Dispatch
                       <% end %>

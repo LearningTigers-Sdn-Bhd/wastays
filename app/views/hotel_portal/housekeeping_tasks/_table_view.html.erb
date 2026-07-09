@@ -34,19 +34,19 @@
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-slate-200 table-fixed">
             <colgroup>
-              <col class="w-[10%]"> <!-- Room -->
-              <col class="w-[15%]"> <!-- Assign To -->
-              <col class="w-[12%]"> <!-- Room Status -->
-              <col class="w-[10%]"> <!-- Arrival Time -->
-              <col class="w-[10%]"> <!-- Arrival Date -->
-              <col class="w-[10%]"> <!-- Departure -->
-              <col class="w-[6%]">  <!-- Nights -->
-              <col class="w-[17%]"> <!-- Task Details -->
+              <col class="w-[18%]"> <!-- Room (expanded to fit room type text) -->
+              <col class="w-[13%]"> <!-- Assign To -->
+              <col class="w-[11%]"> <!-- Room Status -->
+              <col class="w-[9%]">  <!-- Arrival Time -->
+              <col class="w-[9%]">  <!-- Arrival Date -->
+              <col class="w-[9%]">  <!-- Departure -->
+              <col class="w-[5%]">  <!-- Nights -->
+              <col class="w-[16%]"> <!-- Task Details -->
               <col class="w-[10%]"> <!-- Task Status -->
             </colgroup>
             <thead class="bg-slate-50">
               <tr>
-                <th scope="col" class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Room</th>
+                <th scope="col" class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap border-r border-slate-200">Room</th>
                 <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Assign To</th>
                 <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Room Status</th>
                 <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Arrival Time</th>
@@ -63,9 +63,8 @@
                 <tr class="bg-slate-100/80 font-bold cursor-pointer select-none border-b border-slate-200" data-action="click->table-group#toggle">
                   <td colspan="9" class="px-6 py-3 text-xs font-black text-slate-800 uppercase tracking-wider">
                     <div class="flex items-center gap-2">
-                      <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-4 shrink-0 text-slate-500 transition-transform duration-150 rotate-90", data: { table_group_target: "icon" } %>
                       <span><%= group[:room_type].name %></span>
-                      <span class="text-[10px] font-bold text-slate-500 normal-case">(<%= pluralize(group[:rooms].size, "room") %>)</span>
+                      <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-4 shrink-0 text-slate-500 transition-transform duration-150 rotate-90", data: { table_group_target: "icon" } %>
                     </div>
                   </td>
                 </tr>
@@ -76,6 +75,7 @@
                   <% resolved_status = room[:resolved_status] %>
                   <% active_booking = room[:active_booking] %>
                   <% hk_request = room[:hk_request] %>
+                  <% room_type = room[:room_type] %>
 
                   <% display_status = resolved_status == "dirty" ? "Dirty Confirmed" : resolved_status.humanize.titleize %>
                   <% status_badge_class = case resolved_status
@@ -88,8 +88,41 @@
 
                   <tr class="group hover:bg-slate-50/70 transition-colors duration-150 align-middle" data-table-group-target="row">
                     <!-- Room -->
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-950">
-                      <%= room_no %>
+                    <td class="px-6 py-4 whitespace-nowrap align-middle border-r border-slate-200 pr-6">
+                      <div class="flex items-center justify-between gap-2 w-full">
+                        <span class="text-sm font-bold text-slate-950"><%= room_no %></span>
+                        <% if room_type %>
+                          <div class="flex items-center gap-1.5 shrink-0">
+                            <!-- Smoking Icon -->
+                            <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+                              <span data-floating-target="reference" class="<%= room_type.smoking_allowed ? 'text-emerald-500' : 'text-slate-400' %>">
+                                <% if room_type.smoking_allowed %>
+                                  <%= cached_icon "cigarette", library: "phosphor", variant: "light", class: "size-3.5" %>
+                                <% else %>
+                                  <%= cached_icon "cigarette-slash", library: "phosphor", variant: "light", class: "size-3.5" %>
+                                <% end %>
+                              </span>
+                              <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap text-[9px] font-bold uppercase tracking-wider">
+                                <%= room_type.smoking_allowed ? "Smoking Allowed" : "No Smoking" %>
+                              </div>
+                            </div>
+
+                            <!-- Pet Icon -->
+                            <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+                              <span data-floating-target="reference" class="<%= room_type.pets_allowed ? 'text-emerald-500' : 'text-slate-300' %>">
+                                <% if room_type.pets_allowed %>
+                                  <%= cached_icon "paw-print", library: "phosphor", variant: "light", class: "size-3.5" %>
+                                <% else %>
+                                  <%= cached_icon "paw-print", library: "phosphor", variant: "light", class: "size-3.5 opacity-50" %>
+                                <% end %>
+                              </span>
+                              <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap text-[9px] font-bold uppercase tracking-wider">
+                                <%= room_type.pets_allowed ? "Pets Allowed" : "No Pets" %>
+                              </div>
+                            </div>
+                          </div>
+                        <% end %>
+                      </div>
                     </td>
 
                     <!-- Assign To -->
@@ -132,7 +165,7 @@
 
                     <!-- Task Details -->
                     <td class="px-3 py-4">
-                      <% if hk_request %>
+                      <% if hk_request && hk_request.request_details.present? && hk_request.request_details != "-" %>
                         <p class="text-sm font-medium text-slate-700 line-clamp-2" title="<%= hk_request.request_details %>">
                           <%= hk_request.request_details %>
                         </p>
@@ -146,10 +179,10 @@
                       <% if hk_request %>
                         <%= form_with url: hotel_request_status_path(current_hotel, kind: "housekeeping", request_id: hk_request.id), method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
                           <%= hidden_field_tag :redirect_to, request.original_url %>
-                          <%= select_tag :status, options_for_select([["Pending", "pending"], ["In Progress", "in_progress"], ["Completed", "completed"], ["Failed", "failed"], ["Cancelled", "cancelled"]], hk_request.status), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
+                          <%= select_tag :status, options_for_select([["No Task", "no_task"], ["New", "new"], ["Assigned", "assigned"], ["In Progress", "in_progress"], ["Completed", "completed"]], hk_request.status), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
                         <% end %>
                       <% else %>
-                        <span class="text-xs font-bold text-slate-400">-</span>
+                        <span class="text-xs font-bold text-slate-400">No Task</span>
                       <% end %>
                     </td>
                   </tr>

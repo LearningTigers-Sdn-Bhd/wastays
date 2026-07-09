@@ -1,8 +1,9 @@
 class HousekeepingRequest < ApplicationRecord
-  belongs_to :booking
+  belongs_to :booking, optional: true
   belongs_to :room_type, optional: true
+  belongs_to :hotel, optional: true
 
-  STATUSES = %w[pending in_progress completed failed cancelled].freeze
+  STATUSES = %w[new assigned in_progress completed failed cancelled no_task pending].freeze
 
   validates :status, presence: true, inclusion: { in: STATUSES }
   validates :request_details, presence: true

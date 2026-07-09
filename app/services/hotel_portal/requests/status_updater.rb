@@ -77,7 +77,12 @@ module HotelPortal
           return false unless HousekeepingRequest::STATUSES.include?(target_status)
 
           completed_at = target_status == "completed" ? (record.completed_at || Time.current) : nil
-          if record.update(status: target_status, completed_at: completed_at)
+          metadata = record.metadata.to_h
+          if target_status.in?(%w[new no_task])
+            metadata.delete("assigned_to")
+            metadata.delete("assigned_to_name")
+          end
+          if record.update(status: target_status, completed_at: completed_at, metadata: metadata)
             mark_booking_rooms_cleaning(record) if target_status == "in_progress"
             true
           else
@@ -94,16 +99,36 @@ module HotelPortal
       end
 
       def mark_booking_rooms_cleaning(record)
+        if record.room_number.present?
+          r_status = RoomStatus.find_or_create_by!(
+            hotel: record.hotel || record.booking&.hotel,
+            room_type: record.room_type || record.booking&.booking_rooms&.first&.room_type,
+            room_number: record.room_number
+          )
+
+          Rooms::SetStatus.new(
+            room_status: r_status,
+            status: "cleaning",
+            user: nil,
+            booking: record.booking,
+            event_type: "housekeeping_request_dispatched",
+            reason: record.request_details,
+            metadata: { "housekeeping_request_id" => record.id }
+          ).call
+        end
+
         return unless record.booking
 
         record.booking.booking_rooms.includes(:room_type).where.not(room_number: [ nil, "" ]).find_each do |booking_room|
+          next if booking_room.room_number == record.room_number
+
           room_status = RoomStatus.find_or_create_by!(
             hotel: record.booking.hotel,
             room_type: booking_room.room_type,
             room_number: booking_room.room_number
           )
 
-          result = Rooms::SetStatus.new(
+          Rooms::SetStatus.new(
             room_status: room_status,
             status: "cleaning",
             user: nil,

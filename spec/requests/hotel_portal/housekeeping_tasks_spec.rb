@@ -71,13 +71,38 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
       req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
       staff = create(:user, account: account)
-      UserHotelAccess.create!(user: staff, hotel: hotel, role: role)
+      hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
+      UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
+      UserRole.create!(user: staff, role: hk_role)
 
       patch assign_hotel_housekeeping_task_path(hotel, req), params: { assigned_to: staff.id }
 
       expect(response).to redirect_to(hotel_room_status_board_path(hotel, tab: "housekeeping"))
       expect(req.reload.metadata["assigned_to"]).to eq(staff.id)
       expect(req.reload.metadata["assigned_to_name"]).to eq(staff.name)
+    end
+  end
+
+  describe "PATCH /hotel/:hotel_id/requests/housekeeping/:request_id" do
+    it "completes the housekeeping request, causing it to disappear and fallback to No Task" do
+      booking = create(:booking, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101", request_details: "Clean the window")
+
+      # Verify it's displayed initially
+      get hotel_housekeeping_tasks_path(hotel)
+      expect(response.body).to include("Clean the window")
+
+      # Update status to completed
+      patch hotel_request_status_path(hotel, kind: "housekeeping", request_id: req.id), params: { status: "completed" }
+
+      expect(response).to redirect_to(hotel_requests_path(hotel))
+      expect(req.reload.status).to eq("completed")
+
+      # Loading the tasks page again should not show the request, and should display No Task
+      get hotel_housekeeping_tasks_path(hotel)
+      expect(response.body).not_to include("Clean the window")
+      expect(response.body).to include("No Task")
     end
   end
 end
