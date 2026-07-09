@@ -102,6 +102,12 @@ export default class extends Controller {
     const submit = this.element.querySelector("input[type='submit'], button[type='submit']")
     if (!submit) return
 
+    if (this.checkboxTargets.length === 0) {
+      submit.disabled = false
+      submit.classList.remove("opacity-50", "cursor-not-allowed")
+      return
+    }
+
     const complete = !this.masterDetailValue || this.selectedBookingIds.every((id) => this.panelComplete(id))
     const enabled = this.selectedBookingIds.length > 0 && complete
     submit.disabled = !enabled
