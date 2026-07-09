@@ -31,4 +31,18 @@ RSpec.describe HotelPortal::Requests::StatusUpdater do
     room_status = RoomStatus.find_by(hotel: hotel, room_number: "101")
     expect(room_status.status).to eq("cleaning")
   end
+
+  it "marks room as ready when housekeeping request is completed" do
+    room_type = create(:room_type, hotel: hotel, room_numbers: [ "101" ])
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+    
+    room_status = RoomStatus.find_or_create_by!(hotel: hotel, room_type: room_type, room_number: "101")
+    room_status.update!(status: "cleaning")
+    
+    request = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101", request_details: "Clean the sheets")
+
+    described_class.new(hotel: hotel, kind: :housekeeping, request_id: request.id, status: :completed).call
+
+    expect(room_status.reload.status).to eq("ready")
+  end
 end

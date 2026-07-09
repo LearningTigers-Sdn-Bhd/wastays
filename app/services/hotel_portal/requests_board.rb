@@ -168,7 +168,7 @@ module HotelPortal
     end
 
     def request_bucket(kind, request)
-      return nil if request.status.to_s == "cancelled"
+      return nil if request.status.to_s == "cancelled" || request.status.to_s == "no_task"
 
       case kind.to_s
       when "housekeeping"

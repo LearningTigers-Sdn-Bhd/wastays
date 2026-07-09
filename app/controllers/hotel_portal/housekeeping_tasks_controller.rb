@@ -31,6 +31,18 @@ module HotelPortal
                                           .to_a
                                           .sort_by { |r| [ r.status == "no_task" ? 1 : 0, -r.created_at.to_i ] }
                                           .first
+ 
+          if hk_request.nil?
+            hk_request = HousekeepingRequest.create!(
+              hotel: current_hotel,
+              room_type: room_type,
+              room_number: room_number,
+              booking: active_booking,
+              status: "no_task",
+              request_details: "-",
+              requested_at: Time.current
+            )
+          end
 
           {
             room_number: room_number,
