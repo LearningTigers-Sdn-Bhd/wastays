@@ -1,0 +1,24 @@
+<div class="flex h-full min-h-0 flex-col bg-white">
+  <%= render "hotel_portal/bookings/board/partials/content_header",
+    title: "Set billing terms",
+    subtitle: "#{party.display_name} · Booking No. #{@booking.formatted_reservation_number.presence || '—'} · Billing Preferences",
+    icon: cached_icon("credit-card", stroke_width: 2.5, class: "size-5") %>
+
+  <% if flash.now[:notice].present? %>
+    <div class="border-b border-emerald-200 bg-emerald-50 px-6 py-3 text-sm font-semibold text-emerald-800"><%= flash.now[:notice] %></div>
+  <% end %>
+
+  <div class="min-h-0 flex-1 overflow-auto p-6">
+    <p class="text-sm text-slate-600">Billing party added. Set its settlement terms now, or close and edit later from Billing Preferences.</p>
+
+    <%= form_with url: update_billing_terms_hotel_booking_control_panel_path(current_hotel, @booking), method: :patch, class: "mt-4 space-y-4" do %>
+      <%= hidden_field_tag :billing_party_id, party.id %>
+      <%= hidden_field_tag :offcanvas, "1" %>
+      <%= render "hotel_portal/booking_control_panels/billing_preferences/terms_fields", prefix: "billing_terms", object: party.billing_terms, party: party %>
+      <div class="sticky bottom-0 z-30 -mx-6 flex shrink-0 items-center justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4">
+        <button type="button" class="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700" data-action="offcanvas#close">Close</button>
+        <%= submit_tag "Save terms", class: "rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white" %>
+      </div>
+    <% end %>
+  </div>
+</div>

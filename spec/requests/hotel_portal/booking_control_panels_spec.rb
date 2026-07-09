@@ -272,7 +272,9 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
     it "opens only the current booking in grouped entity rails" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
+      booking.update_column(:status, "checked_in")
       sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, confirmation_token: "COLLAPSED-SIBLING")
+      sibling.update_column(:status, "checkout_required")
       create(:booking_room, booking: booking, room_number: "101")
       create(:booking_room, booking: sibling, room_number: "102")
       create(:booking_folio, booking: booking, hotel: hotel, name: "Current Folio")
@@ -286,8 +288,10 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(details.size).to eq(2)
       expect(details.first.key?("open")).to be(true)
       expect(details.last.key?("open")).to be(false)
-      expect(details.first.at_css("summary").text).to include("Room 101", booking.guest_name)
-      expect(details.last.at_css("summary").text).to include("Room 102", sibling.guest_name)
+      expect(details.first.at_css("summary").text.squish).to include("In house Room 101", booking.guest_name)
+      expect(details.last.at_css("summary").text.squish).to include("Checkout due Room 102", sibling.guest_name)
+      current_folio_link = details.first.at_css('a[href*="folio_id="]')
+      expect(current_folio_link["data-turbo-frame"]).to eq("_top")
     end
 
     it "marks grouped folio collapsibles for in-page state preservation" do
@@ -342,7 +346,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
         "confirmed" => [ "Check-in", "Cancel" ],
         "review_no_show" => [ "Backdated Check-in", "Mark No-show", "Cancel" ],
         "no_show" => [ "Reinstate" ],
-        "checked_in" => [ "Check-out", "Edit Check-In" ],
+        "checked_in" => [ "Check-out", "Edit Check-In", "Undo Check-in" ],
         "review_due_out" => [ "Review Late Checkout" ],
         "checkout_required" => [ "Complete Checkout" ]
       }
@@ -354,12 +358,20 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
 
         expect(response).to have_http_status(:success)
         document = Nokogiri::HTML(response.body)
+        summary = document.at_css('section[aria-label="Booking summary"]')
+        expect(summary.at_xpath('.//button[normalize-space()="Actions"]')).to be_present
         labels.each do |label|
-          link = document.at_xpath("//a[normalize-space()='#{label}']")
+          link = summary.at_xpath(".//a[normalize-space()='#{label}']")
           expect(link).to be_present, "expected #{label} for #{status}"
+          expect(link.at_css("svg")).to be_present, "expected #{label} to include an icon"
           expect(CGI.parse(URI.parse(link["href"]).query.to_s)["return_to"]).to eq([ path ])
         end
       end
+
+      booking.update_columns(status: "completed")
+      get hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
+      summary = Nokogiri::HTML(response.body).at_css('section[aria-label="Booking summary"]')
+      expect(summary.at_xpath('.//button[normalize-space()="Actions"]')).to be_nil
     end
 
     it "renders only the workspace frame for workspace turbo requests" do
@@ -451,39 +463,85 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
     it "keeps guest details in a two-column workspace even when drawer state is requested" do
       create(:booking_guest, booking: booking, is_primary: true)
 
-      get hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", drawer: "billing")
+      get hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", drawer: "deposit")
 
       expect(response.body).to include('data-layout-mode="left_and_center"')
       expect(response.body).not_to include('data-testid="control-panel-action-drawer"')
     end
 
     it "renders only true editor drawers" do
-      drawer_tabs = {
-        "billing" => "billing_preferences",
-        "deposit" => "folio_operations"
-      }
+      get hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", drawer: "deposit")
 
-      drawer_tabs.each do |drawer, tab|
-        get hotel_booking_control_panel_path(hotel, booking, tab: tab, drawer: drawer)
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('data-testid="control-panel-action-drawer"')
+    end
 
-        expect(response).to have_http_status(:success), "expected #{drawer} drawer to render"
-        expect(response.body).to include('data-testid="control-panel-action-drawer"')
-      end
+    it "does not render removed billing drawer state" do
+      get hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences", drawer: "billing")
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Billing Preferences")
+      expect(response.body).not_to include('data-testid="control-panel-action-drawer"')
     end
 
     it "shows sibling child bookings when the booking belongs to a group" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
+      booking.update_column(:status, "checked_in")
       sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, confirmation_token: "SIBLING-ROOM", reservation_number: 43)
-      create(:booking_room, booking: booking)
-      create(:booking_room, booking: sibling)
+      create(:booking_room, booking: booking, room_number: "103")
+      create(:booking_room, booking: sibling, room_number: "104")
 
       get hotel_booking_control_panel_path(hotel, booking, tab: "room_and_rate")
 
       expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      child_nav = document.at_css('nav[aria-label="Group booking context"]')
       expect(response.body).to include('data-layout-mode="left_and_center"')
       expect(response.body).to include("Bookings / Room Rate")
       expect(response.body).to include(hotel_booking_control_panel_path(hotel, sibling, tab: "room_and_rate"))
+      expect(child_nav.text.squish).to include("In house Room 103")
+      expect(child_nav.at_xpath('.//a[contains(normalize-space(), "Room")][1]')["data-turbo-frame"]).to eq("_top")
+    end
+
+    it "renders group-aware lifecycle controls as an actions dropdown in group context" do
+      role.permissions << manage_bookings
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      booking.update_column(:status, "completed")
+      checkout_child = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      checkout_child.update_column(:status, "checked_in")
+      create(:booking, hotel: hotel, group_booking: group, group_position: 3, status: "completed")
+      create(:booking_room, booking: booking, room_number: "103")
+
+      get hotel_booking_control_panel_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      summary = Nokogiri::HTML(response.body).at_css('section[aria-label="Booking summary"]')
+      expect(summary.at_xpath('.//button[normalize-space()="Actions"]')).to be_present
+      expect(summary.css('a').map { |link| link.text.squish }).to include("Check-out")
+      expect(summary.text).not_to include("Check-out...")
+      expect(summary.text).not_to include("Checked out")
+      checkout_action = summary.at_xpath('.//a[normalize-space()="Check-out"]')
+      expect(checkout_action.at_css("svg")).to be_present
+      expect(checkout_action["href"]).to include(hotel_booking_transaction_check_out_path(hotel, checkout_child))
+      expect(checkout_action["data-turbo-frame"]).to eq("offcanvas_drawer")
+      expect(checkout_action["data-offcanvas-variant"]).to eq("fullscreen-bottom")
+    end
+
+    it "renders group-aware actions on the group overview summary" do
+      role.permissions << manage_bookings
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      booking.update_column(:status, "checked_in")
+
+      get hotel_booking_control_panel_path(hotel, booking, scope: "group")
+
+      expect(response).to have_http_status(:success)
+      summary = Nokogiri::HTML(response.body).at_css('section[aria-label="Booking summary"]')
+      expect(summary.at_xpath('.//button[normalize-space()="Actions"]')).to be_present
+      expect(summary.css('a').map { |link| link.text.squish }).to include("Check-out")
+      expect(summary.text).to include(group.name)
     end
 
     it "renders security deposits and requests with persistent standalone context" do
@@ -507,9 +565,11 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
     it "uses child-booking rails for grouped security deposits and requests" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
+      booking.update_column(:status, "checked_in")
       sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, confirmation_token: "SIBLING-REQ", reservation_number: 44)
-      create(:booking_room, booking: booking)
-      create(:booking_room, booking: sibling)
+      sibling.update_column(:status, "completed")
+      create(:booking_room, booking: booking, room_number: "103")
+      create(:booking_room, booking: sibling, room_number: "104")
 
       get hotel_booking_control_panel_path(hotel, booking, tab: "housekeeping_requests")
       expect(response).to have_http_status(:success)
@@ -521,7 +581,9 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-layout-mode="left_and_center"')
       expect(response.body).to include("Bookings / Deposits")
-      expect(Nokogiri::HTML(response.body).text).to include("#{sibling.booking_rooms.first.room_type.name} - #{sibling.guest_name}")
+      deposit_document = Nokogiri::HTML(response.body)
+      expect(deposit_document.text).to include("#{sibling.booking_rooms.first.room_type.name} - #{sibling.guest_name}")
+      expect(deposit_document.at_css('nav[aria-label="Group booking context"]').text.squish).to include("In house Room 103", "Checked out Room 104")
     end
 
     it "renders overview and booking rows as chevron navigation without a group identity block" do
@@ -536,7 +598,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       document = Nokogiri::HTML(response.body)
       nav = document.at_css('nav[aria-label="Group booking context"]')
       links = nav.css("a")
-      expect(links.map { |link| link.text.squish }).to include("Overview", "Room 105 Garden Prestige Suite - Hanami Ume")
+      expect(links.map { |link| link.text.squish }).to include("Overview", "Confirmed Room 105 Garden Prestige Suite - Hanami Ume")
       expect(links).to all(satisfy { |link| link.at_css("svg").present? })
       expect(links.first["href"]).to include("tab=booking_details", "scope=group")
       expect(links.first["class"]).to include("bg-slate-900")
@@ -550,6 +612,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(summary.text).not_to include("Booking No. #{booking.formatted_reservation_number}")
       expect(child_nav.css("a").last["class"]).to include("bg-slate-900")
       expect(child_nav.css("a").first["class"]).not_to include("bg-slate-900")
+      expect(child_nav.css("a").last["data-turbo-frame"]).to eq("_top")
     end
 
     it "renders functional group overviews across every tab" do
@@ -590,6 +653,31 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
           expect(table.text).not_to include("Guest", "Status", "Estimated Room Value")
         end
       end
+    end
+
+    it "renders an Edit Stay launch link on the group overview booking details tab" do
+      role.permissions << manage_bookings
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+
+      get hotel_booking_control_panel_path(hotel, booking, tab: "booking_details", scope: "group")
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      link = document.at_xpath("//a[normalize-space()='Edit Stay']")
+      expect(link).to be_present
+      expect(link["href"]).to eq(hotel_booking_transaction_amend_stay_path(hotel, booking))
+    end
+
+    it "hides the Edit Stay launch link on the group overview without manage_bookings permission" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+
+      get hotel_booking_control_panel_path(hotel, booking, tab: "booking_details", scope: "group")
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_xpath("//a[normalize-space()='Edit Stay']")).to be_nil
     end
 
     it "redirects legacy grouped folio scope to the first child's primary folio" do

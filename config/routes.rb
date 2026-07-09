@@ -370,8 +370,6 @@ Rails.application.routes.draw do
         patch "folio_windows/:folio_id", action: :update_folio_window, controller: :booking_control_panel_actions, as: :update_folio_window
         post "folio_windows/:folio_id/close", action: :close_folio_window, controller: :booking_control_panel_actions, as: :close_folio_window
         post "folio_windows/:folio_id/reopen", action: :reopen_folio_window, controller: :booking_control_panel_actions, as: :reopen_folio_window
-        post "forecasts/:forecast_id/move", action: :move_forecast, controller: :booking_control_panel_actions, as: :move_forecast
-        post :apply_billing, controller: :booking_control_panel_actions
         post :add_billing_party, controller: :booking_control_panel_actions
         patch :update_billing_terms, controller: :booking_control_panel_actions
         patch :archive_billing_party, controller: :booking_control_panel_actions
@@ -379,6 +377,9 @@ Rails.application.routes.draw do
         get :billing_routes, controller: :booking_control_panel_actions
         post :preview_billing_routes, controller: :booking_control_panel_actions
         post :apply_billing_routes, controller: :booking_control_panel_actions
+        get :group_billing_routes, controller: :booking_control_panel_actions
+        post :preview_group_billing_routes, controller: :booking_control_panel_actions
+        post :apply_group_billing_routes, controller: :booking_control_panel_actions
         post :allocate_deposit, controller: :booking_control_panel_actions
         post :refund_deposit, controller: :booking_control_panel_actions
         post :reverse_deposit_allocation, controller: :booking_control_panel_actions
@@ -401,8 +402,11 @@ Rails.application.routes.draw do
       match "backdated-check-in/:booking_id", to: "backdated_check_ins#show", via: [ :get, :post ], as: :booking_backdated_check_in
       match "edit-booking/:booking_id", to: "edit_bookings#show", via: [ :get, :patch ], as: :edit_booking
       match "edit-booking-timeline/:booking_id", to: "edit_booking_timelines#show", via: [ :get, :patch ], as: :edit_booking_timeline
+      get "show-booking/:booking_id", to: "show_bookings#show", as: :show_booking
+      get "show-booking/:booking_id/print-send", to: "show_bookings#print_send", as: :show_booking_print_send
       match "amend-stay/:booking_id", to: "amend_stays#show", via: [ :get, :patch ], as: :amend_stay
       get "check-in-reservation/:booking_id", to: "check_in_reservations#show", as: :check_in_reservation
+      match "undo-check-in/:booking_id", to: "undo_check_ins#show", via: [ :get, :post ], as: :undo_check_in
       get "check-out/:booking_id", to: "check_outs#show", as: :check_out
       get "late-checkout/:booking_id", to: "late_checkouts#show", as: :late_checkout
       get "reinstate-no-show/:booking_id", to: "reinstate_no_shows#show", as: :reinstate_no_show
@@ -420,7 +424,6 @@ Rails.application.routes.draw do
       patch "windows/:folio_id", action: :update_window, on: :member, as: :window
       post "windows/:folio_id/close", action: :close_window, on: :member, as: :close_window
       post "windows/:folio_id/reopen", action: :reopen_window, on: :member, as: :reopen_window
-      post "forecasts/:forecast_id/move", action: :move_forecast, on: :member, as: :move_forecast
       get "routing_rules/new", to: "folios/routing_rules#new", on: :member, as: :new_routing_rule
       post "routing_rules", to: "folios/routing_rules#create", on: :member, as: :routing_rules
       get "routing_rules/:routing_rule_id/edit", to: "folios/routing_rules#edit", on: :member, as: :edit_routing_rule

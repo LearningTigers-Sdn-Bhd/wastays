@@ -6,15 +6,16 @@ module Folios
   class CreateFolio
     PERMISSION = "manage_folio_windows"
 
-    def self.call(booking:, user:, attributes: {})
-      new(booking: booking, user: user, attributes: attributes).call
+    def self.call(booking:, user:, attributes: {}, skip_authorization: false)
+      new(booking: booking, user: user, attributes: attributes, skip_authorization: skip_authorization).call
     end
 
-    def initialize(booking:, user:, attributes: {})
+    def initialize(booking:, user:, attributes: {}, skip_authorization: false)
       @booking = booking
       @hotel = booking.hotel
       @user = user
       @attributes = attributes.to_h.with_indifferent_access
+      @skip_authorization = skip_authorization
     end
 
     def call
@@ -132,6 +133,8 @@ module Folios
     end
 
     def permitted?
+      return true if @skip_authorization
+
       @user&.respond_to?(:superadmin?) && @user.superadmin? ||
         @user&.respond_to?(:has_permission?) && @user.has_permission?(PERMISSION, hotel: @hotel)
     end

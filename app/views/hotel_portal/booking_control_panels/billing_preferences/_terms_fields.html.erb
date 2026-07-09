@@ -1,20 +1,18 @@
-<% object = local_assigns[:object] %>
+<%
+  object = local_assigns[:object]
+  party = local_assigns[:party]
+  city_ledger_eligible = party.nil? || (party.company? && party.hotel_corporate_account&.active? && party.hotel_corporate_account&.direct_bill_enabled?)
+  settlement_type_options = [["Cash / bank", "cash_bank"]]
+  settlement_type_options << ["City Ledger", "city_ledger"] if city_ledger_eligible || object&.settlement_type == "city_ledger"
+%>
 <div class="grid gap-4 sm:grid-cols-2">
   <div>
     <%= label_tag "#{prefix}_settlement_type", "Settlement type", class: "mb-1 block text-xs font-semibold text-slate-600" %>
-    <%= select_tag "#{prefix}[settlement_type]", options_for_select([["Cash / bank", "cash_bank"], ["City Ledger", "city_ledger"]], object&.settlement_type || "cash_bank"), id: "#{prefix}_settlement_type", class: "w-full rounded-md border-slate-300 text-sm" %>
-  </div>
-  <div>
-    <%= label_tag "#{prefix}_preferred_payment_method", "Preferred payment method", class: "mb-1 block text-xs font-semibold text-slate-600" %>
-    <%= text_field_tag "#{prefix}[preferred_payment_method]", object&.preferred_payment_method, id: "#{prefix}_preferred_payment_method", class: "w-full rounded-md border-slate-300 text-sm" %>
+    <%= select_tag "#{prefix}[settlement_type]", options_for_select(settlement_type_options, object&.settlement_type || "cash_bank"), id: "#{prefix}_settlement_type", class: "w-full rounded-md border-slate-300 text-sm" %>
   </div>
   <div>
     <%= label_tag "#{prefix}_purchase_order_reference", "PO reference", class: "mb-1 block text-xs font-semibold text-slate-600" %>
     <%= text_field_tag "#{prefix}[purchase_order_reference]", object&.purchase_order_reference, id: "#{prefix}_purchase_order_reference", class: "w-full rounded-md border-slate-300 text-sm" %>
-  </div>
-  <div>
-    <%= label_tag "#{prefix}_billing_reference", "Billing reference", class: "mb-1 block text-xs font-semibold text-slate-600" %>
-    <%= text_field_tag "#{prefix}[billing_reference]", object&.billing_reference, id: "#{prefix}_billing_reference", class: "w-full rounded-md border-slate-300 text-sm" %>
   </div>
   <div class="sm:col-span-2">
     <%= label_tag "#{prefix}_authorization_reference", "Authorization reference", class: "mb-1 block text-xs font-semibold text-slate-600" %>

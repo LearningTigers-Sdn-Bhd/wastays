@@ -1,7 +1,6 @@
 <section aria-labelledby="billing-preferences-heading">
   <header class="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
     <div><p class="text-xs font-semibold text-slate-500">Booking No. <%= presenter.group_overview? ? presenter.group_booking_number : presenter.booking_number %></p><h2 id="billing-preferences-heading" class="mt-1 text-lg font-bold text-slate-950">Billing Preferences</h2><p class="mt-1 text-sm text-slate-600">Register billing parties and settlement terms. Routing is managed separately.</p></div>
-    <% if current_user.has_permission?("manage_folio_movements", hotel: current_hotel) %><%= link_to "Change Billing Routes", billing_routes_hotel_booking_control_panel_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" %><% end %>
   </header>
 
   <div class="p-5">

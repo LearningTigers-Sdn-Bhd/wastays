@@ -15,55 +15,8 @@
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100">
-        <% @routing_matrix.rows.each do |row| %>
-          <% current_folio = row.target_folio %>
-          <% current_party_id = current_folio&.booking_billing_party_id %>
-          <% draft = (@route_draft || {}).fetch(row.code.id.to_s, {}) %>
-          <% selected_party_id = draft["billing_party_id"].presence || current_party_id %>
-          <% selected_folio_id = draft["target_folio_id"].presence || current_folio&.id %>
-          <tr data-billing-routes-target="row" data-route-level="parent" data-code-id="<%= row.code.id %>">
-            <td class="px-3 py-3">
-              <button type="button" class="text-slate-500" aria-label="Show attached taxes for <%= row.code.code %>" aria-expanded="false" data-action="billing-routes#toggle"><%= cached_icon "chevron-right", class: "size-4", data: { billing_routes_target: "chevron" } %></button>
-            </td>
-            <td class="px-3 py-3 font-mono font-bold text-slate-900"><%= row.code.code %></td>
-            <td class="px-3 py-3 font-semibold text-slate-900"><%= row.code.name %></td>
-            <td class="px-3 py-3 text-slate-600"><%= row.included_children.any? ? pluralize(row.included_children.size, "attached item") : "None" %></td>
-            <td class="px-3 py-3">
-              <%= select_tag "routes[#{row.code.id}][billing_party_id]",
-                options_for_select(@routing_matrix.parties.map { |party| [party.display_name, party.id, { disabled: party.booking_folios.none? }] }, selected_party_id),
-                include_blank: current_party_id.blank? ? "Unassigned — add/reconcile folio" : nil,
-                class: "w-full rounded-md border-slate-300 text-xs", data: { action: "billing-routes#partyChanged", billing_routes_target: "party" } %>
-            </td>
-            <td class="px-3 py-3">
-              <%= select_tag "routes[#{row.code.id}][target_folio_id]",
-                options_for_select(@routing_matrix.folios.map { |folio| [folio.display_option_label, folio.id, { disabled: !folio.open?, "data-party-id": folio.booking_billing_party_id.to_s, "data-closed": (!folio.open?).to_s }] }, selected_folio_id),
-                class: "w-full rounded-md border-slate-300 text-xs", data: { action: "billing-routes#parentFolioChanged", billing_routes_target: "folio" } %>
-            </td>
-          </tr>
-          <tr class="hidden bg-slate-50/60" data-billing-routes-target="children">
-            <td colspan="6" class="p-0">
-              <table class="w-full table-fixed border-collapse text-left text-xs">
-                <tbody class="divide-y divide-slate-200 border-y border-slate-200">
-                  <% if row.children.any? %>
-                    <% row.children.each do |child| %>
-                      <% draft_tax = draft.fetch("taxes", {})[child.key] %>
-                      <% included = draft_tax.nil? ? child.included : ActiveModel::Type::Boolean.new.cast(draft_tax) %>
-                      <% child_draft = draft.fetch("children", {}).fetch(child.key, {}) %>
-                      <% child_party_id = child_draft["billing_party_id"].presence || child.target_folio&.booking_billing_party_id || selected_party_id %>
-                      <% child_folio_id = child_draft["target_folio_id"].presence || child.target_folio&.id || selected_folio_id %>
-                      <% guest_primary_folio_id = @routing_booking.booking_folio&.id %>
-                      <% child_choice = child_draft["billing_party_choice"].presence || (child.rule&.target_folio_id == guest_primary_folio_id ? "guest_primary_folio" : (child.rule ? "party:#{child_party_id}" : "inherit")) %>
-                      <% child_folio_id = guest_primary_folio_id if child_choice == "guest_primary_folio" %>
-                      <tr data-billing-routes-target="row" data-route-level="child" data-parent-code-id="<%= row.code.id %>" data-primary-folio-id="<%= guest_primary_folio_id %>"><td class="w-10"></td><td class="w-24 px-3 py-2 font-mono font-bold text-slate-700"><%= child.code.code %></td><td class="px-3 py-2 font-semibold text-slate-800"><%= child.label %></td><td class="w-44 px-3 py-2"><%= hidden_field_tag "routes[#{row.code.id}][taxes][#{child.key}]", "0" %><label class="inline-flex items-center gap-2 text-slate-700"><%= check_box_tag "routes[#{row.code.id}][taxes][#{child.key}]", "1", included, class: "rounded border-slate-300" %> Include</label></td><td class="w-48 px-3 py-2"><%= select_tag "routes[#{row.code.id}][children][#{child.key}][billing_party_choice]", options_for_select([["Follow parent", "inherit"], ["Keep in Guest Primary Folio", "guest_primary_folio", { disabled: guest_primary_folio_id.blank? }]] + @routing_matrix.parties.map { |party| [party.display_name, "party:#{party.id}", { disabled: party.booking_folios.none? }] }, child_choice), class: "w-full rounded-md border-slate-300 text-xs", data: { action: "billing-routes#childChoiceChanged", billing_routes_target: "childChoice" } %></td><td class="w-56 px-3 py-2"><%= select_tag "routes[#{row.code.id}][children][#{child.key}][target_folio_id]", options_for_select(@routing_matrix.folios.map { |folio| [folio.display_option_label, folio.id, { disabled: !folio.open?, "data-party-id": folio.booking_billing_party_id.to_s, "data-closed": (!folio.open?).to_s }] }, child_folio_id), disabled: child_choice.in?(%w[inherit guest_primary_folio]), class: "w-full rounded-md border-slate-300 text-xs disabled:bg-slate-100 disabled:text-slate-400", data: { billing_routes_target: "folio" } %></td></tr>
-                    <% end %>
-                  <% else %>
-                    <tr><td class="px-3 py-3 text-center text-slate-500" colspan="6">No attached taxes or charges.</td></tr>
-                  <% end %>
-                </tbody>
-              </table>
-            </td>
-          </tr>
-        <% end %>
+        <%= render "hotel_portal/booking_control_panels/actions/billing_routes/routing_rows",
+          matrix: @routing_matrix, booking: @routing_booking, draft: @route_draft, field_prefix: "routes" %>
       </tbody>
     </table>
   </div>

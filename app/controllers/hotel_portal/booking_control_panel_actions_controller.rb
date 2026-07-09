@@ -6,10 +6,9 @@ module HotelPortal
   class BookingControlPanelActionsController < BaseController
     include OffcanvasTransactionCompletion
 
-    before_action :authorize_manage_bookings!, except: %i[new_folio_window create_folio_window edit_folio_window update_folio_window close_folio_window reopen_folio_window move_forecast]
+    before_action :authorize_manage_bookings!, except: %i[new_folio_window create_folio_window edit_folio_window update_folio_window close_folio_window reopen_folio_window]
     before_action :authorize_manage_folio_windows!, only: %i[new_folio_window create_folio_window edit_folio_window update_folio_window close_folio_window reopen_folio_window]
-    before_action :authorize_manage_folio_movements!, only: :move_forecast
-    before_action :authorize_manage_billing_routes!, only: %i[billing_routes preview_billing_routes apply_billing_routes]
+    before_action :authorize_manage_billing_routes!, only: %i[billing_routes preview_billing_routes apply_billing_routes group_billing_routes preview_group_billing_routes apply_group_billing_routes]
     before_action :set_booking
 
     def new_folio_window
@@ -84,21 +83,6 @@ module HotelPortal
       respond_with_folio_result(result, folio: folio, notice: "Folio window reopened.")
     end
 
-    def move_forecast
-      forecast = FolioForecastedCharge.joins(:booking_folio)
-        .where(booking_folios: { booking_id: @booking.id, hotel_id: current_hotel.id })
-        .find(params[:forecast_id])
-      target_folio = @booking.booking_folios.find(folio_operation_params[:target_folio_id])
-      result = ::Folios::MoveForecast.call(
-        forecast: forecast,
-        target_folio: target_folio,
-        user: current_user,
-        reason: folio_operation_params[:reason]
-      )
-      selected_folio = result.success? ? target_folio : forecast.booking_folio
-      respond_with_folio_result(result, folio: selected_folio, notice: "Upcoming charge moved.")
-    end
-
     def set_primary_guest
       booking_guest = @booking.booking_guests.find(params[:booking_guest_id])
       result = ::Bookings::SetPrimaryGuest.call(booking: @booking, booking_guest: booking_guest, actor: current_user)
@@ -126,25 +110,49 @@ module HotelPortal
       redirect_with_result(result, tab: "room_and_rate")
     end
 
-    def apply_billing
-      arrangement = group_booking.group_billing_arrangements.find(params[:group_billing_arrangement_id])
-      bookings = scoped_group_bookings.where(id: Array(params[:booking_ids]).presence || @booking.id)
-      result = ::Billing::ApplyGroupArrangement.call(
-        arrangement: arrangement,
-        bookings: bookings,
-        charge_categories: Array(params[:charge_categories]),
-        actor: current_user,
-        local_exception: ActiveModel::Type::Boolean.new.cast(params[:local_exception]),
-        replace_local_exceptions: ActiveModel::Type::Boolean.new.cast(params[:replace_local_exceptions])
-      )
-      redirect_with_result(result, tab: "billing_preferences", billing_scope: params[:billing_scope], scope: ("group" if params[:billing_scope] == "group"))
-    end
-
     def add_billing_party
-      result = ::BookingBillingParties::ManageCompany.call(
-        booking: @booking, actor: current_user, attributes: billing_party_params
-      )
-      redirect_with_result(result, tab: "billing_preferences", billing_party_id: result.party&.id)
+      unless @booking.group_booking_id?
+        result = ::BookingBillingParties::ManageCompany.call(
+          booking: @booking, actor: current_user, attributes: billing_party_params
+        )
+        return redirect_with_result(result, tab: "billing_preferences",
+          billing_editor: (result.success? ? "party" : nil), billing_party_id: result.party&.id)
+      end
+
+      if params[:scope].blank?
+        prepare_confirm_group_scope
+        return render "hotel_portal/booking_control_panels/billing_preferences/confirm_group_scope"
+      end
+
+      result = if params[:scope] == "group"
+        ::BookingBillingParties::ManageCompany.call_for_group(
+          group_booking: group_booking, actor: current_user, attributes: billing_party_params
+        )
+      else
+        ::BookingBillingParties::ManageCompany.call(
+          booking: @booking, actor: current_user, attributes: billing_party_params
+        )
+      end
+
+      if result.success?
+        party = resolved_billing_party(result)
+        respond_to do |format|
+          format.turbo_stream do
+            flash.now[:notice] = "Billing party added."
+            render turbo_stream: turbo_stream.update("offcanvas_drawer",
+              partial: "hotel_portal/booking_control_panels/billing_preferences/edit_terms_offcanvas_content",
+              locals: { party: party })
+          end
+          format.html do
+            redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "billing_preferences",
+              billing_editor: "party", billing_party_id: party.id), notice: "Billing party added."
+          end
+        end
+      else
+        prepare_confirm_group_scope
+        flash.now[:alert] = result.error
+        render "hotel_portal/booking_control_panels/billing_preferences/confirm_group_scope", status: :unprocessable_content
+      end
     end
 
     def update_billing_terms
@@ -152,6 +160,12 @@ module HotelPortal
       result = ::BookingBillingParties::UpdateTerms.call(
         party: party, actor: current_user, attributes: billing_terms_params
       )
+
+      if result.success? && params[:offcanvas].present?
+        destination = hotel_booking_control_panel_path(current_hotel, @booking, tab: "billing_preferences", billing_party_id: party.id)
+        return offcanvas_transaction_response(destination: destination, notice: "Billing terms saved.")
+      end
+
       redirect_with_result(result, tab: "billing_preferences", billing_party_id: party.id)
     end
 
@@ -194,7 +208,7 @@ module HotelPortal
       end
 
       flash.now[:alert] = @batch_preview.error unless @batch_preview.success?
-      render "hotel_portal/booking_control_panels/actions/billing_routes/offcanvas", status: (@batch_preview.success? ? :ok : :unprocessable_entity)
+      render "hotel_portal/booking_control_panels/actions/billing_routes/offcanvas", status: (@batch_preview.success? ? :ok : :unprocessable_content)
     end
 
     def apply_billing_routes
@@ -217,7 +231,49 @@ module HotelPortal
         @route_draft = billing_routes_params
         @batch_preview = ::FolioRouting::ApplyBatch.preview(booking: @routing_booking, routes: @route_draft)
         flash.now[:alert] = result.error
-        render "hotel_portal/booking_control_panels/actions/billing_routes/offcanvas", status: :unprocessable_entity
+        render "hotel_portal/booking_control_panels/actions/billing_routes/offcanvas", status: :unprocessable_content
+      end
+    end
+
+    def group_billing_routes
+      prepare_group_billing_routes
+      render "hotel_portal/booking_control_panels/actions/group_billing_routes/offcanvas"
+    end
+
+    def preview_group_billing_routes
+      prepare_group_billing_routes
+      @group_route_draft = group_billing_routes_params
+      @group_batch_preview = ::FolioRouting::ApplyGroupBatch.preview(group_booking: @group, booking_routes: @group_route_draft)
+      if @group_batch_preview.success? && !@group_batch_preview.review_required?
+        return apply_group_billing_routes
+      end
+
+      flash.now[:alert] = @group_batch_preview.error unless @group_batch_preview.success?
+      render "hotel_portal/booking_control_panels/actions/group_billing_routes/offcanvas",
+        status: (@group_batch_preview.success? ? :ok : :unprocessable_content)
+    end
+
+    def apply_group_billing_routes
+      prepare_group_billing_routes
+      result = ::FolioRouting::ApplyGroupBatch.call(
+        group_booking: @group, actor: current_user, booking_routes: group_billing_routes_params,
+        confirmation: params[:confirmation], forecast_confirmation: params[:forecast_confirmation],
+        reason: params[:reason], idempotency_key: params[:idempotency_key]
+      )
+      destination = hotel_booking_control_panel_path(current_hotel, @booking, tab: "billing_preferences", scope: "group")
+      if result.success?
+        respond_to do |format|
+          format.turbo_stream do
+            flash[:notice] = "Group billing routes updated."
+            render_offcanvas_completion(destination)
+          end
+          format.html { redirect_to destination, notice: "Group billing routes updated.", status: :see_other }
+        end
+      else
+        @group_route_draft = group_billing_routes_params
+        @group_batch_preview = ::FolioRouting::ApplyGroupBatch.preview(group_booking: @group, booking_routes: @group_route_draft)
+        flash.now[:alert] = result.error
+        render "hotel_portal/booking_control_panels/actions/group_billing_routes/offcanvas", status: :unprocessable_content
       end
     end
 
@@ -283,13 +339,19 @@ module HotelPortal
     end
 
     def group_booking
-      raise ActiveRecord::RecordNotFound unless BookingRedesign.enabled? && @booking.group_booking_id.present?
+      raise ActiveRecord::RecordNotFound unless @booking.group_booking_id.present?
 
       @group_booking ||= current_hotel.group_bookings.find(@booking.group_booking_id)
     end
 
     def scoped_group_bookings
       current_hotel.bookings.where(group_booking: group_booking)
+    end
+
+    def resolved_billing_party(result)
+      return result.party if result.respond_to?(:party)
+
+      Array(result.parties).find { |party| party.booking_id == @booking.id }
     end
 
     def room_rate_params
@@ -305,10 +367,6 @@ module HotelPortal
         :name, :folio_type, :payer_type, :payer_id, :hotel_corporate_account_id, :currency,
         :reason, :settlement_method, :is_primary, :set_folio_as_primary_reason
       )
-    end
-
-    def folio_operation_params
-      params.fetch(:folio_operation, {}).permit(:target_folio_id, :reason)
     end
 
     def set_company_government_accounts
@@ -350,13 +408,12 @@ module HotelPortal
     end
 
     def billing_party_params
-      params.fetch(:billing_party, {}).permit(:hotel_corporate_account_id, :settlement_type,
-        :preferred_payment_method, :purchase_order_reference, :billing_reference, :authorization_reference)
+      params.fetch(:billing_party, {}).permit(:hotel_corporate_account_id, :account_type, :settlement_type,
+        :purchase_order_reference, :authorization_reference)
     end
 
     def billing_terms_params
-      params.fetch(:billing_terms, {}).permit(:settlement_type, :preferred_payment_method,
-        :purchase_order_reference, :billing_reference, :authorization_reference)
+      params.fetch(:billing_terms, {}).permit(:settlement_type, :purchase_order_reference, :authorization_reference)
     end
 
     def billing_routes_params
@@ -385,6 +442,23 @@ module HotelPortal
         .order(:group_position, :id)
     end
 
+    def group_billing_routes_params
+      params.fetch(:group_routes, {}).permit!.to_h
+    end
+
+    def prepare_confirm_group_scope
+      @group_bookings = scoped_group_bookings.includes(:booking_rooms, :booking_guests).order(:group_position, :id)
+      @billing_party_attributes = billing_party_params
+    end
+
+    def prepare_group_billing_routes
+      @group = group_booking
+      @group_bookings = @group.bookings.includes(:booking_rooms, :booking_guests,
+        booking_folios: :booking_billing_party, folio_routing_rules: :target_folio)
+      @group_readiness = ::FolioRouting::GroupRoutingReadiness.new(group_booking: @group)
+      @group_batch_key = params[:idempotency_key].presence || SecureRandom.uuid
+    end
+
     def authorize_manage_bookings!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_bookings", hotel: current_hotel)
     end
@@ -396,12 +470,6 @@ module HotelPortal
     end
 
     def authorize_manage_billing_routes!
-      allowed = current_user.respond_to?(:superadmin?) && current_user.superadmin? ||
-        current_user.has_permission?("manage_folio_movements", hotel: current_hotel)
-      raise Pundit::NotAuthorizedError unless allowed
-    end
-
-    def authorize_manage_folio_movements!
       allowed = current_user.respond_to?(:superadmin?) && current_user.superadmin? ||
         current_user.has_permission?("manage_folio_movements", hotel: current_hotel)
       raise Pundit::NotAuthorizedError unless allowed

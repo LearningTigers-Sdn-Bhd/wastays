@@ -21,6 +21,9 @@ module GroupBookings
 
       @booking.with_lock do
         old_value = { group_booking_id: @group_booking.id, group_position: @booking.group_position }
+        reset_rules = group_sourced_active_rules.to_a
+        reset_rules.each { |rule| rule.update!(active: false, updated_by: @actor) }
+
         @booking.update!(group_booking: nil, group_position: nil)
         Bookings::RecordAuditLog.call!(
           auditable: @booking,
@@ -32,6 +35,19 @@ module GroupBookings
           new_value: { group_booking_id: nil, group_position: nil },
           reason: @reason
         )
+
+        if reset_rules.any?
+          Bookings::RecordAuditLog.call!(
+            auditable: @booking,
+            user: @actor,
+            action_type: "update",
+            category: "financial",
+            source: "group_booking",
+            old_value: { active_group_billing_route_ids: reset_rules.map(&:id) },
+            new_value: { active_group_billing_route_ids: [] },
+            reason: "Group billing routes reset because the booking was removed from its group."
+          )
+        end
       end
 
       OpenStruct.new(success?: true, booking: @booking)
@@ -40,6 +56,10 @@ module GroupBookings
     end
 
     private
+
+    def group_sourced_active_rules
+      @booking.folio_routing_rules.active.where(source_type: "group")
+    end
 
     def failure(message)
       OpenStruct.new(success?: false, error: message, booking: @booking)
