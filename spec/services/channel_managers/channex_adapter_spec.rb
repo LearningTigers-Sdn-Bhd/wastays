@@ -45,6 +45,10 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       room_type.room_type_rate_plans.find_by!(rate_plan: rate_plan).create_channel_mapping(provider: "channex", external_id: "ch_rp_123")
       allow(client_double).to receive(:get).with("/channels").and_return({ "data" => [] })
 
+      # push_restrictions_values looks up connected channels to apply per-channel
+      # derived pricing overrides; stub an empty channel list for these specs.
+      allow(client_double).to receive(:get).with("/channels").and_return({ "data" => [] })
+
       # Create ARI data - ensure contiguous dates with SAME values for grouping
       (start_date..end_date).each do |date|
         room_type.room_inventories.create!(date: date, quantity: 10, status: "open")

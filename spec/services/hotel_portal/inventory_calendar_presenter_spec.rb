@@ -126,7 +126,7 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
     end
 
     it 'only includes summary and availability rows for mapped room types' do
-      allow(presenter).to receive(:connected_channels).and_return([channel_data])
+      allow(presenter).to receive(:connected_channels).and_return([ channel_data ])
 
       # Find summary rows
       summary_rows = presenter.rows.select(&:channel_summary_row?)

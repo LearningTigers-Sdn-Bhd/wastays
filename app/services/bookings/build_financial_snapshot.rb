@@ -63,7 +63,7 @@ module Bookings
       raise ArgumentError, "Room type is required to build a rate snapshot." if @room_type.blank?
 
       currency = @rate_plan&.currency.presence || @hotel.default_currency.presence || "MYR"
-      all_eligible_rates = @room_type.room_rates.where(date: stay_dates, currency: currency)
+      all_eligible_rates = @room_type.room_rates.includes(:rate_plan).where(date: stay_dates, currency: currency)
       rates_by_plan_and_date = all_eligible_rates.group_by(&:rate_plan_id)
 
       plans_to_try = [ @rate_plan, @room_type.rate_plans.first, nil ].uniq

@@ -94,7 +94,7 @@ module HotelPortal
     def rows
       @rows ||= visible_room_types.flat_map do |room_type|
         inventory_row = Row.new(key: "room-#{room_type.id}-inventory", kind: :availability, room_type: room_type)
-        
+
         mapped_channels = connected_channels.select do |channel|
           room_type_mapped_to_channel?(room_type, channel)
         end
@@ -120,7 +120,7 @@ module HotelPortal
 
         rate_and_sub_rows = rate_plans_for(room_type).flat_map do |rate_plan|
           parent_row = Row.new(key: "room-#{room_type.id}-rate-#{rate_plan.id}", kind: :rate, room_type: room_type, rate_plan: rate_plan)
-          
+
           sub_rows = []
           rtrp = room_type.room_type_rate_plans.find_by(rate_plan: rate_plan)
           ext_rp_id = rtrp&.channel_mapping&.external_id

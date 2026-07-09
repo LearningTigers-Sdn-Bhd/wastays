@@ -9,7 +9,7 @@ class Public::HotelsController < ApplicationController
   end
 
   def show
-    @hotel = Hotel.friendly.find(params[:id])
+    @hotel = Hotel.includes(room_types: { photos_attachments: :blob }).friendly.find(params[:id])
     # Ensure only active hotels are viewable
     unless @hotel.publicly_bookable?
       redirect_to hotels_path, alert: "Hotel not found"

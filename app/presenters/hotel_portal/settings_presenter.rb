@@ -98,7 +98,7 @@ module HotelPortal
     end
 
     def rate_plans
-      @rate_plans ||= hotel.rate_plans.order(:id)
+      @rate_plans ||= hotel.rate_plans.includes(:room_types).order(:id)
     end
     def settings_summary
       return {} unless hotel
