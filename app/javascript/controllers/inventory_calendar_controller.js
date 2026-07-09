@@ -56,7 +56,8 @@ export default class extends Controller {
     "paxFields",
     "otasToggleCheckbox",
     "topPanel",
-    "fullscreenRestoreBtn"
+    "fullscreenRestoreBtn",
+    "lockTip"
   ]
 
   static values = {
@@ -1181,6 +1182,49 @@ export default class extends Controller {
         tip.classList.remove("opacity-0", "scale-95")
         tip.classList.add("opacity-100", "scale-100")
       }
+    }
+  }
+
+  showLockTip(event) {
+    if (!this.hasLockTipTarget) return
+    event.preventDefault()
+    event.stopPropagation()
+
+    const tip = this.lockTipTarget
+    const rect = event.currentTarget.getBoundingClientRect()
+
+    tip.classList.remove("hidden")
+    tip.style.position = "fixed"
+    tip.style.zIndex = "9999"
+
+    const tipRect = tip.getBoundingClientRect()
+    const viewportPadding = 8
+
+    let left = rect.left + rect.width / 2 - tipRect.width / 2
+    left = Math.max(viewportPadding, Math.min(left, window.innerWidth - tipRect.width - viewportPadding))
+
+    let top = rect.bottom + 8
+    if (top + tipRect.height > window.innerHeight - viewportPadding) {
+      top = rect.top - tipRect.height - 8
+    }
+
+    tip.style.left = `${left}px`
+    tip.style.top = `${top}px`
+
+    if (!this.boundHideLockTipOutside) {
+      this.boundHideLockTipOutside = (e) => {
+        if (!tip.contains(e.target)) this.hideLockTip()
+      }
+    }
+    document.removeEventListener("click", this.boundHideLockTipOutside)
+    document.addEventListener("click", this.boundHideLockTipOutside)
+  }
+
+  hideLockTip() {
+    if (!this.hasLockTipTarget) return
+    this.lockTipTarget.classList.add("hidden")
+    if (this.boundHideLockTipOutside) {
+      document.removeEventListener("click", this.boundHideLockTipOutside)
     }
   }
 }
