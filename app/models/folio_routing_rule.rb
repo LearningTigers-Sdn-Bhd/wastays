@@ -60,5 +60,4 @@ class FolioRoutingRule < ApplicationRecord
 
     errors.add(:effective_until, "must be on or after effective from")
   end
-
 end

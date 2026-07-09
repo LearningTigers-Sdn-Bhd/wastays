@@ -89,6 +89,5 @@ module HotelPortal
       primary_booking_guest = child.booking_guests.find(&:primary?) || child.booking_guests.first
       primary_booking_guest&.name_snapshot.presence || primary_booking_guest&.guest&.name.presence || child.guest_name
     end
-
   end
 end

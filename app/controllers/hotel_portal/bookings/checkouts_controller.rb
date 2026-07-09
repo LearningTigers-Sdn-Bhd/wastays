@@ -251,7 +251,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     HotelPortal::Checkouts::SheetPresenter.new(booking: booking, hotel: current_hotel, user: current_user).folio_rows.each_with_object({}) do |row, actions|
       actions[row.folio.id.to_s] = {
         "action" => row.default_action,
-        "amount" => format('%.2f', row.balance.to_d)
+        "amount" => format("%.2f", row.balance.to_d)
       }
     end
   end

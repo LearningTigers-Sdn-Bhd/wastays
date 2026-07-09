@@ -789,6 +789,5 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
 
       expect(response).to have_http_status(:redirect)
     end
-
   end
 end
