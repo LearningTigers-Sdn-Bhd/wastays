@@ -1,4 +1,49 @@
 @import "tailwindcss";
+@import "./public/theme.css";
+@import "./panel/theme.css";
+
+/* ─── Role tokens (shadcn-style naming) ───
+   Values come from public/theme.css (:root) and panel/theme.css
+   ([data-theme="panel"]); @theme inline just registers the names so
+   Tailwind generates bg-primary / text-*-foreground / etc. utilities
+   that resolve per-theme. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  --color-border: var(--border);
+  --color-border-interactive: var(--border-interactive);
+  --color-ring: var(--ring);
+}
 
 @theme {
   /* ─── Preline-Inspired Design Tokens ─── */
@@ -71,6 +116,72 @@
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
   --shadow-dropdown: 0 10px 40px 10px rgba(0, 0, 0, 0.08);
+
+  /* ─── Structural tokens (theme-agnostic) ─── */
+  /* border-width and z-index have no dedicated Tailwind v4 theme namespace;
+     values are declared here and exposed as utilities via @utility below. */
+  --border-width-thin: 1px;
+  --border-width-base: 1px;
+  --border-width-thick: 2px;
+  --border-width-focus: 2px;
+
+  --z-base: 0;
+  --z-dropdown: 1000;
+  --z-sticky: 1100;
+  --z-fixed: 1200;
+  --z-overlay: 1300;
+  --z-modal: 1400;
+  --z-popover: 1500;
+  --z-tooltip: 1600;
+  --z-toast: 1700;
+
+  /* --duration-* and --ease-* ARE real Tailwind v4 namespaces (duration-fast, ease-standard). */
+  --duration-fast: 100ms;
+  --duration-base: 200ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* border-width-* and z-* have no theme namespace to hook utility generation off of,
+   so they're registered explicitly as named utilities. */
+@utility border-width-thin {
+  border-width: var(--border-width-thin);
+}
+@utility border-width-base {
+  border-width: var(--border-width-base);
+}
+@utility border-width-thick {
+  border-width: var(--border-width-thick);
+}
+@utility border-width-focus {
+  border-width: var(--border-width-focus);
+}
+
+@utility z-base {
+  z-index: var(--z-base);
+}
+@utility z-dropdown {
+  z-index: var(--z-dropdown);
+}
+@utility z-sticky {
+  z-index: var(--z-sticky);
+}
+@utility z-fixed {
+  z-index: var(--z-fixed);
+}
+@utility z-overlay {
+  z-index: var(--z-overlay);
+}
+@utility z-modal {
+  z-index: var(--z-modal);
+}
+@utility z-popover {
+  z-index: var(--z-popover);
+}
+@utility z-tooltip {
+  z-index: var(--z-tooltip);
+}
+@utility z-toast {
+  z-index: var(--z-toast);
 }
 
 @layer base {
@@ -304,19 +415,26 @@
   }
 
   .btn-primary {
-    @apply bg-brand-primary text-white hover:bg-brand-primary-hover focus:ring-brand-primary;
+    @apply bg-primary text-primary-foreground hover:bg-primary-hover focus:ring-primary;
   }
 
   .btn-gradient {
     @apply bg-brand-gradient text-white hover:opacity-90 focus:ring-brand-primary;
   }
 
-  .btn-secondary {
+  /* Renamed from .btn-secondary so panel views (still on the legacy
+     neutral-* palette) keep their exact current appearance while
+     .btn-secondary below is repointed to the new token system for public views. */
+  .legacy-btn-secondary {
     @apply bg-white border-neutral-border text-neutral-text-secondary hover:bg-neutral-bg focus:ring-neutral-border;
   }
 
   .btn-navy {
     @apply bg-brand-navy text-white hover:bg-brand-navy-hover focus:ring-brand-navy;
+  }
+
+  .btn-secondary {
+    @apply bg-card border-border text-muted-foreground hover:bg-muted focus:ring-border;
   }
 
   /* ─── Sidebar Nav Items (Preline CMS Style) ─── */
@@ -403,14 +521,30 @@
     @apply flex items-center gap-x-1.5 py-1.5 px-2.5 text-sm text-navbar-nav-foreground rounded-lg hover:bg-navbar-nav-hover transition-colors duration-150;
   }
 
-  /* ─── Input Styles ─── */
-  .form-input {
+  /* ─── Input Styles (legacy) ───
+     Renamed from .form-input so panel views (still on the legacy
+     neutral- and brand- palette) keep their exact current appearance while
+     .form-input below is repointed to the new token system for public views. */
+  .legacy-form-input {
     @apply block w-full rounded-lg border-neutral-border shadow-xs focus:border-brand-primary focus:ring-brand-primary sm:text-sm transition-all duration-200;
   }
 
-  /* ─── Card Styles ─── */
-  .card {
+  /* ─── Input Styles (token-based) ─── */
+  .form-input {
+    @apply block w-full rounded-lg border-border shadow-xs focus:border-primary focus:ring-primary sm:text-sm transition-all duration-200;
+  }
+
+  /* ─── Card Styles (legacy) ───
+     Renamed from .card so panel views (which still use the legacy
+     neutral-* palette) keep their exact current appearance while
+     .card below is repointed to the new token system for public views. */
+  .legacy-card {
     @apply bg-neutral-surface border border-neutral-border rounded-xl shadow-xs;
+  }
+
+  /* ─── Card Styles (token-based) ─── */
+  .card {
+    @apply bg-card border border-border rounded-xl shadow-xs;
   }
 
   /* ─── Badge Styles ─── */
@@ -446,17 +580,41 @@
   .table-cell {
     @apply px-6 py-4 whitespace-nowrap text-sm text-neutral-text-primary;
   }
-
-  /* Preline Dropdown Integration */
-  .hs-dropdown.open > .hs-dropdown-menu {
-    @apply absolute block opacity-100;
-  }
 }
 
 @layer utilities {
   .pb-safe {
     padding-bottom: 0;
     padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+
+  /* Shared reduced-motion override — identical in both themes, defined once.
+     Tailwind's built-in motion-reduce:/motion-safe: variants cover ordinary
+     utility usage, but the hand-written @keyframes animations below (landing
+     loader, hero fade-ins, marquee, typewriter caret) aren't utility-driven,
+     so they need an explicit kill switch. */
+  @media (prefers-reduced-motion: reduce) {
+    .landing-loader,
+    .landing-loader__backdrop,
+    .landing-loader__shutter,
+    .landing-loader__glow,
+    .landing-loader__meter-bar,
+    .landing-loader__mark,
+    .landing-loader__meter,
+    .landing-loader__caption,
+    .animate-marquee,
+    .typeword-inline::after,
+    .animate-hero-badge,
+    .animate-hero-title,
+    .animate-hero-text,
+    .animate-hero-buttons,
+    .animate-hero-trust,
+    .js-animate-ready [data-animate] {
+      animation: none !important;
+      transition: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
   }
 
   /* Custom Scrollbar (Preline-style) */

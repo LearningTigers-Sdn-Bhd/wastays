@@ -1,0 +1,45 @@
+/* Panel role tokens — shared by all dashboard/role areas (admin, hotel, corporate, guest).
+   Fully defined now for the contrast audit; not yet wired to any panel layout
+   (data-theme="panel" is not set anywhere in this pass). */
+[data-theme="panel"] {
+  --background: oklch(0.1946 0.0156 157.18);
+  --foreground: oklch(0.9417 0.0108 158.84);
+
+  --card: oklch(0.2350 0.0194 160.59);
+  --card-foreground: oklch(0.9417 0.0108 158.84);
+
+  --muted: oklch(0.2726 0.0252 160.84);
+  --muted-foreground: oklch(0.7433 0.0306 156.40);
+
+  --primary: oklch(0.7729 0.1535 163.22);
+  --primary-hover: oklch(0.8100 0.1450 163.22);
+  --primary-active: oklch(0.7350 0.1600 163.22);
+  --primary-foreground: oklch(0.1665 0.0240 169.85);
+
+  --secondary: oklch(0.3472 0.0301 168.91);
+  --secondary-foreground: oklch(0.9417 0.0108 158.84);
+
+  --accent: oklch(0.8308 0.0543 82.82);
+  --accent-foreground: oklch(0.2535 0.0317 82.37);
+
+  --destructive: oklch(0.7106 0.1661 22.22);
+  --destructive-foreground: oklch(0.2005 0.0536 23.23);
+
+  --warning: oklch(0.8369 0.1644 84.43);
+  --warning-foreground: oklch(0.2330 0.0458 75.14);
+
+  --success: oklch(0.8003 0.1821 151.71);
+  --success-foreground: oklch(0.2657 0.0663 150.37);
+
+  --info: oklch(0.7137 0.1434 254.62);
+  --info-foreground: oklch(0.2196 0.0550 252.55);
+
+  --border: oklch(0.3279 0.0313 162.32);
+  --border-interactive: oklch(0.5141 0.0460 167.73);
+  --ring: oklch(0.7729 0.1535 163.22);
+
+  --shadow-color: 0 0% 0%;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-base: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+}
