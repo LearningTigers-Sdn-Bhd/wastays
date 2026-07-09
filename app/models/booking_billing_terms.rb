@@ -11,6 +11,7 @@ class BookingBillingTerms < ApplicationRecord
 
   validates :booking_billing_party_id, uniqueness: true
   validates :settlement_type, presence: true
+  validates :purchase_order_reference, presence: true, if: -> { settlement_type == "city_ledger" }
   validate :city_ledger_requires_eligible_company
 
   private

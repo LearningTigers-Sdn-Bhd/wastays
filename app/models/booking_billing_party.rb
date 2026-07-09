@@ -2,6 +2,8 @@
 
 class BookingBillingParty < ApplicationRecord
   PARTY_KINDS = %w[guest company].freeze
+  ACCOUNT_TYPES = %w[company government travel_agent].freeze
+  UNAVAILABLE_ACCOUNT_TYPES = %w[travel_agent].freeze
 
   belongs_to :hotel
   belongs_to :booking
@@ -12,6 +14,7 @@ class BookingBillingParty < ApplicationRecord
   has_one :billing_terms, class_name: "BookingBillingTerms", dependent: :destroy
 
   enum :party_kind, PARTY_KINDS.index_by(&:itself), validate: true
+  enum :account_type, ACCOUNT_TYPES.index_by(&:itself), prefix: true, validate: { allow_nil: true }
 
   validates :party_kind, presence: true
   validate :booking_belongs_to_hotel
@@ -19,6 +22,7 @@ class BookingBillingParty < ApplicationRecord
   validate :identity_matches_party_kind
   validate :booking_guest_belongs_to_booking
   validate :hotel_corporate_account_belongs_to_hotel
+  validate :account_type_matches_party_kind
 
   scope :active, -> { where(archived_at: nil) }
   scope :guests, -> { where(party_kind: "guest") }
@@ -73,5 +77,9 @@ class BookingBillingParty < ApplicationRecord
     return if hotel_corporate_account.blank? || hotel_id.blank? || hotel_corporate_account.hotel_id == hotel_id
 
     errors.add(:hotel_corporate_account, "must belong to the same hotel")
+  end
+
+  def account_type_matches_party_kind
+    errors.add(:account_type, "must be blank for guest billing parties") if guest? && account_type.present?
   end
 end

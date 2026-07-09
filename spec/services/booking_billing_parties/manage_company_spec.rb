@@ -21,6 +21,23 @@ RSpec.describe BookingBillingParties::ManageCompany do
     expect(BookingAuditLog.where(auditable: booking, action_type: "billing_party_added").count).to eq(2)
   end
 
+  it "sets account_type from the submitted attribute, defaulting to company" do
+    booking = create(:booking)
+    actor = create(:user, account: booking.hotel.account)
+    account = create(:hotel_corporate_account, hotel: booking.hotel, direct_bill_enabled: true)
+
+    result = described_class.call(booking: booking, actor: actor, attributes: {
+      hotel_corporate_account_id: account.id, account_type: "government"
+    })
+    expect(result.party.account_type).to eq("government")
+
+    default_booking = create(:booking, hotel: booking.hotel)
+    default_result = described_class.call(booking: default_booking, actor: actor, attributes: {
+      hotel_corporate_account_id: account.id
+    })
+    expect(default_result.party.account_type).to eq("company")
+  end
+
   it "rejects an account from another hotel" do
     booking = create(:booking)
     result = described_class.call(booking: booking, actor: create(:user), attributes: {

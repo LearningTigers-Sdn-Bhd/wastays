@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -212,21 +212,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
     t.index ["user_id"], name: "index_booking_audit_logs_on_user_id"
   end
 
-  create_table "booking_billing_assignments", force: :cascade do |t|
-    t.bigint "booking_id", null: false
-    t.bigint "group_billing_arrangement_id", null: false
-    t.string "charge_category", null: false
-    t.boolean "local_exception", default: false, null: false
-    t.date "effective_from"
-    t.date "effective_until"
-    t.jsonb "coverage", default: {}, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["booking_id", "charge_category"], name: "idx_booking_billing_assignment_category", unique: true
-    t.index ["booking_id"], name: "index_booking_billing_assignments_on_booking_id"
-    t.index ["group_billing_arrangement_id"], name: "idx_on_group_billing_arrangement_id_e818d3bb6c"
-  end
-
   create_table "booking_billing_parties", force: :cascade do |t|
     t.bigint "hotel_id", null: false
     t.bigint "booking_id", null: false
@@ -237,6 +222,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
     t.datetime "archived_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "account_type"
     t.index ["booking_guest_id"], name: "idx_booking_billing_parties_unique_guest", unique: true, where: "(booking_guest_id IS NOT NULL)"
     t.index ["booking_guest_id"], name: "index_booking_billing_parties_on_booking_guest_id"
     t.index ["booking_id", "hotel_corporate_account_id"], name: "idx_booking_billing_parties_unique_company", unique: true, where: "(hotel_corporate_account_id IS NOT NULL)"
@@ -247,15 +233,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
     t.index ["hotel_id", "archived_at"], name: "index_booking_billing_parties_on_hotel_id_and_archived_at"
     t.index ["hotel_id"], name: "index_booking_billing_parties_on_hotel_id"
     t.check_constraint "((booking_guest_id IS NOT NULL)::integer + (hotel_corporate_account_id IS NOT NULL)::integer) = 1", name: "booking_billing_parties_one_identity"
+    t.check_constraint "account_type IS NULL OR (account_type::text = ANY (ARRAY['company'::character varying, 'government'::character varying, 'travel_agent'::character varying]::text[]))", name: "booking_billing_parties_account_type_allowed"
     t.check_constraint "party_kind::text = ANY (ARRAY['guest'::character varying, 'company'::character varying]::text[])", name: "booking_billing_parties_kind_allowed"
   end
 
   create_table "booking_billing_terms", force: :cascade do |t|
     t.bigint "booking_billing_party_id", null: false
     t.string "settlement_type", default: "cash_bank", null: false
-    t.string "preferred_payment_method"
     t.string "purchase_order_reference"
-    t.string "billing_reference"
     t.string "authorization_reference"
     t.bigint "created_by_id"
     t.bigint "updated_by_id"
@@ -742,17 +727,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
     t.bigint "updated_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "group_billing_arrangement_id"
-    t.bigint "booking_billing_assignment_id"
     t.string "source_type", default: "booking", null: false
     t.date "effective_from"
     t.date "effective_until"
     t.decimal "coverage_percentage", precision: 5, scale: 2, default: "100.0", null: false
-    t.index ["booking_billing_assignment_id"], name: "index_folio_routing_rules_on_booking_billing_assignment_id"
     t.index ["booking_id", "transaction_code_id"], name: "idx_folio_routing_rules_one_active_per_code", unique: true, where: "active"
     t.index ["booking_id"], name: "index_folio_routing_rules_on_booking_id"
     t.index ["created_by_id"], name: "index_folio_routing_rules_on_created_by_id"
-    t.index ["group_billing_arrangement_id"], name: "index_folio_routing_rules_on_group_billing_arrangement_id"
     t.index ["hotel_id"], name: "index_folio_routing_rules_on_hotel_id"
     t.index ["target_folio_id"], name: "index_folio_routing_rules_on_target_folio_id"
     t.index ["transaction_code_id"], name: "index_folio_routing_rules_on_transaction_code_id"
@@ -809,32 +790,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
     t.index ["transfer_group_id"], name: "index_folio_transactions_on_transfer_group_id"
     t.index ["user_id"], name: "index_folio_transactions_on_user_id"
     t.index ["voided_by_transaction_id"], name: "index_folio_transactions_on_voided_by_transaction_id"
-  end
-
-  create_table "group_billing_arrangements", force: :cascade do |t|
-    t.bigint "group_booking_id", null: false
-    t.bigint "hotel_id", null: false
-    t.bigint "hotel_corporate_account_id"
-    t.string "name", null: false
-    t.string "payer_type", default: "guest", null: false
-    t.string "settlement_type", default: "cash_bank", null: false
-    t.string "preferred_payment_method"
-    t.string "billing_reference"
-    t.string "purchase_order_reference"
-    t.string "authorization_reference"
-    t.date "valid_from"
-    t.date "valid_until"
-    t.string "status", default: "active", null: false
-    t.jsonb "coverage", default: {}, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["group_booking_id", "status"], name: "idx_on_group_booking_id_status_69cbeaa2a8"
-    t.index ["group_booking_id"], name: "index_group_billing_arrangements_on_group_booking_id"
-    t.index ["hotel_corporate_account_id"], name: "index_group_billing_arrangements_on_hotel_corporate_account_id"
-    t.index ["hotel_id"], name: "index_group_billing_arrangements_on_hotel_id"
-    t.check_constraint "payer_type::text = ANY (ARRAY['guest'::character varying, 'company'::character varying]::text[])", name: "group_billing_arrangements_payer_allowed"
-    t.check_constraint "settlement_type::text = ANY (ARRAY['cash_bank'::character varying, 'city_ledger'::character varying]::text[])", name: "group_billing_arrangements_settlement_allowed"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[])", name: "group_billing_arrangements_status_allowed"
   end
 
   create_table "group_billing_change_batches", force: :cascade do |t|
@@ -1006,11 +961,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
     t.datetime "suspended_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "account_type", default: "company", null: false
     t.index ["corporate_account_id", "status"], name: "idx_hotel_corporate_accounts_on_account_and_status"
     t.index ["corporate_account_id"], name: "index_hotel_corporate_accounts_on_corporate_account_id"
     t.index ["hotel_id", "corporate_account_id"], name: "idx_hotel_corporate_accounts_unique_relationship", unique: true
     t.index ["hotel_id", "status"], name: "idx_hotel_corporate_accounts_on_hotel_and_status"
     t.index ["hotel_id"], name: "index_hotel_corporate_accounts_on_hotel_id"
+    t.check_constraint "account_type::text = ANY (ARRAY['company'::character varying, 'government'::character varying, 'travel_agent'::character varying]::text[])", name: "hotel_corporate_accounts_account_type_allowed"
     t.check_constraint "credit_limit IS NULL OR credit_limit >= 0::numeric", name: "hotel_corporate_accounts_credit_limit_nonnegative"
     t.check_constraint "payment_terms_days IS NULL OR payment_terms_days >= 0", name: "hotel_corporate_accounts_payment_terms_nonnegative"
     t.check_constraint "relationship_type::text = ANY (ARRAY['standard'::character varying, 'direct_bill'::character varying]::text[])", name: "hotel_corporate_accounts_relationship_type_allowed"
@@ -1892,8 +1849,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
   add_foreign_key "billing_route_batches", "users", column: "actor_id"
   add_foreign_key "booking_audit_logs", "hotels"
   add_foreign_key "booking_audit_logs", "users"
-  add_foreign_key "booking_billing_assignments", "bookings"
-  add_foreign_key "booking_billing_assignments", "group_billing_arrangements"
   add_foreign_key "booking_billing_parties", "booking_guests"
   add_foreign_key "booking_billing_parties", "bookings"
   add_foreign_key "booking_billing_parties", "hotel_corporate_accounts"
@@ -1960,10 +1915,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
   add_foreign_key "folio_operation_logs", "folio_transactions", column: "target_transaction_id"
   add_foreign_key "folio_operation_logs", "hotels"
   add_foreign_key "folio_operation_logs", "users", column: "actor_id"
-  add_foreign_key "folio_routing_rules", "booking_billing_assignments"
   add_foreign_key "folio_routing_rules", "booking_folios", column: "target_folio_id"
   add_foreign_key "folio_routing_rules", "bookings"
-  add_foreign_key "folio_routing_rules", "group_billing_arrangements"
   add_foreign_key "folio_routing_rules", "hotels"
   add_foreign_key "folio_routing_rules", "transaction_codes"
   add_foreign_key "folio_routing_rules", "users", column: "created_by_id"
@@ -1977,9 +1930,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
   add_foreign_key "folio_transactions", "night_audits", on_delete: :restrict
   add_foreign_key "folio_transactions", "transaction_codes"
   add_foreign_key "folio_transactions", "users"
-  add_foreign_key "group_billing_arrangements", "group_bookings"
-  add_foreign_key "group_billing_arrangements", "hotel_corporate_accounts"
-  add_foreign_key "group_billing_arrangements", "hotels"
   add_foreign_key "group_billing_change_batches", "group_bookings"
   add_foreign_key "group_billing_change_batches", "hotels"
   add_foreign_key "group_billing_change_batches", "users", column: "actor_id"

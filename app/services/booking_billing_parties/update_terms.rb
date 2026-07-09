@@ -31,7 +31,7 @@ module BookingBillingParties
     private
 
     def term_keys
-      %w[settlement_type preferred_payment_method purchase_order_reference billing_reference authorization_reference]
+      %w[settlement_type purchase_order_reference authorization_reference]
     end
   end
 end
