@@ -233,12 +233,8 @@
                   <span>Closed to Departure</span>
                 </div>
               </label>
-              <label class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors">
-                <div class="flex items-center gap-2.5 text-red-600">
-                  <%= f.check_box :stop_sell, class: "size-4 rounded border-slate-300 text-red-600 focus:ring-0", data: { inventory_calendar_target: "stopSellField", action: "change->inventory-calendar#markTouched" } %>
-                  <span class="font-black uppercase tracking-wider">Stop Sell</span>
-                </div>
-              </label>
+              <%# Stop Sell is managed via Channels & OTAs > Availability Rules, not here. %>
+              <%= f.check_box :stop_sell, class: "hidden", data: { inventory_calendar_target: "stopSellField" } %>
             </div>
           </div>
         </div>

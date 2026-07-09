@@ -329,7 +329,7 @@
                       data-inventory-row-target="row"
                       data-parent-room-type-id="<%= row.room_type_id %>"
                       class="border-b border-slate-100 bg-slate-50/60">
-                    <td class="sticky left-0 z-20 border-b border-r border-slate-200 bg-slate-50 px-3 py-1.5 pl-10 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
+                    <td class="sticky left-0 z-20 border-b border-r border-slate-200 bg-slate-50 px-3 py-1.5 pl-10 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader" data-original-color="bg-slate-50">
                       <% if @calendar.connected_channels.any? %>
                         <button type="button"
                                 data-action="inventory-row#toggleAvailability"
@@ -479,7 +479,7 @@
                       data-parent-room-type-id="<%= row.room_type_id %>"
                       data-parent-rate-plan-row-id="room-<%= row.room_type_id %>-rate-<%= row.rate_plan_id %>"
                       class="border-b border-slate-100 bg-slate-50/40">
-                    <td class="sticky left-0 z-20 border-b border-r border-slate-200 bg-slate-50 py-1 pl-14 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
+                    <td class="sticky left-0 z-20 border-b border-r border-slate-200 bg-slate-50 py-1 pl-14 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader" data-original-color="bg-slate-50">
                       <% 
                         channel_name = row.channel["attributes"]["title"]
                         channel_code = row.channel["attributes"]["channel"]
