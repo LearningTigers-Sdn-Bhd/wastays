@@ -64,22 +64,24 @@ class HotelPortal::RequestsController < HotelPortal::BaseController
       status: params[:status]
     )
 
+    redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
     if (request = updater.call)
       respond_to do |format|
-        format.html { redirect_to hotel_requests_path(current_hotel), notice: "Request updated successfully." }
+        format.html { redirect_to redirect_target, notice: "Request updated successfully." }
         format.json { render json: { ok: true, status: request.status } }
       end
     else
       respond_to do |format|
-        format.html { redirect_to hotel_requests_path(current_hotel), alert: "Failed to update request." }
+        format.html { redirect_to redirect_target, alert: "Failed to update request." }
         format.json { render json: { ok: false }, status: :unprocessable_entity }
       end
     end
-    rescue ActiveRecord::RecordNotFound
-      respond_to do |format|
-        format.html { redirect_to hotel_requests_path(current_hotel), alert: "Request not found." }
-        format.json { render json: { ok: false }, status: :not_found }
-      end
+  rescue ActiveRecord::RecordNotFound
+    redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
+    respond_to do |format|
+      format.html { redirect_to redirect_target, alert: "Request not found." }
+      format.json { render json: { ok: false }, status: :not_found }
+    end
   end
 
   def archive_request
@@ -89,20 +91,22 @@ class HotelPortal::RequestsController < HotelPortal::BaseController
       request_id: params[:request_id]
     )
 
+    redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
     if (request = updater.archive)
       respond_to do |format|
-        format.html { redirect_to hotel_requests_path(current_hotel), notice: "Request archived successfully." }
+        format.html { redirect_to redirect_target, notice: "Request archived successfully." }
         format.json { render json: { ok: true, archived_at: request.archived_at } }
       end
     else
       respond_to do |format|
-        format.html { redirect_to hotel_requests_path(current_hotel), alert: "Failed to archive request." }
+        format.html { redirect_to redirect_target, alert: "Failed to archive request." }
         format.json { render json: { ok: false }, status: :unprocessable_entity }
       end
     end
   rescue ActiveRecord::RecordNotFound
+    redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
     respond_to do |format|
-      format.html { redirect_to hotel_requests_path(current_hotel), alert: "Request not found." }
+      format.html { redirect_to redirect_target, alert: "Request not found." }
       format.json { render json: { ok: false }, status: :not_found }
     end
   end
@@ -114,20 +118,22 @@ class HotelPortal::RequestsController < HotelPortal::BaseController
       request_id: params[:request_id]
     )
 
+    redirect_target = params[:redirect_to].presence || hotel_request_archive_path(current_hotel)
     if (request = updater.unarchive)
       respond_to do |format|
-        format.html { redirect_to hotel_request_archive_path(current_hotel), notice: "Request restored successfully." }
+        format.html { redirect_to redirect_target, notice: "Request restored successfully." }
         format.json { render json: { ok: true, archived_at: request.archived_at } }
       end
     else
       respond_to do |format|
-        format.html { redirect_to hotel_request_archive_path(current_hotel), alert: "Failed to restore request." }
+        format.html { redirect_to redirect_target, alert: "Failed to restore request." }
         format.json { render json: { ok: false }, status: :unprocessable_entity }
       end
     end
   rescue ActiveRecord::RecordNotFound
+    redirect_target = params[:redirect_to].presence || hotel_request_archive_path(current_hotel)
     respond_to do |format|
-      format.html { redirect_to hotel_request_archive_path(current_hotel), alert: "Request not found." }
+      format.html { redirect_to redirect_target, alert: "Request not found." }
       format.json { render json: { ok: false }, status: :not_found }
     end
   end

@@ -1,0 +1,252 @@
+<% content_for :title, "Housekeeping Tasks | WAStays" %>
+
+<div class="max-w-[1600px] mx-auto pb-10 space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-4 md:px-0 mt-6">
+    <div>
+      <h1 class="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Housekeeping Tasks</h1>
+      <p class="mt-1 text-sm font-medium text-slate-600">Monitor, dispatch, and manage room cleaning and service requests in real-time.</p>
+    </div>
+  </div>
+
+  <!-- Search and Filters Form -->
+  <div class="mx-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:mx-0">
+    <%= form_with url: hotel_housekeeping_tasks_path(current_hotel), method: :get, data: { controller: "auto-submit", turbo_frame: "housekeeping_tasks_results" }, class: "grid gap-4 md:grid-cols-[1fr_200px_200px_auto]" do |f| %>
+      <!-- Text Search -->
+      <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+          <%= cached_icon "search", class: "size-4" %>
+        </div>
+        <%= text_field_tag :q, params[:q], autocomplete: "off", class: "w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", placeholder: "Search guest, booking or request...", data: { action: "input->auto-submit#submit" } %>
+      </div>
+
+      <!-- Status Filter -->
+      <div>
+        <%= select_tag :status, options_for_select([["All Statuses", "all"], ["Pending", "pending"], ["In Progress", "in_progress"], ["Completed", "completed"], ["Failed", "failed"], ["Cancelled", "cancelled"]], params[:status]), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submit" } %>
+      </div>
+
+      <!-- Room Number Filter -->
+      <div>
+        <%= text_field_tag :room_number, params[:room_number], class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", placeholder: "Room number...", data: { action: "input->auto-submit#submit" } %>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-2">
+        <%= f.submit "Filter", class: "rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 cursor-pointer" %>
+        <%= link_to "Reset", hotel_housekeeping_tasks_path(current_hotel), class: "rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50", data: { turbo_frame: "_top" } %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Results Frame -->
+  <%= turbo_frame_tag "housekeeping_tasks_results" do %>
+    <div class="mx-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:mx-0">
+      <% if @housekeeping_requests.any? %>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200 table-fixed">
+            <colgroup>
+              <col class="w-[8%]">
+              <col class="w-[17%]">
+              <col class="w-[10%]">
+              <col class="w-[25%]">
+              <col class="w-[10%]">
+              <col class="w-[13%]">
+              <col class="w-[17%]">
+            </colgroup>
+            <thead class="bg-slate-50">
+              <tr>
+                <th scope="col" class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Room</th>
+                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Guest</th>
+                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Booking</th>
+                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Task Details</th>
+                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Status</th>
+                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Requested At</th>
+                <th scope="col" class="py-4 pl-3 pr-6 text-right text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 bg-white">
+              <% @housekeeping_requests.each_with_index do |hk_request, index| %>
+                <% room_no = hk_request.room_number.presence || hk_request.booking.booking_rooms.first&.room_number || "TBA" %>
+                <% status_class = housekeeping_status_class(hk_request.status) %>
+                <tr class="group hover:bg-slate-50/70 transition-colors duration-150 align-middle">
+                  <!-- Room -->
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center justify-center size-9 rounded-xl bg-slate-900 text-sm font-bold text-white shadow-sm">
+                      <%= room_no %>
+                    </span>
+                  </td>
+
+                  <!-- Guest -->
+                  <td class="px-3 py-4 whitespace-nowrap">
+                    <div class="flex flex-col">
+                      <span class="text-sm font-semibold text-slate-900 truncate max-w-[160px] xl:max-w-none" title="<%= hk_request.booking.guest_name %>">
+                        <%= hk_request.booking.guest_name %>
+                      </span>
+                      <% if hk_request.booking.guest_phone.present? %>
+                        <span class="text-xs text-slate-500"><%= hk_request.booking.guest_phone %></span>
+                      <% end %>
+                    </div>
+                  </td>
+
+                  <!-- Booking Link -->
+                  <td class="px-3 py-4 whitespace-nowrap">
+                    <%= link_to hotel_booking_path(current_hotel, hk_request.booking), class: "font-mono text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline", data: { turbo: false } do %>
+                      <%= hk_request.booking.confirmation_token %>
+                    <% end %>
+                  </td>
+
+                  <!-- Details -->
+                  <td class="px-3 py-4">
+                    <p class="text-sm font-medium text-slate-700 line-clamp-2" title="<%= hk_request.request_details %>">
+                      <%= hk_request.request_details %>
+                    </p>
+                  </td>
+
+                  <!-- Status -->
+                  <td class="px-3 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border <%= status_class %>">
+                      <%= hk_request.status %>
+                    </span>
+                  </td>
+
+                  <!-- Requested At -->
+                  <td class="px-3 py-4 whitespace-nowrap">
+                    <div class="flex flex-col">
+                      <span class="text-xs font-bold text-slate-900"><%= display_housekeeping_date(hk_request.display_requested_at) %></span>
+                      <span class="text-[10px] font-medium text-slate-400"><%= display_housekeeping_datetime(hk_request.display_requested_at).split(" ").last %></span>
+                    </div>
+                  </td>
+
+                  <!-- Actions -->
+                  <td class="py-4 pl-3 pr-6 text-right whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-1.5" data-controller="request-dialog">
+                      <!-- Open Details Dialog -->
+                      <button type="button" data-action="click->request-dialog#open" class="inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-900 hover:text-slate-900" title="View details & notes">
+                        <%= cached_icon "eye", class: "size-4" %>
+                      </button>
+
+                      <% if hk_request.pending? %>
+                        <%= button_to hotel_request_status_path(current_hotel, kind: "housekeeping", request_id: hk_request.id, status: "in_progress", redirect_to: request.original_url), method: :patch, class: "inline-flex items-center gap-1 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-blue-700 shadow-sm transition hover:border-blue-500 hover:bg-blue-500 hover:text-white" do %>
+                          <%= cached_icon "arrow-right", class: "size-3.5" %>
+                          Dispatch
+                        <% end %>
+                      <% elsif hk_request.in_progress? %>
+                        <%= button_to hotel_request_status_path(current_hotel, kind: "housekeeping", request_id: hk_request.id, status: "completed", redirect_to: request.original_url), method: :patch, class: "inline-flex items-center gap-1 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition hover:border-emerald-500 hover:bg-emerald-500 hover:text-white" do %>
+                          <%= cached_icon "check", class: "size-3.5" %>
+                          Complete
+                        <% end %>
+                      <% else %>
+                        <!-- Completed / Failed / Cancelled -> Archive -->
+                        <%= button_to hotel_archive_request_path(current_hotel, kind: "housekeeping", request_id: hk_request.id, redirect_to: request.original_url), method: :patch, class: "inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:border-slate-900 hover:text-slate-900", title: "Archive" do %>
+                          <%= cached_icon "cube", class: "size-4" %>
+                        <% end %>
+                      <% end %>
+
+                      <!-- Modal dialog for detailed view -->
+                      <dialog data-request-dialog-target="dialog" data-action="click->request-dialog#closeOnBackdrop" class="fixed inset-0 m-auto w-[min(94vw,44rem)] rounded-3xl p-0 shadow-2xl backdrop:bg-slate-900/60 text-left">
+                        <div class="flex flex-col overflow-hidden bg-white">
+                          <div class="flex items-center justify-between border-b border-slate-100 px-8 py-6">
+                            <div class="flex items-center gap-4">
+                              <span class="rounded-lg border px-3 py-1 text-[11px] font-black uppercase tracking-widest <%= status_class %>">
+                                <%= hk_request.status %>
+                              </span>
+                              <h3 class="text-xl font-black text-slate-950">Room <%= room_no %></h3>
+                            </div>
+                            <button type="button" class="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900" data-action="request-dialog#close">
+                              <%= cached_icon "x", stroke_width: 3, class: "size-5" %>
+                            </button>
+                          </div>
+
+                          <div class="grid divide-y divide-slate-100 md:grid-cols-2 md:divide-x md:divide-y-0">
+                            <!-- Left Details Panel -->
+                            <div class="space-y-6 p-8">
+                              <div>
+                                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Guest Details</label>
+                                <p class="mt-1 text-lg font-bold text-slate-900"><%= hk_request.booking.guest_name %></p>
+                                <p class="text-sm text-slate-500 font-medium"><%= hk_request.booking.guest_email %></p>
+                              </div>
+                              <div>
+                                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Booking Reference</label>
+                                <p class="mt-1 font-mono text-sm font-bold text-blue-600"><%= hk_request.booking.confirmation_token %></p>
+                              </div>
+                              <div>
+                                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Timeline</label>
+                                <div class="mt-3 space-y-2">
+                                  <div class="flex items-center gap-3 text-sm">
+                                    <span class="w-20 text-[10px] font-bold uppercase text-slate-400">Requested:</span>
+                                    <span class="font-bold text-slate-900"><%= display_housekeeping_datetime(hk_request.display_requested_at) %></span>
+                                  </div>
+                                  <% if hk_request.completed_at.present? %>
+                                    <div class="flex items-center gap-3 text-sm">
+                                      <span class="w-20 text-[10px] font-bold uppercase text-emerald-500">Completed:</span>
+                                      <span class="font-bold text-slate-900"><%= display_housekeeping_datetime(hk_request.completed_at) %></span>
+                                    </div>
+                                  <% end %>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Right Request Panel -->
+                            <div class="space-y-6 bg-slate-50/40 p-8">
+                              <div>
+                                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Request Details</label>
+                                <p class="mt-2 rounded-xl border border-slate-100 bg-white p-4 text-sm font-semibold leading-relaxed text-slate-700 shadow-sm">
+                                  <%= hk_request.request_details %>
+                                </p>
+                              </div>
+                              <div>
+                                <label class="mb-3 block text-[10px] font-black uppercase tracking-widest text-slate-400">Internal Staff Notes</label>
+                                <% notes = hk_request.internal_notes_list %>
+                                <% if notes.any? %>
+                                  <div class="space-y-3 max-h-48 overflow-y-auto custom-scrollbar">
+                                    <% notes.each do |note| %>
+                                      <div class="rounded-xl border border-slate-100 bg-white p-3 shadow-sm space-y-1">
+                                        <p class="text-sm font-medium text-slate-800"><%= note["body"] %></p>
+                                        <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase">
+                                          <span><%= note["created_by_name"] || "Staff" %></span>
+                                          <span><%= Time.zone.parse(note["created_at"])&.strftime("%d %b, %H:%M") rescue nil %></span>
+                                        </div>
+                                      </div>
+                                    <% end %>
+                                  </div>
+                                <% else %>
+                                  <p class="text-xs font-bold uppercase tracking-widest italic text-slate-300">No notes recorded</p>
+                                <% end %>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 px-8 py-6">
+                            <button type="button" class="px-6 py-2.5 text-sm font-black uppercase tracking-widest text-slate-500 transition hover:text-slate-800 animate-pulse-hover" data-action="request-dialog#close">Close</button>
+                            <%= link_to "Full Booking Details", hotel_booking_path(current_hotel, hk_request.booking), class: "rounded-xl bg-slate-950 px-6 py-2.5 text-sm font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-slate-800", data: { turbo: false } %>
+                          </div>
+                        </div>
+                      </dialog>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="px-6 py-20 text-center sm:px-8 space-y-3">
+          <div class="inline-flex size-14 items-center justify-center rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 shadow-inner">
+            <%= cached_icon "clipboard-check", class: "size-6" %>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider">No housekeeping tasks found</h3>
+            <p class="mt-1 text-sm font-medium text-slate-500">Try adjusting your filters or searching for a different room.</p>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Pagination -->
+      <% if @housekeeping_requests.total_pages > 1 %>
+        <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
+          <%= paginate @housekeeping_requests %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>
