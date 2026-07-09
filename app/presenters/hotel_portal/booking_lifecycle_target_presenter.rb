@@ -10,7 +10,12 @@ module HotelPortal
       cancel: "Cancellation",
       backdated_check_in: "Backdated Check-in",
       mark_no_show: "No-show",
-      reinstate: "Reinstatement"
+      reinstate: "Reinstatement",
+      amend_stay: "Stay Amendment",
+      edit_check_in: "Edit Check-in",
+      undo_check_in: "Undo Check-in",
+      checkout: "Checkout",
+      late_checkout: "Late Checkout"
     }.freeze
 
     ELIGIBLE_STATUSES = {
@@ -18,7 +23,12 @@ module HotelPortal
       cancel: %w[pending confirmed review_no_show overbooked],
       backdated_check_in: %w[review_no_show],
       mark_no_show: %w[review_no_show],
-      reinstate: %w[no_show]
+      reinstate: %w[no_show],
+      amend_stay: %w[pending confirmed review_no_show checked_in review_due_out checkout_required overbooked no_show],
+      edit_check_in: %w[checked_in],
+      undo_check_in: %w[checked_in],
+      checkout: %w[checked_in checkout_required],
+      late_checkout: %w[review_due_out]
     }.freeze
 
     def initialize(booking:, action:)

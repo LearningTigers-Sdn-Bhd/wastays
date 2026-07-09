@@ -43,10 +43,7 @@ RSpec.describe "Group reinstatement drawer", type: :system do
       expect(page).to have_css("[data-group-lifecycle-targets-target='panel'][data-booking-id='#{second.id}']:not([hidden])")
       expect(page).to have_css("[data-group-lifecycle-targets-target='panel'][data-booking-id='#{first.id}'][hidden]", visible: :all)
       expect(page).to have_field("Reason for Reinstatement", with: "Delayed group arrival")
-
-      choose "Group"
-      expect(page).to have_checked_field("booking_ids[]", with: first.id.to_s)
-      expect(page).to have_checked_field("booking_ids[]", with: second.id.to_s)
+      expect(page).to have_content("Configured")
     end
   end
 

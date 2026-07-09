@@ -24,7 +24,8 @@
           <%= render "hotel_portal/bookings/transactions/shared/group_target_selector",
             target_presenter: HotelPortal::BookingLifecycleTargetPresenter.new(booking: @booking, action: :reinstate),
             master_detail: true,
-            selection_mode: :radio %>
+            selection_mode: :radio,
+            show_status_badges: true %>
 
           <div class="min-h-0 min-w-0 overflow-y-auto custom-scrollbar lg:col-start-2">
             <div class="space-y-6 p-8">

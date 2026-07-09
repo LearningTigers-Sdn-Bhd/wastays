@@ -14,8 +14,9 @@
       <%# Modal Content %>
       <div class="flex-1 <%= @booking.group_booking_id? ? 'grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none' : 'space-y-6 overflow-y-auto p-6 custom-scrollbar' %>">
         <% currency = current_hotel.default_currency.presence || @booking.currency.presence || "MYR" %>
+        <% presenter_action = @booking.checked_in? ? :edit_check_in : :check_in %>
         <%= render "hotel_portal/bookings/transactions/shared/group_target_selector",
-          target_presenter: HotelPortal::BookingLifecycleTargetPresenter.new(booking: @booking, action: :check_in) %>
+          target_presenter: HotelPortal::BookingLifecycleTargetPresenter.new(booking: @booking, action: presenter_action) %>
 
         <% if @booking.group_booking_id? %>
           <div class="min-h-0 overflow-y-auto custom-scrollbar">
@@ -32,6 +33,16 @@
               value: @presenter.checked_in_at_form_value,
               class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
+
+        <% if @booking.checked_in? %>
+          <div>
+            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Reason to change</label>
+            <%= text_field_tag :retroactive_reason, params[:retroactive_reason],
+                placeholder: "Provide a reason for updating the check-in details",
+                required: true,
+                class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+          </div>
+        <% end %>
 
         <% unless @booking.checked_in? %>
           <div class="space-y-4 border-t border-slate-100 py-4" data-controller="payment-toggle">
@@ -140,7 +151,7 @@
           <% end %>
         </div>
 
-        <% if @presenter.requires_backdated_checkin_reason? %>
+        <% if @presenter.requires_backdated_checkin_reason? && !@booking.checked_in? %>
           <div class="mt-4 pt-4 border-t border-slate-100">
             <div class="flex gap-3">
               <div class="flex-shrink-0 mt-0.5">

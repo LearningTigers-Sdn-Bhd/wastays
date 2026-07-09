@@ -365,6 +365,76 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     expect(flash[:alert]).to eq("Select at least one booking.")
   end
 
+  it "renders group target choices for late checkout" do
+    group = create(:group_booking, hotel: hotel)
+    first = create_group_child(group, status: "review_due_out", room_number: "101", guest_name: "Aina Guest")
+    second = create_group_child(group, status: "checked_in", room_number: "102", guest_name: "Busy Guest")
+
+    get hotel_booking_transaction_late_checkout_path(hotel, first), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Perform Late Checkout on:")
+    expect(response.body).to include("101 - Aina Guest", "102 - Busy Guest")
+    expect(response.body).to include("value=\"#{second.id}\" disabled=\"disabled\"")
+  end
+
+  it "resolves late checkout with a charge for selected group bookings atomically" do
+    group = create(:group_booking, hotel: hotel)
+    first = create_group_child(group, status: "review_due_out", room_number: "101", guest_name: "Aina Guest")
+    second = create_group_child(group, status: "review_due_out", room_number: "102", guest_name: "Budi Guest")
+    unselected = create_group_child(group, status: "review_due_out", room_number: "103", guest_name: "Chin Guest")
+    [ first, second ].each { |booking| create(:booking_folio, booking: booking, hotel: hotel) }
+    grant_permission(role, "post_folio_charges")
+
+    post process_late_checkout_hotel_booking_path(hotel, first), params: {
+      target_scope: "individual",
+      booking_ids: [ first.id, second.id ],
+      charge_type: "charge",
+      amount: "50.00"
+    }
+
+    expect(response).to redirect_to(booking_details_path(first))
+    expect(first.reload.status).to eq("checked_in")
+    expect(second.reload.status).to eq("checked_in")
+    expect(unselected.reload.status).to eq("review_due_out")
+    expect(first.booking_folio.folio_transactions.find_by(category: "late_checkout_charge").amount).to eq(50.0)
+    expect(second.booking_folio.folio_transactions.find_by(category: "late_checkout_charge").amount).to eq(50.0)
+    expect(flash[:notice]).to eq("2 bookings resolved for late checkout.")
+  end
+
+  it "rejects late checkout for selected group bookings atomically" do
+    group = create(:group_booking, hotel: hotel)
+    first = create_group_child(group, status: "review_due_out", room_number: "101", guest_name: "Aina Guest")
+    second = create_group_child(group, status: "review_due_out", room_number: "102", guest_name: "Budi Guest")
+
+    post process_late_checkout_hotel_booking_path(hotel, first), params: {
+      target_scope: "individual",
+      booking_ids: [ first.id, second.id ],
+      charge_type: "none"
+    }
+
+    expect(response).to redirect_to(booking_details_path(first))
+    expect(first.reload.status).to eq("checkout_required")
+    expect(second.reload.status).to eq("checkout_required")
+    expect(flash[:notice]).to eq("2 bookings late checkout rejected.")
+  end
+
+  it "rejects a late-checkout group batch when a selected booking is no longer eligible" do
+    group = create(:group_booking, hotel: hotel)
+    first = create_group_child(group, status: "review_due_out", room_number: "101", guest_name: "Aina Guest")
+    ineligible = create_group_child(group, status: "checked_in", room_number: "102", guest_name: "Busy Guest")
+
+    post process_late_checkout_hotel_booking_path(hotel, first), params: {
+      target_scope: "individual",
+      booking_ids: [ first.id, ineligible.id ],
+      charge_type: "none"
+    }
+
+    expect(response).to redirect_to(booking_details_path(first))
+    expect(first.reload.status).to eq("review_due_out")
+    expect(flash[:alert]).to include("no longer eligible")
+  end
+
   it "cancels selected group bookings atomically" do
     group = create(:group_booking, hotel: hotel)
     first = create_group_child(group, status: "confirmed", room_number: "101", guest_name: "Aina Guest")
@@ -395,17 +465,37 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     expect(flash[:notice]).to eq("2 bookings backdated checked in.")
   end
 
-  it "marks selected no-show review group bookings as no-show atomically" do
+  it "marks selected no-show review group bookings as no-show atomically with a shared reason" do
     group = create(:group_booking, hotel: hotel)
     first = create_group_child(group, status: "review_no_show", room_number: "101", guest_name: "Aina Guest")
     second = create_group_child(group, status: "review_no_show", room_number: "102", guest_name: "Budi Guest")
+    unselected = create_group_child(group, status: "review_no_show", room_number: "103", guest_name: "Chin Guest")
+    reason = "Group did not arrive before audit close"
 
-    post mark_no_show_hotel_booking_path(hotel, first), params: { target_scope: "individual", booking_ids: [ first.id, second.id ] }
+    post mark_no_show_hotel_booking_path(hotel, first), params: { target_scope: "individual", booking_ids: [ first.id, second.id ], no_show_reason: reason }
 
     expect(response).to redirect_to(booking_details_path(first))
     expect(first.reload.status).to eq("no_show")
     expect(second.reload.status).to eq("no_show")
+    expect(unselected.reload.status).to eq("review_no_show")
+    audit_reasons = BookingAuditLog.where(
+      auditable_type: "Booking",
+      auditable_id: [ first.id, second.id ],
+      action_type: "no_show"
+    ).map { |audit| audit.metadata["reason"] }
+    expect(audit_reasons).to contain_exactly(reason, reason)
     expect(flash[:notice]).to eq("2 bookings marked as no-show.")
+  end
+
+  it "requires a reason before marking a no-show review booking" do
+    booking = create(:booking, hotel: hotel, status: "review_no_show", no_show_review_business_date: Date.current)
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 200.0)
+
+    post mark_no_show_hotel_booking_path(hotel, booking), params: { no_show_reason: " " }
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("No-show reason is required.")
+    expect(booking.reload.status).to eq("review_no_show")
   end
 
   it "completes no-show finalization from the offcanvas" do
@@ -421,6 +511,7 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 200.0)
 
     post mark_no_show_hotel_booking_path(hotel, booking),
+      params: { no_show_reason: "Guest did not arrive" },
       headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
 
     expect(response).to have_http_status(:success)
@@ -495,6 +586,7 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     start_business_date_audit(hotel)
 
     post mark_no_show_hotel_booking_path(hotel, booking),
+      params: { no_show_reason: "Guest did not arrive" },
       headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
 
     expect(response).to have_http_status(:unprocessable_content)
@@ -519,7 +611,7 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 200.0)
     start_business_date_audit(hotel)
 
-    post mark_no_show_hotel_booking_path(hotel, booking)
+    post mark_no_show_hotel_booking_path(hotel, booking), params: { no_show_reason: "Guest did not arrive" }
 
     expect(response).to redirect_to(booking_details_path(booking))
     expect(flash[:alert]).to eq(NightAudits::OperationalChangeGuard::ERROR_MESSAGE)
@@ -809,5 +901,76 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     expect(flash[:alert]).to include("Every selected booking must be configured")
     expect(first.reload.status).to eq("no_show")
     expect(second.reload.status).to eq("no_show")
+  end
+  describe "group stay amendment" do
+    let(:room_type) { create(:room_type, hotel: hotel, quantity: 3, room_number_mode: "custom", room_numbers: [ "101", "102", "103" ]) }
+
+    it "renders group selectors in amend-stay sheet when group booking is selected" do
+      group = create(:group_booking, hotel: hotel)
+      booking = create_group_child(group, status: "confirmed", room_number: "101")
+
+      get hotel_booking_transaction_amend_stay_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Stay Amendment", 'data-controller="booking-calc group-lifecycle-targets"')
+      expect(response.body).to include("target_scope", "Group")
+    end
+
+    it "updates stay dates for all selected group bookings in bulk" do
+      group = create(:group_booking, hotel: hotel)
+      first = create_group_child(group, status: "confirmed", room_number: "101")
+      first.update!(hotel_snapshot: { "room_number" => "101" })
+      second = create_group_child(group, status: "confirmed", room_number: "102")
+      second.update!(hotel_snapshot: { "room_number" => "102" })
+
+      new_check_in = Date.current + 3.days
+      new_check_out = Date.current + 5.days
+
+      patch hotel_booking_transaction_amend_stay_path(hotel, first), params: {
+        target_scope: "group",
+        booking_ids: [ first.id, second.id ],
+        booking: {
+          check_in: new_check_in.to_s,
+          check_out: new_check_out.to_s
+        }
+      }
+
+      expect(response).to redirect_to(booking_details_path(first))
+      expect(flash[:notice]).to include("2 bookings stay amended")
+      expect(first.reload.check_in.to_date).to eq(new_check_in)
+      expect(second.reload.check_in.to_date).to eq(new_check_in)
+      expect(first.reload.check_out.to_date).to eq(new_check_out)
+      expect(second.reload.check_out.to_date).to eq(new_check_out)
+    end
+
+    it "rolls back all updates if a single group member fail update (e.g. room number occupied)" do
+      group = create(:group_booking, hotel: hotel)
+      first = create_group_child(group, status: "confirmed", room_number: "101")
+      first.update!(hotel_snapshot: { "room_number" => "101" })
+      second = create_group_child(group, status: "confirmed", room_number: "102")
+      second.update!(hotel_snapshot: { "room_number" => "102" })
+
+      # Create an overlapping booking that conflicts with room 102
+      conflict = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current + 3.days, check_out: Date.current + 5.days)
+      create(:booking_room, booking: conflict, room_type: room_type, room_number: "102")
+
+      original_check_in = first.check_in
+      new_check_in = Date.current + 3.days
+      new_check_out = Date.current + 5.days
+
+      patch hotel_booking_transaction_amend_stay_path(hotel, first), params: {
+        target_scope: "group",
+        booking_ids: [ first.id, second.id ],
+        booking: {
+          check_in: new_check_in.to_s,
+          check_out: new_check_out.to_s
+        }
+      }
+
+      expect(response).to redirect_to(booking_details_path(first))
+      expect(flash[:alert]).to include("is not available for these dates")
+      expect(first.reload.check_in.to_date).to eq(original_check_in.to_date)
+      expect(second.reload.check_in.to_date).to eq(original_check_in.to_date)
+    end
   end
 end

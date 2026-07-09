@@ -1,13 +1,47 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["checkIn", "checkOut", "roomType", "guestCountry", "ratePlanSelect", "restrictionCheckbox", "totalInput", "displayTotal", "displayRoomTotal", "displayTaxTotal", "priceDetailsSection", "adjustPriceSection", "roomNumberSelect", "roomNumberContainer", "paymentAmountInput", "rateOverrideFlag", "corporateRate", "ratesBreakdown", "taxesBreakdown"]
+  static targets = ["checkIn", "checkOut", "roomType", "guestCountry", "ratePlanSelect", "restrictionCheckbox", "totalInput", "displayTotal", "displayRoomTotal", "displayTaxTotal", "priceDetailsSection", "adjustPriceSection", "roomNumberSelect", "roomNumberContainer", "paymentAmountInput", "rateOverrideFlag", "corporateRate", "ratesBreakdown", "taxesBreakdown", "estimatedTotalSection"]
   static values = { availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, bookingId: String, excludeBookingId: String }
 
   connect() {
     // Trigger initial calculation and room numbers load
     if (this.roomTypeTarget.value && this.checkInTarget.value && this.checkOutTarget.value) {
       this.calculate()
+    }
+    this.setupGroupScopeListener()
+  }
+
+  setupGroupScopeListener() {
+    const scopeRadios = this.element.querySelectorAll('[data-group-lifecycle-targets-target="scope"]')
+    scopeRadios.forEach(radio => {
+      radio.addEventListener("change", (e) => this.toggleGroupFields(e))
+    })
+    // Run once on load to ensure correct state
+    const selectedRadio = this.element.querySelector('[data-group-lifecycle-targets-target="scope"]:checked')
+    if (selectedRadio) {
+      this.toggleGroupFields({ target: selectedRadio })
+    }
+  }
+
+  toggleGroupFields(event) {
+    const isGroup = event.target.value === "group"
+
+    const fieldsToToggle = []
+    if (this.hasRoomTypeTarget) fieldsToToggle.push(this.roomTypeTarget)
+    if (this.hasRatePlanSelectTarget) fieldsToToggle.push(this.ratePlanSelectTarget)
+    if (this.hasRoomNumberSelectTarget) fieldsToToggle.push(this.roomNumberSelectTarget)
+
+    fieldsToToggle.forEach(field => {
+      field.disabled = isGroup
+      const container = field.closest(".space-y-2") || field.parentElement
+      if (container) {
+        container.classList.toggle("hidden", isGroup)
+      }
+    })
+
+    if (this.hasEstimatedTotalSectionTarget) {
+      this.estimatedTotalSectionTarget.classList.toggle("hidden", isGroup)
     }
   }
 

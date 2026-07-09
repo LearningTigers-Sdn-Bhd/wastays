@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["scope", "checkbox", "panel", "row"]
+  static targets = ["scope", "checkbox", "panel", "row", "statusBadge"]
   static values = {
     masterDetail: { type: Boolean, default: false },
     initialBookingId: String,
@@ -56,8 +56,13 @@ export default class extends Controller {
       }
       this.syncPanels()
       this.syncRows()
+      this.syncBadges()
     }
     this.syncSubmit()
+    this.element.dispatchEvent(new CustomEvent("group-lifecycle-targets:changed", {
+      bubbles: true,
+      detail: { bookingIds: this.selectedBookingIds }
+    }))
   }
 
   syncPanels() {
@@ -76,6 +81,20 @@ export default class extends Controller {
       row.setAttribute("aria-selected", String(active))
       row.classList.toggle("font-semibold", active)
       row.classList.toggle("text-slate-950", active)
+    })
+  }
+
+  syncBadges() {
+    this.statusBadgeTargets.forEach((badge) => {
+      const bookingId = badge.dataset.bookingId
+      const selected = this.selectedBookingIds.includes(bookingId)
+      const complete = this.panelComplete(bookingId)
+      badge.hidden = !selected
+      badge.textContent = complete ? "Configured" : "Incomplete"
+      badge.classList.toggle("bg-emerald-50", complete)
+      badge.classList.toggle("text-emerald-700", complete)
+      badge.classList.toggle("bg-amber-50", !complete)
+      badge.classList.toggle("text-amber-700", !complete)
     })
   }
 

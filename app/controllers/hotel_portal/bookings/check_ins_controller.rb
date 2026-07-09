@@ -11,6 +11,20 @@ class HotelPortal::Bookings::CheckInsController < HotelPortal::BaseController
     @booking = current_hotel.bookings.find(params[:id])
     timestamp = transition_timestamp(:checked_in_at)
 
+    if @booking.checked_in? && params[:retroactive_reason].blank?
+      error_msg = "Reason to change is required."
+      @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+      set_audit_logs(@booking)
+      respond_to do |format|
+        format.turbo_stream do
+          flash.now[:alert] = error_msg
+          render_offcanvas_completion(check_in_success_path)
+        end
+        format.html { redirect_to check_in_success_path, alert: error_msg, status: :see_other }
+      end
+      return
+    end
+
     return batch_check_in(timestamp) if selected_lifecycle_batch?(@booking)
 
     options = {}
@@ -18,7 +32,9 @@ class HotelPortal::Bookings::CheckInsController < HotelPortal::BaseController
       options[:attributes] = booking_params.except(:checked_in_at, :checked_out_at)
     end
 
-    if params[:override_night_audit] == "1"
+    if @booking.checked_in?
+      options[:reason] = params[:retroactive_reason]
+    elsif params[:override_night_audit] == "1"
       options[:override_night_audit] = true
       options[:reason] = params[:retroactive_reason]
     end
@@ -65,9 +81,16 @@ class HotelPortal::Bookings::CheckInsController < HotelPortal::BaseController
   private
 
   def batch_check_in(timestamp)
-    bookings = selected_lifecycle_bookings(fallback_booking: @booking, action: :check_in)
+    if @booking.checked_in? && params[:retroactive_reason].blank?
+      raise BatchTargetError, "Reason to change is required."
+    end
+
+    action = @booking.checked_in? ? :edit_check_in : :check_in
+    bookings = selected_lifecycle_bookings(fallback_booking: @booking, action: action)
     options = {}
-    if params[:override_night_audit] == "1"
+    if @booking.checked_in?
+      options[:reason] = params[:retroactive_reason]
+    elsif params[:override_night_audit] == "1"
       options[:override_night_audit] = true
       options[:reason] = params[:retroactive_reason]
     end
