@@ -8,7 +8,6 @@ module Bookings
 
     def call
       {
-        multi_room_bookings: multi_room_scope.count.size,
         bookings_with_multiple_room_rows: Booking.joins(:booking_rooms).group("bookings.id").having("COUNT(booking_rooms.id) > 1").count.size,
         duplicate_primary_guests: duplicate_primary_scope.count.size,
         missing_primary_guests: missing_primary_scope.count,
@@ -18,12 +17,6 @@ module Bookings
     end
 
     private
-
-    def multi_room_scope
-      Booking.joins(:booking_rooms)
-        .group("bookings.id")
-        .having("SUM(booking_rooms.quantity) > 1")
-    end
 
     def duplicate_primary_scope
       BookingGuest.where(is_primary: true).group(:booking_id).having("COUNT(*) > 1")

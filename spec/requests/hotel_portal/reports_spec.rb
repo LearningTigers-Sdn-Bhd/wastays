@@ -490,7 +490,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         create(:room_inventory, room_type: room_type, date: Date.new(2026, 6, 15), quantity: 9, status: "open")
 
         booking = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 6, 1), check_out: Date.new(2026, 6, 16), guest_name: "Month Guest")
-        create(:booking_room, booking: booking, room_type: room_type, quantity: 2, subtotal: 300)
+        create(:booking_room, booking: booking, room_type: room_type, subtotal: 300)
 
         get daily_occupancy_hotel_reports_path(hotel)
         doc = Nokogiri::HTML(response.body)

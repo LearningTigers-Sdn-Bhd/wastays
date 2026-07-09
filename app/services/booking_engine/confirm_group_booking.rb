@@ -118,7 +118,6 @@ module BookingEngine
       )
       booking.booking_rooms.create!(
         room_type: item.room_type,
-        quantity: 1,
         subtotal: item.subtotal / item.quantity,
         room_type_snapshot: item.room_type_snapshot,
         nightly_rate_snapshot: normalized_snapshot(item.nightly_rate_snapshot),

@@ -125,10 +125,10 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
     it "totals booked quantity and exposes room number and type rows" do
       deluxe = create(:room_type, hotel: hotel, name: "Deluxe King")
       family = create(:room_type, hotel: hotel, name: "Family Suite")
-      create(:booking_room, booking: booking, room_type: deluxe, room_number: "101", quantity: 1)
-      create(:booking_room, booking: booking, room_type: family, room_number: nil, quantity: 2)
+      create(:booking_room, booking: booking, room_type: deluxe, room_number: "101")
+      create(:booking_room, booking: booking, room_type: family, room_number: nil)
 
-      expect(presenter.room_count).to eq(3)
+      expect(presenter.room_count).to eq(2)
       expect(presenter.rooms.map(&:to_h)).to eq(
         [
           { room_number: "101", room_type: "Deluxe King" },
@@ -341,8 +341,8 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
     it "groups room context by room type and room number" do
       deluxe = create(:room_type, hotel: hotel, name: "Deluxe King")
       family = create(:room_type, hotel: hotel, name: "Family Suite")
-      create(:booking_room, booking: booking, room_type: deluxe, room_number: "101", quantity: 1)
-      create(:booking_room, booking: booking, room_type: family, room_number: "201", quantity: 1)
+      create(:booking_room, booking: booking, room_type: deluxe, room_number: "101")
+      create(:booking_room, booking: booking, room_type: family, room_number: "201")
 
       groups = presenter.room_tree_groups
 
@@ -352,7 +352,7 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
 
     it "groups folio context as group folios and room-type room folios" do
       room_type = create(:room_type, hotel: hotel, name: "Family Room")
-      room = create(:booking_room, booking: booking, room_type: room_type, room_number: "301", quantity: 1)
+      room = create(:booking_room, booking: booking, room_type: room_type, room_number: "301")
       group_folio = create(:booking_folio, booking: booking, hotel: hotel, name: "Group Folio", booking_room: nil)
       room_folio = create(:booking_folio, booking: booking, hotel: hotel, name: "Room Guest Folio", booking_room: room)
       corporate_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Corporate Folio", booking_room: nil)
