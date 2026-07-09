@@ -86,24 +86,25 @@ RSpec.describe "Operational Exceptions", type: :system do
       visit hotel_booking_path(hotel, booking)
 
       # Open the shared fullscreen checkout sheet.
-      click_link "Check Out"
+      find("button[aria-label='Booking actions']").click
+      click_link "Check-out"
 
       # Wait for the compact early-departure controls to appear.
       expect(page).to have_content(/Early departure/i, wait: 10)
       expect(page).to have_content("Pending charges will post when checkout is completed")
 
       # Select Apply Charge
-      find("input[name='apply_charge'][value='true']", visible: :all).trigger("click")
+      find("input[name='early_departures[#{booking.id}][apply_charge]'][value='true']", visible: :all).trigger("click")
 
       expect(page).to have_selector("[data-early-departure-target='customFields']", visible: true)
 
       # Fill in details
-      input = find("[name='early_departure[value]']", visible: :all)
+      input = find("[name='early_departures[#{booking.id}][value]']", visible: :all)
       input.set("150.00")
       input.send_keys(:tab) # trigger blur/change to ensure stimulus updates balance
 
       # Wait for Stimulus JS to update the hidden charge_amount field and the balance display
-      expect(page).to have_selector("input[name='charge_amount'][value='150.00']", visible: :all, wait: 5)
+      expect(page).to have_selector("input[name='early_departures[#{booking.id}][charge_amount]'][value='150.00']", visible: :all, wait: 5)
       expect(page).to have_selector("*", text: "MYR 0.00", visible: :all, wait: 5)
 
       # Submit the form via Capybara's native click (no visible: all) after scrolling it into view
