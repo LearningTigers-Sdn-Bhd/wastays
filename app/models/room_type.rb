@@ -77,13 +77,15 @@ class RoomType < ApplicationRecord
   def ensure_standard_rate_plan
     return if rate_plans.exists?
 
-    # Find or create a standard rate plan for the hotel
-    rate_plan = hotel.rate_plans.find_or_create_by!(name: "Standard Rate") do |rp|
-      rp.sell_mode = "per_room"
-      rp.currency = hotel.default_currency || "MYR"
-    end
+    # Create a dedicated standard rate plan for this room type.
+    # Each room type must have its own plan; sharing one across room
+    # types would make rate updates on one room type bleed into others.
+    rate_plan = hotel.rate_plans.create!(
+      name: "Standard Rate",
+      sell_mode: "per_room",
+      currency: hotel.default_currency || "MYR"
+    )
 
-    # Associate this room type with the rate plan
     room_type_rate_plans.create!(rate_plan: rate_plan)
   end
 
