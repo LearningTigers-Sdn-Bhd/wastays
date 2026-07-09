@@ -221,7 +221,8 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
       amount: 100,
       transaction_code: charge_code,
       description: "Restaurant charge",
-      metadata: { "reference" => "RCPT-42" }
+      metadata: { "reference" => "RCPT-42" },
+      created_at: 10.seconds.ago
     )
     create(
       :folio_transaction,
@@ -238,7 +239,8 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
           "type" => "sst",
           "transaction_code_code" => "TAX_SST"
         }
-      }
+      },
+      created_at: 5.seconds.ago
     )
 
     rows = presenter.posted_rows
@@ -261,7 +263,8 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
       category: "fb",
       amount: 100,
       transaction_code: charge_code,
-      description: "Restaurant charge"
+      description: "Restaurant charge",
+      created_at: 10.seconds.ago
     )
     create(
       :folio_transaction,
@@ -270,7 +273,8 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
       category: "tax",
       amount: 8,
       description: "Tax: SST 8% for Restaurant charge",
-      metadata: { "parent_folio_transaction_id" => parent.id, "tax_line" => { "type" => "sst" } }
+      metadata: { "parent_folio_transaction_id" => parent.id, "tax_line" => { "type" => "sst" } },
+      created_at: 5.seconds.ago
     )
 
     rows = described_class.new(booking: booking, hotel: hotel, user: manager).posted_rows

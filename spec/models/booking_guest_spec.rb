@@ -15,4 +15,20 @@ RSpec.describe BookingGuest, type: :model do
       expect(booking_guest.errors[:is_primary]).to include('is not included in the list')
     end
   end
+
+  describe 'VIP synchronization' do
+    let(:vip_guest) { create(:guest, vip: true) }
+    let(:regular_guest) { create(:guest, vip: false) }
+    let(:booking) { create(:booking) }
+
+    it 'marks the booking as VIP when a VIP guest is associated' do
+      create(:booking_guest, booking: booking, guest: vip_guest, is_primary: true)
+      expect(booking.reload.vip).to be(true)
+    end
+
+    it 'does not mark the booking as VIP when a non-VIP guest is associated' do
+      create(:booking_guest, booking: booking, guest: regular_guest, is_primary: true)
+      expect(booking.reload.vip).to be(false)
+    end
+  end
 end

@@ -467,7 +467,12 @@ Rails.application.routes.draw do
     resources :guests, only: [ :index, :show, :new, :create, :edit, :update, :destroy ] do
       collection do
         get :search
+        get :check_banned
         delete :bulk_destroy
+      end
+      member do
+        patch :toggle_vip
+        patch :toggle_blacklist
       end
     end
     resources :in_house_guests, only: [ :index ]

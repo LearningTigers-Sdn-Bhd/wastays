@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_03_054820) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_07_112000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -369,6 +369,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_03_054820) do
     t.boolean "tourism_tax_collected", default: false, null: false
     t.text "special_requests"
     t.string "folio_account_reference"
+    t.boolean "vip", default: false, null: false
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id_unique", unique: true, where: "(booking_quote_id IS NOT NULL)"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["check_in"], name: "index_bookings_on_check_in"
@@ -747,6 +748,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_03_054820) do
     t.bigint "created_by_hotel_id"
     t.datetime "discarded_at"
     t.date "date_of_birth"
+    t.boolean "vip", default: false, null: false
+    t.boolean "blacklisted", default: false, null: false
+    t.index ["blacklisted"], name: "index_guests_on_blacklisted"
     t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["discarded_at"], name: "index_guests_on_discarded_at"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"

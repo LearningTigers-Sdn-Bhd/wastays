@@ -4,6 +4,8 @@ module HotelPortal
   class BookingPresenter
     attr_reader :booking, :hotel
 
+    delegate :vip?, :blacklisted?, :repeat?, to: :booking
+
     def initialize(booking, hotel)
       @booking = booking
       @hotel = hotel
@@ -40,19 +42,23 @@ module HotelPortal
     end
 
     def check_in_formatted
-      booking.check_in.strftime("%d %b %Y")
+      format_date(booking.check_in, :long)
     end
 
     def check_out_formatted
-      booking.check_out.strftime("%d %b %Y")
+      format_date(booking.check_out, :long)
     end
 
     def nights_count
       (booking.check_out.to_date - booking.check_in.to_date).to_i
     end
 
+    def nights_label
+      view_context.pluralize(nights_count, "night")
+    end
+
     def stay_summary
-      "#{nights_count} #{'night'.pluralize(nights_count)} · #{booking.check_in.strftime('%d %b')}–#{booking.check_out.strftime('%d %b')}"
+      "#{nights_count} #{'night'.pluralize(nights_count)} · #{check_in_short}–#{check_out_short}"
     end
 
     def guest_count_summary
@@ -97,6 +103,14 @@ module HotelPortal
       [ booking.adults.to_i + booking.children.to_i - registered_guest_count, 0 ].max
     end
 
+    def registered_guest_count_label
+      view_context.pluralize(registered_guest_count, "registered guest")
+    end
+
+    def missing_guest_record_label
+      "This booking has #{view_context.pluralize(missing_guest_record_count, 'guest')} that have not been added to the guest records."
+    end
+
     def reference_ids
       [
         [ "Confirmation", confirmation_token ],
@@ -111,6 +125,19 @@ module HotelPortal
     def primary_guest
       @primary_guest ||= booking.primary_guest
     end
+
+    def guest_name
+      booking.guest_name
+    end
+
+    def guest_email
+      booking.guest_email
+    end
+
+    def guest_phone
+      booking.guest_phone
+    end
+
 
     def primary_guest_name
       primary_guest&.name.presence || booking.guest_name
@@ -134,6 +161,18 @@ module HotelPortal
 
     def primary_guest_government_id
       primary_guest&.government_id.presence || booking.guest_government_id.presence || "—"
+    end
+
+    def primary_guest_email_display
+      primary_guest_email.presence || "—"
+    end
+
+    def primary_guest_phone_display
+      primary_guest_phone.presence || "—"
+    end
+
+    def primary_guest_document_type_display
+      primary_guest_document_type.to_s.upcase
     end
 
     def guest_document_type_label(guest)
@@ -185,6 +224,22 @@ module HotelPortal
       when "failed" then "border-red-800 text-red-800"
       when "pending" then "border-yellow-800 text-yellow-800"
       else "border-gray-800 text-gray-800"
+      end
+    end
+
+    def pre_checkin_badge_class
+      if pre_checkin&.completed?
+        "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+      else
+        "bg-amber-50 text-amber-700 ring-amber-600/20"
+      end
+    end
+
+    def pre_checkin_badge_label
+      if pre_checkin&.completed?
+        "Pre-checked"
+      else
+        "Pending"
       end
     end
 
@@ -388,14 +443,131 @@ module HotelPortal
       format_currency(booking.total_amount)
     end
 
+    def guest_name_initial
+      booking.guest_name&.chr || "G"
+    end
+
+    def primary_room_type_name
+      booking.booking_rooms.first&.room_type&.name || "Room"
+    end
+
+    def formatted_check_in_date
+      format_date(booking.check_in, :short_month_day)
+    end
+
+    def formatted_check_out_date
+      format_date(booking.check_out, :short_month_day)
+    end
+
+    def dashboard_status_badge_class
+      case status
+      when "confirmed" then "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+      when "cancelled" then "bg-red-50 text-red-700 ring-red-600/20"
+      else "bg-slate-100 text-slate-700 ring-slate-500/20"
+      end
+    end
+
+    def dashboard_status_label
+      status.titleize
+    end
+
+    def formatted_total_amount_dashboard
+      "RM #{view_context.number_with_precision(booking.total_amount, precision: 2)}"
+    end
+
+    def self.status_pill_style(status)
+      booking_pill_styles = {
+        "pending" => "peer-checked:border-amber-400 peer-checked:bg-amber-50 peer-checked:text-amber-700 peer-checked:hover:bg-amber-100",
+        "confirmed" => "peer-checked:border-blue-400 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-checked:hover:bg-blue-100",
+        "review_no_show" => "peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-800 peer-checked:hover:bg-amber-100",
+        "checked_in" => "peer-checked:border-violet-400 peer-checked:bg-violet-50 peer-checked:text-violet-700 peer-checked:hover:bg-violet-100",
+        "review_due_out" => "peer-checked:border-orange-400 peer-checked:bg-orange-50 peer-checked:text-orange-700 peer-checked:hover:bg-orange-100",
+        "checkout_required" => "peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700 peer-checked:hover:bg-rose-100",
+        "completed" => "peer-checked:border-emerald-400 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 peer-checked:hover:bg-emerald-100",
+        "cancelled" => "peer-checked:border-slate-500 peer-checked:bg-slate-100 peer-checked:text-slate-700 peer-checked:hover:bg-slate-200",
+        "no_show" => "peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700 peer-checked:hover:bg-rose-100",
+        "overbooked" => "peer-checked:border-red-400 peer-checked:bg-red-50 peer-checked:text-red-700 peer-checked:hover:bg-red-100",
+        "not_ready" => "peer-checked:border-red-400 peer-checked:bg-red-50 peer-checked:text-red-700 peer-checked:hover:bg-red-100"
+      }
+      booking_pill_styles[status] || "peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900"
+    end
+
+    def created_at_date
+      format_date(booking.created_at, :long)
+    end
+
+    def status_variant_class
+      booking_styles = {
+        "pending" => "border-amber-200 bg-amber-50 text-amber-700",
+        "confirmed" => "border-blue-200 bg-blue-50 text-blue-700",
+        "review_no_show" => "border-amber-300 bg-amber-50 text-amber-800",
+        "checked_in" => "border-violet-200 bg-violet-50 text-violet-700",
+        "review_due_out" => "border-orange-200 bg-orange-50 text-orange-700",
+        "checkout_required" => "border-rose-200 bg-rose-50 text-rose-700",
+        "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700",
+        "cancelled" => "border-slate-300 bg-slate-100 text-slate-600",
+        "no_show" => "border-rose-200 bg-rose-50 text-rose-700",
+        "overbooked" => "border-red-200 bg-red-50 text-red-700",
+        "not_ready" => "border-red-200 bg-red-50 text-red-700"
+      }
+      booking_styles[status] || "border-slate-200 bg-slate-50 text-slate-600"
+    end
+
+    def status_label_humanized
+      status.humanize
+    end
+
+    def check_in_short
+      format_date(booking.check_in, :short_day_month)
+    end
+
+    def check_out_short
+      format_date(booking.check_out, :short_day_month)
+    end
+
+    def check_out_date_year
+      check_out_formatted
+    end
+
+    def formatted_currency_total
+      "#{currency} #{view_context.number_with_precision(booking.total_amount, precision: 2)}"
+    end
+
+    def guest_email_display
+      booking.guest_email.presence || "—"
+    end
+
+    def guest_phone_display
+      booking.guest_phone.presence || "—"
+    end
+
     private
+
+    def format_date(date, style)
+      return "" if date.blank?
+
+      case style
+      when :long
+        view_context.format_date(date)
+      when :short_day_month
+        date.strftime("%d %b")
+      when :short_month_day
+        date.strftime("%b %d")
+      else
+        date.to_s
+      end
+    end
 
     def format_currency(amount)
       "#{currency} #{view_context.number_with_precision(amount, precision: 2)}"
     end
 
     def view_context
-      ActionController::Base.helpers
+      @view_context ||= begin
+        h = ApplicationController.helpers
+        h.extend(ApplicationHelper) unless h.respond_to?(:format_date)
+        h
+      end
     end
   end
 end

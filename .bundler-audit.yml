@@ -1,0 +1,5 @@
+---
+ignore:
+  # Sourced from git master containing the merged fix (PR #199)
+  # Pending new release on RubyGems
+  - CVE-2026-38969

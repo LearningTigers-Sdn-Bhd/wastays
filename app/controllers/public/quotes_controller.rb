@@ -35,16 +35,16 @@ class Public::QuotesController < ApplicationController
       return render json: { found: false, message: "Email is required." }, status: :unprocessable_content
     end
 
-
-
     guest = Guest.find_by(email: email)
     found = guest.present?
 
-    render json: {
+    payload = {
       found: found,
       guest_details: found ? guest_lookup_payload(guest) : {},
       quote_token: quote.token
     }
+
+    render json: payload
   end
 
   private
