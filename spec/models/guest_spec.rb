@@ -204,6 +204,34 @@ RSpec.describe Guest, type: :model do
       expect(Guest.blacklisted?(email: "other@example.com")).to be(false)
       expect(Guest.blacklisted?(name: "Other Guest")).to be(false)
     end
+
+    context 'with hotel-scoped blacklisting' do
+      let(:hotel_a) { create(:hotel) }
+      let(:hotel_b) { create(:hotel) }
+      let!(:scoped_guest) do
+        create(:guest, name: "Scoped Guest", email: "scoped@example.com", blacklisted: true, metadata: {
+          "blacklisted_hotel_ids" => [ hotel_a.id ]
+        })
+      end
+
+      it 'returns true for blacklisted_at? at hotel A' do
+        expect(scoped_guest.blacklisted_at?(hotel_a)).to be(true)
+      end
+
+      it 'returns false for blacklisted_at? at hotel B' do
+        expect(scoped_guest.blacklisted_at?(hotel_b)).to be(false)
+      end
+
+      it 'respects hotel scoping in Guest.blacklisted? class method' do
+        expect(Guest.blacklisted?(email: "scoped@example.com", hotel: hotel_a)).to be(true)
+        expect(Guest.blacklisted?(email: "scoped@example.com", hotel: hotel_b)).to be(false)
+      end
+
+      it 'respects hotel scoping in Guest.banned? class method' do
+        expect(Guest.banned?(email: "scoped@example.com", hotel: hotel_a)).to be(true)
+        expect(Guest.banned?(email: "scoped@example.com", hotel: hotel_b)).to be(false)
+      end
+    end
   end
 
   describe 'repeat?' do

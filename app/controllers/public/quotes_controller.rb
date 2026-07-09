@@ -44,11 +44,6 @@ class Public::QuotesController < ApplicationController
       quote_token: quote.token
     }
 
-    if Guest.blacklisted?(email: email)
-      payload[:blacklisted] = true
-      payload[:message] = "Please note that this reservation may require additional verification. Our team may contact you if further assistance is needed."
-    end
-
     render json: payload
   end
 

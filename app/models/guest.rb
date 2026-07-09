@@ -37,10 +37,19 @@ class Guest < ApplicationRecord
 
   after_update :propagate_vip_status, if: :saved_change_to_vip?
 
-  def self.blacklisted?(email: nil, name: nil)
+  def self.blacklisted?(email: nil, name: nil, hotel: nil)
     return false if email.blank? && name.blank?
 
     query = Guest.where(blacklisted: true)
+    if hotel
+      hotel_id = hotel.is_a?(ActiveRecord::Base) ? hotel.id : hotel.to_i
+      query = query.where(
+        "guests.metadata @> :h_json OR (COALESCE(guests.metadata->'blacklisted_hotel_ids', '[]'::jsonb) = '[]'::jsonb AND (guests.created_by_hotel_id IS NULL OR guests.created_by_hotel_id = :h_id))",
+        h_json: { blacklisted_hotel_ids: [ hotel_id ] }.to_json,
+        h_id: hotel_id
+      )
+    end
+
     subqueries = []
     subqueries << query.where(email: email.strip.downcase) if email.present?
     subqueries << query.where("LOWER(name) = ?", name.strip.downcase) if name.present?
@@ -54,25 +63,54 @@ class Guest < ApplicationRecord
     end
   end
 
-  def self.banned?(email: nil, phone: nil, name: nil)
+  def self.banned?(email: nil, phone: nil, name: nil, hotel: nil)
     email_clean = email.to_s.strip.downcase.presence
     phone_clean = phone.to_s.strip.presence
     name_clean = name.to_s.strip.downcase.presence
 
     return false if email_clean.blank? && phone_clean.blank? && name_clean.blank?
 
+    query = Guest.where(blacklisted: true)
+    if hotel
+      hotel_id = hotel.is_a?(ActiveRecord::Base) ? hotel.id : hotel.to_i
+      query = query.where(
+        "guests.metadata @> :h_json OR (COALESCE(guests.metadata->'blacklisted_hotel_ids', '[]'::jsonb) = '[]'::jsonb AND (guests.created_by_hotel_id IS NULL OR guests.created_by_hotel_id = :h_id))",
+        h_json: { blacklisted_hotel_ids: [ hotel_id ] }.to_json,
+        h_id: hotel_id
+      )
+    end
+
     is_banned = false
     if email_clean.present?
-      is_banned ||= where(blacklisted: true).where(email: email_clean).exists?
+      is_banned ||= query.where(email: email_clean).exists?
     end
     if !is_banned && phone_clean.present?
-      is_banned ||= where(blacklisted: true).where(phone: phone_clean).exists?
+      is_banned ||= query.where(phone: phone_clean).exists?
     end
     if !is_banned && name_clean.present?
-      is_banned ||= where(blacklisted: true).where("LOWER(name) = ?", name_clean).exists?
+      is_banned ||= query.where("LOWER(name) = ?", name_clean).exists?
     end
 
     is_banned
+  end
+
+  def blacklisted?(hotel: nil)
+    if hotel
+      blacklisted_at?(hotel)
+    else
+      super()
+    end
+  end
+
+  def blacklisted_at?(hotel)
+    return false unless hotel
+    hotel_id = hotel.is_a?(ActiveRecord::Base) ? hotel.id : hotel.to_i
+
+    if metadata&.dig("blacklisted_hotel_ids").present?
+      metadata["blacklisted_hotel_ids"].include?(hotel_id)
+    else
+      self[:blacklisted] && (created_by_hotel_id.nil? || created_by_hotel_id == hotel_id)
+    end
   end
 
   def repeat?

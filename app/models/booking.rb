@@ -93,7 +93,7 @@ class Booking < ApplicationRecord
   end
 
   def blacklisted?
-    primary_guest&.blacklisted? || false
+    primary_guest&.blacklisted_at?(hotel) || false
   end
 
   def repeat?

@@ -4,10 +4,14 @@ module Guests
   class GuestPresenter
     attr_reader :guest
 
-    delegate :vip?, :blacklisted?, :repeat?, to: :guest
+    delegate :vip?, :repeat?, to: :guest
 
     def initialize(guest)
       @guest = guest
+    end
+
+    def blacklisted?(hotel = nil)
+      @guest.blacklisted?(hotel: hotel)
     end
 
   def name

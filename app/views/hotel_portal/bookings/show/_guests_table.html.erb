@@ -83,14 +83,14 @@
 
         <% presenter.additional_guests.each do |booking_guest| %>
           <% guest_presenter = Guests::GuestPresenter.new(booking_guest.guest) %>
-          <tr class="<%= guest_presenter.blacklisted? ? 'bg-rose-100' : '' %>">
-            <td class="py-3 align-top <%= guest_presenter.blacklisted? ? 'border-l-4 border-l-rose-600 pl-3' : 'pl-4' %>">
+          <tr class="<%= guest_presenter.blacklisted?(current_hotel) ? 'bg-rose-100' : '' %>">
+            <td class="py-3 align-top <%= guest_presenter.blacklisted?(current_hotel) ? 'border-l-4 border-l-rose-600 pl-3' : 'pl-4' %>">
               <div class="flex items-center gap-x-1">
                 <p class="font-semibold text-slate-950"><%= guest_presenter.name %></p>
                 <% if guest_presenter.vip? %>
                   <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
                 <% end %>
-                <% if guest_presenter.blacklisted? %>
+                <% if guest_presenter.blacklisted?(current_hotel) %>
                   <div class="relative size-4 flex items-center justify-center shrink-0">
                     <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3.5 text-rose-600" %>
                     <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
