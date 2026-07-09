@@ -150,6 +150,12 @@
               <%= button_to "Full Refresh (500 Days)", full_refresh_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 shadow-sm", data: { turbo_confirm: "This will push 500 days of availability, rates and restrictions. Continue?" } %>
             </div>
 
+            <div class="pt-2 border-t border-slate-200 mt-2">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Diagnostics</p>
+              <p class="text-[10px] text-slate-500 mb-3 leading-relaxed">Checks whether the mapped property still matches the one this hotel's rate plans actually belong to on Channex, and repoints it if drift is found (e.g. after a disconnect/reconnect that left stale mappings behind).</p>
+              <%= button_to "Repair Channel Mapping", repair_channex_mapping_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-700 transition hover:bg-amber-100", data: { turbo_confirm: "This will check for mapping drift and, if found, repoint this hotel's Channex mapping and trigger a full refresh. Continue?" } %>
+            </div>
+
             <div class="pt-4 mt-2">
               <%= button_to "Disconnect Channel Manager", disconnect_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-50", data: { turbo_confirm: "Are you sure? This will remove all mapping IDs for this hotel and its rooms." } %>
             </div>

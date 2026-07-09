@@ -36,6 +36,16 @@ class Admin::Hotels::ChannelManagersController < Admin::BaseController
     end
   end
 
+  def repair_mapping
+    result = ChannelManagers::RepairMappingService.new(hotel: @hotel).call
+
+    if result.success?
+      redirect_to admin_hotel_path(@hotel), notice: result.message
+    else
+      redirect_to admin_hotel_path(@hotel), alert: "Repair failed: #{result.message}"
+    end
+  end
+
   private
 
   def set_hotel

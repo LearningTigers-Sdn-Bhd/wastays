@@ -171,6 +171,7 @@ Rails.application.routes.draw do
         post :onboard_channex, to: "hotels/channel_managers#onboard_channex"
         post :full_refresh, to: "hotels/channel_managers#full_refresh"
         post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
+        post :repair_channex_mapping, to: "hotels/channel_managers#repair_mapping"
       end
       resources :onboarding_sessions, module: :hotels, only: [ :create, :show, :edit, :update, :destroy ] do
         member do
