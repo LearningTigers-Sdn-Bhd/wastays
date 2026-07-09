@@ -1,0 +1,94 @@
+<section aria-labelledby="dialog-preview-heading" class="border-t border-border pt-8">
+  <h2 id="dialog-preview-heading" class="text-lg font-semibold text-neutral-text-primary">Dialog</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Native <code>&lt;dialog&gt;</code> — focus trap, Escape, top-layer and backdrop are browser-native.
+    The component renders only the dialog; triggers are external via the native
+    <code>command="show-modal"</code> invoker attributes.
+  </p>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <%# Default dialog: string title + description, dismissible, content + footer slots %>
+    <button type="button" class="btn btn-primary" command="show-modal" commandfor="sd-dialog">Open dialog</button>
+    <%= render PanelsUI::DialogComponent.new(
+          id: "sd-dialog",
+          size: :md,
+          title: "Invite teammate",
+          description: "Send an invitation to collaborate on this property.") do |dialog| %>
+      <% dialog.with_body do %>
+        <div class="space-y-4">
+          <p>They'll get an email with a join link. You can revoke access at any time.</p>
+          <button id="sd-dialog-stack-trigger"
+                  type="button"
+                  class="btn btn-secondary"
+                  command="show-modal"
+                  commandfor="sd-dialog-confirm">Review permissions</button>
+        </div>
+      <% end %>
+      <% dialog.with_footer do %>
+        <button type="button" class="btn btn-secondary" data-action="panels-ui--dialog#close">Cancel</button>
+        <button type="button" class="btn btn-primary">Send invite</button>
+      <% end %>
+    <% end %>
+
+    <%# Stacked child: a DOM sibling opened from inside the default dialog. %>
+    <%= render PanelsUI::DialogComponent.new(
+          id: "sd-dialog-confirm",
+          size: :sm,
+          title: "Confirm permissions",
+          description: "This dialog is stacked above the invitation dialog.") do |dialog| %>
+      <% dialog.with_body do %>
+        <p>The invitation dialog remains open and inert underneath this confirmation.</p>
+      <% end %>
+      <% dialog.with_footer do %>
+        <button type="button" class="btn btn-primary" data-action="panels-ui--dialog#close">Back to invitation</button>
+      <% end %>
+    <% end %>
+
+    <%# almost-full: fills the viewport with a gap-6 frame, keeps rounding %>
+    <button type="button" class="btn btn-secondary" command="show-modal" commandfor="sd-dialog-almost">Open almost-full</button>
+    <%= render PanelsUI::DialogComponent.new(
+          id: "sd-dialog-almost",
+          size: :almost_full,
+          title: "Almost-full",
+          description: "Fills the viewport minus a 1.5rem frame; body scrolls.") do |dialog| %>
+      <% dialog.with_body do %>
+        <div class="space-y-3">
+          <% 20.times do |i| %>
+            <p>Scrollable row <%= i + 1 %> — the header and footer stay pinned while this region scrolls.</p>
+          <% end %>
+        </div>
+      <% end %>
+      <% dialog.with_footer do %>
+        <button type="button" class="btn btn-primary" data-action="panels-ui--dialog#close">Done</button>
+      <% end %>
+    <% end %>
+
+    <%# full: edge-to-edge, no rounding %>
+    <button type="button" class="btn btn-secondary" command="show-modal" commandfor="sd-dialog-full">Open full</button>
+    <%= render PanelsUI::DialogComponent.new(
+          id: "sd-dialog-full",
+          size: :full,
+          title: "Full screen",
+          description: "Edge-to-edge, no rounded corners.") do |dialog| %>
+      <% dialog.with_body do %>
+        <p>Occupies the whole viewport — useful for immersive editors or wizards.</p>
+      <% end %>
+      <% dialog.with_footer do %>
+        <button type="button" class="btn btn-primary" data-action="panels-ui--dialog#close">Close</button>
+      <% end %>
+    <% end %>
+
+    <%# Non-dismissible dialog: no close ✕, closes only via an explicit action %>
+    <button type="button" class="btn btn-secondary" command="show-modal" commandfor="sd-dialog-bare">Open bare (non-dismissible)</button>
+    <%= render PanelsUI::DialogComponent.new(
+          id: "sd-dialog-bare",
+          size: :sm,
+          dismissible: false,
+          title: "Heads up",
+          description: "Not dismissible — closes only via an explicit action.") do |dialog| %>
+      <% dialog.with_footer do %>
+        <button type="button" class="btn btn-primary" data-action="panels-ui--dialog#close">Got it</button>
+      <% end %>
+    <% end %>
+  </div>
+</section>

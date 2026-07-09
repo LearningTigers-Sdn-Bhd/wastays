@@ -34,6 +34,10 @@ module Wastays
     config.autoload_paths << Rails.root.join("app/presenters")
     config.eager_load_paths << Rails.root.join("app/presenters")
 
+    # PanelsUI component library: generate components with a sidecar directory
+    # (template + assets colocated next to the .rb).
+    config.view_component.generate.sidecar = true
+
     config.middleware.use ObservationDeckMiddleware
     config.middleware.use Rack::Attack
   end

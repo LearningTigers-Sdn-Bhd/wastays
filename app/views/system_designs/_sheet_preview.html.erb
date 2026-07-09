@@ -1,0 +1,134 @@
+<section aria-labelledby="sheet-preview-heading" class="border-t border-border pt-8">
+  <h2 id="sheet-preview-heading" class="text-lg font-semibold text-neutral-text-primary">Sheet</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Native modal <code>&lt;dialog&gt;</code> surfaces anchored to a viewport edge.
+    Sheets share the dialog overlay stack and close in last-opened, first-closed order.
+  </p>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <button type="button" class="btn btn-primary" command="show-modal" commandfor="sd-sheet-right">Open right sheet</button>
+    <button type="button" class="btn btn-secondary" command="show-modal" commandfor="sd-sheet-floating">Open floating sheet</button>
+    <button type="button" class="btn btn-secondary" command="show-modal" commandfor="sd-sheet-left">Open left sheet</button>
+    <button type="button" class="btn btn-secondary" command="show-modal" commandfor="sd-sheet-top">Open top sheet</button>
+    <button type="button" class="btn btn-secondary" command="show-modal" commandfor="sd-sheet-bottom">Open bottom sheet</button>
+    <button type="button" class="btn btn-secondary" command="show-modal" commandfor="sd-sheet-full">Open full sheet</button>
+    <button type="button" class="btn btn-secondary" command="show-modal" commandfor="sd-sheet-required">Open required sheet</button>
+
+    <%= render PanelsUI::SheetComponent.new(
+          id: "sd-sheet-right",
+          side: :right,
+          size: :md,
+          title: "Booking filters",
+          description: "Filter the reservation list without leaving the page.") do |sheet| %>
+      <% sheet.with_body do %>
+        <div class="space-y-4">
+          <p>The body scrolls independently while the header and footer remain visible.</p>
+          <button id="sd-sheet-stack-trigger"
+                  type="button"
+                  class="btn btn-secondary"
+                  command="show-modal"
+                  commandfor="sd-sheet-stacked">Open stacked sheet</button>
+        </div>
+      <% end %>
+      <% sheet.with_footer do %>
+        <button type="button" class="btn btn-secondary" data-action="panels-ui--sheet#close">Cancel filters</button>
+        <button type="button" class="btn btn-primary">Apply filters</button>
+      <% end %>
+    <% end %>
+
+    <%# DOM sibling opened from inside the right sheet. %>
+    <%= render PanelsUI::SheetComponent.new(
+          id: "sd-sheet-stacked",
+          side: :bottom,
+          size: :sm,
+          title: "Choose a saved view",
+          description: "This bottom sheet is stacked above the filter sheet.") do |sheet| %>
+      <% sheet.with_body do %>
+        <p>The filter sheet remains open and inert underneath.</p>
+      <% end %>
+      <% sheet.with_footer do %>
+        <button type="button" class="btn btn-primary" data-action="panels-ui--sheet#close">Back to filters</button>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::SheetComponent.new(
+          id: "sd-sheet-floating",
+          side: :left,
+          size: :sm,
+          variant: :floating,
+          title: "Invite people",
+          description: "Send an invite and they'll join the workspace right away.") do |sheet| %>
+      <% sheet.with_body do %>
+        <div class="space-y-4">
+          <label class="block text-sm font-medium" for="floating-sheet-email">Email</label>
+          <input id="floating-sheet-email" type="email" class="input" placeholder="teammate@example.com">
+        </div>
+      <% end %>
+      <% sheet.with_footer do %>
+        <button type="button" class="btn btn-secondary" data-action="panels-ui--sheet#close">Cancel invite</button>
+        <button type="button" class="btn btn-primary">Send invite</button>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::SheetComponent.new(
+          id: "sd-sheet-left",
+          side: :left,
+          size: :sm,
+          title: "Navigation sheet",
+          description: "A compact sheet anchored to the left edge.") do |sheet| %>
+      <% sheet.with_body { "Left-side content." } %>
+      <% sheet.with_footer do %>
+        <button type="button" class="btn btn-primary" data-action="panels-ui--sheet#close">Close left sheet</button>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::SheetComponent.new(
+          id: "sd-sheet-top",
+          side: :top,
+          size: :sm,
+          title: "Notification settings",
+          description: "A sheet anchored to the top edge.") do |sheet| %>
+      <% sheet.with_body { "Top-side content." } %>
+      <% sheet.with_footer do %>
+        <button type="button" class="btn btn-primary" data-action="panels-ui--sheet#close">Close top sheet</button>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::SheetComponent.new(
+          id: "sd-sheet-bottom",
+          side: :bottom,
+          size: :md,
+          title: "Mobile actions",
+          description: "A sheet anchored to the bottom edge.") do |sheet| %>
+      <% sheet.with_body { "Bottom-side content." } %>
+      <% sheet.with_footer do %>
+        <button type="button" class="btn btn-primary" data-action="panels-ui--sheet#close">Close bottom sheet</button>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::SheetComponent.new(
+          id: "sd-sheet-full",
+          side: :right,
+          size: :full,
+          title: "Full-screen workflow",
+          description: "A viewport-filling sheet with no rounded edge.") do |sheet| %>
+      <% sheet.with_body { "Full-screen sheet content." } %>
+      <% sheet.with_footer do %>
+        <button type="button" class="btn btn-primary" data-action="panels-ui--sheet#close">Close full sheet</button>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::SheetComponent.new(
+          id: "sd-sheet-required",
+          side: :bottom,
+          size: :sm,
+          dismissible: false,
+          title: "Required step",
+          description: "Complete this step using its explicit action.") do |sheet| %>
+      <% sheet.with_body { "This sheet ignores Escape and backdrop dismissal." } %>
+      <% sheet.with_footer do %>
+        <button type="button" class="btn btn-primary" data-action="panels-ui--sheet#close">Finish required step</button>
+      <% end %>
+    <% end %>
+  </div>
+</section>

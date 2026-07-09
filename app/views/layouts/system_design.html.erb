@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <title><%= content_for(:title) || "System Design — PanelsUI" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="min-h-full bg-background text-foreground font-sans antialiased">
+    <main id="content" data-system-design-showcase>
+      <%= yield %>
+    </main>
+  </body>
+</html>

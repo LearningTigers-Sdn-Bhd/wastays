@@ -1,0 +1,50 @@
+# frozen_string_literal: true
+
+module PanelsUI
+  # Base class for every PanelsUI primitive.
+  #
+  # Provides a tiny cva-style variant DSL. A component declares its styling once
+  # with `style`, then resolves a concrete, conflict-merged class string at render
+  # time with `class_for` — base classes, the selected variant/size classes, and the
+  # caller's `class:` override are combined and de-duplicated through `tw_merge`
+  # (see config/initializers/tailwind_merge.rb), so the last-declared utility wins.
+  #
+  #   class ButtonComponent < PanelsUI::BaseComponent
+  #     style base: "inline-flex items-center rounded-md",
+  #           variants: {
+  #             variant: { solid: "bg-primary text-primary-foreground", ghost: "text-foreground hover:bg-muted" },
+  #             size:    { sm: "h-8 px-3 text-sm", md: "h-10 px-4" },
+  #           },
+  #           defaults: { variant: :solid, size: :md }
+  #   end
+  #
+  #   class_for(variant: :ghost, class_override: "w-full") # merged string, ghost + md + w-full
+  class BaseComponent < ViewComponent::Base
+    class << self
+      attr_reader :style_config
+
+      def style(base: "", variants: {}, defaults: {})
+        @style_config = { base: base, variants: variants, defaults: defaults }
+      end
+
+      # Subclasses inherit the parent's style unless they declare their own.
+      def inherited(subclass)
+        super
+        subclass.instance_variable_set(:@style_config, @style_config)
+      end
+    end
+
+    # Resolve declared style + variant selections (+ caller override) into one
+    # conflict-merged class string. Unknown/nil selections fall back to defaults.
+    def class_for(class_override: nil, **selected)
+      config = self.class.style_config
+      return tw_merge(class_override) unless config
+
+      chosen = config[:defaults].merge(selected.compact)
+      parts  = [config[:base]]
+      chosen.each { |group, value| parts << config.dig(:variants, group, value) }
+      parts << class_override
+      tw_merge(parts)
+    end
+  end
+end
