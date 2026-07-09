@@ -15,7 +15,9 @@ module FolioRouting
     end
 
     def bookings
-      @bookings ||= @group_booking.bookings.to_a
+      @bookings ||= @group_booking.bookings
+        .includes(:hotel, :booking_folio, :booking_folios, :booking_billing_parties, :folio_routing_rules, :booking_tax_inclusion_overrides)
+        .to_a
     end
 
     def matrix_for(booking)

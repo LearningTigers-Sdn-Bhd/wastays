@@ -20,7 +20,7 @@ module GroupLifecycleTargeting
     raise BatchTargetError, "Group selection is only available for group bookings." if fallback_booking.group_booking_id.blank?
 
     bookings = fallback_booking.group_booking.bookings
-      .includes(:booking_folio, booking_rooms: :room_type, booking_guests: :guest)
+      .includes(:hotel, :booking_folio, booking_rooms: :room_type, booking_guests: :guest)
       .where(id: ids)
       .order(:group_position, :id)
       .to_a

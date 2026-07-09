@@ -105,7 +105,9 @@ module FolioRouting
     private
 
     def bookings
-      @bookings ||= @group_booking.bookings.where(id: @booking_routes.keys).order(:id).to_a
+      @bookings ||= @group_booking.bookings
+        .includes(:hotel, :booking_folio, :booking_folios, :booking_billing_parties, :folio_routing_rules, :booking_tax_inclusion_overrides)
+        .where(id: @booking_routes.keys).order(:id).to_a
     end
 
     def payload_digest

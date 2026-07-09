@@ -43,7 +43,9 @@ module Bookings
     def selected_bookings
       raise BatchFailure, "Select at least one booking." if @booking_ids.empty?
 
-      bookings = @group_booking.bookings.where(id: @booking_ids).to_a
+      bookings = @group_booking.bookings
+        .includes(:hotel, :pre_checkin, :booking_folio, :booking_rooms)
+        .where(id: @booking_ids).to_a
       raise BatchFailure, "One or more selected bookings are not part of this group." unless bookings.size == @booking_ids.size
 
       bookings
