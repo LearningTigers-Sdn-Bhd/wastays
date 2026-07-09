@@ -229,7 +229,7 @@ RSpec.describe BookingFolio, type: :model do
     it "restricts deletion of a booking room with folios" do
       expect(booking_room.destroy).to be(false)
       expect(booking_room.errors[:base]).to include("Cannot delete record because dependent booking folios exist")
-      expect { booking_room.delete }.to raise_error(ActiveRecord::StatementInvalid, /RestrictViolation/)
+      expect { booking_room.delete }.to raise_error(ActiveRecord::StatementInvalid, /foreign key constraint/)
     end
   end
 
