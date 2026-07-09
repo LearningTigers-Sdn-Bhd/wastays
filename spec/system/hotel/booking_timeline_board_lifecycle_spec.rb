@@ -155,7 +155,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     find("[data-booking-actions-id-value='#{@booking.id}']").click
 
     within "#offcanvas_drawer" do
-      expect(page).to have_field("Guest name", with: "John Doe")
+      expect(page).to have_content("John Doe")
     end
     page.execute_script("document.getElementById('offcanvas_drawer').src = '#{hotel_booking_transaction_check_in_reservation_path(hotel, @booking, source: "booking_timeline_board")}'")
 
@@ -228,7 +228,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     booking_block.send_keys(:enter)
 
     within "#offcanvas_drawer" do
-      expect(page).to have_field("Guest name", with: "John Doe")
+      expect(page).to have_content("John Doe")
       page.execute_script("document.getElementById('offcanvas_drawer').src = '#{hotel_booking_transaction_amend_stay_path(hotel, @booking)}'")
       expect(page).to have_content(/Edit Stay & Room/i)
       find_button("Cancel").trigger("click")

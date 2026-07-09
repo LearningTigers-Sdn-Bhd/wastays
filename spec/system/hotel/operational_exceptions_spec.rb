@@ -32,6 +32,7 @@ RSpec.describe "Operational Exceptions", type: :system do
 
       visit hotel_booking_path(hotel, booking)
 
+      find("button[aria-label='Booking actions']").click
       expect(page).to have_content("Review Late Checkout")
       click_link "Review Late Checkout"
 
