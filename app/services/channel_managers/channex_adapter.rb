@@ -139,6 +139,84 @@ module ChannelManagers
       client.delete("/rate_plans/#{external_id}")
     end
 
+    def create_channel_availability_rule(rule)
+      client = Channex::Client.new
+      property_id = mapping_for(rule.hotel).external_id
+
+      # Translate PMS room types to Channex room type UUIDs
+      ext_rt_ids = rule.affected_room_types.map do |rt_id|
+        rt = RoomType.find_by(id: rt_id)
+        rt ? mapping_for(rt).external_id : nil
+      end.compact.reject { |id| id.to_s.start_with?("pending") }
+
+      days_array = rule.days.to_s.split(",").map(&:strip).reject(&:blank?)
+      days_array = [ "mo", "tu", "we", "th", "fr", "sa", "su" ] if days_array.empty?
+
+      payload = {
+        channel_availability_rule: {
+          title: rule.title,
+          type: rule.rule_type,
+          value: rule.value.presence&.to_i,
+          affected_channels: rule.affected_channels,
+          affected_room_types: ext_rt_ids,
+          days: days_array,
+          start_date: rule.start_date.to_s,
+          end_date: rule.end_date.presence&.to_s,
+          property_id: property_id
+        }.compact
+      }
+
+      response = client.post("/channel_availability_rules", payload)
+      if response["data"] && response["data"]["id"]
+        # Skip validations/callbacks to prevent infinite loops
+        rule.update_columns(external_id: response["data"]["id"])
+        true
+      else
+        Rails.logger.error "Channex: Failed to create availability rule: #{response}"
+        false
+      end
+    end
+
+    def update_channel_availability_rule(rule)
+      client = Channex::Client.new
+      property_id = mapping_for(rule.hotel).external_id
+
+      ext_rt_ids = rule.affected_room_types.map do |rt_id|
+        rt = RoomType.find_by(id: rt_id)
+        rt ? mapping_for(rt).external_id : nil
+      end.compact.reject { |id| id.to_s.start_with?("pending") }
+
+      days_array = rule.days.to_s.split(",").map(&:strip).reject(&:blank?)
+      days_array = [ "mo", "tu", "we", "th", "fr", "sa", "su" ] if days_array.empty?
+
+      payload = {
+        channel_availability_rule: {
+          title: rule.title,
+          type: rule.rule_type,
+          value: rule.value.presence&.to_i,
+          affected_channels: rule.affected_channels,
+          affected_room_types: ext_rt_ids,
+          days: days_array,
+          start_date: rule.start_date.to_s,
+          end_date: rule.end_date.presence&.to_s,
+          property_id: property_id
+        }.compact
+      }
+
+      response = client.put("/channel_availability_rules/#{rule.external_id}", payload)
+      if response["data"] && response["data"]["id"]
+        true
+      else
+        Rails.logger.error "Channex: Failed to update availability rule #{rule.id}: #{response}"
+        false
+      end
+    end
+
+    def delete_channel_availability_rule(external_id)
+      client = Channex::Client.new
+      client.delete("/channel_availability_rules/#{external_id}")
+    end
+
     def push_ari(date_range:, sync_availability: true, sync_rates: true, sync_restrictions: true, room_type_ids: nil, rate_plan_ids: nil, rate_plan_fields: nil)
       client = Channex::Client.new
       property_id = mapping_for(@hotel).external_id
@@ -760,84 +838,6 @@ module ChannelManagers
       end
       ranges << (start_date..prev_date)
       ranges
-    end
-
-    def create_channel_availability_rule(rule)
-      client = Channex::Client.new
-      property_id = mapping_for(rule.hotel).external_id
-
-      # Translate PMS room types to Channex room type UUIDs
-      ext_rt_ids = rule.affected_room_types.map do |rt_id|
-        rt = RoomType.find_by(id: rt_id)
-        rt ? mapping_for(rt).external_id : nil
-      end.compact.reject { |id| id.to_s.start_with?("pending") }
-
-      days_array = rule.days.to_s.split(",").map(&:strip).reject(&:blank?)
-      days_array = [ "mo", "tu", "we", "th", "fr", "sa", "su" ] if days_array.empty?
-
-      payload = {
-        channel_availability_rule: {
-          title: rule.title,
-          type: rule.rule_type,
-          value: rule.value.presence&.to_i,
-          affected_channels: rule.affected_channels,
-          affected_room_types: ext_rt_ids,
-          days: days_array,
-          start_date: rule.start_date.to_s,
-          end_date: rule.end_date.presence&.to_s,
-          property_id: property_id
-        }.compact
-      }
-
-      response = client.post("/channel_availability_rules", payload)
-      if response["data"] && response["data"]["id"]
-        # Skip validations/callbacks to prevent infinite loops
-        rule.update_columns(external_id: response["data"]["id"])
-        true
-      else
-        Rails.logger.error "Channex: Failed to create availability rule: #{response}"
-        false
-      end
-    end
-
-    def update_channel_availability_rule(rule)
-      client = Channex::Client.new
-      property_id = mapping_for(rule.hotel).external_id
-
-      ext_rt_ids = rule.affected_room_types.map do |rt_id|
-        rt = RoomType.find_by(id: rt_id)
-        rt ? mapping_for(rt).external_id : nil
-      end.compact.reject { |id| id.to_s.start_with?("pending") }
-
-      days_array = rule.days.to_s.split(",").map(&:strip).reject(&:blank?)
-      days_array = [ "mo", "tu", "we", "th", "fr", "sa", "su" ] if days_array.empty?
-
-      payload = {
-        channel_availability_rule: {
-          title: rule.title,
-          type: rule.rule_type,
-          value: rule.value.presence&.to_i,
-          affected_channels: rule.affected_channels,
-          affected_room_types: ext_rt_ids,
-          days: days_array,
-          start_date: rule.start_date.to_s,
-          end_date: rule.end_date.presence&.to_s,
-          property_id: property_id
-        }.compact
-      }
-
-      response = client.put("/channel_availability_rules/#{rule.external_id}", payload)
-      if response["data"] && response["data"]["id"]
-        true
-      else
-        Rails.logger.error "Channex: Failed to update availability rule #{rule.id}: #{response}"
-        false
-      end
-    end
-
-    def delete_channel_availability_rule(external_id)
-      client = Channex::Client.new
-      client.delete("/channel_availability_rules/#{external_id}")
     end
   end
 end
