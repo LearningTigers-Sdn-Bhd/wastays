@@ -151,10 +151,9 @@ RSpec.describe FolioRouting::ApplyBatch do
     company_party = create(:booking_billing_party, :company, booking:, hotel: group.hotel)
     target = create(:booking_folio, :secondary, booking:, hotel: group.hotel,
       booking_billing_party: company_party, payer_type: "company", hotel_corporate_account: company_party.hotel_corporate_account)
-    arrangement = create(:group_billing_arrangement, group_booking: group, hotel: group.hotel)
     code = group.hotel.transaction_codes.find_by!(system_key: "room_revenue")
     derived = create(:folio_routing_rule, booking:, hotel: group.hotel, transaction_code: code,
-      target_folio: primary, source_type: "group", group_billing_arrangement: arrangement)
+      target_folio: primary, source_type: "group")
 
     result = described_class.call(booking:, actor:, confirmation: nil, reason: nil, idempotency_key: SecureRandom.uuid,
       routes: { code.id.to_s => { "billing_party_id" => company_party.id.to_s, "target_folio_id" => target.id.to_s } })
@@ -163,6 +162,5 @@ RSpec.describe FolioRouting::ApplyBatch do
     expect(derived.reload).not_to be_active
     local = booking.folio_routing_rules.active.find_by!(transaction_code: code)
     expect(local).to have_attributes(source_type: "booking", target_folio_id: target.id)
-    expect(arrangement.reload.status).to eq("active")
   end
 end

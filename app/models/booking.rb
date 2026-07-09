@@ -20,7 +20,6 @@ class Booking < ApplicationRecord
   has_many :booking_folios, dependent: :destroy
   has_one :booking_folio, -> { where(is_primary: true, booking_room_id: nil) }, dependent: :destroy
   has_many :folio_routing_rules, dependent: :destroy
-  has_many :booking_billing_assignments, dependent: :destroy
   has_many :booking_billing_parties, dependent: :restrict_with_error
   has_many :booking_billing_terms, through: :booking_billing_parties, source: :billing_terms
   has_many :booking_tax_inclusion_overrides, dependent: :destroy

@@ -7,8 +7,7 @@ class FolioRoutingRule < ApplicationRecord
   belongs_to :target_folio, class_name: "BookingFolio"
   belongs_to :created_by, class_name: "User", optional: true
   belongs_to :updated_by, class_name: "User", optional: true
-  belongs_to :group_billing_arrangement, optional: true
-  belongs_to :booking_billing_assignment, optional: true
+
 
   scope :active, -> { where(active: true) }
 
@@ -23,7 +22,7 @@ class FolioRoutingRule < ApplicationRecord
   validate :target_folio_belongs_to_hotel
   validate :transaction_code_belongs_to_hotel
   validate :effective_dates_are_ordered
-  validate :source_references_are_consistent
+
 
   def effective_on?(date)
     date = date.to_date
@@ -62,11 +61,4 @@ class FolioRoutingRule < ApplicationRecord
     errors.add(:effective_until, "must be on or after effective from")
   end
 
-  def source_references_are_consistent
-    if source_type == "group" && group_billing_arrangement.blank?
-      errors.add(:group_billing_arrangement, "must be present for group-derived routing")
-    elsif source_type == "booking" && group_billing_arrangement.present?
-      errors.add(:group_billing_arrangement, "must be blank for booking-local routing")
-    end
-  end
 end

@@ -408,26 +408,6 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).not_to include("forecasted-mobile")
     end
 
-    it "renders the move forecast action without the fallback dash" do
-      %w[
-        manage_folio_movements
-        post_folio_charges
-      ].each { |slug| grant_permission(slug) }
-      booking = create_booking_with_folio(guest_name: "Forecast Move Guest", confirmation_token: "BK-MOVE-FC", folio_number: 615, check_out: Date.current + 1.day)
-      create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 616)
-      create(:folio_forecasted_charge, booking_folio: booking.booking_folio, amount: 30, stay_date: Date.current, charge_kind: "accommodation")
-
-      get folio_operations_path(booking)
-
-      html = Nokogiri::HTML(response.body)
-      forecast_row = html.css("tr[data-section='forecasted']").find { |row| row.text.include?("Move Forecast") }
-      action_cell = forecast_row.css("td").last
-
-      expect(response).to have_http_status(:success)
-      expect(action_cell.at_css("button").text.squish).to eq("Move Forecast")
-      expect(action_cell.text.squish).not_to include("—")
-    end
-
     it "renders folio windows and switches the active ledger" do
       grant_permission("manage_folio_windows")
       booking = create_booking_with_folio(guest_name: "Window Guest", confirmation_token: "BK-WINDOW", folio_number: 617)

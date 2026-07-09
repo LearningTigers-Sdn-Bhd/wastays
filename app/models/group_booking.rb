@@ -6,7 +6,6 @@ class GroupBooking < ApplicationRecord
   belongs_to :hotel
   belongs_to :organizer_guest, class_name: "Guest", optional: true
   has_many :bookings, -> { order(:group_position, :id) }, dependent: :restrict_with_error
-  has_many :group_billing_arrangements, dependent: :restrict_with_error
   has_many :group_deposits, dependent: :restrict_with_error
   has_many :group_billing_change_batches, dependent: :restrict_with_error
 

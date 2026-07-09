@@ -62,43 +62,6 @@
           <% end %>
         </div>
       </dialog>
-    <% elsif row.row_kind == :forecasted && row.movement_allowed && folio_show.can_manage_folio_movements? %>
-      <% movement_controls_rendered = true %>
-      <% forecast_move_modal_id = "forecast-move-modal-#{row.forecast_id}" %>
-      <button type="button"
-              class="mr-1 inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-              onclick="document.getElementById('<%= forecast_move_modal_id %>').showModal()">
-        Move Forecast
-      </button>
-      <dialog id="<%= forecast_move_modal_id %>" class="fixed inset-0 m-auto w-[min(92vw,30rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
-        <div class="bg-white text-left" onclick="event.stopPropagation()">
-          <div class="border-b border-slate-100 px-6 py-5">
-            <h3 class="text-lg font-bold text-slate-900">Move Upcoming Charge</h3>
-          </div>
-          <% move_forecast_path = if folio_origin == "booking_control_panel"
-            move_forecast_hotel_booking_control_panel_path(hotel, booking, row.forecast_id)
-          else
-            move_forecast_hotel_folio_path(hotel, booking, row.forecast_id)
-          end %>
-          <%= form_with url: move_forecast_path, method: :post, local: true, class: "space-y-4 p-6" do %>
-            <% if folio_origin.present? %>
-              <%= hidden_field_tag "folio_origin", folio_origin %>
-            <% end %>
-            <div>
-              <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Target Folio</label>
-              <%= select_tag "folio_operation[target_folio_id]", options_from_collection_for_select(folio_show.other_open_folios, :id, :display_option_label), required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700" %>
-            </div>
-            <div>
-              <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Reason</label>
-              <%= text_field_tag "folio_operation[reason]", nil, required: true, placeholder: "e.g., Company pays upcoming room charge", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700" %>
-            </div>
-            <div class="flex items-center justify-end gap-x-3 pt-2">
-              <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" onclick="this.closest('dialog').close()">Cancel</button>
-              <%= submit_tag "Move Forecast", class: "rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
-            </div>
-          <% end %>
-        </div>
-      </dialog>
     <% end %>
 
     <% if row.action_kind == :reverse %>

@@ -115,22 +115,6 @@ module HotelPortal
         result.success? ? { notice: "Folio window reopened." } : { alert: result.error }
     end
 
-    def move_forecast
-      authorize_manage_folio_movements!
-      booking = current_hotel.bookings.includes(:booking_folios).find(params[:booking_id])
-      forecast = FolioForecastedCharge.joins(:booking_folio).where(booking_folios: { booking_id: booking.id, hotel_id: current_hotel.id }).find(params[:forecast_id])
-      target_folio = booking.booking_folios.find(folio_operation_params[:target_folio_id])
-      result = ::Folios::MoveForecast.call(
-        forecast: forecast,
-        target_folio: target_folio,
-        user: current_user,
-        reason: folio_operation_params[:reason]
-      )
-
-      redirect_to hotel_booking_control_panel_path(current_hotel, booking, tab: "folio_operations", folio_id: (result.success? ? target_folio.id : forecast.booking_folio_id)),
-        result.success? ? { notice: "Upcoming charge moved." } : { alert: result.error }
-    end
-
     def invoice
       @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions, booking_rooms: :room_type).find(params[:booking_id])
       unless @booking.booking_folio&.status == "closed"
@@ -179,12 +163,6 @@ module HotelPortal
       raise Pundit::NotAuthorizedError unless allowed
     end
 
-    def authorize_manage_folio_movements!
-      allowed = current_user.respond_to?(:superadmin?) && current_user.superadmin? ||
-        current_user.has_permission?("manage_folio_movements", hotel: current_hotel)
-      raise Pundit::NotAuthorizedError unless allowed
-    end
-
     def folio_window_params
       params.fetch(:booking_folio, {}).permit(:name, :folio_type, :payer_type, :payer_id, :hotel_corporate_account_id, :currency, :reason, :settlement_method, :is_primary, :set_folio_as_primary_reason)
     end
@@ -194,10 +172,6 @@ module HotelPortal
         .active
         .includes(corporate_account: :users)
         .order(created_at: :desc)
-    end
-
-    def folio_operation_params
-      params.fetch(:folio_operation, {}).permit(:target_folio_id, :reason)
     end
 
     def folio_origin_params
