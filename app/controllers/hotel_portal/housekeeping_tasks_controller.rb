@@ -6,28 +6,92 @@ module HotelPortal
     before_action -> { require_feature!("task_assignment_minibar_log") }
 
     def index
-      # We query housekeeping requests belonging to the hotel's bookings.
-      @base_scope = HousekeepingRequest.joins(:booking).where(bookings: { hotel_id: current_hotel.id })
+      @staff_members = current_hotel.users.joins(:roles).where(roles: { slug: "housekeeper" }).order(:name).distinct
+      @staff_members = current_hotel.users.order(:name) if @staff_members.empty?
 
-      # Only active (unarchived) housekeeping requests
-      @housekeeping_requests = @base_scope.active
+      # Build room groups with resolved statuses, active bookings, and tasks
+      @room_groups = current_hotel.room_types.order(:name).map do |room_type|
+        rooms_list = room_type.room_numbers.map do |room_number|
+          resolved = Rooms::StatusResolver.new(
+            hotel: current_hotel,
+            room_type: room_type,
+            room_number: room_number,
+            date: Date.current
+          ).call
 
-      # Filter by status
-      if params[:status].present? && params[:status] != "all"
-        @housekeeping_requests = @housekeeping_requests.where(status: params[:status])
+          active_booking = resolved.booking_details&.dig(:active)&.first || resolved.booking_details&.dig(:completed)&.first
+
+          hk_request = HousekeepingRequest.joins(:booking)
+                                          .where(bookings: { hotel_id: current_hotel.id }, room_number: room_number, status: "in_progress")
+                                          .first
+
+          {
+            room_number: room_number,
+            room_type: room_type,
+            resolved_status: resolved.status,
+            active_booking: active_booking,
+            hk_request: hk_request
+          }
+        end
+
+        {
+          room_type: room_type,
+          rooms: rooms_list
+        }
       end
 
       # Filter by room number
       if params[:room_number].present?
-        @housekeeping_requests = @housekeeping_requests.where(room_number: params[:room_number])
+        @room_groups.each do |group|
+          group[:rooms].select! { |r| r[:room_number].to_s == params[:room_number].to_s }
+        end
+        @room_groups.select! { |group| group[:rooms].any? }
       end
 
-      # Search query
+      # Filter by search query
       if params[:q].present?
-        @housekeeping_requests = @housekeeping_requests.search(params[:q])
+        q = params[:q].downcase
+        @room_groups.each do |group|
+          group[:rooms].select! do |r|
+            r[:room_number].to_s.downcase.include?(q) ||
+              group[:room_type].name.downcase.include?(q) ||
+              (r[:active_booking] && (r[:active_booking].guest_name.to_s.downcase.include?(q) || r[:active_booking].confirmation_token.to_s.downcase.include?(q))) ||
+              (r[:hk_request] && r[:hk_request].request_details.to_s.downcase.include?(q))
+          end
+        end
+        @room_groups.select! { |group| group[:rooms].any? }
+      end
+    end
+
+    def assign
+      @request = HousekeepingRequest.joins(:booking)
+                                    .where(bookings: { hotel_id: current_hotel.id })
+                                    .find(params[:id])
+
+      assigned_to = params[:assigned_to].presence
+      metadata = @request.metadata.to_h
+
+      if assigned_to
+        staff = current_hotel.users.joins(:roles).where(roles: { slug: "housekeeper" }).find_by(id: assigned_to)
+        staff ||= current_hotel.users.find_by(id: assigned_to) # fallback
+        if staff
+          metadata["assigned_to"] = staff.id
+          metadata["assigned_to_name"] = staff.name
+        else
+          metadata.delete("assigned_to")
+          metadata.delete("assigned_to_name")
+        end
+      else
+        metadata.delete("assigned_to")
+        metadata.delete("assigned_to_name")
       end
 
-      @housekeeping_requests = @housekeeping_requests.recent_first.page(params[:page]).per(25)
+      @request.update!(metadata: metadata)
+
+      respond_to do |format|
+        format.html { redirect_to hotel_room_status_board_path(current_hotel, tab: "housekeeping"), notice: "Task assigned successfully." }
+        format.json { render json: { ok: true } }
+      end
     end
 
     private

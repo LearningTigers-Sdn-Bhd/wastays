@@ -8,6 +8,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
   let(:user) { create(:user, account: account, role: "admin") }
   let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
   let(:permission) { Permission.find_or_create_by!(slug: "manage_requests") { |record| record.name = "Manage Requests" } }
+  let!(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "101", "202", "303" ]) }
 
   before do
     RolePermission.find_or_create_by!(role: role, permission: permission)
@@ -18,13 +19,14 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
   end
 
   describe "GET /hotel/:hotel_id/housekeeping-tasks" do
-    it "renders the page successfully and lists housekeeping requests" do
+    it "renders the page successfully and lists in_progress housekeeping requests" do
       booking = create(:booking, hotel: hotel, guest_name: "John Doe", confirmation_token: "WS-HK123")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
       create(
         :housekeeping_request,
         booking: booking,
         request_details: "Clean the sheets",
-        status: "pending",
+        status: "in_progress",
         room_number: "101"
       )
 
@@ -36,26 +38,46 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       expect(response.body).to include("101")
     end
 
-    it "filters requests by status" do
+    it "only shows in_progress requests and excludes other statuses" do
       booking = create(:booking, hotel: hotel)
-      pending_req = create(:housekeeping_request, booking: booking, request_details: "Need water", status: "pending")
-      completed_req = create(:housekeeping_request, booking: booking, request_details: "Need broom", status: "completed")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      create(:housekeeping_request, booking: booking, request_details: "Need water", status: "in_progress", room_number: "101")
+      create(:housekeeping_request, booking: booking, request_details: "Need broom", status: "pending", room_number: "101")
+      create(:housekeeping_request, booking: booking, request_details: "Need soap", status: "completed", room_number: "101")
 
-      get hotel_housekeeping_tasks_path(hotel, status: "pending")
+      get hotel_housekeeping_tasks_path(hotel)
 
       expect(response.body).to include("Need water")
       expect(response.body).not_to include("Need broom")
+      expect(response.body).not_to include("Need soap")
     end
 
     it "filters requests by room number" do
       booking = create(:booking, hotel: hotel)
-      create(:housekeeping_request, booking: booking, request_details: "Towels", room_number: "202")
-      create(:housekeeping_request, booking: booking, request_details: "Soap", room_number: "303")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "202")
+      create(:housekeeping_request, booking: booking, request_details: "Towels", room_number: "202", status: "in_progress")
+      create(:housekeeping_request, booking: booking, request_details: "Soap", room_number: "303", status: "in_progress")
 
       get hotel_housekeeping_tasks_path(hotel, room_number: "202")
 
       expect(response.body).to include("Towels")
       expect(response.body).not_to include("Soap")
+    end
+  end
+
+  describe "PATCH /hotel/:hotel_id/housekeeping_tasks/:id/assign" do
+    it "assigns a staff member to the request metadata" do
+      booking = create(:booking, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
+      staff = create(:user, account: account)
+      UserHotelAccess.create!(user: staff, hotel: hotel, role: role)
+
+      patch assign_hotel_housekeeping_task_path(hotel, req), params: { assigned_to: staff.id }
+
+      expect(response).to redirect_to(hotel_room_status_board_path(hotel, tab: "housekeeping"))
+      expect(req.reload.metadata["assigned_to"]).to eq(staff.id)
+      expect(req.reload.metadata["assigned_to_name"]).to eq(staff.name)
     end
   end
 end

@@ -1,5 +1,6 @@
 class HousekeepingRequest < ApplicationRecord
   belongs_to :booking
+  belongs_to :room_type, optional: true
 
   STATUSES = %w[pending in_progress completed failed cancelled].freeze
 

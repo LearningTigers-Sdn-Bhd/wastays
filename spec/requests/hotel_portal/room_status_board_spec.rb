@@ -97,6 +97,20 @@ RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
       expect(response.body).to include("Carryover Guest")
     end
 
+    it "renders the housekeeping tab successfully and lists requests" do
+      sign_in_with_permissions("view_room_readiness")
+      booking = create(:booking, hotel: hotel, guest_name: "Tab Guest", confirmation_token: "WS-TAB123")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      create(:housekeeping_request, booking: booking, request_details: "Clean the window", status: "in_progress", room_number: "101")
+      create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "task_assignment_minibar_log"), enabled: true)
+
+      get hotel_room_status_board_path(hotel), params: { tab: "housekeeping" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Clean the window")
+      expect(response.body).to include("101")
+    end
+
     it "renders density controls, legends, and room amenity chips from query params" do
       sign_in_with_permissions("view_room_readiness")
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")

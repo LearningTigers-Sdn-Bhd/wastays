@@ -11,95 +11,119 @@
           <p class="mt-1 font-medium text-slate-600 <%= @presenter.subtitle_class %>"><%= current_hotel.name %> · Live room status and occupancy timeline</p>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-          <span class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm">
-            <%= @presenter.formatted_date_range %>
-          </span>
+        <!-- Tab Navigation -->
+        <div class="rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm flex items-center gap-1 mt-4">
+          <nav class="flex items-center gap-1" aria-label="Tabs">
+            <%= link_to hotel_room_status_board_path(current_hotel), class: "group inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-semibold transition-all duration-150 whitespace-nowrap #{params[:tab] != 'housekeeping' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}" do %>
+              <%= cached_icon "layout-grid", class: "size-4" %>
+              <span>Room Status Board</span>
+            <% end %>
+            <%= link_to hotel_room_status_board_path(current_hotel, tab: 'housekeeping'), class: "group inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-semibold transition-all duration-150 whitespace-nowrap #{params[:tab] == 'housekeeping' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}" do %>
+              <%= cached_icon "clipboard-check", class: "size-4" %>
+              <span>Housekeeping Tasks</span>
+            <% end %>
+          </nav>
         </div>
+
+        <% unless params[:tab] == "housekeeping" %>
+          <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 mt-2">
+            <span class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm">
+              <%= @presenter.formatted_date_range %>
+            </span>
+          </div>
+        <% end %>
       </div>
     </div>
 
-    <div class="mt-4 space-y-2">
-      <%# Navigation Toolbar %>
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
-        <div class="flex flex-wrap items-center gap-3">
-          <%= form_with url: hotel_room_status_board_path(current_hotel), method: :get, local: true, class: "flex items-center gap-2", data: { controller: "auto-submit", action: "change->auto-submit#submit" } do %>
-            <%= hidden_field_tag :days, @presenter.board_days %>
-            <%= hidden_field_tag :layout, @presenter.board_layout %>
-            <%= date_field_tag :start_date, @presenter.start_date.to_s, class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
-          <% end %>
-
-          <div class="h-6 w-px bg-slate-200"></div>
-
-          <%= form_with url: hotel_room_status_board_path(current_hotel), method: :get, local: true, class: "flex items-center gap-2", data: { controller: "auto-submit", action: "change->auto-submit#submit" } do %>
-            <%= hidden_field_tag :start_date, @presenter.start_date.to_s %>
-            <%= hidden_field_tag :layout, @presenter.board_layout %>
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Days</span>
-              <%= select_tag :days, options_for_select([7, 14, 21], @presenter.board_days), class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
-            </div>
-          <% end %>
-
-          <div class="h-6 w-px bg-slate-200"></div>
-
-          <div class="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5">
-            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @presenter.prev_start_date)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Previous #{@presenter.nav_step_days} days" do %>
-              &larr; Prev
-            <% end %>
-            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: Date.current.to_s)), class: "rounded bg-white px-2.5 py-1 text-xs font-black text-slate-900 shadow-sm transition hover:bg-slate-50" do %>
-              Today
-            <% end %>
-            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @presenter.next_start_date)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Next #{@presenter.nav_step_days} days" do %>
-              Next &rarr;
-            <% end %>
-          </div>
-        </div>
-
-        <div class="px-2">
-          <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @presenter.start_date.to_s, layout: @presenter.comfortable_mode? ? "compact" : "comfortable")), class: "flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors" do %>
-            <div class="relative inline-flex h-4 w-7 items-center rounded-full <%= @presenter.compact_toggle_bg_class %> transition-colors">
-              <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform <%= @presenter.compact_toggle_dot_class %>"></span>
-            </div>
-            Compact Mode
-          <% end %>
-        </div>
+    <% if params[:tab] == "housekeeping" %>
+      <div class="mt-6">
+        <%= render "hotel_portal/housekeeping_tasks/table_view" %>
       </div>
+    <% else %>
+      <div class="mt-4 space-y-2">
+        <%# Navigation Toolbar %>
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+          <div class="flex flex-wrap items-center gap-3">
+            <%= form_with url: hotel_room_status_board_path(current_hotel), method: :get, local: true, class: "flex items-center gap-2", data: { controller: "auto-submit", action: "change->auto-submit#submit" } do %>
+              <%= hidden_field_tag :days, @presenter.board_days %>
+              <%= hidden_field_tag :layout, @presenter.board_layout %>
+              <%= date_field_tag :start_date, @presenter.start_date.to_s, class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
+            <% end %>
 
-      <%# Status Badges Toolbar %>
-      <div class="rounded-xl border border-slate-200 bg-white p-2 shadow-sm overflow-x-auto whitespace-nowrap scrollbar-hide">
-        <div class="flex flex-col gap-2">
-          <div class="flex items-center gap-3">
-            <span class="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 min-w-[80px]">Inventory Status</span>
-            <div class="flex items-center gap-1.5">
-              <% @presenter.filterable_statuses.each do |status| %>
-                <% count = @presenter.status_counts[status] %>
-                <span class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide <%= @presenter.status_style(status) %> transition-all hover:shadow-sm">
-                  <%= @presenter.status_icon(status) %>
-                  <%= status.humanize.titleize %>
-                  <% if count > 0 %>
-                    <span class="opacity-60 font-black">(<%= count %>)</span>
-                  <% end %>
-                </span>
+            <div class="h-6 w-px bg-slate-200"></div>
+
+            <%= form_with url: hotel_room_status_board_path(current_hotel), method: :get, local: true, class: "flex items-center gap-2", data: { controller: "auto-submit", action: "change->auto-submit#submit" } do %>
+              <%= hidden_field_tag :start_date, @presenter.start_date.to_s %>
+              <%= hidden_field_tag :layout, @presenter.board_layout %>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Days</span>
+                <%= select_tag :days, options_for_select([7, 14, 21], @presenter.board_days), class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
+              </div>
+            <% end %>
+
+            <div class="h-6 w-px bg-slate-200"></div>
+
+            <div class="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+              <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @presenter.prev_start_date)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Previous #{@presenter.nav_step_days} days" do %>
+                &larr; Prev
+              <% end %>
+              <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: Date.current.to_s)), class: "rounded bg-white px-2.5 py-1 text-xs font-black text-slate-900 shadow-sm transition hover:bg-slate-50" do %>
+                Today
+              <% end %>
+              <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @presenter.next_start_date)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", title: "Next #{@presenter.nav_step_days} days" do %>
+                Next &rarr;
               <% end %>
             </div>
           </div>
 
-          <div class="h-px bg-slate-50 w-full"></div>
+          <div class="px-2">
+            <%= link_to hotel_room_status_board_path(current_hotel, @board_query_params.merge(start_date: @presenter.start_date.to_s, layout: @presenter.comfortable_mode? ? "compact" : "comfortable")), class: "flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors" do %>
+              <div class="relative inline-flex h-4 w-7 items-center rounded-full <%= @presenter.compact_toggle_bg_class %> transition-colors">
+                <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform <%= @presenter.compact_toggle_dot_class %>"></span>
+              </div>
+              Compact Mode
+            <% end %>
+          </div>
+        </div>
 
-          <div class="flex items-center gap-3">
-            <span class="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 min-w-[80px]">Daily Occupancy</span>
-            <div class="flex items-center gap-1.5">
-              <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700">Available</span>
-              <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-700">Completed Booking</span>
-              <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">Arriving</span>
-              <span class="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-rose-700">Occupied</span>
-              <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-700">Blocked / Maintenance</span>
+        <%# Status Badges Toolbar %>
+        <div class="rounded-xl border border-slate-200 bg-white p-2 shadow-sm overflow-x-auto whitespace-nowrap scrollbar-hide">
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-3">
+              <span class="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 min-w-[80px]">Inventory Status</span>
+              <div class="flex items-center gap-1.5">
+                <% @presenter.filterable_statuses.each do |status| %>
+                  <% count = @presenter.status_counts[status] %>
+                  <span class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide <%= @presenter.status_style(status) %> transition-all hover:shadow-sm">
+                    <%= @presenter.status_icon(status) %>
+                    <%= status.humanize.titleize %>
+                    <% if count > 0 %>
+                      <span class="opacity-60 font-black">(<%= count %>)</span>
+                    <% end %>
+                  </span>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="h-px bg-slate-50 w-full"></div>
+
+            <div class="flex items-center gap-3">
+              <span class="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 min-w-[80px]">Daily Occupancy</span>
+              <div class="flex items-center gap-1.5">
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700">Available</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-700">Completed Booking</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">Arriving</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-rose-700">Occupied</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-700">Blocked / Maintenance</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    <% end %>
   </div>
 
-  <%= render "hotel_portal/room_status_board/board_grid", presenter: @presenter %>
+  <% unless params[:tab] == "housekeeping" %>
+    <%= render "hotel_portal/room_status_board/board_grid", presenter: @presenter %>
+  <% end %>
 </div>
