@@ -1,7 +1,7 @@
 <%# frozen_string_literal: true %>
 <% content_for :hide_header, true %>
 
-<div class="bg-neutral-bg min-h-screen pb-24 lg:pb-0" 
+<div class="bg-muted min-h-screen pb-24 lg:pb-0"
   data-controller="gallery-toggle room-details" 
   data-gallery-toggle-photos-value="<%= @hotel.photo_urls_json %>"
   data-gallery-toggle-index-value="0">
@@ -17,12 +17,12 @@
     room_count: @room_count %>
 
   <%# Breadcrumb %>
-  <div class="bg-white border-b border-neutral-border">
+  <div class="bg-white border-b border-border">
     <div class="max-w-[85rem] mx-auto px-4 py-2.5">
-      <nav class="flex text-sm text-neutral-text-secondary" aria-label="Breadcrumb">
-        <%= link_to "Hotels", hotels_path(request.query_parameters), class: "hover:text-brand-primary" %>
+      <nav class="flex text-sm text-muted-foreground" aria-label="Breadcrumb">
+        <%= link_to "Hotels", hotels_path(request.query_parameters), class: "hover:text-primary" %>
         <svg class="mx-2 h-4 w-4 text-gray-400 self-center" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
-        <span class="font-semibold text-neutral-text-primary truncate"><%= @hotel.name %></span>
+        <span class="font-semibold text-foreground truncate"><%= @hotel.name %></span>
       </nav>
     </div>
   </div>
@@ -44,7 +44,7 @@
   <%# Gallery Section (Primary Visuals) %>
   <div id="hotel-gallery-top" class="max-w-[85rem] mx-auto px-4 py-6 sm:px-6 lg:px-8">
     <div class="flex flex-wrap items-center gap-3 mb-2">
-      <h1 class="text-3xl md:text-4xl font-extrabold text-neutral-text-primary"><%= @hotel.name %></h1>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-foreground"><%= @hotel.name %></h1>
       <% if @hotel.pax_pricing_only? %>
         <span class="inline-flex items-center gap-x-1.5 py-1 px-3 rounded-full text-[10px] font-black bg-indigo-50 border border-indigo-100 text-indigo-700 shadow-sm uppercase tracking-wider">
           Per Pax Pricing Only
@@ -57,8 +57,8 @@
         <% if @hotel.primary_photo.present? %>
           <%= image_tag @hotel.primary_photo, class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" %>
         <% else %>
-          <div class="w-full h-full bg-neutral-border flex items-center justify-center">
-            <svg class="w-16 h-16 text-neutral-text-secondary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13 2 2 4-4"/></svg>
+          <div class="w-full h-full bg-border flex items-center justify-center">
+            <svg class="w-16 h-16 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13 2 2 4-4"/></svg>
           </div>
         <% end %>
       </div>
@@ -73,7 +73,7 @@
 
           <% if index == 3 %>
             <div class="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
-              <span class="inline-flex items-center gap-x-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-neutral-text-primary shadow-sm">
+              <span class="inline-flex items-center gap-x-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-foreground shadow-sm">
                 <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                 See all photos
               </span>
@@ -85,7 +85,7 @@
  
     <% if @hotel.has_photos? %>
       <div class="mt-4 md:hidden">
-        <button type="button" data-action="click->gallery-toggle#show" class="inline-flex w-full items-center justify-center gap-x-2 rounded-xl border border-neutral-border bg-white px-4 py-3 text-sm font-semibold text-neutral-text-primary shadow-sm hover:bg-neutral-bg">
+        <button type="button" data-action="click->gallery-toggle#show" class="inline-flex w-full items-center justify-center gap-x-2 rounded-xl border border-border bg-white px-4 py-3 text-sm font-semibold text-foreground shadow-sm hover:bg-muted">
           <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
           See all photos
         </button>
@@ -114,16 +114,16 @@
                     <%= cached_icon "star", library: "phosphor", variant: "fill", class: "w-3.5 h-3.5 fill-current" %>
                   <% end %>
                 </div>
-                <span class="text-xs font-bold text-neutral-text-secondary uppercase tracking-widest">Hotel Grade</span>
+                <span class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Hotel Grade</span>
               </div>
-              <h1 class="text-3xl md:text-4xl font-extrabold text-neutral-text-primary mb-2"><%= @hotel.name %></h1>
-              <p class="text-neutral-text-secondary flex items-start gap-x-2">
-                <svg class="w-5 h-5 mt-0.5 text-brand-primary shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              <h1 class="text-3xl md:text-4xl font-extrabold text-foreground mb-2"><%= @hotel.name %></h1>
+              <p class="text-muted-foreground flex items-start gap-x-2">
+                <svg class="w-5 h-5 mt-0.5 text-primary shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                 <span><%= @hotel.full_address %></span>
               </p>
             </div>
             <div class="hidden sm:block text-right">
-              <div class="bg-brand-primary text-white p-3 rounded-xl shadow-lg shadow-brand-primary/20">
+              <div class="bg-primary text-white p-3 rounded-xl shadow-lg shadow-primary/20">
                 <span class="block text-[10px] uppercase font-black tracking-tighter opacity-80">Guest Rating</span>
                 <span class="text-2xl font-black italic tracking-tighter">4.8</span>
               </div>
@@ -135,8 +135,8 @@
 
         <%# About / Story Section %>
         <div class="space-y-4">
-          <h2 class="text-2xl font-extrabold text-neutral-text-primary">About <%= @hotel.name %></h2>
-          <div class="prose prose-neutral max-w-none text-neutral-text-secondary leading-relaxed">
+          <h2 class="text-2xl font-extrabold text-foreground">About <%= @hotel.name %></h2>
+          <div class="prose prose-neutral max-w-none text-muted-foreground leading-relaxed">
             <p>Welcome to <%= @hotel.name %>, where local hospitality meets modern comfort. Located in the heart of <%= @hotel.city %>, our property is designed for travelers who value simplicity, quality, and direct deals.</p>
             <p>Whether you're visiting for business or leisure, we provide a seamless stay experience with all the essential amenities you need. Book directly with us through WAStays to enjoy the best rates and personalized WhatsApp support throughout your journey.</p>
           </div>
@@ -145,9 +145,9 @@
         <%# Room Options Section %>
         <div class="space-y-6 pt-4" id="rooms-section">
           <div class="flex justify-between items-end">
-            <h2 class="text-2xl font-extrabold text-neutral-text-primary">Select your room</h2>
+            <h2 class="text-2xl font-extrabold text-foreground">Select your room</h2>
             <div class="flex items-center gap-3">
-              <p class="text-sm text-brand-secondary font-bold">Recommended for <%= @adults %> guests</p>
+              <p class="text-sm text-secondary font-bold">Recommended for <%= @adults %> guests</p>
               <%= form_with url: hotel_path(@hotel), method: :get, local: true, class: "hidden sm:block" do |f| %>
                 <% request.query_parameters.except("display_currency").each do |key, value| %>
                   <%= hidden_field_tag key, value %>
@@ -155,7 +155,7 @@
                 <%= f.select :display_currency,
                              options_for_select(@hotel.currency_dropdown_options, @display_currency),
                              {},
-                             class: "rounded-lg border border-neutral-border bg-white px-3 py-2 text-xs font-bold text-neutral-text-primary",
+                             class: "rounded-lg border border-border bg-white px-3 py-2 text-xs font-bold text-foreground",
                              onchange: "this.form.submit()",
                              aria: { label: "Display currency" } %>
               <% end %>
@@ -165,27 +165,27 @@
           <div class="space-y-6">
             <% if @search_ready && @allocation_options.empty? %>
               <div class="card p-8 text-center">
-                <h3 class="text-lg font-bold text-neutral-text-primary mb-2">No rooms available for selected dates</h3>
-                <p class="text-sm text-neutral-text-secondary mb-6">Try changing your check-in/check-out dates or guest count to see available options.</p>
+                <h3 class="text-lg font-bold text-foreground mb-2">No rooms available for selected dates</h3>
+                <p class="text-sm text-muted-foreground mb-6">Try changing your check-in/check-out dates or guest count to see available options.</p>
                 <%= link_to "Edit Search", "#", data: { action: "click->rate-calendar#openPicker" }, class: "btn btn-secondary px-8" %>
               </div>
             <% end %>
 
             <% if @allocation_options.any? %>
               <div class="space-y-4">
-                <p class="text-xs font-bold text-neutral-text-secondary uppercase tracking-widest">Recommended Stay Bundles</p>
+                <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Recommended Stay Bundles</p>
                 <% @allocation_options.each do |option| %>
-                  <div class="card p-6 border-2 border-brand-primary/10 hover:border-brand-primary/30 transition-colors shadow-sm">
+                  <div class="card p-6 border-2 border-primary/10 hover:border-primary/30 transition-colors shadow-sm">
                     <div class="flex flex-col lg:flex-row justify-between gap-6">
                       
                       <%# Left/Main Section: Bundle Rooms Details %>
                       <div class="flex-1 space-y-4">
-                        <div class="border-b border-neutral-border pb-3">
-                          <h3 class="text-lg font-bold text-brand-primary mb-1">
+                        <div class="border-b border-border pb-3">
+                          <h3 class="text-lg font-bold text-primary mb-1">
                             <%= option.rooms_summary %>
                           </h3>
-                          <p class="text-xs text-neutral-text-secondary">
-                            Perfectly fits <strong class="font-extrabold text-neutral-text-primary"><%= pluralize(@adults + @children, 'guest') %></strong> across <strong class="font-extrabold text-neutral-text-primary"><%= pluralize(option.rooms.sum(&:quantity), 'room') %></strong>.
+                          <p class="text-xs text-muted-foreground">
+                            Perfectly fits <strong class="font-extrabold text-foreground"><%= pluralize(@adults + @children, 'guest') %></strong> across <strong class="font-extrabold text-foreground"><%= pluralize(option.rooms.sum(&:quantity), 'room') %></strong>.
                           </p>
                         </div>
                         
@@ -194,26 +194,26 @@
                           <% option.rooms.each do |allocated_room| %>
                             <% room_type = allocated_room.room_type %>
                             <% presenter = Public::RoomTypePresenter.new(room_type, @hotel, @availability_service, self) %>
-                            <div class="flex gap-x-4 bg-neutral-bg/40 p-3 rounded-xl border border-neutral-border/40 cursor-pointer hover:bg-brand-primary/[0.03] hover:border-brand-primary/20 transition-all duration-200 group/room"
+                            <div class="flex gap-x-4 bg-muted/40 p-3 rounded-xl border border-border/40 cursor-pointer hover:bg-primary/[0.03] hover:border-primary/20 transition-all duration-200 group/room"
                                  data-action="click->room-details#open"
                                  data-room-details="<%= presenter.details_json %>">
                               <%# Room thumbnail %>
-                              <div class="size-20 shrink-0 rounded-lg overflow-hidden relative bg-neutral-bg border border-neutral-border/50">
+                              <div class="size-20 shrink-0 rounded-lg overflow-hidden relative bg-muted border border-border/50">
                                 <% if room_type.photos.attached? %>
                                   <%= image_tag room_type.photos.first, class: "absolute inset-0 w-full h-full object-cover group-hover/room:scale-105 transition-transform duration-500" %>
                                 <% else %>
-                                  <div class="absolute inset-0 bg-neutral-border/20 flex items-center justify-center">
-                                    <svg class="size-6 text-neutral-border" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                  <div class="absolute inset-0 bg-border/20 flex items-center justify-center">
+                                    <svg class="size-6 text-border" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                   </div>
                                 <% end %>
                               </div>
                               
                               <%# Room details %>
                               <div class="min-w-0 flex-1">
-                                <p class="text-sm font-bold text-neutral-text-primary truncate group-hover/room:text-brand-primary transition-colors">
+                                <p class="text-sm font-bold text-foreground truncate group-hover/room:text-primary transition-colors">
                                   <%= allocated_room.quantity %>x <%= room_type.name %>
                                 </p>
-                                <p class="text-xs text-neutral-text-secondary line-clamp-2 mt-0.5 leading-relaxed">
+                                <p class="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">
                                   <%= room_type.description %>
                                 </p>
                                 <div class="flex items-center gap-x-2 mt-1.5">
@@ -233,12 +233,12 @@
                       </div>
                       
                       <%# Right/Sidebar Section: Price and Reserve CTA %>
-                      <div class="lg:w-72 shrink-0 flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center pt-4 lg:pt-0 border-t border-neutral-border lg:border-t-0 lg:border-l lg:border-neutral-border/60 lg:pl-6 mt-4 lg:mt-0">
+                      <div class="lg:w-72 shrink-0 flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center pt-4 lg:pt-0 border-t border-border lg:border-t-0 lg:border-l lg:border-border/60 lg:pl-6 mt-4 lg:mt-0">
                         <div class="text-left lg:text-right mb-0 lg:mb-4">
-                          <p class="text-2xl font-black text-neutral-text-primary leading-none mb-1">
+                          <p class="text-2xl font-black text-foreground leading-none mb-1">
                             <%= option.display_total_price(@display_currency, @hotel) %>
                           </p>
-                          <p class="text-[10px] text-neutral-text-secondary italic">
+                          <p class="text-[10px] text-muted-foreground italic">
                             Total for <%= pluralize((@check_out - @check_in).to_i, 'night') %>
                           </p>
                         </div>
@@ -265,10 +265,10 @@
 
               <div class="relative py-4">
                 <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div class="w-full border-t border-neutral-border"></div>
+                  <div class="w-full border-t border-border"></div>
                 </div>
                 <div class="relative flex justify-center">
-                  <span class="bg-neutral-bg px-3 text-sm text-neutral-text-secondary">Or select individual rooms</span>
+                  <span class="bg-muted px-3 text-sm text-muted-foreground">Or select individual rooms</span>
                 </div>
               </div>
             <% end %>
@@ -299,15 +299,15 @@
           <%# Location Map Card %>
           <div class="card p-6 bg-white shadow-sm">
             <%# Card Header %>
-            <div class="flex justify-between items-center mb-4 pb-3 border-b border-neutral-bg">
-              <h3 class="text-xs font-black text-neutral-text-primary uppercase tracking-widest flex items-center gap-x-2">
-                <%= cached_icon "map-pin", class: "w-4 h-4 text-brand-primary" %>
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-muted">
+              <h3 class="text-xs font-black text-foreground uppercase tracking-widest flex items-center gap-x-2">
+                <%= cached_icon "map-pin", class: "w-4 h-4 text-primary" %>
                 Location
               </h3>
             </div>
 
             <%# Map Frame Wrapper %>
-            <div class="h-40 w-full bg-neutral-bg rounded-lg overflow-hidden border border-neutral-border relative group cursor-pointer">
+            <div class="h-40 w-full bg-muted rounded-lg overflow-hidden border border-border relative group cursor-pointer">
               <%# Interactive Overlay Link %>
               <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors z-10"></div>
               <a href="<%= @hotel.google_maps_search_url %>" 
@@ -329,27 +329,27 @@
           </div>
 
           <div class="card p-6 bg-white">
-            <h3 class="text-xs font-black text-neutral-text-primary uppercase tracking-widest mb-4 pb-3 border-b border-neutral-bg flex items-center gap-x-2">
-              <svg class="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <h3 class="text-xs font-black text-foreground uppercase tracking-widest mb-4 pb-3 border-b border-muted flex items-center gap-x-2">
+              <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               Check-in & Policies
             </h3>
-            <ul class="space-y-3 text-sm text-neutral-text-secondary">
-              <li class="flex justify-between border-b border-neutral-bg pb-2">
+            <ul class="space-y-3 text-sm text-muted-foreground">
+              <li class="flex justify-between border-b border-muted pb-2">
                 <span>Check-in time</span>
-                <span class="font-bold text-neutral-text-primary"><%= @hotel.check_in_time %></span>
+                <span class="font-bold text-foreground"><%= @hotel.check_in_time %></span>
               </li>
               <li class="flex justify-between pb-2">
                 <span>Check-out time</span>
-                <span class="font-bold text-neutral-text-primary"><%= @hotel.check_out_time %></span>
+                <span class="font-bold text-foreground"><%= @hotel.check_out_time %></span>
               </li>
-              <li class="pt-1 border-t border-neutral-bg">
-                <p class="font-bold text-neutral-text-primary mb-1 text-[10px] uppercase tracking-widest">Important Info</p>
+              <li class="pt-1 border-t border-muted">
+                <p class="font-bold text-foreground mb-1 text-[10px] uppercase tracking-widest">Important Info</p>
                 <p class="text-xs leading-relaxed"><%= @hotel.cancellation_policy %></p>
               </li>
             </ul>
           </div>
 
-          <div class="card p-6 bg-brand-primary text-white border-none">
+          <div class="card p-6 bg-primary text-white border-none">
             <div class="flex flex-col items-center text-center gap-y-3">
               <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
                 <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
@@ -359,25 +359,25 @@
                 <p class="text-xs text-white/70 mt-0.5">Our travel experts are ready to help you via WhatsApp.</p>
               </div>
               <a href="https://wa.me/601162023996" target="_blank" rel="noopener noreferrer"
-                 class="w-full text-center text-sm font-bold bg-white text-brand-primary rounded-full py-2 px-4 hover:bg-white/90 transition-colors">
+                 class="w-full text-center text-sm font-bold bg-white text-primary rounded-full py-2 px-4 hover:bg-white/90 transition-colors">
                 Chat with an expert
               </a>
             </div>
           </div>
 
           <div class="card p-6 bg-red-50/50 border-red-100">
-            <h4 class="text-xs font-black text-brand-primary uppercase tracking-widest mb-3">Why book here?</h4>
+            <h4 class="text-xs font-black text-primary uppercase tracking-widest mb-3">Why book here?</h4>
             <ul class="space-y-3">
-              <li class="flex items-start gap-x-2 text-xs font-medium text-neutral-text-secondary leading-snug">
-                <svg class="w-3.5 h-3.5 text-status-success shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              <li class="flex items-start gap-x-2 text-xs font-medium text-muted-foreground leading-snug">
+                <svg class="w-3.5 h-3.5 text-success shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                 No hidden fees or service charges
               </li>
-              <li class="flex items-start gap-x-2 text-xs font-medium text-neutral-text-secondary leading-snug">
-                <svg class="w-3.5 h-3.5 text-status-success shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              <li class="flex items-start gap-x-2 text-xs font-medium text-muted-foreground leading-snug">
+                <svg class="w-3.5 h-3.5 text-success shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                 Verified local stays
               </li>
-              <li class="flex items-start gap-x-2 text-xs font-medium text-neutral-text-secondary leading-snug">
-                <svg class="w-3.5 h-3.5 text-status-success shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              <li class="flex items-start gap-x-2 text-xs font-medium text-muted-foreground leading-snug">
+                <svg class="w-3.5 h-3.5 text-success shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                 Direct WhatsApp line to the hotel
               </li>
             </ul>
@@ -388,11 +388,11 @@
 
     <%# Sticky Bottom Cart Bar %>
     <div data-room-selector-target="stickyBar"
-         class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-neutral-border shadow-2xl p-4 transition-all duration-300 transform translate-y-full opacity-0 lg:left-0 lg:right-0">
+         class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-border shadow-2xl p-4 transition-all duration-300 transform translate-y-full opacity-0 lg:left-0 lg:right-0">
       <div class="max-w-[85rem] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
         <div class="flex-1 text-left w-full">
           <div class="flex items-center gap-x-2 mb-1.5">
-            <span data-room-selector-target="summaryText" class="text-sm font-bold text-neutral-text-primary"></span>
+            <span data-room-selector-target="summaryText" class="text-sm font-bold text-foreground"></span>
           </div>
           <div data-room-selector-target="validationWarning" class="text-xs font-bold text-red-600 flex items-center gap-1">
             <svg class="size-3.5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
@@ -402,8 +402,8 @@
 
         <div class="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
           <div class="text-left sm:text-right">
-            <p class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest">Total Price</p>
-            <p data-room-selector-target="totalPriceText" class="text-xl sm:text-2xl font-black text-neutral-text-primary"></p>
+            <p class="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Price</p>
+            <p data-room-selector-target="totalPriceText" class="text-xl sm:text-2xl font-black text-foreground"></p>
           </div>
 
           <%= form_with url: quotes_path, method: :post, local: true, class: "flex items-center" do |f| %>

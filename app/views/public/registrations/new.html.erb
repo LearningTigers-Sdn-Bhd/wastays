@@ -6,7 +6,7 @@
 
     <!-- Deep radial glow -->
     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-      <div class="w-[600px] h-[600px] bg-brand-primary/15 rounded-full blur-[120px]"></div>
+      <div class="w-[600px] h-[600px] bg-primary/15 rounded-full blur-[120px]"></div>
     </div>
 
     <!-- Top: Logo -->
@@ -87,16 +87,16 @@
         </div>
 
         <div class="flex items-center justify-center gap-x-3 mb-6">
-          <span class="w-6 h-px bg-brand-primary/30"></span>
-          <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary">Create Account</span>
-          <span class="w-6 h-px bg-brand-primary/30"></span>
+          <span class="w-6 h-px bg-primary/30"></span>
+          <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Create Account</span>
+          <span class="w-6 h-px bg-primary/30"></span>
         </div>
-        <h2 class="text-4xl font-serif text-neutral-text-primary leading-tight mb-3">
-          Start Your <span class="italic text-brand-primary">Free Account</span>
+        <h2 class="text-4xl font-serif text-foreground leading-tight mb-3">
+          Start Your <span class="italic text-primary">Free Account</span>
         </h2>
-        <p class="text-neutral-text-secondary text-sm leading-relaxed">
+        <p class="text-muted-foreground text-sm leading-relaxed">
           Already have an account?
-          <%= link_to "Sign in here", login_path, class: "text-brand-primary font-semibold hover:underline underline-offset-2" %>
+          <%= link_to "Sign in here", login_path, class: "text-primary font-semibold hover:underline underline-offset-2" %>
         </p>
       </div>
 
@@ -108,15 +108,15 @@
             <div class="flex-none w-6 h-6 rounded-full bg-[#1e2e2a] flex items-center justify-center">
               <span class="text-[9px] font-black text-[#d9c5a0]">1</span>
             </div>
-            <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-neutral-text-secondary">Business Details</h3>
-            <span class="flex-1 h-px bg-neutral-border"></span>
+            <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Business Details</h3>
+            <span class="flex-1 h-px bg-border"></span>
           </div>
 
           <div>
-            <label for="business_name" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Company / Group Name</label>
+            <label for="business_name" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Company / Group Name</label>
             <%= text_field_tag "account[name]", params.dig(:account, :name),
                 id: "business_name",
-                class: "w-full bg-white border border-neutral-border rounded-xl px-4 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                class: "w-full bg-white border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200",
                 required: true,
                 placeholder: "e.g. Nusantara Hospitality Group" %>
           </div>
@@ -128,34 +128,34 @@
             <div class="flex-none w-6 h-6 rounded-full bg-[#1e2e2a] flex items-center justify-center">
               <span class="text-[9px] font-black text-[#d9c5a0]">2</span>
             </div>
-            <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-neutral-text-secondary">Your First Hotel</h3>
-            <span class="flex-1 h-px bg-neutral-border"></span>
+            <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Your First Hotel</h3>
+            <span class="flex-1 h-px bg-border"></span>
           </div>
 
           <div class="space-y-4">
             <div>
-              <label for="hotel_name" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Hotel Name</label>
+              <label for="hotel_name" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Hotel Name</label>
               <%= text_field_tag "hotel[name]", params.dig(:hotel, :name),
                   id: "hotel_name",
-                  class: "w-full bg-white border border-neutral-border rounded-xl px-4 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                  class: "w-full bg-white border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200",
                   required: true,
                   placeholder: "e.g. Budget Stay Kuala Lumpur" %>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label for="city" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">City</label>
+                <label for="city" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">City</label>
                 <%= text_field_tag "hotel[city]", params.dig(:hotel, :city),
                     id: "city",
-                    class: "w-full bg-white border border-neutral-border rounded-xl px-4 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                    class: "w-full bg-white border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200",
                     required: true,
                     placeholder: "Kuala Lumpur" %>
               </div>
               <div>
-                <label for="country" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Country</label>
+                <label for="country" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Country</label>
                 <%= text_field_tag "hotel[country]", params.dig(:hotel, :country) || "Malaysia",
                     id: "country",
-                    class: "w-full bg-white border border-neutral-border rounded-xl px-4 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                    class: "w-full bg-white border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200",
                     required: true %>
               </div>
             </div>
@@ -168,41 +168,41 @@
             <div class="flex-none w-6 h-6 rounded-full bg-[#1e2e2a] flex items-center justify-center">
               <span class="text-[9px] font-black text-[#d9c5a0]">3</span>
             </div>
-            <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-neutral-text-secondary">Admin Account</h3>
-            <span class="flex-1 h-px bg-neutral-border"></span>
+            <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Admin Account</h3>
+            <span class="flex-1 h-px bg-border"></span>
           </div>
 
           <div class="space-y-4">
             <div>
-              <label for="user_name" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Full Name</label>
+              <label for="user_name" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Full Name</label>
               <%= text_field_tag "user[name]", params.dig(:user, :name),
                   id: "user_name",
-                  class: "w-full bg-white border border-neutral-border rounded-xl px-4 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                  class: "w-full bg-white border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200",
                   required: true,
                   placeholder: "Sarah Lim" %>
             </div>
 
             <div>
-              <label for="user_email" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Work Email</label>
+              <label for="user_email" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Work Email</label>
               <%= email_field_tag "user[email]", params.dig(:user, :email),
                   id: "user_email",
-                  class: "w-full bg-white border border-neutral-border rounded-xl px-4 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                  class: "w-full bg-white border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200",
                   required: true,
                   placeholder: "sarah@nusantara.com" %>
             </div>
 
             <div>
-              <label for="user_password" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Password</label>
+              <label for="user_password" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Password</label>
               <div class="relative" data-controller="password-toggle">
                 <%= password_field_tag "user[password]", nil,
                     id: "user_password",
-                    class: "w-full bg-white border border-neutral-border rounded-xl px-4 pe-12 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                    class: "w-full bg-white border border-border rounded-xl px-4 pe-12 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200",
                     required: true,
                     placeholder: "Create a password",
                     data: { password_toggle_target: "input" } %>
                 <button
                   type="button"
-                  class="absolute inset-y-0 end-0 flex items-center pe-4 text-neutral-text-secondary/50 hover:text-brand-primary transition-colors"
+                  class="absolute inset-y-0 end-0 flex items-center pe-4 text-muted-foreground/50 hover:text-primary transition-colors"
                   data-password-toggle-target="button"
                   data-action="click->password-toggle#toggle"
                   aria-label="Show password"
@@ -221,35 +221,35 @@
 
         <!-- Submit -->
         <div class="pt-2">
-          <p class="text-[11px] text-neutral-text-secondary leading-relaxed mb-6">
+          <p class="text-[11px] text-muted-foreground leading-relaxed mb-6">
             By registering, you agree to our
-            <a href="#" class="text-brand-primary hover:underline underline-offset-2">Terms of Service</a>
+            <a href="#" class="text-primary hover:underline underline-offset-2">Terms of Service</a>
             and
-            <a href="#" class="text-brand-primary hover:underline underline-offset-2">Privacy Policy</a>.
+            <a href="#" class="text-primary hover:underline underline-offset-2">Privacy Policy</a>.
             We never share your data without consent.
           </p>
 
           <%= f.submit "Register Your Hotel",
-              class: "group w-full inline-flex items-center justify-center gap-x-2 btn btn-primary py-4 rounded-xl text-base font-bold shadow-lg shadow-brand-primary/20 cursor-pointer hover:shadow-xl hover:shadow-brand-primary/30 transition-all duration-200" %>
+              class: "group w-full inline-flex items-center justify-center gap-x-2 btn btn-primary py-4 rounded-xl text-base font-bold shadow-lg shadow-primary/20 cursor-pointer hover:shadow-xl hover:shadow-primary/30 transition-all duration-200" %>
         </div>
 
       <% end %>
 
       <!-- Trust micro-row -->
-      <div class="mt-12 pt-8 border-t border-neutral-border/60">
+      <div class="mt-12 pt-8 border-t border-border/60">
         <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-          <div class="flex items-center gap-x-2 text-xs text-neutral-text-secondary">
-            <svg class="w-3.5 h-3.5 text-brand-primary flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          <div class="flex items-center gap-x-2 text-xs text-muted-foreground">
+            <svg class="w-3.5 h-3.5 text-primary flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
             No subscription fees
           </div>
-          <span class="w-px h-3 bg-neutral-border hidden sm:block"></span>
-          <div class="flex items-center gap-x-2 text-xs text-neutral-text-secondary">
-            <svg class="w-3.5 h-3.5 text-brand-primary flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          <span class="w-px h-3 bg-border hidden sm:block"></span>
+          <div class="flex items-center gap-x-2 text-xs text-muted-foreground">
+            <svg class="w-3.5 h-3.5 text-primary flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
             Set up in minutes
           </div>
-          <span class="w-px h-3 bg-neutral-border hidden sm:block"></span>
-          <div class="flex items-center gap-x-2 text-xs text-neutral-text-secondary">
-            <svg class="w-3.5 h-3.5 text-brand-primary flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          <span class="w-px h-3 bg-border hidden sm:block"></span>
+          <div class="flex items-center gap-x-2 text-xs text-muted-foreground">
+            <svg class="w-3.5 h-3.5 text-primary flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
             Pay only when you earn
           </div>
         </div>

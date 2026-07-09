@@ -92,7 +92,7 @@
             <% if @batch.receipt.attached? %>
               <div>
                 <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Payment Receipt</p>
-                <%= link_to url_for(@batch.receipt), target: "_blank", class: "btn btn-secondary w-full text-xs py-2" do %>
+                <%= link_to url_for(@batch.receipt), target: "_blank", class: "btn legacy-btn-secondary w-full text-xs py-2" do %>
                   View Uploaded Receipt
                 <% end %>
               </div>
@@ -104,7 +104,7 @@
               <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Upload Receipt (PDF/Image)</label>
               <%= f.file_field :receipt, class: "block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" %>
             </div>
-            <%= f.submit "Save Receipt", class: "btn btn-secondary w-full py-2 text-xs" %>
+            <%= f.submit "Save Receipt", class: "btn legacy-btn-secondary w-full py-2 text-xs" %>
           <% end %>
 
           <hr class="my-6">
@@ -112,7 +112,7 @@
           <%= form_with url: mark_as_paid_admin_payout_batch_path(@batch), method: :post, local: true, class: "space-y-4" do |f| %>
             <div>
               <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Payment Reference</label>
-              <%= text_field_tag :payout_reference, nil, placeholder: "e.g. MYB12345678", class: "form-input py-2 px-3 text-sm", required: true %>
+              <%= text_field_tag :payout_reference, nil, placeholder: "e.g. MYB12345678", class: "legacy-form-input py-2 px-3 text-sm", required: true %>
             </div>
             <%= f.submit "Mark as Paid", class: "btn btn-gradient w-full py-3 font-bold", data: { confirm: "Confirm that you have transferred RM #{number_with_precision(@batch.amount, precision: 2)} to this hotel?" } %>
           <% end %>

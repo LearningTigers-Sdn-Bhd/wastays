@@ -19,9 +19,6 @@
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
     <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
-    <% unless Rails.env.test? || (controller_name == "static_pages" && action_name == "home") %>
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/preline@2.4.1/dist/preline.min.css">
-    <% end %>
     <%= javascript_importmap_tags %>
     <% unless Rails.env.test? %>
       <script type="text/javascript" src="https://widget.1automations.com/widget/6cd1b8b4-95e9-443a-91fc-fa863f3d821b.js" data-turbo-track="reload"></script>
@@ -37,8 +34,7 @@
       html.skip-landing-loader.landing-loader-active body { overflow: auto !important; }
     </style>
   </head>
-  <body class="bg-neutral-bg text-neutral-text-primary font-sans antialiased" 
-        data-preline-enabled="<%= !(Rails.env.test? || (controller_name == 'static_pages' && action_name == 'home')) %>" 
+  <body class="bg-background text-foreground font-sans antialiased"
         data-controller="widget <%= yield :body_controllers %>"
         <%= yield :body_attributes %>>
     <div id="abw-btn-cont" data-turbo-permanent></div>
@@ -52,7 +48,7 @@
 
     <% unless content_for?(:hide_header) || content_for?(:hide_chrome) %>
     <!-- Desktop/Mobile Top Nav -->
-    <header class="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-lg border-b border-neutral-border/60 shadow-sm shadow-black/[0.04]">
+    <header class="sticky top-0 z-50 w-full bg-card/90 backdrop-blur-lg border-b border-border/60 shadow-sm shadow-black/[0.04]">
       <nav class="max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16" aria-label="Global">
 
         <!-- Logo -->
@@ -62,10 +58,10 @@
 
         <!-- Nav links (desktop) -->
         <div class="hidden md:flex items-center gap-x-1">
-          <a class="relative px-4 py-2 rounded-full text-sm font-medium text-neutral-text-secondary hover:text-brand-primary hover:bg-brand-primary/5 transition-all duration-200 focus:outline-none" href="<%= root_path(anchor: "products") %>">How It Works</a>
-          <a class="relative px-4 py-2 rounded-full text-sm font-medium text-neutral-text-secondary hover:text-brand-primary hover:bg-brand-primary/5 transition-all duration-200 focus:outline-none" href="<%= root_path(anchor: "whatsapp") %>">Why WhatsApp</a>
-          <a class="relative px-4 py-2 rounded-full text-sm font-medium text-neutral-text-secondary hover:text-brand-primary hover:bg-brand-primary/5 transition-all duration-200 focus:outline-none" href="<%= root_path(anchor: "testimonials") %>">Testimonials</a>
-          <a class="relative px-4 py-2 rounded-full text-sm font-medium text-neutral-text-secondary hover:text-brand-primary hover:bg-brand-primary/5 transition-all duration-200 focus:outline-none" href="<%= root_path(anchor: "faq") %>">FAQ</a>
+          <a class="relative px-4 py-2 rounded-full text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none" href="<%= root_path(anchor: "products") %>">How It Works</a>
+          <a class="relative px-4 py-2 rounded-full text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none" href="<%= root_path(anchor: "whatsapp") %>">Why WhatsApp</a>
+          <a class="relative px-4 py-2 rounded-full text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none" href="<%= root_path(anchor: "testimonials") %>">Testimonials</a>
+          <a class="relative px-4 py-2 rounded-full text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none" href="<%= root_path(anchor: "faq") %>">FAQ</a>
         </div>
 
         <!-- CTAs -->
@@ -76,53 +72,53 @@
               <!-- Trigger: letter avatar + name -->
               <button data-action="click->dropdown#toggle" type="button"
                       class="inline-flex items-center gap-x-2.5 hover:opacity-80 transition-opacity duration-200 focus:outline-none">
-                <div class="w-8 h-8 rounded-full bg-neutral-text-primary/10 border border-neutral-text-primary/20 flex items-center justify-center flex-none">
-                  <svg class="w-4 h-4 text-neutral-text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                <div class="w-8 h-8 rounded-full bg-foreground/10 border border-foreground/20 flex items-center justify-center flex-none">
+                  <svg class="w-4 h-4 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                 </div>
-                <span class="hidden sm:inline-block text-sm font-semibold text-neutral-text-primary"><%= current_user.name %></span>
+                <span class="hidden sm:inline-block text-sm font-semibold text-foreground"><%= current_user.name %></span>
               </button>
 
               <!-- Dropdown panel -->
-              <div data-dropdown-target="menu" class="hidden absolute right-0 top-full w-64 bg-white shadow-xl rounded-2xl mt-2 z-70 border border-neutral-border/50 overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div data-dropdown-target="menu" class="hidden absolute right-0 top-full w-64 bg-card shadow-xl rounded-2xl mt-2 z-70 border border-border/50 overflow-hidden animate-in fade-in zoom-in duration-200">
 
                 <!-- User info header -->
-                <div class="flex items-center gap-x-3 px-4 py-4 border-b border-neutral-border/50">
-                  <div class="w-10 h-10 rounded-full bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center flex-none">
-                    <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                <div class="flex items-center gap-x-3 px-4 py-4 border-b border-border/50">
+                  <div class="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-none">
+                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                   </div>
                   <div class="min-w-0">
-                    <p class="text-sm font-bold text-neutral-text-primary truncate"><%= current_user.name %></p>
-                    <p class="text-xs text-neutral-text-secondary truncate"><%= current_user.email %></p>
+                    <p class="text-sm font-bold text-foreground truncate"><%= current_user.name %></p>
+                    <p class="text-xs text-muted-foreground truncate"><%= current_user.email %></p>
                   </div>
                 </div>
 
                 <!-- Menu items -->
                 <div class="p-1.5 space-y-0.5">
                   <% if current_user.superadmin? %>
-                    <a class="flex items-center gap-x-3 py-2.5 px-3 rounded-xl text-sm text-neutral-text-primary hover:bg-neutral-bg transition-colors" href="<%= admin_dashboard_path %>">
-                      <svg class="w-4 h-4 text-neutral-text-secondary flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0 0h18"></path></svg>
+                    <a class="flex items-center gap-x-3 py-2.5 px-3 rounded-xl text-sm text-foreground hover:bg-muted transition-colors" href="<%= admin_dashboard_path %>">
+                      <svg class="w-4 h-4 text-muted-foreground flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0 0h18"></path></svg>
                       Admin Panel
                     </a>
                   <% end %>
                   <% if current_hotel.present? %>
-                    <a class="flex items-center gap-x-3 py-2.5 px-3 rounded-xl text-sm text-neutral-text-primary hover:bg-neutral-bg transition-colors" href="<%= hotel_dashboard_path(current_hotel) %>">
-                      <svg class="w-4 h-4 text-neutral-text-secondary flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    <a class="flex items-center gap-x-3 py-2.5 px-3 rounded-xl text-sm text-foreground hover:bg-muted transition-colors" href="<%= hotel_dashboard_path(current_hotel) %>">
+                      <svg class="w-4 h-4 text-muted-foreground flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                       Hotel Dashboard
                     </a>
                   <% end %>
-                  <a class="flex items-center gap-x-3 py-2.5 px-3 rounded-xl text-sm text-neutral-text-primary hover:bg-neutral-bg transition-colors" href="<%= current_user.superadmin? ? edit_admin_profile_path : edit_hotel_user_profile_path(current_hotel) %>">
-                    <svg class="w-4 h-4 text-neutral-text-secondary flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                  <a class="flex items-center gap-x-3 py-2.5 px-3 rounded-xl text-sm text-foreground hover:bg-muted transition-colors" href="<%= current_user.superadmin? ? edit_admin_profile_path : edit_hotel_user_profile_path(current_hotel) %>">
+                    <svg class="w-4 h-4 text-muted-foreground flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                     My Account
                   </a>
-                  <a class="flex items-center gap-x-3 py-2.5 px-3 rounded-xl text-sm text-neutral-text-primary hover:bg-neutral-bg transition-colors" href="<%= current_user.superadmin? ? edit_admin_profile_path : edit_hotel_user_profile_path(current_hotel) %>">
-                    <svg class="w-4 h-4 text-neutral-text-secondary flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  <a class="flex items-center gap-x-3 py-2.5 px-3 rounded-xl text-sm text-foreground hover:bg-muted transition-colors" href="<%= current_user.superadmin? ? edit_admin_profile_path : edit_hotel_user_profile_path(current_hotel) %>">
+                    <svg class="w-4 h-4 text-muted-foreground flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     Settings
                   </a>
                 </div>
 
                 <!-- Sign out -->
-                <div class="p-1.5 border-t border-neutral-border/50">
-                  <%= button_to logout_path, method: :delete, class: "flex items-center gap-x-3 py-2.5 px-3 rounded-xl text-sm text-status-error hover:bg-red-50 transition-colors w-full text-left" do %>
+                <div class="p-1.5 border-t border-border/50">
+                  <%= button_to logout_path, method: :delete, class: "flex items-center gap-x-3 py-2.5 px-3 rounded-xl text-sm text-destructive hover:bg-destructive/10 transition-colors w-full text-left" do %>
                     <svg class="w-4 h-4 flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                     Sign out
                   <% end %>
@@ -131,7 +127,7 @@
               </div>
             </div>
           <% else %>
-            <a class="inline-flex items-center px-5 py-2 rounded-full text-sm font-semibold text-white bg-brand-primary hover:bg-brand-primary/90 shadow-sm hover:shadow-md hover:shadow-brand-primary/20 transition-all duration-200" href="<%= login_path %>">
+            <a class="inline-flex items-center px-5 py-2 rounded-full text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary-hover shadow-sm hover:shadow-md hover:shadow-primary/20 transition-all duration-200" href="<%= login_path %>">
               Login
             </a>
           <% end %>
@@ -145,19 +141,19 @@
       <div class="fixed top-20 right-6 z-[200] flex flex-col gap-y-3 pointer-events-none animate-in fade-in slide-in-from-top-4 duration-300">
         <% flash.each do |key, value| %>
           <div data-controller="toast"
-               class="pointer-events-auto flex items-start gap-x-3 w-80 bg-white rounded-2xl shadow-xl shadow-black/10 border border-neutral-border/60 px-4 py-3.5 transition-all duration-250"
+               class="pointer-events-auto flex items-start gap-x-3 w-80 bg-card rounded-2xl shadow-xl shadow-black/10 border border-border/60 px-4 py-3.5 transition-all duration-250"
                role="alert">
             <% if key == 'alert' %>
-              <div class="flex-none w-8 h-8 rounded-full bg-red-50 flex items-center justify-center mt-0.5">
-                <svg class="w-4 h-4 text-status-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <div class="flex-none w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center mt-0.5">
+                <svg class="w-4 h-4 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
               </div>
             <% else %>
-              <div class="flex-none w-8 h-8 rounded-full bg-green-50 flex items-center justify-center mt-0.5">
-                <svg class="w-4 h-4 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <div class="flex-none w-8 h-8 rounded-full bg-success/10 flex items-center justify-center mt-0.5">
+                <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
               </div>
             <% end %>
             <div class="flex-1 min-w-0 pt-0.5">
-              <p class="text-sm font-semibold text-neutral-text-primary"><%= value %></p>
+              <p class="text-sm font-semibold text-foreground"><%= value %></p>
             </div>
           </div>
         <% end %>
@@ -172,21 +168,21 @@
                                 (controller_name == "legal_pages" && %w[privacy_policy terms_and_conditions].include?(action_name)) %>
     <% unless hide_mobile_bottom_nav %>
       <!-- Mobile Bottom Nav (Phase 4 requirement) -->
-      <div class="sm:hidden fixed bottom-0 left-0 right-0 z-[150] w-full bg-white/95 backdrop-blur-md border-t border-neutral-border pb-safe">
+      <div class="sm:hidden fixed bottom-0 left-0 right-0 z-[150] w-full bg-card/95 backdrop-blur-md border-t border-border pb-safe">
         <nav class="flex items-center justify-around py-3 px-4">
-          <a href="<%= root_path %>" class="flex flex-col items-center gap-y-1 text-neutral-text-secondary hover:text-brand-primary">
+          <a href="<%= root_path %>" class="flex flex-col items-center gap-y-1 text-muted-foreground hover:text-primary">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             <span class="text-[10px] font-medium">Home</span>
           </a>
-          <a href="<%= hotels_path %>" class="flex flex-col items-center gap-y-1 text-neutral-text-secondary hover:text-brand-primary">
+          <a href="<%= hotels_path %>" class="flex flex-col items-center gap-y-1 text-muted-foreground hover:text-primary">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             <span class="text-[10px] font-medium">Search</span>
           </a>
-          <a href="<%= help_center_path %>" class="flex flex-col items-center gap-y-1 text-neutral-text-secondary hover:text-brand-primary">
+          <a href="<%= help_center_path %>" class="flex flex-col items-center gap-y-1 text-muted-foreground hover:text-primary">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <span class="text-[10px] font-medium">Help</span>
           </a>
-          <a href="<%= login_path %>" class="flex flex-col items-center gap-y-1 text-neutral-text-secondary hover:text-brand-primary">
+          <a href="<%= login_path %>" class="flex flex-col items-center gap-y-1 text-muted-foreground hover:text-primary">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             <span class="text-[10px] font-medium">Account</span>
           </a>

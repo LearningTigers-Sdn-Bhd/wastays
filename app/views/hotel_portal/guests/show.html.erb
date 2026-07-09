@@ -80,7 +80,7 @@
     </div>
   </div>
 
-  <div class="card <%= @guest.blacklisted_at?(current_hotel) ? 'border-rose-200 bg-rose-50/20' : '' %>">
+  <div class="legacy-card <%= @guest.blacklisted_at?(current_hotel) ? 'border-rose-200 bg-rose-50/20' : '' %>">
     <div class="p-4 border-b border-neutral-border <%= @guest.blacklisted_at?(current_hotel) ? 'bg-rose-50/30 border-rose-200' : '' %>">
       <div>
         <div class="flex items-center gap-x-2">
@@ -144,7 +144,7 @@
   </div>
 
   <div class="grid md:grid-cols-2 gap-4">
-    <div class="card">
+    <div class="legacy-card">
       <div class="p-4 border-b border-neutral-border">
         <p class="text-xs uppercase font-black tracking-widest text-neutral-text-secondary">Currency Totals</p>
       </div>
@@ -162,7 +162,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="legacy-card">
       <div class="p-4 border-b border-neutral-border">
         <p class="text-xs uppercase font-black tracking-widest text-neutral-text-secondary">Recent Notes</p>
       </div>

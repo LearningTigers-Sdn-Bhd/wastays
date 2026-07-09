@@ -1,14 +1,14 @@
-<div class="bg-neutral-bg min-h-screen pb-12">
+<div class="bg-muted min-h-screen pb-12">
   <!-- Checkout Header -->
-  <div class="bg-white border-b border-neutral-border py-4 md:py-6 shadow-sm">
+  <div class="bg-white border-b border-border py-4 md:py-6 shadow-sm">
     <div class="max-w-[85rem] mx-auto px-4 flex flex-col md:flex-row md:items-center md:justify-between gap-y-4">
       <div class="text-center md:text-left">
-        <h1 class="text-xl md:text-2xl font-black text-neutral-text-primary tracking-tight">Complete Your Booking</h1>
-        <p class="text-xs md:text-sm text-neutral-text-secondary mt-1">Please provide your details to secure your room.</p>
+        <h1 class="text-xl md:text-2xl font-black text-foreground tracking-tight">Complete Your Booking</h1>
+        <p class="text-xs md:text-sm text-muted-foreground mt-1">Please provide your details to secure your room.</p>
       </div>
       
       <!-- Hold Timer -->
-      <div class="inline-flex items-center justify-center gap-x-2 bg-red-50 border border-red-100 px-4 py-2 rounded-xl text-status-error self-center md:self-auto">
+      <div class="inline-flex items-center justify-center gap-x-2 bg-red-50 border border-red-100 px-4 py-2 rounded-xl text-destructive self-center md:self-auto">
         <%= cached_icon("clock", class: "w-4 h-4 animate-pulse") %>
         <span class="text-[10px] md:text-xs font-black uppercase tracking-widest">
           Hold expires in: 
@@ -24,20 +24,20 @@
   <div class="max-w-[85rem] mx-auto px-4 py-6 md:py-8">
     <div class="flex items-center justify-center max-w-2xl mx-auto mb-10 md:mb-12">
       <div class="flex flex-col items-center">
-        <div class="w-8 h-8 rounded-full bg-status-success text-white flex items-center justify-center text-xs font-bold ring-4 ring-green-50 shadow-sm relative">
+        <div class="w-8 h-8 rounded-full bg-success text-white flex items-center justify-center text-xs font-bold ring-4 ring-green-50 shadow-sm relative">
           <%= cached_icon("check", class: "w-4 h-4", stroke_width: 3) %>
         </div>
-        <span class="text-[9px] md:text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mt-2">Room</span>
+        <span class="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-2">Room</span>
       </div>
-      <div class="flex-1 h-0.5 bg-brand-primary mx-2 md:mx-4 -mt-5"></div>
+      <div class="flex-1 h-0.5 bg-primary mx-2 md:mx-4 -mt-5"></div>
       <div class="flex flex-col items-center">
-        <div class="w-8 h-8 rounded-full bg-brand-primary text-white flex items-center justify-center text-xs font-black ring-4 ring-red-50 shadow-md">2</div>
-        <span class="text-[9px] md:text-[10px] font-black text-brand-primary uppercase tracking-widest mt-2">Details</span>
+        <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-black ring-4 ring-red-50 shadow-md">2</div>
+        <span class="text-[9px] md:text-[10px] font-black text-primary uppercase tracking-widest mt-2">Details</span>
       </div>
-      <div class="flex-1 h-0.5 bg-neutral-border mx-2 md:mx-4 -mt-5"></div>
+      <div class="flex-1 h-0.5 bg-border mx-2 md:mx-4 -mt-5"></div>
       <div class="flex flex-col items-center opacity-50">
-        <div class="w-8 h-8 rounded-full bg-neutral-surface border-2 border-neutral-border text-neutral-text-secondary flex items-center justify-center text-xs font-bold">3</div>
-        <span class="text-[9px] md:text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mt-2">Payment</span>
+        <div class="w-8 h-8 rounded-full bg-card border-2 border-border text-muted-foreground flex items-center justify-center text-xs font-bold">3</div>
+        <span class="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-2">Payment</span>
       </div>
     </div>
 
@@ -65,20 +65,20 @@
         <div class="lg:col-span-8 space-y-6 order-2 lg:order-1">
           <!-- Guest Information -->
           <div class="card p-4 md:p-8">
-            <h2 class="text-xl font-extrabold text-neutral-text-primary mb-6 flex items-center gap-x-2">
-               <%= cached_icon("user", class: "w-5 h-5 text-brand-primary") %>
+            <h2 class="text-xl font-extrabold text-foreground mb-6 flex items-center gap-x-2">
+               <%= cached_icon("user", class: "w-5 h-5 text-primary") %>
               Guest Information
             </h2>
             
             <div class="grid sm:grid-cols-12 gap-4 sm:items-end">
               <div class="sm:col-span-9">
-                <label for="email" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Email Address</label>
+                <label for="email" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Email Address</label>
                 <%= f.email_field "guest_details[email]",
                                   value: @quote.guest_email,
                                   id: "email",
                                   required: true,
                                   placeholder: "john@example.com",
-                                  class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20 disabled:opacity-50 disabled:cursor-not-allowed",
+                                  class: "form-input w-full rounded-xl border border-border py-3 px-4 focus:border-primary focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed",
                                   data: {
                                     checkout_details_target: "emailInput",
                                     checkout_payment_target: "emailField",
@@ -93,52 +93,52 @@
                 </button>
               </div>
             </div>
-            <p class="text-xs text-neutral-text-secondary mt-2" data-checkout-details-target="feedback">
+            <p class="text-xs text-muted-foreground mt-2" data-checkout-details-target="feedback">
               Enter your email first. We will auto-fill your details if we find a previous booking.
             </p>
 
             <div data-checkout-details-target="detailsPanel" data-controller="guest-dob" class="mt-6 opacity-60 pointer-events-none transition">
               <div class="grid sm:grid-cols-3 gap-6">
                 <div class="sm:col-span-2">
-                  <label for="name" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Full Name (as per ID/Passport)</label>
+                  <label for="name" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Full Name (as per ID/Passport)</label>
                   <%= f.text_field "guest_details[name]",
                                    value: @quote.guest_name,
                                    id: "name",
                                    required: true,
                                    placeholder: "John Doe",
-                                   class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
+                                   class: "form-input w-full rounded-xl border border-border py-3 px-4 focus:border-primary focus:ring-primary/20",
                                    data: { checkout_details_target: "field", checkout_payment_target: "nameField", guest_field: "name" },
                                    disabled: true %>
                 </div>
                 <div>
-                  <label for="gender" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Gender</label>
+                  <label for="gender" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Gender</label>
                   <%= f.select "guest_details[gender]",
                                options_for_select([["Male", "male"], ["Female", "female"], ["Other", "other"]]),
                                { prompt: "Select gender" },
                                { required: true,
-                                 class: "form-select w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
+                                 class: "form-select w-full rounded-xl border border-border py-3 px-4 focus:border-primary focus:ring-primary/20",
                                  data: { checkout_details_target: "field", guest_field: "gender" },
                                  disabled: true } %>
                 </div>
               </div>
               <div class="grid sm:grid-cols-2 gap-6 mt-6">
                 <div>
-                  <label for="phone" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">WhatsApp Number</label>
+                  <label for="phone" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">WhatsApp Number</label>
                   <%= f.telephone_field "guest_details[phone]",
                                        value: @quote.guest_phone,
                                        id: "phone",
                                        required: true,
                                        placeholder: "+60 12-345 6789",
-                                       class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
+                                       class: "form-input w-full rounded-xl border border-border py-3 px-4 focus:border-primary focus:ring-primary/20",
                                        data: { checkout_details_target: "field", checkout_payment_target: "phoneField", guest_field: "phone" },
                                        disabled: true %>
                 </div>
                 <div class="relative">
-                  <label for="country" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Country (passport)</label>
+                  <label for="country" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Country (passport)</label>
                   <%= f.text_field "guest_details[country]",
                                    id: "country",
                                    required: true,
-                                   class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
+                                   class: "form-input w-full rounded-xl border border-border py-3 px-4 focus:border-primary focus:ring-primary/20",
                                    placeholder: "Start typing to search",
                                    autocomplete: "off",
                                    inputmode: "search",
@@ -148,17 +148,17 @@
                                       action: "input->checkout-details#handleCountryInput focus->checkout-details#handleCountryFocus blur->checkout-details#handleCountryBlur"
                                     },
                                    disabled: true %>
-                  <p class="text-[10px] text-neutral-text-secondary mt-2">Start typing to select a country, then choose the document type.</p>
+                  <p class="text-[10px] text-muted-foreground mt-2">Start typing to select a country, then choose the document type.</p>
                   <div class="absolute z-20 mt-2 w-full rounded-xl border border-neutral-200 bg-white shadow-lg max-h-56 overflow-auto hidden"
                        data-checkout-details-target="countryMenu"
                        data-action="mousedown->checkout-details#selectCountry click->checkout-details#selectCountry"></div>
                 </div>
                 <div>
-                  <label for="document_type" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Document Type</label>
+                  <label for="document_type" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Document Type</label>
                   <%= f.select "guest_details[document_type]",
                                options_for_select([["MyKad / IC", "ic"], ["Passport", "passport"]]),
                                { required: true, prompt: "Select document type" },
-                               class: "form-select w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
+                               class: "form-select w-full rounded-xl border border-border py-3 px-4 focus:border-primary focus:ring-primary/20",
                                data: {
                                  checkout_details_target: "documentSelect field",
                                  guest_field: "document_type",
@@ -167,27 +167,27 @@
                                disabled: true %>
                 </div>
                 <div data-checkout-details-target="documentField" class="hidden">
-                  <label for="government_id" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" data-checkout-details-target="documentLabel">IC / Passport Number</label>
+                  <label for="government_id" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" data-checkout-details-target="documentLabel">IC / Passport Number</label>
                   <%= f.text_field "guest_details[government_id]",
                                    id: "government_id",
                                    required: true,
-                                   class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
+                                   class: "form-input w-full rounded-xl border border-border py-3 px-4 focus:border-primary focus:ring-primary/20",
                                    placeholder: "Enter document number",
                                    data: { checkout_details_target: "documentInput field", guest_field: "government_id", guest_dob_target: "governmentId", action: "input->guest-dob#autofill" },
                                    disabled: true %>
                 </div>
                 <div data-checkout-details-target="documentField" class="hidden">
-                  <label for="date_of_birth" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Date of Birth</label>
+                  <label for="date_of_birth" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Date of Birth</label>
                   <%= f.date_field "guest_details[date_of_birth]",
                                    id: "date_of_birth",
-                                   class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
+                                   class: "form-input w-full rounded-xl border border-border py-3 px-4 focus:border-primary focus:ring-primary/20",
                                    data: { checkout_details_target: "field", guest_field: "date_of_birth", guest_dob_target: "dateOfBirth" },
                                    disabled: true %>
                 </div>
               </div>
             </div>
             <% if @hotel.tourism_tax_enabled? %>
-              <p class="text-xs text-neutral-text-secondary mt-3">
+              <p class="text-xs text-muted-foreground mt-3">
                 Malaysia tourism tax of RM <%= number_with_precision(@hotel.tourism_tax_amount, precision: 2) %> applies to guests with passports from outside Malaysia. The amount will be included during checkout for clarity.
               </p>
             <% end %>
@@ -195,50 +195,50 @@
 
           <!-- Special Requests -->
           <div class="card p-4 md:p-8">
-            <h2 class="text-xl font-extrabold text-neutral-text-primary mb-6 flex items-center gap-x-2">
-              <svg class="w-5 h-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M11 12H7"/></svg>
+            <h2 class="text-xl font-extrabold text-foreground mb-6 flex items-center gap-x-2">
+              <svg class="w-5 h-5 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M11 12H7"/></svg>
               Special Requests
             </h2>
-            <p class="text-sm text-neutral-text-secondary mb-4">
+            <p class="text-sm text-muted-foreground mb-4">
               Please let us know if you have any special requirements. We will do our best to accommodate them, but they are subject to availability.
             </p>
             <%= f.text_area "guest_details[special_requests]",
                             rows: 3,
                             placeholder: "Type your special requests here...",
-                            class: "form-input w-full rounded-xl border border-neutral-border py-3 px-4 focus:border-brand-primary focus:ring-brand-primary/20",
+                            class: "form-input w-full rounded-xl border border-border py-3 px-4 focus:border-primary focus:ring-primary/20",
                             data: { checkout_payment_target: "specialRequestsField" } %>
           </div>
 
           <!-- Payment Selection -->
           <div class="card p-4 md:p-8">
-            <h2 class="text-xl font-extrabold text-neutral-text-primary mb-6 flex items-center gap-x-2">
-              <%= cached_icon("credit-card", class: "w-5 h-5 text-brand-primary") %>
+            <h2 class="text-xl font-extrabold text-foreground mb-6 flex items-center gap-x-2">
+              <%= cached_icon("credit-card", class: "w-5 h-5 text-primary") %>
               Secure Payment Method
             </h2>
             
             <div class="space-y-4">
               <label class="relative block cursor-pointer group">
                 <input type="radio" name="payment_method" value="online" checked class="peer sr-only">
-                <div class="p-4 md:p-5 bg-white border-2 border-neutral-border rounded-xl peer-checked:border-brand-primary peer-checked:bg-red-50/30 transition-all">
+                <div class="p-4 md:p-5 bg-white border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-red-50/30 transition-all">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-x-4">
-                      <div class="w-10 h-10 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                      <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                         <%= cached_icon("credit-card", class: "w-6 h-6") %>
                       </div>
                       <div>
-                        <p class="font-bold text-neutral-text-primary">Online Payment / Cards</p>
-                        <p class="text-xs text-neutral-text-secondary">FPX, Visa, Mastercard, E-Wallets</p>
+                        <p class="font-bold text-foreground">Online Payment / Cards</p>
+                        <p class="text-xs text-muted-foreground">FPX, Visa, Mastercard, E-Wallets</p>
                       </div>
                     </div>
-                    <div class="h-6 w-6 rounded-full border-2 border-brand-primary flex items-center justify-center">
-                      <div class="h-3 w-3 rounded-full bg-brand-primary"></div>
+                    <div class="h-6 w-6 rounded-full border-2 border-primary flex items-center justify-center">
+                      <div class="h-3 w-3 rounded-full bg-primary"></div>
                     </div>
                   </div>
                 </div>
               </label>
             </div>
             
-            <p class="mt-6 text-xs text-neutral-text-secondary text-center">
+            <p class="mt-6 text-xs text-muted-foreground text-center">
               Your connection is encrypted. We do not store your full card details.
             </p>
             <% unless @payment_ready %>
@@ -250,17 +250,17 @@
 
           <!-- PDPA Consent -->
           <div class="space-y-4 py-4">
-            <label class="flex items-start gap-3 text-sm text-neutral-text-secondary cursor-pointer">
+            <label class="flex items-start gap-3 text-sm text-muted-foreground cursor-pointer">
               <%= hidden_field_tag "guest_details[privacy_consent]", "0" %>
-              <%= check_box_tag "guest_details[privacy_consent]", "1", false, required: true, class: "mt-1 h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary" %>
+              <%= check_box_tag "guest_details[privacy_consent]", "1", false, required: true, class: "mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary" %>
               <span>
-                I have read and agree to the <%= link_to "Privacy Policy", privacy_policy_path, class: "text-brand-primary underline", target: "_blank" %> and how my data will be processed. <span class="text-status-error">*</span>
+                I have read and agree to the <%= link_to "Privacy Policy", privacy_policy_path, class: "text-primary underline", target: "_blank" %> and how my data will be processed. <span class="text-destructive">*</span>
               </span>
             </label>
 
-            <label class="flex items-start gap-3 text-sm text-neutral-text-secondary cursor-pointer">
+            <label class="flex items-start gap-3 text-sm text-muted-foreground cursor-pointer">
               <%= hidden_field_tag "guest_details[marketing_consent]", "0" %>
-              <%= check_box_tag "guest_details[marketing_consent]", "1", false, class: "mt-1 h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary" %>
+              <%= check_box_tag "guest_details[marketing_consent]", "1", false, class: "mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary" %>
               <span>
                 I agree to receive marketing communications, exclusive offers, and travel updates from WAStays and its partner hotels.
               </span>
@@ -282,43 +282,43 @@
         <aside class="lg:col-span-4 order-1 lg:order-2">
           <div class="sticky top-[130px] space-y-6">
             <div class="card overflow-hidden">
-              <div class="p-4 md:p-5 border-b border-neutral-border bg-neutral-bg/50">
-                <h3 class="text-xs font-black text-neutral-text-secondary uppercase tracking-widest">Booking Summary</h3>
+              <div class="p-4 md:p-5 border-b border-border bg-muted/50">
+                <h3 class="text-xs font-black text-muted-foreground uppercase tracking-widest">Booking Summary</h3>
               </div>
               <div class="p-4 md:p-6">
                 <div class="flex gap-x-4 mb-6">
-                  <div class="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-neutral-border shadow-sm">
+                  <div class="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-border shadow-sm">
                     <% if @hotel.summary_photo %>
                       <%= image_tag @hotel.summary_photo, class: "w-full h-full object-cover" %>
                     <% else %>
-                      <div class="w-full h-full bg-neutral-bg flex items-center justify-center text-neutral-border">
+                      <div class="w-full h-full bg-muted flex items-center justify-center text-border">
                         <%= cached_icon("house", class: "w-8 h-8") %>
                       </div>
                     <% end %>
                   </div>
                   <div>
-                    <h4 class="font-extrabold text-neutral-text-primary leading-tight"><%= @hotel.name %></h4>
-                    <p class="text-xs text-neutral-text-secondary mt-1"><%= @hotel.city %></p>
+                    <h4 class="font-extrabold text-foreground leading-tight"><%= @hotel.name %></h4>
+                    <p class="text-xs text-muted-foreground mt-1"><%= @hotel.city %></p>
                     <%= star_rating_icons(@hotel.star_rating) %>
                   </div>
                 </div>
 
-                <div class="space-y-4 text-sm border-t border-b border-neutral-bg py-6 mb-6">
+                <div class="space-y-4 text-sm border-t border-b border-muted py-6 mb-6">
                   <div class="flex justify-between">
-                    <span class="text-neutral-text-secondary">Check-in</span>
-                    <span class="font-bold text-neutral-text-primary"><%= @quote.formatted_check_in %></span>
+                    <span class="text-muted-foreground">Check-in</span>
+                    <span class="font-bold text-foreground"><%= @quote.formatted_check_in %></span>
                   </div>
                   <div class="flex justify-between">
-                    <span class="text-neutral-text-secondary">Check-out</span>
-                    <span class="font-bold text-neutral-text-primary"><%= @quote.formatted_check_out %></span>
+                    <span class="text-muted-foreground">Check-out</span>
+                    <span class="font-bold text-foreground"><%= @quote.formatted_check_out %></span>
                   </div>
                   <div class="flex justify-between">
-                    <span class="text-neutral-text-secondary">Stay Length</span>
-                    <span class="font-bold text-neutral-text-primary"><%= @quote.stay_length_text %></span>
+                    <span class="text-muted-foreground">Stay Length</span>
+                    <span class="font-bold text-foreground"><%= @quote.stay_length_text %></span>
                   </div>
                   <div class="flex justify-between">
-                    <span class="text-neutral-text-secondary">Guests</span>
-                    <span class="font-bold text-neutral-text-primary">
+                    <span class="text-muted-foreground">Guests</span>
+                    <span class="font-bold text-foreground">
                       <%= @quote.adults %> Adults · <%= @quote.children %> Children<%= " · #{@quote.infants} Infant#{"s" if @quote.infants.to_i > 1}" if @quote.infants.to_i > 0 %>
                     </span>
                   </div>
@@ -326,20 +326,20 @@
 
                 <div class="space-y-4 mb-8">
                   <% @quote_items.each do |item| %>
-                    <div class="border-b border-neutral-bg pb-3 last:border-0 last:pb-0">
+                    <div class="border-b border-muted pb-3 last:border-0 last:pb-0">
                       <div class="flex justify-between text-sm font-bold mb-1.5">
-                        <span class="text-neutral-text-primary"><%= item.quantity %>x <%= item.room_type_snapshot['name'] %></span>
-                        <span class="text-neutral-text-primary"><%= display_amount(item.subtotal, quote_currency: @quote.currency, display_currency: @display_currency, hotel: @hotel) %></span>
+                        <span class="text-foreground"><%= item.quantity %>x <%= item.room_type_snapshot['name'] %></span>
+                        <span class="text-foreground"><%= display_amount(item.subtotal, quote_currency: @quote.currency, display_currency: @display_currency, hotel: @hotel) %></span>
                       </div>
                       <% if @hotel.pax_pricing_only? %>
-                        <div class="pl-4 space-y-1.5 text-xs text-neutral-text-secondary border-l-2 border-brand-primary/20">
+                        <div class="pl-4 space-y-1.5 text-xs text-muted-foreground border-l-2 border-primary/20">
                           <% pax_pricing_breakdown_items(item, @hotel, @display_currency).each do |line| %>
                             <div class="flex justify-between items-center">
                               <span class="flex flex-col">
-                                <span class="font-bold text-neutral-text-primary/95"><%= line[:label] %></span>
-                                <span class="text-[10px] text-neutral-text-secondary/70"><%= line[:detail] %></span>
+                                <span class="font-bold text-foreground/95"><%= line[:label] %></span>
+                                <span class="text-[10px] text-muted-foreground/70"><%= line[:detail] %></span>
                               </span>
-                              <span class="font-semibold text-neutral-text-primary"><%= line[:amount] %></span>
+                              <span class="font-semibold text-foreground"><%= line[:amount] %></span>
                             </div>
                           <% end %>
                         </div>
@@ -348,23 +348,23 @@
                   <% end %>
                 </div>
 
-                <div class="space-y-4 pt-6 border-t border-neutral-border">
+                <div class="space-y-4 pt-6 border-t border-border">
                   <div class="flex justify-between items-center text-xl">
-                    <span class="font-black text-neutral-text-primary">Total</span>
-                    <span class="font-black text-brand-primary">
+                    <span class="font-black text-foreground">Total</span>
+                    <span class="font-black text-primary">
                       <%= @quote.formatted_total %>
                     </span>
                   </div>
-                  <p class="text-[10px] text-neutral-text-secondary italic text-right leading-tight">
+                  <p class="text-[10px] text-muted-foreground italic text-right leading-tight">
                     All-in price including taxes and service charges. Payment is charged in <%= @quote.currency %>.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div class="card p-5 bg-neutral-surface border-neutral-border">
-              <h4 class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest mb-3">Cancellation Policy</h4>
-              <p class="text-xs text-neutral-text-secondary leading-relaxed">
+            <div class="card p-5 bg-card border-border">
+              <h4 class="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3">Cancellation Policy</h4>
+              <p class="text-xs text-muted-foreground leading-relaxed">
                 <%= @quote.cancellation_policy %>
               </p>
             </div>

@@ -22,25 +22,25 @@
       <% if room_type.photo_url %>
         <%= image_tag room_type.photo_url, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
       <% else %>
-        <div class="absolute inset-0 bg-neutral-bg flex items-center justify-center">
-          <svg class="w-12 h-12 text-neutral-border" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13 2 2 4-4"/></svg>
+        <div class="absolute inset-0 bg-muted flex items-center justify-center">
+          <svg class="w-12 h-12 text-border" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13 2 2 4-4"/></svg>
         </div>
       <% end %>
     </div>
     
     <div class="flex-1 p-6 flex flex-col justify-between">
       <div>
-        <h3 class="text-xl font-bold text-neutral-text-primary mb-2"><%= room_type.name %></h3>
-        <p class="text-sm text-neutral-text-secondary line-clamp-2 mb-4"><%= room_type.description %></p>
+        <h3 class="text-xl font-bold text-foreground mb-2"><%= room_type.name %></h3>
+        <p class="text-sm text-muted-foreground line-clamp-2 mb-4"><%= room_type.description %></p>
         
         <div class="flex flex-wrap gap-y-2 gap-x-4 mb-6">
-          <div class="flex items-center gap-x-1.5 text-xs font-bold text-neutral-text-secondary uppercase tracking-wider">
-            <svg class="w-3.5 h-3.5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          <div class="flex items-center gap-x-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            <svg class="w-3.5 h-3.5 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
             Up to <%= room_type.max_adults %> Adults
           </div>
           <% if room_type.max_children.to_i > 0 %>
-            <div class="flex items-center gap-x-1.5 text-xs font-bold text-neutral-text-secondary uppercase tracking-wider">
-              <svg class="w-3.5 h-3.5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <div class="flex items-center gap-x-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              <svg class="w-3.5 h-3.5 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               <%= room_type.max_children %> Children
             </div>
           <% end %>
@@ -73,30 +73,30 @@
         <% end %>
       </div>
 
-      <div class="flex justify-between items-end border-t border-neutral-border pt-4">
+      <div class="flex justify-between items-end border-t border-border pt-4">
         <div>
           <% if search_ready %>
             <% if (restriction_error = room_type.stay_restriction_error).present? %>
-              <p class="text-xs font-bold text-status-error flex items-start gap-x-1.5 mt-1">
+              <p class="text-xs font-bold text-destructive flex items-start gap-x-1.5 mt-1">
                 <svg class="w-4 h-4 shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 <%= restriction_error %>
               </p>
             <% else %>
-              <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-widest mb-1">
+              <p class="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">
                 <%= room_type.per_pax_billing? ? "Price Per Person" : "Price Per Room" %>
               </p>
-              <p class="text-2xl font-black text-neutral-text-primary">
+              <p class="text-2xl font-black text-foreground">
                 <%= room_type.per_pax_billing? ? room_type.display_pax_rate(display_currency) : room_type.display_single_room_total_price(display_currency) %>
               </p>
-              <p class="text-[10px] text-neutral-text-secondary italic">
+              <p class="text-[10px] text-muted-foreground italic">
                 <%= room_type.rate_plan_name %> · <%= display_currency != room_type.single_room_pricing_summary[:currency] ? "estimate" : "fixed rate" %>
               </p>
             <% end %>
           <% else %>
-            <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-widest mb-1">
+            <p class="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">
               <%= @hotel.pax_pricing_only? ? "Price Per Person" : "Price Per Room" %>
             </p>
-            <p class="text-sm font-bold text-neutral-text-secondary">Select dates to see price</p>
+            <p class="text-sm font-bold text-muted-foreground">Select dates to see price</p>
           <% end %>
         </div>
 
@@ -121,24 +121,24 @@
               </button>
 
               <%# 2. Stepper control (visible when selected quantity > 0) %>
-              <div data-role="stepper" class="flex items-center gap-x-3 bg-neutral-bg rounded-xl border border-neutral-border p-1 hidden">
+              <div data-role="stepper" class="flex items-center gap-x-3 bg-muted rounded-xl border border-border p-1 hidden">
                 <button type="button"
                         data-role="decrement-btn"
                         data-action="click->room-selector#decrement"
                         data-room-type-id="<%= room_type.id %>"
-                        class="w-10 h-10 rounded-lg flex items-center justify-center text-neutral-text-secondary hover:bg-white hover:shadow-sm border border-transparent hover:border-neutral-border transition font-black text-lg">
+                        class="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-white hover:shadow-sm border border-transparent hover:border-border transition font-black text-lg">
                   −
                 </button>
                 <span data-room-selector-target="quantityDisplay"
                       data-room-type-id="<%= room_type.id %>"
-                      class="w-6 text-center text-sm font-black text-neutral-text-primary">
+                      class="w-6 text-center text-sm font-black text-foreground">
                   0
                 </span>
                 <button type="button"
                         data-role="increment-btn"
                         data-action="click->room-selector#increment"
                         data-room-type-id="<%= room_type.id %>"
-                        class="w-10 h-10 rounded-lg flex items-center justify-center text-neutral-text-secondary hover:bg-white hover:shadow-sm border border-transparent hover:border-neutral-border transition font-black text-lg">
+                        class="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-white hover:shadow-sm border border-transparent hover:border-border transition font-black text-lg">
                   +
                 </button>
               </div>

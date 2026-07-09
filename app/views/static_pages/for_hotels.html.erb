@@ -1,29 +1,29 @@
-<div class="relative w-full bg-neutral-bg selection:bg-brand-primary selection:text-white">
+<div class="relative w-full bg-muted selection:bg-primary selection:text-white">
   
   <!-- Hero Section: Editorial & Asymmetric -->
-  <section class="relative pt-20 pb-32 lg:pt-32 lg:pb-48 overflow-hidden bg-neutral-surface border-b border-neutral-border">
+  <section class="relative pt-20 pb-32 lg:pt-32 lg:pb-48 overflow-hidden bg-card border-b border-border">
     <div class="max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8">
       <div class="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
         <!-- Text Content (Left 7 cols) -->
         <div class="lg:col-span-7 z-10">
           <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 border border-neutral-200 mb-8">
-            <div class="w-2 h-2 rounded-full bg-status-success animate-pulse"></div>
-            <span class="text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">WAStays for Partners</span>
+            <div class="w-2 h-2 rounded-full bg-success animate-pulse"></div>
+            <span class="text-xs font-bold uppercase tracking-widest text-muted-foreground">WAStays for Partners</span>
           </div>
           
-          <h1 class="text-5xl sm:text-7xl lg:text-[5rem] font-black text-neutral-text-primary leading-[0.95] tracking-tight mb-8">
+          <h1 class="text-5xl sm:text-7xl lg:text-[5rem] font-black text-foreground leading-[0.95] tracking-tight mb-8">
             Bookings.<br>
-            <span class="text-brand-primary">No Nonsense.</span><br>
+            <span class="text-primary">No Nonsense.</span><br>
             Just WhatsApp.
           </h1>
           
-          <p class="text-xl sm:text-2xl text-neutral-text-secondary font-medium max-w-2xl leading-snug mb-10">
+          <p class="text-xl sm:text-2xl text-muted-foreground font-medium max-w-2xl leading-snug mb-10">
             A radical new way for independent hotels to grow. Zero monthly fees. Zero setup costs. We only earn when you do.
           </p>
           
           <div class="flex flex-wrap gap-4">
-            <%= link_to "Start for Free", register_path, class: "btn bg-neutral-text-primary text-white hover:bg-black py-4 px-8 text-lg font-bold rounded-none shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all" %>
-            <a href="#bento" class="btn bg-white text-neutral-text-primary border-2 border-neutral-text-primary hover:bg-neutral-100 py-4 px-8 text-lg font-bold rounded-none transition-all">
+            <%= link_to "Start for Free", register_path, class: "btn bg-foreground text-white hover:bg-black py-4 px-8 text-lg font-bold rounded-none shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all" %>
+            <a href="#bento" class="btn bg-white text-foreground border-2 border-foreground hover:bg-neutral-100 py-4 px-8 text-lg font-bold rounded-none transition-all">
               How it works ↓
             </a>
           </div>
@@ -32,20 +32,20 @@
         <!-- Floating Abstract UI (Right 5 cols) -->
         <div class="lg:col-span-5 relative h-[400px] sm:h-[500px] w-full hidden md:block">
           <!-- Abstract shapes and floating cards instead of generic image -->
-          <div class="absolute top-10 right-10 w-72 h-72 bg-brand-primary/10 rounded-full blur-3xl"></div>
+          <div class="absolute top-10 right-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl"></div>
           <div class="absolute bottom-10 left-10 w-64 h-64 bg-green-500/10 rounded-full blur-3xl"></div>
           
           <!-- Floating Chat Bubble 1 -->
           <div class="absolute top-[15%] right-[10%] w-64 bg-white p-4 rounded-2xl rounded-tr-none shadow-xl border border-neutral-100 animate-[bounce_6s_infinite] rotate-3">
             <div class="flex items-center gap-3 mb-2">
-              <div class="w-8 h-8 rounded-full bg-brand-primary/20 flex items-center justify-center text-brand-primary font-bold text-xs">WA</div>
-              <span class="text-xs font-bold text-neutral-text-primary">WAStays Auto-Reply</span>
+              <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">WA</div>
+              <span class="text-xs font-bold text-foreground">WAStays Auto-Reply</span>
             </div>
-            <p class="text-sm text-neutral-text-secondary">Your room at Jesselton Cabin is confirmed! 🎉 Check-in is at 2PM.</p>
+            <p class="text-sm text-muted-foreground">Your room at Jesselton Cabin is confirmed! 🎉 Check-in is at 2PM.</p>
           </div>
 
           <!-- Floating Stat Card -->
-          <div class="absolute top-[45%] left-[5%] w-56 bg-brand-primary text-white p-5 rounded-xl shadow-2xl animate-[bounce_7s_infinite_1s] -rotate-3">
+          <div class="absolute top-[45%] left-[5%] w-56 bg-primary text-white p-5 rounded-xl shadow-2xl animate-[bounce_7s_infinite_1s] -rotate-3">
             <p class="text-xs font-bold uppercase tracking-widest text-white/80 mb-1">New Booking</p>
             <p class="text-3xl font-black mb-1">RM 240.00</p>
             <p class="text-sm text-white/90">Paid via Secure Link</p>
@@ -55,9 +55,9 @@
           <div class="absolute bottom-[20%] right-[5%] w-72 bg-white p-4 rounded-2xl rounded-tl-none shadow-xl border border-neutral-100 animate-[bounce_8s_infinite_2s] rotate-2">
             <div class="flex items-center gap-3 mb-2">
               <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold text-xs">G</div>
-              <span class="text-xs font-bold text-neutral-text-primary">Guest (Ahmad)</span>
+              <span class="text-xs font-bold text-foreground">Guest (Ahmad)</span>
             </div>
-            <p class="text-sm text-neutral-text-secondary">Thanks! I've uploaded my ID for pre-check-in as requested. 👍</p>
+            <p class="text-sm text-muted-foreground">Thanks! I've uploaded my ID for pre-check-in as requested. 👍</p>
           </div>
         </div>
       </div>
@@ -65,14 +65,14 @@
   </section>
 
   <!-- Bento Box Section: Pricing & Value -->
-  <section id="bento" class="py-24 sm:py-32 bg-neutral-bg">
+  <section id="bento" class="py-24 sm:py-32 bg-muted">
     <div class="max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8">
       
       <div class="mb-16 md:flex md:justify-between md:items-end">
-        <h2 class="text-4xl sm:text-5xl font-black text-neutral-text-primary tracking-tight max-w-2xl leading-tight">
-          A business model built for <span class="text-brand-primary">independent growth.</span>
+        <h2 class="text-4xl sm:text-5xl font-black text-foreground tracking-tight max-w-2xl leading-tight">
+          A business model built for <span class="text-primary">independent growth.</span>
         </h2>
-        <p class="mt-6 md:mt-0 text-lg text-neutral-text-secondary max-w-sm font-medium">
+        <p class="mt-6 md:mt-0 text-lg text-muted-foreground max-w-sm font-medium">
           We stripped away everything that makes dealing with OTAs painful.
         </p>
       </div>
@@ -81,13 +81,13 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         <!-- Large Block: Pay per booking -->
-        <div class="md:col-span-2 bg-neutral-surface border-2 border-neutral-text-primary rounded-3xl p-8 sm:p-12 relative overflow-hidden group hover:shadow-2xl transition-all duration-500">
+        <div class="md:col-span-2 bg-card border-2 border-foreground rounded-3xl p-8 sm:p-12 relative overflow-hidden group hover:shadow-2xl transition-all duration-500">
           <div class="relative z-10">
-            <div class="w-16 h-16 bg-brand-primary text-white flex items-center justify-center rounded-2xl mb-8 transform -rotate-6 group-hover:rotate-0 transition-transform duration-300">
+            <div class="w-16 h-16 bg-primary text-white flex items-center justify-center rounded-2xl mb-8 transform -rotate-6 group-hover:rotate-0 transition-transform duration-300">
               <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
-            <h3 class="text-3xl sm:text-4xl font-black text-neutral-text-primary mb-4">Pay Only Per Booking</h3>
-            <p class="text-lg text-neutral-text-secondary max-w-md font-medium leading-relaxed">
+            <h3 class="text-3xl sm:text-4xl font-black text-foreground mb-4">Pay Only Per Booking</h3>
+            <p class="text-lg text-muted-foreground max-w-md font-medium leading-relaxed">
               We take a small, transparent margin on confirmed bookings. If we don't bring you guests, you don't pay us a single cent. Simple.
             </p>
           </div>
@@ -96,35 +96,35 @@
         </div>
 
         <!-- Small Block 1: Zero Setup -->
-        <div class="bg-neutral-text-primary text-white rounded-3xl p-8 sm:p-10 flex flex-col justify-between">
+        <div class="bg-foreground text-white rounded-3xl p-8 sm:p-10 flex flex-col justify-between">
           <div>
             <h3 class="text-2xl font-bold mb-3">Zero Setup Cost</h3>
             <p class="text-white/70 font-medium">Free onboarding. We'll list your inventory and set up your profile within 24 hours.</p>
           </div>
-          <div class="mt-8 text-brand-secondary">
+          <div class="mt-8 text-secondary">
              <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           </div>
         </div>
 
         <!-- Small Block 2: No Monthly Fees -->
-        <div class="bg-amber-400 border-2 border-neutral-text-primary rounded-3xl p-8 sm:p-10">
+        <div class="bg-amber-400 border-2 border-foreground rounded-3xl p-8 sm:p-10">
           <div class="w-12 h-12 bg-white text-amber-600 flex items-center justify-center rounded-xl mb-6 shadow-sm">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </div>
-          <h3 class="text-2xl font-black text-neutral-text-primary mb-3">No Monthly Fees</h3>
+          <h3 class="text-2xl font-black text-foreground mb-3">No Monthly Fees</h3>
           <p class="text-amber-900 font-bold">No subscriptions. No hidden maintenance charges. Just pure ROI.</p>
         </div>
 
         <!-- Medium Block: Instant Payouts / Payout process -->
-        <div class="md:col-span-2 bg-neutral-surface border border-neutral-border rounded-3xl p-8 sm:p-10 flex items-center gap-8">
+        <div class="md:col-span-2 bg-card border border-border rounded-3xl p-8 sm:p-10 flex items-center gap-8">
            <div class="hidden sm:block flex-shrink-0">
-             <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center text-status-success">
+             <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center text-success">
                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
              </div>
            </div>
            <div>
-             <h3 class="text-2xl font-black text-neutral-text-primary mb-2">Automated Payouts</h3>
-             <p class="text-neutral-text-secondary font-medium">Guest pays securely upfront. We remit funds to your bank account automatically minus our margin. No chasing invoices.</p>
+             <h3 class="text-2xl font-black text-foreground mb-2">Automated Payouts</h3>
+             <p class="text-muted-foreground font-medium">Guest pays securely upfront. We remit funds to your bank account automatically minus our margin. No chasing invoices.</p>
            </div>
         </div>
 
@@ -133,7 +133,7 @@
   </section>
 
   <!-- Show Don't Tell: WhatsApp workflow -->
-  <section class="py-24 sm:py-32 bg-green-500 overflow-hidden relative border-y-2 border-neutral-text-primary">
+  <section class="py-24 sm:py-32 bg-green-500 overflow-hidden relative border-y-2 border-foreground">
     <!-- Background noise/pattern could go here -->
     <div class="max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8">
       <div class="grid lg:grid-cols-2 gap-16 items-center">
@@ -165,10 +165,10 @@
         <!-- Phone Mockup -->
         <div class="relative w-full max-w-sm mx-auto mt-10 lg:mt-0">
           <!-- Minimalist Phone Frame drawn in CSS -->
-          <div class="relative bg-neutral-surface rounded-[3rem] border-[12px] border-neutral-text-primary shadow-2xl h-[650px] overflow-hidden rotate-2 transform-gpu hover:rotate-0 transition-transform duration-500">
+          <div class="relative bg-card rounded-[3rem] border-[12px] border-foreground shadow-2xl h-[650px] overflow-hidden rotate-2 transform-gpu hover:rotate-0 transition-transform duration-500">
             <!-- Dynamic Island / Notch -->
             <div class="absolute top-0 inset-x-0 h-7 flex justify-center z-20">
-               <div class="w-32 h-6 bg-neutral-text-primary rounded-b-3xl"></div>
+               <div class="w-32 h-6 bg-foreground rounded-b-3xl"></div>
             </div>
             
             <!-- WhatsApp Header -->
@@ -185,29 +185,29 @@
               <!-- Background pattern mock -->
               <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#000 1px, transparent 1px); background-size: 20px 20px;"></div>
               
-              <div class="relative z-10 w-fit max-w-[85%] bg-white rounded-xl rounded-tl-none p-3 shadow-sm text-sm text-neutral-text-primary">
+              <div class="relative z-10 w-fit max-w-[85%] bg-white rounded-xl rounded-tl-none p-3 shadow-sm text-sm text-foreground">
                 Hi! Looking for a room near the airport for tonight.
-                <span class="text-[10px] text-neutral-text-secondary float-right mt-2 ml-2">14:02</span>
+                <span class="text-[10px] text-muted-foreground float-right mt-2 ml-2">14:02</span>
               </div>
               
-              <div class="relative z-10 w-fit max-w-[85%] self-end bg-[#DCF8C6] rounded-xl rounded-tr-none p-3 shadow-sm text-sm text-neutral-text-primary">
+              <div class="relative z-10 w-fit max-w-[85%] self-end bg-[#DCF8C6] rounded-xl rounded-tr-none p-3 shadow-sm text-sm text-foreground">
                 Hi there! We have a Standard Queen at Aeropod Hotel available for RM 150. Would you like to secure this?
                 <span class="text-[10px] text-green-800 float-right mt-2 ml-2">14:03</span>
               </div>
               
-              <div class="relative z-10 w-fit max-w-[85%] bg-white rounded-xl rounded-tl-none p-3 shadow-sm text-sm text-neutral-text-primary">
+              <div class="relative z-10 w-fit max-w-[85%] bg-white rounded-xl rounded-tl-none p-3 shadow-sm text-sm text-foreground">
                 Perfect. How do I pay?
-                <span class="text-[10px] text-neutral-text-secondary float-right mt-2 ml-2">14:04</span>
+                <span class="text-[10px] text-muted-foreground float-right mt-2 ml-2">14:04</span>
               </div>
               
               <div class="relative z-10 w-full max-w-[85%] self-end bg-[#DCF8C6] rounded-xl rounded-tr-none p-3 shadow-sm">
                 <div class="bg-white/50 rounded-lg p-3 mb-2 border border-green-200">
                   <p class="font-bold text-sm">Invoice #INV-293</p>
-                  <p class="text-xs text-neutral-text-secondary">Aeropod Hotel • 1 Night</p>
+                  <p class="text-xs text-muted-foreground">Aeropod Hotel • 1 Night</p>
                   <p class="font-black text-lg mt-1">RM 150.00</p>
-                  <button class="w-full bg-brand-primary text-white text-xs font-bold py-2 rounded mt-2">Pay Securely</button>
+                  <button class="w-full bg-primary text-white text-xs font-bold py-2 rounded mt-2">Pay Securely</button>
                 </div>
-                <p class="text-sm text-neutral-text-primary">Click the button above to pay via FPX or Card. I'll send your check-in details right after!</p>
+                <p class="text-sm text-foreground">Click the button above to pay via FPX or Card. I'll send your check-in details right after!</p>
                 <span class="text-[10px] text-green-800 float-right mt-2 ml-2">14:04</span>
               </div>
             </div>
@@ -221,28 +221,28 @@
   </section>
 
   <!-- Editorial Pull-Quote / Social Proof -->
-  <section class="py-32 bg-neutral-surface border-b-2 border-neutral-text-primary">
+  <section class="py-32 bg-card border-b-2 border-foreground">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <svg class="w-16 h-16 mx-auto mb-8 text-brand-primary opacity-50" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+      <svg class="w-16 h-16 mx-auto mb-8 text-primary opacity-50" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
       
-      <h3 class="text-3xl sm:text-5xl font-black text-neutral-text-primary leading-tight tracking-tight mb-12">
+      <h3 class="text-3xl sm:text-5xl font-black text-foreground leading-tight tracking-tight mb-12">
         "We used to lose 20% of our revenue to OTA commissions. Switching to WAStays brought our direct bookings back to life, and the WhatsApp pre-check-in feels like magic to our guests."
       </h3>
       
       <div class="inline-flex items-center gap-4 text-left">
-        <div class="w-14 h-14 bg-neutral-200 rounded-full border-2 border-neutral-text-primary overflow-hidden">
+        <div class="w-14 h-14 bg-neutral-200 rounded-full border-2 border-foreground overflow-hidden">
           <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200" alt="Hotel Owner" class="w-full h-full object-cover">
         </div>
         <div>
-          <p class="font-bold text-neutral-text-primary text-lg">Azman Ibrahim</p>
-          <p class="text-neutral-text-secondary font-medium">Owner, Jesselton Cabin</p>
+          <p class="font-bold text-foreground text-lg">Azman Ibrahim</p>
+          <p class="text-muted-foreground font-medium">Owner, Jesselton Cabin</p>
         </div>
       </div>
     </div>
   </section>
 
   <!-- Brutalist / High-Contrast CTA -->
-  <section class="py-24 sm:py-32 bg-brand-primary text-white text-center">
+  <section class="py-24 sm:py-32 bg-primary text-white text-center">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 class="text-5xl sm:text-7xl font-black tracking-tight mb-8 leading-none">
         Ready to take control?
@@ -252,7 +252,7 @@
       </p>
       
       <div class="flex flex-col sm:flex-row justify-center gap-6 items-center">
-        <%= link_to "Register Your Hotel", register_path, class: "btn bg-white text-neutral-text-primary hover:bg-neutral-100 py-5 px-10 text-xl font-bold rounded-none shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] border-2 border-neutral-text-primary hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all" %>
+        <%= link_to "Register Your Hotel", register_path, class: "btn bg-white text-foreground hover:bg-neutral-100 py-5 px-10 text-xl font-bold rounded-none shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] border-2 border-foreground hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all" %>
         <span class="text-white/60 font-bold italic">or</span>
         <a href="https://wa.me/601162023996" class="group flex items-center gap-2 text-lg font-bold hover:text-yellow-300 transition-colors">
           Chat with Sales
@@ -263,24 +263,24 @@
   </section>
   
   <!-- FAQ - Simplified & Clean -->
-  <section class="py-24 bg-neutral-surface">
+  <section class="py-24 bg-card">
     <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h3 class="text-4xl font-black text-neutral-text-primary mb-12 tracking-tight">Got questions?</h3>
+      <h3 class="text-4xl font-black text-foreground mb-12 tracking-tight">Got questions?</h3>
       
       <div class="space-y-6">
-        <div class="border-b-2 border-neutral-border pb-6">
-          <h4 class="font-bold text-xl mb-3 text-neutral-text-primary">How much does it actually cost?</h4>
-          <p class="text-neutral-text-secondary text-lg font-medium leading-relaxed">WAStays is free to join. We don't charge any setup fees or monthly subscriptions. We only take a small margin on confirmed bookings processed through our platform. No guests, no fees.</p>
+        <div class="border-b-2 border-border pb-6">
+          <h4 class="font-bold text-xl mb-3 text-foreground">How much does it actually cost?</h4>
+          <p class="text-muted-foreground text-lg font-medium leading-relaxed">WAStays is free to join. We don't charge any setup fees or monthly subscriptions. We only take a small margin on confirmed bookings processed through our platform. No guests, no fees.</p>
         </div>
         
-        <div class="border-b-2 border-neutral-border pb-6">
-          <h4 class="font-bold text-xl mb-3 text-neutral-text-primary">Do I need special software?</h4>
-          <p class="text-neutral-text-secondary text-lg font-medium leading-relaxed">Not at all. You can access our Hotel Dashboard from any web browser on your phone, tablet, or PC to manage rooms and view bookings. Your guests only need WhatsApp.</p>
+        <div class="border-b-2 border-border pb-6">
+          <h4 class="font-bold text-xl mb-3 text-foreground">Do I need special software?</h4>
+          <p class="text-muted-foreground text-lg font-medium leading-relaxed">Not at all. You can access our Hotel Dashboard from any web browser on your phone, tablet, or PC to manage rooms and view bookings. Your guests only need WhatsApp.</p>
         </div>
         
-        <div class="border-b-2 border-neutral-border pb-6">
-          <h4 class="font-bold text-xl mb-3 text-neutral-text-primary">How do payouts work?</h4>
-          <p class="text-neutral-text-secondary text-lg font-medium leading-relaxed">We handle the secure payment link via WhatsApp. Once a guest pays and the booking is confirmed, the funds (minus our margin) are automatically remitted to your registered bank account.</p>
+        <div class="border-b-2 border-border pb-6">
+          <h4 class="font-bold text-xl mb-3 text-foreground">How do payouts work?</h4>
+          <p class="text-muted-foreground text-lg font-medium leading-relaxed">We handle the secure payment link via WhatsApp. Once a guest pays and the booking is confirmed, the funds (minus our margin) are automatically remitted to your registered bank account.</p>
         </div>
       </div>
     </div>

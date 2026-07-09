@@ -18,14 +18,14 @@
               total_amenities_count += visible_amenities.size
         %>
           <div>
-            <h4 class="flex items-center gap-x-2 text-xs font-black text-neutral-text-primary uppercase tracking-widest mb-4">
+            <h4 class="flex items-center gap-x-2 text-xs font-black text-foreground uppercase tracking-widest mb-4">
               <%= category_icon(category) %>
               <%= category %>
             </h4>
             <div class="space-y-3">
               <% visible_amenities.each do |amenity| %>
-                <div class="flex items-center gap-x-2.5 text-[13px] font-medium text-neutral-text-secondary">
-                  <svg class="w-5 h-5 text-status-success shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <div class="flex items-center gap-x-2.5 text-[13px] font-medium text-muted-foreground">
+                  <svg class="w-5 h-5 text-success shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   <span><%= amenity.name %></span>
                 </div>
               <% end %>
@@ -43,14 +43,14 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-10">
         <% categorized_amenities.each do |category, amenities| %>
           <div>
-            <h4 class="flex items-center gap-x-2 text-xs font-black text-neutral-text-primary uppercase tracking-widest mb-4">
+            <h4 class="flex items-center gap-x-2 text-xs font-black text-foreground uppercase tracking-widest mb-4">
               <%= category_icon(category) %>
               <%= category %>
             </h4>
             <div class="space-y-3">
               <% amenities.each do |amenity| %>
-                <div class="flex items-center gap-x-2.5 text-[13px] font-medium text-neutral-text-secondary">
-                  <svg class="w-5 h-5 text-status-success shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <div class="flex items-center gap-x-2.5 text-[13px] font-medium text-muted-foreground">
+                  <svg class="w-5 h-5 text-success shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   <span><%= amenity.name %></span>
                 </div>
               <% end %>

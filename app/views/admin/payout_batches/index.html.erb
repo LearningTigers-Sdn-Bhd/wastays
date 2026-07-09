@@ -30,18 +30,18 @@
           <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'grid' : 'hidden' %> md:col-span-4 grid-cols-2 gap-2">
             <div>
               <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">From</label>
-              <%= f.date_field :start_date, value: @start_date, class: "form-input py-2 px-2 text-xs", data: { action: "change->auto-submit#submitNow" } %>
+              <%= f.date_field :start_date, value: @start_date, class: "legacy-form-input py-2 px-2 text-xs", data: { action: "change->auto-submit#submitNow" } %>
             </div>
             <div>
               <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">To</label>
-              <%= f.date_field :end_date, value: @end_date, class: "form-input py-2 px-2 text-xs", data: { action: "change->auto-submit#submitNow" } %>
+              <%= f.date_field :end_date, value: @end_date, class: "legacy-form-input py-2 px-2 text-xs", data: { action: "change->auto-submit#submitNow" } %>
             </div>
           </div>
 
           <div class="md:col-span-5">
             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Search Hotels/Reference</label>
             <div class="relative">
-              <%= f.text_field :q, value: params[:q], placeholder: "Search as you type...", class: "form-input py-2 pl-9 pr-3 text-sm", data: { action: "input->auto-submit#submit" } %>
+              <%= f.text_field :q, value: params[:q], placeholder: "Search as you type...", class: "legacy-form-input py-2 pl-9 pr-3 text-sm", data: { action: "input->auto-submit#submit" } %>
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <svg class="size-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               </div>
@@ -54,11 +54,10 @@
     <!-- Tabs Navigation -->
     <div class="border-b border-gray-200 mb-6">
       <nav class="flex space-x-6" aria-label="Tabs" role="tablist">
-        <button type="button" 
-                class="hs-tab-active:font-bold hs-tab-active:border-brand-primary hs-tab-active:text-brand-primary py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-brand-primary focus:outline-none focus:text-brand-primary <%= 'active' if @active_tab == 'pending' %>" 
-                id="tabs-payout-item-1" 
-                data-hs-tab="#tabs-payout-1" 
-                aria-controls="tabs-payout-1" 
+        <button type="button"
+                class="py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-brand-primary focus:outline-none focus:text-brand-primary <%= 'font-bold border-brand-primary text-brand-primary' if @active_tab == 'pending' %>"
+                id="tabs-payout-item-1"
+                aria-controls="tabs-payout-1"
                 role="tab"
                 data-action="click->tab-field#update"
                 data-tab-value="pending">
@@ -67,11 +66,10 @@
             <%= @pending_batches.total_count %>
           </span>
         </button>
-        <button type="button" 
-                class="hs-tab-active:font-bold hs-tab-active:border-brand-primary hs-tab-active:text-brand-primary py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-brand-primary focus:outline-none focus:text-brand-primary <%= 'active' if @active_tab == 'paid' %>" 
-                id="tabs-payout-item-2" 
-                data-hs-tab="#tabs-payout-2" 
-                aria-controls="tabs-payout-2" 
+        <button type="button"
+                class="py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-brand-primary focus:outline-none focus:text-brand-primary <%= 'font-bold border-brand-primary text-brand-primary' if @active_tab == 'paid' %>"
+                id="tabs-payout-item-2"
+                aria-controls="tabs-payout-2"
                 role="tab"
                 data-action="click->tab-field#update"
                 data-tab-value="paid">
