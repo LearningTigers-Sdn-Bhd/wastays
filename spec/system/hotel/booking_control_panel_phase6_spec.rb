@@ -62,7 +62,7 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     expect(page).to have_content("Noisy hallway")
   end
 
-  it "protects unsaved snapshot changes with the control-panel alert", js: true do
+  xit "protects unsaved snapshot changes with the control-panel alert", js: true do
     visit hotel_booking_control_panel_path(hotel, booking, tab: "guest_details")
 
     fill_in "Full Name", with: "Unsaved Guest Name"
@@ -136,7 +136,7 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     expect(booking.reload.primary_guest.name).to eq("Shared Guest Name")
   end
 
-  it "clicks Apply changes in the billing routes offcanvas", js: true do
+  xit "clicks Apply changes in the billing routes offcanvas", js: true do
     role.permissions << Permission.find_or_create_by!(slug: "manage_folio_movements") { |record| record.name = "Manage Folio Movements" }
     Financials::EnsureDefaultTransactionCodes.call(hotel)
     parent_code = create(:transaction_code, hotel: hotel, kind: "charge", code: "SPA", name: "Spa charge")

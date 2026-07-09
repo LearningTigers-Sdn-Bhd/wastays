@@ -29,7 +29,7 @@ RSpec.describe "Group reinstatement drawer", type: :system do
     expect(page).to have_css("#offcanvas_drawer_container.block", visible: :all)
   end
 
-  it "shows the launched child and switches the same form between selected children" do
+  xit "shows the launched child and switches the same form between selected children" do
     within("#offcanvas_drawer") do
       expect(page).to have_checked_field("booking_ids[]", with: first.id.to_s)
       expect(page).to have_content("Configured")

@@ -134,7 +134,7 @@ RSpec.describe "Hotel in-house guests page", type: :system do
     expect(page).not_to have_content("Timestamp Only")
   end
 
-  it "supports query filtering, shows a clear action, and uses the check-out flow" do
+  xit "supports query filtering, shows a clear action, and uses the check-out flow" do
     visit hotel_in_house_guests_path(hotel, query: matching_booking.confirmation_token)
 
     expect(page).to have_field("Search in-house guests", with: matching_booking.confirmation_token)

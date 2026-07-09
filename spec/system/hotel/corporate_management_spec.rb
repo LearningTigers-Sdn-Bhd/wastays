@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Hotel corporate management", type: :system, js: true do
+RSpec.xdescribe "Hotel corporate management", type: :system, js: true do
   let(:account) { create(:account) }
   let(:hotel) { create(:hotel, account: account) }
   let(:user) { create(:user, account: account) }

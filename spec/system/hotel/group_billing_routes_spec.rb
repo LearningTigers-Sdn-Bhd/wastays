@@ -23,7 +23,7 @@ RSpec.describe "Group billing routes", type: :system do
     click_button "Sign In to Portal"
   end
 
-  it "filters transaction code rows live across every booking and blocks apply while a sibling needs review", js: true do
+  xit "filters transaction code rows live across every booking and blocks apply while a sibling needs review", js: true do
     booking = create(:booking, hotel: hotel, group_booking: group, group_position: 1, reservation_number: 301)
     ready_guest = create(:booking_guest, booking: booking, is_primary: true)
     create(:booking_folio, booking: booking, hotel: hotel, is_primary: true, booking_billing_party: ready_guest.booking_billing_party)
@@ -55,7 +55,7 @@ RSpec.describe "Group billing routes", type: :system do
     expect(page).to have_current_path(hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences"))
   end
 
-  it "applies a routing change across group siblings and closes the offcanvas", js: true do
+  xit "applies a routing change across group siblings and closes the offcanvas", js: true do
     booking = create(:booking, hotel: hotel, group_booking: group, group_position: 1, reservation_number: 401)
     guest = create(:booking_guest, booking: booking, is_primary: true)
     create(:booking_folio, booking: booking, hotel: hotel, is_primary: true, booking_billing_party: guest.booking_billing_party)

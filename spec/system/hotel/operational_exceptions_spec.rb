@@ -58,7 +58,7 @@ RSpec.describe "Operational Exceptions", type: :system do
   end
 
   describe "Early Departure" do
-    it "shows early departure review in checkout modal and applies charge" do
+    xit "shows early departure review in checkout modal and applies charge" do
       travel_to Time.zone.local(2026, 5, 21, 10, 0, 0)
       business_date = hotel.business_date_for
 

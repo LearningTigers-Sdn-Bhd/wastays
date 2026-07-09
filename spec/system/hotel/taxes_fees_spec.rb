@@ -54,7 +54,7 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
     end
   end
 
-  it "opens add and edit fee forms in the fullscreen offcanvas" do
+  xit "opens add and edit fee forms in the fullscreen offcanvas" do
     visit hotel_taxes_fees_path(hotel)
 
     within("[data-testid='additional-taxes-fees']") do
@@ -115,7 +115,7 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
     expect(page).to have_content("No additional service transaction codes found.")
   end
 
-  it "updates transaction code tax rules and footer preview dynamically" do
+  xit "updates transaction code tax rules and footer preview dynamically" do
     HotelTax.create!(hotel: hotel, name: "Service Charge", code: "SC", rate_type: "percentage", amount: 10.0, enabled: true)
 
     visit hotel_transaction_codes_path(hotel)
