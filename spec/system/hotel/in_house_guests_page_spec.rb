@@ -100,10 +100,7 @@ RSpec.describe "Hotel in-house guests page", type: :system do
     Folios::InitializeForBooking.call(booking: matching_booking, user: user)
     Folios::InitializeForBooking.call(booking: older_booking, user: user)
 
-    visit login_path
-    fill_in "Email Address", with: user.email
-    fill_in "Password", with: "password123"
-    click_button "Sign In to Portal"
+    sign_in_through_ui(user)
   end
 
   it "renders the in-house guests board with search, summary, rows, and actions" do

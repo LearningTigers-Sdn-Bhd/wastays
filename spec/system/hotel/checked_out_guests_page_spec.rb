@@ -92,10 +92,7 @@ RSpec.describe "Hotel today's check-outs page", type: :system do
       )
     end
 
-    visit login_path
-    fill_in "Email Address", with: user.email
-    fill_in "Password", with: "password123"
-    click_button "Sign In to Portal"
+    sign_in_through_ui(user)
   end
 
   it "renders today's check-outs with search, summary, rows, and actions" do
