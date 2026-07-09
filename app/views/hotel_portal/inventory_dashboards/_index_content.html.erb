@@ -82,19 +82,14 @@
     <% end %>
 
     <!-- Page Header -->
-    <div class="mb-5 flex flex-wrap items-end justify-end gap-4 hidden" data-inventory-calendar-target="syncHeader">
-      <div class="flex items-center gap-3.5">
+    <div class="fixed bottom-6 right-6 z-40 flex flex-wrap items-end justify-end gap-4 hidden" data-inventory-calendar-target="syncHeader">
+      <div class="flex items-center gap-3.5 rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
         <div class="flex items-center gap-1">
           <span class="hidden text-xs text-slate-400 sm:block">
             Last synced <%= Time.current.strftime("%-I:%M %p") %>
           </span>
-          <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(force_refresh: true)), 
-                      class: "text-slate-400 hover:text-indigo-600 transition-all hover:rotate-180 duration-500 p-1 rounded-md hover:bg-slate-100 flex items-center justify-center size-7", 
-                      title: "Refresh channel connections" do %>
-            <%= cached_icon "refresh-cw", class: "size-3.5" %>
-          <% end %>
         </div>
-        <button type="button" 
+        <button type="button"
                 data-inventory-calendar-target="syncButton"
                 data-action="inventory-calendar#openReview"
                 disabled
@@ -169,16 +164,31 @@
 
       <div class="mx-1 hidden h-6 w-px bg-slate-200 sm:block"></div>
 
-      <!-- OTAs Toggle -->
-      <div class="flex items-center select-none">
-        <label class="relative inline-flex items-center cursor-pointer select-none">
-          <input type="checkbox"
-                 data-action="change->inventory-calendar#toggleOtas"
-                 data-inventory-calendar-target="otasToggleCheckbox"
-                 class="sr-only peer">
-          <div class="relative w-9 h-5 bg-slate-200 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
-          <span class="ml-2.5 text-xs font-bold uppercase tracking-wider text-slate-400">Show OTAs</span>
-        </label>
+      <!-- OTAs Toggle / Refresh -->
+      <div class="flex items-center gap-3 select-none">
+        <% if @channels.present? %>
+          <label class="relative inline-flex items-center cursor-pointer select-none">
+            <input type="checkbox"
+                   data-action="change->inventory-calendar#toggleOtas"
+                   data-inventory-calendar-target="otasToggleCheckbox"
+                   class="sr-only peer">
+            <div class="relative w-9 h-5 bg-slate-200 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+            <span class="ml-2.5 text-xs font-bold uppercase tracking-wider text-slate-400">Show OTAs</span>
+          </label>
+        <% end %>
+        <div class="relative flex items-center">
+          <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(force_refresh: true)),
+                      class: "text-slate-400 hover:text-indigo-600 transition-all hover:rotate-180 duration-500 p-1 rounded-md hover:bg-slate-100 flex items-center justify-center size-7",
+                      data: { tooltip_id: "refresh-channels-tip", action: "mouseenter->inventory-calendar#showTooltip mouseleave->inventory-calendar#hideTooltip" } do %>
+            <%= cached_icon "refresh-cw", class: "size-3.5" %>
+          <% end %>
+          <!-- Tooltip Box -->
+          <div id="refresh-channels-tip"
+               class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 p-2.5 bg-slate-900 text-white text-[11px] font-semibold leading-relaxed rounded-xl shadow-xl z-50 transition-all duration-200 hidden opacity-0 scale-95 origin-top">
+            <div class="absolute bottom-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-b-slate-900"></div>
+            Refresh channel connections to detect newly connected OTAs.
+          </div>
+        </div>
       </div>
 
       <!-- Legend -->
