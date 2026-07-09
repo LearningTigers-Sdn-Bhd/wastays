@@ -417,7 +417,7 @@ module HotelPortal
     end
 
     def billing_routes_params
-      params.fetch(:routes, {}).permit!.to_h
+      params.permit(routes: {}).fetch(:routes, {}).to_h
     end
 
     def prepare_billing_routes
@@ -443,7 +443,7 @@ module HotelPortal
     end
 
     def group_billing_routes_params
-      params.fetch(:group_routes, {}).permit!.to_h
+      params.permit(group_routes: {}).fetch(:group_routes, {}).to_h
     end
 
     def prepare_confirm_group_scope
