@@ -27,7 +27,7 @@ module Public
     end
 
     def rooms_count_label
-      "#{booking.booking_rooms.sum(&:quantity)} room(s)"
+      "#{booking.booking_rooms.count} room(s)"
     end
 
     def completed?

@@ -6,6 +6,7 @@ class Public::BookingsController < ApplicationController
     @booking = Public::BookingPresenter.new(booking, view_context)
     @hotel = Public::HotelPresenter.new(@booking.hotel, view_context)
     @booking_rooms = @booking.booking_rooms
+    @display_currency = DisplayCurrencyResolver.new(params: params, cookies: cookies, request: request).call
     pre_checkin_result = GuestArrival::StartPreCheckin.new(booking).call
     @pre_checkin = pre_checkin_result.pre_checkin if pre_checkin_result.success?
     @qr_data_url = Concierge::QrSvg.data_url(@booking.confirmation_token)

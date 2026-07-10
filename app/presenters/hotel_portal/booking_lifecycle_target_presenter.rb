@@ -64,7 +64,7 @@ module HotelPortal
 
     def child_bookings
       booking.group_booking.bookings
-        .includes(:booking_folio, booking_rooms: :room_type, booking_guests: :guest)
+        .includes(:hotel, :booking_folio, booking_rooms: :room_type, booking_guests: :guest)
         .order(:group_position, :id)
     end
 

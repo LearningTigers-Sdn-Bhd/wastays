@@ -100,7 +100,7 @@
               <% end %>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-2">
+            <div class="grid gap-4 md:grid-cols-2 <%= 'lg:grid-cols-3' if @hotel.allow_pax_pricing? %>">
               <div data-controller="searchable-select">
                 <%= f.label :time_zone, "Property Timezone", class: "mb-2 block text-sm font-medium text-slate-900" %>
                 <div class="relative group">
@@ -137,6 +137,20 @@
                   <p class="mt-1 text-[10px] font-medium text-rose-500 italic">Contact admin to change base currency.</p>
                 <% end %>
               </div>
+
+              <% if @hotel.allow_pax_pricing? %>
+                <div>
+                  <span class="mb-2 block text-sm font-medium text-slate-900">Pax Pricing Only</span>
+                  <label class="flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 cursor-pointer">
+                    <span class="text-xs text-slate-600 font-medium">Restrict to Per-Pax Rates</span>
+                    <span class="relative inline-flex items-center">
+                      <%= f.check_box :pax_pricing_only, class: "sr-only peer" %>
+                      <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-900 peer-checked:after:translate-x-full"></span>
+                    </span>
+                  </label>
+                  <p class="mt-1 text-[10px] font-medium text-slate-400 italic">If enabled, guests can only book via per-person rates on the public booking page.</p>
+                </div>
+              <% end %>
             </div>
 
             <div class="grid gap-4 md:grid-cols-2 mt-6">

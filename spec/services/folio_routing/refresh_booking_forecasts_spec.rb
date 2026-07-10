@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe FolioRouting::RefreshBookingForecasts do
   it "rebuilds booking tax snapshots from room items and syncs the primary folio" do
     booking = create(:booking, guest_country: "Malaysia")
-    room = create(:booking_room, booking: booking, quantity: 0, nightly_rate_snapshot: { "2026-07-09" => 150 })
+    room = create(:booking_room, booking: booking, nightly_rate_snapshot: { "2026-07-09" => 150 })
     folio = create(:booking_folio, booking: booking, hotel: booking.hotel)
     snapshot = OpenStruct.new(
       tax_lines: [ { "type" => "sst", "amount" => "12.00" } ],
@@ -32,7 +32,7 @@ RSpec.describe FolioRouting::RefreshBookingForecasts do
 
   it "updates snapshots without syncing when no folio exists" do
     booking = create(:booking)
-    create(:booking_room, booking: booking, quantity: 2, nightly_rate_snapshot: { "2026-07-09" => 100 })
+    create(:booking_room, booking: booking, nightly_rate_snapshot: { "2026-07-09" => 100 })
     snapshot = OpenStruct.new(tax_lines: [], tax_posting_snapshot: {})
     allow(Bookings::BuildFinancialSnapshot).to receive(:new).and_return(instance_double(Bookings::BuildFinancialSnapshot, call: snapshot))
     allow(Folios::SyncForecastedCharges).to receive(:call)

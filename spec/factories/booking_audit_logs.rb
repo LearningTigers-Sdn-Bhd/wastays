@@ -1,7 +1,7 @@
 FactoryBot.define do
   factory :booking_audit_log do
     association :hotel
-    association :auditable, factory: :booking
+    auditable { association :booking, hotel: hotel }
     association :user
     action_type { "update" }
     category { "stay" }

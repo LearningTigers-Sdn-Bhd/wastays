@@ -4,6 +4,7 @@
     <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) %>
       <% tabs.concat([
         { name: "general", label: "General", icon: "settings" },
+        { name: "rates", label: "Rate Settings", icon: "badge-dollar-sign" },
         { name: "ai", label: "AI Concierge", icon: "sparkles" },
         { name: "notifications", label: "Notifications", icon: "bell" }
       ]) %>

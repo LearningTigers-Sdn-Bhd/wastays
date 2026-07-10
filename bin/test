@@ -370,6 +370,32 @@ runtime_log_path() {
   printf "tmp/parallel_runtime_rspec_%s.log" "$1"
 }
 
+# Headless Chrome is far heavier per-process than a plain RSpec worker, so
+# running one Cuprite/Chrome instance per CPU core saturates the machine and
+# produces flaky Ferrum timeouts. Halve the worker count whenever the run
+# includes spec/system, unless the caller explicitly pins a count.
+worker_count_for_paths() {
+  local base_count
+  base_count=$(parallel_process_count)
+
+  if [[ -n "${PARALLEL_TEST_PROCESSORS:-}" ]]; then
+    printf "%s" "$base_count"
+    return
+  fi
+
+  local path
+  for path in "$@"; do
+    if [[ "$path" == spec/system* ]]; then
+      local half=$(( base_count / 2 ))
+      (( half < 2 )) && half=2
+      printf "%s" "$half"
+      return
+    fi
+  done
+
+  printf "%s" "$base_count"
+}
+
 runtime_group_by() {
   local domain="$1"
 
@@ -403,6 +429,7 @@ print_run_card() {
   local mode="$3"
   local group_by="${4:-}"
   local target="${5:-}"
+  local worker_count="${6:-}"
 
   printf "\n${BOLD}${CYAN}╭─ %s WASTAYS TEST RUN ─────────────────────────────${RESET}\n" "$icon"
   if [[ -n "$domain" ]]; then
@@ -411,7 +438,7 @@ print_run_card() {
   fi
   print_kv "Mode" "$mode"
   if [[ "$mode" == "parallel" ]]; then
-    print_kv "Processes" "$(parallel_process_count)"
+    print_kv "Processes" "${worker_count:-$(parallel_process_count)}"
     print_kv "Balance" "$(balance_label "$group_by")"
   fi
   if [[ -n "$target" ]]; then
@@ -770,14 +797,18 @@ run_parallel() {
   runtime_log=$(runtime_log_path "$domain")
   group_by=$(runtime_group_by "$domain")
 
+  local worker_count
+  worker_count=$(worker_count_for_paths "${paths[@]}")
+
   mkdir -p tmp
 
-  print_run_card "$(domain_icon "$domain")" "$domain" "parallel" "$group_by"
+  print_run_card "$(domain_icon "$domain")" "$domain" "parallel" "$group_by" "" "$worker_count"
   print_groups_card "$domain"
 
   if (( $# > 0 )); then
     run_and_report "$domain" "parallel" "$group_by" "$runtime_log" "" \
       bundle exec parallel_rspec \
+      -n "$worker_count" \
       --runtime-log "$runtime_log" \
       --group-by "$group_by" \
       --allowed-missing 100 \
@@ -791,6 +822,7 @@ run_parallel() {
   else
     run_and_report "$domain" "parallel" "$group_by" "$runtime_log" "" \
       bundle exec parallel_rspec \
+      -n "$worker_count" \
       --runtime-log "$runtime_log" \
       --group-by "$group_by" \
       --allowed-missing 100 \

@@ -81,7 +81,7 @@ module HotelPortal
       end
 
       def fetch_rate_plan_names
-        RatePlan.joins(:room_type).where(room_types: { hotel_id: current_hotel.id }).distinct.pluck(:name)
+        RatePlan.joins(:room_types).where(room_types: { hotel_id: current_hotel.id }).distinct.pluck(:name)
       end
 
       def build_booking_timeline_board(filters)

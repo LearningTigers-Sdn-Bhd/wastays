@@ -1,0 +1,41 @@
+<div data-controller="subtabs"
+     data-subtabs-default-tab-value="derived_settings"
+     data-subtabs-parameter-name-value="subtab">
+
+  <nav class="<%= dashboard_tab_container_classes %> mb-6">
+    <div class="flex min-w-max items-center gap-1" role="tablist" aria-label="Channels and OTAs sub-panels">
+      <button type="button"
+              data-subtabs-target="tab"
+              data-tab-name="derived_settings"
+              data-tab-label="Derived Pricing & Allocations"
+              data-action="click->subtabs#switch"
+              data-active="<%= @active_subtab == 'derived_settings' || @active_subtab.blank? %>"
+              class="<%= dashboard_tab_classes %>"
+              aria-controls="channels-derived-panel"
+              role="tab">
+        <%= cached_icon "percent", class: "size-4", aria: { hidden: true } %>
+        Derived Pricing & Allocations
+      </button>
+      <button type="button"
+              data-subtabs-target="tab"
+              data-tab-name="availability_rules"
+              data-tab-label="Availability Rules"
+              data-action="click->subtabs#switch"
+              data-active="<%= @active_subtab == 'availability_rules' %>"
+              class="<%= dashboard_tab_classes %>"
+              aria-controls="channels-rules-panel"
+              role="tab">
+        <%= cached_icon "calendar-cog", class: "size-4", aria: { hidden: true } %>
+        Availability Rules
+      </button>
+    </div>
+  </nav>
+
+  <div id="channels-derived-panel" data-subtabs-target="panel" data-tab-panel="derived_settings" class="<%= @active_subtab == 'derived_settings' || @active_subtab.blank? ? '' : 'hidden' %>" role="tabpanel">
+    <%= render "channels_derived_pricing" %>
+  </div>
+
+  <div id="channels-rules-panel" data-subtabs-target="panel" data-tab-panel="availability_rules" class="<%= @active_subtab == 'availability_rules' ? '' : 'hidden' %>" role="tabpanel">
+    <%= render "channels_availability_rules" %>
+  </div>
+</div>

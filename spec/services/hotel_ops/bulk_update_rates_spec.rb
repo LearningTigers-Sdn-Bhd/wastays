@@ -49,6 +49,6 @@ RSpec.describe HotelOps::BulkUpdateRates do
 
     expect {
       subject.call
-    }.to have_enqueued_job(ChannelManagers::SyncJob)
+    }.to enqueue_job(ChannelManagers::SyncJob).at_least(:once)
   end
 end

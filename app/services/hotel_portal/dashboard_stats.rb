@@ -7,7 +7,7 @@ module HotelPortal
     end
 
     def today_arrivals
-      @hotel.bookings.active.checking_in_on(Date.current, @hotel.hotel_time_zone)
+      @hotel.bookings.active.includes(:pre_checkin).checking_in_on(Date.current, @hotel.hotel_time_zone)
     end
 
     def tomorrow_arrivals

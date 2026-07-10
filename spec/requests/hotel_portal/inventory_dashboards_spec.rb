@@ -74,7 +74,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       page = Capybara.string(response.body)
       expect(page).to have_content("Rates & Availability")
       expect(page).to have_css("[data-testid='inventory-calendar-grid']")
-      expect(page).to have_button("Bulk Edit")
+      expect(page).to have_button("Sync")
       expect(page).to have_content("Pricing Rules")
       expect(page).to have_content("Availability Overrides")
     end
@@ -98,8 +98,6 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       page = Capybara.string(response.body)
       expect(page).to have_css("[data-testid='rate-cell-#{deluxe.id}-#{deluxe_plan.id}-#{Date.current}']", text: "320")
       expect(page).not_to have_css("[data-testid^='rate-cell-#{twin.id}-']")
-      expect(page).to have_select("room_type_id", selected: "Deluxe Room")
-      expect(page).not_to have_select("rate_plan_id")
     end
 
     it "renders restriction badges in unified rate cells" do
@@ -287,6 +285,85 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       inventory = room_type.room_inventories.find_by(date: Date.current)
       expect(inventory.quantity).to eq(8)
       expect(inventory.available_room_numbers).to match_array([ "101", "102", "103", "104", "105", "106", "107", "108" ])
+    end
+  end
+
+  describe "POST /update_channel_derived_pricing" do
+    it "creates or updates a ChannelDerivedSetting record" do
+      post update_channel_derived_pricing_hotel_inventory_dashboards_path(hotel), params: {
+        channel_id: "test_channel_id",
+        pricing_mode: "multiplier",
+        pricing_value: "12.50"
+      }
+
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, tab: "channels", subtab: "derived_settings"))
+      setting = hotel.channel_derived_settings.find_by(channel_id: "test_channel_id")
+      expect(setting).to be_present
+      expect(setting.pricing_mode).to eq("multiplier")
+      expect(setting.pricing_value.to_f).to eq(12.5)
+    end
+  end
+
+  describe "POST /create_channel_availability_rule" do
+    before do
+      allow(ChannelManagers::SyncAvailabilityRuleJob).to receive(:perform_later)
+    end
+
+    it "creates a ChannelAvailabilityRule record" do
+      post create_channel_availability_rule_hotel_inventory_dashboards_path(hotel), params: {
+        title: "Test Rule",
+        start_date: "2026-07-04",
+        end_date: "2026-07-10",
+        rule_type: "max_availability",
+        value: "4",
+        day_mo: "1",
+        day_fr: "1",
+        affected_channels: [ "ch_1" ],
+        affected_room_types: [ 123 ]
+      }
+
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, tab: "channels", subtab: "availability_rules"))
+      rule = hotel.channel_availability_rules.find_by(title: "Test Rule")
+      expect(rule).to be_present
+      expect(rule.rule_type).to eq("max_availability")
+      expect(rule.value).to eq(4)
+      expect(rule.days).to eq("mo,fr")
+      expect(rule.affected_channels).to eq([ "ch_1" ])
+      expect(rule.affected_room_types).to eq([ 123 ])
+    end
+  end
+
+  describe "DELETE /destroy_channel_availability_rule" do
+    before do
+      allow(ChannelManagers::SyncAvailabilityRuleJob).to receive(:perform_later)
+    end
+
+    it "destroys the specified availability rule" do
+      rule = create(:channel_availability_rule, hotel: hotel, start_date: Date.current, rule_type: "close_out")
+
+      delete destroy_channel_availability_rule_hotel_inventory_dashboards_path(hotel, id: rule.id)
+
+      expect(response).to redirect_to(hotel_inventory_index_path(hotel, tab: "channels", subtab: "availability_rules"))
+      expect(ChannelAvailabilityRule.find_by(id: rule.id)).to be_nil
+    end
+  end
+
+  describe "GET /occupancy_details" do
+    it "renders guest bookings grouped by room type with target=_blank link to their booking" do
+      room_type = create(:room_type, hotel: hotel, name: "Luxury Suite")
+      booking = create(:booking, hotel: hotel, guest_name: "Alice Cooper", check_in: Date.current, check_out: Date.current + 2.days, status: "confirmed")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "502")
+
+      get occupancy_details_hotel_inventory_dashboards_path(hotel), params: { date: Date.current.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Alice Cooper")
+      expect(response.body).to include("Luxury Suite")
+      expect(response.body).to include("502")
+      expect(response.body).to include("href=\"/hotel/#{hotel.to_param}/bookings/#{booking.id}\"")
+      expect(response.body).to include("target=\"_blank\"")
+      expect(response.body).to include(Date.current.strftime("%b %-d"))
+      expect(response.body).to include("2 nights")
     end
   end
 end

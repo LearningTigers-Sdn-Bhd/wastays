@@ -2,11 +2,13 @@
      data-controller="inventory-calendar inventory-row inventory-highlight"
      data-inventory-calendar-hotel-id-value="<%= current_hotel.id %>"
      data-inventory-calendar-batch-url-value="<%= batch_save_ari_hotel_inventory_dashboards_path(current_hotel) %>"
+     data-inventory-calendar-occupancy-details-url-value="<%= occupancy_details_hotel_inventory_dashboards_path(current_hotel) %>"
      data-inventory-calendar-default-mode-value="<%= @view_mode %>" 
      data-inventory-calendar-default-start-value="<%= @start_date %>" 
      data-inventory-calendar-default-end-value="<%= @end_date %>" 
      data-inventory-calendar-default-currency-value="<%= @display_currency %>"
-     data-inventory-calendar-base-currency-value="<%= @hotel_base_currency %>">
+     data-inventory-calendar-base-currency-value="<%= @hotel_base_currency %>"
+     data-inventory-calendar-allow-pax-pricing-value="<%= current_hotel.allow_pax_pricing? %>">
 
   <% if current_hotel.status == 'inventory_incomplete' %>
     <div class="px-4 md:px-0 mb-6">
@@ -48,6 +50,8 @@
 
         <div class="flex-1 overflow-y-auto px-5 py-5 space-y-6">
           <%= f.hidden_field :mode, data: { inventory_calendar_target: "mode" } %>
+          <%= f.hidden_field :channel_id, data: { inventory_calendar_target: "channelIdField" } %>
+          <%= f.hidden_field :channel_rate_plan_id, data: { inventory_calendar_target: "channelRatePlanIdField" } %>
           <%= f.hidden_field :apply_inventory, value: "0", data: { inventory_calendar_target: "applyInventory" } %>
           <%= f.hidden_field :apply_rates, value: "0", data: { inventory_calendar_target: "applyRates" } %>
           <%= f.hidden_field :apply_restrictions, value: "0", data: { inventory_calendar_target: "applyRestrictions" } %>
@@ -132,11 +136,75 @@
             </div>
           </div>
 
-          <div data-inventory-calendar-target="rateFields" class="pt-2">
+          <div data-inventory-calendar-target="rateFields" class="pt-2 space-y-4">
             <div>
-              <label class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Price (<%= @hotel_base_currency %>)</label>
+              <label data-inventory-calendar-target="priceLabel" class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Price (<%= @hotel_base_currency %>)</label>
               <%= f.number_field :price, step: 0.01, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "priceField", action: "input->inventory-calendar#markTouched" } %>
               <%= f.hidden_field :currency, value: @hotel_base_currency, data: { inventory_calendar_target: "currencyField" } %>
+            </div>
+             <div data-inventory-calendar-target="paxFields" class="grid gap-4 <%= current_hotel.allow_pax_pricing? ? 'sm:grid-cols-3' : 'sm:grid-cols-2' %>">
+              <div>
+                <div class="mb-1.5 flex items-center justify-between">
+                  <div class="relative flex items-center gap-1.5">
+                    <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Base Occupancy</label>
+                    <button type="button" 
+                            data-action="click->inventory-calendar#toggleTooltip mouseenter->inventory-calendar#showTooltip mouseleave->inventory-calendar#hideTooltip"
+                            data-tooltip-id="base-occ-tip"
+                            class="text-slate-400 hover:text-slate-600 transition-colors focus:outline-none">
+                      <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+                    </button>
+                    <!-- Tooltip Box -->
+                    <div id="base-occ-tip" 
+                         class="absolute bottom-full left-0 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] font-semibold leading-relaxed rounded-xl shadow-xl z-50 transition-all duration-200 hidden opacity-0 scale-95 origin-bottom-left">
+                      <div class="absolute top-full left-3 border-[6px] border-transparent border-t-slate-900"></div>
+                      Number of guests included in the base rate. Up to this occupancy, the standard price applies.
+                    </div>
+                  </div>
+                </div>
+                <%= f.number_field :base_occupancy, min: 1, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "baseOccupancyField", action: "input->inventory-calendar#markTouched" } %>
+              </div>
+              <div>
+                <div class="mb-1.5 flex items-center justify-between">
+                  <div class="relative flex items-center gap-1.5">
+                    <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Extra Pax Charge</label>
+                    <button type="button" 
+                            data-action="click->inventory-calendar#toggleTooltip mouseenter->inventory-calendar#showTooltip mouseleave->inventory-calendar#hideTooltip"
+                            data-tooltip-id="extra-pax-tip"
+                            class="text-slate-400 hover:text-slate-600 transition-colors focus:outline-none">
+                      <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+                    </button>
+                    <!-- Tooltip Box -->
+                    <div id="extra-pax-tip" 
+                         class="absolute bottom-full left-0 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] font-semibold leading-relaxed rounded-xl shadow-xl z-50 transition-all duration-200 hidden opacity-0 scale-95 origin-bottom-left">
+                      <div class="absolute top-full left-3 border-[6px] border-transparent border-t-slate-900"></div>
+                      The additional nightly charge applied to each guest exceeding the Base Occupancy limit.
+                    </div>
+                  </div>
+                </div>
+                <%= f.number_field :extra_pax_charge, step: 0.01, min: 0, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "extraPaxChargeField", action: "input->inventory-calendar#markTouched" } %>
+              </div>
+              <% if current_hotel.allow_pax_pricing? %>
+                <div>
+                  <div class="mb-1.5 flex items-center justify-between">
+                    <div class="relative flex items-center gap-1.5">
+                      <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Single Supplement</label>
+                      <button type="button" 
+                              data-action="click->inventory-calendar#toggleTooltip mouseenter->inventory-calendar#showTooltip mouseleave->inventory-calendar#hideTooltip"
+                              data-tooltip-id="single-supp-tip"
+                              class="text-slate-400 hover:text-slate-600 transition-colors focus:outline-none">
+                        <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+                      </button>
+                      <!-- Tooltip Box -->
+                      <div id="single-supp-tip" 
+                           class="absolute bottom-full right-0 mb-2 w-56 p-3 bg-slate-900 text-white text-[11px] font-semibold leading-relaxed rounded-xl shadow-xl z-50 transition-all duration-200 hidden opacity-0 scale-95 origin-bottom-right">
+                        <div class="absolute top-full right-3 border-[6px] border-transparent border-t-slate-900"></div>
+                        The supplement charge added (or discount applied if negative) for single occupancy bookings.
+                      </div>
+                    </div>
+                  </div>
+                  <%= f.number_field :single_supplement, step: 0.01, min: 0, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "singleSupplementField", action: "input->inventory-calendar#markTouched" } %>
+                </div>
+              <% end %>
             </div>
           </div>
 
@@ -165,12 +233,8 @@
                   <span>Closed to Departure</span>
                 </div>
               </label>
-              <label class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors">
-                <div class="flex items-center gap-2.5 text-red-600">
-                  <%= f.check_box :stop_sell, class: "size-4 rounded border-slate-300 text-red-600 focus:ring-0", data: { inventory_calendar_target: "stopSellField", action: "change->inventory-calendar#markTouched" } %>
-                  <span class="font-black uppercase tracking-wider">Stop Sell</span>
-                </div>
-              </label>
+              <%# Stop Sell is managed via Channels & OTAs > Availability Rules, not here. %>
+              <%= f.check_box :stop_sell, class: "hidden", data: { inventory_calendar_target: "stopSellField" } %>
             </div>
           </div>
         </div>
@@ -246,4 +310,38 @@
       </div>
     </div>
   </dialog>
+
+  <!-- Occupancy Details Dialog -->
+  <dialog id="occupancy-details-dialog" class="fixed inset-0 m-auto max-h-[85vh] w-[min(94vw,40rem)] overflow-hidden rounded-2xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/60 transition-all">
+    <turbo-frame id="occupancy_details_frame" loading="lazy">
+      <div class="flex h-48 items-center justify-center bg-white">
+        <div class="text-slate-400 font-semibold">Loading details...</div>
+      </div>
+    </turbo-frame>
+  </dialog>
+
+  <!-- Focus Mode Floating Exit Button -->
+  <button type="button"
+          data-action="click->inventory-calendar#toggleFullscreen"
+          data-inventory-calendar-target="fullscreenRestoreBtn"
+          class="fixed bottom-6 right-6 z-[70] hidden flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl hover:bg-indigo-700 transition-all active:scale-95 cursor-pointer border border-indigo-500/30"
+          title="Exit Focus Mode (Show menus)">
+    <%= cached_icon "minimize-2", class: "size-5", stroke_width: 2.5 %>
+  </button>
+
+  <style>
+    body.hotel-portal-focus-mode header,
+    body.hotel-portal-focus-mode aside,
+    body.hotel-portal-focus-mode [id^="sidebar"],
+    body.hotel-portal-focus-mode .flex-none.bg-layer {
+      display: none !important;
+    }
+    body.hotel-portal-focus-mode main {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    body.hotel-portal-focus-mode main > div {
+      padding: 12px !important;
+    }
+  </style>
 </div>

@@ -53,7 +53,7 @@ module GroupBookings
     end
 
     def one_room_stay?(booking)
-      booking.booking_rooms.size == 1 && booking.booking_rooms.first.quantity == 1
+      booking.booking_rooms.size == 1
     end
 
     def failure(message)

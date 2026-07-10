@@ -27,7 +27,7 @@ module Folios
 
     def nightly_room_amount(booking_room, business_date)
       snapshot = nightly_rate_snapshot_for(booking_room, business_date)
-      return snapshot["price"].to_d * booking_room.quantity.to_i if snapshot.present?
+      return snapshot["price"].to_d if snapshot.present?
 
       nightly_amount(booking_room.subtotal, booking_room.booking, business_date)
     end

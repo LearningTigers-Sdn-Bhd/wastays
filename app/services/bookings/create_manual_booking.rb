@@ -136,7 +136,6 @@ module Bookings
           booking.booking_rooms.build(
             room_type: room_type,
             rate_plan: rate_plan,
-            quantity: 1,
             subtotal: financial_snapshot.room_total,
             room_type_snapshot: room_type.as_json,
             nightly_rate_snapshot: financial_snapshot.nightly_rate_snapshot

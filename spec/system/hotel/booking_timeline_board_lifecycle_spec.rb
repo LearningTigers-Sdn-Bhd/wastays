@@ -25,14 +25,19 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
   end
 
   def drag_booking_to(booking:, room_number:, date:)
-    expect(page).to have_selector("[data-booking-actions-id-value='#{booking.id}']")
-    expect(page).to have_selector("[data-room-number='#{room_number}'][data-date='#{date}']")
+    source_selector = "[data-booking-actions-id-value='#{booking.id}']"
+    handle_selector = "#{source_selector} [data-action*='onDragHandleMouseDown']"
+    target_selector = "[data-room-number='#{room_number}'][data-date='#{date}']"
+
+    expect(page).to have_selector(source_selector)
+    expect(page).to have_selector(handle_selector)
+    expect(page).to have_selector(target_selector)
     wait_for_booking_timeline_controller
 
     page.execute_script(<<~JS)
-      const source = document.querySelector("[data-booking-actions-id-value='#{booking.id}']")
-      const handle = source.querySelector("[data-action*='onDragHandleMouseDown']")
-      const target = document.querySelector("[data-room-number='#{room_number}'][data-date='#{date}']")
+      const source = document.querySelector("#{source_selector}")
+      const handle = document.querySelector("#{handle_selector}")
+      const target = document.querySelector("#{target_selector}")
       const transfer = new DataTransfer()
       handle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }))
       source.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer: transfer }))
@@ -223,9 +228,11 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     end
   end
 
-  xit "opens a booking from the keyboard and closes the amend-stay drawer", js: true do
-    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
+  it "opens a booking from the keyboard and closes the amend-stay drawer", js: true do
+    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    wait_for_booking_timeline_controller
 
+    expect(page).to have_selector("[data-booking-actions-id-value='#{@booking.id}']", wait: 10)
     booking_block = find("[data-booking-actions-id-value='#{@booking.id}']")
     booking_block.send_keys(:enter)
 
@@ -239,8 +246,9 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
     expect(page).to have_selector("#offcanvas_drawer_container.hidden", visible: :all)
   end
 
-  xit "opens today slot actions and prefills the selected room", js: true do
-    visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
+  it "opens today slot actions and prefills the selected room", js: true do
+    visit board_hotel_bookings_path(hotel, start_date: @business_date)
+    wait_for_booking_timeline_controller
     board_url = page.current_url
 
     cell = find("[data-room-number='102'][data-date='#{@business_date}']")
@@ -310,8 +318,12 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
   xit "does not open Edit Booking from a timeline handle", js: true do
     visit_when_loaded board_hotel_bookings_path(hotel, start_date: @business_date)
 
+    source_selector = "[data-booking-actions-id-value='#{@booking.id}']"
+    expect(page).to have_selector(source_selector)
+    expect(page).to have_selector("#{source_selector} [data-booking-timeline-target='dragHandle']")
+
     page.execute_script(<<~JS)
-      const source = document.querySelector("[data-booking-actions-id-value='#{@booking.id}']")
+      const source = document.querySelector("#{source_selector}")
       source.querySelector("[data-booking-timeline-target='dragHandle']").click()
     JS
     expect(page).to have_selector("#offcanvas_drawer_container.hidden", visible: :all)

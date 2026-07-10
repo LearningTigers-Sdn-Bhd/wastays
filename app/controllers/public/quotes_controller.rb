@@ -2,11 +2,17 @@ class Public::QuotesController < ApplicationController
   skip_before_action :authenticate_user! if respond_to?(:authenticate_user!)
 
   def create
-    result = BookingEngine::CreateQuote.new(quote_params).call
+    result = BookingEngine::CreateQuote.new(
+      quote_params.merge(
+        corporate_rate: current_agent_account.present?,
+        agent_account_id: current_agent_account&.id
+      )
+    ).call
 
     if result.success?
       redirect_to quote_path(result.quote.token)
     else
+      Rails.logger.error "QUOTE CREATION FAILED: #{result.message}"
       redirect_back fallback_location: root_path, alert: result.message
     end
   end
@@ -50,7 +56,7 @@ class Public::QuotesController < ApplicationController
   private
 
   def quote_params
-    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :display_currency, :rate_plan_id)
+    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :infants, :room_count, :display_currency, :rate_plan_id, :corporate_rate, :agent_account_id, allocations: [ :room_type_id, :quantity ])
   end
 
   def display_currency_for_request(quote)

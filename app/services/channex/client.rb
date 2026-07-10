@@ -17,7 +17,7 @@ module Channex
 
     def get(path, params = {})
       uri = URI("#{@base_url}#{path}")
-      uri.query = URI.encode_www_form(params) if params.any?
+      uri.query = params.to_query if params.any?
 
       request = Net::HTTP::Get.new(uri)
       execute(request)

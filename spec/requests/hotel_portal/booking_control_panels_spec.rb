@@ -33,7 +33,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       guest = create(:guest, name: "Aina Rahman")
       room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
       create(:booking_guest, booking: booking, guest: guest, is_primary: true)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "208", quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "208")
 
       get hotel_booking_control_panel_path(hotel, booking)
 
@@ -323,7 +323,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
     it "renders every control panel tab with its declared layout" do
       guest = create(:guest, name: "Aina Rahman")
       room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
-      room = create(:booking_room, booking: booking, room_type: room_type, room_number: "208", quantity: 1)
+      room = create(:booking_room, booking: booking, room_type: room_type, room_number: "208")
       create(:booking_guest, booking: booking, guest: guest, is_primary: true)
       create(:booking_folio, booking: booking, hotel: hotel, booking_room: room, name: "Room Guest Folio")
 
@@ -376,7 +376,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
 
     it "renders only the workspace frame for workspace turbo requests" do
       room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "208", quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "208")
 
       get hotel_booking_control_panel_path(hotel, booking, tab: "room_and_rate"), headers: { "Turbo-Frame" => "booking_control_panel_workspace" }
 

@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe BookingEngine::CreateQuote do
   let!(:account) { Account.create!(name: "Test Account", slug: "test-account", status: "active") }
-  let!(:hotel) { Hotel.create!(name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved") }
+  let!(:hotel) { Hotel.create!(name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved", allow_pax_pricing: true) }
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Deluxe", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
 
   let(:check_in) { Date.today }
@@ -52,7 +52,7 @@ RSpec.describe BookingEngine::CreateQuote do
       result = service.call
 
       expect(result.success?).to be false
-      expect(result.message).to eq("Room is no longer available for these dates.")
+      expect(result.message).to eq("Room Deluxe is no longer available.")
     end
 
     it "fails with clear error when dates are missing" do
@@ -95,7 +95,7 @@ RSpec.describe BookingEngine::CreateQuote do
           result = described_class.new(params.merge(rate_plan_id: rate_plan.id)).call
 
           expect(result.success?).to be false
-          expect(result.message).to eq("No valid rate is available for these dates.")
+          expect(result.message).to eq("No valid rate for room #{room_type.name} with selected occupancy.")
         end
       end
 
@@ -106,7 +106,7 @@ RSpec.describe BookingEngine::CreateQuote do
           result = described_class.new(params.merge(rate_plan_id: rate_plan.id)).call
 
           expect(result.success?).to be false
-          expect(result.message).to eq("No valid rate is available for these dates.")
+          expect(result.message).to eq("No valid rate for room #{room_type.name} with selected occupancy.")
         end
       end
 
@@ -120,6 +120,97 @@ RSpec.describe BookingEngine::CreateQuote do
           expect(result.quote).to be_persisted
           expect(result.quote.total_amount).to eq(360)
         end
+      end
+    end
+
+    it "fails if total guests exceed maximum capacity of the allocated rooms" do
+      # Capacity of Deluxe room_type is 2. Booking requests 3 adults for 1 room.
+      service = described_class.new(params.merge(adults: 3))
+      result = service.call
+
+      expect(result.success?).to be false
+      expect(result.message).to include("do not have enough capacity")
+    end
+
+    context "with per_person pricing plan" do
+      let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per Person Plan", sell_mode: "per_person", single_supplement: 15.0, currency: "MYR") }
+
+      before do
+        RoomTypeRatePlan.create!(room_type: room_type, rate_plan: pax_rate_plan)
+        stay_dates.each do |date|
+          RoomRate.create!(room_type: room_type, rate_plan: pax_rate_plan, date: date, price: 30.0, currency: "MYR")
+        end
+      end
+
+      it "calculates correct per-person quote with single occupancy supplement" do
+        # 1 guest -> Room occupancy is 1.
+        # Nightly rate = 30 * 1 + 15 supplement = 45.
+        # Total for 2 nights = 90.
+        service = described_class.new(params.merge(adults: 1, rate_plan_id: pax_rate_plan.id))
+        result = service.call
+
+        expect(result.success?).to be true
+        expect(result.quote.total_amount).to eq(90.0)
+        expect(result.quote.booking_quote_items.first.occupancy_snapshot["actual_occupancy"]).to eq(1)
+      end
+
+      it "calculates correct per-person quote for multi-room group with distributed occupancy" do
+        # 3 guests in 2 rooms -> Room 1 has 2 guests, Room 2 has 1 guest.
+        # Room 1: 30 * 2 = 60/night.
+        # Room 2: 30 * 1 + 15 = 45/night.
+        # Total nightly = 105. For 2 nights = 210.
+        service = described_class.new(
+          hotel_id: hotel.id,
+          allocations: [ { room_type_id: room_type.id, quantity: 2 } ],
+          check_in: check_in,
+          check_out: check_out,
+          adults: 3,
+          rate_plan_id: pax_rate_plan.id
+        )
+        result = service.call
+
+        expect(result.success?).to be true
+        expect(result.quote.total_amount).to eq(210.0)
+
+        items = result.quote.booking_quote_items
+        expect(items.count).to eq(2) # Group of 2 pax and Group of 1 pax
+        expect(items.map { |i| i.occupancy_snapshot["actual_occupancy"] }).to contain_exactly(2, 1)
+      end
+
+      it "fails if there are not enough adults to supervise each room (at least 1 adult per room)" do
+        # Requests 2 rooms, but only 1 adult is provided
+        service = described_class.new(
+          hotel_id: hotel.id,
+          allocations: [ { room_type_id: room_type.id, quantity: 2 } ],
+          check_in: check_in,
+          check_out: check_out,
+          adults: 1,
+          children: 2
+        )
+        result = service.call
+
+        expect(result.success?).to be false
+        expect(result.message).to include("require more adults to supervise each room")
+      end
+
+      it "respects explicit room count for flexible guest layouts (e.g. 3 guests in 3 rooms)" do
+        # 3 adults requesting room_count: 3. Should distribute as [1, 1, 1] instead of [2, 1]
+        service = described_class.new(
+          hotel_id: hotel.id,
+          allocations: [ { room_type_id: room_type.id, quantity: 3 } ],
+          check_in: check_in,
+          check_out: check_out,
+          adults: 3,
+          room_count: 3,
+          rate_plan_id: pax_rate_plan.id
+        )
+        result = service.call
+
+        expect(result.success?).to be true
+        expect(result.quote.booking_quote_items.count).to eq(1) # 1 item since all have same occupancy 1
+        expect(result.quote.booking_quote_items.first.quantity).to eq(3) # 3 rooms
+        expect(result.quote.booking_quote_items.first.occupancy_snapshot["actual_occupancy"]).to eq(1)
+        expect(result.quote.total_amount).to eq(270.0) # 3 rooms * (30 * 1 pax + 15 supplement) * 2 nights = 3 * 45 * 2 = 270.0
       end
     end
   end

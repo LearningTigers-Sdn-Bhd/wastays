@@ -18,7 +18,7 @@ RSpec.describe "HotelPortal::Bookings::CheckIns", type: :request do
   end
 
   before do
-    create(:booking_room, booking: booking, room_type: room_type, quantity: 1)
+    create(:booking_room, booking: booking, room_type: room_type)
     sign_in_as(user)
   end
 

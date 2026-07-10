@@ -237,10 +237,14 @@ module HotelDemoManagement
     end
 
     def ensure_rate_plan(room_type, name)
-      room_type.rate_plans.find_or_create_by!(name: name) do |plan|
+      rate_plan = @hotel.rate_plans.find_or_create_by!(name: name) do |plan|
         plan.sell_mode = "per_room"
         plan.currency = @hotel.default_currency || "MYR"
       end
+
+      room_type.room_type_rate_plans.find_or_create_by!(rate_plan: rate_plan)
+
+      rate_plan
     end
 
     def reset_room_statuses

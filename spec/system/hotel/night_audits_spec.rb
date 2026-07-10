@@ -24,10 +24,7 @@ RSpec.describe "Hotel night audits", type: :system do
       UserHotelAccess.create!(user: user, hotel: hotel, role: role)
       create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "no_show_auto_handling"), enabled: true)
 
-      visit login_path
-      fill_in "Email Address", with: user.email
-      fill_in "Password", with: "password123"
-      click_button "Sign In to Portal"
+      sign_in_through_ui(user)
     end
 
     it "renders the page and lets front desk run a completed audit" do
@@ -167,10 +164,7 @@ RSpec.describe "Hotel night audits", type: :system do
       UserHotelAccess.create!(user: user, hotel: hotel, role: role)
       create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "no_show_auto_handling"), enabled: true)
 
-      visit login_path
-      fill_in "Email Address", with: user.email
-      fill_in "Password", with: "password123"
-      click_button "Sign In to Portal"
+      sign_in_through_ui(user)
     end
 
     it "navigates to the resolve page and displays blockers interactive wizard" do

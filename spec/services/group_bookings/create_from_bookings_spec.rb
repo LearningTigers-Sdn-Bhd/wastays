@@ -7,8 +7,8 @@ RSpec.describe GroupBookings::CreateFromBookings do
     hotel = create(:hotel)
     first = create(:booking, hotel: hotel)
     second = create(:booking, hotel: hotel)
-    create(:booking_room, booking: first, quantity: 1)
-    create(:booking_room, booking: second, quantity: 1)
+    create(:booking_room, booking: first)
+    create(:booking_room, booking: second)
 
     result = described_class.call(
       hotel: hotel,
@@ -25,16 +25,17 @@ RSpec.describe GroupBookings::CreateFromBookings do
     expect(second.reload.group_position).to eq(2)
   end
 
-  it "rejects an aggregated room booking" do
+  it "rejects a multi-room booking" do
     hotel = create(:hotel)
-    aggregated = create(:booking, hotel: hotel)
+    multi_room = create(:booking, hotel: hotel)
     normal = create(:booking, hotel: hotel)
-    create(:booking_room, booking: aggregated, quantity: 2)
-    create(:booking_room, booking: normal, quantity: 1)
+    create(:booking_room, booking: multi_room)
+    create(:booking_room, booking: multi_room)
+    create(:booking_room, booking: normal)
 
     result = described_class.call(
       hotel: hotel,
-      bookings: [ aggregated, normal ],
+      bookings: [ multi_room, normal ],
       attributes: { name: "Invalid" }
     )
 

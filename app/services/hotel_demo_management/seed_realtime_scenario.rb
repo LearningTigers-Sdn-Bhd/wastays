@@ -136,7 +136,6 @@ module HotelDemoManagement
       booking.booking_rooms.create!(
         room_type: room_type,
         rate_plan: standard_plan,
-        quantity: 1,
         subtotal: snapshot.room_total,
         nightly_rate_snapshot: snapshot.nightly_rate_snapshot,
         room_number: room_number

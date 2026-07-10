@@ -18,7 +18,7 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
     it "flows from check-in to night audit to checkout seamlessly" do
       # Guest booked for 2 nights at 100/night = 200 total
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 2.days, total_amount: 200.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0, quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0)
 
       # 1. Booking Payment (Simulate gateway payment sync)
       payment = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 20_000, captured_at: Time.current)
@@ -67,7 +67,7 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
     it "accrues debt via night audit, settles at checkout, and reconciles reports" do
       # 1. Create a 2-night booking (No upfront payment)
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 2.days, total_amount: 200.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0, quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0)
 
       # Initially, reports should show 0 revenue because nothing is posted yet
       summary = Booking.analytics_summary(Date.current, Date.current, base_scope: hotel.bookings)
@@ -132,7 +132,7 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
     it "uses the nightly rate snapshot for subsequent night audits without altering past nights" do
       # 3 nights.
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 3.days, total_amount: 300.0)
-      booking_room = create(:booking_room, booking: booking, room_type: room_type, subtotal: 300.0, quantity: 1, nightly_rate_snapshot: {
+      booking_room = create(:booking_room, booking: booking, room_type: room_type, subtotal: 300.0, nightly_rate_snapshot: {
         business_date.iso8601 => { "price" => 100.0 },
         (business_date + 1.day).iso8601 => { "price" => 100.0 },
         (business_date + 2.days).iso8601 => { "price" => 100.0 }

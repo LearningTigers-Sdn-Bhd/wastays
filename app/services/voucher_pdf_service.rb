@@ -169,7 +169,7 @@ class VoucherPdfService
       name = room.room_type_snapshot["name"].presence || room.room_type.name
       [
         { content: name,               size: 10, text_color: TEXT_PRIMARY },
-        { content: room.quantity.to_s, size: 10, text_color: TEXT_PRIMARY, align: :center },
+        { content: "1",                size: 10, text_color: TEXT_PRIMARY, align: :center },
         { content: "PAID",             size: 9,  text_color: SUCCESS, font_style: :bold, align: :right }
       ]
     end

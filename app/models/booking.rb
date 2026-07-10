@@ -9,6 +9,7 @@ class Booking < ApplicationRecord
   belongs_to :hotel
   belongs_to :group_booking, optional: true
   belongs_to :payout_batch, optional: true
+  belongs_to :agent_account, optional: true
   has_many :booking_rooms, dependent: :destroy
   accepts_nested_attributes_for :booking_rooms
   has_many :booking_notes, dependent: :destroy
@@ -120,7 +121,6 @@ class Booking < ApplicationRecord
   scope :recent_first, -> { order(created_at: :desc) }
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }
-  scope :checkout_required, -> { where(status: "checkout_required") }
   scope :completed, -> { where(status: "completed") }
   scope :no_show, -> { where(status: "no_show") }
   scope :active, -> { where(status: [ "confirmed", "review_no_show", "checked_in", "review_due_out", "checkout_required" ]) }
@@ -251,7 +251,7 @@ class Booking < ApplicationRecord
   end
 
   def group_booking?
-    group_booking_id.present? || booking_rooms.sum { |booking_room| booking_room.quantity.to_i } > 1
+    group_booking_id.present? || booking_rooms.size > 1
   end
 
   def payout_eligible?

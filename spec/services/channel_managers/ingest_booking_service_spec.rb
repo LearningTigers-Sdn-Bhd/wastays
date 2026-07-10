@@ -72,7 +72,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
       check_in: booking_data[:check_in],
       check_out: booking_data[:check_out],
       status: "confirmed")
-    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+    create(:booking_room, booking: existing, room_type: room_type)
     room_type.room_inventories.update_all(quantity: 1)
     data = booking_data.merge(status: "cancelled", revision_number: 2)
     dispatcher = instance_double(Notifications::Dispatcher, call: [])
@@ -97,7 +97,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
       status: "review_no_show",
       no_show_review_business_date: booking_data[:check_in]
     )
-    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+    create(:booking_room, booking: existing, room_type: room_type)
 
     result = described_class.new(booking_data: booking_data.merge(revision_number: 2)).call
 
@@ -115,7 +115,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
       status: "review_no_show",
       no_show_review_business_date: booking_data[:check_in]
     )
-    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+    create(:booking_room, booking: existing, room_type: room_type)
 
     result = described_class.new(booking_data: booking_data.merge(status: "cancelled", revision_number: 2)).call
 
@@ -143,7 +143,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
       check_in: booking_data[:check_in],
       check_out: booking_data[:check_out],
       status: "overbooked")
-    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+    create(:booking_room, booking: existing, room_type: room_type)
     data = booking_data.merge(status: "confirmed", revision_number: 2)
 
     result = described_class.new(booking_data: data).call
@@ -192,7 +192,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
       check_in: booking_data[:check_in],
       check_out: booking_data[:check_out],
       status: "confirmed")
-    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+    create(:booking_room, booking: existing, room_type: room_type)
     room_type.room_inventories.update_all(quantity: 1)
     data = booking_data.merge(guest_details: booking_data[:guest_details].merge(email: ""), revision_number: 2)
 
@@ -209,7 +209,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
       check_in: booking_data[:check_in],
       check_out: booking_data[:check_out],
       status: "confirmed")
-    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+    create(:booking_room, booking: existing, room_type: room_type)
     data = booking_data.except(:check_in, :check_out).merge(total_amount: 250.0, revision_number: 2)
 
     result = described_class.new(booking_data: data).call
@@ -228,7 +228,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
       check_out: booking_data[:check_out],
       status: "confirmed"
     )
-    create(:booking_room, booking: existing, room_type: room_type, quantity: 1)
+    create(:booking_room, booking: existing, room_type: room_type)
     data = booking_data.merge(
       rooms: [ { room_type: other_room_type, quantity: 2, amount: 200.0 } ],
       revision_number: 2

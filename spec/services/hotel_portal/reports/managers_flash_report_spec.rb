@@ -16,7 +16,7 @@ RSpec.describe HotelPortal::Reports::ManagersFlashReport, type: :service do
 
       # Occupancy part: Booking spanning 2 days
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 2.days)
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 2, subtotal: 400) # 200 per day
+      create_list(:booking_room, 2, booking: booking, room_type: room_type, subtotal: 200) # 200 per day
 
       # Posted Revenue part: Folio transactions on start_date
       folio = create(:booking_folio, booking: booking)

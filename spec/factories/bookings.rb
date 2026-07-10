@@ -1,7 +1,7 @@
 FactoryBot.define do
   factory :booking do
     association :hotel
-    association :booking_quote
+    booking_quote { association :booking_quote, hotel: hotel }
     status { "confirmed" }
     total_amount { 200.0 }
     currency { "MYR" }

@@ -17,7 +17,7 @@ RSpec.describe "Booking room readiness assignment", type: :request do
 
   it "blocks assigning a dirty room when updating a booking" do
     booking = create(:booking, hotel: hotel, status: "confirmed")
-    booking_room = create(:booking_room, booking: booking, room_type: room_type, room_number: nil, quantity: 1, subtotal: 200)
+    booking_room = create(:booking_room, booking: booking, room_type: room_type, room_number: nil, subtotal: 200)
     create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
     patch hotel_booking_path(hotel, booking), params: {

@@ -43,6 +43,7 @@ class Hotel < ApplicationRecord
   accepts_nested_attributes_for :property_policy
   has_many :room_types, dependent: :destroy
   has_many :room_groups, dependent: :destroy
+  has_many :rate_plans, dependent: :destroy
   has_many :knowledge_documents, class_name: "HotelKnowledgeDocument", dependent: :destroy
   has_many :knowledge_diagnostics, class_name: "HotelKnowledgeDiagnostic", dependent: :destroy
   has_many :nearby_attractions, dependent: :destroy
@@ -78,8 +79,11 @@ class Hotel < ApplicationRecord
   has_many :room_statuses, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :destroy
   has_many :room_blocks, dependent: :destroy
+  has_many :agent_accounts, dependent: :destroy
   has_many :notification_configs, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
+  has_many :channel_derived_settings, dependent: :destroy
+  has_many :channel_availability_rules, dependent: :destroy
 
 
   validates :name, presence: true
@@ -89,6 +93,7 @@ class Hotel < ApplicationRecord
                            if: -> { hotel_prefix.present? }
 
   before_validation :normalize_default_currency
+  before_validation :reset_pax_pricing_only_if_not_allowed
   before_create :assign_hotel_prefix
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
@@ -690,5 +695,32 @@ class Hotel < ApplicationRecord
     return matches.last.to_f if matches.any?
 
     google_map_link[fallback_regex, 1]&.to_f
+  end
+
+  def reset_pax_pricing_only_if_not_allowed
+    unless allow_pax_pricing?
+      self.pax_pricing_only = false
+      rate_plans.where(sell_mode: "per_person").update_all(sell_mode: "per_room") if persisted?
+    end
+  end
+
+  def ensure_current_business_date
+    HotelBusinessDate.initialize_for_hotel!(hotel: self, date: business_date_for(Time.current))
+  end
+
+  def ensure_default_gl_maps
+    Financials::EnsureDefaultGlMaps.call(self)
+  end
+
+  def ensure_default_transaction_codes
+    Financials::EnsureDefaultTransactionCodes.call(self)
+  end
+
+  def saved_change_to_primary_tax_settings?
+    saved_change_to_sst_enabled? || saved_change_to_tourism_tax_enabled?
+  end
+
+  def sync_primary_tax_transaction_codes
+    Financials::EnsureDefaultTransactionCodes.call(self)
   end
 end

@@ -81,21 +81,18 @@ RSpec.describe "Hotel today's check-outs page", type: :system do
       booking: earlier_checkout_booking,
       room_type: room_type,
       room_type_snapshot: { "name" => room_type.name },
-      quantity: 1,
       subtotal: earlier_checkout_booking.total_amount
     )
-    BookingRoom.create!(
-      booking: latest_checkout_booking,
-      room_type: secondary_room_type,
-      room_type_snapshot: { "name" => secondary_room_type.name },
-      quantity: 2,
-      subtotal: latest_checkout_booking.total_amount
-    )
+    2.times do
+      BookingRoom.create!(
+        booking: latest_checkout_booking,
+        room_type: secondary_room_type,
+        room_type_snapshot: { "name" => secondary_room_type.name },
+        subtotal: latest_checkout_booking.total_amount / 2
+      )
+    end
 
-    visit login_path
-    fill_in "Email Address", with: user.email
-    fill_in "Password", with: "password123"
-    click_button "Sign In to Portal"
+    sign_in_through_ui(user)
   end
 
   it "renders today's check-outs with search, summary, rows, and actions" do

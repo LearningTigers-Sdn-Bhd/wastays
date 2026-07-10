@@ -328,7 +328,7 @@ module HotelPortal
       return [ booking ] unless group_context_enabled?
 
       @child_bookings ||= booking.group_booking.bookings
-        .includes(:deposits, :housekeeping_requests, :complaint_requests, :booking_folios, :folio_operation_logs, :booking_rooms, booking_guests: :guest)
+        .includes(:hotel, :deposits, :housekeeping_requests, :complaint_requests, :booking_folios, :folio_operation_logs, :booking_rooms, booking_guests: :guest)
         .to_a
     end
 

@@ -66,9 +66,8 @@ module HotelPortal
     end
 
     def rooms_summary
-      booking_rooms.map do |room|
-        room_name = room.room_type_snapshot["name"].presence || room.room_type.name
-        "#{room.quantity}x #{room_name}"
+      booking_rooms.group_by { |room| room.room_type_snapshot["name"].presence || room.room_type.name }.map do |room_name, rooms|
+        "#{rooms.size}x #{room_name}"
       end
     end
 

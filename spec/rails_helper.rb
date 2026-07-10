@@ -126,7 +126,13 @@ Capybara.register_driver :cuprite do |app|
   Capybara::Cuprite::Driver.new(
     app,
     browser_path: browser_path,
-    browser_options: { "no-sandbox" => nil, "disable-dev-shm-usage" => nil },
+    browser_options: {
+      "no-sandbox" => nil,
+      "disable-dev-shm-usage" => nil,
+      "disable-gpu" => nil,
+      "disable-site-isolation-trials" => nil,
+      "disable-features" => "site-per-process"
+    },
     headless: true,
     timeout: 60,
     process_timeout: 120,

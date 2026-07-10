@@ -3,6 +3,7 @@ require_relative "../app/constraints/superadmin_constraint"
 Rails.application.routes.draw do
   mount RailsIcons::Engine, at: "/rails_icons"
   namespace :hotel_portal do
+    resources :agent_accounts
     get "room_blocks/create"
     get "room_blocks/destroy"
   end
@@ -170,6 +171,7 @@ Rails.application.routes.draw do
         post :onboard_channex, to: "hotels/channel_managers#onboard_channex"
         post :full_refresh, to: "hotels/channel_managers#full_refresh"
         post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
+        post :repair_channex_mapping, to: "hotels/channel_managers#repair_mapping"
       end
       resources :onboarding_sessions, module: :hotels, only: [ :create, :show, :edit, :update, :destroy ] do
         member do
@@ -488,10 +490,14 @@ Rails.application.routes.draw do
     end
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
       collection do
+        get :occupancy_details
         post :apply_pricing_rules
         post :apply_availability_override
         post :bulk_save_ari
         post :batch_save_ari
+        post :update_channel_derived_pricing
+        post :create_channel_availability_rule
+        delete "channel_availability_rules/:id", action: :destroy_channel_availability_rule, as: :destroy_channel_availability_rule
         delete "pricing_tiers/:rule_type", action: :destroy_pricing_tier_rule, as: :destroy_pricing_tier_rule
         delete "public_holidays/:id", action: :destroy_public_holiday_rule, as: :destroy_public_holiday_rule
       end
@@ -514,6 +520,7 @@ Rails.application.routes.draw do
     patch "settings", to: "settings#update"
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
     resources :hotel_taxes, only: %i[index new create edit update destroy]
+    resources :rate_plans, only: %i[create destroy]
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board

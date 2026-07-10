@@ -165,7 +165,7 @@ module Reports
         @invoices ||= invoice_scope
           .where(currency: selected_currency)
           .where(issued_on: ..@end_date)
-          .includes({ booking_folio: { booking_billing_party: :billing_terms } }, ar_payment_allocations: [ :ar_payment, :reversal ])
+          .includes({ booking_folio: [ :booking, { booking_billing_party: :billing_terms } ] }, ar_payment_allocations: [ :ar_payment, :reversal ])
           .to_a
       end
 

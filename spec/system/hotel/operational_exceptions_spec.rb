@@ -27,7 +27,7 @@ RSpec.describe "Operational Exceptions", type: :system do
       travel_to Time.zone.local(2026, 5, 21, 10, 0, 0)
 
       booking = create(:booking, hotel: hotel, status: "review_due_out", guest_name: "John Doe", check_in: 1.day.ago, check_out: Date.current, total_amount: 100.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, quantity: 1, nightly_rate_snapshot: { 1.day.ago.to_date.iso8601 => { "price" => 100.0 } })
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, nightly_rate_snapshot: { 1.day.ago.to_date.iso8601 => { "price" => 100.0 } })
       folio = Folios::InitializeForBooking.call(booking: booking, user: user)
 
       visit hotel_booking_path(hotel, booking)
@@ -64,7 +64,7 @@ RSpec.describe "Operational Exceptions", type: :system do
 
       # Future checkout
       booking = create(:booking, hotel: hotel, status: "checked_in", guest_name: "Jane Smith", check_in: 1.day.ago, check_out: 3.days.from_now, total_amount: 400.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 400.0, quantity: 1, nightly_rate_snapshot: {
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 400.0, nightly_rate_snapshot: {
         1.day.ago.to_date.iso8601 => { "price" => 100.0 },
         Date.current.iso8601 => { "price" => 100.0 },
         1.day.from_now.to_date.iso8601 => { "price" => 100.0 },

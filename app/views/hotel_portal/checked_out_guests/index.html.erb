@@ -95,10 +95,9 @@
                 <td class="px-6 py-4">
                   <% if booking.booking_rooms.any? %>
                     <div class="flex flex-wrap gap-2">
-                      <% booking.booking_rooms.each do |room| %>
-                        <% room_name = room.room_type_snapshot["name"].presence || room.room_type.name %>
+                      <% booking.booking_rooms.group_by { |r| r.room_type_snapshot["name"].presence || r.room_type.name }.each do |room_name, rooms| %>
                         <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
-                          <%= room.quantity %>x <%= room_name %>
+                          <%= rooms.size %>x <%= room_name %>
                         </span>
                       <% end %>
                     </div>
@@ -175,10 +174,9 @@
                 <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Rooms</dt>
                 <dd class="mt-1 flex flex-wrap gap-1.5">
                   <% if booking.booking_rooms.any? %>
-                    <% booking.booking_rooms.each do |room| %>
-                      <% room_name = room.room_type_snapshot["name"].presence || room.room_type.name %>
+                    <% booking.booking_rooms.group_by { |r| r.room_type_snapshot["name"].presence || r.room_type.name }.each do |room_name, rooms| %>
                       <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700">
-                        <%= room.quantity %>x <%= room_name %>
+                        <%= rooms.size %>x <%= room_name %>
                       </span>
                     <% end %>
                   <% else %>
