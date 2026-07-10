@@ -47,9 +47,8 @@ module BookingEngine
       return [] if stay_dates_list.empty?
 
       # 1. Basic occupancy filter and preload associations for performance
-      potential_room_types = hotel.room_types
-                                  .includes(:room_inventories, :room_rates, :rate_plans)
-                                  .where("max_adults >= ?", @adults)
+      potential_room_types = hotel.room_types.where("max_adults >= ?", @adults).to_a
+      preload_availability_data(potential_room_types)
 
       # 2. Date-based availability & rate check
       available_room_types = potential_room_types.select do |room_type|
@@ -157,7 +156,10 @@ module BookingEngine
       return [] if stay_dates_list.empty?
 
       # 1. Get all potential room types with their availability
-      room_type_data = hotel.room_types.includes(:room_inventories, :room_rates, :rate_plans).map do |room_type|
+      potential_room_types = hotel.room_types.to_a
+      preload_availability_data(potential_room_types)
+
+      room_type_data = potential_room_types.map do |room_type|
         # Check inventory
         inventories = room_type.room_inventories.select { |inv| stay_dates_list.include?(inv.date) }
         available_qty = (inventories.count == stay_dates_list.count) ? inventories.map(&:quantity).min : 0
@@ -287,6 +289,34 @@ module BookingEngine
 
     def stay_dates
       @stay_dates ||= (@check_in...@check_out).to_a
+    end
+
+    # Preloads only the room_inventories/room_rates rows relevant to this
+    # search's date range, instead of every historical row for the room
+    # type. Unscoped `includes` here previously loaded a room type's full
+    # rate/inventory history on every search request.
+    def preload_availability_data(room_types)
+      return if room_types.empty?
+
+      ActiveRecord::Associations::Preloader.new(
+        records: room_types,
+        associations: :room_inventories,
+        scope: RoomInventory.where(date: stay_dates)
+      ).call
+
+      # Inclusive of @check_out: CTD (closed-to-departure) restrictions are
+      # keyed off the checkout date's own rate record, which falls outside
+      # the exclusive stay_dates range.
+      ActiveRecord::Associations::Preloader.new(
+        records: room_types,
+        associations: :room_rates,
+        scope: RoomRate.where(date: @check_in..@check_out)
+      ).call
+
+      ActiveRecord::Associations::Preloader.new(
+        records: room_types,
+        associations: :rate_plans
+      ).call
     end
 
     def nights
