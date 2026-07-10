@@ -39,7 +39,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
         respond_to do |format|
           format.turbo_stream do
             if booking_timeline_board_request?
-              render turbo_stream: turbo_stream.append("booking_timeline_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
+              render turbo_stream: turbo_stream.append("toast-viewport", partial: "shared/feedback/toast_trigger", locals: { message: result.error, type: "error", description: nil })
             else
               flash[:alert] = result.error
               render_offcanvas_completion(booking_details_path)
@@ -144,7 +144,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
       respond_to do |format|
         format.turbo_stream do
           if booking_timeline_board_request?
-            render turbo_stream: turbo_stream.append("booking_timeline_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
+            render turbo_stream: turbo_stream.append("toast-viewport", partial: "shared/feedback/toast_trigger", locals: { message: result.error, type: "error", description: nil })
           else
             flash[:alert] = result.error
             render_offcanvas_completion(booking_details_path)

@@ -63,8 +63,6 @@
 
         <main class="flex-1 flex flex-col overflow-hidden overflow-y-auto overscroll-contain custom-scrollbar">
           <div class="p-5 sm:p-6 space-y-5">
-            <%= render "shared/feedback/flash_toasts", flash: flash %>
-
             <div class="grid grid-cols-1 <%= content_for?(:right_sidebar) ? 'xl:grid-cols-4 gap-6' : '' %>">
               <div class="<%= content_for?(:right_sidebar) ? 'xl:col-span-3' : '' %>">
                 <%= yield %>
@@ -83,5 +81,7 @@
 
     <%= render "shared/turbo_confirm" %>
     <%= yield :body_end %>
+    <%= render PanelsUI::ToastViewport.new %>
+    <%= render "shared/feedback/flash_toast_triggers", flash: flash %>
   </body>
 </html>

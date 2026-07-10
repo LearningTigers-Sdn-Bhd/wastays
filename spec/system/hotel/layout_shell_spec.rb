@@ -45,7 +45,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_text('Reports')
     expect(page).to have_link('Summary', href: hotel_reports_path(hotel), visible: :all)
     expect(page).to have_link('Night Audit', href: hotel_night_audits_path(hotel), visible: :all)
-    expect(page).to have_css('#flash_toasts')
+    expect(page).to have_css('#toast-viewport[data-controller="toast"]')
     expect(page).to have_css("#hotel-sidebar a.sidebar-nav-link-active[data-sidebar-route]", text: "Dashboard")
     expect(page).to have_css("#hotel-sidebar summary.sidebar-group-parent", text: "Financial", visible: :all)
     expect(page).to have_no_css("#hotel-sidebar summary.sidebar-nav-link-active", visible: :all)

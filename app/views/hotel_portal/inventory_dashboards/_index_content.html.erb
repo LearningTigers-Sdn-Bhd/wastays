@@ -15,10 +15,6 @@
   }.compact
 %>
 
-<% if request.headers["Turbo-Frame"].present? %>
-  <%= render "shared/feedback/flash_toasts", flash: flash %>
-<% end %>
-
 <!-- Top-Level Tabs -->
 <nav class="<%= dashboard_tab_container_classes %>" data-testid="inventory-tabs" data-inventory-calendar-target="topPanel">
   <div class="flex min-w-max items-center gap-1" role="tablist" aria-label="Rates and inventory sections">

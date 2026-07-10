@@ -13,9 +13,11 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="min-h-full bg-background text-foreground font-sans antialiased">
+  <body data-theme="panel-dark" class="min-h-full bg-background text-foreground font-sans antialiased">
     <main id="content" data-system-design-showcase>
       <%= yield %>
     </main>
+    <%= render PanelsUI::ToastViewport.new %>
+    <%= render "shared/feedback/flash_toast_triggers", flash: flash %>
   </body>
 </html>

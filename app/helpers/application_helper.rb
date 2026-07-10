@@ -1,4 +1,28 @@
 module ApplicationHelper
+  def toast_flash_messages(flash)
+    messages = []
+    toast_data = flash[:toast]
+
+    if toast_data.present?
+      toast_data = toast_data.with_indifferent_access if toast_data.respond_to?(:with_indifferent_access)
+      if toast_data.is_a?(Hash) && toast_data[:message].present?
+        messages << {
+          message: toast_data[:message].to_s,
+          options: { type: toast_data[:type].presence || "default", description: toast_data[:description].presence }.compact
+        }
+      end
+    end
+
+    flash.each do |key, value|
+      next if key.to_sym == :toast || value.blank?
+
+      type = key.to_sym == :notice ? "success" : key.to_sym == :alert ? "error" : "default"
+      messages << { message: value.to_s, options: { type: type } }
+    end
+
+    messages
+  end
+
   def cached_icon(name, library: RailsIcons.configuration.default_library, from: library, variant: nil, **arguments)
     @_cached_icons ||= {}
     key = [ name.to_s, library.to_s, from.to_s, variant&.to_s, arguments ]

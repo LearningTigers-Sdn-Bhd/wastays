@@ -74,12 +74,13 @@
 
         <main class="flex-1 flex flex-col overflow-hidden overflow-y-auto custom-scrollbar">
           <div class="p-5 sm:p-6 space-y-5">
-            <%= render "shared/feedback/flash_toasts", flash: flash %>
             <%= yield %>
           </div>
         </main>
       </div>
     </div>
     <%= render "shared/turbo_confirm" %>
+    <%= render PanelsUI::ToastViewport.new %>
+    <%= render "shared/feedback/flash_toast_triggers", flash: flash %>
   </body>
 </html>

@@ -1,0 +1,7 @@
+<% toast_flash_messages(flash).each do |toast| %>
+  <script>
+    document.addEventListener("turbo:load", () => {
+      window.toast?.(<%= raw json_escape(toast[:message].to_json) %>, <%= raw json_escape(toast[:options].to_json) %>);
+    }, { once: true });
+  </script>
+<% end %>

@@ -131,7 +131,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.media_type).to eq("text/vnd.turbo-stream.html")
-      expect(response.body).to include('turbo-stream action="prepend" target="flash_toasts"')
+      expect(response.body).to include('turbo-stream action="append" target="toast-viewport"')
       expect(response.body).to include("Each reservation row requires a room category.")
       decoded_body = CGI.unescapeHTML(response.body)
       expect(decoded_body).to include(%("room_type_id":""), %("rate_plan_id":"#{rate_plan.id}"))

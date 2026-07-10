@@ -27,10 +27,10 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
               partial: "admin/hotels/onboarding_sessions_list",
               locals: { sessions: @sessions, hotel: @hotel }
             ),
-            turbo_stream.prepend(
-              "flash_toasts",
-              partial: "shared/toast",
-              locals: { key: "notice", value: "Training session scheduled successfully." }
+            turbo_stream.append(
+              "toast-viewport",
+              partial: "shared/feedback/toast_trigger",
+              locals: { message: "Training session scheduled successfully.", type: "success", description: nil }
             )
           ]
         end
@@ -46,10 +46,10 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
               partial: "admin/hotels/onboarding_session_form",
               locals: { session: @session }
             ),
-            turbo_stream.prepend(
-              "flash_toasts",
-              partial: "shared/toast",
-              locals: { key: "alert", value: "Failed to schedule session: #{@session.errors.full_messages.to_sentence}" }
+            turbo_stream.append(
+              "toast-viewport",
+              partial: "shared/feedback/toast_trigger",
+              locals: { message: "Failed to schedule session: #{@session.errors.full_messages.to_sentence}", type: "error", description: nil }
             )
           ], status: :unprocessable_content
         end
@@ -171,10 +171,10 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
         partial: "admin/hotels/onboarding_sessions_list",
         locals: { sessions: @sessions, hotel: @hotel }
       ),
-      turbo_stream.prepend(
-        "flash_toasts",
-        partial: "shared/toast",
-        locals: { key: key.to_s, value: message }
+      turbo_stream.append(
+        "toast-viewport",
+        partial: "shared/feedback/toast_trigger",
+        locals: { message: message, type: key.to_s == "notice" ? "success" : "error", description: nil }
       )
     ], status: status
   end

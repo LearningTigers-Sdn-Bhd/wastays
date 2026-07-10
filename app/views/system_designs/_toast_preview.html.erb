@@ -1,0 +1,39 @@
+<section aria-labelledby="toast-preview-heading" class="border-t border-border pt-8" data-controller="system-designs--toast-preview">
+  <h2 id="toast-preview-heading" class="text-lg font-semibold text-foreground">Toast</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    RailsBlocks-style stacked notifications with PanelsUI semantic colors and icons.
+    <code>#toast-viewport</code> is mounted once by the layout; redirects, Turbo Streams,
+    and client interactions all use the <code>toast(message, options)</code> API.
+  </p>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <% {
+      default: [ "Default", :neutral ],
+      primary: [ "Primary", :primary ],
+      info: [ "Info", :info ],
+      success: [ "Success", :success ],
+      warning: [ "Warning", :warning ],
+      danger: [ "Danger", :destructive ]
+    }.each do |toast_variant, (label, button_variant)| %>
+      <%= render PanelsUI::Button.new(
+            variant: button_variant,
+            size: :sm,
+            data: {
+              action: "click->system-designs--toast-preview#showVariant",
+              toast_variant: toast_variant
+            }) do %>
+        <%= label %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="mt-3 flex flex-wrap items-center gap-3">
+    <%= render PanelsUI::Button.new(variant: :warning, data: { action: "click->system-designs--toast-preview#showWithAction" }) do %>
+      With action button
+    <% end %>
+
+    <%= render PanelsUI::Button.new(variant: :success, data: { action: "click->system-designs--toast-preview#showDescription" }) do %>
+      With description
+    <% end %>
+  </div>
+</section>

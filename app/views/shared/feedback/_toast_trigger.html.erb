@@ -1,0 +1,4 @@
+<% options = { type: type.to_s, description: description.presence }.compact %>
+<script>
+  window.toast?.(<%= raw json_escape(message.to_s.to_json) %>, <%= raw json_escape(options.to_json) %>);
+</script>
