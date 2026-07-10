@@ -1,0 +1,226 @@
+@layer components {
+  .panel-radio {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.625rem;
+    color: var(--foreground);
+    cursor: pointer;
+  }
+
+  .panel-radio[data-variant="card"] {
+    display: flex;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border-interactive);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+    transition: border-color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-radio[data-variant="card"][data-invalid="true"]:hover:not([data-disabled="true"]) {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-radio[data-variant="card"]:not([data-invalid="true"]):has(.panel-radio__input:checked) {
+    border-color: var(--primary);
+    background: color-mix(in oklab, var(--primary) 9%, var(--card));
+  }
+
+  .panel-radio[data-invalid="true"] .panel-radio__input,
+  .panel-radio[data-invalid="true"][data-variant="card"] {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-radio[data-invalid="true"] .panel-radio__label {
+    color: var(--destructive-on-surface);
+  }
+
+  .panel-radio[data-disabled="true"] {
+    cursor: not-allowed;
+    color: var(--muted-foreground);
+    opacity: 0.6;
+  }
+
+  .panel-radio[data-disabled="true"][data-variant="card"] {
+    border-color: color-mix(in oklab, var(--border) 76%, var(--muted-foreground));
+    background: color-mix(in oklab, var(--muted) 64%, var(--card));
+  }
+
+  .panel-radio__input {
+    appearance: none;
+    display: grid;
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0;
+    place-content: center;
+    border: 1px solid var(--border-interactive);
+    border-radius: 50%;
+    background-color: var(--card);
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-radio__input:hover:not(:disabled) {
+    border-color: var(--primary);
+  }
+
+  .panel-radio[data-invalid="true"] .panel-radio__input:hover:not(:disabled) {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-radio__input:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-radio[data-invalid="true"] .panel-radio__input:focus-visible {
+    outline-color: var(--destructive-on-surface);
+  }
+
+  /* Card variant lifts the focus ring onto the whole card (see checkbox.css). */
+  .panel-radio[data-variant="card"]:has(.panel-radio__input:focus-visible) {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-radio[data-variant="card"][data-invalid="true"]:has(.panel-radio__input:focus-visible) {
+    outline-color: var(--destructive-on-surface);
+  }
+
+  .panel-radio[data-variant="card"] .panel-radio__input:focus-visible {
+    outline: none;
+  }
+
+  .panel-radio__input:checked {
+    border-color: var(--primary);
+  }
+
+  .panel-radio__input:checked::before {
+    content: "";
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    background-color: var(--primary);
+  }
+
+  .panel-radio[data-invalid="true"] .panel-radio__input:checked {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-radio[data-invalid="true"] .panel-radio__input:checked::before {
+    background-color: var(--destructive-on-surface);
+  }
+
+  .panel-radio__input:disabled {
+    border-color: color-mix(in oklab, var(--border) 76%, var(--muted-foreground));
+    background-color: color-mix(in oklab, var(--muted) 64%, var(--card));
+    cursor: not-allowed;
+  }
+
+  .panel-radio__input:disabled:checked::before {
+    background-color: var(--muted-foreground);
+  }
+
+  .panel-radio__content {
+    display: grid;
+    min-width: 0;
+    gap: 0.125rem;
+    padding-block: 0.0625rem;
+  }
+
+  .panel-radio__label {
+    @apply inline text-sm font-medium leading-5;
+  }
+
+  .panel-radio__description,
+  .panel-radio__error {
+    @apply text-xs leading-5;
+    margin: 0;
+  }
+
+  .panel-radio__description { color: var(--muted-foreground); }
+  .panel-radio__error { color: var(--destructive-on-surface); }
+  .panel-radio__required { margin-inline-start: 0.1875rem; color: var(--destructive-on-surface); }
+
+  .panel-radio[data-size="sm"] { gap: 0.5rem; }
+  .panel-radio[data-size="sm"] .panel-radio__input { width: 1.25rem; height: 1.25rem; }
+  .panel-radio[data-size="sm"] .panel-radio__input:checked::before { width: 0.625rem; height: 0.625rem; }
+  .panel-radio[data-size="sm"] .panel-radio__label { @apply text-xs; }
+
+  .panel-radio[data-size="lg"] { gap: 0.75rem; }
+  .panel-radio[data-size="lg"] .panel-radio__input { width: 1.75rem; height: 1.75rem; }
+  .panel-radio[data-size="lg"] .panel-radio__input:checked::before { width: 0.875rem; height: 0.875rem; }
+  .panel-radio[data-size="lg"] .panel-radio__label { @apply text-base; }
+  .panel-radio[data-size="lg"] :is(.panel-radio__description, .panel-radio__error) { @apply text-sm; }
+
+  /* ---- Group ------------------------------------------------------------ */
+  .panel-radio-group {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .panel-radio-group__legend {
+    @apply text-sm font-medium leading-5;
+    padding: 0;
+    color: var(--foreground);
+  }
+
+  .panel-radio-group[data-invalid="true"] .panel-radio-group__legend {
+    color: var(--destructive-on-surface);
+  }
+
+  .panel-radio-group__options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .panel-radio-group[data-orientation="horizontal"] .panel-radio-group__options {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .panel-radio-group__description,
+  .panel-radio-group__error {
+    @apply text-xs leading-5;
+    margin: 0;
+  }
+
+  .panel-radio-group__description { color: var(--muted-foreground); }
+  .panel-radio-group__error { color: var(--destructive-on-surface); }
+  .panel-radio-group__required { margin-inline-start: 0.1875rem; color: var(--destructive-on-surface); }
+
+  /* A group-level error tints its radios without each one owning the message.
+     Grouped radios render with error: nil (so only the fieldset is aria-invalid),
+     which means the per-radio [data-invalid] rules never fire — the group must
+     re-apply them: destructive circle + card border, and a destructive selected
+     dot so a green "ok" dot never sits inside a red error ring. The dot stays
+     >=3:1 on the card (9.7 light / 4.9 dark); option labels are left neutral —
+     the red legend and message carry the state at the group altitude. */
+  .panel-radio-group[data-invalid="true"] .panel-radio__input,
+  .panel-radio-group[data-invalid="true"] .panel-radio[data-variant="card"] {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-radio-group[data-invalid="true"] .panel-radio__input:checked::before {
+    background-color: var(--destructive-on-surface);
+  }
+
+  /* The selected-card treatment (:not([data-invalid]):has(:checked)) tests the
+     radio's own invalid flag, which is always false inside a group — so it would
+     paint the checked card green. Re-assert the destructive border + tint at
+     higher specificity so an invalid group's selected card reads as an error,
+     not a valid selection. */
+  .panel-radio-group[data-invalid="true"] .panel-radio[data-variant="card"]:has(.panel-radio__input:checked) {
+    border-color: var(--destructive-on-surface);
+    background: color-mix(in oklab, var(--destructive-on-surface) 9%, var(--card));
+  }
+}

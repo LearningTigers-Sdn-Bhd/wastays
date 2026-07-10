@@ -1,0 +1,181 @@
+@layer components {
+  .panel-checkbox {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.625rem;
+    color: var(--foreground);
+    cursor: pointer;
+  }
+
+  .panel-checkbox[data-variant="card"] {
+    display: flex;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border-interactive);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+    transition: border-color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-checkbox[data-variant="card"]:hover:not([data-disabled="true"]):not([data-invalid="true"]) {
+    border-color: var(--border-interactive);
+  }
+
+  .panel-checkbox[data-variant="card"][data-invalid="true"]:hover:not([data-disabled="true"]) {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-checkbox[data-variant="card"]:not([data-invalid="true"]):has(.panel-checkbox__input:checked),
+  .panel-checkbox[data-variant="card"]:not([data-invalid="true"]):has(.panel-checkbox__input:indeterminate) {
+    border-color: var(--primary);
+    background: color-mix(in oklab, var(--primary) 9%, var(--card));
+  }
+
+  .panel-checkbox[data-invalid="true"] .panel-checkbox__input,
+  .panel-checkbox[data-invalid="true"][data-variant="card"] {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-checkbox[data-invalid="true"] .panel-checkbox__label {
+    color: var(--destructive-on-surface);
+  }
+
+  .panel-checkbox[data-disabled="true"] {
+    cursor: not-allowed;
+    color: var(--muted-foreground);
+    opacity: 0.6;
+  }
+
+  .panel-checkbox[data-disabled="true"][data-variant="card"] {
+    border-color: color-mix(in oklab, var(--border) 76%, var(--muted-foreground));
+    background: color-mix(in oklab, var(--muted) 64%, var(--card));
+  }
+
+  .panel-checkbox__input {
+    appearance: none;
+    display: grid;
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0;
+    place-content: center;
+    border: 1px solid var(--border-interactive);
+    border-radius: calc(var(--radius-sm) + 1px);
+    background-color: var(--card);
+    color: var(--primary-foreground);
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-checkbox__input:hover:not(:disabled) {
+    border-color: var(--primary);
+  }
+
+  .panel-checkbox[data-invalid="true"] .panel-checkbox__input:hover:not(:disabled) {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-checkbox__input:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-checkbox[data-invalid="true"] .panel-checkbox__input:focus-visible {
+    outline-color: var(--destructive-on-surface);
+  }
+
+  /* Card variant: keyboard focus lands on the inner input, but the whole card
+     is the visual control — so lift the ring onto the card and suppress the
+     inner ring to avoid a double outline. */
+  .panel-checkbox[data-variant="card"]:has(.panel-checkbox__input:focus-visible) {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-checkbox[data-variant="card"][data-invalid="true"]:has(.panel-checkbox__input:focus-visible) {
+    outline-color: var(--destructive-on-surface);
+  }
+
+  .panel-checkbox[data-variant="card"] .panel-checkbox__input:focus-visible {
+    outline: none;
+  }
+
+  .panel-checkbox__input:checked,
+  .panel-checkbox__input:indeterminate {
+    border-color: var(--primary);
+    background-color: var(--card);
+  }
+
+  /* The mark is painted with background-color through a mask, so it follows a
+     real CSS variable. (currentColor does not inherit into an SVG referenced
+     as a background-image, which rendered the mark black.) */
+  .panel-checkbox__input:checked::before,
+  .panel-checkbox__input:indeterminate::before {
+    content: "";
+    width: 0.875rem;
+    height: 0.875rem;
+    background-color: var(--primary);
+    -webkit-mask: var(--panel-checkbox-mark) center / contain no-repeat;
+    mask: var(--panel-checkbox-mark) center / contain no-repeat;
+  }
+
+  .panel-checkbox[data-invalid="true"] .panel-checkbox__input:checked,
+  .panel-checkbox[data-invalid="true"] .panel-checkbox__input:indeterminate {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-checkbox[data-invalid="true"] .panel-checkbox__input:checked::before,
+  .panel-checkbox[data-invalid="true"] .panel-checkbox__input:indeterminate::before {
+    background-color: var(--destructive-on-surface);
+  }
+
+  .panel-checkbox__input:checked::before {
+    --panel-checkbox-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 8 3 3 7-7'/%3E%3C/svg%3E");
+  }
+
+  .panel-checkbox__input:indeterminate::before {
+    --panel-checkbox-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M3.5 8h9'/%3E%3C/svg%3E");
+  }
+
+  .panel-checkbox__input:disabled {
+    border-color: color-mix(in oklab, var(--border) 76%, var(--muted-foreground));
+    background-color: color-mix(in oklab, var(--muted) 64%, var(--card));
+    cursor: not-allowed;
+  }
+
+  .panel-checkbox__input:disabled::before {
+    background-color: var(--muted-foreground);
+  }
+
+  .panel-checkbox__content {
+    display: grid;
+    min-width: 0;
+    gap: 0.125rem;
+    padding-block: 0.0625rem;
+  }
+
+  .panel-checkbox__label {
+    @apply inline text-sm font-medium leading-5;
+  }
+
+  .panel-checkbox__description,
+  .panel-checkbox__error {
+    @apply text-xs leading-5;
+    margin: 0;
+  }
+
+  .panel-checkbox__description { color: var(--muted-foreground); }
+  .panel-checkbox__error { color: var(--destructive-on-surface); }
+  .panel-checkbox__required { margin-inline-start: 0.1875rem; color: var(--destructive-on-surface); }
+
+  .panel-checkbox[data-size="sm"] { gap: 0.5rem; }
+  .panel-checkbox[data-size="sm"] .panel-checkbox__input { width: 1.25rem; height: 1.25rem; }
+  .panel-checkbox[data-size="sm"] .panel-checkbox__label { @apply text-xs; }
+
+  .panel-checkbox[data-size="lg"] { gap: 0.75rem; }
+  .panel-checkbox[data-size="lg"] .panel-checkbox__input { width: 1.75rem; height: 1.75rem; }
+  .panel-checkbox[data-size="lg"] .panel-checkbox__label { @apply text-base; }
+  .panel-checkbox[data-size="lg"] :is(.panel-checkbox__description, .panel-checkbox__error) { @apply text-sm; }
+}

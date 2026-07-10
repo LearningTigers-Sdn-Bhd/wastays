@@ -1,0 +1,167 @@
+@layer components {
+  .panel-button {
+    @apply relative inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border text-sm font-semibold no-underline outline-none select-none;
+    @apply transition-colors duration-150 ease-standard motion-reduce:transition-none;
+    min-height: 2.25rem;
+    border-color: color-mix(in oklab, currentColor 12%, transparent);
+  }
+
+  .panel-button:focus-visible {
+    @apply ring-2 ring-ring ring-offset-2;
+    --tw-ring-offset-color: var(--background);
+  }
+
+  .panel-button svg {
+    @apply size-4 shrink-0;
+  }
+
+  .panel-button[data-size="sm"] {
+    @apply h-8 px-3 text-xs;
+    min-height: 2rem;
+  }
+
+  .panel-button[data-size="md"] {
+    @apply h-9 px-4 text-sm;
+    min-height: 2.25rem;
+  }
+
+  .panel-button[data-size="lg"] {
+    @apply h-11 px-6 text-base;
+    min-height: 2.75rem;
+  }
+
+  .panel-button[data-size="icon_sm"] {
+    @apply size-8 p-0;
+    min-width: 2rem;
+    min-height: 2rem;
+    aspect-ratio: 1 / 1;
+  }
+
+  .panel-button[data-size="icon"] {
+    @apply size-9 p-0;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    aspect-ratio: 1 / 1;
+  }
+
+  .panel-button[data-icon-only="true"] {
+    @apply gap-0;
+  }
+
+  .panel-button[data-variant="primary"] {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  .panel-button[data-variant="primary"]:not(:disabled):not([aria-disabled="true"]):hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+  }
+
+  .panel-button[data-variant="primary"]:not(:disabled):not([aria-disabled="true"]):active {
+    background: var(--primary-active);
+  }
+
+  .panel-button[data-variant="secondary"] {
+    background: var(--secondary);
+    border-color: var(--secondary);
+    color: var(--secondary-foreground);
+  }
+
+  .panel-button[data-variant="secondary"]:not(:disabled):not([aria-disabled="true"]):hover {
+    background: color-mix(in oklab, var(--secondary) 90%, var(--foreground));
+    border-color: color-mix(in oklab, var(--secondary) 90%, var(--foreground));
+  }
+
+  .panel-button[data-variant="accent"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  .panel-button[data-variant="accent"]:not(:disabled):not([aria-disabled="true"]):hover {
+    background: color-mix(in oklab, var(--accent) 90%, var(--foreground));
+    border-color: color-mix(in oklab, var(--accent) 90%, var(--foreground));
+  }
+
+  .panel-button[data-variant="neutral"] {
+    background: var(--card);
+    color: var(--card-foreground);
+    border-color: var(--border);
+  }
+
+  .panel-button[data-variant="neutral"]:not(:disabled):not([aria-disabled="true"]):hover {
+    background: var(--muted);
+    border-color: var(--border-interactive);
+  }
+
+  .panel-button[data-variant="ghost"] {
+    background: transparent;
+    color: var(--foreground);
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .panel-button[data-variant="ghost"]:not(:disabled):not([aria-disabled="true"]):hover {
+    background: color-mix(in oklab, var(--muted) 72%, transparent);
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .panel-button[data-variant="destructive"] {
+    background: var(--destructive);
+    border-color: var(--destructive);
+    color: var(--destructive-foreground);
+  }
+
+  .panel-button[data-variant="destructive"]:not(:disabled):not([aria-disabled="true"]):hover {
+    background: color-mix(in oklab, var(--destructive) 90%, var(--foreground));
+    border-color: color-mix(in oklab, var(--destructive) 90%, var(--foreground));
+  }
+
+  .panel-button[data-variant="success"] {
+    background: var(--success);
+    border-color: var(--success);
+    color: var(--success-foreground);
+  }
+
+  .panel-button[data-variant="success"]:not(:disabled):not([aria-disabled="true"]):hover {
+    background: color-mix(in oklab, var(--success) 90%, var(--foreground));
+    border-color: color-mix(in oklab, var(--success) 90%, var(--foreground));
+  }
+
+  .panel-button[data-variant="warning"] {
+    background: var(--warning);
+    border-color: var(--warning);
+    color: var(--warning-foreground);
+  }
+
+  .panel-button[data-variant="warning"]:not(:disabled):not([aria-disabled="true"]):hover {
+    background: color-mix(in oklab, var(--warning) 90%, var(--foreground));
+    border-color: color-mix(in oklab, var(--warning) 90%, var(--foreground));
+  }
+
+  .panel-button[data-variant="info"] {
+    background: var(--info);
+    border-color: var(--info);
+    color: var(--info-foreground);
+  }
+
+  .panel-button[data-variant="info"]:not(:disabled):not([aria-disabled="true"]):hover {
+    background: color-mix(in oklab, var(--info) 90%, var(--foreground));
+    border-color: color-mix(in oklab, var(--info) 90%, var(--foreground));
+  }
+
+  .panel-button:disabled,
+  .panel-button[aria-disabled="true"] {
+    background: color-mix(in oklab, var(--muted) 82%, var(--background));
+    color: var(--muted-foreground);
+    border-color: var(--border);
+    cursor: not-allowed;
+  }
+
+  .panel-button[aria-disabled="true"] {
+    pointer-events: none;
+  }
+}

@@ -1,7 +1,57 @@
-/* Panel role tokens — shared by all dashboard/role areas (admin, hotel, corporate, guest).
-   Fully defined now for the contrast audit; not yet wired to any panel layout
-   (data-theme="panel" is not set anywhere in this pass). */
-[data-theme="panel"] {
+/* Panel role tokens — shared by all dashboard/role areas (admin, hotel, corporate, guest). */
+[data-theme="panel-light"] {
+  color-scheme: light;
+
+  --background: oklch(0.9850 0.0060 157.18);
+  --foreground: oklch(0.2100 0.0250 160.00);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2100 0.0250 160.00);
+
+  --muted: oklch(0.9550 0.0090 160.00);
+  --muted-foreground: oklch(0.4750 0.0260 160.00);
+
+  --primary: oklch(0.5300 0.1050 176.00);
+  --primary-hover: oklch(0.4800 0.1000 176.00);
+  --primary-active: oklch(0.4400 0.0950 176.00);
+  --primary-foreground: oklch(0.9850 0.0060 157.18);
+
+  --secondary: oklch(0.4050 0.0250 255.00);
+  --secondary-foreground: oklch(0.9850 0.0060 157.18);
+
+  --accent: oklch(0.8308 0.0543 82.82);
+  --accent-foreground: oklch(0.2535 0.0317 82.37);
+
+  --destructive: oklch(0.7106 0.1661 22.22);
+  --destructive-foreground: oklch(0.2005 0.0536 23.23);
+  --destructive-on-surface: oklch(0.5600 0.1661 22.22);
+
+  --warning: oklch(0.8369 0.1644 84.43);
+  --warning-foreground: oklch(0.2330 0.0458 75.14);
+  --warning-on-surface: oklch(0.5500 0.1300 84.43);
+
+  --success: oklch(0.7600 0.1700 151.71);
+  --success-foreground: oklch(0.2450 0.0605 148.75);
+  --success-on-surface: oklch(0.5300 0.1700 151.71);
+
+  --info: oklch(0.7000 0.1450 254.62);
+  --info-foreground: oklch(0.2196 0.0550 252.55);
+  --info-on-surface: oklch(0.5500 0.1450 254.62);
+
+  --border: oklch(0.8800 0.0180 160.00);
+  --border-interactive: oklch(0.5350 0.0450 167.73);
+  --ring: oklch(0.6000 0.1250 163.22);
+
+  --shadow-color: 0 0% 0%;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+  --shadow-base: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.10), 0 4px 6px -4px rgb(0 0 0 / 0.08);
+}
+
+[data-theme="panel"],
+[data-theme="panel-dark"] {
+  color-scheme: dark;
+
   --background: oklch(0.1946 0.0156 157.18);
   --foreground: oklch(0.9417 0.0108 158.84);
 
@@ -9,14 +59,14 @@
   --card-foreground: oklch(0.9417 0.0108 158.84);
 
   --muted: oklch(0.2726 0.0252 160.84);
-  --muted-foreground: oklch(0.7433 0.0306 156.40);
+  --muted-foreground: oklch(0.8050 0.0240 156.40);
 
-  --primary: oklch(0.7729 0.1535 163.22);
-  --primary-hover: oklch(0.8100 0.1450 163.22);
-  --primary-active: oklch(0.7350 0.1600 163.22);
-  --primary-foreground: oklch(0.1665 0.0240 169.85);
+  --primary: oklch(0.7400 0.1250 176.00);
+  --primary-hover: oklch(0.7900 0.1200 176.00);
+  --primary-active: oklch(0.6800 0.1250 176.00);
+  --primary-foreground: oklch(0.1450 0.0250 176.00);
 
-  --secondary: oklch(0.3472 0.0301 168.91);
+  --secondary: oklch(0.3350 0.0180 255.00);
   --secondary-foreground: oklch(0.9417 0.0108 158.84);
 
   --accent: oklch(0.8308 0.0543 82.82);
@@ -24,18 +74,22 @@
 
   --destructive: oklch(0.7106 0.1661 22.22);
   --destructive-foreground: oklch(0.2005 0.0536 23.23);
+  --destructive-on-surface: oklch(0.7106 0.1661 22.22);
 
   --warning: oklch(0.8369 0.1644 84.43);
   --warning-foreground: oklch(0.2330 0.0458 75.14);
+  --warning-on-surface: oklch(0.8369 0.1644 84.43);
 
   --success: oklch(0.8003 0.1821 151.71);
   --success-foreground: oklch(0.2657 0.0663 150.37);
+  --success-on-surface: oklch(0.8003 0.1821 151.71);
 
   --info: oklch(0.7137 0.1434 254.62);
   --info-foreground: oklch(0.2196 0.0550 252.55);
+  --info-on-surface: oklch(0.7137 0.1434 254.62);
 
   --border: oklch(0.3279 0.0313 162.32);
-  --border-interactive: oklch(0.5141 0.0460 167.73);
+  --border-interactive: oklch(0.5450 0.0460 167.73);
   --ring: oklch(0.7729 0.1535 163.22);
 
   --shadow-color: 0 0% 0%;

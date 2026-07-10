@@ -1,0 +1,35 @@
+@layer components {
+  /* FieldGroup — owns the vertical rhythm between stacked fields.
+     1.25rem matches the space-y-5 it replaces. */
+  .panel-field-group {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  /* FieldSet — semantic grouping with a shared legend. Reset the native
+     <fieldset>/<legend> chrome so it lays out like the rest of the system. */
+  .panel-field-set {
+    display: grid;
+    gap: 0.75rem;
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .panel-field-set__legend {
+    @apply text-sm font-semibold;
+    padding: 0;
+    color: var(--foreground);
+  }
+
+  .panel-field-set__legend[data-variant="label"] {
+    @apply font-medium;
+  }
+
+  .panel-field-set__description {
+    @apply text-xs leading-5;
+    margin: 0;
+    color: var(--muted-foreground);
+  }
+}

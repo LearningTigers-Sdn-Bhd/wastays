@@ -1,0 +1,109 @@
+@layer components {
+  .panel-native-select {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 2.5rem;
+    border: 1px solid var(--border-interactive);
+    border-radius: var(--radius-lg);
+    background-color: var(--card);
+    color: var(--card-foreground);
+    padding-inline: 0.75rem;
+    padding-inline-end: 2.25rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    /* Inlined chevron so the affordance follows the token color without an asset. */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23737373' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.15rem;
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+  }
+
+  /* CSS vars can't be interpolated into the background-image url, so the dark
+     themes swap in a lighter chevron to track --muted-foreground. */
+  [data-theme="panel"] .panel-native-select,
+  [data-theme="panel-dark"] .panel-native-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23a3a3a3' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  }
+
+  [dir="rtl"] .panel-native-select {
+    background-position: left 0.75rem center;
+  }
+
+  .panel-native-select:hover:not(:disabled):not([aria-invalid="true"]) {
+    border-color: var(--border-interactive);
+  }
+
+  .panel-native-select:focus-visible {
+    border-color: var(--border-interactive);
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-native-select[aria-invalid="true"] {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-native-select[aria-invalid="true"]:focus-visible {
+    outline-color: var(--destructive-on-surface);
+  }
+
+  .panel-native-select:disabled {
+    cursor: not-allowed;
+    border-color: var(--border);
+    background-color: color-mix(in oklab, var(--muted) 82%, var(--background));
+    color: var(--muted-foreground);
+  }
+
+  /* A multiple select is a scrollable list box, not a dropdown — drop the chevron. */
+  .panel-native-select[multiple] {
+    min-height: auto;
+    padding: 0.375rem;
+    padding-inline-end: 0.375rem;
+    background-image: none;
+    cursor: default;
+  }
+
+  .panel-native-select[multiple] option {
+    border-radius: var(--radius-md);
+    padding: 0.25rem 0.5rem;
+  }
+
+  .panel-native-select[data-size="sm"] {
+    min-height: 2rem;
+    padding-inline: 0.625rem;
+    padding-inline-end: 2rem;
+    @apply text-xs;
+  }
+
+  .panel-native-select[data-size="lg"] {
+    min-height: 2.75rem;
+    padding-inline: 1rem;
+    padding-inline-end: 2.5rem;
+    @apply text-base;
+  }
+
+  .panel-control-group[data-layout="inline"] .panel-native-select {
+    grid-area: control;
+    min-height: 2.5rem;
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+    outline: 0;
+  }
+
+  .panel-control-group[data-layout="inline"] .panel-native-select:focus-visible {
+    outline: 0;
+  }
+
+  @media (min-width: 640px) {
+    .panel-native-select {
+      @apply text-sm;
+    }
+  }
+}

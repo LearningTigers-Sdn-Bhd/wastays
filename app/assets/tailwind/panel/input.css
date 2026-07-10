@@ -1,0 +1,90 @@
+@layer components {
+  .panel-input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 2.5rem;
+    border: 1px solid var(--border-interactive);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+    color: var(--card-foreground);
+    padding-inline: 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    outline: none;
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-input::placeholder {
+    color: var(--muted-foreground);
+    opacity: 1;
+  }
+
+  .panel-input:hover:not(:disabled):not([readonly]):not([aria-invalid="true"]) {
+    border-color: var(--border-interactive);
+  }
+
+  .panel-input:focus-visible {
+    border-color: var(--border-interactive);
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-input[aria-invalid="true"] {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-input[aria-invalid="true"]:focus-visible {
+    outline-color: var(--destructive-on-surface);
+  }
+
+  .panel-input:disabled {
+    cursor: not-allowed;
+    border-color: var(--border);
+    background: color-mix(in oklab, var(--muted) 82%, var(--background));
+    color: var(--muted-foreground);
+  }
+
+  .panel-input[readonly] {
+    background: color-mix(in oklab, var(--muted) 52%, var(--card));
+  }
+
+  .panel-input[data-size="sm"] {
+    min-height: 2rem;
+    padding-inline: 0.625rem;
+    @apply text-xs;
+  }
+
+  .panel-input[data-size="lg"] {
+    min-height: 2.75rem;
+    padding-inline: 1rem;
+    @apply text-base;
+  }
+
+  .panel-control-group[data-layout="inline"] .panel-input {
+    grid-area: control;
+    min-height: 2.5rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    outline: 0;
+  }
+
+  .panel-control-group[data-layout="inline"] .panel-input:focus-visible {
+    outline: 0;
+  }
+
+  .panel-control-group[data-layout="inline"] .panel-input[data-size="sm"] {
+    min-height: 2rem;
+  }
+
+  .panel-control-group[data-layout="inline"] .panel-input[data-size="lg"] {
+    min-height: 2.75rem;
+  }
+
+  @media (min-width: 640px) {
+    .panel-input {
+      @apply text-sm;
+    }
+  }
+}
