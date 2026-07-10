@@ -42,7 +42,7 @@ export function isTopOverlay(element) {
 // if/when a primitive wants an enter/leave effect.
 
 // ── Focus trapping (for non-native overlays) ─────────────────────────────────
-// The native <dialog> element traps focus on its own, so DialogComponent does not
+// The native <dialog> element traps focus on its own, so PanelsUI::Dialog does not
 // need this; drawers/popovers that aren't native use it. Returns the trap so the
 // caller can `.deactivate()` in disconnect().
 export function createTrap(element, options = {}) {
