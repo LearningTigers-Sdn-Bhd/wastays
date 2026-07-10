@@ -45,4 +45,12 @@ RSpec.describe HotelPortal::Requests::StatusUpdater do
 
     expect(room_status.reload.status).to eq("ready")
   end
+
+  it "updates housekeeping request successfully even if booking is nil but hotel matches" do
+    request = create(:housekeeping_request, booking: nil, hotel: hotel, status: "pending")
+    result = described_class.new(hotel: hotel, kind: :housekeeping, request_id: request.id, status: :completed).call
+
+    expect(result).to eq(request)
+    expect(request.reload.status).to eq("completed")
+  end
 end

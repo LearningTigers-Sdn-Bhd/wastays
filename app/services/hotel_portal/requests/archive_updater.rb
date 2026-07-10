@@ -38,7 +38,9 @@ module HotelPortal
           raise ActiveRecord::RecordNotFound
         end
 
-        raise ActiveRecord::RecordNotFound unless record.booking.hotel_id == hotel.id
+        record_hotel_id = record.respond_to?(:hotel_id) ? record.hotel_id : nil
+        record_hotel_id ||= record.booking&.hotel_id
+        raise ActiveRecord::RecordNotFound unless record_hotel_id == hotel.id
         record
       end
     end

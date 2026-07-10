@@ -41,10 +41,10 @@ module HotelPortal
           status: new_status,
           completed_at: @request.completed_at,
           booking_id: @request.booking_id,
-          confirmation_token: @request.booking.confirmation_token,
-          guest_name: @request.booking.guest_name,
-          guest_phone: @request.booking.guest_phone,
-          hotel_name: @request.booking.hotel.name
+          confirmation_token: @request.booking&.confirmation_token,
+          guest_name: @request.booking&.guest_name,
+          guest_phone: @request.booking&.guest_phone,
+          hotel_name: @request.booking&.hotel&.name || @request.hotel&.name
         }
 
         WebhookBroadcastJob.perform_later(event_type, payload)
@@ -60,7 +60,9 @@ module HotelPortal
           raise ActiveRecord::RecordNotFound
         end
 
-        raise ActiveRecord::RecordNotFound unless record.booking.hotel_id == hotel.id
+        record_hotel_id = record.respond_to?(:hotel_id) ? record.hotel_id : nil
+        record_hotel_id ||= record.booking&.hotel_id
+        raise ActiveRecord::RecordNotFound unless record_hotel_id == hotel.id
         record
       end
 
@@ -79,6 +81,15 @@ module HotelPortal
           completed_at = target_status == "completed" ? (record.completed_at || Time.current) : nil
           metadata = record.metadata.to_h
           if target_status.in?(%w[new no_task])
+            if metadata["assigned_to"].present?
+              history = Array(metadata["assignment_history"])
+              history << {
+                "assigned_to_name" => "Unassigned",
+                "assigned_by_name" => "System",
+                "timestamp" => Time.current.iso8601
+              }
+              metadata["assignment_history"] = history
+            end
             metadata.delete("assigned_to")
             metadata.delete("assigned_to_name")
           end

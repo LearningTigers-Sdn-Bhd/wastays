@@ -1,28 +1,37 @@
-<% form_url = (controller_name == "room_status_board" ? hotel_room_status_board_path(current_hotel) : hotel_housekeeping_tasks_path(current_hotel)) %>
+<% form_url = hotel_housekeeping_tasks_path(current_hotel) %>
 
 <div class="space-y-6">
   <!-- Search and Filters Form -->
-  <div class="mx-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:mx-0">
-    <%= form_with url: form_url, method: :get, data: { controller: "auto-submit", turbo_frame: "housekeeping_tasks_results" }, class: "grid gap-4 md:grid-cols-[1fr_250px_auto]" do |f| %>
-      <%= hidden_field_tag :tab, "housekeeping" if controller_name == "room_status_board" %>
+  <div class="mx-4 md:mx-0">
+    <%= form_with url: form_url, method: :get, id: "hk-filters-form", data: { controller: "auto-submit", turbo_frame: "housekeeping_tasks_results" }, class: "grid gap-4 sm:grid-cols-2 lg:grid-cols-4" do |f| %>
 
       <!-- Text Search -->
-      <div class="relative">
+      <div class="relative lg:col-span-2">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
           <%= cached_icon "search", class: "size-4" %>
         </div>
         <%= text_field_tag :q, params[:q], autocomplete: "off", class: "w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", placeholder: "Search guest, booking or request...", data: { action: "input->auto-submit#submit" } %>
       </div>
 
-      <!-- Room Number Filter -->
+      <!-- Assigned To Filter -->
       <div>
-        <%= text_field_tag :room_number, params[:room_number], class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", placeholder: "Room number...", data: { action: "input->auto-submit#submit" } %>
+        <%= select_tag :assigned_to, options_for_select([["All Staff", ""]] + @staff_members.map { |s| [s.name, s.id] }, params[:assigned_to]), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
       </div>
 
-      <!-- Actions -->
-      <div class="flex items-center gap-2">
-        <%= f.submit "Filter", class: "rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 cursor-pointer" %>
-        <%= link_to "Reset", form_url, class: "rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50", data: { turbo_frame: "_top" } %>
+      <!-- Room Status Filter -->
+      <div>
+        <% status_options = [
+          ["All Room Statuses", ""],
+          ["Ready", "ready"],
+          ["Dirty", "dirty"],
+          ["Cleaning", "cleaning"],
+          ["Occupied", "occupied"],
+          ["Awaiting Inspection", "awaiting_inspection"],
+          ["Inspection Failed", "inspection_failed"],
+          ["Out of Service", "out_of_service"],
+          ["Late Checkout Detected", "late_checkout_detected"]
+        ] %>
+        <%= select_tag :room_status, options_for_select(status_options, params[:room_status]), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
       </div>
     <% end %>
   </div>
@@ -148,7 +157,7 @@
 
                     <!-- Arrival Time -->
                     <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
-                      <%= (active_booking && active_booking.pre_checkin&.metadata&.dig("estimated_arrival_time").presence) || "-" %>
+                      <%= (active_booking && active_booking.checked_in_at&.strftime("%I:%M %p")) || "-" %>
                     </td>
 
                     <!-- Arrival Date -->
@@ -220,3 +229,46 @@
     </div>
   <% end %>
 </div>
+
+<script>
+  (function() {
+    const initExportSync = () => {
+      const form = document.getElementById("hk-filters-form");
+      if (!form) return;
+      
+      const updateLinks = () => {
+        const q = form.querySelector('[name="q"]').value;
+        const assignedTo = form.querySelector('[name="assigned_to"]').value;
+        const roomStatus = form.querySelector('[name="room_status"]').value;
+        
+        const pdfLink = document.getElementById("export-pdf-link");
+        const excelLink = document.getElementById("export-excel-link");
+        
+        if (pdfLink) {
+          const url = new URL(pdfLink.href, window.location.origin);
+          url.searchParams.set("q", q);
+          url.searchParams.set("assigned_to", assignedTo);
+          url.searchParams.set("room_status", roomStatus);
+          pdfLink.href = url.pathname + url.search;
+        }
+        if (excelLink) {
+          const url = new URL(excelLink.href, window.location.origin);
+          url.searchParams.set("q", q);
+          url.searchParams.set("assigned_to", assignedTo);
+          url.searchParams.set("room_status", roomStatus);
+          excelLink.href = url.pathname + url.search;
+        }
+      };
+      
+      form.addEventListener("input", updateLinks);
+      form.addEventListener("change", updateLinks);
+      updateLinks();
+    };
+    
+    document.addEventListener("turbo:load", initExportSync);
+    // Fallback for Turbo Frame navigation updates
+    document.addEventListener("turbo:frame-render", initExportSync);
+    // Initialize immediately in case script loads after turbo:load
+    initExportSync();
+  })();
+</script>
