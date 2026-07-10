@@ -115,17 +115,27 @@ module HotelPortal
 
       def smoking_icon
         if room_type.smoking_allowed
-          helpers.cached_icon("cigarette", library: "phosphor", variant: "light", class: "size-3")
+          helpers.cached_icon("cigarette", stroke_width: 2.75, class: "size-3")
         else
-          helpers.cached_icon("cigarette-slash", library: "phosphor", variant: "light", class: "size-3")
+          helpers.content_tag(:span, class: "relative inline-flex items-center justify-center size-3") do
+            helpers.safe_join([
+              helpers.cached_icon("cigarette", stroke_width: 2.75, class: "size-3"),
+              helpers.cached_icon("ban", stroke_width: 2.75, class: "absolute size-4")
+            ])
+          end
         end
       end
 
       def pets_icon
         if room_type.pets_allowed
-          helpers.cached_icon("paw-print", library: "phosphor", variant: "light", class: "size-3")
+          helpers.cached_icon("paw-print", stroke_width: 2.75, class: "size-3")
         else
-          helpers.cached_icon("paw-print", library: "phosphor", variant: "light", class: "size-3 opacity-50")
+          helpers.content_tag(:span, class: "relative inline-flex items-center justify-center size-3") do
+            helpers.safe_join([
+              helpers.cached_icon("paw-print", stroke_width: 2.75, class: "size-3"),
+              helpers.cached_icon("ban", stroke_width: 2.75, class: "absolute size-4")
+            ])
+          end
         end
       end
 

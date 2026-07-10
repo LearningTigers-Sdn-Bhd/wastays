@@ -382,18 +382,19 @@ module Bookings
           reason: nil,
           metadata: { "booking_id" => @booking.id }
         ).call
-
-        # Auto-create housekeeping request for checkout cleaning
-        HousekeepingRequest.create!(
-          hotel: @booking.hotel,
-          room_type: booking_room.room_type,
-          room_number: booking_room.room_number,
-          booking: @booking,
-          status: "new",
-          request_details: "Checkout Room Cleaning",
-          requested_at: Time.current
-        )
       end
+
+      # Auto-create one checkout request for the booking.
+      # Checkout room cleaning stays in CheckOutRequest and is rendered in the housekeeping task view.
+      return if @booking.check_out_requests.where(status: %w[new assigned in_progress pending acknowledged]).exists?
+
+      checkout_room_number = @booking.booking_rooms.where.not(room_number: [ nil, "" ]).first&.room_number
+      @booking.check_out_requests.create!(
+        status: "new",
+        requested_at: Time.current,
+        guest_notes: "Checkout Room Cleaning",
+        metadata: { "source" => "auto_checkout", "room_number" => checkout_room_number }
+      )
     end
 
     def release_review_rooms_to_ready

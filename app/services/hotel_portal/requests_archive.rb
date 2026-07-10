@@ -35,7 +35,7 @@ module HotelPortal
     def build_rows
       rows = []
 
-      hotel.bookings.includes(:housekeeping_requests, :complaint_requests).find_each do |booking|
+      hotel.bookings.includes(:housekeeping_requests, :complaint_requests, :check_out_requests).find_each do |booking|
         booking.housekeeping_requests.each do |request|
           rows << build_row(
             kind: "housekeeping",
@@ -52,6 +52,29 @@ module HotelPortal
             booking: booking,
             title: request.complaint_details
           )
+        end
+
+        booking.check_out_requests.each do |request|
+          archived_at = request.metadata.to_h["archived_at"]
+          next unless request.status == "cancelled" || (request.status == "completed" && archived_at.present?)
+          rows << {
+            kind: "checkout",
+            request_id: request.id,
+            booking_id: booking.id,
+            booking_token: booking.confirmation_token,
+            guest_name: booking.guest_name,
+            title: request.guest_notes.presence || "Checkout requested",
+            requested_at: request.requested_at,
+            completed_at: request.acknowledged_at || request.updated_at,
+            status: request.status,
+            internal_notes: [],
+            archived_at: archived_at.presence || request.updated_at,
+            status_class: request.status == "completed" ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border border-red-100",
+            kind_class: "bg-amber-50 text-amber-600 border-amber-100",
+            archive_url: hotel_unarchive_request_path(hotel, kind: "checkout", request_id: request.id),
+            archive_action: "Unarchive",
+            booking_url: hotel_booking_path(hotel, booking, tab: "requests")
+          }
         end
       end
 
@@ -151,10 +174,10 @@ module HotelPortal
 
     def status_class_for(kind, status)
       case kind.to_s
-      when "housekeeping"
+      when "housekeeping", "checkout"
         case status.to_s
         when "completed", "resolved" then "bg-green-50 text-green-700 border border-green-100"
-        when "cancel", "rejected" then "bg-red-50 text-red-700 border border-red-100"
+        when "cancel", "rejected", "cancelled" then "bg-red-50 text-red-700 border border-red-100"
         when "pending", "requested" then "bg-yellow-50 text-yellow-700 border border-yellow-100"
         else "bg-gray-50 text-gray-700 border border-gray-100"
         end
@@ -170,7 +193,13 @@ module HotelPortal
     end
 
     def kind_class_for(kind)
-      kind == "housekeeping" ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-rose-50 text-rose-600 border-rose-100"
+      if kind == "housekeeping"
+        "bg-blue-50 text-blue-600 border-blue-100"
+      elsif kind == "checkout"
+        "bg-amber-50 text-amber-600 border-amber-100"
+      else
+        "bg-rose-50 text-rose-600 border-rose-100"
+      end
     end
   end
 end

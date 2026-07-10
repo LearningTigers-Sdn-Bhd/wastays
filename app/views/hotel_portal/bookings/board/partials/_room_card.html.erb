@@ -28,11 +28,11 @@
         <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
           <div data-floating-target="reference" class="<%= room_card_smoking_badge_color_class(room_type) %> cursor-help translate-y-[1px] ">
             <% if room_type.smoking_allowed %>
-              <%= cached_icon "cigarette", stroke_width: 2.25, class: "size-3.5" %>
+              <%= cached_icon "cigarette", stroke_width: 2.75, class: "size-3.5" %>
             <% else %>
               <span class="relative inline-flex items-center justify-center size-3.5">
-                <%= cached_icon "cigarette", stroke_width: 2.25, class: "size-3.5" %>
-                <%= cached_icon "ban", stroke_width: 2.25, class: "absolute size-3.5" %>
+                <%= cached_icon "cigarette", stroke_width: 2.75, class: "size-3.5" %>
+                <%= cached_icon "ban", stroke_width: 2.75, class: "absolute size-3.5" %>
               </span>
             <% end %>
           </div>
@@ -45,11 +45,11 @@
         <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
           <div data-floating-target="reference" class="<%= room_card_pets_badge_color_class(room_type) %> cursor-help">
             <% if room_type.pets_allowed %>
-              <%= cached_icon "paw-print", stroke_width: 2.25, class: "size-3.5" %>
+              <%= cached_icon "paw-print", stroke_width: 2.75, class: "size-3.5" %>
             <% else %>
               <span class="relative inline-flex items-center justify-center size-3.5">
-                <%= cached_icon "paw-print", stroke_width: 2.25, class: "size-3.5" %>
-                <%= cached_icon "ban", stroke_width: 2.25, class: "absolute size-3.5" %>
+                <%= cached_icon "paw-print", stroke_width: 2.75, class: "size-3.5" %>
+                <%= cached_icon "ban", stroke_width: 2.75, class: "absolute size-3.5" %>
               </span>
             <% end %>
           </div>

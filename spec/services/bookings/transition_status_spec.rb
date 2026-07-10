@@ -447,11 +447,33 @@ RSpec.describe Bookings::TransitionStatus do
         expect(room_status.dnd).to be false
         expect(room_status.dnd_date).to be_nil
 
-        # Verify checkout housekeeping request is created
+        # Verify checkout request is created (not a housekeeping request)
+        checkout_req = CheckOutRequest.find_by(booking: booking)
+        expect(checkout_req).to be_present
+        expect(checkout_req.status).to eq("new")
+        expect(checkout_req.guest_notes).to eq("Checkout Room Cleaning")
+        expect(checkout_req.metadata["room_number"]).to eq("101")
+
+        # Verify no HousekeepingRequest is created at checkout time
+        # (it will be backfilled on-demand by the housekeeping tasks controller)
         hk_req = HousekeepingRequest.find_by(booking: booking, room_number: "101")
-        expect(hk_req).to be_present
-        expect(hk_req.status).to eq("new")
-        expect(hk_req.request_details).to eq("Checkout Room Cleaning")
+        expect(hk_req).to be_nil
+      end
+
+      it "creates only one checkout request for a multi-room booking" do
+        room_type = create(:room_type, hotel: booking.hotel)
+        create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+        create(:booking_room, booking: booking, room_type: room_type, room_number: "102")
+        create_settled_folio
+        allow_any_instance_of(Folios::CloseForCheckout).to receive(:validate_all_nights_posted).and_return(nil)
+
+        result = subject.call
+
+        expect(result.success?).to be(true)
+        expect(booking.reload.check_out_requests.count).to eq(1)
+        expect(booking.check_out_requests.first.guest_notes).to eq("Checkout Room Cleaning")
+        expect(booking.check_out_requests.first.metadata["room_number"]).to eq("101")
+        expect(HousekeepingRequest.where(booking: booking, request_details: "Checkout Room Cleaning")).to be_empty
       end
     end
 

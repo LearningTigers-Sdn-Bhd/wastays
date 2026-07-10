@@ -8,11 +8,11 @@
       <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
         <div data-floating-target="reference" class="<%= room_smoking_color_class(room[:room_type]) %> cursor-help">
           <% if room[:room_type].smoking_allowed %>
-            <%= cached_icon "cigarette", stroke_width: 2, class: "size-3.5" %>
+            <%= cached_icon "cigarette", stroke_width: 2.75, class: "size-3.5" %>
           <% else %>
             <span class="relative inline-flex items-center justify-center size-3.5">
-              <%= cached_icon "cigarette", stroke_width: 2, class: "size-3.5" %>
-              <%= cached_icon "ban", stroke_width: 2, class: "absolute size-3.5" %>
+              <%= cached_icon "cigarette", stroke_width: 2.75, class: "size-3.5" %>
+              <%= cached_icon "ban", stroke_width: 2.75, class: "absolute size-3.5" %>
             </span>
           <% end %>
         </div>
@@ -24,11 +24,11 @@
       <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
         <div data-floating-target="reference" class="<%= room_pets_color_class(room[:room_type]) %> cursor-help">
           <% if room[:room_type].pets_allowed %>
-            <%= cached_icon "paw-print", stroke_width: 2, class: "size-3.5" %>
+            <%= cached_icon "paw-print", stroke_width: 2.75, class: "size-3.5" %>
           <% else %>
             <span class="relative inline-flex items-center justify-center size-3.5">
-              <%= cached_icon "paw-print", stroke_width: 2, class: "size-3.5" %>
-              <%= cached_icon "ban", stroke_width: 2, class: "absolute size-3.5" %>
+              <%= cached_icon "paw-print", stroke_width: 2.75, class: "size-3.5" %>
+              <%= cached_icon "ban", stroke_width: 2.75, class: "absolute size-3.5" %>
             </span>
           <% end %>
         </div>
