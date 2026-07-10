@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PanelsUI::DialogComponent, type: :component do
+RSpec.describe PanelsUI::Dialog, type: :component do
   def render_dialog(**opts, &block)
     render_inline(described_class.new(**{ id: "d1" }.merge(opts)), &block)
   end

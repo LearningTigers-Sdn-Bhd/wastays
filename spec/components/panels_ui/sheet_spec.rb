@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PanelsUI::SheetComponent, type: :component do
+RSpec.describe PanelsUI::Sheet, type: :component do
   def render_sheet(**opts, &block)
     render_inline(described_class.new(**{ id: "s1", title: "Sheet title" }.merge(opts)), &block)
   end

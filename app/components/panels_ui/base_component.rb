@@ -9,7 +9,7 @@ module PanelsUI
   # caller's `class:` override are combined and de-duplicated through `tw_merge`
   # (see config/initializers/tailwind_merge.rb), so the last-declared utility wins.
   #
-  #   class ButtonComponent < PanelsUI::BaseComponent
+  #   class Button < PanelsUI::BaseComponent
   #     style base: "inline-flex items-center rounded-md",
   #           variants: {
   #             variant: { solid: "bg-primary text-primary-foreground", ghost: "text-foreground hover:bg-muted" },

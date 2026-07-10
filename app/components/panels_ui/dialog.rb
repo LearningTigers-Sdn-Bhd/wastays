@@ -9,7 +9,7 @@ module PanelsUI
   #
   #   <button command="show-modal" commandfor="invite">Invite teammate</button>
   #
-  #   <%= render PanelsUI::DialogComponent.new(
+  #   <%= render PanelsUI::Dialog.new(
   #         id: "invite",
   #         title: "Invite teammate",
   #         description: "They'll get an email with a join link.") do |dialog| %>
@@ -27,7 +27,7 @@ module PanelsUI
   # Using native <dialog> gives us focus trapping, Escape-to-close, the top layer,
   # and a stylable ::backdrop for free — the Stimulus controller only drives
   # scroll-lock, initial focus, and backdrop-click dismissal.
-  class DialogComponent < PanelsUI::BaseComponent
+  class Dialog < PanelsUI::BaseComponent
     renders_one :body
     renders_one :footer
 
@@ -39,7 +39,7 @@ module PanelsUI
     # `flex` must only apply while the dialog is open. An unconditional author
     # `display: flex` overrides the browser's `dialog:not([open]) { display: none }`
     # rule and leaks every closed dialog into normal document flow.
-    style base: "relative m-auto hidden open:flex flex-col w-full overflow-hidden " \
+    style base: "fixed inset-0 m-auto hidden open:flex flex-col w-full overflow-hidden " \
                 "bg-card text-card-foreground border border-border rounded-lg " \
                 "shadow-lg p-0 z-modal backdrop:bg-black/50 backdrop:backdrop-blur-sm",
           variants: {

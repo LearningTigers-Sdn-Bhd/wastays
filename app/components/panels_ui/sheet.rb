@@ -9,7 +9,7 @@ module PanelsUI
   #
   # Close through `panels-ui--sheet#close` so the exit transition and overlay
   # stack complete before the native dialog leaves the top layer.
-  class SheetComponent < PanelsUI::BaseComponent
+  class Sheet < PanelsUI::BaseComponent
     renders_one :body
     renders_one :footer
 

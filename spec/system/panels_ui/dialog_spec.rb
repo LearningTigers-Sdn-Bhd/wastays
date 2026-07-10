@@ -20,6 +20,20 @@ RSpec.describe "PanelsUI::Dialog", type: :system do
     expect(page.evaluate_script("document.activeElement.getAttribute('aria-label')")).not_to eq("Close")
   end
 
+  it "preserves the document position while locking background scroll" do
+    page.execute_script(<<~JS)
+      document.documentElement.style.minHeight = "250vh"
+      window.scrollTo(0, 500)
+    JS
+    original_scroll_y = page.evaluate_script("window.scrollY")
+
+    page.execute_script("document.getElementById('sd-dialog').showModal()")
+
+    expect(page).to have_css("dialog#sd-dialog[open]")
+    expect(page.evaluate_script("document.body.style.overflow")).to eq("hidden")
+    expect(page.evaluate_script("window.scrollY")).to eq(original_scroll_y)
+  end
+
   it "closes on Escape" do
     click_button "Open dialog"
     expect(page).to have_css("dialog#sd-dialog[open]")
