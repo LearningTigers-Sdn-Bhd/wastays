@@ -1,0 +1,101 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe PanelsUI::FormField, type: :component do
+  FormFieldObject = Class.new do
+    include ActiveModel::Model
+    attr_accessor :email, :notes, :nightly_rate, :reference
+  end
+
+  def form_for(object = FormFieldObject.new)
+    ActionView::Helpers::FormBuilder.new(:profile, object, vc_test_view_context, {})
+  end
+
+  def render_field(object: FormFieldObject.new, **options, &block)
+    render_inline(described_class.new(form: form_for(object), attribute: :email, **options), &block)
+  end
+
+  it "composes an input with a linked label and hint" do
+    render_field(label: "Email address", hint: "Used for booking notifications.") do |field|
+      field.with_input(type: :email, placeholder: "guest@example.com")
+    end
+
+    expect(page).to have_css(".panel-form-field[data-size='md'][data-invalid='false']")
+    expect(page).to have_css("label.panel-form-field__label[for='profile_email']", text: "Email address")
+    expect(page).to have_css("input#profile_email.panel-input[type='email'][aria-describedby='profile_email-hint']")
+    expect(page).to have_css("#profile_email-hint.panel-form-field__hint", text: "Used for booking notifications.")
+  end
+
+  it "derives errors from the builder object and wires the invalid description" do
+    object = FormFieldObject.new
+    object.errors.add(:email, "is already in use")
+
+    render_field(object: object, label: "Email") { |field| field.with_input(type: :email) }
+
+    expect(page).to have_css(".panel-form-field[data-invalid='true']")
+    expect(page).to have_css("input[aria-invalid='true'][aria-describedby='profile_email-error']")
+    expect(page).to have_css("#profile_email-error.panel-form-field__error[role='alert']", text: "is already in use")
+    expect(page).to have_no_css("#profile_email-hint")
+  end
+
+  it "propagates required, disabled, readonly, and hidden-label state to the control" do
+    render_field(label: "Email", required: true, disabled: true, readonly: true, label_hidden: true) do |field|
+      field.with_input
+    end
+
+    expect(page).to have_css("label.sr-only", text: "Email")
+    expect(page).to have_css("input[required][disabled][readonly]")
+    expect(page).to have_css("span.sr-only", text: "(required)", visible: :all)
+  end
+
+  it "creates an inline control group for start and end addons after the input in the DOM" do
+    render_field(label: "Rate") do |field|
+      field.with_input(type: :number)
+      field.with_addon(align: :inline_start) { "MYR" }
+      field.with_addon(align: :inline_end) { "per night" }
+    end
+
+    group = page.find(".panel-control-group[data-layout='inline']")
+    expect(group).to have_css("input.panel-input")
+    expect(group).to have_css(".panel-control-group__addon[data-align='inline-start'][data-variant='bordered']", text: "MYR")
+    expect(group).to have_css(".panel-control-group__addon[data-align='inline-end'][data-variant='bordered']", text: "per night")
+    expect(group.native.to_html.index("panel-input")).to be < group.native.to_html.index("inline-start")
+  end
+
+  it "supports bare addons and falls back unknown variants to bordered" do
+    render_field(label: "Email") do |field|
+      field.with_input
+      field.with_addon(align: :inline_start, variant: :bare) { "Bare" }
+      field.with_addon(align: :inline_end, variant: :unknown) { "Fallback" }
+    end
+
+    expect(page).to have_css("[data-align='inline-start'][data-variant='bare']", text: "Bare")
+    expect(page).to have_css("[data-align='inline-end'][data-variant='bordered']", text: "Fallback")
+  end
+
+  it "creates a block control group for textarea addons" do
+    render_field(label: "Notes") do |field|
+      field.with_text_area(rows: 4)
+      field.with_addon(align: :block_start) { "Staff only" }
+      field.with_addon(align: :block_end) { "0 / 500" }
+    end
+
+    expect(page).to have_css(".panel-control-group[data-layout='block'] textarea.panel-text-area[rows='4']")
+    expect(page).to have_css(".panel-control-group__addon[data-align='block-start']", text: "Staff only")
+    expect(page).to have_css(".panel-control-group__addon[data-align='block-end']", text: "0 / 500")
+  end
+
+  it "rejects addon directions that do not match the control" do
+    expect do
+      render_field(label: "Notes") do |field|
+        field.with_text_area
+        field.with_addon(align: :inline_start) { "Invalid" }
+      end
+    end.to raise_error(ArgumentError, "Text areas only support block_start, block_end addons")
+  end
+
+  it "requires a typed control slot" do
+    expect { render_field(label: "Email") }.to raise_error(ArgumentError, "Form fields require an input or text area control")
+  end
+end

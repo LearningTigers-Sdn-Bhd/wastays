@@ -1,0 +1,19 @@
+<div id="<%= @id %>"
+     class="dropdown-menu-root"
+     data-controller="panels-ui--dropdown-menu"
+     data-panels-ui--dropdown-menu-placement-value="<%= floating_placement %>"
+     data-panels-ui--dropdown-menu-offset-value="<%= @offset %>"
+     data-action="pointerdown@window->panels-ui--dropdown-menu#onWindowPointerDown">
+  <%= trigger %>
+
+  <div id="<%= menu_id %>"
+       role="menu"
+       tabindex="-1"
+       popover="manual"
+       class="<%= tw_merge("dropdown-menu", @class) %>"
+       aria-labelledby="<%= trigger_id %>"
+       data-panels-ui--dropdown-menu-target="menu"
+       data-action="keydown->panels-ui--dropdown-menu#onMenuKeydown click->panels-ui--dropdown-menu#onMenuClick toggle->panels-ui--dropdown-menu#onPopoverToggle">
+    <%= safe_join(entries) %>
+  </div>
+</div>

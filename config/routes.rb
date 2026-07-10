@@ -19,6 +19,7 @@ Rails.application.routes.draw do
   # PanelsUI component library showcase (not exposed in production).
   unless Rails.env.production?
     get "system-design", to: "system_designs#index", as: :system_design
+    post "system-design/submit-form", to: "system_designs#submit_form", as: :system_design_submit_form
   end
 
   # Defines the root path route ("/")

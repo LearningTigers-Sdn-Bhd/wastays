@@ -1,0 +1,26 @@
+<%= tag.div(**field_attributes) do %>
+  <% if @label.present? %>
+    <%= tag.label(for: control_id, class: label_classes) do %>
+      <%= @label %>
+      <% if @required %>
+        <span class="panel-form-field__required" aria-hidden="true">*</span>
+        <span class="sr-only">(required)</span>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% if control_group? %>
+    <%= tag.div(class: "panel-control-group", data: { layout: control_layout }) do %>
+      <%= control %>
+      <%= safe_join(addons) %>
+    <% end %>
+  <% else %>
+    <%= control %>
+  <% end %>
+
+  <% if invalid? %>
+    <p id="<%= error_id %>" class="panel-form-field__error" role="alert"><%= error_message %></p>
+  <% elsif hint? %>
+    <p id="<%= hint_id %>" class="panel-form-field__hint"><%= @hint %></p>
+  <% end %>
+<% end %>

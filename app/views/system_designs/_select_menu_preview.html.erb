@@ -1,0 +1,65 @@
+<section aria-labelledby="select-menu-preview-heading" class="border-t border-border pt-8">
+  <h2 id="select-menu-preview-heading" class="text-lg font-semibold text-foreground">Styled select (SelectMenu)</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    A token-styled listbox layered over a native <code>&lt;select&gt;</code>. The native control is the source of
+    truth (it submits and validates); a Stimulus controller hides it and drives a styled trigger + <code>role="listbox"</code>
+    popup with full keyboard nav and typeahead. With JS off, the native select shows instead.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> selects</h3>
+        <% scope = "select_menu_#{theme.tr('-', '_')}".to_sym %>
+        <%= form_with url: "#select-menu-preview", scope: scope, class: "mt-4 space-y-4" do |form| %>
+          <%= render PanelsUI::FieldGroup.new do %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :board,
+                  label: "Board basis",
+                  hint: "Keyboard: type to jump, arrows to move, Enter to pick.") do |field| %>
+              <% field.with_select_menu(
+                   [
+                     { label: "Room only", value: "room_only" },
+                     { label: "Breakfast included", value: "bnb" },
+                     { label: "Full board", value: "full" },
+                     { label: "All inclusive (sold out)", value: "all_in", disabled: true }
+                   ],
+                   prompt: "Select a board basis") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :room_type,
+                  label: "Room type",
+                  required: true,
+                  error: "Please pick a room type.") do |field| %>
+              <% field.with_select_menu(
+                   [ [ "Standard King", "std_king" ], [ "Deluxe Twin", "dlx_twin" ], [ "Suite", "suite" ] ],
+                   selected: "dlx_twin") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :currency,
+                  label: "Currency",
+                  size: :sm) do |field| %>
+              <% field.with_select_menu(
+                   [ [ "Malaysian Ringgit (MYR)", "MYR" ], [ "Singapore Dollar (SGD)", "SGD" ], [ "Thai Baht (THB)", "THB" ] ],
+                   selected: "MYR") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :channel,
+                  label: "Connected channel",
+                  hint: "Managed by the integration — not editable here.",
+                  disabled: true) do |field| %>
+              <% field.with_select_menu([ [ "Agoda", "agoda" ] ], selected: "agoda") %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

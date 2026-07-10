@@ -1,0 +1,139 @@
+<section aria-labelledby="button-preview-heading" class="border-t border-border pt-8">
+  <% button_preview_icon = app_icon("message-circle", class: "size-4", aria: { hidden: "true" }) %>
+
+  <h2 id="button-preview-heading" class="text-lg font-semibold text-foreground">Button</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Token-based action buttons with accessible focus states, semantic variants, disabled states,
+    link rendering, native dialog trigger attributes, and icon-only labels.
+  </p>
+
+  <% preview_variants = [
+    [ :neutral, "Neutral" ],
+    [ :primary, "Primary" ],
+    [ :secondary, "Secondary" ],
+    [ :destructive, "Destructive" ],
+    [ :accent, "Accent" ],
+    [ :success, "Success" ],
+    [ :warning, "Warning" ],
+    [ :info, "Informational" ],
+    [ :ghost, "Ghost" ]
+  ] %>
+
+  <div class="grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light variants" ], [ "panel-dark", "Dark variants" ] ].each do |theme, heading| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= heading %></h3>
+        <p class="mt-1 text-sm text-muted-foreground">
+          <code>data-theme="<%= theme %>"</code>
+        </p>
+
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <% preview_variants.each do |variant, label| %>
+            <%= render PanelsUI::Button.new(variant: variant, class: "w-full justify-start") do %>
+              <% if %i[neutral primary secondary destructive].include?(variant) %>
+                <%= button_preview_icon %>
+              <% end %>
+              <%= label %>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="mt-5 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+    <h3 class="text-sm font-semibold">Sizes</h3>
+    <div class="mt-3 flex flex-wrap items-center gap-2">
+      <%= render PanelsUI::Button.new(size: :sm) do %>
+        Small
+      <% end %>
+      <%= render PanelsUI::Button.new(size: :md) do %>
+        Medium
+      <% end %>
+      <%= render PanelsUI::Button.new(size: :lg) do %>
+        Large
+      <% end %>
+
+      <%= render PanelsUI::Button.new(size: :icon_sm, aria_label: "Small icon button") do %>
+        <%= button_preview_icon %>
+      <% end %>
+      <%= render PanelsUI::Button.new(size: :icon, aria_label: "Default icon button") do %>
+        <%= button_preview_icon %>
+      <% end %>
+    </div>
+
+    <div class="mt-6 border-t border-border pt-5">
+      <h3 class="text-sm font-semibold">Icon variants</h3>
+      <div class="mt-3 flex flex-wrap items-center gap-3">
+        <%= render PanelsUI::Button.new(variant: :neutral, size: :icon, aria_label: "Neutral icon action") do %>
+          <%= button_preview_icon %>
+        <% end %>
+
+        <%= render PanelsUI::Button.new(variant: :primary, size: :icon, aria_label: "Primary icon action") do %>
+          <%= button_preview_icon %>
+        <% end %>
+
+        <%= render PanelsUI::Button.new(variant: :secondary, size: :icon, aria_label: "Secondary icon action") do %>
+          <%= button_preview_icon %>
+        <% end %>
+
+        <%= render PanelsUI::Button.new(variant: :destructive, size: :icon, aria_label: "Destructive icon action") do %>
+          <%= button_preview_icon %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-4">
+      <h3 class="text-sm font-semibold text-card-foreground">Compact semantic variants</h3>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <%= render PanelsUI::Button.new(variant: :accent, size: :sm) do %>
+          Accent
+        <% end %>
+        <%= render PanelsUI::Button.new(variant: :success, size: :sm) do %>
+          Success
+        <% end %>
+        <%= render PanelsUI::Button.new(variant: :warning, size: :sm) do %>
+          Warning
+        <% end %>
+        <%= render PanelsUI::Button.new(variant: :info, size: :sm) do %>
+          Informational
+        <% end %>
+        <%= render PanelsUI::Button.new(variant: :ghost, size: :sm) do %>
+          Ghost
+        <% end %>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-border bg-card p-4">
+      <h3 class="text-sm font-semibold text-card-foreground">States and attributes</h3>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <%= render PanelsUI::Button.new(disabled: true) do %>
+          Disabled button
+        <% end %>
+        <%= render PanelsUI::Button.new(href: "#button-link-preview", variant: :secondary) do %>
+          Link button
+        <% end %>
+        <%= render PanelsUI::Button.new(command: "show-modal", commandfor: "sd-button-preview-dialog", variant: :accent) do %>
+          Dialog trigger
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <%= render PanelsUI::Dialog.new(
+        id: "sd-button-preview-dialog",
+        size: :sm,
+        title: "Button trigger",
+        description: "This dialog was opened by a PanelsUI::Button preserving native command attributes.") do |dialog| %>
+    <% dialog.with_body do %>
+      <p>Use the button component anywhere a regular button or link is needed.</p>
+    <% end %>
+    <% dialog.with_footer do %>
+      <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--dialog#close" }) do %>
+        Close
+      <% end %>
+    <% end %>
+  <% end %>
+</section>

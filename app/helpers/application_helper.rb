@@ -37,6 +37,13 @@ module ApplicationHelper
     @_cached_icons[key].dup.html_safe
   end
 
+  # ViewComponent-backed replacement for `cached_icon`, in progress. Not called
+  # from any view yet — migrate call sites to this one at a time, then retire
+  # `cached_icon` once nothing references it. See AppIconComponent.
+  def app_icon(name, **arguments)
+    render(AppIconComponent.new(name, **arguments))
+  end
+
   def booking_status_class(status)
     case status
     when "confirmed" then "bg-green-100 text-green-800"
