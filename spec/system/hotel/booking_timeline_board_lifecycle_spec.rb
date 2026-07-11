@@ -240,7 +240,7 @@ RSpec.describe "Booking Timeline Board Booking Lifecycle", type: :system do
       expect(page).to have_content("John Doe")
       page.execute_script("document.getElementById('offcanvas_drawer').src = '#{hotel_booking_transaction_amend_stay_path(hotel, @booking)}'")
       expect(page).to have_content(/Edit Stay & Room/i)
-      find_button("Cancel").trigger("click")
+      click_button "Cancel"
     end
 
     expect(page).to have_selector("#offcanvas_drawer_container.hidden", visible: :all)

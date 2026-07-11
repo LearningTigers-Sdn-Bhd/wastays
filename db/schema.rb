@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_11_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -967,6 +967,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.datetime "signed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "display_fields_snapshot"
     t.index ["booking_id"], name: "index_guest_registration_cards_on_booking_id", unique: true
     t.index ["hotel_id"], name: "index_guest_registration_cards_on_hotel_id"
     t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'signed'::character varying]::text[])", name: "guest_registration_cards_status_allowed"
@@ -1225,6 +1226,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_08_020000) do
     t.boolean "allow_pax_pricing", default: false, null: false
     t.string "google_map_link"
     t.boolean "geolocation_enabled", default: true, null: false
+    t.jsonb "guest_registration_card_fields"
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true

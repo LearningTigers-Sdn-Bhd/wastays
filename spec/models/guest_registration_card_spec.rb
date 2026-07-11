@@ -47,4 +47,42 @@ RSpec.describe GuestRegistrationCard, type: :model do
       expect(card.reload.terms_snapshot).to eq(snapshot)
     end
   end
+
+  describe "display fields" do
+    it "uses every supported field by default" do
+      card = build(:guest_registration_card)
+
+      expect(card.visible_fields).to eq(GuestRegistrationCard::DISPLAY_FIELDS.keys)
+    end
+
+    it "uses sanitized hotel settings while draft" do
+      hotel = create(:hotel, guest_registration_card_fields: %w[email room_type unknown])
+      card = build(:guest_registration_card, hotel: hotel, booking: build(:booking, hotel: hotel))
+
+      expect(card.visible_fields).to eq(%w[email room_type])
+      expect(card.field_visible?(:room_type)).to be(true)
+      expect(card.field_visible?(:phone)).to be(false)
+    end
+
+    it "uses its saved snapshot after signing" do
+      hotel = create(:hotel, guest_registration_card_fields: %w[email room_type])
+      card = build(:guest_registration_card, :signed, hotel: hotel, booking: build(:booking, hotel: hotel), display_fields_snapshot: %w[phone unknown])
+
+      hotel.guest_registration_card_fields = %w[check_in]
+
+      expect(card.visible_fields).to eq(%w[phone])
+    end
+
+    it "uses every supported field for a signed card with a nil snapshot" do
+      card = build(:guest_registration_card, :signed, display_fields_snapshot: nil)
+
+      expect(card.visible_fields).to eq(GuestRegistrationCard::DISPLAY_FIELDS.keys)
+    end
+
+    it "uses no fields for a signed card with an empty snapshot" do
+      card = build(:guest_registration_card, :signed, display_fields_snapshot: [])
+
+      expect(card.visible_fields).to eq([])
+    end
+  end
 end

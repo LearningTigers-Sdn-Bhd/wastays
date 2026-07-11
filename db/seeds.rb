@@ -72,6 +72,7 @@ module SeedData
       guest.country = guest_attrs[:country]
       guest.document_type = guest_attrs[:document_type]
       guest.government_id = guest_attrs[:government_id]
+      guest.date_of_birth = guest_attrs[:date_of_birth]
       guest.save!
       guest
     end
@@ -412,7 +413,7 @@ if Rails.env.development?
     {
       hotel_name: 'Sample Hotel',
       room_name: 'Executive King',
-      guest: { name: 'Ravi Menon', email: 'ravi.menon@example.com', phone: '+60129876543', adults: 1, children: 0, gender: 'male', country: 'India', document_type: 'passport', government_id: 'N7788991' },
+      guest: { name: 'Ravi Menon', email: 'ravi.menon@example.com', phone: '+60129876543', adults: 1, children: 0, gender: 'male', country: 'India', document_type: 'passport', government_id: 'N7788991', date_of_birth: Date.new(1987, 3, 18) },
       check_in: Date.current - 2.days,
       nights: 3,
       status: 'confirmed',
@@ -424,7 +425,7 @@ if Rails.env.development?
     {
       hotel_name: 'Aurora Hill Retreat',
       room_name: 'Skyline Suite',
-      guest: { name: 'Elena Cruz', email: 'elena.cruz@example.com', phone: '+60123333333', adults: 2, children: 1, gender: 'female', country: 'Philippines', document_type: 'passport', government_id: 'P3344556' },
+      guest: { name: 'Elena Cruz', email: 'elena.cruz@example.com', phone: '+60123333333', adults: 2, children: 1, gender: 'female', country: 'Philippines', document_type: 'passport', government_id: 'P3344556', date_of_birth: Date.new(1991, 7, 24) },
       check_in: Date.current + 4.days,
       nights: 2,
       status: 'confirmed',
@@ -448,7 +449,7 @@ if Rails.env.development?
     {
       hotel_name: 'Kinabalu Rainforest Lodge',
       room_name: 'Canopy Cabin',
-      guest: { name: 'Tom Becker', email: 'tom.becker@example.com', phone: '+60192223344', adults: 2, children: 0, gender: 'male', country: 'Germany', document_type: 'passport', government_id: 'C01X7788' },
+      guest: { name: 'Tom Becker', email: 'tom.becker@example.com', phone: '+60192223344', adults: 2, children: 0, gender: 'male', country: 'Germany', document_type: 'passport', government_id: 'C01X7788', date_of_birth: Date.new(1985, 11, 9) },
       check_in: Date.current + 9.days,
       nights: 2,
       status: 'confirmed',

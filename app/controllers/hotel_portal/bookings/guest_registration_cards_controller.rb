@@ -10,9 +10,21 @@ class HotelPortal::Bookings::GuestRegistrationCardsController < HotelPortal::Bas
   end
 
   def update
-    @card.assign_attributes(card_params.merge(status: "signed", signed_at: Time.current, terms_snapshot: @card.capture_terms_snapshot_preview))
+    result = @card.with_lock do
+      break :already_signed if @card.signed?
 
-    if @card.save
+      @card.assign_attributes(card_params.merge(
+        status: "signed",
+        signed_at: Time.current,
+        terms_snapshot: @card.capture_terms_snapshot_preview,
+        display_fields_snapshot: @card.capture_display_fields_snapshot
+      ))
+      @card.save ? :saved : :invalid
+    end
+
+    if result == :already_signed
+      redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking), alert: "Delete the existing signature before signing again."
+    elsif result == :saved
       redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking), notice: "Guest registration card signed."
     else
       render :show, status: :unprocessable_content
@@ -20,7 +32,7 @@ class HotelPortal::Bookings::GuestRegistrationCardsController < HotelPortal::Bas
   end
 
   def destroy
-    @card.update!(status: "draft", signer_name: nil, signature_data_url: nil, signed_at: nil)
+    @card.update!(status: "draft", signer_name: nil, signature_data_url: nil, signed_at: nil, display_fields_snapshot: nil)
     redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking), notice: "Guest registration card signature removed."
   end
 
