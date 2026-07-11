@@ -23,50 +23,53 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     sign_in_through_ui(user)
   end
 
-  it "loads direct tab links and synchronizes tab switches with the URL and breadcrumb" do
-    visit hotel_settings_path(hotel, tab: "notifications")
+  it "loads direct tab links and updates the URL and breadcrumb" do
+    visit hotel_notification_settings_path(hotel)
 
-    expect(page).to have_current_path(hotel_settings_path(hotel, tab: "notifications"))
-    expect(page).to have_css("[data-testid='settings-notifications-panel']")
-    expect(page).to have_css("[data-testid='settings-general-panel']", visible: :hidden)
+    expect(page).to have_current_path(hotel_notification_settings_path(hotel))
+    expect(page).to have_css("h2", text: "Communication & Notifications")
+    expect(page).to have_no_css("h2", text: "AI Concierge Configuration")
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Notifications")
 
-    click_button "AI Concierge"
+    within("[data-testid='settings-tabs']") { click_link "AI Concierge" }
 
-    expect(page).to have_current_path(hotel_settings_path(hotel, tab: "ai"))
-    expect(page).to have_css("[data-testid='settings-ai-panel']")
-    expect(page).to have_css("[data-testid='settings-notifications-panel']", visible: :hidden)
+    expect(page).to have_current_path(hotel_ai_concierge_settings_path(hotel))
+    expect(page).to have_css("h2", text: "AI Concierge Configuration")
+    expect(page).to have_no_css("h2", text: "Communication & Notifications")
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "AI Concierge")
   end
 
   it "falls back to General for an unknown tab parameter" do
     visit hotel_settings_path(hotel, tab: "unknown")
 
-    expect(page).to have_css("[data-testid='settings-general-panel']")
-    expect(page).to have_no_css("[data-testid='settings-tax-panel']", visible: :all)
+    expect(page).to have_current_path(hotel_general_settings_path(hotel))
+    expect(page).to have_css("h2", text: "Hotel Settings", visible: :all)
+    expect(page).to have_no_css("h2", text: "Banking Details")
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "General")
   end
 
   it "does not expose Banking without manage account permission" do
     RolePermission.find_by!(role: role, permission: manage_account_permission).destroy!
 
-    visit hotel_settings_path(hotel, tab: "banking")
+    visit hotel_banking_details_settings_path(hotel)
 
-    expect(page).to have_no_button("Banking")
-    expect(page).to have_no_css("[data-testid='settings-banking-panel']", visible: :all)
-    expect(page).to have_css("[data-testid='settings-general-panel']")
+    expect(page).to have_current_path(hotel_general_settings_path(hotel))
+    expect(page).to have_no_link("Banking Details", href: hotel_banking_details_settings_path(hotel))
+    expect(page).to have_no_css("h2", text: "Banking Details")
+    expect(page).to have_css("h2", text: "Hotel Settings", visible: :all)
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "General")
   end
 
   it "shows only Banking to an account-only user" do
     RolePermission.find_by!(role: role, permission: manage_profile_permission).destroy!
 
-    visit hotel_settings_path(hotel, tab: "general")
+    visit hotel_general_settings_path(hotel)
 
-    expect(page).to have_button("Banking")
-    expect(page).to have_no_button("General")
-    expect(page).to have_no_css("[data-testid='settings-general-panel']", visible: :all)
-    expect(page).to have_css("[data-testid='settings-banking-panel']")
+    expect(page).to have_current_path(hotel_banking_details_settings_path(hotel))
+    expect(page).to have_link("Banking Details", href: hotel_banking_details_settings_path(hotel))
+    expect(page).to have_no_link("General Settings", href: hotel_general_settings_path(hotel))
+    expect(page).to have_no_css("h2", text: "Hotel Settings", visible: :all)
+    expect(page).to have_css("h2", text: "Banking Details")
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Banking")
   end
 end

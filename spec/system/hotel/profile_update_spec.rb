@@ -22,10 +22,17 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
   end
 
   it 'allows the user to update the hotel profile' do
-    visit hotel_dashboard_path(hotel)
-    within('#hotel-sidebar') { click_link 'Hotel Details' }
+    visit edit_hotel_profile_path(hotel)
+
+    expect(page).to have_css('h1', text: 'Settings')
+    within('[data-testid="settings-tabs"]') do
+      expect(page).to have_link('Hotel Details')
+    end
 
     within('#hotel-profile-section') do
+      expect(page).to have_link('See Hotel', href: hotel_path(hotel))
+      expect(page).to have_css('div.border-b a[href$="' + hotel_path(hotel) + '"]', text: 'See Hotel')
+
       fill_in 'Hotel Name', with: 'Updated Hotel Name'
       fill_in 'Address', with: '123 New Street'
       click_button 'Save Profile'

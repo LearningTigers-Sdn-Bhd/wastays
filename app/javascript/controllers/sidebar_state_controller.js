@@ -6,6 +6,7 @@ export default class extends Controller {
 
   connect() {
     this.beforeVisitHandler = this.persistScroll.bind(this)
+    this.beforeRenderHandler = this.refreshForModeChange.bind(this)
     this.loadHandler = this.syncAndRestore.bind(this)
     this.clickHandler = this.closeFlyoutsFromOutsideClick.bind(this)
     this.sidebarClickHandler = this.togglePinnedGroup.bind(this)
@@ -14,6 +15,7 @@ export default class extends Controller {
     this.stateChangeHandler = this.handleStateChange.bind(this)
 
     document.addEventListener("turbo:before-visit", this.beforeVisitHandler)
+    document.addEventListener("turbo:before-render", this.beforeRenderHandler)
     document.addEventListener("turbo:load", this.loadHandler)
     document.addEventListener("click", this.clickHandler)
     document.addEventListener("keydown", this.keydownHandler)
@@ -27,6 +29,7 @@ export default class extends Controller {
 
   disconnect() {
     document.removeEventListener("turbo:before-visit", this.beforeVisitHandler)
+    document.removeEventListener("turbo:before-render", this.beforeRenderHandler)
     document.removeEventListener("turbo:load", this.loadHandler)
     document.removeEventListener("click", this.clickHandler)
     document.removeEventListener("keydown", this.keydownHandler)
@@ -42,12 +45,24 @@ export default class extends Controller {
     this.restoreScroll()
   }
 
+  refreshForModeChange(event) {
+    const nextSidebar = event.detail.newBody?.querySelector(`#${this.element.id}`)
+    if (!nextSidebar) return
+    if (nextSidebar.dataset.sidebarMode === this.element.dataset.sidebarMode) return
+
+    this.unbindHoverInteractions()
+    this.element.dataset.sidebarMode = nextSidebar.dataset.sidebarMode
+    this.element.innerHTML = nextSidebar.innerHTML
+    this.bindHoverInteractions()
+    this.syncActiveLinks()
+  }
+
   syncActiveLinks() {
-    const currentPath = this.normalize(window.location.pathname)
+    const currentPath = this.normalize(`${window.location.pathname}${window.location.search}`)
     const links = Array.from(this.element.querySelectorAll("a[data-sidebar-route][href]"))
     const activeLink = links
-      .filter((link) => this.pathMatches(currentPath, this.linkPath(link)))
-      .sort((a, b) => this.linkPath(b).length - this.linkPath(a).length)[0]
+      .filter((link) => this.linkMatchesCurrentPath(link, currentPath))
+      .sort((a, b) => this.activeMatchLength(b, currentPath) - this.activeMatchLength(a, currentPath))[0]
 
     links.forEach((link) => {
       this.toggleActive(link, link === activeLink)
@@ -67,15 +82,32 @@ export default class extends Controller {
 
   pathMatches(currentPath, linkPath) {
     if (!linkPath) return false
+    if (linkPath.includes("?")) return currentPath === linkPath
 
-    return currentPath === linkPath || currentPath.startsWith(`${linkPath}/`)
+    const currentPathname = currentPath.split("?")[0]
+    return currentPathname === linkPath || currentPathname.startsWith(`${linkPath}/`)
+  }
+
+  linkMatchesCurrentPath(link, currentPath) {
+    const paths = [this.linkPath(link), ...(link.dataset.sidebarActivePaths || "").split(/\s+/).filter(Boolean).map((path) => this.normalize(path))]
+
+    return paths.some((path) => this.pathMatches(currentPath, path))
+  }
+
+  activeMatchLength(link, currentPath) {
+    const paths = [this.linkPath(link), ...(link.dataset.sidebarActivePaths || "").split(/\s+/).filter(Boolean).map((path) => this.normalize(path))]
+    const matches = paths.filter((path) => this.pathMatches(currentPath, path))
+
+    return Math.max(...matches.map((path) => path.length), 0)
   }
 
   bindHoverInteractions() {
     this.groupInteractions = Array.from(this.element.querySelectorAll("details.sidebar-group")).map((details) => {
       const enter = () => this.openGroup(details, false)
       const leave = () => this.closeTemporaryGroup(details)
-      const focusIn = () => this.openGroup(details, false)
+      const focusIn = () => {
+        if (!this.dismissingFlyouts) this.openGroup(details, false)
+      }
       const focusOut = (event) => {
         if (!details.contains(event.relatedTarget)) this.closeTemporaryGroup(details)
       }
@@ -212,14 +244,19 @@ export default class extends Controller {
     const openDetails = this.element.querySelector("details.sidebar-group[open]")
     if (!openDetails || !this.collapsed) return
 
-    this.closeGroup(openDetails)
+    this.dismissingFlyouts = true
+    this.closeFlyouts()
     this.hideTooltip()
-    openDetails.querySelector("summary")?.focus()
+    openDetails.querySelector(":scope > summary")?.focus()
+    this.dismissingFlyouts = false
   }
 
   closeFlyouts(except = null) {
     this.element.querySelectorAll("details.sidebar-group[open]").forEach((details) => {
-      if (details !== except) this.closeGroup(details)
+      if (details === except) return
+      if (except && details.contains(except)) return
+
+      this.closeGroup(details)
     })
   }
 
@@ -261,7 +298,8 @@ export default class extends Controller {
 
   linkPath(link) {
     try {
-      return this.normalize(new URL(link.href, window.location.origin).pathname)
+      const url = new URL(link.href, window.location.origin)
+      return this.normalize(`${url.pathname}${url.search}`)
     } catch (_) {
       return null
     }

@@ -21,14 +21,14 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
     visit hotel_reports_path(hotel)
   end
 
-  it "shows instant tooltips and hover-opened nested children in a compact rail" do
+  it "shows instant tooltips and hover-opened report children in a compact rail" do
     find('button[aria-label="Collapse sidebar"]').click
 
     expect(page).to have_css("#hotel-sidebar.sidebar-collapsed")
     compact_section_spacing = page.evaluate_script(<<~JS)
       (() => {
         const groups = Array.from(document.querySelectorAll("#hotel-sidebar .sidebar-nav-group"))
-        const styles = window.getComputedStyle(groups[1])
+          const styles = window.getComputedStyle(groups[0])
         return parseFloat(styles.marginTop) + parseFloat(styles.paddingTop)
       })()
     JS
@@ -46,15 +46,15 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
       financial_group = find("summary.sidebar-group-parent", text: "Financial", visible: :all)
       financial_group.hover
 
-      expect(page).to have_css("details.sidebar-group-active[open]")
+      expect(page).to have_css("details.sidebar-group[open] > summary[aria-label='Financial']")
       expect(page).to have_css(".sidebar-details-content[style*='left:']")
       expect(page).to have_no_css(".sidebar-tooltip", visible: :visible)
 
-      summary_link = find("a.sidebar-child-link[aria-label='Summary']")
+      summary_link = find("a.sidebar-child-link[aria-label='Summary']", visible: :all)
       summary_link.hover
 
       expect(page).to have_css(".sidebar-tooltip", text: "Summary", visible: :visible)
-      expect(page).to have_css("a.sidebar-child-link[aria-label='Summary']")
+      expect(page).to have_css("a.sidebar-child-link[aria-label='Summary']", visible: :all)
       expect(page).to have_css("a.sidebar-child-link span.hidden", text: "Summary", visible: :all)
     end
 
@@ -102,6 +102,34 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
     end
   end
 
+  it "renders report flyout leaves directly in a compact rail, without a wrapping Reports group" do
+    find('button[aria-label="Collapse sidebar"]').click
+
+    within("#hotel-sidebar") do
+      find("summary.sidebar-group-parent", text: "Financial", visible: :all).click
+      expect(page).to have_css("details.sidebar-group[open] > summary[aria-label='Financial']")
+      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Reports", visible: :all)
+      expect(page).to have_no_css("details.sidebar-group details.sidebar-group", visible: :all)
+      expect(page).to have_css("a.sidebar-child-link[aria-label='Summary']", visible: :all)
+    end
+  end
+
+  it "closes compact rail flyouts on Escape" do
+    find('button[aria-label="Collapse sidebar"]').click
+
+    within("#hotel-sidebar") do
+      find("summary.sidebar-group-parent", text: "Financial", visible: :all).click
+
+      expect(page).to have_css("details.sidebar-group[open] > summary[aria-label='Financial']")
+    end
+
+    page.send_keys(:escape)
+
+    within("#hotel-sidebar") do
+      expect(page).to have_no_css("details.sidebar-group[open]", visible: :all)
+    end
+  end
+
   it "keeps the most-specific parent route active on nested pages" do
     nested_report_path = "#{hotel_reports_path(hotel)}/nested"
 
@@ -112,14 +140,15 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
 
     within("#hotel-sidebar") do
       expect(page).to have_css("a.sidebar-child-link.sidebar-nav-link-active", text: "Summary")
-      expect(page).to have_css("details.sidebar-group-active[open]")
+      expect(page).to have_css("details.sidebar-group-active[open] > summary[aria-label='Financial']")
+      expect(page).to have_no_css("details.sidebar-group details.sidebar-group", visible: :all)
     end
   end
 
   it "keeps active and user-opened groups expanded through Turbo navigation" do
     within("#hotel-sidebar") do
       expect(page).to have_css("details.sidebar-group-active[open] > summary[aria-label='Financial']")
-      find("summary.sidebar-group-parent", text: "Accounting", visible: :all).click
+      find("summary.sidebar-group-parent", text: "Accounting", visible: :all).trigger("click")
       expect(page).to have_css("details.sidebar-group[open] > summary[aria-label='Accounting']")
     end
 

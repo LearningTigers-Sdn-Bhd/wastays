@@ -1,0 +1,24 @@
+<%
+  active_group = if settings_group_active?(:general) then :general
+                 elsif settings_group_active?(:property) then :property
+                 elsif settings_group_active?(:finance) then :finance
+                 elsif settings_group_active?(:guest_content) then :guest_content
+                 elsif settings_group_active?(:team) then :team
+                 end
+
+  tabs = settings_tabs_for_group(active_group)
+%>
+
+<% if tabs.present? %>
+  <div class="rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm max-w-[1600px] mx-auto" data-testid="settings-tabs">
+    <nav class="relative flex items-center gap-1.5 overflow-x-auto w-full" aria-label="Settings sections">
+      <% tabs.each do |tab| %>
+        <%= link_to tab[:path],
+                    class: "flex-1 flex items-center justify-center gap-2.5 whitespace-nowrap rounded-xl px-5 py-3 text-xs font-bold transition-all duration-200 hover:text-slate-800 active:scale-[0.98] #{tab[:active] ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 bg-transparent'}" do %>
+          <%= cached_icon tab[:icon], class: "size-4 #{tab[:active] ? 'text-white' : 'text-slate-400'}" %>
+          <span><%= tab[:label] %></span>
+        <% end %>
+      <% end %>
+    </nav>
+  </div>
+<% end %>

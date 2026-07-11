@@ -19,16 +19,7 @@ RSpec.describe 'HotelPortal::Settings Housekeeper Access', type: :request do
 
   describe 'GET /hotel/:hotel_id/settings' do
     it 'denies access to housekeeper' do
-      get hotel_settings_path(hotel)
-
-      expect(response).to redirect_to(root_path)
-      expect(flash[:alert]).to eq('You are not authorized to perform this action.')
-    end
-  end
-
-  describe 'GET /hotel/:hotel_id/settings/edit' do
-    it 'denies access to housekeeper' do
-      get hotel_edit_settings_path(hotel)
+      get hotel_general_settings_path(hotel)
 
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to eq('You are not authorized to perform this action.')
@@ -37,7 +28,7 @@ RSpec.describe 'HotelPortal::Settings Housekeeper Access', type: :request do
 
   describe 'PATCH /hotel/:hotel_id/settings' do
     it 'denies access to housekeeper' do
-      patch hotel_settings_path(hotel), params: {
+      patch hotel_general_settings_path(hotel), params: {
         hotel: { time_zone: 'UTC' }
       }
 

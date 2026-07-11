@@ -6,6 +6,10 @@
     </div>
   </div>
 
+  <div class="px-4 md:px-0">
+    <%= render "hotel_portal/settings/group_tabs" %>
+  </div>
+
   <div data-controller="tabs"
        data-tabs-default-tab-value="<%= @presenter.active_tab %>"
        class="space-y-6 px-4 md:px-0">

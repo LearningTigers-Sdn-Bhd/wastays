@@ -250,10 +250,10 @@ Rails.application.routes.draw do
 
   # Hotel admin dashboard
   get "/hotel/settings", to: "hotel_portal/settings#index", as: :legacy_hotel_settings
+  get "/hotel/:hotel_id/settings/property/hotel-details", to: "hotel_portal/profiles#edit", as: :edit_hotel_profile
   scope "/hotel/:hotel_id", module: :hotel_portal, as: :hotel do
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
     get "dashboard", to: "dashboard#index", as: :dashboard
-    get "plan", to: "plans#show", as: :plan
     post "submit_for_review", to: "dashboard#submit_for_review", as: :submit_for_review
 
     resources :onboarding_sessions, only: [ :index ] do
@@ -262,31 +262,7 @@ Rails.application.routes.draw do
       end
     end
 
-    resource :profile, only: [ :edit, :update ]
-    resources :knowledge_policies do
-      member { post :reindex }
-    end
-    resources :knowledge_faqs do
-      member { post :reindex }
-    end
-    resources :knowledge_general_infos do
-      member { post :reindex }
-    end
-    resources :knowledge_diagnostics, only: [ :index, :update ]
-    delete "profile/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo
-    delete "profile/photos", to: "profiles#destroy_photos", as: :profile_photos
-    patch "profile/photos/:photo_id/feature", to: "profiles#set_featured_photo", as: :profile_photo_feature
-    post "profile/photo_queue", to: "profiles#enqueue_photo", as: :profile_photo_queue
-    delete "profile/photo_queue", to: "profiles#clear_photo_queue", as: :clear_profile_photo_queue
-    delete "profile/photo_queue/:signed_id", to: "profiles#remove_photo_from_queue", as: :profile_photo_queue_item
-    post "profile/photo_queue/commit", to: "profiles#commit_photo_queue", as: :commit_profile_photo_queue
     resource :property_policy, only: [ :edit, :update ]
-    resources :users, only: [ :index, :new, :create, :update, :destroy ], path: "staff" do
-      patch :reactivate, on: :member
-    end
-    resources :staff_invitations, only: [ :update, :destroy ] do
-      post :resend, on: :member
-    end
     scope "accounts-receivable" do
       resources :corporate_accounts, only: [ :index, :new, :create ], path: "corporate-accounts" do
         member do
@@ -308,27 +284,6 @@ Rails.application.routes.draw do
     resources :corporate_invitations, only: [ :destroy ], path: "corporate-invitations" do
       post :resend, on: :member
     end
-    resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions" do
-      patch :bulk_update, on: :collection
-    end
-    resources :general_ledger_maps, only: [ :index, :edit, :update ], path: "general-ledger-mappings"
-
-    resources :room_types, except: [ :show ] do
-      member do
-        delete :destroy_photo
-        delete :bulk_destroy_photos
-      end
-    end
-
-    resources :nearby_attractions, except: [ :show ]
-    resource :taxes_fees, only: [ :show, :update ], path: "taxes-fees"
-    get "transaction-codes", to: "transaction_codes#show", as: :transaction_codes
-    get "transaction-codes/new", to: "transaction_codes#new", as: :new_transaction_code
-    post "transaction-codes", to: "transaction_codes#create"
-    patch "transaction-codes/configuration", to: "transaction_codes#update_configuration", as: :transaction_code_configuration
-    get "transaction-codes/:id/edit", to: "transaction_codes#edit", as: :edit_transaction_code
-    patch "transaction-codes/:id", to: "transaction_codes#update", as: :transaction_code
-
     resources :bookings, only: [ :index, :show, :update ] do
       collection do
         post :sync, to: "bookings/syncs#create"
@@ -469,11 +424,110 @@ Rails.application.routes.draw do
       end
     end
     resources :in_house_guests, only: [ :index ]
-    get "settings", to: "settings#index", as: :settings
-    get "settings/edit", to: "settings#edit", as: :edit_settings
-    patch "settings", to: "settings#update"
+    get "settings", to: "settings#show", as: :settings
+    scope "settings" do
+      get "general", to: "settings#index", as: :general_settings, defaults: { settings_page: "general" }
+      patch "general", to: "settings#update", defaults: { settings_page: "general" }
+      get "general/plan-and-billing", to: "plans#show", as: :plan
+
+      scope "property" do
+        patch "hotel-details", to: "profiles#update", as: :profile
+        delete "hotel-details/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo
+        delete "hotel-details/photos", to: "profiles#destroy_photos", as: :profile_photos
+        patch "hotel-details/photos/:photo_id/feature", to: "profiles#set_featured_photo", as: :profile_photo_feature
+        post "hotel-details/photo-queue", to: "profiles#enqueue_photo", as: :profile_photo_queue
+        delete "hotel-details/photo-queue", to: "profiles#clear_photo_queue", as: :clear_profile_photo_queue
+        delete "hotel-details/photo-queue/:signed_id", to: "profiles#remove_photo_from_queue", as: :profile_photo_queue_item
+        post "hotel-details/photo-queue/commit", to: "profiles#commit_photo_queue", as: :commit_profile_photo_queue
+
+        resources :room_types, path: "room-categories", except: [ :show ] do
+          member do
+            delete :destroy_photo
+            delete :bulk_destroy_photos
+          end
+        end
+        resources :nearby_attractions, path: "nearby-attractions", except: [ :show ]
+      end
+
+      scope "finance" do
+        get "banking-details", to: "settings#index", as: :banking_details_settings, defaults: { settings_page: "banking" }
+        patch "banking-details", to: "settings#update", defaults: { settings_page: "banking" }
+        resource :taxes_fees, path: "taxes-and-fees", only: [ :show, :update ]
+        resources :hotel_taxes, path: "taxes-and-fees/fees", only: %i[index new create edit update destroy]
+        get "transaction-codes", to: "transaction_codes#show", as: :transaction_codes
+        get "transaction-codes/new", to: "transaction_codes#new", as: :new_transaction_code
+        post "transaction-codes", to: "transaction_codes#create"
+        patch "transaction-codes/configuration", to: "transaction_codes#update_configuration", as: :transaction_code_configuration
+        get "transaction-codes/:id/edit", to: "transaction_codes#edit", as: :edit_transaction_code
+        patch "transaction-codes/:id", to: "transaction_codes#update", as: :transaction_code
+        resources :general_ledger_maps, path: "general-ledger-mappings", only: [ :index, :edit, :update ]
+      end
+
+      scope "guest-content" do
+        get "ai-concierge", to: "settings#index", as: :ai_concierge_settings, defaults: { settings_page: "ai" }
+        patch "ai-concierge", to: "settings#update", defaults: { settings_page: "ai" }
+        get "notifications", to: "settings#index", as: :notification_settings, defaults: { settings_page: "notifications" }
+        patch "notifications", to: "settings#update", defaults: { settings_page: "notifications" }
+        resources :knowledge_policies, path: "policies" do
+          member { post :reindex }
+        end
+        resources :knowledge_faqs, path: "faqs" do
+          member { post :reindex }
+        end
+        resources :knowledge_general_infos, path: "general-info" do
+          member { post :reindex }
+        end
+        resources :knowledge_diagnostics, path: "knowledge-diagnostics", only: [ :index, :update ]
+      end
+
+      scope "team" do
+        resources :users, only: [ :index, :new, :create, :update, :destroy ], path: "staff" do
+          patch :reactivate, on: :member
+        end
+        resources :staff_invitations, path: "staff-invitations", only: [ :update, :destroy ] do
+          post :resend, on: :member
+        end
+        resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions" do
+          patch :bulk_update, on: :collection
+        end
+      end
+    end
+
+    # Legacy Settings URLs remain read-only redirects for existing bookmarks.
+    get "plan", to: redirect("/hotel/%{hotel_id}/settings/general/plan-and-billing")
+    get "profile/edit", to: redirect("/hotel/%{hotel_id}/settings/property/hotel-details")
+    get "room_types", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories")
+    get "room_types/new", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories/new")
+    get "room_types/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories/%{id}/edit")
+    get "nearby_attractions", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions")
+    get "nearby_attractions/new", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions/new")
+    get "nearby_attractions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions/%{id}/edit")
+    get "taxes-fees", to: redirect("/hotel/%{hotel_id}/settings/finance/taxes-and-fees")
+    get "transaction-codes", to: redirect("/hotel/%{hotel_id}/settings/finance/transaction-codes")
+    get "transaction-codes/new", to: redirect("/hotel/%{hotel_id}/settings/finance/transaction-codes/new")
+    get "transaction-codes/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/finance/transaction-codes/%{id}/edit")
+    get "general-ledger-mappings", to: redirect("/hotel/%{hotel_id}/settings/finance/general-ledger-mappings")
+    get "general-ledger-mappings/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/finance/general-ledger-mappings/%{id}/edit")
+    get "knowledge_policies", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies")
+    get "knowledge_policies/new", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/new")
+    get "knowledge_policies/:id", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/%{id}")
+    get "knowledge_policies/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/%{id}/edit")
+    get "knowledge_faqs", to: redirect("/hotel/%{hotel_id}/settings/guest-content/faqs")
+    get "knowledge_faqs/new", to: redirect("/hotel/%{hotel_id}/settings/guest-content/faqs/new")
+    get "knowledge_faqs/:id", to: redirect("/hotel/%{hotel_id}/settings/guest-content/faqs/%{id}")
+    get "knowledge_faqs/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/guest-content/faqs/%{id}/edit")
+    get "knowledge_general_infos", to: redirect("/hotel/%{hotel_id}/settings/guest-content/general-info")
+    get "knowledge_general_infos/new", to: redirect("/hotel/%{hotel_id}/settings/guest-content/general-info/new")
+    get "knowledge_general_infos/:id", to: redirect("/hotel/%{hotel_id}/settings/guest-content/general-info/%{id}")
+    get "knowledge_general_infos/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/guest-content/general-info/%{id}/edit")
+    get "knowledge_diagnostics", to: redirect("/hotel/%{hotel_id}/settings/guest-content/knowledge-diagnostics")
+    get "staff", to: redirect("/hotel/%{hotel_id}/settings/team/staff")
+    get "staff/new", to: redirect("/hotel/%{hotel_id}/settings/team/staff/new")
+    get "roles-and-permissions", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions")
+    get "roles-and-permissions/new", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions/new")
+    get "roles-and-permissions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions/%{id}/edit")
+
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
-    resources :hotel_taxes, only: %i[index new create edit update destroy]
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board

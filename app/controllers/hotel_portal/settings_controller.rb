@@ -2,20 +2,21 @@
 
 module HotelPortal
   class SettingsController < HotelPortal::BaseController
-    SETTINGS_TABS = %w[general ai notifications banking].freeze
+    SETTINGS_PAGES = %w[general ai notifications banking].freeze
 
     before_action :set_account
     before_action :set_hotel
-    before_action :authorize_settings_access!, only: [ :index, :edit ]
+    before_action :authorize_settings_access!, only: [ :show, :index ]
 
-    def index
-      @presenter = settings_presenter
-      @account.build_banking_detail unless @account.banking_detail
-      append_settings_tab_breadcrumb
+    def show
+      redirect_to(params[:tab].present? ? legacy_tab_destination : settings_page_path(active_settings_page), status: :moved_permanently)
     end
 
-    def edit
-      @property_policy = settings_policy
+    def index
+      return redirect_to(settings_page_path(active_settings_page)) if params[:settings_page] != active_settings_page
+
+      prepare_settings_page
+      append_settings_page_breadcrumb
     end
 
     def update
@@ -24,7 +25,7 @@ module HotelPortal
       elsif settings_update_request?
         update_settings
       elsif params[:payment_setting].present?
-        redirect_to hotel_settings_path(@hotel, tab: active_settings_tab), alert: "Payment gateway credentials are managed by superadmin."
+        redirect_to settings_page_path(active_settings_page), alert: "Payment gateway credentials are managed by superadmin."
       else
         update_banking_details
       end
@@ -53,12 +54,10 @@ module HotelPortal
       form = HotelPortal::GeneralSettingsForm.new(@hotel, params)
 
       if form.save
-        tab = params[:form_id].to_s == "ai_configuration" ? "ai" : settings_tab_for_form
-        redirect_to hotel_settings_path(@hotel, tab: tab), notice: "Settings updated successfully."
+        redirect_to settings_page_path(settings_page_for_form), notice: "Settings updated successfully."
       else
-        @presenter = settings_presenter
-        @account.build_banking_detail unless @account.banking_detail
-        append_settings_tab_breadcrumb
+        prepare_settings_page
+        append_settings_page_breadcrumb
         render :index, status: :unprocessable_entity
       end
     end
@@ -69,10 +68,11 @@ module HotelPortal
       form = HotelPortal::BankingDetailsForm.new(@account, params)
 
       if form.save
-        redirect_to hotel_settings_path(@hotel, tab: "banking"), notice: "Settings updated successfully."
+        redirect_to hotel_banking_details_settings_path(@hotel), notice: "Settings updated successfully."
       else
-        @presenter = settings_presenter(tab: "banking")
-        append_settings_tab_breadcrumb
+        @presenter = settings_presenter(page: "banking")
+        @account.build_banking_detail unless @account.banking_detail
+        append_settings_page_breadcrumb
         render :index, status: :unprocessable_entity
       end
     end
@@ -83,12 +83,11 @@ module HotelPortal
       form = HotelPortal::NotificationSettingsForm.new(@hotel, params)
 
       if form.save
-        redirect_to hotel_settings_path(@hotel, tab: "notifications"), notice: "Settings updated successfully."
+        redirect_to hotel_notification_settings_path(@hotel), notice: "Settings updated successfully."
       else
         @notification_config = form.config
-        @presenter = settings_presenter(tab: "notifications")
-        @account.build_banking_detail unless @account.banking_detail
-        append_settings_tab_breadcrumb
+        @presenter = settings_presenter(page: "notifications")
+        append_settings_page_breadcrumb
         render :index, status: :unprocessable_entity
       end
     end
@@ -101,45 +100,50 @@ module HotelPortal
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_account")
     end
 
-    def settings_presenter(tab: active_settings_tab)
-      HotelPortal::SettingsPresenter.new(
-        hotel: @hotel,
-        active_tab: tab,
-        current_user: current_user
-      )
-    end
+    def active_settings_page
+      requested_page = params[:settings_page].to_s
+      return requested_page if permitted_settings_pages.include?(requested_page)
 
-    def active_settings_tab
-      requested_tab = params[:tab].to_s
-      return requested_tab if permitted_settings_tabs.include?(requested_tab)
-
-      form_tab = settings_tab_for_form
-      return form_tab if permitted_settings_tabs.include?(form_tab)
+      form_page = settings_page_for_form
+      return form_page if permitted_settings_pages.include?(form_page)
 
       "banking"
     end
 
-    def permitted_settings_tabs
-      tabs = []
-      tabs.concat(SETTINGS_TABS - [ "banking" ]) if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel)
-      tabs << "banking" if current_user.has_permission?("manage_account")
-      tabs
+    def prepare_settings_page
+      @presenter = settings_presenter
+      @account.build_banking_detail unless @account.banking_detail
     end
 
-    def append_settings_tab_breadcrumb
-      append_breadcrumb({ label: settings_tab_label(@presenter.active_tab), tab_label: true })
+    def settings_presenter(page: active_settings_page)
+      HotelPortal::SettingsPresenter.new(
+        hotel: @hotel,
+        active_page: page,
+        current_user: current_user
+      )
     end
 
-    def settings_tab_label(tab)
+    def permitted_settings_pages
+      pages = []
+      pages.concat(SETTINGS_PAGES - [ "banking" ]) if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel)
+      pages << "banking" if current_user.has_permission?("manage_account")
+      pages
+    end
+
+    def append_settings_page_breadcrumb
+      append_breadcrumb({ label: settings_page_label(@presenter.active_page), tab_label: true })
+    end
+
+    def settings_page_label(page)
       {
         "general" => "General",
         "ai" => "AI Concierge",
         "notifications" => "Notifications",
         "banking" => "Banking"
-      }.fetch(tab, "General")
+      }.fetch(page, "General")
     end
 
-    def settings_tab_for_form
+    def settings_page_for_form
       case params[:form_id].to_s
       when "hotel_settings" then "general"
       when "ai_configuration" then "ai"
@@ -148,8 +152,21 @@ module HotelPortal
       end
     end
 
-    def settings_policy
-      current_hotel.property_policy || current_hotel.build_property_policy
+    def settings_page_path(page)
+      case page
+      when "ai" then hotel_ai_concierge_settings_path(@hotel)
+      when "notifications" then hotel_notification_settings_path(@hotel)
+      when "banking" then hotel_banking_details_settings_path(@hotel)
+      else hotel_general_settings_path(@hotel)
+      end
+    end
+
+    def legacy_tab_destination
+      case params[:tab]
+      when "hotel_details" then edit_hotel_profile_path(@hotel)
+      when "taxes_fees" then hotel_taxes_fees_path(@hotel)
+      else settings_page_path(params[:tab])
+      end
     end
 
     def notification_update_request?

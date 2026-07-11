@@ -36,6 +36,10 @@
   </div>
 
   <div class="px-4 md:px-0">
+    <%= render "hotel_portal/settings/group_tabs" %>
+  </div>
+
+  <div class="px-4 md:px-0">
     <%= form_with url: bulk_update_hotel_roles_path(current_hotel), method: :patch, local: true do %>
       <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div class="overflow-x-auto rounded-2xl">

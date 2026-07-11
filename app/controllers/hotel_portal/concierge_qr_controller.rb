@@ -31,7 +31,7 @@ class HotelPortal::ConciergeQrController < HotelPortal::BaseController
   def set_breadcrumbs
     override_breadcrumbs(
       { label: "System" },
-      { label: "Settings", path: hotel_settings_path(current_hotel) },
+      { label: "Settings", path: hotel_general_settings_path(current_hotel) },
       { label: "Concierge QR", path: hotel_concierge_qr_path(current_hotel) }
     )
   end

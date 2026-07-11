@@ -17,12 +17,12 @@ RSpec.describe "HotelPortal::ProfilePhotoQueue", type: :request do
   end
 
   describe "GET /hotel/:hotel_id/profile/edit" do
-    it "renders the queue uploader section" do
+    it "renders the canonical hotel details page" do
       get edit_hotel_profile_path(hotel)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Upload Queue")
-      expect(response.body).to include("Confirm Upload")
+      expect(response.body).to include(%(id="hotel-profile-section"))
+      expect(response.body).to include(%(data-testid="settings-tabs"))
     end
   end
 

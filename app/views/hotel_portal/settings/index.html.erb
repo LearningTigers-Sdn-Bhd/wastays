@@ -1,56 +1,26 @@
 <div class="mx-auto max-w-[1600px] space-y-8 pb-20">
   <div class="px-4 md:px-0">
     <div class="mt-5">
-      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Settings</h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">Update hotel policy, sell currency, AI, notifications, and banking details.</p>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl"><%= @presenter.page_title %></h1>
+      <p class="mt-1 text-sm font-medium text-slate-600"><%= @presenter.page_description %></p>
     </div>
   </div>
 
   <% if @presenter %>
-    <% can_manage_profile = current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) %>
-    <div data-controller="tabs"
-         data-tabs-default-tab-value="<%= @presenter.active_tab %>"
-         class="space-y-6 px-4 md:px-0">
-      <%= render "settings_tabs", presenter: @presenter %>
+    <div class="px-4 md:px-0">
+      <%= render "hotel_portal/settings/group_tabs" %>
+    </div>
 
-      <% if can_manage_profile %>
-        <div id="general-panel"
-             data-tabs-target="panel"
-             data-tab-panel="general"
-             class="<%= @presenter.active_tab == "general" ? "space-y-6" : "hidden space-y-6" %>"
-             role="tabpanel"
-             data-testid="settings-general-panel">
-          <%= render "general_section" %>
-        </div>
-
-        <div id="ai-panel"
-             data-tabs-target="panel"
-             data-tab-panel="ai"
-             class="<%= @presenter.active_tab == "ai" ? "space-y-6" : "hidden space-y-6" %>"
-             role="tabpanel"
-             data-testid="settings-ai-panel">
-          <%= render "ai_concierge_section" %>
-        </div>
-
-        <div id="notifications-panel"
-             data-tabs-target="panel"
-             data-tab-panel="notifications"
-             class="<%= @presenter.active_tab == "notifications" ? "space-y-6" : "hidden space-y-6" %>"
-             role="tabpanel"
-             data-testid="settings-notifications-panel">
-          <%= render "notifications_section" %>
-        </div>
-      <% end %>
-
-      <% if current_user.has_permission?("manage_account") %>
-        <div id="banking-panel"
-             data-tabs-target="panel"
-             data-tab-panel="banking"
-             class="<%= @presenter.active_tab == "banking" ? "space-y-6" : "hidden space-y-6" %>"
-             role="tabpanel"
-             data-testid="settings-banking-panel">
-          <%= render "banking_section" %>
-        </div>
+    <div class="space-y-6 px-4 md:px-0">
+      <% case @presenter.active_page %>
+      <% when "general" %>
+        <%= render "hotel_portal/settings/general_section" %>
+      <% when "ai" %>
+        <%= render "hotel_portal/settings/ai_concierge_section" %>
+      <% when "notifications" %>
+        <%= render "hotel_portal/settings/notifications_section" %>
+      <% when "banking" %>
+        <%= render "hotel_portal/settings/banking_section" %>
       <% end %>
     </div>
   <% else %>

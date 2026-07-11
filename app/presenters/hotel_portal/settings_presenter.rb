@@ -2,16 +2,31 @@
 
 module HotelPortal
   class SettingsPresenter
-    attr_reader :hotel, :active_tab, :current_user
+    PAGE_HEADINGS = {
+      "general" => [ "General Settings", "Configure core hotel policies and operational defaults." ],
+      "ai" => [ "AI Concierge", "Configure AI concierge behavior and provider settings." ],
+      "notifications" => [ "Notifications", "Configure guest notification automations and channels." ],
+      "banking" => [ "Banking Details", "Manage the bank account used for hotel payouts." ]
+    }.freeze
 
-    def initialize(hotel:, active_tab:, current_user:)
+    attr_reader :hotel, :active_page, :current_user
+
+    def initialize(hotel:, active_page:, current_user:)
       @hotel = hotel
-      @active_tab = active_tab
+      @active_page = active_page
       @current_user = current_user
     end
 
     def property_policy
       @property_policy ||= hotel.property_policy || hotel.build_property_policy
+    end
+
+    def page_title
+      PAGE_HEADINGS.fetch(active_page).first
+    end
+
+    def page_description
+      PAGE_HEADINGS.fetch(active_page).last
     end
 
     def check_in_notification_config

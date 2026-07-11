@@ -3,7 +3,7 @@
      data-controller="notification-card"
      data-notification-card-active-class="bg-white"
      data-notification-card-inactive-class="bg-slate-50/50">
-  <%= form_with model: config, url: hotel_settings_path(@hotel, tab: "notifications"), method: :patch, local: true, class: "flex flex-col h-full" do |f| %>
+  <%= form_with model: config, url: hotel_notification_settings_path(@hotel), method: :patch, local: true, class: "flex flex-col h-full" do |f| %>
     <%= hidden_field_tag :form_id, "notification_settings" %>
     <%= hidden_field_tag "notification_config[notification_type]", notification_type %>
 

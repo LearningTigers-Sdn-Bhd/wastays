@@ -37,7 +37,7 @@ RSpec.describe "Hotel room status sidebar", type: :system do
 
     visit hotel_dashboard_path(hotel)
 
-    expect(page).to have_link("Room Status", href: hotel_room_status_board_path(hotel))
+    expect(page).to have_link("Room Status", href: hotel_room_status_board_path(hotel), visible: :all)
   end
 
   it "hides the Room Status link for users without room status permissions" do
@@ -45,7 +45,7 @@ RSpec.describe "Hotel room status sidebar", type: :system do
 
     visit hotel_dashboard_path(hotel)
 
-    expect(page).to have_no_link("Room Status", href: hotel_room_status_board_path(hotel))
+    expect(page).to have_no_link("Room Status", href: hotel_room_status_board_path(hotel), visible: :all)
   end
 
   it "shows the Room Status link for account-level permissions only" do
@@ -56,6 +56,6 @@ RSpec.describe "Hotel room status sidebar", type: :system do
 
     visit hotel_dashboard_path(hotel)
 
-    expect(page).to have_link("Room Status", href: hotel_room_status_board_path(hotel))
+    expect(page).to have_link("Room Status", href: hotel_room_status_board_path(hotel), visible: :all)
   end
 end

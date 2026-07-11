@@ -28,7 +28,7 @@
         My account
       </a>
       <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) || current_user.has_permission?("manage_account") %>
-        <a class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-neutral-text-primary hover:bg-surface-hover focus:outline-none transition-colors" href="<%= hotel_settings_path(current_hotel) %>">
+        <a class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-neutral-text-primary hover:bg-surface-hover focus:outline-none transition-colors" href="<%= hotel_general_settings_path(current_hotel) %>">
           <%= cached_icon "settings", class: "shrink-0 size-4 text-muted-foreground" %>
           Settings
         </a>

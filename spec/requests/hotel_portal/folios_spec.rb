@@ -171,7 +171,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       get hotel_folio_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Operations")
+      expect(response.body).to include("Bookings")
       expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
       expect(response.body).to include(%(href="#{hotel_booking_path(hotel, booking)}"))
       expect(response.body).to include("Generate Report")
@@ -185,7 +185,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       get hotel_folio_path(hotel, booking, origin: "folios")
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Finance")
+      expect(response.body).to include("Folios")
       expect(response.body).to include(%(href="#{hotel_folios_path(hotel)}">Folios</a>))
       expect(response.body).to include(%(href="#{hotel_folio_path(hotel, booking)}?origin=folios"))
       expect(response.body).to include("Generate Report")
