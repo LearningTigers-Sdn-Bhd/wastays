@@ -364,7 +364,8 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
           link = summary.at_xpath(".//a[normalize-space()='#{label}']")
           expect(link).to be_present, "expected #{label} for #{status}"
           expect(link.at_css("svg")).to be_present, "expected #{label} to include an icon"
-          expect(CGI.parse(URI.parse(link["href"]).query.to_s)["return_to"]).to eq([ path ])
+          query = URI.decode_www_form(URI.parse(link["href"]).query.to_s).to_h
+          expect(query["return_to"]).to eq(path)
         end
       end
 

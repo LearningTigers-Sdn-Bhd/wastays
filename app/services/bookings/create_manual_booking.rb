@@ -9,6 +9,7 @@ module Bookings
       @params = params.dup
       @room_type_id = @params.delete(:room_type_id)
       @room_number = @params.delete(:room_number)
+      @require_room_number = @params.delete(:require_room_number) != false
 
       @record_payment = @params.delete(:record_payment)
       @payment_method = @params.delete(:payment_method)
@@ -63,12 +64,12 @@ module Bookings
         check_out: booking.check_out
       ).call
 
-      unless available_rooms.include?(@room_number.to_s)
+      unless @room_number.blank? && !@require_room_number || available_rooms.include?(@room_number.to_s)
         return OpenStruct.new(success?: false, errors: [ "Room #{@room_number} is no longer available for these dates." ])
       end
 
       # 1.1 Check for locks by others
-      lock = @hotel.room_locks.active.find_by(room_number: @room_number)
+      lock = @hotel.room_locks.active.find_by(room_number: @room_number) if @room_number.present?
       if lock && lock.user_id != @user&.id
         return OpenStruct.new(success?: false, errors: [ "Room #{@room_number} is currently being assigned by another staff member." ])
       end
@@ -142,14 +143,14 @@ module Bookings
           )
 
           if booking.save
-            assignment_result = Bookings::AssignRoom.new(
-              booking: booking,
-              room_number: @room_number,
-              user: @user
-            ).call
+            if @room_number.present?
+              assignment_result = Bookings::AssignRoom.new(
+                booking: booking,
+                room_number: @room_number,
+                user: @user
+              ).call
 
-            unless assignment_result.success?
-              raise assignment_result.error
+              raise assignment_result.error unless assignment_result.success?
             end
 
             InventoryManager.new(booking).deduct
