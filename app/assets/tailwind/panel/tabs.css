@@ -1,0 +1,44 @@
+@layer components {
+  /* PanelsUI::Tabs — APG tabs. Theme-token colors hold contrast in light and dark. */
+  .tabs-root {
+    @apply flex flex-col;
+  }
+
+  .tabs-list {
+    @apply inline-flex items-center gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1.5 shadow-sm;
+  }
+
+  .tabs-tab {
+    @apply inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-medium text-muted-foreground transition-colors;
+  }
+
+  .tabs-tab:hover {
+    @apply bg-muted text-foreground;
+  }
+
+  .tabs-tab[aria-selected="true"] {
+    @apply bg-primary font-semibold text-primary-foreground;
+  }
+
+  .tabs-tab:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2;
+    --tw-ring-offset-color: var(--background);
+  }
+
+  .tabs-tab__count {
+    @apply rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground;
+  }
+
+  .tabs-tab[aria-selected="true"] .tabs-tab__count {
+    background: color-mix(in oklab, var(--primary-foreground) 24%, transparent);
+    @apply text-primary-foreground;
+  }
+
+  .tabs-panel {
+    @apply mt-4;
+  }
+
+  .tabs-panel.hidden {
+    display: none;
+  }
+}

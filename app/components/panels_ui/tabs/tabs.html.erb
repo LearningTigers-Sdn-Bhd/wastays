@@ -1,0 +1,20 @@
+<div class="<%= tw_merge("tabs-root", @class) %>"
+     data-controller="panels-ui--tabs"
+     data-panels-ui--tabs-param-value="<%= param %>"
+     data-panels-ui--tabs-level-value="<%= level %>"
+     data-panels-ui--tabs-sync-url-value="<%= sync_url? %>"
+     <% if default_value %>data-panels-ui--tabs-active-value="<%= default_value %>"<% end %>
+     <% if breadcrumb_outlet_selector %>data-panels-ui--tabs-panels-ui--breadcrumb-outlet="<%= breadcrumb_outlet_selector %>"<% end %>>
+  <div class="<%= tw_merge("tabs-list", @list_class) %>"
+       role="tablist"
+       <% if aria_label %>aria-label="<%= aria_label %>"<% end %>
+       data-action="keydown->panels-ui--tabs#onKeydown">
+    <%= safe_join(tabs) %>
+  </div>
+
+  <% if panels? %>
+    <div class="<%= tw_merge("tabs-panels", @panels_class) %>">
+      <%= safe_join(panels) %>
+    </div>
+  <% end %>
+</div>

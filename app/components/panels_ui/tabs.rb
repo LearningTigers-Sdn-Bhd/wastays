@@ -1,0 +1,131 @@
+# frozen_string_literal: true
+
+module PanelsUI
+  # Accessible tabs (WAI-ARIA APG "tabs" pattern) — a self-contained widget: the
+  # controller root wraps the tablist and the panels, so it is a drop-in for the old
+  # hand-rolled `tabs`/`subtabs` markup.
+  #
+  #   <%= render PanelsUI::Tabs.new(id: "audit", default: "history") do |t| %>
+  #     <% t.with_tab(name: "history", label: "Audit History", icon: "history", count: 12) %>
+  #     <% t.with_tab(name: "advanced", label: "Advanced Actions") %>
+  #     <% t.with_panel(name: "history") do %> … <% end %>
+  #     <% t.with_panel(name: "advanced") do %> … <% end %>
+  #   <% end %>
+  #
+  # Keyboard: roving tabindex with ←/→/↑/↓/Home/End (automatic activation). The active
+  # tab is synced to the `?tab=` query param (name configurable via `param:`).
+  #
+  # ── Breadcrumb integration ──────────────────────────────────────────────────────
+  # When a PanelsUI::Breadcrumb is on the page, the `panels-ui--tabs` controller reaches
+  # it through a Stimulus **outlet** (not a global DOM query) and calls its outlet API on
+  # tab change: a `:primary` Tabs sets the tab label + toggles the subtab segment; a
+  # `:secondary` (subtab) Tabs sets the subtab label. Absent breadcrumb → no-op.
+  class Tabs < PanelsUI::BaseComponent
+    LEVELS = %i[primary secondary].freeze
+
+    # One tab button (role="tab"). `show_subtab_breadcrumb` (primary level only) reveals
+    # the breadcrumb's subtab segment when this tab is active.
+    class Tab < PanelsUI::BaseComponent
+      def initialize(tabs_id:, name:, label:, icon: nil, count: nil,
+                     show_subtab_breadcrumb: false, id: nil, panel_id: nil,
+                     data: {}, aria: {}, class: nil)
+        @tabs_id = tabs_id
+        @name = name
+        @label = label
+        @icon = icon
+        @count = count
+        @show_subtab_breadcrumb = show_subtab_breadcrumb
+        @id = id || "#{@tabs_id}-tab-#{@name}"
+        @panel_id = panel_id || "#{@tabs_id}-panel-#{@name}"
+        @data = data
+        @aria = aria
+        @class = binding.local_variable_get(:class)
+      end
+
+      def call
+        tag.button(
+          safe_join([ icon_tag, tag.span(@label), count_tag ].compact),
+          type: "button",
+          role: "tab",
+          id: @id,
+          tabindex: "-1",
+          class: tw_merge("tabs-tab", @class),
+          aria: { selected: "false", controls: @panel_id }.merge(@aria),
+          data: {
+            panels_ui__tabs_target: "tab",
+            tab_name: @name,
+            tab_label: @label,
+            show_subtab_breadcrumb: (@show_subtab_breadcrumb ? "true" : nil),
+            action: "click->panels-ui--tabs#select"
+          }.compact.merge(@data)
+        )
+      end
+
+      private
+
+      def icon_tag
+        return if @icon.blank?
+
+        helpers.app_icon(@icon, class: "size-4 shrink-0", aria: { hidden: "true" })
+      end
+
+      def count_tag
+        return if @count.nil?
+
+        tag.span(@count, class: "tabs-tab__count")
+      end
+    end
+
+    # One tab panel (role="tabpanel"). Starts hidden; the controller reveals the active one.
+    class Panel < PanelsUI::BaseComponent
+      def initialize(tabs_id:, name:, id: nil, tab_id: nil, data: {}, aria: {}, class: nil)
+        @tabs_id = tabs_id
+        @name = name
+        @id = id || "#{@tabs_id}-panel-#{@name}"
+        @tab_id = tab_id || "#{@tabs_id}-tab-#{@name}"
+        @data = data
+        @aria = aria
+        @class = binding.local_variable_get(:class)
+      end
+
+      def call
+        tag.div(
+          content,
+          role: "tabpanel",
+          id: @id,
+          tabindex: "0",
+          class: tw_merge("tabs-panel hidden", @class),
+          aria: { labelledby: @tab_id }.merge(@aria),
+          data: { panels_ui__tabs_target: "panel", tab_panel: @name }.merge(@data)
+        )
+      end
+    end
+
+    renders_many :tabs, ->(**args) { Tab.new(tabs_id: @id, **args) }
+    renders_many :panels, ->(**args) { Panel.new(tabs_id: @id, **args) }
+
+    def initialize(id: nil, default: nil, param: "tab", level: :primary,
+                   sync_url: true, aria_label: nil, breadcrumb_id: nil,
+                   list_class: nil, panels_class: nil, class: nil)
+      @id = id || "tabs-#{object_id}"
+      @default = default
+      @param = param
+      @level = LEVELS.include?(level.to_sym) ? level.to_sym : :primary
+      @sync_url = ActiveModel::Type::Boolean.new.cast(sync_url) || false
+      @aria_label = aria_label
+      @breadcrumb_id = breadcrumb_id
+      @list_class = list_class
+      @panels_class = panels_class
+      @class = binding.local_variable_get(:class)
+    end
+
+    attr_reader :param, :level, :aria_label
+
+    def default_value = @default
+    def sync_url? = @sync_url
+
+    def breadcrumb_outlet_selector
+      "##{@breadcrumb_id}" if @breadcrumb_id.present?
+    end
+  end
+end
