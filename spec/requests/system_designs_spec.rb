@@ -31,6 +31,8 @@ RSpec.describe "System design showcase", type: :request do
     expect(response.body).to include('data-orientation="vertical"')
     expect(response.body).to include("kbd-preview-heading")
     expect(response.body).to include('class="panel-kbd"')
+    expect(response.body).to include("collapsible-preview-heading")
+    expect(response.body).to include("panel-collapsible")
     expect(response.body).to include("checkbox-preview-heading")
     expect(response.body).to include("panel-checkbox")
     expect(response.body).to include('data-toast-variant="danger"')

@@ -1,0 +1,12 @@
+<%= tag.div(**root_attributes) do %>
+  <%= tag.button(**trigger_attributes) do %>
+    <%= trigger %>
+  <% end %>
+
+  <%= tag.div(**content_attributes) do %>
+    <div class="panel-collapsible__content-inner"
+         data-panels-ui--collapsible-target="contentInner">
+      <%= body %>
+    </div>
+  <% end %>
+<% end %>

@@ -1,0 +1,55 @@
+@layer components {
+  /* PanelsUI::Collapsible — structurally styled, deliberately surface-neutral. */
+  .panel-collapsible__trigger {
+    @apply flex w-full items-center justify-between gap-3 text-left text-foreground;
+  }
+
+  .panel-collapsible__trigger:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2;
+    --tw-ring-offset-color: var(--background);
+  }
+
+  .panel-collapsible__trigger:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .panel-collapsible__content {
+    overflow: hidden;
+  }
+
+  .panel-collapsible__content[data-state="open"] {
+    animation: panel-collapsible-down 200ms ease-out;
+  }
+
+  .panel-collapsible__content[data-state="closed"] {
+    animation: panel-collapsible-up 200ms ease-out;
+  }
+
+  .panel-collapsible__indicator {
+    @apply shrink-0 transition-transform duration-200;
+  }
+
+  .panel-collapsible[data-state="open"] .panel-collapsible__indicator {
+    transform: rotate(180deg);
+  }
+
+  @keyframes panel-collapsible-down {
+    from { height: 0; }
+    to { height: var(--panel-collapsible-content-height); }
+  }
+
+  @keyframes panel-collapsible-up {
+    from { height: var(--panel-collapsible-content-height); }
+    to { height: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel-collapsible__content {
+      animation: none;
+    }
+
+    .panel-collapsible__indicator {
+      transition: none;
+    }
+  }
+}
