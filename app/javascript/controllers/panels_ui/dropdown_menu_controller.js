@@ -18,11 +18,13 @@ export default class extends Controller {
     this.typeaheadTimer = null
     this.submenuCloseTimer = null
     this.onOtherMenuOpen = this.handleOtherMenuOpen.bind(this)
-    window.addEventListener("panels-ui:dropdown-menu-open", this.onOtherMenuOpen)
+    // Shared singleton channel across floating layers (dropdown, popover): opening one
+    // closes any other that's open.
+    window.addEventListener("panels-ui:layer-open", this.onOtherMenuOpen)
   }
 
   disconnect() {
-    window.removeEventListener("panels-ui:dropdown-menu-open", this.onOtherMenuOpen)
+    window.removeEventListener("panels-ui:layer-open", this.onOtherMenuOpen)
     this.cancelTypeahead()
     this.cancelSubmenuClose()
     this.stopPositioning()
@@ -47,7 +49,7 @@ export default class extends Controller {
   open(focus = "first") {
     if (this.isOpen(this.menuTarget)) return
 
-    window.dispatchEvent(new CustomEvent("panels-ui:dropdown-menu-open", { detail: { controller: this } }))
+    window.dispatchEvent(new CustomEvent("panels-ui:layer-open", { detail: { controller: this } }))
     this.menuTarget.showPopover()
     this.triggerTarget.setAttribute("aria-expanded", "true")
     this.startPositioning(this.triggerTarget, this.menuTarget, this.placementValue)

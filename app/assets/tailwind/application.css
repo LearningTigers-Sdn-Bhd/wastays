@@ -21,7 +21,10 @@
 @import "./panel/separator.css";
 @import "./panel/alert.css";
 @import "./panel/banner.css";
+@import "./panel/floating.css";
 @import "./panel/dropdown-menu.css";
+@import "./panel/tooltip.css";
+@import "./panel/popover.css";
 @import "./panel/toast.css";
 
 /* ─── Role tokens (shadcn-style naming) ───

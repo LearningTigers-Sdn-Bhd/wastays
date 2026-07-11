@@ -1,0 +1,20 @@
+<span class="<%= tw_merge("popover-root", @root_class) %>"
+      data-controller="panels-ui--popover"
+      data-panels-ui--popover-placement-value="<%= floating_placement %>"
+      data-panels-ui--popover-offset-value="<%= @offset %>"
+      data-panels-ui--popover-delay-value="<%= @delay %>"
+      data-panels-ui--popover-close-delay-value="<%= @close_delay %>"
+      data-panels-ui--popover-trigger-on-value="<%= @trigger_on %>"
+      data-panels-ui--popover-focus-value="<%= focus? %>"
+      <%= tag.attributes(data: { action: root_action }.compact) if root_action %>>
+  <%= trigger %>
+
+  <div id="<%= panel_id %>"
+       <%= tag.attributes(role: @role) if @role %>
+       popover="manual"
+       tabindex="-1"
+       data-state="closed"
+       aria-modal="<%= focus? %>"
+       class="<%= tw_merge("popover", @class) %>"
+       data-panels-ui--popover-target="panel"><%= content %><% if arrow? %><span class="floating-arrow" aria-hidden="true" data-panels-ui--popover-target="arrow"></span><% end %></div>
+</span>
