@@ -1,0 +1,78 @@
+<nav id="<%= @id %>"
+     aria-label="Breadcrumb"
+     class="<%= tw_merge("breadcrumb-root", @class) %>"
+     data-controller="panels-ui--breadcrumb">
+  <ol class="breadcrumb-list">
+    <% parts.each_with_index do |part, index| %>
+      <li class="breadcrumb-item<%= " hidden" if part[:subtab_label] && part[:hidden] %>"
+          <% if part[:subtab_label] %>data-subtabs-breadcrumb-segment data-panels-ui--breadcrumb-target="subtabSegment"<% end %>>
+        <% case kind_for(part, index) %>
+        <% when :static %>
+          <span class="cursor-default font-medium text-muted-foreground"><%= part[:label] %></span>
+
+        <% when :link %>
+          <%= link_to part[:label], part[:path], class: "font-medium text-muted-foreground hover:text-primary transition-colors" %>
+
+        <% when :current %>
+          <span class="cursor-default font-semibold text-foreground"><%= part[:label] %></span>
+
+        <% when :tab_current %>
+          <span class="cursor-default font-semibold text-foreground"
+                data-tabs-breadcrumb-label
+                data-panels-ui--breadcrumb-target="tabLabel"><%= part[:label] %></span>
+
+        <% when :subtab_current %>
+          <span class="cursor-default font-semibold text-foreground"
+                data-subtabs-breadcrumb-label
+                data-panels-ui--breadcrumb-target="subtabLabel"><%= part[:label] %></span>
+
+        <% when :dropdown %>
+          <%#
+            Sibling menu is delegated to the canonical panels-ui--dropdown-menu controller
+            (roving-tabindex keyboard nav, typeahead, floating-ui positioning, layer
+            singleton) with an inline breadcrumb-styled trigger instead of the chunky
+            .panel-button one. The current label keeps its navigation link while the
+            adjacent chevron button opens the sibling menu.
+          %>
+          <div class="breadcrumb-dropdown dropdown-menu-root"
+               data-controller="panels-ui--dropdown-menu"
+               data-panels-ui--dropdown-menu-placement-value="bottom-end"
+               data-action="pointerdown@window->panels-ui--dropdown-menu#onWindowPointerDown">
+            <% if part[:path].present? %>
+              <%= link_to part[:label], part[:path], class: "font-semibold text-foreground hover:text-primary transition-colors" %>
+            <% else %>
+              <span class="cursor-default font-semibold text-foreground"><%= part[:label] %></span>
+            <% end %>
+            <button type="button"
+                    id="<%= trigger_id(index) %>"
+                    class="breadcrumb-dropdown__trigger"
+                    aria-label="Open <%= part[:label] %> navigation"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-controls="<%= menu_id(index) %>"
+                    data-panels-ui--dropdown-menu-target="trigger"
+                    data-action="click->panels-ui--dropdown-menu#toggle keydown->panels-ui--dropdown-menu#onTriggerKeydown">
+              <%= helpers.app_icon "chevron-down", class: "size-3 shrink-0", aria: { hidden: "true" } %>
+            </button>
+            <div id="<%= menu_id(index) %>"
+                 role="menu"
+                 tabindex="-1"
+                 popover="manual"
+                 class="dropdown-menu"
+                 aria-labelledby="<%= trigger_id(index) %>"
+                 data-panels-ui--dropdown-menu-target="menu"
+                 data-action="keydown->panels-ui--dropdown-menu#onMenuKeydown click->panels-ui--dropdown-menu#onMenuClick toggle->panels-ui--dropdown-menu#onPopoverToggle">
+              <% Array(part[:siblings]).each do |sibling| %>
+                <%= link_to sibling[:label], sibling[:path],
+                      role: "menuitem",
+                      tabindex: "-1",
+                      class: "dropdown-menu__item",
+                      data: { panels_ui__dropdown_menu_target: "item", dropdown_menu_kind: "command" } %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </li>
+    <% end %>
+  </ol>
+</nav>

@@ -26,6 +26,7 @@
 @import "./panel/tooltip.css";
 @import "./panel/popover.css";
 @import "./panel/toast.css";
+@import "./panel/breadcrumb.css";
 
 /* ─── Role tokens (shadcn-style naming) ───
    Values come from public/theme.css (:root) and panel/theme.css
