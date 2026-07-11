@@ -10,6 +10,7 @@ module PanelsUI
   # Close through `panels-ui--sheet#close` so the exit transition and overlay
   # stack complete before the native dialog leaves the top layer.
   class Sheet < PanelsUI::BaseComponent
+    renders_one :header
     renders_one :body
     renders_one :footer
 
@@ -69,7 +70,7 @@ module PanelsUI
     }.freeze
 
     def initialize(id:, side: :right, size: :md, variant: :edge, title: nil, aria_label: nil,
-                   description: nil, dismissible: true, class: nil)
+                   description: nil, dismissible: true, body_class: nil, class: nil)
       if title.blank? && aria_label.blank?
         raise ArgumentError, "Sheet requires a visible title or an aria_label"
       end
@@ -82,6 +83,7 @@ module PanelsUI
       @aria_label = aria_label
       @description = description
       @dismissible = dismissible
+      @body_class = body_class
       @class = binding.local_variable_get(:class)
     end
 

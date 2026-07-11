@@ -5,8 +5,9 @@ module PanelsUI
     VARIANTS = %i[primary secondary accent neutral ghost destructive success warning info].freeze
     SIZES = %i[sm md lg icon_sm icon].freeze
 
-    def initialize(variant: :primary, size: :md, href: nil, disabled: false, icon_only: false,
+    def initialize(label: nil, variant: :primary, size: :md, href: nil, disabled: false, icon_only: false,
                    aria_label: nil, class: nil, **attributes)
+      @label = label
       @variant = VARIANTS.include?(variant) ? variant : :primary
       @size = SIZES.include?(size) ? size : :md
       @href = href
@@ -18,7 +19,7 @@ module PanelsUI
     end
 
     def call
-      tag.public_send(tag_name, content, **button_attributes)
+      tag.public_send(tag_name, content.presence || @label, **button_attributes)
     end
 
     private

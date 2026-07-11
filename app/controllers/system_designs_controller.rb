@@ -22,7 +22,7 @@ class SystemDesignsController < ApplicationController
     else
       render partial: "system_designs/reservation_form",
              locals: { reservation: reservation, state: :invalid },
-             status: :unprocessable_entity
+             status: :unprocessable_content
     end
   end
 

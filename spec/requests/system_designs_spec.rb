@@ -67,7 +67,7 @@ RSpec.describe "System design showcase", type: :request do
       post system_design_submit_form_path,
            params: { reservation_request: { guest_name: "", email: "not-an-email", nights: "0" } }
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include('id="system-design-reservation-form"')
       expect(response.body).to include("panel-form-field__error")
     end

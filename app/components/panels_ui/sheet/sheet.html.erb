@@ -12,7 +12,9 @@
   <div class="flex flex-1 min-h-0 flex-col focus:outline-none"
        tabindex="-1"
        data-panels-ui--sheet-target="panel">
-    <% if @title.present? || @description.present? || @dismissible %>
+    <% if header? %>
+      <%= header %>
+    <% elsif @title.present? || @description.present? || @dismissible %>
       <header class="flex items-start justify-between gap-4 px-6 pt-6 pb-4">
         <div class="min-w-0">
           <% if @title.present? %>
@@ -39,7 +41,7 @@
     <% end %>
 
     <% if body? %>
-      <div class="flex-1 min-h-0 overflow-y-auto px-6 py-2 text-sm text-card-foreground">
+      <div class="<%= tw_merge("flex-1 min-h-0 overflow-y-auto px-6 py-2 text-sm text-card-foreground", @body_class) %>">
         <%= body %>
       </div>
     <% end %>

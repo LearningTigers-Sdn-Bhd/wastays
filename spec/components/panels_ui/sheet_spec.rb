@@ -62,6 +62,22 @@ RSpec.describe PanelsUI::Sheet, type: :component do
     end
   end
 
+  describe "custom composition" do
+    it "supports a custom header and body classes without replacing dialog behavior" do
+      render_sheet(title: nil, aria_label: "Navigation", body_class: "flex flex-col overflow-hidden p-0") do |sheet|
+        sheet.with_header do
+          '<header class="custom-head"><button data-action="panels-ui--sheet#close">Close nav</button></header>'.html_safe
+        end
+        sheet.with_body { '<nav>Links</nav>'.html_safe }
+      end
+
+      expect(page).to have_css("dialog[aria-label='Navigation'][data-controller='panels-ui--sheet']")
+      expect(page).to have_css("header.custom-head button[data-action='panels-ui--sheet#close']", text: "Close nav")
+      expect(page).to have_css("dialog > div > div.flex.flex-col.overflow-hidden.p-0 nav", text: "Links")
+      expect(page).to have_no_css("dialog > div > header:not(.custom-head)")
+    end
+  end
+
   describe "dismissible: false" do
     it "removes the close affordance and exposes the controller value" do
       render_sheet(dismissible: false) { |sheet| sheet.with_body { "x" } }
