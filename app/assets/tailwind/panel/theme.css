@@ -72,6 +72,24 @@
   --border-interactive: oklch(0.5350 0.0450 167.73);
   --ring: oklch(0.6000 0.1250 163.22);
 
+  /* Sidebar owns a dedicated Shadcn-style surface scale. Literal values keep the
+     WCAG audit independent from CSS variable resolution. */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.2100 0.0250 160.00);
+  --sidebar-muted-foreground: oklch(0.4750 0.0260 160.00);
+  --sidebar-accent: oklch(0.9550 0.0090 160.00);
+  --sidebar-accent-foreground: oklch(0.2100 0.0250 160.00);
+  --sidebar-border: oklch(0.8800 0.0180 160.00);
+  --sidebar-ring: oklch(0.6000 0.1250 163.22);
+  --sidebar-tooltip: oklch(0.2100 0.0250 160.00);
+  --sidebar-tooltip-foreground: oklch(0.9850 0.0060 157.18);
+  --sidebar-popup: oklch(1 0 0);
+  --sidebar-popup-foreground: oklch(0.2100 0.0250 160.00);
+  --sidebar-popup-muted-foreground: oklch(0.4750 0.0260 160.00);
+  --sidebar-popup-accent: oklch(0.9550 0.0090 160.00);
+  --sidebar-popup-accent-foreground: oklch(0.2100 0.0250 160.00);
+  --sidebar-popup-border: oklch(0.5350 0.0450 167.73);
+
   --shadow-color: 0 0% 0%;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.06);
   --shadow-base: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
@@ -151,6 +169,22 @@
   --border: oklch(0.3279 0.0313 162.32);
   --border-interactive: oklch(0.5450 0.0460 167.73);
   --ring: oklch(0.7729 0.1535 163.22);
+
+  --sidebar: oklch(0.2350 0.0194 160.59);
+  --sidebar-foreground: oklch(0.9417 0.0108 158.84);
+  --sidebar-muted-foreground: oklch(0.8050 0.0240 156.40);
+  --sidebar-accent: oklch(0.2726 0.0252 160.84);
+  --sidebar-accent-foreground: oklch(0.9417 0.0108 158.84);
+  --sidebar-border: oklch(0.3279 0.0313 162.32);
+  --sidebar-ring: oklch(0.7729 0.1535 163.22);
+  --sidebar-tooltip: oklch(0.9417 0.0108 158.84);
+  --sidebar-tooltip-foreground: oklch(0.1946 0.0156 157.18);
+  --sidebar-popup: oklch(0.2850 0.0200 160.00);
+  --sidebar-popup-foreground: oklch(0.9417 0.0108 158.84);
+  --sidebar-popup-muted-foreground: oklch(0.8050 0.0240 156.40);
+  --sidebar-popup-accent: oklch(0.3500 0.0252 160.84);
+  --sidebar-popup-accent-foreground: oklch(0.9417 0.0108 158.84);
+  --sidebar-popup-border: oklch(0.5500 0.0460 167.73);
 
   --shadow-color: 0 0% 0%;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);

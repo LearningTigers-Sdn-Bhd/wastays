@@ -69,7 +69,10 @@ export default class extends Controller {
     this.element.getBoundingClientRect()
     this.openFrame = window.requestAnimationFrame(() => {
       this.openFrame = null
-      if (this.element.open && !this.closing) this.element.setAttribute("data-panels-open", "")
+      if (this.element.open && !this.closing) {
+        this.element.setAttribute("data-panels-open", "")
+        this.element.dispatchEvent(new CustomEvent("panels-ui:sheet-open", { bubbles: true }))
+      }
     })
   }
 

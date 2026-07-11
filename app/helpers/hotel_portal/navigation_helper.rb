@@ -127,6 +127,31 @@ module HotelPortal
       end
     end
 
+    # Produces the fully authorized navigation tree consumed by PanelsUI::Sidebar.
+    # Authorization remains in the portal helper; the component only renders the
+    # already-filtered value objects it receives.
+    def hotel_visible_sidebar_sections
+      hotel_sidebar_sections.filter_map do |section|
+        items = hotel_visible_items(section.items).filter_map do |item|
+          attributes = item.to_h.symbolize_keys
+
+          if item.children.present?
+            children = hotel_visible_items(item.children).map do |child|
+              PanelsUI::Navigation::Item.new(**child.to_h.symbolize_keys)
+            end
+            next if children.empty?
+
+            attributes[:children] = children
+          end
+
+          PanelsUI::Navigation::Item.new(**attributes)
+        end
+        next if items.empty?
+
+        PanelsUI::Navigation::Section.new(label: section.label, items:)
+      end
+    end
+
     def hotel_breadcrumb_trail
       return @_hotel_breadcrumb_trail if defined?(@_hotel_breadcrumb_trail)
 

@@ -4,10 +4,11 @@ namespace :tokens do
   desc "Audit public/panel theme tokens for WCAG 2.2 AA contrast"
   task :contrast do
     public_vars = TokenAudit.parse_block("app/assets/tailwind/public/theme.css", /:root\s*\{/)
-    panel_vars  = TokenAudit.parse_block("app/assets/tailwind/panel/theme.css", /\[data-theme=['"]?panel['"]?\]\s*\{/)
+    panel_light_vars = TokenAudit.parse_block("app/assets/tailwind/panel/theme.css", /\[data-theme=['"]?panel-light['"]?\]\s*\{/)
+    panel_dark_vars  = TokenAudit.parse_block("app/assets/tailwind/panel/theme.css", /\[data-theme=['"]?panel-dark['"]?\]\s*\{/)
 
     failures = []
-    [ [ "public", public_vars ], [ "panel", panel_vars ] ].each do |theme_name, vars|
+    [ [ "public", public_vars ], [ "panel-light", panel_light_vars ], [ "panel-dark", panel_dark_vars ] ].each do |theme_name, vars|
       TokenAudit::PAIRS.each do |fg, bg, min_ratio, label|
         next unless vars[fg] && vars[bg]
 
@@ -47,7 +48,16 @@ module TokenAudit
     [ "border-interactive", "background", 3.0, "border-interactive/background" ],
     [ "border-interactive", "card", 3.0, "border-interactive/card" ],
     [ "ring", "background", 3.0, "ring/background" ],
-    [ "ring", "card", 3.0, "ring/card" ]
+    [ "ring", "card", 3.0, "ring/card" ],
+    [ "sidebar-foreground", "sidebar", 4.5, "sidebar foreground" ],
+    [ "sidebar-muted-foreground", "sidebar", 4.5, "sidebar muted foreground" ],
+    [ "sidebar-accent-foreground", "sidebar-accent", 4.5, "sidebar accent foreground" ],
+    [ "sidebar-tooltip-foreground", "sidebar-tooltip", 7.0, "sidebar tooltip foreground" ],
+    [ "sidebar-popup-foreground", "sidebar-popup", 7.0, "sidebar popup foreground" ],
+    [ "sidebar-popup-muted-foreground", "sidebar-popup", 4.5, "sidebar popup muted foreground" ],
+    [ "sidebar-popup-accent-foreground", "sidebar-popup-accent", 4.5, "sidebar popup accent foreground" ],
+    [ "sidebar-popup-border", "sidebar-popup", 3.0, "sidebar popup boundary" ],
+    [ "sidebar-ring", "sidebar", 3.0, "sidebar focus ring" ]
   ].freeze
 
   def self.parse_block(path, selector_regex)
