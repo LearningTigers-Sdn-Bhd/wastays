@@ -20,8 +20,13 @@ module Bookings
     def call
       return failure("Unknown booking type.") unless @booking_type.in?(%w[reservation walk_in backdated_check_in])
       return failure("Add at least one room.") if @room_rows.empty?
-      return failure("Each room row requires a room category and room number.") if @room_rows.any? { |row| row[:room_type_id].blank? || row[:room_number].blank? }
-      return failure("The same room cannot be selected twice.") if @room_rows.pluck(:room_number).map(&:to_s).uniq.size != @room_rows.size
+      if @booking_type == "reservation"
+        return failure("Each reservation row requires a room category.") if @room_rows.any? { |row| row[:room_type_id].blank? }
+      elsif @room_rows.any? { |row| row[:room_type_id].blank? || row[:room_number].blank? }
+        return failure("Each room row requires a room category and room number.")
+      end
+      room_numbers = @room_rows.pluck(:room_number).compact_blank.map(&:to_s)
+      return failure("The same room cannot be selected twice.") if room_numbers.uniq.size != room_numbers.size
 
       bookings = []
       group_booking = nil
@@ -69,7 +74,8 @@ module Bookings
         room_type_id: row[:room_type_id], room_number: row[:room_number], rate_plan_id: normalized_rate_plan_id(row[:rate_plan_id]),
         adults: row[:adults].presence || 1, children: row[:children].presence || 0,
         manual_rate_override: row[:manual_rate_override], posting_date: @posting_date,
-        source: @booking_type == "reservation" ? @common_params[:source] : "walk_in"
+        source: @booking_type == "reservation" ? @common_params[:source] : "walk_in",
+        require_room_number: @booking_type != "reservation"
       )
       params[:record_payment] = false if @room_rows.many?
       params

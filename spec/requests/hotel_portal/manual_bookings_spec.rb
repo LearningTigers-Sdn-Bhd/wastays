@@ -104,12 +104,13 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
       get hotel_booking_transaction_quick_booking_path(hotel)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Quick Booking", "Every row creates one assigned room booking", "Confirm booking")
+      expect(response.body).to include("Quick Booking", "Every row creates one room booking", "Confirm booking")
       expect(response.body).to include('data-offcanvas-variant="right"')
       expect(response.body).to include("bg-stone-50")
       expect(response.body).to include("Phone", "+60 12-345 6789", "guest@example.com")
       expect(response.body).not_to include(">Mobile</label>")
       expect(response.body.scan('data-booking-room-rows-target="template"').size).to eq(1)
+      expect(Nokogiri::HTML(response.body).at_css('[data-role="room-number"]')).not_to have_attribute("required")
     end
 
     it "keeps quick booking row values and emits a toast when creation fails" do
@@ -119,7 +120,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
           check_in: Date.current, check_out: Date.current + 2.days,
           source: "phone",
           rooms: {
-            "0" => { room_type_id: room_type.id, rate_plan_id: rate_plan.id, room_number: "", adults: 2, children: 0 }
+            "0" => { room_type_id: "", rate_plan_id: rate_plan.id, room_number: "", adults: 2, children: 0 }
           }
         }
       }
@@ -131,9 +132,9 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.media_type).to eq("text/vnd.turbo-stream.html")
       expect(response.body).to include('turbo-stream action="prepend" target="flash_toasts"')
-      expect(response.body).to include("Each room row requires a room category and room number.")
+      expect(response.body).to include("Each reservation row requires a room category.")
       decoded_body = CGI.unescapeHTML(response.body)
-      expect(decoded_body).to include(%("room_type_id":"#{room_type.id}"), %("rate_plan_id":"#{rate_plan.id}"))
+      expect(decoded_body).to include(%("room_type_id":""), %("rate_plan_id":"#{rate_plan.id}"))
       expect(response.body).not_to include("prohibited this booking from being saved")
     end
 

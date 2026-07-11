@@ -120,6 +120,11 @@ module Bookings
             next
           end
 
+          if unassigned_booking_room?
+            error = "Assign a room number to every room before check-in."
+            next
+          end
+
           if BookingRedesign.enabled? && !@booking.booking_guests.exists?(role: "primary")
             error = "A primary guest is required before check-in."
             next
@@ -218,6 +223,22 @@ module Bookings
         payment_method: deposit_options[:payment_method],
         external_reference: deposit_options[:external_reference]
       )
+    end
+
+    def unassigned_booking_room?
+      nested = @options.dig(:attributes, :booking_rooms_attributes) ||
+        @options.dig(:attributes, "booking_rooms_attributes")
+      submitted_rooms = nested.respond_to?(:each_value) ? nested.each_value.to_a : Array(nested)
+
+      @booking.booking_rooms.any? do |booking_room|
+        submitted = submitted_rooms.find { |room| (room[:id] || room["id"]).to_s == booking_room.id.to_s }
+        room_number = if submitted && (submitted.key?(:room_number) || submitted.key?("room_number"))
+          submitted[:room_number] || submitted["room_number"]
+        else
+          booking_room.room_number
+        end
+        room_number.blank?
+      end
     end
 
     def record_tourism_tax_payment_if_requested

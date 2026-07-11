@@ -11,6 +11,7 @@ export default class extends Controller {
       rows.forEach((values) => this.addRow(values))
     }
     this.updateNights()
+    this.toggleBackdate()
   }
 
   add() {
@@ -25,6 +26,7 @@ export default class extends Controller {
     row.querySelector("input[name$='[adults]']").value = values.adults || 1
     row.querySelector("input[name$='[children]']").value = values.children || 0
     if (values.room_type_id) this.loadRow(row, values)
+    this.updateRoomRequirements()
     this.updateRemoveButtons()
   }
 
@@ -129,6 +131,12 @@ export default class extends Controller {
 
   toggleBackdate() {
     if (this.hasBackdateFieldsTarget) this.backdateFieldsTarget.classList.toggle("hidden", this.bookingTypeTarget.value !== "backdated_check_in")
+    this.updateRoomRequirements()
+  }
+
+  updateRoomRequirements() {
+    const roomRequired = this.hasBookingTypeTarget && this.bookingTypeTarget.value !== "reservation"
+    this.rowTargets.forEach((row) => { row.querySelector("[data-role='room-number']").required = roomRequired })
   }
 
   toggleCorporate(event) {
