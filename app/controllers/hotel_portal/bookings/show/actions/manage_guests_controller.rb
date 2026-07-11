@@ -8,6 +8,7 @@ module HotelPortal
           MODES = %w[add edit_primary edit_additional].freeze
 
           before_action :set_mode
+          before_action :set_primary_booking_guest, if: -> { @mode == "edit_primary" }
           before_action :set_additional_booking_guest, if: -> { @mode == "edit_additional" }
 
           def show
@@ -29,6 +30,10 @@ module HotelPortal
             @booking_guest = @booking.booking_guests.find_by!(id: params[:booking_guest_id], is_primary: false)
           end
 
+          def set_primary_booking_guest
+            @booking_guest = @booking.booking_guests.find(&:primary?)
+          end
+
           def prepare_guest
             @guest = if @mode == "edit_additional"
               @booking_guest.guest
@@ -48,52 +53,50 @@ module HotelPortal
                 @booking.booking_guests.create!(guest: @guest, is_primary: false)
                 record_guest_audit("guest_added", old_value: {}, new_value: guest_audit_values(@guest))
               end
-              return complete_action(notice: "Guest added.")
+              return complete_guest_action(notice: "Guest added.")
             end
 
-            render_sheet(status: :unprocessable_content)
+            render_guest_errors
           end
 
           def update_guest
-            return update_primary if @mode == "edit_primary"
+            return update_primary_without_snapshot unless @booking_guest
 
             @guest = @booking_guest.guest
-            old_values = guest_audit_values(@guest)
-            @guest.assign_attributes(guest_params)
-            if @guest.valid?
-              Booking.transaction do
-                @guest.save!
-                record_guest_audit("guest_updated", old_value: old_values, new_value: guest_audit_values(@guest))
-              end
-              return complete_action(notice: "Guest updated.")
-            end
+            update_profile = save_scope == "snapshot_and_profile"
+            result = ::BookingGuests::UpdateSnapshot.call(
+              booking_guest: @booking_guest,
+              attributes: guest_params,
+              actor: current_user,
+              update_profile:
+            )
+            return complete_guest_action(notice: update_profile ? "Guest details and guest record updated." : "Guest details saved.") if result.success?
 
-            render_sheet(status: :unprocessable_content)
+            result.errors.each { |error| @guest.errors.add(:base, error) }
+            render_guest_errors
           end
 
-          def update_primary
+          def update_primary_without_snapshot
             @guest = primary_guest_record
             @guest.assign_attributes(guest_params)
-            return render_sheet(status: :unprocessable_content) unless @guest.valid?
+            return render_guest_errors unless @guest.valid?
 
             result = nil
-
             ActiveRecord::Base.transaction do
               result = ::Bookings::UpdateStayService.new(
                 booking: @booking,
                 params: primary_booking_params,
                 user: current_user
               ).call
-
               raise ActiveRecord::Rollback unless result.success?
 
               @booking.reload.primary_guest&.update!(guest_params)
             end
 
-            return complete_action(notice: "Primary guest updated.") if result&.success?
+            return complete_guest_action(notice: "Primary guest updated.") if result&.success?
 
             result.errors.each { |error| @guest.errors.add(:base, error) }
-            render_sheet(status: :unprocessable_content)
+            render_guest_errors
           end
 
           def primary_guest_record
@@ -107,6 +110,11 @@ module HotelPortal
               government_id: @booking.guest_government_id,
               date_of_birth: @booking.primary_guest&.date_of_birth
             )
+          end
+
+          def save_scope
+            requested = params[:save_scope].presence_in(%w[snapshot snapshot_and_profile])
+            requested || (inline_request? ? "snapshot" : "snapshot_and_profile")
           end
 
           def primary_booking_params
@@ -142,6 +150,22 @@ module HotelPortal
 
           def render_sheet(status: :ok)
             render "hotel_portal/bookings/show/actions/manage_guest/offcanvas", status: status
+          end
+
+          def inline_request?
+            params[:presentation] == "booking_control_panel"
+          end
+
+          def complete_guest_action(notice:)
+            return redirect_to(@return_to, notice: notice, status: :see_other) if inline_request?
+
+            complete_action(notice: notice)
+          end
+
+          def render_guest_errors
+            return redirect_to(@return_to, alert: @guest.errors.full_messages.to_sentence, status: :see_other) if inline_request?
+
+            render_sheet(status: :unprocessable_content)
           end
         end
       end

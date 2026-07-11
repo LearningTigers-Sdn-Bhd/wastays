@@ -49,7 +49,7 @@ module Notifications
         @booking.booking_rooms.map do |booking_room|
           {
             description: room_description(booking_room),
-            quantity: booking_room.quantity.to_i,
+            quantity: 1,
             amount: booking_room.subtotal.to_f.round(2),
             room_number: booking_room.room_number.presence
           }

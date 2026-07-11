@@ -3,7 +3,6 @@ module HotelOps
     def initialize(hotel:, rate_plan:, start_date:, end_date:, price:, currency: "MYR", user:, min_stay: nil, max_stay: nil, closed_to_arrival: nil, closed_to_departure: nil, stop_sell: nil)
       @hotel = hotel
       @rate_plan = rate_plan
-      @room_type = rate_plan.room_type
       @start_date = start_date.to_date
       @end_date = end_date.to_date
       @price = price
@@ -24,29 +23,30 @@ module HotelOps
           @rate_plan.update!(currency: @currency)
         end
 
-        (@start_date..@end_date).each do |date|
-          # Find or create record for this specific date, plan and currency
-          rate = @rate_plan.room_rates.find_or_initialize_by(date: date, currency: @currency)
-          rate.room_type = @room_type
-          old_price = rate.price
-          rate.price = @price
-          rate.min_stay = @min_stay if @min_stay.present?
-          rate.max_stay = @max_stay if @max_stay.present?
-          rate.closed_to_arrival = @closed_to_arrival if !@closed_to_arrival.nil?
-          rate.closed_to_departure = @closed_to_departure if !@closed_to_departure.nil?
-          rate.stop_sell = @stop_sell if !@stop_sell.nil?
-          rate.save!
+        @rate_plan.room_types.each do |room_type|
+          (@start_date..@end_date).each do |date|
+            # Find or create record for this specific date, plan and currency
+            rate = @rate_plan.room_rates.find_or_initialize_by(date: date, currency: @currency, room_type: room_type)
+            old_price = rate.price
+            rate.price = @price
+            rate.min_stay = @min_stay if @min_stay.present?
+            rate.max_stay = @max_stay if @max_stay.present?
+            rate.closed_to_arrival = @closed_to_arrival if !@closed_to_arrival.nil?
+            rate.closed_to_departure = @closed_to_departure if !@closed_to_departure.nil?
+            rate.stop_sell = @stop_sell if !@stop_sell.nil?
+            rate.save!
 
-          # Log change if price actually changed or new record
-          if old_price != @price
-            @hotel.inventory_audit_logs.create!(
-              room_type: @room_type,
-              user: @user,
-              action_type: "rate_update",
-              old_value: { date: date, price: old_price.to_f, rate_plan_id: @rate_plan.id },
-              new_value: { date: date, price: @price.to_f, rate_plan_id: @rate_plan.id },
-              metadata: { source: "bulk_editor" }
-            )
+            # Log change if price actually changed or new record
+            if old_price != @price
+              @hotel.inventory_audit_logs.create!(
+                room_type: room_type,
+                user: @user,
+                action_type: "rate_update",
+                old_value: { date: date, price: old_price.to_f, rate_plan_id: @rate_plan.id },
+                new_value: { date: date, price: @price.to_f, rate_plan_id: @rate_plan.id },
+                metadata: { source: "bulk_editor" }
+              )
+            end
           end
         end
 

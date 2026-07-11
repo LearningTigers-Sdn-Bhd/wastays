@@ -1,0 +1,33 @@
+<% if presenter.active_tab == "billing_preferences" && current_user.has_permission?("manage_folio_movements", hotel: current_hotel) %>
+  <div class="border-b border-slate-200 p-4">
+    <div class="relative" data-controller="dropdown" data-dropdown-align="left">
+      <button type="button" class="flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white hover:bg-slate-800" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-expanded="false" aria-haspopup="true">
+        <%= cached_icon "route", class: "size-4" %>
+        Change Billing Routes
+        <%= cached_icon "chevron-down", class: "size-4" %>
+      </button>
+      <div data-dropdown-target="menu" class="hidden absolute left-0 z-50 mt-2 w-full origin-top rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-950/10 focus:outline-none" role="menu" aria-orientation="vertical" tabindex="-1">
+        <%= link_to group_billing_routes_hotel_booking_control_panel_path(current_hotel, booking),
+          role: "menuitem",
+          class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none",
+          data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
+          <%= cached_icon "route", class: "size-4 text-slate-500" %>
+          <span>Group Billing Routes</span>
+        <% end %>
+        <%= link_to billing_routes_hotel_booking_control_panel_path(current_hotel, booking),
+          role: "menuitem",
+          class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none",
+          data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %>
+          <%= cached_icon "route", class: "size-4 text-slate-500" %>
+          <span>Selective Billing Routes</span>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<%= render "hotel_portal/booking_control_panels/left_rails/booking_navigation",
+    presenter: presenter,
+    rows: presenter.child_booking_rows,
+    overview_path: presenter.group_overview_path,
+    aria_label: "Group booking context" %>

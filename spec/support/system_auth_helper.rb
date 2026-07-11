@@ -7,9 +7,15 @@ module SystemAuthHelper
 
     expect(page).to have_no_current_path(login_path, wait: 10)
     expect(page).to have_css("body", wait: 10)
+    return unless js_driver?
+
     page.document.synchronize do
       raise Capybara::ElementNotFound, "page still loading after sign in" unless page.evaluate_script("document.readyState") == "complete"
     end
+  end
+
+  def js_driver?
+    Capybara.current_driver != :rack_test
   end
 
   def wait_for_stimulus_controller(selector, identifier)

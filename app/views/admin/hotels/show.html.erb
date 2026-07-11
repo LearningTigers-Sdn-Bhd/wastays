@@ -116,20 +116,57 @@
 
     <aside class="space-y-6 xl:col-span-4">
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="mb-4 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Channel Management</h2>
+        <h2 class="mb-4 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Hotel Dashboard</h2>
+        <div class="space-y-3">
+          <%= link_to hotel_dashboard_path(@hotel), class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50", target: "_blank" do %>
+            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+            Go to Hotel Dashboard
+          <% end %>
+        </div>
+      </section>
+
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Channel Management</h2>
+          <% if @hotel.channel_mapping&.external_id.present? %>
+            <div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="right">
+              <button
+                type="button"
+                class="inline-flex size-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                data-dropdown-target="button"
+                data-action="click->dropdown#toggle keydown->dropdown#handleKeydown"
+                aria-expanded="false"
+                aria-haspopup="true"
+                aria-label="Channel Manager actions">
+                <%= cached_icon "ellipsis", stroke_width: 2.5, class: "size-4" %>
+              </button>
+
+              <div data-dropdown-target="menu" class="hidden absolute right-0 top-full z-[100] mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-950/10" role="menu" aria-orientation="vertical" tabindex="-1">
+                <%= button_to "Full Refresh (500 Days)", full_refresh_admin_hotel_path(@hotel), role: "menuitem", form_class: "contents", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950 focus-visible:bg-slate-50 focus-visible:outline-none cursor-pointer", data: { turbo_confirm: "This will push 500 days of availability, rates and restrictions. Continue?" } %>
+                <%= button_to "Refresh Channel Mapping", repair_channex_mapping_admin_hotel_path(@hotel), role: "menuitem", form_class: "contents", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950 focus-visible:bg-slate-50 focus-visible:outline-none cursor-pointer", data: { turbo_confirm: "This will check for mapping drift and, if found, repoint this hotel's Channel Manager mapping and trigger a full refresh. Continue?" } %>
+
+                <div class="my-1 border-t border-slate-100"></div>
+
+                <%= button_to "Disconnect Channel Manager", disconnect_channex_admin_hotel_path(@hotel), role: "menuitem", form_class: "contents", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50 focus-visible:bg-red-50 focus-visible:outline-none cursor-pointer", data: { turbo_confirm: "Are you sure? This will remove all mapping IDs for this hotel and its rooms." } %>
+              </div>
+            </div>
+          <% end %>
+        </div>
         <div class="space-y-4">
-          <div class="flex items-center justify-between gap-4">
-            <div>
-              <p class="text-sm font-semibold text-slate-900">Channel Manager Connectivity</p>
-              <% if @hotel.channel_mapping&.external_id.present? %>
-                <p class="mt-0.5 text-xs font-medium text-emerald-600">Connected (ID: <%= @hotel.channel_mapping.external_id %>)</p>
-              <% else %>
-                <p class="mt-0.5 text-xs font-medium text-slate-500">Not Connected</p>
-              <% end %>
-            </div>
-            <div class="shrink-0">
-              <span class="inline-flex size-2 rounded-full <%= @hotel.channel_mapping&.external_id.present? ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300' %>"></span>
-            </div>
+          <div>
+            <p class="text-sm font-semibold text-slate-900 mb-1.5">Connectivity</p>
+            <% if @hotel.channel_mapping&.external_id.present? %>
+              <span class="inline-flex items-center gap-x-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                <span class="inline-flex size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Connected
+              </span>
+              <p class="mt-1.5 text-xs font-medium text-slate-500 break-all">ID: <%= @hotel.channel_mapping.external_id %></p>
+            <% else %>
+              <span class="inline-flex items-center gap-x-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-inset ring-slate-200">
+                <span class="inline-flex size-1.5 rounded-full bg-slate-400"></span>
+                Not Connected
+              </span>
+            <% end %>
           </div>
 
           <% if @hotel.channel_mapping&.external_id.present? %>
@@ -142,30 +179,10 @@
                 </div>
               </div>
             </div>
-            <%= button_to "Onboard / Sync structure to Channel Manager", onboard_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-slate-800 shadow-sm" %>
-            
-            <div class="pt-2 border-t border-slate-200 mt-2">
-              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Sync Operations</p>
-              <p class="text-[10px] text-slate-500 mb-3 leading-relaxed">Required for certification or after long downtime. Sends 500 days of ARI data. Max once per 24h recommended.</p>
-              <%= button_to "Full Refresh (500 Days)", full_refresh_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 shadow-sm", data: { turbo_confirm: "This will push 500 days of availability, rates and restrictions. Continue?" } %>
-            </div>
-
-            <div class="pt-4 mt-2">
-              <%= button_to "Disconnect Channel Manager", disconnect_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-50", data: { turbo_confirm: "Are you sure? This will remove all mapping IDs for this hotel and its rooms." } %>
-            </div>
+            <%= button_to "Onboard / Sync structure", onboard_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-slate-800 shadow-sm" %>
           <% else %>
             <p class="text-xs text-slate-500 leading-relaxed italic">Provision this property, its room types and default rate plans directly into Channel Manager via API.</p>
             <%= button_to "Connect to Channel Manager", onboard_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 shadow-lg" %>
-          <% end %>
-        </div>
-      </section>
-
-      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="mb-4 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Hotel Dashboard</h2>
-        <div class="space-y-3">
-          <%= link_to hotel_dashboard_path(@hotel), class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50", target: "_blank" do %>
-            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-            Go to Hotel Dashboard
           <% end %>
         </div>
       </section>

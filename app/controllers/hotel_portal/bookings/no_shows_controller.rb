@@ -2,16 +2,26 @@
 
 class HotelPortal::Bookings::NoShowsController < HotelPortal::BaseController
   include OffcanvasTransactionCompletion
+  include GroupLifecycleTargeting
 
   before_action :authorize_manage_bookings!
 
   def create
     @booking = current_hotel.bookings.find(params[:id])
-    result = Bookings::FinalizeNoShow.call(booking: @booking, user: current_user)
+    if no_show_reason.blank?
+      @booking.errors.add(:base, "No-show reason is required.")
+      @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+      @transaction_return_to = offcanvas_return_to(fallback: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"))
+      return render "hotel_portal/bookings/transactions/mark_no_show/offcanvas", status: :unprocessable_content
+    end
+
+    return batch_mark_no_show if selected_lifecycle_batch?(@booking)
+
+    result = Bookings::FinalizeNoShow.call(booking: @booking, user: current_user, reason: no_show_reason)
 
     if result.success?
       offcanvas_transaction_response(
-        destination: offcanvas_return_to(fallback: hotel_booking_path(current_hotel, @booking)),
+        destination: offcanvas_return_to(fallback: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details")),
         notice: no_show_notice(result)
       )
     else
@@ -20,6 +30,24 @@ class HotelPortal::Bookings::NoShowsController < HotelPortal::BaseController
   end
 
   private
+
+  def batch_mark_no_show
+    bookings = selected_lifecycle_bookings(fallback_booking: @booking, action: :mark_no_show)
+
+    ActiveRecord::Base.transaction do
+      bookings.each do |booking|
+        result = Bookings::FinalizeNoShow.call(booking: booking, user: current_user, reason: no_show_reason)
+        raise BatchTargetError, result.error unless result.success?
+      end
+    end
+
+    offcanvas_transaction_response(
+      destination: offcanvas_return_to(fallback: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details")),
+      notice: batch_lifecycle_notice(bookings, "marked as no-show")
+    )
+  rescue BatchTargetError => e
+    redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: e.message, status: :see_other
+  end
 
   def no_show_notice(result)
     notice = "Booking marked as no-show. Tourism tax was not charged."
@@ -35,7 +63,7 @@ class HotelPortal::Bookings::NoShowsController < HotelPortal::BaseController
   def render_failure(error)
     @booking.errors.add(:base, error)
     @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-    @transaction_return_to = offcanvas_return_to(fallback: hotel_booking_path(current_hotel, @booking))
+    @transaction_return_to = offcanvas_return_to(fallback: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"))
 
     respond_to do |format|
       format.turbo_stream do
@@ -44,8 +72,12 @@ class HotelPortal::Bookings::NoShowsController < HotelPortal::BaseController
           partial: "hotel_portal/bookings/transactions/mark_no_show/sheet"
         ), status: :unprocessable_content
       end
-      format.html { redirect_to hotel_booking_path(current_hotel, @booking), alert: error }
+      format.html { redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: error }
     end
+  end
+
+  def no_show_reason
+    params[:no_show_reason].to_s.strip
   end
 
   def authorize_manage_bookings!

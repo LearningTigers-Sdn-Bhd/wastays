@@ -1,0 +1,15 @@
+<div class="p-3">
+  <p class="mb-2 text-[11px] font-black uppercase tracking-wider text-slate-500">Rooms</p>
+  <% if presenter.room_tree_rows.any? %>
+    <div class="space-y-1">
+      <% presenter.room_tree_rows.each do |row| %>
+        <%= link_to hotel_booking_control_panel_path(current_hotel, booking, tab: presenter.active_tab, room_id: row.id, folio_id: params[:folio_id]), class: "block rounded-lg px-3 py-2 text-sm #{row.active ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}" do %>
+          <span class="block font-bold"><%= row.label %></span>
+          <span class="block truncate text-xs opacity-75"><%= row.description %></span>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-sm text-slate-500">No rooms added.</p>
+  <% end %>
+</div>

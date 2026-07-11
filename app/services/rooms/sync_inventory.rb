@@ -47,7 +47,7 @@ module Rooms
                              .joins(:booking_rooms)
                              .where(":date >= bookings.check_in::date AND :date < bookings.check_out::date", date: date)
                              .where(booking_rooms: { room_type_id: @room_type.id })
-                             .sum("booking_rooms.quantity")
+                             .count("booking_rooms.id")
 
       inventory.quantity = [ 0, available_rooms.size - occupied_count ].max
       inventory.status = "open" if inventory.new_record?

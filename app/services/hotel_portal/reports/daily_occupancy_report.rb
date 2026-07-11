@@ -114,7 +114,7 @@ module HotelPortal
       end
 
       def booked_room_quantity(booking)
-        quantity = booking.booking_rooms.sum { |room| room.quantity.to_i }
+        quantity = booking.booking_rooms.count
         quantity.positive? ? quantity : 1
       end
 

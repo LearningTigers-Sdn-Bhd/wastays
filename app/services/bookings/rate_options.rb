@@ -68,7 +68,6 @@ module Bookings
       column = case tier.to_sym
       when :walk_in then "walk_in_price"
       when :corporate then "corporate_price"
-      when :ota then "ota_price"
       end
 
       return false if column.blank?

@@ -49,11 +49,11 @@
             </td>
             <td class="sticky right-0 z-10 border-l border-slate-100 bg-white px-5 py-4 text-right shadow-[-4px_0_6px_-1px_rgba(15,23,42,0.08)] group-hover:bg-slate-50">
               <div class="flex flex-col items-end gap-1.5">
-                <%= link_to hotel_folio_path(current_hotel, row.booking, origin: "folios"), class: "inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-slate-700", data: { turbo_frame: "_top" } do %>
+                <%= link_to hotel_booking_control_panel_path(current_hotel, row.booking, tab: "folio_operations", folio_id: row.folio.id), class: "inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-slate-700", data: { turbo_frame: "_top" } do %>
                   <%= cached_icon "book-open", class: "size-3" %>
                   View Folio
                 <% end %>
-                <%= link_to hotel_booking_path(current_hotel, row.booking), class: "inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50", data: { turbo_frame: "_top" } do %>
+                <%= link_to hotel_booking_control_panel_path(current_hotel, row.booking, tab: "booking_details"), class: "inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50", data: { turbo_frame: "_top" } do %>
                   <%= cached_icon "calendar-days", class: "size-3" %>
                   View Booking
                 <% end %>

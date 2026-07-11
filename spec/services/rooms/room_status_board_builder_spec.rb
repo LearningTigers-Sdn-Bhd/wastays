@@ -8,7 +8,7 @@ RSpec.describe Rooms::RoomStatusBoardBuilder do
     room_type = create(:room_type, hotel: hotel, name: "Deluxe", room_numbers: [ "101" ], quantity: 1, smoking_allowed: true, pets_allowed: true)
     create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")
     booking = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current, check_out: Date.current + 2.days, guest_name: "Sarah Jenkins")
-    create(:booking_room, booking: booking, room_type: room_type, room_number: "101", quantity: 1, subtotal: 200)
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 200)
 
     room_status_board_data = described_class.new(hotel: hotel, start_date: Date.current, days: 7).call
 

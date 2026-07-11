@@ -20,6 +20,7 @@ class FinancialAuditEvent < ApplicationRecord
     business_date_force_closed
     business_date_opened
     folio_forecasts_refreshed
+    hotel_tax_rules_changed
     missing_folio_recovered
     ar_payment_recorded
     ar_payment_allocated

@@ -75,7 +75,7 @@ module Folios
       @expected_tax_code_ids ||= begin
         return [] if @transaction.transaction_code.blank?
 
-        @transaction.transaction_code.transaction_code_taxes.includes(:hotel_tax).filter_map do |tax_rule|
+        FolioRouting::EffectiveTaxRules.call(booking: @transaction.booking_folio.booking, transaction_code: @transaction.transaction_code).filter_map do |tax_rule|
           next unless tax_rule.enabled_for_posting?
 
           tax_rule.posting_transaction_code&.id

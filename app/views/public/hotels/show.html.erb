@@ -1,20 +1,20 @@
 <%# frozen_string_literal: true %>
+<% content_for :hide_header, true %>
 
 <div class="bg-neutral-bg min-h-screen pb-24 lg:pb-0" 
-     data-controller="gallery-toggle room-details" 
-     data-gallery-toggle-photos-value="<%= @hotel.photo_urls_json %>"
-     data-gallery-toggle-index-value="0">
-  
-  <% content_for :hide_chrome, true %>
+  data-controller="gallery-toggle room-details" 
+  data-gallery-toggle-photos-value="<%= @hotel.photo_urls_json %>"
+  data-gallery-toggle-index-value="0">
 
   <%# ── Search-bar header ── %>
   <%= render "hotel_search_bar",
-      hotel: @hotel,
-      check_in: @check_in,
-      check_out: @check_out,
-      adults: @adults,
-      children: @children,
-      room_count: @room_count %>
+    hotel: @hotel,
+    check_in: @check_in,
+    check_out: @check_out,
+    adults: @adults,
+    children: @children,
+    infants: @infants,
+    room_count: @room_count %>
 
   <%# Breadcrumb %>
   <div class="bg-white border-b border-neutral-border">
@@ -43,6 +43,14 @@
 
   <%# Gallery Section (Primary Visuals) %>
   <div id="hotel-gallery-top" class="max-w-[85rem] mx-auto px-4 py-6 sm:px-6 lg:px-8">
+    <div class="flex flex-wrap items-center gap-3 mb-2">
+      <h1 class="text-3xl md:text-4xl font-extrabold text-neutral-text-primary"><%= @hotel.name %></h1>
+      <% if @hotel.pax_pricing_only? %>
+        <span class="inline-flex items-center gap-x-1.5 py-1 px-3 rounded-full text-[10px] font-black bg-indigo-50 border border-indigo-100 text-indigo-700 shadow-sm uppercase tracking-wider">
+          Per Pax Pricing Only
+        </span>
+      <% end %>
+    </div>
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[420px]">
       <div class="md:col-span-2 md:row-span-2 aspect-[2/1] md:aspect-auto rounded-2xl overflow-hidden shadow-lg group cursor-pointer" 
            data-action="click->gallery-toggle#show">
@@ -85,10 +93,16 @@
     <% end %>
   </div>
 
-  <div class="max-w-[85rem] mx-auto px-4 py-6 sm:px-6 lg:px-8">
-    <div class="flex flex-col lg:flex-row gap-8">
+  <div class="max-w-[85rem] mx-auto px-4 py-6 sm:px-6 lg:px-8" 
+       data-controller="room-selector" 
+       data-room-selector-adults-value="<%= @adults %>" 
+       data-room-selector-children-value="<%= @children %>" 
+       data-room-selector-infants-value="<%= @infants %>" 
+       data-room-selector-currency-value="<%= @display_currency %>"
+       data-room-selector-pax-pricing-only-value="<%= @hotel.pax_pricing_only? %>">
+    <div class="flex flex-col md:flex-row gap-8 items-start">
       <%# Main Content %>
-      <div class="flex-1 space-y-8">
+      <div class="flex-1 w-full space-y-8 min-w-0">
         
         <%# Hotel Info Header %>
         <div class="card p-6 md:p-8">
@@ -121,7 +135,7 @@
 
         <%# About / Story Section %>
         <div class="space-y-4">
-          <h2 class="text-2xl font-extrabold text-neutral-text-primary">About this hotel</h2>
+          <h2 class="text-2xl font-extrabold text-neutral-text-primary">About <%= @hotel.name %></h2>
           <div class="prose prose-neutral max-w-none text-neutral-text-secondary leading-relaxed">
             <p>Welcome to <%= @hotel.name %>, where local hospitality meets modern comfort. Located in the heart of <%= @hotel.city %>, our property is designed for travelers who value simplicity, quality, and direct deals.</p>
             <p>Whether you're visiting for business or leisure, we provide a seamless stay experience with all the essential amenities you need. Book directly with us through WAStays to enjoy the best rates and personalized WhatsApp support throughout your journey.</p>
@@ -134,7 +148,6 @@
             <h2 class="text-2xl font-extrabold text-neutral-text-primary">Select your room</h2>
             <div class="flex items-center gap-3">
               <p class="text-sm text-brand-secondary font-bold">Recommended for <%= @adults %> guests</p>
-              
               <%= form_with url: hotel_path(@hotel), method: :get, local: true, class: "hidden sm:block" do |f| %>
                 <% request.query_parameters.except("display_currency").each do |key, value| %>
                   <%= hidden_field_tag key, value %>
@@ -150,32 +163,138 @@
           </div>
 
           <div class="space-y-6">
-            <% if @search_ready && @room_types.empty? %>
+            <% if @search_ready && @allocation_options.empty? %>
               <div class="card p-8 text-center">
                 <h3 class="text-lg font-bold text-neutral-text-primary mb-2">No rooms available for selected dates</h3>
-                <p class="text-sm text-neutral-text-secondary mb-6">Try changing your check-in/check-out dates to see available options.</p>
+                <p class="text-sm text-neutral-text-secondary mb-6">Try changing your check-in/check-out dates or guest count to see available options.</p>
                 <%= link_to "Edit Search", "#", data: { action: "click->rate-calendar#openPicker" }, class: "btn btn-secondary px-8" %>
               </div>
             <% end %>
 
-            <% @room_types.each do |room_type| %>
-              <%= render "room_card",
-                         room_type: room_type,
-                         hotel: @hotel,
-                         search_ready: @search_ready,
-                         check_in: @check_in,
-                         check_out: @check_out,
-                         adults: @adults,
-                         children: @children,
-                         room_count: @room_count,
-                         display_currency: @display_currency %>
+            <% if @allocation_options.any? %>
+              <div class="space-y-4">
+                <p class="text-xs font-bold text-neutral-text-secondary uppercase tracking-widest">Recommended Stay Bundles</p>
+                <% @allocation_options.each do |option| %>
+                  <div class="card p-6 border-2 border-brand-primary/10 hover:border-brand-primary/30 transition-colors shadow-sm">
+                    <div class="flex flex-col lg:flex-row justify-between gap-6">
+                      
+                      <%# Left/Main Section: Bundle Rooms Details %>
+                      <div class="flex-1 space-y-4">
+                        <div class="border-b border-neutral-border pb-3">
+                          <h3 class="text-lg font-bold text-brand-primary mb-1">
+                            <%= option.rooms_summary %>
+                          </h3>
+                          <p class="text-xs text-neutral-text-secondary">
+                            Perfectly fits <strong class="font-extrabold text-neutral-text-primary"><%= pluralize(@adults + @children, 'guest') %></strong> across <strong class="font-extrabold text-neutral-text-primary"><%= pluralize(option.rooms.sum(&:quantity), 'room') %></strong>.
+                          </p>
+                        </div>
+                        
+                        <%# List of rooms in the bundle %>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <% option.rooms.each do |allocated_room| %>
+                            <% room_type = allocated_room.room_type %>
+                            <% presenter = Public::RoomTypePresenter.new(room_type, @hotel, @availability_service, self) %>
+                            <div class="flex gap-x-4 bg-neutral-bg/40 p-3 rounded-xl border border-neutral-border/40 cursor-pointer hover:bg-brand-primary/[0.03] hover:border-brand-primary/20 transition-all duration-200 group/room"
+                                 data-action="click->room-details#open"
+                                 data-room-details="<%= presenter.details_json %>">
+                              <%# Room thumbnail %>
+                              <div class="size-20 shrink-0 rounded-lg overflow-hidden relative bg-neutral-bg border border-neutral-border/50">
+                                <% if room_type.photos.attached? %>
+                                  <%= image_tag room_type.photos.first, class: "absolute inset-0 w-full h-full object-cover group-hover/room:scale-105 transition-transform duration-500" %>
+                                <% else %>
+                                  <div class="absolute inset-0 bg-neutral-border/20 flex items-center justify-center">
+                                    <svg class="size-6 text-neutral-border" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                  </div>
+                                <% end %>
+                              </div>
+                              
+                              <%# Room details %>
+                              <div class="min-w-0 flex-1">
+                                <p class="text-sm font-bold text-neutral-text-primary truncate group-hover/room:text-brand-primary transition-colors">
+                                  <%= allocated_room.quantity %>x <%= room_type.name %>
+                                </p>
+                                <p class="text-xs text-neutral-text-secondary line-clamp-2 mt-0.5 leading-relaxed">
+                                  <%= room_type.description %>
+                                </p>
+                                <div class="flex items-center gap-x-2 mt-1.5">
+                                  <span class="inline-flex items-center gap-x-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-neutral-100 text-neutral-700">
+                                    Up to <%= room_type.max_adults.to_i %> adults
+                                  </span>
+                                  <% if room_type.max_children.to_i > 0 %>
+                                    <span class="inline-flex items-center gap-x-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-neutral-100 text-neutral-700">
+                                      <%= room_type.max_children.to_i %> children
+                                    </span>
+                                  <% end %>
+                                </div>
+                              </div>
+                            </div>
+                          <% end %>
+                        </div>
+                      </div>
+                      
+                      <%# Right/Sidebar Section: Price and Reserve CTA %>
+                      <div class="lg:w-72 shrink-0 flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center pt-4 lg:pt-0 border-t border-neutral-border lg:border-t-0 lg:border-l lg:border-neutral-border/60 lg:pl-6 mt-4 lg:mt-0">
+                        <div class="text-left lg:text-right mb-0 lg:mb-4">
+                          <p class="text-2xl font-black text-neutral-text-primary leading-none mb-1">
+                            <%= option.display_total_price(@display_currency, @hotel) %>
+                          </p>
+                          <p class="text-[10px] text-neutral-text-secondary italic">
+                            Total for <%= pluralize((@check_out - @check_in).to_i, 'night') %>
+                          </p>
+                        </div>
+                        
+                        <%= form_with url: quotes_path, method: :post, local: true, class: "w-auto lg:w-full" do |f| %>
+                          <%= f.hidden_field :hotel_id, value: @hotel.slug %>
+                          <%= f.hidden_field :check_in, value: @check_in %>
+                          <%= f.hidden_field :check_out, value: @check_out %>
+                          <%= f.hidden_field :adults, value: @adults %>
+                          <%= f.hidden_field :children, value: @children %>
+                          <%= f.hidden_field :infants, value: @infants %>
+                          <% option.allocations_params.each_with_index do |alloc, index| %>
+                            <%= hidden_field_tag "allocations[][room_type_id]", alloc[:room_type_id] %>
+                            <%= hidden_field_tag "allocations[][quantity]", alloc[:quantity] %>
+                          <% end %>
+                          <%= f.submit "Reserve Rooms", class: "btn bg-brand-navy hover:bg-brand-navy-hover text-white px-6 lg:px-8 py-2.5 lg:py-3 text-sm font-bold w-full rounded-xl transition-all shadow-sm cursor-pointer" %>
+                        <% end %>
+                      </div>
+                      
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+
+              <div class="relative py-4">
+                <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div class="w-full border-t border-neutral-border"></div>
+                </div>
+                <div class="relative flex justify-center">
+                  <span class="bg-neutral-bg px-3 text-sm text-neutral-text-secondary">Or select individual rooms</span>
+                </div>
+              </div>
             <% end %>
+
+            <div class="space-y-6">
+              <% @room_types.each do |room_type| %>
+                <%= render "room_card", 
+                  room_type: room_type,
+                  hotel: @hotel,
+                  search_ready: @search_ready,
+                  check_in: @check_in,
+                  check_out: @check_out,
+                  adults: @adults,
+                  children: @children,
+                  infants: @infants,
+                  room_count: @room_count,
+                  display_currency: @display_currency 
+                %>
+              <% end %>
+            </div>
           </div>
         </div>
       </div>
 
       <%# Sticky Sidebar %>
-      <aside class="lg:w-80">
+      <aside class="w-full md:w-80 shrink-0">
         <div class="sticky top-[130px] space-y-6">
           <%# Location Map Card %>
           <div class="card p-6 bg-white shadow-sm">
@@ -255,7 +374,7 @@
               </li>
               <li class="flex items-start gap-x-2 text-xs font-medium text-neutral-text-secondary leading-snug">
                 <svg class="w-3.5 h-3.5 text-status-success shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                Verified local budget stays
+                Verified local stays
               </li>
               <li class="flex items-start gap-x-2 text-xs font-medium text-neutral-text-secondary leading-snug">
                 <svg class="w-3.5 h-3.5 text-status-success shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
@@ -266,11 +385,44 @@
         </div>
       </aside>
     </div>
-  </div>
 
-  <%# Mobile Sticky CTA (Keep as partial as it's a floating fixed element) %>
-  <%= render "mobile_sticky_cta", 
-             hotel: @hotel, 
-             availability_service: @availability_service, 
-             room_types: @room_types %>
+    <%# Sticky Bottom Cart Bar %>
+    <div data-room-selector-target="stickyBar"
+         class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-neutral-border shadow-2xl p-4 transition-all duration-300 transform translate-y-full opacity-0 lg:left-0 lg:right-0">
+      <div class="max-w-[85rem] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="flex-1 text-left w-full">
+          <div class="flex items-center gap-x-2 mb-1.5">
+            <span data-room-selector-target="summaryText" class="text-sm font-bold text-neutral-text-primary"></span>
+          </div>
+          <div data-room-selector-target="validationWarning" class="text-xs font-bold text-red-600 flex items-center gap-1">
+            <svg class="size-3.5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+            <span></span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
+          <div class="text-left sm:text-right">
+            <p class="text-[10px] font-black text-neutral-text-secondary uppercase tracking-widest">Total Price</p>
+            <p data-room-selector-target="totalPriceText" class="text-xl sm:text-2xl font-black text-neutral-text-primary"></p>
+          </div>
+
+          <%= form_with url: quotes_path, method: :post, local: true, class: "flex items-center" do |f| %>
+            <%= f.hidden_field :hotel_id, value: @hotel.slug %>
+            <%= f.hidden_field :check_in, value: @check_in %>
+            <%= f.hidden_field :check_out, value: @check_out %>
+            <%= f.hidden_field :adults, value: @adults %>
+            <%= f.hidden_field :children, value: @children %>
+            <%= f.hidden_field :infants, value: @infants %>
+            <%= f.hidden_field :display_currency, value: @display_currency %>
+            
+            <div data-room-selector-target="formInputs" class="hidden"></div>
+
+            <%= f.submit "Book Selected",
+                         data: { room_selector_target: "submitButton" },
+                         class: "btn bg-brand-navy hover:bg-brand-navy-hover text-white font-bold py-3 px-8 shadow-lg shadow-brand-navy/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200" %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

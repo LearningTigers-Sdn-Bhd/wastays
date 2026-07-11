@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# LEGACY: frozen pending booking-control-panel migration. Do not add features here.
+
 module HotelPortal
   module Folios
     class RoutingRulesController < HotelPortal::BaseController
@@ -10,72 +12,30 @@ module HotelPortal
       before_action :set_routing_rule, only: %i[edit update deactivate]
 
       def new
-        @routing_rule = @booking.folio_routing_rules.build(active: true)
-        assign_sheet_context(
-          title: "Add Billing Instruction",
-          description: "Route future charges for this booking to a selected folio window.",
-          form_url: routing_rules_hotel_folio_path(current_hotel, @booking),
-          form_method: :post,
-          submit_label: "Create Rule"
-        )
-        render "hotel_portal/folios/routing_rules/offcanvas"
+        redirect_to canonical_billing_routes_path, status: :see_other
       end
 
       def edit
-        assign_sheet_context(
-          title: "Edit Billing Instruction",
-          description: "Update where this charge posts for future expected lines.",
-          form_url: routing_rule_hotel_folio_path(current_hotel, @booking, @routing_rule),
-          form_method: :patch,
-          submit_label: "Save Rule"
-        )
-        render "hotel_portal/folios/routing_rules/offcanvas"
+        redirect_to canonical_billing_routes_path, status: :see_other
       end
 
       def create
-        @routing_rule = @booking.folio_routing_rules.build(parent_routing_rule_params)
-        @routing_rule.hotel = current_hotel
-        @routing_rule.created_by = current_user
-        @routing_rule.updated_by = current_user
-
-        if save_with_log("create_routing_rule")
-          respond_with_offcanvas_completion(folio_path_for_billing, notice: "Billing instruction created.")
-        else
-          respond_with_offcanvas_completion(folio_path_for_billing, alert: @routing_rule.errors.full_messages.to_sentence)
-        end
-      rescue StandardError => e
-        respond_with_offcanvas_completion(folio_path_for_billing, alert: e.message)
+        redirect_to canonical_billing_routes_path, status: :see_other
       end
 
       def update
-        previous_attributes = tracked_attributes(@routing_rule)
-        @routing_rule.assign_attributes(parent_routing_rule_params)
-        @routing_rule.updated_by = current_user
-
-        if save_with_log("update_routing_rule", previous_attributes: previous_attributes)
-          respond_with_offcanvas_completion(folio_path_for_billing, notice: "Billing instruction updated.")
-        else
-          respond_with_offcanvas_completion(folio_path_for_billing, alert: @routing_rule.errors.full_messages.to_sentence)
-        end
-      rescue StandardError => e
-        respond_with_offcanvas_completion(folio_path_for_billing, alert: e.message)
+        redirect_to canonical_billing_routes_path, status: :see_other
       end
 
       def deactivate
-        previous_attributes = tracked_attributes(@routing_rule)
-        @routing_rule.active = false
-        @routing_rule.updated_by = current_user
-
-        if save_with_log("deactivate_routing_rule", previous_attributes: previous_attributes)
-          respond_with_offcanvas_completion(folio_path_for_billing, notice: "Billing instruction deactivated.")
-        else
-          respond_with_offcanvas_completion(folio_path_for_billing, alert: @routing_rule.errors.full_messages.to_sentence)
-        end
-      rescue StandardError => e
-        respond_with_offcanvas_completion(folio_path_for_billing, alert: e.message)
+        redirect_to canonical_billing_routes_path, status: :see_other
       end
 
       private
+
+      def canonical_billing_routes_path
+        billing_routes_hotel_booking_control_panel_path(current_hotel, @booking)
+      end
 
       def set_booking
         @booking = current_hotel.bookings.includes(:booking_folios).find(params[:booking_id])
@@ -205,10 +165,11 @@ module HotelPortal
       end
 
       def folio_path_for_billing
-        hotel_folio_path(
+        hotel_booking_control_panel_path(
           current_hotel,
           @booking,
-          **folio_origin_params.merge(tab: "billing_instructions", active_folio_id: params[:active_folio_id].presence).compact
+          tab: "billing_preferences",
+          folio_id: params[:active_folio_id].presence
         )
       end
 

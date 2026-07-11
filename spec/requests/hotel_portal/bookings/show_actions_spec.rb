@@ -61,6 +61,59 @@ RSpec.describe "HotelPortal booking show actions", type: :request do
     )
   end
 
+  it "returns inline guest updates to the booking control panel" do
+    primary = create(:booking_guest, booking: booking, is_primary: true)
+    return_to = hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", booking_guest_id: primary.id)
+
+    patch hotel_booking_show_action_manage_guest_path(hotel, booking, mode: "edit_primary"), params: {
+      presentation: "booking_control_panel",
+      return_to: return_to,
+      guest: {
+        name: "Inline Primary", email: "inline@example.com", phone: "123456",
+        country: "Malaysia", document_type: "ic", government_id: "900101011234", date_of_birth: "1990-01-01"
+      }
+    }
+
+    expect(response).to redirect_to(return_to)
+    expect(flash[:notice]).to eq("Guest details saved.")
+    expect(booking.reload.guest_name).to eq("Inline Primary")
+    expect(primary.reload).to have_attributes(name_snapshot: "Inline Primary", date_of_birth_snapshot: Date.new(1990, 1, 1))
+    expect(primary.guest.reload.name).not_to eq("Inline Primary")
+  end
+
+  it "updates both snapshot and reusable guest record when explicitly requested" do
+    additional = create(:booking_guest, booking: booking, is_primary: false)
+    original_guest = additional.guest
+
+    patch hotel_booking_show_action_manage_guest_path(hotel, booking, mode: "edit_additional", booking_guest_id: additional.id), params: {
+      presentation: "booking_control_panel",
+      save_scope: "snapshot_and_profile",
+      return_to: hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", booking_guest_id: additional.id),
+      guest: {
+        name: "Shared Update", email: "shared@example.com", phone: "789",
+        country: "Malaysia", document_type: "ic", government_id: "900101011234", date_of_birth: "1990-01-01"
+      }
+    }
+
+    expect(flash[:notice]).to eq("Guest details and guest record updated.")
+    expect(additional.reload.name_snapshot).to eq("Shared Update")
+    expect(original_guest.reload.name).to eq("Shared Update")
+  end
+
+  it "returns inline validation errors without rendering an offcanvas fragment" do
+    additional = create(:booking_guest, booking: booking, is_primary: false)
+    return_to = hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", booking_guest_id: additional.id)
+
+    patch hotel_booking_show_action_manage_guest_path(hotel, booking, mode: "edit_additional", booking_guest_id: additional.id), params: {
+      presentation: "booking_control_panel",
+      return_to: return_to,
+      guest: { name: "", country: "Malaysia" }
+    }
+
+    expect(response).to redirect_to(return_to)
+    expect(flash[:alert]).to include("Name can't be blank")
+  end
+
   it "edits a passport primary guest when the booking has no linked primary guest yet" do
     booking.booking_guests.destroy_all
 
@@ -159,7 +212,7 @@ RSpec.describe "HotelPortal booking show actions", type: :request do
     view_permission = Permission.find_by(slug: "view_bookings") || create(:permission, slug: "view_bookings", name: "View Bookings")
     create(:role_permission, role: role, permission: view_permission)
 
-    get hotel_booking_path(hotel, booking)
+    get hotel_booking_control_panel_path(hotel, booking)
 
     expect(response).to have_http_status(:success)
     expect(response.body).not_to include(hotel_booking_show_action_manage_guest_path(hotel, booking))
@@ -182,6 +235,6 @@ RSpec.describe "HotelPortal booking show actions", type: :request do
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include("complete_offcanvas")
-    expect(response.body).to include(hotel_booking_path(hotel, booking))
+    expect(response.body).to include(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
   end
 end

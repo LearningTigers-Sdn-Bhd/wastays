@@ -165,7 +165,7 @@ module Reports
         @invoices ||= invoice_scope
           .where(currency: selected_currency)
           .where(issued_on: ..@end_date)
-          .includes(:booking_folio, ar_payment_allocations: [ :ar_payment, :reversal ])
+          .includes({ booking_folio: [ :booking, { booking_billing_party: :billing_terms } ] }, ar_payment_allocations: [ :ar_payment, :reversal ])
           .to_a
       end
 
@@ -246,10 +246,17 @@ module Reports
 
       def invoice_description(invoice)
         booking = invoice.booking
+        terms = billing_terms_for(invoice)
         parts = [ corporate_account.name ]
         parts << "Booking #{booking.confirmation_token}" if booking&.confirmation_token.present?
         parts << "Folio #{invoice.booking_folio.folio_reference_display}" if invoice.booking_folio.present?
+        parts << "PO: #{terms.purchase_order_reference}" if terms&.purchase_order_reference.present?
+        parts << "Auth: #{terms.authorization_reference}" if terms&.authorization_reference.present?
         parts.join(" · ")
+      end
+
+      def billing_terms_for(invoice)
+        invoice.booking_folio&.booking_billing_party&.billing_terms
       end
 
       def payment_description(payment)

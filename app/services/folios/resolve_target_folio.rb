@@ -6,7 +6,7 @@ module Folios
   class ResolveTargetFolio
     PERMISSION = "manage_folio_movements"
 
-    def self.call(booking:, transaction_code:, parent_transaction: nil, fallback_transaction_code: nil, override_target_folio: nil, override_reason: nil, actor: nil, permission_context: nil)
+    def self.call(booking:, transaction_code:, parent_transaction: nil, fallback_transaction_code: nil, override_target_folio: nil, override_reason: nil, actor: nil, permission_context: nil, posting_date: nil)
       new(
         booking: booking,
         transaction_code: transaction_code,
@@ -15,11 +15,12 @@ module Folios
         override_target_folio: override_target_folio,
         override_reason: override_reason,
         actor: actor,
-        permission_context: permission_context
+        permission_context: permission_context,
+        posting_date: posting_date
       ).call
     end
 
-    def initialize(booking:, transaction_code:, parent_transaction: nil, fallback_transaction_code: nil, override_target_folio: nil, override_reason: nil, actor: nil, permission_context: nil)
+    def initialize(booking:, transaction_code:, parent_transaction: nil, fallback_transaction_code: nil, override_target_folio: nil, override_reason: nil, actor: nil, permission_context: nil, posting_date: nil)
       @booking = booking
       @hotel = booking&.hotel
       @transaction_code = transaction_code
@@ -29,6 +30,7 @@ module Folios
       @override_reason = override_reason.to_s.strip
       @actor = actor
       @permission_context = permission_context || actor
+      @posting_date = (posting_date || @hotel&.current_business_date || Date.current).to_date
     end
 
     def call
@@ -80,7 +82,8 @@ module Folios
         booking: @booking,
         transaction_code: @fallback_transaction_code,
         actor: @actor,
-        permission_context: @permission_context
+        permission_context: @permission_context,
+        posting_date: @posting_date
       )
       metadata = {
         fallback_transaction_code_id: @fallback_transaction_code.id,
@@ -101,7 +104,12 @@ module Folios
     def active_rule
       return if @booking.blank? || @transaction_code.blank?
 
-      @active_rule ||= @booking.folio_routing_rules.active.includes(:target_folio).find_by(transaction_code: @transaction_code)
+      @active_rule ||= @booking.folio_routing_rules.active
+        .includes(:target_folio)
+        .where(transaction_code: @transaction_code)
+        .where("effective_from IS NULL OR effective_from <= ?", @posting_date)
+        .where("effective_until IS NULL OR effective_until >= ?", @posting_date)
+        .first
     end
 
     def validate_parent_transaction

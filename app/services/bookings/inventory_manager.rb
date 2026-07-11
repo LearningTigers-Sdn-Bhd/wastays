@@ -8,25 +8,25 @@ module Bookings
 
     def deduct
       @booking.booking_rooms.each do |room|
-        update_inventory(room, -room.quantity)
+        update_inventory(room, -1)
       end
     end
 
     def release
       @booking.booking_rooms.each do |room|
-        update_inventory(room, room.quantity)
+        update_inventory(room, 1)
       end
     end
 
     def release_by_dates(start_date, end_date)
       @booking.booking_rooms.each do |room|
-        update_inventory(room, room.quantity, dates: (start_date.to_date...end_date.to_date).to_a)
+        update_inventory(room, 1, dates: (start_date.to_date...end_date.to_date).to_a)
       end
     end
 
     def reserve_by_dates(start_date, end_date)
       @booking.booking_rooms.each do |room|
-        update_inventory(room, -room.quantity, dates: (start_date.to_date...end_date.to_date).to_a)
+        update_inventory(room, -1, dates: (start_date.to_date...end_date.to_date).to_a)
       end
     end
 

@@ -92,7 +92,7 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
         title: "#{booking.confirmation_token} · #{booking.guest_name}",
         subtitle: "#{booking.guest_email} · #{booking.guest_phone}",
         group: "Bookings",
-        url: hotel_booking_path(@hotel, booking),
+        url: hotel_booking_control_panel_path(@hotel, booking, tab: "booking_details"),
         score: search_score(haystack, @query) + 6
       }
     end
@@ -134,7 +134,7 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
         title: "#{label}: #{request.external_id || booking&.confirmation_token}",
         subtitle: "#{booking&.guest_name} · #{request.status.to_s.humanize}",
         group: "Requests",
-        url: hotel_booking_path(@hotel, booking),
+        url: hotel_booking_control_panel_path(@hotel, booking, tab: "booking_details"),
         score: search_score(haystack, @query) + 5
       }
     end

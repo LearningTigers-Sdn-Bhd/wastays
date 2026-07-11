@@ -41,7 +41,7 @@
         · <%= concierge_booking_nights(@booking) %>
       </p>
       <% @booking.booking_rooms.each do |booking_room| %>
-        <p class="text-xs text-neutral-text-secondary"><%= booking_room.quantity %>x <%= booking_room.room_type_snapshot["name"] %></p>
+        <p class="text-xs text-neutral-text-secondary">1x <%= booking_room.room_type_snapshot["name"] %></p>
       <% end %>
     </div>
   </div>

@@ -6,9 +6,9 @@ module HotelPortal
 
     before_action -> { require_feature!("unified_guest_profile") }
     before_action :authorize_view_guest_records!, only: %i[index show]
-    before_action :authorize_manage_bookings!, only: %i[search new create edit update]
+    before_action :authorize_manage_bookings!, only: %i[search check_banned new create edit update toggle_vip toggle_blacklist]
     before_action :authorize_delete_guest_record!, only: %i[destroy bulk_destroy]
-    before_action :set_guest, only: [ :show, :edit, :update, :destroy ]
+    before_action :set_guest, only: [ :show, :edit, :update, :destroy, :toggle_vip, :toggle_blacklist ]
     before_action :set_breadcrumbs, only: [ :show, :new, :create, :edit, :update ]
 
     def index
@@ -32,7 +32,23 @@ module HotelPortal
 
     def search
       @guests = Guests::GuestQuery.new(hotel: current_hotel, params: { query: params[:q] }).call.limit(10)
-      render json: @guests.as_json(only: [ :id, :name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth ])
+      guests_json = @guests.map do |guest|
+        guest.as_json(only: [ :id, :name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth ]).merge(
+          blacklisted: guest.blacklisted_at?(current_hotel)
+        )
+      end
+      render json: guests_json
+    end
+
+    def check_banned
+      is_banned = Guest.banned?(
+        email: params[:email],
+        phone: params[:phone],
+        name: params[:name],
+        hotel: current_hotel
+      )
+
+      render json: { banned: is_banned }
     end
 
     def show
@@ -66,6 +82,36 @@ module HotelPortal
       else
         render :edit, status: :unprocessable_content
       end
+    end
+
+    def toggle_vip
+      @guest.update!(vip: !@guest.vip)
+      redirect_to hotel_guest_path(current_hotel, @guest), notice: "Guest VIP status updated."
+    end
+
+    def toggle_blacklist
+      is_blacklisted_here = @guest.blacklisted_at?(current_hotel)
+      hotel_id = current_hotel.id
+      @guest.metadata ||= {}
+
+      if is_blacklisted_here
+        if @guest.metadata["blacklisted_hotel_ids"].is_a?(Array)
+          @guest.metadata["blacklisted_hotel_ids"].delete(hotel_id)
+        end
+        if @guest.metadata["blacklisted_hotel_ids"].blank?
+          @guest.blacklisted = false
+        else
+          @guest.blacklisted = @guest.metadata["blacklisted_hotel_ids"].any?
+        end
+      else
+        @guest.metadata["blacklisted_hotel_ids"] ||= []
+        @guest.metadata["blacklisted_hotel_ids"] << hotel_id
+        @guest.metadata["blacklisted_hotel_ids"].uniq!
+        @guest.blacklisted = true
+      end
+      @guest.save!
+
+      redirect_to hotel_guest_path(current_hotel, @guest), notice: "Guest blacklist status updated."
     end
 
     def destroy

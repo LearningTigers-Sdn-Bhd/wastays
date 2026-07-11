@@ -19,7 +19,6 @@ RSpec.describe "Guest::Bookings DND toggle", type: :request do
     create(:booking_room,
       booking: booking,
       room_type: room_type,
-      quantity: 1,
       subtotal: 100.0,
       room_number: "101"
     )

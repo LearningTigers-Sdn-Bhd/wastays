@@ -1,11 +1,21 @@
 class RatePlan < ApplicationRecord
-  belongs_to :room_type
+  include HotelScopable
+
+  has_many :room_type_rate_plans, dependent: :destroy
+  has_many :room_types, through: :room_type_rate_plans
   has_many :room_rates, dependent: :destroy
+  has_many :channel_room_rates, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
 
   validates :name, presence: true
   validates :sell_mode, presence: true, inclusion: { in: %w[per_room per_person] }
+  validate :pax_pricing_allowed_for_person_mode
   validates :currency, presence: true, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
+  validates :single_supplement, numericality: { greater_than_or_equal_to: 0 }
+  validates :child_price_multiplier, numericality: { greater_than_or_equal_to: 0 }
+  validates :infant_price_multiplier, numericality: { greater_than_or_equal_to: 0 }
+  validates :base_occupancy, numericality: { only_integer: true, greater_than: 0 }
+  validates :extra_pax_charge, numericality: { greater_than_or_equal_to: 0 }
 
   before_validation :normalize_currency
 
@@ -37,17 +47,23 @@ class RatePlan < ApplicationRecord
     self.currency = CurrencyCatalog.normalize(currency)
   end
 
+  def pax_pricing_allowed_for_person_mode
+    if sell_mode == "per_person" && !hotel&.allow_pax_pricing?
+      errors.add(:sell_mode, "cannot be set to Per Person unless allowed by admin")
+    end
+  end
+
   def sync_with_channel_manager
-    return if room_type.hotel.preferred_channel_manager.blank?
+    return if hotel.preferred_channel_manager.blank?
 
     ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
   end
 
   def delete_from_channel_manager
-    ChannelManagers::SyncStructureJob.perform_later(self.class.name, nil, "delete", hotel_id: room_type.hotel_id, external_id: channel_mapping.external_id)
+    ChannelManagers::SyncStructureJob.perform_later(self.class.name, nil, "delete", hotel_id: hotel_id, external_id: channel_mapping.external_id)
   end
 
   def synced_with_channel_manager?
-    room_type.hotel.preferred_channel_manager.present? && channel_mapping.present? && channel_mapping.external_id != "pending"
+    hotel.preferred_channel_manager.present? && channel_mapping.present? && !channel_mapping.external_id.to_s.start_with?("pending")
   end
 end

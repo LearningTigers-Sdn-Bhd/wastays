@@ -4,8 +4,9 @@ require "ostruct"
 
 module Bookings
   class BuildFinancialSnapshot
-    def initialize(hotel:, check_in:, check_out:, guest_country:, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil, corporate_rate: false, rate_tier: :standard)
+    def initialize(hotel:, check_in:, check_out:, guest_country:, booking: nil, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil, corporate_rate: false, rate_tier: :standard)
       @hotel = hotel
+      @booking = booking
       @check_in = check_in.to_date
       @check_out = check_out.to_date
       @guest_country = guest_country
@@ -62,7 +63,7 @@ module Bookings
       raise ArgumentError, "Room type is required to build a rate snapshot." if @room_type.blank?
 
       currency = @rate_plan&.currency.presence || @hotel.default_currency.presence || "MYR"
-      all_eligible_rates = @room_type.room_rates.where(date: stay_dates, currency: currency)
+      all_eligible_rates = @room_type.room_rates.includes(:rate_plan).where(date: stay_dates, currency: currency)
       rates_by_plan_and_date = all_eligible_rates.group_by(&:rate_plan_id)
 
       plans_to_try = [ @rate_plan, @room_type.rate_plans.first, nil ].uniq
@@ -81,7 +82,6 @@ module Bookings
           price = case tier_kind
           when :walk_in then rate.walk_in_price
           when :corporate then rate.corporate_price
-          when :ota then rate.ota_price
           else
             @corporate_rate ? rate.corporate_price : nil
           end
@@ -178,9 +178,15 @@ module Bookings
     def room_revenue_tax_rules
       return [] unless room_revenue_transaction_code&.active? && room_revenue_transaction_code.is_taxable?
 
-      room_revenue_transaction_code.transaction_code_taxes.includes(:hotel_tax).select do |rule|
+      effective_room_revenue_tax_rules.select do |rule|
         room_transaction_code_tax_enabled?(rule)
       end
+    end
+
+    def effective_room_revenue_tax_rules
+      return room_revenue_transaction_code.transaction_code_taxes.includes(:hotel_tax) unless @booking
+
+      FolioRouting::EffectiveTaxRules.call(booking: @booking, transaction_code: room_revenue_transaction_code)
     end
 
     def room_revenue_transaction_code

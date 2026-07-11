@@ -3,6 +3,7 @@ require_relative "../app/constraints/superadmin_constraint"
 Rails.application.routes.draw do
   mount RailsIcons::Engine, at: "/rails_icons"
   namespace :hotel_portal do
+    resources :agent_accounts
     get "room_blocks/create"
     get "room_blocks/destroy"
   end
@@ -170,6 +171,7 @@ Rails.application.routes.draw do
         post :onboard_channex, to: "hotels/channel_managers#onboard_channex"
         post :full_refresh, to: "hotels/channel_managers#full_refresh"
         post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
+        post :repair_channex_mapping, to: "hotels/channel_managers#repair_mapping"
       end
       resources :onboarding_sessions, module: :hotels, only: [ :create, :show, :edit, :update, :destroy ] do
         member do
@@ -320,6 +322,8 @@ Rails.application.routes.draw do
       end
     end
 
+    resources :room_groups, except: [ :show ]
+
     resources :nearby_attractions, except: [ :show ]
     resource :taxes_fees, only: [ :show, :update ], path: "taxes-fees"
     get "transaction-codes", to: "transaction_codes#show", as: :transaction_codes
@@ -327,6 +331,7 @@ Rails.application.routes.draw do
     post "transaction-codes", to: "transaction_codes#create"
     patch "transaction-codes/configuration", to: "transaction_codes#update_configuration", as: :transaction_code_configuration
     get "transaction-codes/:id/edit", to: "transaction_codes#edit", as: :edit_transaction_code
+    patch "transaction-codes/:id/preview-hotel-tax-rules", to: "transaction_codes#preview_hotel_tax_rules", as: :preview_transaction_code_hotel_tax_rules
     patch "transaction-codes/:id", to: "transaction_codes#update", as: :transaction_code
 
     resources :bookings, only: [ :index, :show, :update ] do
@@ -357,20 +362,53 @@ Rails.application.routes.draw do
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
       resource :guest_registration_card, only: [ :show, :update, :destroy ], module: :bookings
     end
+    resources :booking_control_panels, only: :show, param: :booking_id, path: "booking-control-panels" do
+      member do
+        patch :set_primary_guest, controller: :booking_control_panel_actions
+        patch :update_room_rate, controller: :booking_control_panel_actions
+        get :new_folio_window, controller: :booking_control_panel_actions
+        post :create_folio_window, controller: :booking_control_panel_actions
+        get "folio_windows/:folio_id/edit", action: :edit_folio_window, controller: :booking_control_panel_actions, as: :edit_folio_window
+        patch "folio_windows/:folio_id", action: :update_folio_window, controller: :booking_control_panel_actions, as: :update_folio_window
+        post "folio_windows/:folio_id/close", action: :close_folio_window, controller: :booking_control_panel_actions, as: :close_folio_window
+        post "folio_windows/:folio_id/reopen", action: :reopen_folio_window, controller: :booking_control_panel_actions, as: :reopen_folio_window
+        post :add_billing_party, controller: :booking_control_panel_actions
+        patch :update_billing_terms, controller: :booking_control_panel_actions
+        patch :archive_billing_party, controller: :booking_control_panel_actions
+        post :apply_routing, controller: :booking_control_panel_actions
+        get :billing_routes, controller: :booking_control_panel_actions
+        post :preview_billing_routes, controller: :booking_control_panel_actions
+        post :apply_billing_routes, controller: :booking_control_panel_actions
+        get :group_billing_routes, controller: :booking_control_panel_actions
+        post :preview_group_billing_routes, controller: :booking_control_panel_actions
+        post :apply_group_billing_routes, controller: :booking_control_panel_actions
+        post :allocate_deposit, controller: :booking_control_panel_actions
+        post :refund_deposit, controller: :booking_control_panel_actions
+        post :reverse_deposit_allocation, controller: :booking_control_panel_actions
+        post :collect_security_deposit, controller: :booking_control_panel_actions
+        post :release_security_deposits, controller: :booking_control_panel_actions
+        post :complete_housekeeping_request, controller: :booking_control_panel_actions
+        post :resolve_complaint_request, controller: :booking_control_panel_actions
+      end
+    end
     scope "bookings/:booking_id/show/actions", as: :booking_show_action, module: "bookings/show/actions" do
       match "manage-guest", to: "manage_guests#show", via: [ :get, :post, :patch ], as: :manage_guest
       match "confirmation", to: "confirmation_actions#show", via: [ :get, :delete ], as: :confirmation
       match "manage-internal-notes", to: "manage_internal_notes#show", via: [ :get, :post, :patch ], as: :manage_internal_notes
     end
     scope "booking-transactions", as: :booking_transaction, module: "bookings/transactions" do
+      match "quick-booking", to: "quick_bookings#show", via: [ :get, :post ], as: :quick_booking
       match "new-booking", to: "new_bookings#show", via: [ :get, :post ], as: :new_booking
       match "walk-in-check-in", to: "walk_in_check_ins#show", via: [ :get, :post ], as: :walk_in_check_in
       match "backdated-check-in", to: "backdated_check_ins#show", via: [ :get, :post ], as: :backdated_check_in
       match "backdated-check-in/:booking_id", to: "backdated_check_ins#show", via: [ :get, :post ], as: :booking_backdated_check_in
       match "edit-booking/:booking_id", to: "edit_bookings#show", via: [ :get, :patch ], as: :edit_booking
       match "edit-booking-timeline/:booking_id", to: "edit_booking_timelines#show", via: [ :get, :patch ], as: :edit_booking_timeline
+      get "show-booking/:booking_id", to: "show_bookings#show", as: :show_booking
+      get "show-booking/:booking_id/print-send", to: "show_bookings#print_send", as: :show_booking_print_send
       match "amend-stay/:booking_id", to: "amend_stays#show", via: [ :get, :patch ], as: :amend_stay
       get "check-in-reservation/:booking_id", to: "check_in_reservations#show", as: :check_in_reservation
+      match "undo-check-in/:booking_id", to: "undo_check_ins#show", via: [ :get, :post ], as: :undo_check_in
       get "check-out/:booking_id", to: "check_outs#show", as: :check_out
       get "late-checkout/:booking_id", to: "late_checkouts#show", as: :late_checkout
       get "reinstate-no-show/:booking_id", to: "reinstate_no_shows#show", as: :reinstate_no_show
@@ -388,7 +426,6 @@ Rails.application.routes.draw do
       patch "windows/:folio_id", action: :update_window, on: :member, as: :window
       post "windows/:folio_id/close", action: :close_window, on: :member, as: :close_window
       post "windows/:folio_id/reopen", action: :reopen_window, on: :member, as: :reopen_window
-      post "forecasts/:forecast_id/move", action: :move_forecast, on: :member, as: :move_forecast
       get "routing_rules/new", to: "folios/routing_rules#new", on: :member, as: :new_routing_rule
       post "routing_rules", to: "folios/routing_rules#create", on: :member, as: :routing_rules
       get "routing_rules/:routing_rule_id/edit", to: "folios/routing_rules#edit", on: :member, as: :edit_routing_rule
@@ -453,10 +490,14 @@ Rails.application.routes.draw do
     end
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
       collection do
+        get :occupancy_details
         post :apply_pricing_rules
         post :apply_availability_override
         post :bulk_save_ari
         post :batch_save_ari
+        post :update_channel_derived_pricing
+        post :create_channel_availability_rule
+        delete "channel_availability_rules/:id", action: :destroy_channel_availability_rule, as: :destroy_channel_availability_rule
         delete "pricing_tiers/:rule_type", action: :destroy_pricing_tier_rule, as: :destroy_pricing_tier_rule
         delete "public_holidays/:id", action: :destroy_public_holiday_rule, as: :destroy_public_holiday_rule
       end
@@ -465,7 +506,12 @@ Rails.application.routes.draw do
     resources :guests, only: [ :index, :show, :new, :create, :edit, :update, :destroy ] do
       collection do
         get :search
+        get :check_banned
         delete :bulk_destroy
+      end
+      member do
+        patch :toggle_vip
+        patch :toggle_blacklist
       end
     end
     resources :in_house_guests, only: [ :index ]
@@ -474,6 +520,7 @@ Rails.application.routes.draw do
     patch "settings", to: "settings#update"
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
     resources :hotel_taxes, only: %i[index new create edit update destroy]
+    resources :rate_plans, only: %i[create destroy]
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
     get "room-status", to: "room_status_board#index", as: :room_status_board

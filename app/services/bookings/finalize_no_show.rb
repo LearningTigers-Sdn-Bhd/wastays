@@ -6,15 +6,16 @@ module Bookings
   class FinalizeNoShow
     include Folios::NightlyChargeCalculation
 
-    def self.call(booking:, user:, night_audit: nil, automatic: false)
-      new(booking: booking, user: user, night_audit: night_audit, automatic: automatic).call
+    def self.call(booking:, user:, night_audit: nil, automatic: false, reason: nil)
+      new(booking: booking, user: user, night_audit: night_audit, automatic: automatic, reason: reason).call
     end
 
-    def initialize(booking:, user:, night_audit: nil, automatic: false)
+    def initialize(booking:, user:, night_audit: nil, automatic: false, reason: nil)
       @booking = booking
       @user = user
       @night_audit = night_audit
       @automatic = automatic
+      @reason = reason.to_s.strip.presence
     end
 
     def call
@@ -57,6 +58,7 @@ module Bookings
             source: @night_audit.present? ? "night_audit" : (@user.present? ? "staff" : "system"),
             old_value: { "status" => "review_no_show" },
             new_value: { "status" => "no_show" },
+            reason: @reason,
             metadata: audit_metadata
           )
         end
@@ -153,7 +155,7 @@ module Bookings
         booking: @booking,
         user: @user,
         event_type: "no_show_released",
-        reason: "Booking finalized as no-show",
+        reason: @reason.presence || "Booking finalized as no-show",
         metadata: audit_metadata.merge("source" => "bookings_finalize_no_show", "booking_id" => @booking.id)
       )
       raise result.error unless result.success?
@@ -163,7 +165,8 @@ module Bookings
       {
         "night_audit_id" => @night_audit&.id,
         "business_date" => @business_date.iso8601,
-        "automatic" => @automatic
+        "automatic" => @automatic,
+        "reason" => @reason
       }.compact
     end
 

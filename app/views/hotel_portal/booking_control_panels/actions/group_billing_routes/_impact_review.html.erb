@@ -1,0 +1,96 @@
+<%= form_with url: apply_group_billing_routes_hotel_booking_control_panel_path(current_hotel, @booking), method: :post, class: "flex min-h-0 flex-1 flex-col", data: { turbo_frame: "offcanvas_drawer" } do %>
+  <%= hidden_field_tag :idempotency_key, @group_batch_key %>
+  <% @group_route_draft.each do |booking_id, codes| %><% codes.each do |code_id, attrs| %><%= hidden_field_tag "group_routes[#{booking_id}][#{code_id}][billing_party_id]", attrs["billing_party_id"] %><%= hidden_field_tag "group_routes[#{booking_id}][#{code_id}][target_folio_id]", attrs["target_folio_id"] %><% attrs.fetch("taxes", {}).each do |key, value| %><%= hidden_field_tag "group_routes[#{booking_id}][#{code_id}][taxes][#{key}]", value %><% end %><% attrs.fetch("children", {}).each do |key, child| %><% child.each do |field, value| %><%= hidden_field_tag "group_routes[#{booking_id}][#{code_id}][children][#{key}][#{field}]", value %><% end %><% end %><% end %><% end %>
+
+  <div class="min-h-0 flex-1 overflow-y-auto p-6">
+    <% @group_batch_preview.bookings.each do |item| %>
+      <% booking = item[:booking] %>
+      <% preview = item[:preview] %>
+      <div class="mb-6">
+        <h3 class="mb-2 text-sm font-black text-slate-900">Booking No. <%= booking.formatted_reservation_number.presence || "—" %> · <%= booking.guest_name %></h3>
+        <div class="overflow-hidden border border-slate-200">
+          <table class="w-full table-fixed text-left text-sm">
+            <thead class="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <tr class="border-b border-slate-200">
+                <th class="px-4 py-3">Impact</th>
+                <th class="w-40 px-4 py-3 text-right">Count</th>
+                <th class="w-44 px-4 py-3 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+              <tr>
+                <td class="px-4 py-3 font-semibold text-slate-950">Existing charge impact</td>
+                <td class="px-4 py-3 text-right font-semibold text-slate-700"><%= pluralize(preview.count, "transaction") %></td>
+                <td class="px-4 py-3 text-right font-bold text-slate-950"><%= number_to_currency(preview.amount, unit: "#{booking.currency} ") %></td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-semibold text-slate-950">Upcoming charge impact</td>
+                <td class="px-4 py-3 text-right font-semibold text-slate-700"><%= pluralize(preview.upcoming_count, "forecast") %></td>
+                <td class="px-4 py-3 text-right font-bold text-slate-950"><%= number_to_currency(preview.upcoming_amount, unit: "#{booking.currency} ") %></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <% if preview.impacts.any? %>
+          <div class="mt-3 overflow-hidden border border-slate-200">
+            <table class="w-full table-fixed text-left text-sm">
+              <thead class="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <tr class="border-b border-slate-200">
+                  <th class="w-24 px-4 py-3">Code</th>
+                  <th class="px-4 py-3">From</th>
+                  <th class="px-4 py-3">To billing party / folio</th>
+                  <th class="w-32 px-4 py-3 text-right">Transactions</th>
+                  <th class="w-36 px-4 py-3 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                <% preview.impacts.each do |impact| %>
+                  <% change = impact[:change] %>
+                  <tr>
+                    <td class="px-4 py-3 font-mono font-bold text-slate-900"><%= change[:row].code.code %></td>
+                    <td class="px-4 py-3 text-slate-700"><%= change[:row].target_folio&.display_name || "Unassigned" %></td>
+                    <td class="px-4 py-3 text-slate-700"><%= change[:folio].booking_billing_party&.display_name || "Unassigned" %> / <%= change[:folio].display_name %></td>
+                    <td class="px-4 py-3 text-right text-slate-700"><%= impact[:preview].count %></td>
+                    <td class="px-4 py-3 text-right font-semibold text-slate-950"><%= number_to_currency(impact[:preview].amount, unit: "#{booking.currency} ") %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if @group_batch_preview.count.positive? || @group_batch_preview.upcoming_count.positive? %>
+      <div class="mt-5 space-y-3">
+        <% if @group_batch_preview.count.positive? %>
+          <label class="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
+            <%= radio_button_tag :confirmation, "existing_and_future", true %>
+            <span><strong class="text-slate-950">Move existing eligible charges</strong><span class="block text-xs text-slate-600">Move eligible posted charges and route future postings, for every booking above.</span></span>
+          </label>
+          <label class="flex gap-3 rounded-lg border border-slate-200 bg-white p-3 text-sm">
+            <%= radio_button_tag :confirmation, "future_only", false %>
+            <span><strong class="text-slate-950">Leave existing charges</strong><span class="block text-xs text-slate-600">Leave posted transactions where they are.</span></span>
+          </label>
+        <% end %>
+        <% if @group_batch_preview.upcoming_count.positive? %>
+          <label class="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
+            <%= radio_button_tag :forecast_confirmation, "reconcile_upcoming", true %>
+            <span><strong class="text-slate-950">Reconcile upcoming forecasts</strong><span class="block text-xs text-slate-600">Supersede and recreate unposted forecasts using these changes.</span></span>
+          </label>
+          <label class="flex gap-3 rounded-lg border border-slate-200 bg-white p-3 text-sm">
+            <%= radio_button_tag :forecast_confirmation, "leave_upcoming", false %>
+            <span><strong class="text-slate-950">Leave upcoming forecasts</strong><span class="block text-xs text-slate-600">Preserve current unposted forecast rows.</span></span>
+          </label>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="mt-5">
+      <%= label_tag :reason, "Reason", class: "booking-form__label" %>
+      <%= text_field_tag :reason, nil, required: true, class: "booking-form__control" %>
+    </div>
+  </div>
+  <div class="sticky bottom-0 z-30 flex shrink-0 justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4 pointer-events-auto"><%= link_to "Back", group_billing_routes_hotel_booking_control_panel_path(current_hotel, @booking), data: { turbo_frame: "offcanvas_drawer" }, class: "rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold pointer-events-auto" %><%= submit_tag "Confirm and apply", class: "rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white pointer-events-auto" %></div>
+<% end %>

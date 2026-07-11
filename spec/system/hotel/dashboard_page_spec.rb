@@ -12,10 +12,7 @@ RSpec.describe 'Hotel dashboard page', type: :system do
     UserRole.create!(user: user, role: role)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
-    visit login_path
-    fill_in 'Email Address', with: user.email
-    fill_in 'Password', with: 'password123'
-    click_button 'Sign In to Portal'
+    sign_in_through_ui(user)
   end
 
   it 'shows the hotel dashboard content' do

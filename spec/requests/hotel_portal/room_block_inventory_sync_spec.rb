@@ -59,7 +59,7 @@ RSpec.describe "Room Block Inventory Sync", type: :request do
     it "correctly counts existing bookings in the new quantity" do
       # 1. Create a booking for Room 102
       booking = create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 1.day, status: "confirmed")
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "102", quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "102")
 
       # 2. Create a block for Room 101
       post hotel_room_blocks_path(hotel), params: {

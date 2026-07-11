@@ -42,6 +42,8 @@ class Hotel < ApplicationRecord
   has_one :property_policy, dependent: :destroy
   accepts_nested_attributes_for :property_policy
   has_many :room_types, dependent: :destroy
+  has_many :room_groups, dependent: :destroy
+  has_many :rate_plans, dependent: :destroy
   has_many :knowledge_documents, class_name: "HotelKnowledgeDocument", dependent: :destroy
   has_many :knowledge_diagnostics, class_name: "HotelKnowledgeDiagnostic", dependent: :destroy
   has_many :nearby_attractions, dependent: :destroy
@@ -50,6 +52,8 @@ class Hotel < ApplicationRecord
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
   has_many :guest_registration_cards, dependent: :restrict_with_error
+  has_many :group_bookings, dependent: :restrict_with_error
+  has_many :group_deposits, dependent: :restrict_with_error
   has_many :booking_folios, dependent: :restrict_with_error
   has_many :ar_invoices, dependent: :restrict_with_error
   has_many :ar_payments, dependent: :restrict_with_error
@@ -75,13 +79,12 @@ class Hotel < ApplicationRecord
   has_many :room_statuses, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :destroy
   has_many :room_blocks, dependent: :destroy
+  has_many :agent_accounts, dependent: :destroy
   has_many :notification_configs, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
+  has_many :channel_derived_settings, dependent: :destroy
+  has_many :channel_availability_rules, dependent: :destroy
 
-  after_create :ensure_default_gl_maps
-  after_create :ensure_default_transaction_codes
-  after_create :ensure_current_business_date
-  after_update :sync_primary_tax_transaction_codes, if: :saved_change_to_primary_tax_settings?
 
   validates :name, presence: true
   validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true,
@@ -90,6 +93,7 @@ class Hotel < ApplicationRecord
                            if: -> { hotel_prefix.present? }
 
   before_validation :normalize_default_currency
+  before_validation :reset_pax_pricing_only_if_not_allowed
   before_create :assign_hotel_prefix
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
@@ -607,7 +611,6 @@ class Hotel < ApplicationRecord
     name_changed? || slug.blank?
   end
 
-  after_commit :sync_with_channel_manager, on: :update, if: :saved_changes_to_synced_attributes?
 
   private
 
@@ -648,20 +651,14 @@ class Hotel < ApplicationRecord
     base.length >= PREFIX_MIN_LENGTH ? base : base.ljust(PREFIX_MIN_LENGTH, "X")
   end
 
-  def saved_changes_to_synced_attributes?
-    (saved_changes.keys & %w[name city country default_currency amenities]).any?
-  end
-
-  def sync_with_channel_manager
-    return if preferred_channel_manager.blank? || channel_mapping.blank?
-
-    ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
+  def self.allowed_amenity_slugs
+    @allowed_amenity_slugs ||= Amenity.hotel.pluck(:slug)
   end
 
   def amenities_must_be_from_list
     return if amenities.blank?
 
-    allowed_ids = Amenity.hotel.pluck(:slug)
+    allowed_ids = self.class.allowed_amenity_slugs
     invalid_amenities = amenities - allowed_ids
 
     if invalid_amenities.any?
@@ -691,8 +688,6 @@ class Hotel < ApplicationRecord
       onboarding_sessions.where(notes: "FINAL_ONBOARDING_COMPLETION").order(updated_at: :desc).first
   end
 
-  private
-
   def extract_coordinate(prefix, fallback_regex)
     return nil if google_map_link.blank?
 
@@ -700,6 +695,13 @@ class Hotel < ApplicationRecord
     return matches.last.to_f if matches.any?
 
     google_map_link[fallback_regex, 1]&.to_f
+  end
+
+  def reset_pax_pricing_only_if_not_allowed
+    unless allow_pax_pricing?
+      self.pax_pricing_only = false
+      rate_plans.where(sell_mode: "per_person").update_all(sell_mode: "per_room") if persisted?
+    end
   end
 
   def ensure_current_business_date

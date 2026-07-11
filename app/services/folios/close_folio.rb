@@ -5,20 +5,24 @@ require "ostruct"
 module Folios
   class CloseFolio
     PERMISSION = "manage_folio_windows"
+    CREDIT_OVERRIDE_PERMISSION = "override_corporate_credit_limit"
 
     DIRECT_BILL_SETTLEMENT = "direct_bill"
 
-    def self.call(folio:, user:, reason: nil, settlement_method: nil)
-      new(folio: folio, user: user, reason: reason, settlement_method: settlement_method).call
+    def self.call(folio:, user:, reason: nil, settlement_method: nil, credit_override: false, credit_override_reason: nil)
+      new(folio: folio, user: user, reason: reason, settlement_method: settlement_method,
+        credit_override: credit_override, credit_override_reason: credit_override_reason).call
     end
 
-    def initialize(folio:, user:, reason: nil, settlement_method: nil)
+    def initialize(folio:, user:, reason: nil, settlement_method: nil, credit_override: false, credit_override_reason: nil)
       @folio = folio
       @booking = folio.booking
       @hotel = folio.hotel
       @user = user
       @reason = reason.to_s.strip.presence
       @settlement_method = settlement_method.to_s
+      @credit_override = ActiveModel::Type::Boolean.new.cast(credit_override)
+      @credit_override_reason = credit_override_reason.to_s.strip
     end
 
     def call
@@ -77,7 +81,15 @@ module Folios
       return "Company & Government Account must be active for Direct Bill settlement." unless hotel_corporate_account.active?
       return "Direct Bill is not enabled for this Company & Government Account." unless hotel_corporate_account.direct_bill_enabled?
       return "Direct Bill settlement requires a positive folio balance." unless balance.positive?
-      "AR invoice already exists for this folio." if @folio.ar_invoice.present?
+      return "AR invoice already exists for this folio." if @folio.ar_invoice.present?
+
+      exposure = corporate_credit_exposure(balance)
+      return unless exposure.over_limit?
+      return "Corporate credit limit exceeded. An explicit override is required." unless @credit_override
+      return "Corporate credit override reason can't be blank." if @credit_override_reason.blank?
+      return "You do not have permission to override the corporate credit limit." unless credit_override_permitted?
+
+      nil
     end
 
     def create_ar_invoice!(balance)
@@ -85,7 +97,11 @@ module Folios
     end
 
     def close_metadata(ar_invoice)
-      metadata = { closed_at: @folio.closed_at&.iso8601 }
+      metadata = {
+        closed_at: @folio.closed_at&.iso8601,
+        corporate_credit_override: @credit_override,
+        corporate_credit_override_reason: @credit_override_reason.presence
+      }.compact
       return metadata if ar_invoice.blank?
 
       metadata.merge(
@@ -113,13 +129,28 @@ module Folios
           hotel_corporate_account_id: hotel_corporate_account.id,
           corporate_account_id: hotel_corporate_account.corporate_account_id,
           due_on: ar_invoice.due_on.iso8601,
-          settlement_method: DIRECT_BILL_SETTLEMENT
+          settlement_method: DIRECT_BILL_SETTLEMENT,
+          corporate_credit_override: @credit_override,
+          corporate_credit_override_reason: @credit_override_reason.presence
         }
       )
     end
 
     def hotel_corporate_account
       @hotel_corporate_account ||= @folio.hotel_corporate_account
+    end
+
+    def corporate_credit_exposure(balance)
+      @corporate_credit_exposure ||= ArInvoices::CreditExposure.call(
+        hotel_corporate_account: hotel_corporate_account,
+        pending_amount: balance,
+        pending_currency: @folio.currency
+      )
+    end
+
+    def credit_override_permitted?
+      @user&.respond_to?(:superadmin?) && @user.superadmin? ||
+        @user&.respond_to?(:has_permission?) && @user.has_permission?(CREDIT_OVERRIDE_PERMISSION, hotel: @hotel)
     end
 
     def formatted_balance(balance)

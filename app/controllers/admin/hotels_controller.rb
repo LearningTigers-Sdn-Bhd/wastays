@@ -84,12 +84,13 @@ class Admin::HotelsController < Admin::BaseController
       star_rating: params.dig(:hotel, :star_rating),
       salesperson_id: params.dig(:hotel, :salesperson_id),
       preferred_channel_manager: params.dig(:hotel, :preferred_channel_manager),
-      amenities: params.dig(:hotel, :amenities)
+      amenities: params.dig(:hotel, :amenities),
+      allow_pax_pricing: params.dig(:hotel, :allow_pax_pricing)
     }
   end
 
   def update_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :hotel_prefix, :salesperson_id, :preferred_channel_manager, :plan_id, amenities: [])
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :hotel_prefix, :salesperson_id, :preferred_channel_manager, :plan_id, :pax_pricing_only, :allow_pax_pricing, amenities: [])
   end
 
   def salesperson_name_param

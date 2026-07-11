@@ -135,7 +135,6 @@ RSpec.describe "HotelPortal::InHouseGuests", type: :request do
       booking: booking,
       room_type: room_type,
       room_type_snapshot: { "name" => room_type.name },
-      quantity: 1,
       subtotal: booking.total_amount
     )
     create(:booking_guest, booking: booking, guest: guest, is_primary: true)

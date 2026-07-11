@@ -4,9 +4,12 @@
       title: "Cancel Booking",
       subtitle: @booking.guest_name,
       icon: cached_icon("circle-x", class: "size-5 text-red-600") %>
-    <%= form_with url: cancel_hotel_booking_path(current_hotel, @booking), method: :post, class: "flex min-h-0 flex-1 flex-col" do |f| %>
+    <%= form_with url: cancel_hotel_booking_path(current_hotel, @booking), method: :post, class: "flex min-h-0 flex-1 flex-col", data: { controller: "group-lifecycle-targets" } do |f| %>
       <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
-      <div class="flex-1 overflow-y-auto p-8">
+      <div class="flex-1 <%= @booking.group_booking_id? ? 'grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none' : 'overflow-y-auto p-8' %>">
+      <%= render "hotel_portal/bookings/transactions/shared/group_target_selector",
+        target_presenter: HotelPortal::BookingLifecycleTargetPresenter.new(booking: @booking, action: :cancel) %>
+      <% if @booking.group_booking_id? %><div class="min-h-0 overflow-y-auto custom-scrollbar"><div class="p-8"><% end %>
       <% if @booking.errors.any? %>
         <div class="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><%= @booking.errors.full_messages.to_sentence %></div>
       <% end %>
@@ -15,6 +18,7 @@
         <%= label_tag :cancellation_reason, "Cancellation Reason", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
         <%= text_area_tag :cancellation_reason, params[:cancellation_reason], required: true, rows: 5, class: "w-full rounded-xl border border-slate-200 px-4 py-3", placeholder: "Explain why this reservation is being cancelled." %>
       </div>
+      <% if @booking.group_booking_id? %></div></div><% end %>
       </div>
       <%= render "hotel_portal/bookings/board/partials/content_footer",
         show_full_page_link: false,

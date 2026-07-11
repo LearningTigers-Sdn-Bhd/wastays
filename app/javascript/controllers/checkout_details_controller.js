@@ -64,6 +64,15 @@ export default class extends Controller {
           return
         }
 
+        if (payload.blacklisted) {
+          this.setDetailsUnlocked(true)
+          if (payload.found) {
+            this.applyGuestDetails(payload.guest_details || {})
+          }
+          this.setFeedback(payload.message || "Booking Notice: Standard front desk verification is required upon check-in. You may proceed to complete your booking.", "warning")
+          return
+        }
+
         this.setDetailsUnlocked(true)
 
         if (payload.found) {
@@ -131,11 +140,13 @@ export default class extends Controller {
   setFeedback(message, tone = "neutral") {
     if (!this.hasFeedbackTarget) return
     this.feedbackTarget.textContent = message
-    this.feedbackTarget.classList.remove("text-neutral-text-secondary", "text-status-success", "text-status-error")
+    this.feedbackTarget.classList.remove("text-neutral-text-secondary", "text-status-success", "text-status-error", "text-status-warning")
     if (tone === "success") {
       this.feedbackTarget.classList.add("text-status-success")
     } else if (tone === "error") {
       this.feedbackTarget.classList.add("text-status-error")
+    } else if (tone === "warning") {
+      this.feedbackTarget.classList.add("text-status-warning")
     } else {
       this.feedbackTarget.classList.add("text-neutral-text-secondary")
     }

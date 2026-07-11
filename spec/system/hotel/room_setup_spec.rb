@@ -15,10 +15,7 @@ RSpec.describe 'Room Setup', type: :system do
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
     # Login
-    visit login_path
-    fill_in 'Email Address', with: user.email
-    fill_in 'Password', with: 'password123'
-    click_button 'Sign In to Portal'
+    sign_in_through_ui(user)
   end
 
   it 'allows the user to add a room type' do
@@ -34,7 +31,7 @@ RSpec.describe 'Room Setup', type: :system do
     fill_in 'Total Number of Rooms', with: 5
     fill_in 'Base Nightly Rate (MYR)', with: 250
 
-    click_button 'Create Room Type'
+    click_button 'Create Room type'
 
     expect(page).to have_content('Room type created successfully.')
     expect(page).to have_content('Deluxe Suite')

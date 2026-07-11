@@ -4,6 +4,14 @@
   <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
     <h3 class="text-sm font-bold text-slate-900">Main Guest Information</h3>
   </div>
+  <!-- Banned Guest Warning -->
+  <div data-guest-autocomplete-target="bannedWarning" class="hidden border-b border-rose-200 bg-rose-50 px-6 py-3.5 text-sm text-rose-800 flex items-start gap-x-2">
+    <%= cached_icon "ban", class: "size-4 text-rose-600 shrink-0 mt-0.5" %>
+    <div>
+      <p class="font-bold text-rose-900">This guest was blacklisted from this hotel.</p>
+      <p class="text-xs text-rose-700/90 mt-0.5">Note: Frontdesk can still proceed with the booking if required.</p>
+    </div>
+  </div>
   <div class="p-6 space-y-6">
     <div class="relative z-50">
       <%= f.label :guest_name, "Full Name", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
@@ -13,7 +21,7 @@
           aria: { expanded: "false", controls: "booking_guest_results", autocomplete: "list" },
             data: { 
             guest_autocomplete_target: "input", guest_change_confirmation_target: "name",
-            action: "input->guest-autocomplete#clearGuestId input->guest-autocomplete#search focus->guest-autocomplete#search blur->guest-autocomplete#hideOnBlur" 
+            action: "input->guest-autocomplete#clearGuestId input->guest-autocomplete#search focus->guest-autocomplete#search blur->guest-autocomplete#hideOnBlur change->guest-autocomplete#checkBannedStatus" 
           } %>
       <%= f.hidden_field :existing_guest_id, data: { guest_autocomplete_target: "guestId", guest_change_confirmation_target: "guestId" } %>
       <div id="booking_guest_results"
@@ -26,13 +34,13 @@
         <%= f.label :guest_email, "Email Address", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
         <%= f.email_field :guest_email, required: true, placeholder: "john@example.com", 
             class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
-            data: { guest_autocomplete_target: "email", guest_change_confirmation_target: "email" } %>
+            data: { guest_autocomplete_target: "email", guest_change_confirmation_target: "email", action: "change->guest-autocomplete#checkBannedStatus" } %>
       </div>
       <div>
         <%= f.label :guest_phone, "Phone Number", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
         <%= f.telephone_field :guest_phone, required: true, placeholder: "+60 12-345 6789", 
             class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
-            data: { guest_autocomplete_target: "phone", guest_change_confirmation_target: "phone" } %>
+            data: { guest_autocomplete_target: "phone", guest_change_confirmation_target: "phone", action: "change->guest-autocomplete#checkBannedStatus" } %>
       </div>
     </div>
     <div class="grid sm:grid-cols-2 gap-6">
