@@ -12,7 +12,7 @@ module PanelsUI
 
     def initialize(form:, attribute:, choices:, id: nil, described_by: nil, invalid: false,
                    required: false, disabled: false, size: :md, include_blank: false, prompt: nil,
-                   selected: nil, placeholder: nil, max_options: nil, class: nil, **attributes)
+                   selected: nil, placeholder: nil, max_options: nil, empty_text: nil, class: nil, **attributes)
       raise ArgumentError, "Comboboxes require choices" if choices.blank?
 
       @form = form
@@ -29,13 +29,25 @@ module PanelsUI
       @selected = selected
       @placeholder = placeholder
       @max_options = max_options
+      @empty_text = empty_text
       @class = binding.local_variable_get(:class)
       @attributes = attributes
     end
 
     def native_id = @id || @form.field_id(@attribute)
-    def root_id = "#{native_id}-combobox"
     def placeholder_text = @placeholder || @prompt || "Search and select…"
+
+    # Override hooks — MultiSelect subclasses to repoint the Stimulus controller,
+    # the root id/class, and the native <select multiple> flag while inheriting
+    # everything else. Kept here so both components render an identical structure.
+    def stimulus_identifier = "panels-ui--combobox"
+    def root_id = "#{native_id}-combobox"
+    def root_class = "panel-combobox"
+    def native_multiple? = false
+
+    # Extra Stimulus value data merged into the root — MultiSelect adds its
+    # trigger cap here. Keyed by stimulus_identifier so the values resolve.
+    def extra_root_data = {}
 
     def native_component
       PanelsUI::NativeSelect.new(
@@ -48,13 +60,14 @@ module PanelsUI
         required: @required,
         disabled: @disabled,
         size: @size,
+        multiple: native_multiple?,
         include_blank: @include_blank,
         prompt: @prompt,
         selected: @selected,
         class: "panel-combobox__native",
         data: {
-          panels_ui__combobox_target: "native",
-          action: "change->panels-ui--combobox#syncFromNative"
+          "#{stimulus_identifier}-target" => "native",
+          action: "change->#{stimulus_identifier}#syncFromNative"
         }
       )
     end
@@ -65,18 +78,20 @@ module PanelsUI
 
       attributes.merge(
         id: root_id,
-        class: tw_merge("panel-combobox", @class),
+        class: tw_merge(root_class, @class),
         data: data.merge(
           {
-            controller: [ data.delete(:controller), "panels-ui--combobox" ].compact.join(" "),
-            panels_ui__combobox_placeholder_value: placeholder_text,
+            controller: [ data.delete(:controller), stimulus_identifier ].compact.join(" "),
+            "#{stimulus_identifier}-placeholder-value" => placeholder_text,
             # Absent by default so Tom Select stays unlimited; a caller-supplied cap
             # is opt-in. Omitted entirely when nil to avoid a "0" (= show nothing).
-            panels_ui__combobox_max_options_value: @max_options,
+            "#{stimulus_identifier}-max-options-value" => @max_options,
+            # Overrides the "No results found" text when the filter matches nothing.
+            "#{stimulus_identifier}-empty-text-value" => @empty_text,
             size: @size,
             invalid: @invalid.to_s,
             disabled: @disabled.to_s
-          }.compact
+          }.merge(extra_root_data).compact
         )
       )
     end

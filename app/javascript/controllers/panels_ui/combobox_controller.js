@@ -3,7 +3,7 @@ import TomSelect from "tom-select"
 
 export default class extends Controller {
   static targets = ["native"]
-  static values = { placeholder: String, maxOptions: Number }
+  static values = { placeholder: String, maxOptions: Number, emptyText: String }
 
   connect() {
     this.onFormReset = this.onFormReset.bind(this)
@@ -13,27 +13,7 @@ export default class extends Controller {
     // so it must be read now). See the strip below.
     const copiedNativeClasses = this.nativeTarget.className.split(/\s+/).filter(Boolean)
 
-    this.control = new TomSelect(this.nativeTarget, {
-      // The dropdown_input plugin moves the search field into the menu, so the
-      // control reads as a select trigger (placeholder/selected item + chevron)
-      // rather than an inline text box.
-      plugins: ["dropdown_input"],
-      maxItems: 1,
-      // Curated, server-rendered lists: show every option by default (Tom Select's
-      // default of 50 would silently hide the rest). A caller can opt into a cap.
-      maxOptions: this.hasMaxOptionsValue ? this.maxOptionsValue : null,
-      create: false,
-      openOnFocus: true,
-      closeAfterSelect: true,
-      selectOnTab: false,
-      allowEmptyOption: false,
-      placeholder: this.placeholderValue,
-      render: {
-        no_results() {
-          return '<div class="panel-combobox__empty" role="status">No results found</div>'
-        }
-      }
-    })
+    this.control = new TomSelect(this.nativeTarget, this.tomSelectOptions())
 
     // The trigger keeps the descriptive prompt; the in-menu search gets its own,
     // plainly-a-search placeholder.
@@ -53,6 +33,40 @@ export default class extends Controller {
     this.element.dataset.enhanced = "true"
   }
 
+  // The Tom Select configuration. Extracted so subclasses (e.g. MultiSelect) can
+  // override individual options while inheriting every other behaviour verbatim.
+  tomSelectOptions() {
+    return {
+      // The dropdown_input plugin moves the search field into the menu, so the
+      // control reads as a select trigger (placeholder/selected item + chevron)
+      // rather than an inline text box.
+      plugins: ["dropdown_input"],
+      maxItems: 1,
+      // Curated, server-rendered lists: show every option by default (Tom Select's
+      // default of 50 would silently hide the rest). A caller can opt into a cap.
+      maxOptions: this.hasMaxOptionsValue ? this.maxOptionsValue : null,
+      create: false,
+      openOnFocus: true,
+      closeAfterSelect: true,
+      selectOnTab: false,
+      allowEmptyOption: false,
+      placeholder: this.placeholderValue,
+      render: {
+        no_results: () => {
+          const text = this.hasEmptyTextValue ? this.emptyTextValue : "No results found"
+          return `<div class="panel-combobox__empty" role="status">${this.escapeHtml(text)}</div>`
+        }
+      }
+    }
+  }
+
+  // Escape developer-provided empty text before interpolating it into the menu.
+  escapeHtml(value) {
+    const div = document.createElement("div")
+    div.textContent = value
+    return div.innerHTML
+  }
+
   disconnect() {
     this.form?.removeEventListener("reset", this.onFormReset)
     this.control?.destroy()
@@ -69,10 +83,16 @@ export default class extends Controller {
     // real external change (form reset, Turbo/server update) leaves the native
     // value diverging from what Tom Select already holds, and only that needs a
     // full re-sync.
-    if (this.control.getValue() === this.nativeTarget.value) return
+    if (this.valueMatchesNative()) return
 
     this.control.sync()
     this.decorateFocusableControl()
+  }
+
+  // True when Tom Select's selection already equals the native <select>. Single
+  // value here; MultiSelect overrides this to compare the selected-value sets.
+  valueMatchesNative() {
+    return this.control.getValue() === this.nativeTarget.value
   }
 
   onFormReset() {

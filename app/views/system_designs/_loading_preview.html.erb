@@ -1,0 +1,84 @@
+<section aria-labelledby="loading-preview-heading" class="border-t border-border pt-8">
+  <h2 id="loading-preview-heading" class="text-lg font-semibold text-foreground">Loading states</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    CSS-only skeletons, activity indicators, and progress bars. Utility classes control layout;
+    data attributes control component states and variants.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> skeleton</h3>
+
+        <div class="mt-4 rounded-xl border border-border p-4" aria-busy="true" aria-label="Loading guest profile">
+          <span class="sr-only">Loading guest profile…</span>
+          <div class="flex items-center gap-3" aria-hidden="true">
+            <div class="panel-skeleton size-11 shrink-0" data-shape="circle"></div>
+            <div class="min-w-0 flex-1 space-y-2">
+              <div class="panel-skeleton h-3 w-2/5"></div>
+              <div class="panel-skeleton h-3 w-4/5"></div>
+            </div>
+          </div>
+          <div class="mt-4 grid grid-cols-3 gap-3" aria-hidden="true">
+            <div class="panel-skeleton h-14" data-shape="square"></div>
+            <div class="panel-skeleton h-14" data-shape="square"></div>
+            <div class="panel-skeleton h-14" data-shape="square"></div>
+          </div>
+        </div>
+
+        <p class="mt-3 text-xs text-muted-foreground">Every skeleton uses the same quiet opacity pulse.</p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+      <h3 class="text-sm font-semibold">Spinner and loading label</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Use a visible label when the activity needs an explanation.</p>
+
+      <div class="mt-5 flex flex-wrap items-center gap-5">
+        <span class="panel-spinner" data-size="sm" aria-label="Loading"></span>
+        <span class="panel-spinner" aria-label="Loading"></span>
+        <span class="panel-spinner" data-size="lg" aria-label="Loading"></span>
+      </div>
+
+      <div class="mt-5 flex flex-wrap gap-x-5 gap-y-3">
+        <span class="panel-loading" role="status">
+          <span class="panel-spinner" data-variant="primary" aria-hidden="true"></span>
+          Saving booking…
+        </span>
+        <span class="panel-loading" role="status">
+          <span class="panel-spinner" data-variant="success" aria-hidden="true"></span>
+          Confirming payment…
+        </span>
+      </div>
+    </div>
+
+    <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+      <h3 class="text-sm font-semibold">Progress</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Native progress works for known values; the track pattern handles indeterminate work.</p>
+
+      <div class="mt-5 space-y-5">
+        <% [ [ "Profile setup", 25, nil ], [ "Data import", 62, "info" ], [ "Ready", 100, "success" ] ].each do |label, value, variant| %>
+          <div>
+            <div class="mb-2 flex items-center justify-between gap-4 text-xs font-medium">
+              <span><%= label %></span>
+              <span class="text-muted-foreground"><%= value %>%</span>
+            </div>
+            <progress class="panel-progress" value="<%= value %>" max="100" data-variant="<%= variant %>"><%= value %>%</progress>
+          </div>
+        <% end %>
+
+        <div>
+          <div class="mb-2 flex items-center justify-between gap-4 text-xs font-medium">
+            <span>Preparing night audit</span>
+            <span class="text-muted-foreground">In progress</span>
+          </div>
+          <div class="panel-progress" data-state="indeterminate" role="progressbar" aria-label="Preparing night audit">
+            <div class="panel-progress__indicator"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

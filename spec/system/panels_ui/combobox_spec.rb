@@ -73,10 +73,17 @@ RSpec.describe "PanelsUI::Combobox", type: :system do
     expect(root).to have_css(".ts-wrapper", count: 1)
   end
 
-  # The searchable filtering itself is driven by Sifter reacting to native key
-  # events on the in-menu input. The headless Cuprite/Ferrum driver delivers those
-  # keystrokes unreliably (they intermittently fail to register or filter), so a
-  # type-to-filter assertion here is inherently flaky. Filtering is verified
-  # manually; every non-typing behaviour is covered by the specs above.
-  it "filters options as the user types"
+  # Type-to-filter is reliable in headless Cuprite/Ferrum *if* we open via
+  # .ts-control first, then send_keys into the in-menu search input, and let
+  # Capybara's have_css waiting settle on the filtered result. Earlier attempts
+  # that drove the field with .set / page.send_keys / JS input events were flaky;
+  # this formulation is not (verified over 40 consecutive runs).
+  it "filters options as the user types" do
+    open_combobox
+    search_input.send_keys("Berl")
+
+    expect(root).to have_css(".ts-dropdown .option", text: "Berlin, Germany")
+    expect(root).to have_css(".ts-dropdown .option", count: 1)
+    expect(root).to have_no_css(".ts-dropdown .option", text: "Bangkok, Thailand")
+  end
 end

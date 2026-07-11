@@ -1,0 +1,70 @@
+@layer components {
+  .panel-progress {
+    --panel-progress-color: var(--primary);
+    --panel-progress-value: 0%;
+
+    display: block;
+    width: 100%;
+    height: 0.5rem;
+    overflow: hidden;
+    border: 0;
+    border-radius: 9999px;
+    appearance: none;
+    background: var(--muted);
+  }
+
+  .panel-progress[data-size="sm"] { height: 0.25rem; }
+  .panel-progress[data-size="lg"] { height: 0.75rem; }
+
+  .panel-progress[data-variant="success"] { --panel-progress-color: var(--success-on-surface); }
+  .panel-progress[data-variant="warning"] { --panel-progress-color: var(--warning-on-surface); }
+  .panel-progress[data-variant="destructive"] { --panel-progress-color: var(--destructive-on-surface); }
+  .panel-progress[data-variant="info"] { --panel-progress-color: var(--info-on-surface); }
+
+  .panel-progress__indicator {
+    width: var(--panel-progress-value);
+    height: 100%;
+    border-radius: inherit;
+    background: var(--panel-progress-color);
+    transition: width 200ms var(--ease-standard);
+  }
+
+  progress.panel-progress::-webkit-progress-bar {
+    border-radius: inherit;
+    background: var(--muted);
+  }
+
+  progress.panel-progress::-webkit-progress-value {
+    border-radius: inherit;
+    background: var(--panel-progress-color);
+    transition: width 200ms var(--ease-standard);
+  }
+
+  progress.panel-progress::-moz-progress-bar {
+    border-radius: inherit;
+    background: var(--panel-progress-color);
+    transition: width 200ms var(--ease-standard);
+  }
+
+  .panel-progress[data-state="indeterminate"] .panel-progress__indicator {
+    width: 40%;
+    animation: panel-progress-indeterminate 1.25s var(--ease-standard) infinite;
+  }
+
+  @keyframes panel-progress-indeterminate {
+    from { transform: translateX(-110%); }
+    to { transform: translateX(260%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel-progress__indicator,
+    progress.panel-progress::-webkit-progress-value,
+    progress.panel-progress::-moz-progress-bar {
+      transition: none;
+    }
+
+    .panel-progress[data-state="indeterminate"] .panel-progress__indicator {
+      animation-duration: 2.5s;
+    }
+  }
+}

@@ -3,6 +3,11 @@
     position: relative;
     display: block;
     width: 100%;
+    /* The root is a grid item of .panel-form-field (itself a grid item). Grid items
+       default to min-width:auto, so a wide, unbreakable pill/label would blow the
+       track out past its container and stretch the trigger. Pin it to 0 so the
+       control stays width-constrained and its content truncates instead. */
+    min-width: 0;
   }
 
   /* Hide the native <select> source only after enhancement. Element-qualified

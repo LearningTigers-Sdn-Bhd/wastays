@@ -1,0 +1,49 @@
+@layer components {
+  .panel-loading {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: inherit;
+  }
+
+  .panel-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+    border: 0.125rem solid color-mix(in oklab, currentColor 24%, transparent);
+    border-top-color: currentColor;
+    border-radius: 9999px;
+    color: var(--muted-foreground);
+    vertical-align: -0.125em;
+    animation: panel-spinner-rotate 700ms linear infinite;
+  }
+
+  .panel-spinner[data-size="sm"] {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-width: 0.09375rem;
+  }
+
+  .panel-spinner[data-size="lg"] {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-width: 0.1875rem;
+  }
+
+  .panel-spinner[data-variant="primary"] { color: var(--primary); }
+  .panel-spinner[data-variant="success"] { color: var(--success-on-surface); }
+  .panel-spinner[data-variant="warning"] { color: var(--warning-on-surface); }
+  .panel-spinner[data-variant="destructive"] { color: var(--destructive-on-surface); }
+  .panel-spinner[data-variant="info"] { color: var(--info-on-surface); }
+  .panel-spinner[data-variant="current"] { color: currentColor; }
+
+  @keyframes panel-spinner-rotate {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel-spinner { animation-duration: 1.4s; }
+  }
+}
