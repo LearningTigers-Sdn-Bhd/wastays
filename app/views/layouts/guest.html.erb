@@ -43,7 +43,7 @@
 
           <div class="flex items-center gap-x-1">
             <% if guest_logged_in? %>
-              <%= render "shared/navigation/command_palette", endpoint: guest_global_search_index_path, placeholder: "Search dashboard pages and bookings..." %>
+              <%= render PanelsUI::CommandPalette.new(endpoint: guest_global_search_index_path, placeholder: "Search dashboard pages and bookings...") %>
 
               <a class="navbar-link hidden sm:flex" href="<%= help_center_path %>">
                 <%= cached_icon "circle-question-mark", class: "size-4" %>

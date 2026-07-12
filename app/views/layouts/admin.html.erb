@@ -49,7 +49,7 @@
               <%= yield :header_actions %>
             <% end %>
 
-            <%= render "shared/navigation/command_palette", endpoint: admin_global_search_index_path, placeholder: "Search pages, bookings, hotels..." %>
+            <%= render PanelsUI::CommandPalette.new(endpoint: admin_global_search_index_path, placeholder: "Search pages, bookings, hotels...") %>
 
             <!-- Help Link -->
             <a class="navbar-link hidden sm:flex" href="<%= help_center_path %>">

@@ -12,6 +12,7 @@
 @import "./panel/select-menu.css";
 @import "./panel/combobox.css";
 @import "./panel/multi-select.css";
+@import "./panel/command-palette.css";
 @import "./panel/button.css";
 @import "./panel/badge.css";
 @import "./panel/skeleton.css";

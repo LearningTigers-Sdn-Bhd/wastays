@@ -50,7 +50,7 @@
             <% end %>
 
             <% unless locked_hotel_portal_shell? %>
-              <%= render "shared/navigation/command_palette", endpoint: hotel_global_search_index_path(current_hotel), placeholder: "Search dashboard pages..." %>
+              <%= render PanelsUI::CommandPalette.new(endpoint: hotel_global_search_index_path(current_hotel), placeholder: "Search dashboard pages...") %>
             <% end %>
 
             <!-- Help Link -->
