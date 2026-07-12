@@ -20,11 +20,7 @@
   <% end %>
   
   <turbo-frame id="inventory_calendar_frame" data-turbo-action="advance">
-    <div data-controller="tabs"
-         data-tabs-default-tab-value="<%= @active_tab %>"
-         data-tabs-parameter-name-value="tab">
-      <%= render "index_content", active_tab: @active_tab, active_subtab: @active_subtab %>
-    </div>
+    <%= render "index_content", active_tab: @active_tab, active_subtab: @active_subtab %>
   </turbo-frame>
 
   <!-- Bulk Edit Dialog -->

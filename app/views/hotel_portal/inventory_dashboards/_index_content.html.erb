@@ -15,53 +15,12 @@
   }.compact
 %>
 
-<!-- Top-Level Tabs -->
-<nav class="<%= dashboard_tab_container_classes %>" data-testid="inventory-tabs" data-inventory-calendar-target="topPanel">
-  <div class="flex min-w-max items-center gap-1" role="tablist" aria-label="Rates and inventory sections">
-    <button type="button"
-            data-tabs-target="tab"
-            data-tab-name="calendar"
-            data-tab-label="Rates & Availability"
-            data-action="click->tabs#switch"
-            data-active="<%= active_tab == 'calendar' %>"
-            class="<%= dashboard_tab_classes %>"
-            aria-controls="inventory-calendar-panel"
-            role="tab">
-      <%= cached_icon "calendar-range", class: "size-4", aria: { hidden: true } %>
-      Rates & Availability
-    </button>
-    <button type="button"
-            data-tabs-target="tab"
-            data-tab-name="advanced"
-            data-tab-label="Advanced Pricing"
-            data-show-subtab-breadcrumb="true"
-            data-action="click->tabs#switch"
-            data-active="<%= active_tab == 'advanced' %>"
-            class="<%= dashboard_tab_classes %>"
-            aria-controls="inventory-advanced-panel"
-            role="tab">
-      <%= cached_icon "settings-2", class: "size-4", aria: { hidden: true } %>
-      Advanced Pricing
-    </button>
-    <button type="button"
-            data-tabs-target="tab"
-            data-tab-name="channels"
-            data-tab-label="Channels & OTAs"
-            data-action="click->tabs#switch"
-            data-active="<%= active_tab == 'channels' %>"
-            class="<%= dashboard_tab_classes %>"
-            aria-controls="inventory-channels-panel"
-            role="tab">
-      <%= cached_icon "radio", class: "size-4", aria: { hidden: true } %>
-      Channels & OTAs
-    </button>
-  </div>
-</nav>
-
-<!-- Main Content Panels -->
-<div class="mt-6">
+<%= render PanelsUI::Tabs.new(id: "inventory-tabs", default: active_tab, param: "tab", breadcrumb_id: "hotel-breadcrumb", panels_class: "mt-6", aria_label: "Rates and inventory sections") do |tabs| %>
+  <% tabs.with_tab(name: "calendar", label: "Rates & Availability", icon: "calendar-range", panel_id: "inventory-calendar-panel", data: { testid: "inventory-calendar-tab" }) %>
+  <% tabs.with_tab(name: "advanced", label: "Advanced Pricing", icon: "settings-2", panel_id: "inventory-advanced-panel", show_subtab_breadcrumb: true) %>
+  <% tabs.with_tab(name: "channels", label: "Channels & OTAs", icon: "radio", panel_id: "inventory-channels-panel") %>
   <!-- Panel: Rates & Availability -->
-  <div id="inventory-calendar-panel" data-tabs-target="panel" data-tab-panel="calendar" class="<%= active_tab == 'calendar' ? 'space-y-6' : 'hidden' %>" role="tabpanel" data-testid="inventory-calendar-panel">
+  <% tabs.with_panel(name: "calendar", id: "inventory-calendar-panel", class: "space-y-6", data: { testid: "inventory-calendar-panel" }) do %>
     <% if @missing_rates.any? %>
       <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
         <div class="flex items-center gap-3 text-rose-800">
@@ -690,55 +649,25 @@
         </button>
       </div>
     </div>
-  </div>
+  <% end %>
 
   <!-- Panel: Advanced Pricing -->
-  <div id="inventory-advanced-panel" data-tabs-target="panel" data-tab-panel="advanced" class="<%= active_tab == 'advanced' ? '' : 'hidden' %>" role="tabpanel" data-testid="inventory-advanced-panel">
-    <div data-controller="subtabs"
-         data-subtabs-default-tab-value="pricing"
-         data-subtabs-parameter-name-value="subtab">
-
-      <nav class="<%= dashboard_tab_container_classes %> mb-6" data-testid="inventory-subtabs">
-        <div class="flex min-w-max items-center gap-1" role="tablist" aria-label="Advanced pricing sections">
-          <button type="button"
-                  data-subtabs-target="tab"
-                  data-tab-name="pricing"
-                  data-tab-label="Pricing Rules"
-                  data-action="click->subtabs#switch"
-                  data-active="<%= active_subtab == 'pricing' %>"
-                  class="<%= dashboard_tab_classes %>"
-                  aria-controls="inventory-pricing-panel"
-                  role="tab">
-            <%= cached_icon "tags", class: "size-4", aria: { hidden: true } %>
-            Pricing Rules
-          </button>
-          <button type="button"
-                  data-subtabs-target="tab"
-                  data-tab-name="overrides"
-                  data-tab-label="Availability Overrides"
-                  data-action="click->subtabs#switch"
-                  data-active="<%= active_subtab == 'overrides' %>"
-                  class="<%= dashboard_tab_classes %>"
-                  aria-controls="inventory-overrides-panel"
-                  role="tab">
-            <%= cached_icon "calendar-cog", class: "size-4", aria: { hidden: true } %>
-            Availability Overrides
-          </button>
-        </div>
-      </nav>
-
-      <div id="inventory-pricing-panel" data-subtabs-target="panel" data-tab-panel="pricing" class="<%= active_subtab == 'pricing' ? '' : 'hidden' %>" role="tabpanel" data-testid="inventory-pricing-panel">
+  <% tabs.with_panel(name: "advanced", id: "inventory-advanced-panel", data: { testid: "inventory-advanced-panel" }) do %>
+    <%= render PanelsUI::Tabs.new(id: "inventory-subtabs", default: active_subtab, param: "subtab", level: :secondary, breadcrumb_id: "hotel-breadcrumb", list_class: "mb-6", aria_label: "Advanced pricing sections") do |subtabs| %>
+      <% subtabs.with_tab(name: "pricing", label: "Pricing Rules", icon: "tags", panel_id: "inventory-pricing-panel") %>
+      <% subtabs.with_tab(name: "overrides", label: "Availability Overrides", icon: "calendar-cog", panel_id: "inventory-overrides-panel") %>
+      <% subtabs.with_panel(name: "pricing", id: "inventory-pricing-panel", data: { testid: "inventory-pricing-panel" }) do %>
         <%= render "pricing_rules" %>
-      </div>
+      <% end %>
 
-      <div id="inventory-overrides-panel" data-subtabs-target="panel" data-tab-panel="overrides" class="<%= active_subtab == 'overrides' ? '' : 'hidden' %>" role="tabpanel" data-testid="inventory-overrides-panel">
+      <% subtabs.with_panel(name: "overrides", id: "inventory-overrides-panel", data: { testid: "inventory-overrides-panel" }) do %>
         <%= render "availability_override" %>
-      </div>
-    </div>
-  </div>
+       <% end %>
+     <% end %>
+   <% end %>
 
   <!-- Panel: Channels & OTAs -->
-  <div id="inventory-channels-panel" data-tabs-target="panel" data-tab-panel="channels" class="<%= active_tab == 'channels' ? 'space-y-6' : 'hidden space-y-6' %>" role="tabpanel" data-testid="inventory-channels-panel">
+  <% tabs.with_panel(name: "channels", id: "inventory-channels-panel", class: "space-y-6", data: { testid: "inventory-channels-panel" }) do %>
     <%= render "channels_and_otas" %>
-  </div>
-</div>
+  <% end %>
+<% end %>

@@ -10,17 +10,13 @@
     <%= render "hotel_portal/settings/group_tabs" %>
   </div>
 
-  <div data-controller="tabs"
-       data-tabs-default-tab-value="<%= @presenter.active_tab %>"
-       class="space-y-6 px-4 md:px-0">
-    <%= render "tabs", presenter: @presenter %>
+  <div data-testid="transaction-codes-tabs">
+  <%= render PanelsUI::Tabs.new(id: "transaction-codes-tabs", default: @presenter.active_tab, breadcrumb_id: "hotel-breadcrumb", class: "space-y-6 px-4 md:px-0", aria_label: "Transaction code sections") do |tabs| %>
+    <% @presenter.tabs.each do |tab| %>
+      <% tabs.with_tab(name: tab[:name], label: tab[:label], icon: tab[:icon], panel_id: "#{tab[:name]}-panel") %>
+    <% end %>
 
-    <div id="default_codes-panel"
-         data-tabs-target="panel"
-         data-tab-panel="default_codes"
-         class="<%= @presenter.active_tab == "default_codes" ? "space-y-6" : "hidden space-y-6" %>"
-         role="tabpanel"
-         data-testid="transaction-codes-default-codes-panel">
+    <% tabs.with_panel(name: "default_codes", id: "default_codes-panel", class: "space-y-6", data: { testid: "transaction-codes-default-codes-panel" }) do %>
       <% @presenter.default_code_sections.each do |section| %>
         <%= render "default_codes",
                    transaction_codes: section[:transaction_codes],
@@ -30,14 +26,9 @@
                    test_id: section[:test_id],
                    action: section[:action] %>
       <% end %>
-    </div>
+    <% end %>
 
-    <div id="additional_service_codes-panel"
-         data-tabs-target="panel"
-         data-tab-panel="additional_service_codes"
-         class="<%= @presenter.active_tab == "additional_service_codes" ? "space-y-6" : "hidden space-y-6" %>"
-          role="tabpanel"
-          data-testid="transaction-codes-additional-service-codes-panel">
+    <% tabs.with_panel(name: "additional_service_codes", id: "additional_service_codes-panel", class: "space-y-6", data: { testid: "transaction-codes-additional-service-codes-panel" }) do %>
       <div class="flex justify-end">
         <%= link_to "New Code",
                     hotel_new_transaction_code_path(current_hotel),
@@ -50,15 +41,11 @@
                  description: "Hotel-specific non-tax transaction codes for additional service postings.",
                  empty_message: "No additional service transaction codes found.",
                  test_id: "transaction-codes-additional-service-list" %>
-    </div>
+    <% end %>
 
-    <div id="configuration-panel"
-         data-tabs-target="panel"
-         data-tab-panel="configuration"
-         class="<%= @presenter.active_tab == "configuration" ? "space-y-6" : "hidden space-y-6" %>"
-         role="tabpanel"
-         data-testid="transaction-codes-configuration-panel">
+    <% tabs.with_panel(name: "configuration", id: "configuration-panel", class: "space-y-6", data: { testid: "transaction-codes-configuration-panel" }) do %>
       <%= render "configuration", configuration: @presenter.transaction_configuration %>
-    </div>
+    <% end %>
+  <% end %>
   </div>
 </div>

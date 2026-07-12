@@ -7,28 +7,17 @@
   </div>
 
   <%= turbo_frame_tag "payouts_content", class: "block space-y-8" do %>
-    <div data-controller="tabs"
-         data-tabs-default-tab-value="<%= @active_tab %>"
-         class="space-y-8">
-      <%= render "payout_tabs" %>
-
-      <div id="upcoming-panel"
-           data-tabs-target="panel"
-           data-tab-panel="upcoming"
-           class="<%= @active_tab == "upcoming" ? "space-y-8" : "hidden space-y-8" %>"
-           role="tabpanel"
-           data-testid="payouts-upcoming-panel">
+    <div data-testid="payout-tabs">
+    <%= render PanelsUI::Tabs.new(id: "payout-tabs", default: @active_tab, breadcrumb_id: "hotel-breadcrumb", class: "space-y-8", aria_label: "Payout sections") do |tabs| %>
+      <% tabs.with_tab(name: "upcoming", label: "Upcoming & Processing", icon: "clock-3", panel_id: "upcoming-panel") %>
+      <% tabs.with_tab(name: "paid", label: "Paid History", icon: "history", count: @payout_history.total_count, panel_id: "paid-panel") %>
+      <% tabs.with_panel(name: "upcoming", id: "upcoming-panel", class: "space-y-8", data: { testid: "payouts-upcoming-panel" }) do %>
         <%= render "upcoming_payouts_section" %>
-      </div>
-
-      <div id="paid-panel"
-           data-tabs-target="panel"
-           data-tab-panel="paid"
-           class="<%= @active_tab == "paid" ? "space-y-8" : "hidden space-y-8" %>"
-           role="tabpanel"
-           data-testid="payouts-paid-panel">
+      <% end %>
+      <% tabs.with_panel(name: "paid", id: "paid-panel", class: "space-y-8", data: { testid: "payouts-paid-panel" }) do %>
         <%= render "paid_history_section" %>
-      </div>
+      <% end %>
+    <% end %>
     </div>
   <% end %>
 

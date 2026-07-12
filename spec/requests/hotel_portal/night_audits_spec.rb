@@ -348,12 +348,12 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     sign_in(user)
 
     get hotel_night_audits_path(hotel, tab: "advanced-actions")
-    expect(response.body).to include("data-tabs-breadcrumb-label>Audit History</span>")
+    expect(Capybara.string(response.body)).to have_css("[data-tabs-breadcrumb-label]", text: "Audit History")
     expect(response.body).to include(%(href="#{hotel_night_audits_path(hotel)}">Night Audit</a>))
     expect(response.body).to include("aria-label=\"Open Night Audit navigation\"")
 
     get hotel_night_audit_path(hotel, night_audit, tab: "financial-summary")
-    expect(response.body).to include("data-tabs-breadcrumb-label>Results</span>")
+    expect(Capybara.string(response.body)).to have_css("[data-tabs-breadcrumb-label]", text: "Results")
   end
 
   it "separates hard blockers from warnings and makes close readiness obvious" do

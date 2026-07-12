@@ -28,7 +28,7 @@ module PanelsUI
     class Tab < PanelsUI::BaseComponent
       def initialize(tabs_id:, name:, label:, icon: nil, count: nil,
                      show_subtab_breadcrumb: false, id: nil, panel_id: nil,
-                     data: {}, aria: {}, class: nil)
+                     data: {}, aria: {}, active: false, class: nil)
         @tabs_id = tabs_id
         @name = name
         @label = label
@@ -39,6 +39,7 @@ module PanelsUI
         @panel_id = panel_id || "#{@tabs_id}-panel-#{@name}"
         @data = data
         @aria = aria
+        @active = active
         @class = binding.local_variable_get(:class)
       end
 
@@ -48,9 +49,9 @@ module PanelsUI
           type: "button",
           role: "tab",
           id: @id,
-          tabindex: "-1",
+          tabindex: (@active ? "0" : "-1"),
           class: tw_merge("tabs-tab", @class),
-          aria: { selected: "false", controls: @panel_id }.merge(@aria),
+          aria: { selected: (@active ? "true" : "false"), controls: @panel_id }.merge(@aria),
           data: {
             panels_ui__tabs_target: "tab",
             tab_name: @name,
@@ -78,13 +79,14 @@ module PanelsUI
 
     # One tab panel (role="tabpanel"). Starts hidden; the controller reveals the active one.
     class Panel < PanelsUI::BaseComponent
-      def initialize(tabs_id:, name:, id: nil, tab_id: nil, data: {}, aria: {}, class: nil)
+      def initialize(tabs_id:, name:, id: nil, tab_id: nil, data: {}, aria: {}, active: false, class: nil)
         @tabs_id = tabs_id
         @name = name
         @id = id || "#{@tabs_id}-panel-#{@name}"
         @tab_id = tab_id || "#{@tabs_id}-tab-#{@name}"
         @data = data
         @aria = aria
+        @active = active
         @class = binding.local_variable_get(:class)
       end
 
@@ -94,15 +96,19 @@ module PanelsUI
           role: "tabpanel",
           id: @id,
           tabindex: "0",
-          class: tw_merge("tabs-panel hidden", @class),
+          class: tw_merge("tabs-panel", ("hidden" unless @active), @class),
           aria: { labelledby: @tab_id }.merge(@aria),
           data: { panels_ui__tabs_target: "panel", tab_panel: @name }.merge(@data)
         )
       end
     end
 
-    renders_many :tabs, ->(**args) { Tab.new(tabs_id: @id, **args) }
-    renders_many :panels, ->(**args) { Panel.new(tabs_id: @id, **args) }
+    renders_many :tabs, ->(**args) {
+      Tab.new(tabs_id: @id, active: args[:name].to_s == @default.to_s, **args)
+    }
+    renders_many :panels, ->(**args) {
+      Panel.new(tabs_id: @id, active: args[:name].to_s == @default.to_s, **args)
+    }
 
     def initialize(id: nil, default: nil, param: "tab", level: :primary,
                    sync_url: true, aria_label: nil, breadcrumb_id: nil,

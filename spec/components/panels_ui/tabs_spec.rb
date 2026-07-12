@@ -36,14 +36,22 @@ RSpec.describe PanelsUI::Tabs, type: :component do
     expect(page).to have_css("button#t-tab-two[data-show-subtab-breadcrumb='true']")
   end
 
-  it "renders role=tabpanel panels linked back to their tab, hidden by default" do
+  it "renders the configured default tab and panel active on the server" do
     render_tabs
 
     expect(page).to have_css(
-      "div#t-panel-one.tabs-panel.hidden[role='tabpanel'][aria-labelledby='t-tab-one'][data-tab-panel='one']",
-      text: "Panel one", visible: :all
+      "button#t-tab-one[aria-selected='true'][tabindex='0']"
     )
-    expect(page).to have_css("div#t-panel-two[role='tabpanel'][data-panels-ui--tabs-target='panel']", visible: :all)
+    expect(page).to have_css(
+      "div#t-panel-one.tabs-panel[role='tabpanel'][aria-labelledby='t-tab-one'][data-tab-panel='one']",
+      text: "Panel one"
+    )
+    expect(page).to have_no_css("div#t-panel-one.hidden", visible: :all)
+    expect(page).to have_css("button#t-tab-two[aria-selected='false'][tabindex='-1']")
+    expect(page).to have_css(
+      "div#t-panel-two.hidden[role='tabpanel'][data-panels-ui--tabs-target='panel']",
+      visible: :all
+    )
   end
 
   it "works without panels (navigation-only tabs)" do

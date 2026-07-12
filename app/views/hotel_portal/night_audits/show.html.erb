@@ -11,20 +11,21 @@
   <%= render "hotel_portal/night_audits/show/result_banner", presenter: presenter %>
   <%= render "hotel_portal/night_audits/show/summary", presenter: presenter %>
 
-  <div data-controller="tabs" data-tabs-default-tab-value="results" class="space-y-4">
-    <%= render "hotel_portal/night_audits/show/tabs", presenter: presenter %>
-
-    <div id="results-panel" data-tabs-target="panel" data-tab-panel="results" role="tabpanel" class="space-y-4" data-testid="results-panel">
+  <div data-testid="night-audit-show-tabs">
+  <%= render PanelsUI::Tabs.new(id: "night-audit-show-tabs", default: "results", breadcrumb_id: "hotel-breadcrumb", class: "space-y-4", aria_label: "Night Audit record sections") do |tabs| %>
+    <% tabs.with_tab(name: "results", label: "Results", icon: "list-checks", count: presenter.run_result_counters.sum { |counter| counter.value.to_i }, panel_id: "results-panel") %>
+    <% tabs.with_tab(name: "financial-summary", label: "Financial Summary", icon: "chart-no-axes-combined", panel_id: "financial-summary-panel") %>
+    <% tabs.with_tab(name: "advanced-actions", label: "Advanced Actions", icon: "settings-2", count: presenter.manual_adjustment_rows.count, panel_id: "advanced-actions-panel") %>
+    <% tabs.with_panel(name: "results", id: "results-panel", class: "space-y-4", data: { testid: "results-panel" }) do %>
       <%= render "hotel_portal/night_audits/show/run_results", presenter: presenter %>
       <%= render "hotel_portal/night_audits/show/blockers_and_warnings", presenter: presenter %>
-    </div>
-
-    <div id="financial-summary-panel" data-tabs-target="panel" data-tab-panel="financial-summary" role="tabpanel" class="hidden" data-testid="financial-summary-panel">
+    <% end %>
+    <% tabs.with_panel(name: "financial-summary", id: "financial-summary-panel", data: { testid: "financial-summary-panel" }) do %>
       <%= render "hotel_portal/night_audits/show/financial_summary", presenter: presenter %>
-    </div>
-
-    <div id="advanced-actions-panel" data-tabs-target="panel" data-tab-panel="advanced-actions" role="tabpanel" class="hidden" data-testid="show-advanced-actions-panel">
+    <% end %>
+    <% tabs.with_panel(name: "advanced-actions", id: "advanced-actions-panel", data: { testid: "show-advanced-actions-panel" }) do %>
       <%= render "hotel_portal/night_audits/show/manual_adjustments", presenter: presenter %>
-    </div>
+    <% end %>
+  <% end %>
   </div>
 </div>
