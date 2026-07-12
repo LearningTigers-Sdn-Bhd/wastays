@@ -11,6 +11,7 @@
     <a class="panel-sidebar__link<%= " panel-sidebar__child" if child %>"
        href="<%= entry.path %>"
        data-sidebar-route
+       <%= %(data-sidebar-active-paths="#{ERB::Util.html_escape(entry.active_paths.join(" "))}").html_safe if entry.active_paths.any? %>
        <%= 'target="_blank" rel="noopener noreferrer"'.html_safe if entry.external? %>
        <%= 'aria-current="page"'.html_safe if entry.active? %>>
       <% if entry.icon %><%= component.helpers.app_icon entry.icon, class: "panel-sidebar__icon", aria: { hidden: "true" } %><% end %>

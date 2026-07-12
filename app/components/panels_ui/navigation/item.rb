@@ -18,16 +18,16 @@ module PanelsUI
     # `children` nests Items one level (a collapsible sidebar group / breakdown menu).
     Item = Data.define(
       :label, :path, :icon, :active, :search_text, :external,
-      :children, :permission, :permission_scope, :plan_feature
+      :children, :permission, :permission_scope, :plan_feature, :active_paths
     ) do
       def initialize(label:, path: nil, icon: nil, active: false, search_text: nil,
                      external: false, children: [], permission: nil,
-                     permission_scope: nil, plan_feature: nil)
+                     permission_scope: nil, plan_feature: nil, active_paths: [])
         frozen_children = Array(children).dup.freeze
         super(
           label:, path:, icon:, active:, search_text:,
           external:, children: frozen_children, permission:,
-          permission_scope:, plan_feature:
+          permission_scope:, plan_feature:, active_paths: Array(active_paths).dup.freeze
         )
       end
 

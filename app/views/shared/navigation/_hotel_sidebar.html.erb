@@ -1,89 +1,33 @@
-<% sections = hotel_sidebar_sections %>
-<% footer_items = hotel_sidebar_footer_items %>
-
-<% hotel_sidebar_header = capture do %>
-  <div class="flex flex-col gap-y-2 px-4 py-3 min-h-12 sidebar-header-container">
-    <div class="flex items-center gap-x-2.5 min-w-0 sidebar-header" title="<%= current_hotel.name %>" aria-label="Hotel: <%= current_hotel.name %>">
-      <span class="inline-flex justify-center items-center size-7 rounded-lg bg-slate-100 text-slate-700 shadow-xs ring-1 ring-slate-200 shrink-0">
-        <%= cached_icon "building-2", class: "size-4 shrink-0" %>
-      </span>
-      <span class="text-sm font-semibold text-neutral-text-primary truncate sidebar-label"><%= current_hotel.name.truncate(24) %></span>
+<%= render PanelsUI::Sidebar.new(
+      key: "hotel",
+      home_path: hotel_dashboard_path(current_hotel),
+      sections: hotel_visible_sidebar_sections,
+      footer_items: hotel_sidebar_footer_items,
+      collapsible: true,
+      searchable: false,
+      permanent: true
+    ) do |sidebar| %>
+  <% sidebar.with_header do %>
+    <div class="space-y-0.5 p-2">
+      <a href="<%= hotel_dashboard_path(current_hotel) %>"
+         class="panel-sidebar__link"
+         title="<%= current_hotel.name %>"
+         aria-label="Hotel: <%= current_hotel.name %>">
+        <%= cached_icon "building-2", class: "panel-sidebar__icon" %>
+        <span class="panel-sidebar__label truncate"><%= current_hotel.name.truncate(24) %></span>
+      </a>
+      <% if current_user.superadmin? %>
+        <a href="<%= admin_dashboard_path %>" target="_blank" rel="noopener noreferrer" class="panel-sidebar__link" aria-label="Go to Admin Panel">
+          <%= cached_icon "external-link", class: "panel-sidebar__icon" %>
+          <span class="panel-sidebar__label">Go to Admin Panel</span>
+        </a>
+      <% end %>
+      <% if settings_sidebar_mode? %>
+        <a href="<%= hotel_settings_back_path %>" class="panel-sidebar__link" aria-label="Back to previous page">
+          <%= cached_icon "arrow-left", class: "panel-sidebar__icon" %>
+          <span class="panel-sidebar__label">Back to previous page</span>
+        </a>
+      <% end %>
     </div>
-    <% if current_user.superadmin? %>
-      <a href="<%= admin_dashboard_path %>" target="_blank" rel="noopener noreferrer" class="sidebar-nav-link sidebar-nav-link-default" data-sidebar-tooltip="Go to Admin Panel" aria-label="Go to Admin Panel">
-        <%= cached_icon "external-link", class: "size-4 shrink-0" %>
-        <span class="sidebar-label">Go to Admin Panel</span>
-      </a>
-    <% end %>
-    <% if settings_sidebar_mode? %>
-      <a href="<%= hotel_settings_back_path %>" class="sidebar-nav-link sidebar-nav-link-default" data-sidebar-tooltip="Back to previous page" aria-label="Back to previous page">
-        <%= cached_icon "arrow-left", class: "size-4 shrink-0" %>
-        <span class="sidebar-label">Back to previous page</span>
-      </a>
-    <% end %>
-  </div>
-<% end %>
-
-<% render_hotel_sidebar_items = nil %>
-<% render_hotel_sidebar_items = lambda do |items, depth: 0| %>
-<%   capture do %>
-  <% hotel_visible_items(items).each do |item| %>
-    <% visible_children = item.children.present? ? hotel_visible_items(item.children) : [] %>
-    <% next if item.children.present? && visible_children.blank? %>
-    <% if visible_children.present? %>
-      <% item_active = hotel_nav_item_active?(item) %>
-      <details class="group sidebar-group <%= 'sidebar-group-active' if item_active %>" <%= "open" if item_active %> data-sidebar-state-target="details" data-sidebar-depth="<%= depth %>">
-        <summary class="sidebar-nav-link sidebar-group-parent list-none cursor-pointer" aria-label="<%= item.label %>" data-sidebar-tooltip="<%= item.label %>">
-          <%= cached_icon item.icon, class: "size-4 shrink-0" %>
-          <span class="flex-1 sidebar-label"><%= item.label %></span>
-          <%= cached_icon "chevron-down", class: "size-4 shrink-0 transition-transform group-open:rotate-180 sidebar-chevron" %>
-        </summary>
-        <div class="mt-1 space-y-0.5 sidebar-details-content <%= depth.zero? ? 'ps-5' : 'ps-4' %>">
-          <%= render_hotel_sidebar_items.call(visible_children, depth: depth + 1) %>
-        </div>
-      </details>
-    <% else %>
-      <a class="sidebar-nav-link <%= depth.positive? ? 'sidebar-child-link' : '' %> <%= item.active ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= item.path %>" data-sidebar-route data-sidebar-tooltip="<%= item.label %>" <% if item.active_paths.present? %>data-sidebar-active-paths="<%= item.active_paths.join(' ') %>"<% end %> aria-label="<%= item.label %>">
-        <%= cached_icon item.icon, class: "size-4 shrink-0" %>
-        <span class="<%= 'text-sm ' if depth.positive? %>sidebar-label"><%= item.label %></span>
-      </a>
-    <% end %>
-  <% end %>
-<%   end %>
-<% end %>
-
-<% render_hotel_sidebar_nav = lambda do %>
-  <nav class="flex-1 px-4 py-3 space-y-6">
-    <% sections.each do |section| %>
-      <% visible_items = hotel_visible_items(section.items) %>
-      <% next if visible_items.blank? %>
-
-      <div class="sidebar-nav-group" aria-label="<%= section.label %>" data-section-label="<%= section.label %>">
-        <% unless section.label.blank? %>
-          <span class="sidebar-section-label"><%= section.label %></span>
-        <% end %>
-        <div class="space-y-0.5">
-          <%= render_hotel_sidebar_items.call(visible_items) %>
-        </div>
-      </div>
-    <% end %>
-  </nav>
-<% end %>
-
-<% hotel_nav_html = capture(&render_hotel_sidebar_nav) %>
-<% hotel_footer_html = capture do %>
-  <% hotel_visible_items(footer_items).each do |item| %>
-    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item.path %>" data-sidebar-tooltip="<%= item.label %>" aria-label="<%= item.label %>">
-      <%= cached_icon item.icon, class: "size-4 shrink-0" %>
-      <span><%= item.label %></span>
-    </a>
   <% end %>
 <% end %>
-
-<%= render "shared/navigation/sidebar_shell",
-            sidebar_key: "hotel",
-            sidebar_mode: hotel_sidebar_mode,
-            home_path: hotel_dashboard_path(current_hotel),
-            header_html: hotel_sidebar_header,
-            nav_html: hotel_nav_html,
-           footer_html: hotel_footer_html %>

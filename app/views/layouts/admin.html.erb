@@ -17,7 +17,7 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="h-full" data-controller="<%= yield :body_controllers %>" <%= yield :body_attributes %>>
+  <body class="h-full" data-theme="panel-light" data-controller="<%= yield :body_controllers %>" <%= yield :body_attributes %>>
     <!-- Preline CMS-style layout: flex column (header + body row) -->
     <div class="flex flex-col h-screen bg-layer-alt">
 
@@ -26,12 +26,12 @@
         <div class="flex items-center h-14 px-4 gap-x-3">
 
           <!-- Mobile hamburger -->
-          <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#toggle" aria-label="Toggle navigation">
+          <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" command="show-modal" commandfor="admin-sidebar-mobile" aria-label="Toggle navigation">
             <%= cached_icon "menu", class: "size-4" %>
           </button>
 
           <!-- Desktop sidebar collapse -->
-          <button type="button" class="hidden lg:inline-flex shrink-0 justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#toggleDesktop" aria-label="Collapse sidebar">
+          <button type="button" class="hidden lg:inline-flex shrink-0 justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="panels-ui--sidebar-toggle" data-panels-ui--sidebar-toggle-key-value="admin" data-action="click->panels-ui--sidebar-toggle#toggleDesktop" aria-label="Collapse sidebar">
             <%= cached_icon "panel-left-close", class: "size-4" %>
           </button>
 

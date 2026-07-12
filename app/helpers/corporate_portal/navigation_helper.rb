@@ -2,38 +2,35 @@
 
 module CorporatePortal
   module NavigationHelper
-    NavSection = Struct.new(:label, :items, keyword_init: true)
-    NavItem = Struct.new(:label, :path, :search_text, :icon, :active, :children, keyword_init: true)
-
     def corporate_sidebar_sections
       return @_corporate_sidebar_sections if defined?(@_corporate_sidebar_sections)
 
       finance_items = [
-        NavItem.new(
+        PanelsUI::Navigation::Item.new(
           label: "AR Invoices",
           path: corporate_ar_invoices_path,
           search_text: "AR Invoices Accounts Receivable Direct Bill Outstanding Balance",
           active: controller_name == "ar_invoices",
           icon: "file-text"
         ),
-        NavItem.new(
+        PanelsUI::Navigation::Item.new(
           label: "Payments",
           path: corporate_ar_payments_path,
           search_text: "Payments Payment History Accounts Receivable",
           active: controller_name == "ar_payments",
           icon: "landmark",
           children: [
-            NavItem.new(label: "Payment History", path: corporate_ar_payments_path, search_text: "Payment History Accounts Receivable", active: controller_name == "ar_payments" && action_name.in?(%w[index show]), icon: "history"),
-            NavItem.new(label: "Pay Invoices", path: pay_invoices_corporate_ar_payments_path, search_text: "Pay Invoices Accounts Receivable", active: controller_name == "ar_payments" && action_name.in?(%w[pay_invoices review checkout_session verify]), icon: "credit-card")
+            PanelsUI::Navigation::Item.new(label: "Payment History", path: corporate_ar_payments_path, search_text: "Payment History Accounts Receivable", active: controller_name == "ar_payments" && action_name.in?(%w[index show]), icon: "history"),
+            PanelsUI::Navigation::Item.new(label: "Pay Invoices", path: pay_invoices_corporate_ar_payments_path, search_text: "Pay Invoices Accounts Receivable", active: controller_name == "ar_payments" && action_name.in?(%w[pay_invoices review checkout_session verify]), icon: "credit-card")
           ]
         )
       ]
 
       @_corporate_sidebar_sections = [
-        NavSection.new(
+        PanelsUI::Navigation::Section.new(
           label: "Home",
           items: [
-            NavItem.new(
+            PanelsUI::Navigation::Item.new(
               label: "Dashboard",
               path: corporate_dashboard_path,
               search_text: "Dashboard Home Linked Hotels Corporate Portal",
@@ -42,10 +39,10 @@ module CorporatePortal
             )
           ]
         ),
-        NavSection.new(
+        PanelsUI::Navigation::Section.new(
           label: "Account",
           items: [
-            NavItem.new(
+            PanelsUI::Navigation::Item.new(
               label: "Profile",
               path: corporate_profile_path,
               search_text: "Profile Corporate Account Company Details Linked Hotels",
@@ -54,7 +51,7 @@ module CorporatePortal
             )
           ]
         ),
-        NavSection.new(
+        PanelsUI::Navigation::Section.new(
           label: "Finance",
           items: finance_items
         )
@@ -63,8 +60,8 @@ module CorporatePortal
 
     def corporate_sidebar_footer_items
       @_corporate_sidebar_footer_items ||= [
-        NavItem.new(label: "Homepage", path: root_path, search_text: "Homepage Website", icon: "house", active: false),
-        NavItem.new(label: "Help & support", path: help_center_path, search_text: "Help Support FAQ", icon: "circle-question-mark", active: false)
+        PanelsUI::Navigation::Item.new(label: "Homepage", path: root_path, search_text: "Homepage Website", icon: "house", active: false),
+        PanelsUI::Navigation::Item.new(label: "Help & support", path: help_center_path, search_text: "Help Support FAQ", icon: "circle-question-mark", active: false)
       ]
     end
 
@@ -99,7 +96,7 @@ module CorporatePortal
       parts = corporate_breadcrumb_parts
       return if parts.blank?
 
-      render partial: "shared/navigation/breadcrumb_bar", locals: { parts: parts }
+      render PanelsUI::Breadcrumb.new(id: "corporate-breadcrumb", parts:)
     end
 
     private

@@ -34,6 +34,9 @@ RSpec.describe 'Hotel layout shell', type: :system do
     visit hotel_dashboard_path(hotel)
 
     expect(page).to have_link('Dashboard', href: hotel_dashboard_path(hotel))
+    expect(page).to have_css(
+      "#hotel-sidebar .panel-sidebar__header a.panel-sidebar__link[aria-label='Hotel: #{hotel.name}']"
+    )
     expect(page).to have_link('Arrivals', href: hotel_arrivals_path(hotel), visible: :all)
     expect(page).to have_link('Bookings', href: hotel_bookings_path(hotel), visible: :all)
     expect(page).to have_link('In-House Guests', href: hotel_in_house_guests_path(hotel), visible: :all)
@@ -46,8 +49,8 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_link('Summary', href: hotel_reports_path(hotel), visible: :all)
     expect(page).to have_link('Night Audit', href: hotel_night_audits_path(hotel), visible: :all)
     expect(page).to have_css('#toast-viewport[data-controller="toast"]')
-    expect(page).to have_css("#hotel-sidebar a.sidebar-nav-link-active[data-sidebar-route]", text: "Dashboard")
-    expect(page).to have_css("#hotel-sidebar summary.sidebar-group-parent", text: "Financial", visible: :all)
-    expect(page).to have_no_css("#hotel-sidebar summary.sidebar-nav-link-active", visible: :all)
+    expect(page).to have_css("#hotel-sidebar a.panel-sidebar__link[data-sidebar-route][aria-current='page']", text: "Dashboard")
+    expect(page).to have_css("#hotel-sidebar button.panel-sidebar__group-trigger", text: "Financial", visible: :all)
+    expect(page).to have_no_css("#hotel-sidebar button.panel-sidebar__group-trigger[aria-current='page']", visible: :all)
   end
 end

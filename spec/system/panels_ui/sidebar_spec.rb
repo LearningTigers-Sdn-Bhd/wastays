@@ -109,6 +109,26 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
     expect(page).to have_css("#{content}[hidden]", visible: :all, wait: 1)
   end
 
+  it "preserves a manually closed group across navigation" do
+    trigger = find("#sd-nav-sidebar-desktop-section-1-item-2-collapsible-trigger")
+    trigger.click
+    expect(trigger["aria-expanded"]).to eq("true")
+
+    trigger.click
+    expect(trigger["aria-expanded"]).to eq("false")
+
+    page.execute_script(<<~JS)
+      const sidebar = document.querySelector("#sd-nav-sidebar")
+      const group = sidebar.querySelector("#sd-nav-sidebar-desktop-section-1-item-2-collapsible")
+      group.querySelector("a[data-sidebar-route]").setAttribute("href", window.location.pathname)
+      window.Stimulus.getControllerForElementAndIdentifier(sidebar, "panels-ui--sidebar").syncActiveLinks()
+    JS
+    expect(trigger["aria-expanded"]).to eq("false")
+
+    visit "/system-design"
+    expect(find("#sd-nav-sidebar-desktop-section-1-item-2-collapsible-trigger")["aria-expanded"]).to eq("false")
+  end
+
   it "opens a collapsed group through Popover, supports pinning, and closes outside" do
     click_button "Toggle collapse"
     expect(page).to have_css("#sd-nav-sidebar[data-collapsed='true']")

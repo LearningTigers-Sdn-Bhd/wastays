@@ -20,8 +20,8 @@ RSpec.describe HotelPortal::NavigationHelper, type: :helper do
   end
 
   describe "#hotel_visible_sidebar_sections" do
-    let(:item_class) { HotelPortal::NavigationHelper::NavItem }
-    let(:section_class) { HotelPortal::NavigationHelper::NavSection }
+    let(:item_class) { PanelsUI::Navigation::Item }
+    let(:section_class) { PanelsUI::Navigation::Section }
 
     it "recursively filters denied items and removes empty groups and sections" do
       allowed_child = item_class.new(label: "Allowed child", path: "/allowed", permission: "allowed")

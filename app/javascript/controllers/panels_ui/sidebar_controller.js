@@ -13,8 +13,10 @@ export default class extends Controller {
   connect() {
     this.onTurboLoad = () => { this.syncActiveLinks(); this.restoreScroll() }
     this.onBeforeVisit = () => this.persistScroll()
+    this.onCollapsibleChange = (event) => this.persistGroupState(event)
     document.addEventListener("turbo:load", this.onTurboLoad)
     document.addEventListener("turbo:before-visit", this.onBeforeVisit)
+    this.element.addEventListener("panels-ui--collapsible:change", this.onCollapsibleChange)
 
     this.sheet = this.element.closest("dialog[data-controller~='panels-ui--sheet']")
     this.onSheetOpen = () => this.restoreScroll()
@@ -22,11 +24,13 @@ export default class extends Controller {
 
     this.syncActiveLinks()
     this.restoreScroll()
+    queueMicrotask(() => this.syncActiveLinks())
   }
 
   disconnect() {
     document.removeEventListener("turbo:load", this.onTurboLoad)
     document.removeEventListener("turbo:before-visit", this.onBeforeVisit)
+    this.element.removeEventListener("panels-ui--collapsible:change", this.onCollapsibleChange)
     this.sheet?.removeEventListener("panels-ui:sheet-open", this.onSheetOpen)
   }
 
@@ -45,31 +49,67 @@ export default class extends Controller {
     const current = this.normalize(window.location.pathname)
     const links = Array.from(this.element.querySelectorAll("a[data-sidebar-route][href]"))
     const activePath = links
-      .map((link) => this.pathOf(link))
+      .flatMap((link) => this.pathsOf(link))
       .filter((path) => this.pathMatches(current, path))
       .sort((a, b) => b.length - a.length)[0]
 
     links.forEach((link) => {
-      if (activePath && this.pathOf(link) === activePath) link.setAttribute("aria-current", "page")
+      if (activePath && this.pathsOf(link).includes(activePath)) link.setAttribute("aria-current", "page")
       else link.removeAttribute("aria-current")
     })
 
     this.element.querySelectorAll("[data-sidebar-group-item]").forEach((groupItem) => {
       const hasActiveChild = Boolean(groupItem.querySelector('a[aria-current="page"]'))
       groupItem.toggleAttribute("data-sidebar-active", hasActiveChild)
-      if (hasActiveChild && !this.collapsed) this.openCollapsible(groupItem)
+      if (!this.collapsed) this.reconcileCollapsible(groupItem, hasActiveChild)
     })
   }
 
-  openCollapsible(groupItem) {
-    const root = groupItem.querySelector(
-      '[data-sidebar-presentation="expanded"] [data-controller~="panels-ui--collapsible"]'
-    )
+  reconcileCollapsible(groupItem, hasActiveChild) {
+    const root = this.collapsibleRoot(groupItem)
     const controller = root && this.application.getControllerForElementAndIdentifier(
       root,
       "panels-ui--collapsible"
     )
-    controller?.open()
+    if (!controller) return
+
+    const stored = this.groupStates[root.id]
+    this.suppressGroupPersistence = true
+    if (stored === true || (stored === undefined && hasActiveChild)) controller.open()
+    else if (stored === false) controller.close()
+    this.suppressGroupPersistence = false
+  }
+
+  persistGroupState(event) {
+    if (this.suppressGroupPersistence) return
+
+    const root = event.target.closest('[data-controller~="panels-ui--collapsible"]')
+    if (!root?.id || !this.element.contains(root)) return
+
+    const states = this.groupStates
+    states[root.id] = Boolean(event.detail?.open)
+    window.localStorage.setItem(this.groupStorageKey, JSON.stringify(states))
+  }
+
+  collapsibleRoot(groupItem) {
+    if (this.surfaceValue === "desktop") {
+      return groupItem.querySelector(
+        '[data-sidebar-presentation="expanded"] [data-controller~="panels-ui--collapsible"]'
+      )
+    }
+    return groupItem.querySelector('[data-controller~="panels-ui--collapsible"]')
+  }
+
+  get groupStorageKey() {
+    return `wastays:${this.keyValue}-sidebar-${this.surfaceValue}-groups`
+  }
+
+  get groupStates() {
+    try {
+      return JSON.parse(window.localStorage.getItem(this.groupStorageKey) || "{}")
+    } catch (_) {
+      return {}
+    }
   }
 
   persistScroll() {
@@ -103,6 +143,15 @@ export default class extends Controller {
     } catch (_) {
       return ""
     }
+  }
+
+  pathsOf(link) {
+    const aliases = (link.dataset.sidebarActivePaths || "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((path) => this.normalize(new URL(path, window.location.origin).pathname))
+
+    return [this.pathOf(link), ...aliases].filter(Boolean)
   }
 
   normalize(path) {

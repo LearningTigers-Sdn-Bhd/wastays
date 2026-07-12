@@ -17,14 +17,14 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="h-full overflow-hidden" data-controller="<%= yield :body_controllers %>" <%= yield :body_attributes %>>
+  <body class="h-full overflow-hidden" data-theme="panel-light" data-controller="<%= yield :body_controllers %>" <%= yield :body_attributes %>>
     <div class="flex flex-col h-screen h-dvh min-h-screen min-h-dvh bg-layer-alt">
       <header class="sticky top-0 z-[60] w-full bg-layer border-b border-layer-line">
         <div class="flex items-center h-14 px-4 gap-x-3">
-          <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#toggle" aria-label="Toggle navigation">
+          <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" command="show-modal" commandfor="corporate-sidebar-mobile" aria-label="Toggle navigation">
             <%= cached_icon "menu", class: "size-4" %>
           </button>
-          <button type="button" class="hidden lg:inline-flex shrink-0 justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#toggleDesktop" aria-label="Collapse sidebar">
+          <button type="button" class="hidden lg:inline-flex shrink-0 justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="panels-ui--sidebar-toggle" data-panels-ui--sidebar-toggle-key-value="corporate" data-action="click->panels-ui--sidebar-toggle#toggleDesktop" aria-label="Collapse sidebar">
             <%= cached_icon "panel-left-close", class: "size-4" %>
           </button>
 

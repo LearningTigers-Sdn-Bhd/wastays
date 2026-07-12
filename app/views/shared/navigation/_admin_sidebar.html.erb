@@ -1,51 +1,18 @@
-<% sections = admin_sidebar_sections %>
-<% footer_items = admin_sidebar_footer_items %>
-
-<% admin_sidebar_header = capture do %>
-  <div class="flex items-center gap-x-2.5 px-4 py-3 sidebar-header sidebar-header-container">
-    <span class="inline-flex justify-center items-center size-7 rounded-lg bg-slate-100 text-slate-700 shadow-xs ring-1 ring-slate-200">
-      <%= cached_icon "settings", class: "size-4 shrink-0" %>
-    </span>
-    <span class="text-sm font-semibold text-neutral-text-primary sidebar-label">Admin Panel</span>
-  </div>
-<% end %>
-
-<% render_sidebar_nav = lambda do %>
-  <nav class="flex-1 px-4 py-3 space-y-6">
-    <% sections.each do |section| %>
-      <div class="sidebar-nav-group">
-        <span class="sidebar-section-label"><%= section.label %></span>
-        <div class="space-y-0.5">
-          <% section.items.each do |item| %>
-            <a class="sidebar-nav-link <%= item.active ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>"
-               href="<%= item.path %>"
-               data-sidebar-route
-               data-sidebar-tooltip="<%= item.label %>"
-               aria-label="<%= item.label %>"
-               <%= 'target="_blank" rel="noopener noreferrer"'.html_safe if item.external %>>
-              <%= cached_icon item.icon, class: "size-4 shrink-0" %>
-              <span><%= item.label %></span>
-            </a>
-          <% end %>
-        </div>
-      </div>
-    <% end %>
-  </nav>
-<% end %>
-
-<% admin_nav_html = capture(&render_sidebar_nav) %>
-<% admin_footer_html = capture do %>
-  <% footer_items.each do |item| %>
-    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item.path %>" data-sidebar-tooltip="<%= item.label %>" aria-label="<%= item.label %>">
-      <%= cached_icon item.icon, class: "size-4 shrink-0" %>
-      <span><%= item.label %></span>
-    </a>
+<%= render PanelsUI::Sidebar.new(
+      key: "admin",
+      home_path: admin_dashboard_path,
+      sections: admin_sidebar_sections,
+      footer_items: admin_sidebar_footer_items,
+      collapsible: true,
+      searchable: false,
+      permanent: true
+    ) do |sidebar| %>
+  <% sidebar.with_header do %>
+    <div class="flex items-center gap-x-2.5 px-4 py-3">
+      <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 shadow-xs ring-1 ring-slate-200">
+        <%= cached_icon "settings", class: "size-4 shrink-0" %>
+      </span>
+      <span class="panel-sidebar__label text-sm font-semibold text-neutral-text-primary">Admin Panel</span>
+    </div>
   <% end %>
 <% end %>
-
-<%= render "shared/navigation/sidebar_shell",
-           sidebar_key: "admin",
-           home_path: admin_dashboard_path,
-           header_html: admin_sidebar_header,
-           nav_html: admin_nav_html,
-           footer_html: admin_footer_html %>

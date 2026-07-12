@@ -2,8 +2,8 @@
 
 module HotelPortal
   module NavigationHelper
-    NavSection = Struct.new(:label, :items, keyword_init: true)
-    NavItem = Struct.new(:label, :path, :search_text, :icon, :active, :external, :children, :permission, :permission_scope, :plan_feature, :active_paths, keyword_init: true)
+    NavSection = PanelsUI::Navigation::Section
+    NavItem = PanelsUI::Navigation::Item
 
     def hotel_sidebar_sections
       return @_hotel_sidebar_sections if defined?(@_hotel_sidebar_sections)
@@ -31,11 +31,11 @@ module HotelPortal
       guest_compliance_nav_active = guest_compliance_nav_items.any?(&:active)
 
       accounts_receivable_nav_items = [
-        NavItem.new(label: "Corporate Accounts", path: hotel_corporate_accounts_path(current_hotel), search_text: "Corporate Accounts Government Direct Bill Credit Terms External Payers Accounts Receivable", active: controller_name.in?(%w[corporate_accounts corporate_invitations]), icon: "building-2", permission: "manage_corporate_accounts"),
-        NavItem.new(label: "AR Invoices", path: hotel_ar_invoices_path(current_hotel), search_text: "AR Invoices Accounts Receivable Direct Bill Aging Finance", active: controller_name == "ar_invoices" && action_name != "aging", icon: "file-text", permission: "view_reports"),
-        NavItem.new(label: "AR Payments", path: hotel_ar_payments_path(current_hotel), search_text: "AR Payments Corporate Payments Accounts Receivable Finance", active: controller_name == "ar_payments", icon: "landmark", permission: "view_reports"),
-        NavItem.new(label: "AR Statements", path: hotel_ar_statements_path(current_hotel), search_text: "AR Statements Corporate Account Statement Ledger Accounts Receivable Finance", active: controller_name == "ar_statements", icon: "file-spreadsheet", permission: "view_reports"),
-        NavItem.new(label: "Aging Report", path: hotel_ar_aging_path(current_hotel), search_text: "AR Aging Aging Report Credit Exposure Accounts Receivable Finance", active: controller_name == "ar_invoices" && action_name == "aging", icon: "chart-bar", permission: "view_reports")
+        PanelsUI::Navigation::Item.new(label: "Corporate Accounts", path: hotel_corporate_accounts_path(current_hotel), search_text: "Corporate Accounts Government Direct Bill Credit Terms External Payers Accounts Receivable", active: controller_name.in?(%w[corporate_accounts corporate_invitations]), icon: "building-2", permission: "manage_corporate_accounts"),
+        PanelsUI::Navigation::Item.new(label: "AR Invoices", path: hotel_ar_invoices_path(current_hotel), search_text: "AR Invoices Accounts Receivable Direct Bill Aging Finance", active: controller_name == "ar_invoices" && action_name != "aging", icon: "file-text", permission: "view_reports"),
+        PanelsUI::Navigation::Item.new(label: "AR Payments", path: hotel_ar_payments_path(current_hotel), search_text: "AR Payments Corporate Payments Accounts Receivable Finance", active: controller_name == "ar_payments", icon: "landmark", permission: "view_reports"),
+        PanelsUI::Navigation::Item.new(label: "AR Statements", path: hotel_ar_statements_path(current_hotel), search_text: "AR Statements Corporate Account Statement Ledger Accounts Receivable Finance", active: controller_name == "ar_statements", icon: "file-spreadsheet", permission: "view_reports"),
+        PanelsUI::Navigation::Item.new(label: "Aging Report", path: hotel_ar_aging_path(current_hotel), search_text: "AR Aging Aging Report Credit Exposure Accounts Receivable Finance", active: controller_name == "ar_invoices" && action_name == "aging", icon: "chart-bar", permission: "view_reports")
       ]
       accounts_receivable_nav_active = accounts_receivable_nav_items.any?(&:active)
 
@@ -196,7 +196,7 @@ module HotelPortal
       parts = hotel_breadcrumb_parts
       return if parts.blank?
 
-      render partial: "shared/navigation/breadcrumb_bar", locals: { parts: parts }
+      render PanelsUI::Breadcrumb.new(id: "hotel-breadcrumb", parts:)
     end
 
     def hotel_nav_item_active?(item)
