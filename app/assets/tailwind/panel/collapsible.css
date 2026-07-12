@@ -17,11 +17,11 @@
     overflow: hidden;
   }
 
-  .panel-collapsible__content[data-state="open"] {
+  .panel-collapsible__content[data-collapsible-animate][data-state="open"] {
     animation: panel-collapsible-down 200ms ease-out;
   }
 
-  .panel-collapsible__content[data-state="closed"] {
+  .panel-collapsible__content[data-collapsible-animate][data-state="closed"] {
     animation: panel-collapsible-up 200ms ease-out;
   }
 

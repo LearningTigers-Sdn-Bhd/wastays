@@ -15,7 +15,7 @@ export default class extends Controller {
 
   connect() {
     this.connected = true
-    this.contentTarget.addEventListener("animationend", this.finishClose)
+    this.contentTarget.addEventListener("animationend", this.finishAnimation)
     this.resizeObserver = new ResizeObserver(() => this.measure())
     this.resizeObserver.observe(this.contentInnerTarget)
     this.sync({ animate: false, notify: false })
@@ -24,7 +24,7 @@ export default class extends Controller {
   disconnect() {
     this.connected = false
     this.resizeObserver?.disconnect()
-    this.contentTarget.removeEventListener("animationend", this.finishClose)
+    this.contentTarget.removeEventListener("animationend", this.finishAnimation)
     window.clearTimeout(this.hideTimer)
   }
 
@@ -49,11 +49,13 @@ export default class extends Controller {
 
   sync({ animate, notify }) {
     const state = this.openValue ? "open" : "closed"
+    const shouldAnimate = animate && !this.reducedMotion
 
     window.clearTimeout(this.hideTimer)
     if (this.openValue) this.contentTarget.hidden = false
     this.measure()
 
+    this.contentTarget.toggleAttribute("data-collapsible-animate", shouldAnimate)
     this.element.dataset.state = state
     this.triggerTarget.dataset.state = state
     this.contentTarget.dataset.state = state
@@ -65,7 +67,7 @@ export default class extends Controller {
       if (this.contentTarget.contains(document.activeElement)) this.triggerTarget.focus()
       this.contentTarget.inert = true
 
-      if (!animate || this.reducedMotion) {
+      if (!shouldAnimate) {
         this.contentTarget.hidden = true
       } else {
         // animationend is the normal path; the timeout covers browsers that do
@@ -82,9 +84,10 @@ export default class extends Controller {
     this.contentTarget.style.setProperty("--panel-collapsible-content-height", `${height}px`)
   }
 
-  finishClose = (event) => {
-    if (event.target !== this.contentTarget || event.animationName !== "panel-collapsible-up") return
-    this.hideClosedContent()
+  finishAnimation = (event) => {
+    if (event.target !== this.contentTarget || !event.animationName.startsWith("panel-collapsible-")) return
+    if (event.animationName === "panel-collapsible-up") this.hideClosedContent()
+    this.contentTarget.removeAttribute("data-collapsible-animate")
   }
 
   hideClosedContent() {
