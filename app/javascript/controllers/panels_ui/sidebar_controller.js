@@ -1,5 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
+// Shared with PanelsUI::Sidebar::GROUP_STATE_COOKIE (Ruby). We record each user
+// toggle here; the server reads it to render every group's open/closed state on
+// first paint. The client never re-opens or re-closes a group after load — the
+// server render plus Turbo's permanent sidebar are the single source of truth.
+const GROUP_STATE_COOKIE = "sidebar_groups"
+
 // Identifier: panels-ui--sidebar
 //
 // Sidebar-wide state only. Collapsible, Tooltip, and Popover own their interaction,
@@ -12,7 +18,7 @@ export default class extends Controller {
 
   connect() {
     this.onTurboLoad = () => { this.syncActiveLinks(); this.restoreScroll() }
-    this.onBeforeVisit = () => this.persistScroll()
+    this.onBeforeVisit = (event) => this.beforeVisit(event)
     this.onCollapsibleChange = (event) => this.persistGroupState(event)
     document.addEventListener("turbo:load", this.onTurboLoad)
     document.addEventListener("turbo:before-visit", this.onBeforeVisit)
@@ -34,17 +40,29 @@ export default class extends Controller {
     this.sheet?.removeEventListener("panels-ui:sheet-open", this.onSheetOpen)
   }
 
-  get collapsed() {
-    return this.surfaceValue === "desktop" && this.element.dataset.collapsed === "true"
-  }
-
   get scrollable() {
     return this.element.querySelector(".panel-sidebar__body")
   }
 
+  beforeVisit(event) {
+    this.persistScroll()
+
+    // Desktop and mobile presentations are connected at the same time. Let one
+    // controller own visit cancellation while both persist their own scroll state.
+    if (this.surfaceValue !== "desktop" || !event.detail?.url) return
+
+    try {
+      const destination = new URL(event.detail.url, window.location.href)
+      if (destination.href === window.location.href) event.preventDefault()
+    } catch (_) {
+      // Let Turbo handle malformed or otherwise unsupported destinations.
+    }
+  }
+
   // Mark every rendered presentation of the longest route match. Desktop keeps
   // expanded and collapsed copies in the DOM, so selecting a single anchor would
-  // leave one presentation stale after a Turbo visit.
+  // leave one presentation stale after a Turbo visit. Open/closed state is left
+  // untouched — the server render and Turbo's permanent sidebar own it.
   syncActiveLinks() {
     const current = this.normalize(window.location.pathname)
     const links = Array.from(this.element.querySelectorAll("a[data-sidebar-route][href]"))
@@ -59,57 +77,39 @@ export default class extends Controller {
     })
 
     this.element.querySelectorAll("[data-sidebar-group-item]").forEach((groupItem) => {
-      const hasActiveChild = Boolean(groupItem.querySelector('a[aria-current="page"]'))
-      groupItem.toggleAttribute("data-sidebar-active", hasActiveChild)
-      if (!this.collapsed) this.reconcileCollapsible(groupItem, hasActiveChild)
+      groupItem.toggleAttribute("data-sidebar-active", Boolean(groupItem.querySelector('a[aria-current="page"]')))
     })
   }
 
-  reconcileCollapsible(groupItem, hasActiveChild) {
-    const root = this.collapsibleRoot(groupItem)
-    const controller = root && this.application.getControllerForElementAndIdentifier(
-      root,
-      "panels-ui--collapsible"
-    )
-    if (!controller) return
-
-    const stored = this.groupStates[root.id]
-    this.suppressGroupPersistence = true
-    if (stored === true || (stored === undefined && hasActiveChild)) controller.open()
-    else if (stored === false) controller.close()
-    this.suppressGroupPersistence = false
-  }
-
   persistGroupState(event) {
-    if (this.suppressGroupPersistence) return
-
     const root = event.target.closest('[data-controller~="panels-ui--collapsible"]')
     if (!root?.id || !this.element.contains(root)) return
 
     const states = this.groupStates
     states[root.id] = Boolean(event.detail?.open)
-    window.localStorage.setItem(this.groupStorageKey, JSON.stringify(states))
+    this.writeGroupCookie(states)
   }
 
-  collapsibleRoot(groupItem) {
-    if (this.surfaceValue === "desktop") {
-      return groupItem.querySelector(
-        '[data-sidebar-presentation="expanded"] [data-controller~="panels-ui--collapsible"]'
-      )
-    }
-    return groupItem.querySelector('[data-controller~="panels-ui--collapsible"]')
-  }
-
-  get groupStorageKey() {
-    return `wastays:${this.keyValue}-sidebar-${this.surfaceValue}-groups`
-  }
-
+  // Flat `{ collapsibleId => bool }` map, shared across every sidebar surface and
+  // portal in one cookie. Ids are fully qualified, so entries never collide.
   get groupStates() {
     try {
-      return JSON.parse(window.localStorage.getItem(this.groupStorageKey) || "{}")
+      return JSON.parse(this.readGroupCookie() || "{}")
     } catch (_) {
       return {}
     }
+  }
+
+  readGroupCookie() {
+    const row = document.cookie
+      .split("; ")
+      .find((entry) => entry.startsWith(`${GROUP_STATE_COOKIE}=`))
+    return row ? decodeURIComponent(row.slice(GROUP_STATE_COOKIE.length + 1)) : null
+  }
+
+  writeGroupCookie(states) {
+    const value = encodeURIComponent(JSON.stringify(states))
+    document.cookie = `${GROUP_STATE_COOKIE}=${value}; path=/; max-age=31536000; samesite=lax`
   }
 
   persistScroll() {

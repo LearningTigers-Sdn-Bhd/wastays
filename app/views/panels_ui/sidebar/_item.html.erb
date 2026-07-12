@@ -47,7 +47,7 @@
       <% if item.children? %>
         <%= render PanelsUI::Collapsible.new(
           id: "#{item_id}-collapsible",
-          open: item.active?,
+          open: component.group_open?(surface: surface, section_index: section_index, item_index: item_index, default: item.active?),
           class: "panel-sidebar__group",
           trigger_class: "panel-sidebar__link panel-sidebar__group-trigger",
           content_class: "panel-sidebar__group-content",

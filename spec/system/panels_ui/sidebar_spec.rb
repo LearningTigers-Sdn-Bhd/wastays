@@ -26,6 +26,30 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
     end
   end
 
+  it "cancels an exact same-URL Turbo visit without blocking another destination" do
+    result = page.evaluate_script(<<~JS)
+      (() => {
+        const sameUrlVisit = new CustomEvent("turbo:before-visit", {
+          bubbles: true,
+          cancelable: true,
+          detail: { url: window.location.href }
+        })
+        const differentUrlVisit = new CustomEvent("turbo:before-visit", {
+          bubbles: true,
+          cancelable: true,
+          detail: { url: `${window.location.origin}/system-design?section=sidebar` }
+        })
+
+        document.dispatchEvent(sameUrlVisit)
+        document.dispatchEvent(differentUrlVisit)
+
+        return [sameUrlVisit.defaultPrevented, differentUrlVisit.defaultPrevented]
+      })()
+    JS
+
+    expect(result).to eq([ true, false ])
+  end
+
   it "collapses and expands the desktop sidebar, hiding labels while collapsed" do
     expect(sidebar["data-collapsed"]).to eq("false")
 
@@ -103,10 +127,24 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
     trigger.click
     expect(trigger["aria-expanded"]).to eq("true")
     expect(page).to have_css("#{content}:not([hidden])[data-state='open']")
+    expect(computed_style(content, "animationName")).to eq("panel-collapsible-down")
 
     trigger.click
     expect(trigger["aria-expanded"]).to eq("false")
     expect(page).to have_css("#{content}[hidden]", visible: :all, wait: 1)
+  end
+
+  it "does not animate server-rendered group state during initial layout" do
+    content = "#sd-nav-sidebar-desktop-section-1-item-2-collapsible-content"
+
+    page.execute_script(<<~JS)
+      const content = document.querySelector(#{content.to_json})
+      content.hidden = false
+      content.dataset.state = "open"
+      content.removeAttribute("data-collapsible-animate")
+    JS
+
+    expect(computed_style(content, "animationName")).to eq("none")
   end
 
   it "preserves a manually closed group across navigation" do
