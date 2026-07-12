@@ -1,0 +1,12 @@
+@layer components {
+  /* Shared role-portal content viewport. Width is intentionally uncapped for PMS
+     dashboards, tables, and operational workspaces. Pages own their internal layout,
+     while this wrapper owns the screen-edge padding and mobile-nav clearance. */
+  .panel-page {
+    @apply w-full p-5 pb-36 sm:p-6 lg:pb-20;
+  }
+
+  .panel-page--workspace {
+    @apply flex min-h-0 flex-1 flex-col p-0;
+  }
+}

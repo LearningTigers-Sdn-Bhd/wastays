@@ -1,14 +1,14 @@
 <%# locals: (room:, room_type:, can_manage_bookings:, current_hotel:, visible_start_date:, visible_end_exclusive:, hotel_today:) %>
 
-<div class="flex flex-col rounded-md border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden" data-room-number="<%= room[:room_number] %>">
+<div class="flex flex-col rounded-md border border-border bg-card shadow-sm hover:shadow-md transition-shadow overflow-hidden" data-room-number="<%= room[:room_number] %>">
   <div class="h-1.5 w-full <%= room_card_top_bar_class(room) %>"></div>
   <div class="p-2 flex-1 flex flex-col justify-between">
     <!-- Room Header -->
-    <div class="flex items-center justify-between border-b border-slate-100 pb-1">
+    <div class="flex items-center justify-between border-b border-border pb-1">
       <div>
-        <h3 class="text-xs font-black text-slate-950 leading-none"><%= room[:room_number] %></h3>
+        <h3 class="text-xs font-black text-foreground leading-none"><%= room[:room_number] %></h3>
       </div>
-      
+
       <div class="flex items-center gap-1.5">
         <!-- Booking Status Icon (if any) -->
         <% bookings = room_card_bookings(room) %>
@@ -18,7 +18,7 @@
             <div data-floating-target="reference" class="flex items-center shrink-0 <%= booking_icon_class(booking_status) %> cursor-help">
               <%= cached_icon booking_status_icon(booking_status), stroke_width: 2.5, class: "size-3.5" %>
             </div>
-            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded shadow-xl pointer-events-none text-white text-[10px] font-bold uppercase tracking-wider">
+            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-primary rounded shadow-xl pointer-events-none text-primary-foreground text-[10px] font-bold uppercase tracking-wider">
               <%= booking_status.to_s.humanize %>
             </div>
           </div>
@@ -39,8 +39,8 @@
                    icon_name: "paw-print",
                    allowed_label: room_pets_label(room_type),
                    disallowed_label: room_pets_label(room_type),
-                   extra_class: "#{room_card_pets_badge_color_class(room_type)} cursor-help",
-                   tooltip_class: "px-2 py-1 text-[10px] font-bold uppercase tracking-wider" %>
+                    extra_class: "#{room_card_pets_badge_color_class(room_type)} cursor-help",
+                    tooltip_class: "px-2 py-1 text-[10px] font-bold uppercase tracking-wider" %>
       </div>
     </div>
 
@@ -65,7 +65,7 @@
     <div class="mt-1.5 flex-1 flex flex-col justify-between">
       <div class="space-y-1.5">
         <% if room_card_bookings(room).blank? %>
-          <div class="flex flex-col items-center justify-center py-2 px-1.5 rounded-lg border border-dashed border-slate-200 text-center gap-1">
+          <div class="flex flex-col items-center justify-center py-2 px-1.5 rounded-lg border border-dashed border-border text-center gap-1">
             <% if can_manage_bookings %>
               <%= render "hotel_portal/bookings/board/partials/room_card_quick_actions",
                          room_type: room_type,
@@ -95,14 +95,14 @@
                   data-booking-actions-payment-status-value="<%= block[:payment_status] %>"
                   data-booking-actions-notes-value="<%= block[:notes] %>"
                   data-action="click->booking-actions#openBookingSheet keydown.enter->booking-actions#openBookingSheet keydown.space->booking-actions#openBookingSheet"
-                  class="block w-full text-left rounded-md border p-2.5 hover:shadow-sm transition <%= booking_block_status_classes(block) %> cursor-pointer focus:outline-none focus:ring-1 focus:ring-slate-900 focus:ring-offset-1"
+                  class="block w-full text-left rounded-md border p-2.5 hover:shadow-sm transition <%= booking_block_status_classes(block) %> cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1"
                 >
                   <%= render "hotel_portal/bookings/board/partials/room_card_booking_content", block: block %>
                 </div>
               <% else %>
                 <%= link_to hotel_booking_control_panel_path(current_hotel, block[:booking], tab: "booking_details"),
                     aria: { label: booking_block_accessibility_label(block) },
-                    class: "block w-full text-left rounded-md border p-2.5 hover:shadow-sm transition #{booking_block_status_classes(block)} focus:outline-none focus:ring-1 focus:ring-slate-900 focus:ring-offset-1",
+                    class: "block w-full text-left rounded-md border p-2.5 hover:shadow-sm transition #{booking_block_status_classes(block)} focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1",
                     data: { turbo_frame: "_top" } do %>
                   <%= render "hotel_portal/bookings/board/partials/room_card_booking_content", block: block %>
                 <% end %>

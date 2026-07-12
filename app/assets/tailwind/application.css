@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./public/theme.css";
 @import "./panel/theme.css";
+@import "./panel/page.css";
 @import "./panel/form.css";
 @import "./panel/field.css";
 @import "./panel/checkbox.css";
@@ -30,6 +31,7 @@
 @import "./panel/breadcrumb.css";
 @import "./panel/tabs.css";
 @import "./panel/collapsible.css";
+@import "./panel/scroll-area.css";
 @import "./panel/sidebar.css";
 
 /* ─── Role tokens (shadcn-style naming) ───
@@ -73,6 +75,14 @@
   --color-border: var(--border);
   --color-border-interactive: var(--border-interactive);
   --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted-foreground: var(--sidebar-muted-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 @theme {

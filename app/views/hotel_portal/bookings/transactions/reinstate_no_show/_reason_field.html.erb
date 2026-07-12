@@ -1,8 +1,8 @@
 <div>
-  <%= label_tag :retroactive_reason, "Reason for Reinstatement", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
+  <%= label_tag :retroactive_reason, "Reason for Reinstatement", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground" %>
   <%= text_area_tag :retroactive_reason,
     params[:retroactive_reason].presence || "Guest arrived late after night audit.",
     required: true,
     rows: 5,
-    class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+    class: "w-full rounded-xl border border-border px-4 py-3" %>
 </div>

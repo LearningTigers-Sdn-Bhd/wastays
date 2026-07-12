@@ -1,5 +1,5 @@
 <%= turbo_frame_tag "offcanvas_drawer" do %>
-  <div class="flex h-full flex-col bg-white">
+  <div class="flex h-full flex-col bg-card">
     <%= render "hotel_portal/bookings/board/partials/content_header",
       title: "Reinstate No-show",
       subtitle: @booking.guest_name,
@@ -59,7 +59,7 @@
 
       <%= render "hotel_portal/bookings/board/partials/content_footer",
         show_full_page_link: false,
-        submit_button: f.submit("Reinstate & Check In", class: "rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white") %>
+        submit_button: f.submit("Reinstate & Check In", class: "rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-primary-foreground") %>
     <% end %>
   </div>
 <% end %>

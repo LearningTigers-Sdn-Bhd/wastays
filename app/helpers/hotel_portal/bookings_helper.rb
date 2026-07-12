@@ -27,6 +27,6 @@ module HotelPortal::BookingsHelper
     amount = transaction.amount.to_d
     balance_effect = transaction.payment? ? -amount : amount
 
-    balance_effect.negative? ? "text-emerald-600" : "text-slate-900"
+    balance_effect.negative? ? "text-emerald-600" : "text-foreground"
   end
 end

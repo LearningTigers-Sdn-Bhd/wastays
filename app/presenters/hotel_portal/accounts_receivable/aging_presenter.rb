@@ -29,7 +29,7 @@ module HotelPortal
             amounts: amounts_for(&:total),
             description: "All open AR balances",
             icon: "wallet-cards",
-            class_name: "bg-slate-100 text-slate-700"
+            class_name: "bg-muted text-foreground"
           )
         ]
       end
@@ -110,12 +110,12 @@ module HotelPortal
         end
 
         def credit_status_class
-          return "border-slate-200 bg-slate-50 text-slate-600" unless row.credit_comparable?
+          return "border-border bg-muted text-muted-foreground" unless row.credit_comparable?
 
           case row.credit_exposure.warning_state
           when "near_limit" then "border-amber-200 bg-amber-50 text-amber-800"
           when "over_limit" then "border-red-200 bg-red-50 text-red-700"
-          when "no_limit" then "border-slate-200 bg-slate-100 text-slate-700"
+          when "no_limit" then "border-border bg-muted text-foreground"
           else "border-emerald-200 bg-emerald-50 text-emerald-700"
           end
         end

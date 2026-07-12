@@ -8,11 +8,13 @@
       permanent: true
     ) do |sidebar| %>
   <% sidebar.with_header do %>
-    <div class="flex items-center gap-x-2.5 px-4 py-3" title="<%= current_user.account.name %>" aria-label="Corporate account: <%= current_user.account.name %>">
-      <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand-primary/10 text-brand-primary shadow-xs ring-1 ring-brand-primary/20">
-        <%= cached_icon "building-2", class: "size-4 shrink-0" %>
-      </span>
-      <span class="panel-sidebar__label truncate text-sm font-semibold text-neutral-text-primary"><%= current_user.account.name.truncate(24) %></span>
-    </div>
+    <%= render PanelsUI::Tooltip.new(text: current_user.account.name, placement: :top, root_class: "w-full") do %>
+      <div class="flex items-center gap-x-2.5 px-4 py-3" aria-label="Corporate account: <%= current_user.account.name %>">
+        <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand-primary/10 text-brand-primary shadow-xs ring-1 ring-brand-primary/20">
+          <%= cached_icon "building-2", class: "size-4 shrink-0" %>
+        </span>
+        <span class="panel-sidebar__label truncate text-sm font-semibold text-foreground"><%= current_user.account.name.truncate(24) %></span>
+      </div>
+    <% end %>
   <% end %>
 <% end %>

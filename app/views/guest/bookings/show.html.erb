@@ -3,16 +3,16 @@
 <div class="space-y-6">
   <!-- Header -->
   <div class="space-y-1">
-    <h1 class="text-2xl font-semibold text-neutral-text-primary">Booking Details</h1>
-    <p class="text-sm text-neutral-text-secondary font-mono tracking-wider"><%= @booking.confirmation_token.upcase %></p>
+    <h1 class="text-2xl font-semibold text-foreground">Booking Details</h1>
+    <p class="text-sm text-muted-foreground font-mono tracking-wider"><%= @booking.confirmation_token.upcase %></p>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Main Info -->
     <div class="lg:col-span-2 space-y-6">
-      <div class="bg-white rounded-2xl border border-layer-line shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-layer-line flex items-center justify-between">
-          <h2 class="font-semibold text-neutral-text-primary">Reservation Information</h2>
+      <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-border flex items-center justify-between">
+          <h2 class="font-semibold text-foreground">Reservation Information</h2>
           <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider <%= guest_booking_badge_class(@booking) %>">
             <%= guest_booking_status(@booking).humanize %>
           </span>
@@ -22,19 +22,19 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div class="space-y-6">
               <div>
-                <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-text-secondary mb-1">Hotel</p>
-                <p class="text-base font-semibold text-neutral-text-primary"><%= @booking.hotel.name %></p>
-                <p class="text-sm text-neutral-text-secondary"><%= @booking.hotel.city %>, <%= @booking.hotel.country %></p>
+                <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Hotel</p>
+                <p class="text-base font-semibold text-foreground"><%= @booking.hotel.name %></p>
+                <p class="text-sm text-muted-foreground"><%= @booking.hotel.city %>, <%= @booking.hotel.country %></p>
               </div>
 
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-text-secondary mb-1">Check-in</p>
-                  <p class="text-sm font-semibold text-neutral-text-primary"><%= @booking.check_in.strftime("%d %b %Y") %></p>
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Check-in</p>
+                  <p class="text-sm font-semibold text-foreground"><%= @booking.check_in.strftime("%d %b %Y") %></p>
                 </div>
                 <div>
-                  <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-text-secondary mb-1">Check-out</p>
-                  <p class="text-sm font-semibold text-neutral-text-primary"><%= @booking.check_out.strftime("%d %b %Y") %></p>
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Check-out</p>
+                  <p class="text-sm font-semibold text-foreground"><%= @booking.check_out.strftime("%d %b %Y") %></p>
                 </div>
               </div>
             </div>
@@ -42,22 +42,22 @@
             <div class="space-y-6">
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-text-secondary mb-1">Guests</p>
-                  <p class="text-sm font-semibold text-neutral-text-primary">
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Guests</p>
+                  <p class="text-sm font-semibold text-foreground">
                     <%= @booking.adults %> adult<%= @booking.adults != 1 ? "s" : "" %>
                     <% if @booking.children > 0 %>, <%= @booking.children %> child<%= @booking.children != 1 ? "ren" : "" %><% end %>
                   </p>
                 </div>
 
                 <div>
-                  <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-text-secondary mb-1">Room Category</p>
-                  <p class="text-sm font-semibold text-neutral-text-primary"><%= @booking.room_type_summary %></p>
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Room Category</p>
+                  <p class="text-sm font-semibold text-foreground"><%= @booking.room_type_summary %></p>
                 </div>
               </div>
 
               <div>
-                <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-text-secondary mb-1">Stay Duration</p>
-                <p class="text-sm font-semibold text-neutral-text-primary">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Stay Duration</p>
+                <p class="text-sm font-semibold text-foreground">
                   <%= @booking.duration_in_nights %> Nights
                 </p>
               </div>
@@ -71,29 +71,29 @@
     <div class="space-y-6">
       <% if @booking.status == "checked_in" %>
         <!-- In-Stay Preferences -->
-        <div class="bg-white rounded-2xl border border-layer-line shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-layer-line">
-            <h2 class="font-semibold text-neutral-text-primary">In-Stay Preferences</h2>
+        <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-border">
+            <h2 class="font-semibold text-foreground">In-Stay Preferences</h2>
           </div>
           <div class="p-6 space-y-4">
             <% @booking.booking_rooms.where.not(room_number: [nil, ""]).each do |br| %>
               <% room_status = @room_statuses[[br.room_type_id, br.room_number]] %>
               <% is_dnd = room_status&.active_dnd? %>
-              
-              <div class="flex flex-col gap-y-3 p-4 rounded-xl border border-layer-line <%= is_dnd ? 'bg-orange-50/50 border-orange-200' : 'bg-neutral-50/30' %>">
+
+              <div class="flex flex-col gap-y-3 p-4 rounded-xl border border-border <%= is_dnd ? 'bg-orange-50/50 border-orange-200' : 'bg-muted/30' %>">
                 <div class="flex items-center gap-3">
-                  <div class="p-2 rounded-lg <%= is_dnd ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500' %>">
+                  <div class="p-2 rounded-lg <%= is_dnd ? 'bg-orange-100 text-orange-600' : 'bg-muted text-muted-foreground' %>">
                     <%= cached_icon "bell", class: "size-5", fill: (is_dnd ? "currentColor" : "none") %>
                   </div>
                   <div>
-                    <p class="text-sm font-semibold text-neutral-text-primary">Room <%= br.room_number %></p>
-                    <p class="text-xs text-neutral-text-secondary">
+                    <p class="text-sm font-semibold text-foreground">Room <%= br.room_number %></p>
+                    <p class="text-xs text-muted-foreground">
                       <%= is_dnd ? "Do Not Disturb is active." : "Toggle Do Not Disturb for privacy." %>
                     </p>
                   </div>
                 </div>
-                
-                <%= button_to toggle_dnd_guest_booking_path(@booking), method: :patch, class: "w-full inline-flex items-center justify-center gap-x-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold shadow-sm #{is_dnd ? 'bg-orange-600 border-orange-600 text-white hover:bg-orange-700' : 'bg-white border-layer-line text-neutral-text-primary hover:bg-layer-alt'}" do %>
+
+                <%= button_to toggle_dnd_guest_booking_path(@booking), method: :patch, class: "w-full inline-flex items-center justify-center gap-x-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold shadow-sm #{is_dnd ? 'bg-orange-600 border-orange-600 text-primary-foreground hover:bg-orange-700' : 'bg-card border-border text-foreground hover:bg-background'}" do %>
                   <%= is_dnd ? "Remove Do Not Disturb" : "Activate Do Not Disturb" %>
                 <% end %>
               </div>
@@ -102,20 +102,20 @@
         </div>
       <% end %>
 
-      <div class="bg-white rounded-2xl border border-layer-line shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-layer-line">
-          <h2 class="font-semibold text-neutral-text-primary">Payment Summary</h2>
+      <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-border">
+          <h2 class="font-semibold text-foreground">Payment Summary</h2>
         </div>
         <div class="p-6 space-y-4">
           <div class="flex items-center justify-between">
-            <p class="text-sm text-neutral-text-secondary">Payment Status</p>
-            <span class="text-sm font-bold text-neutral-text-primary capitalize"><%= @booking.payment_status %></span>
+            <p class="text-sm text-muted-foreground">Payment Status</p>
+            <span class="text-sm font-bold text-foreground capitalize"><%= @booking.payment_status %></span>
           </div>
-          <div class="pt-4 border-t border-layer-line flex items-center justify-between">
-            <p class="text-sm font-bold text-neutral-text-primary">Total Amount</p>
+          <div class="pt-4 border-t border-border flex items-center justify-between">
+            <p class="text-sm font-bold text-foreground">Total Amount</p>
             <p class="text-lg font-bold text-brand-primary"><%= number_to_currency(@booking.total_amount, unit: @booking.currency + " ") %></p>
           </div>
-          <div class="pt-4 border-t border-layer-line">
+          <div class="pt-4 border-t border-border">
             <% if @booking.status == "completed" %>
               <%= link_to invoice_guest_booking_path(@booking), class: "w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-[#0a2e29] hover:bg-[#0d3d35] text-[#d9c5a0] transition-colors", data: { turbo: false } do %>
                 <%= cached_icon "download", class: "w-4 h-4" %>
@@ -132,12 +132,12 @@
       </div>
 
       <% if @booking.eligible_for_refund?(@refund_policy) %>
-        <div class="bg-white rounded-2xl border border-layer-line shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-layer-line">
-            <h2 class="font-semibold text-neutral-text-primary">Need a Refund?</h2>
+        <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-border">
+            <h2 class="font-semibold text-foreground">Need a Refund?</h2>
           </div>
           <div class="p-6">
-            <p class="text-sm text-neutral-text-secondary mb-4">If you need to cancel this booking and request a refund, you can submit a refund request below. Please note that submitting will immediately cancel your booking.</p>
+            <p class="text-sm text-muted-foreground mb-4">If you need to cancel this booking and request a refund, you can submit a refund request below. Please note that submitting will immediately cancel your booking.</p>
             <%= link_to new_guest_booking_refund_request_path(@booking, return_to: "details"),
                 class: "inline-flex items-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-red-200 text-red-600 hover:bg-red-50" do %>
               <%= cached_icon "credit-card", class: "size-4" %>
@@ -146,46 +146,46 @@
           </div>
         </div>
       <% elsif @booking.status == "confirmed" && @booking.refund_request.nil? %>
-        <div class="bg-white rounded-2xl border border-layer-line shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-layer-line">
-            <h2 class="font-semibold text-neutral-text-primary">Refund Availability</h2>
+        <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-border">
+            <h2 class="font-semibold text-foreground">Refund Availability</h2>
           </div>
           <div class="p-6">
             <% if @refund_policy.blank? %>
-              <p class="text-sm text-neutral-text-secondary">We're preparing refund requests for this booking right now. If you need help urgently, please contact the hotel and they'll assist you.</p>
+              <p class="text-sm text-muted-foreground">We're preparing refund requests for this booking right now. If you need help urgently, please contact the hotel and they'll assist you.</p>
             <% else %>
-              <p class="text-sm text-neutral-text-secondary">Thanks for checking in. This booking is currently outside the online refund request window (minimum <%= @refund_policy.min_days_before_checkin %> days before check-in).</p>
-              <p class="text-sm text-neutral-text-secondary mt-2">If your plans changed unexpectedly, please contact the hotel directly. They can still guide you on available options.</p>
+              <p class="text-sm text-muted-foreground">Thanks for checking in. This booking is currently outside the online refund request window (minimum <%= @refund_policy.min_days_before_checkin %> days before check-in).</p>
+              <p class="text-sm text-muted-foreground mt-2">If your plans changed unexpectedly, please contact the hotel directly. They can still guide you on available options.</p>
             <% end %>
           </div>
         </div>
       <% elsif @booking.refund_request.present? %>
-        <div class="bg-white rounded-2xl border border-layer-line shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-layer-line">
-            <h2 class="font-semibold text-neutral-text-primary">Refund Request</h2>
+        <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-border">
+            <h2 class="font-semibold text-foreground">Refund Request</h2>
           </div>
           <div class="p-6 space-y-3">
             <div class="flex items-center justify-between">
-              <p class="text-sm text-neutral-text-secondary">Status</p>
+              <p class="text-sm text-muted-foreground">Status</p>
               <% rr = @booking.refund_request %>
               <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider <%= refund_status_class(rr.status) %>">
                 <%= rr.status.humanize %>
               </span>
             </div>
             <div class="flex items-center justify-between">
-              <p class="text-sm text-neutral-text-secondary">Refund Amount</p>
-              <p class="text-sm font-bold text-neutral-text-primary"><%= number_to_currency(@booking.refund_request.refund_amount, unit: @booking.currency + " ") %></p>
+              <p class="text-sm text-muted-foreground">Refund Amount</p>
+              <p class="text-sm font-bold text-foreground"><%= number_to_currency(@booking.refund_request.refund_amount, unit: @booking.currency + " ") %></p>
             </div>
             <% if @booking.refund_request.hotel_note.present? %>
-              <div class="pt-3 border-t border-layer-line">
-                <p class="text-xs font-bold text-neutral-text-secondary uppercase tracking-wider mb-1">Hotel Note</p>
-                <p class="text-sm text-neutral-text-primary"><%= @booking.refund_request.hotel_note %></p>
+              <div class="pt-3 border-t border-border">
+                <p class="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Hotel Note</p>
+                <p class="text-sm text-foreground"><%= @booking.refund_request.hotel_note %></p>
               </div>
             <% end %>
             <% if @booking.refund_request.rejected? %>
-              <div class="pt-3 border-t border-layer-line">
+              <div class="pt-3 border-t border-border">
                 <%= link_to new_guest_booking_refund_request_path(@booking, return_to: "details"),
-                    class: "inline-flex items-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-layer-line text-neutral-text-primary hover:bg-surface-hover" do %>
+                    class: "inline-flex items-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-muted" do %>
                   <%= cached_icon "credit-card", class: "size-4" %>
                   Resubmit Refund Request
                 <% end %>

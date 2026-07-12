@@ -1,6 +1,6 @@
 <%= form_with model: [:admin, hotel], local: true, class: "space-y-0" do |f| %>
   <% cancel_path = hotel.persisted? ? admin_hotel_path(hotel) : admin_hotels_path %>
-  <% input_classes = "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+  <% input_classes = "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
 
   <div class="px-6 py-6 sm:px-8">
     <% if hotel.errors.any? %>
@@ -17,18 +17,18 @@
     <div class="space-y-8">
       <section class="space-y-5">
         <div>
-          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Property Profile</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Capture the hotel identity, location, and basic commercial profile.</p>
+          <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Property Profile</h2>
+          <p class="mt-1 text-sm font-medium text-muted-foreground">Capture the hotel identity, location, and basic commercial profile.</p>
         </div>
 
         <div class="grid gap-5 sm:grid-cols-2">
           <div>
-            <label for="hotel_name" class="mb-2 block text-sm font-medium text-slate-700">Hotel Name</label>
+            <label for="hotel_name" class="mb-2 block text-sm font-medium text-foreground">Hotel Name</label>
             <%= f.text_field :name, id: "hotel_name", class: input_classes %>
           </div>
 
           <div>
-            <label for="star_rating" class="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+            <label for="star_rating" class="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
               <svg class="size-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321 1.012l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.386a.562.562 0 0 1-.84.61L12.5 17.77a.563.563 0 0 0-.5 0l-4.517 2.794a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557L3.542 10.41a.562.562 0 0 1 .321-1.012l5.518-.442a.563.563 0 0 0 .475-.345z"/></svg>
               Star Rating
             </label>
@@ -36,35 +36,35 @@
           </div>
 
           <div>
-            <label for="hotel_prefix" class="mb-2 block text-sm font-medium text-slate-700">Hotel Prefix</label>
+            <label for="hotel_prefix" class="mb-2 block text-sm font-medium text-foreground">Hotel Prefix</label>
             <%= f.text_field :hotel_prefix, placeholder: "e.g. SPH", maxlength: 6, minlength: 3, class: input_classes %>
-            <p class="mt-1 text-xs text-slate-400">3-6 uppercase letters/numbers. Prefixes receipt, folio, invoice, reservation, and guest registration numbers (e.g. SPH-10000001). Must be unique.</p>
+            <p class="mt-1 text-xs text-muted-foreground">3-6 uppercase letters/numbers. Prefixes receipt, folio, invoice, reservation, and guest registration numbers (e.g. SPH-10000001). Must be unique.</p>
           </div>
 
           <% if hotel.persisted? %>
             <div>
-              <label for="hotel_plan_id" class="mb-2 block text-sm font-medium text-slate-700">Subscription Plan</label>
+              <label for="hotel_plan_id" class="mb-2 block text-sm font-medium text-foreground">Subscription Plan</label>
               <%= select_tag "hotel[plan_id]",
                     options_from_collection_for_select(Plan.active.ordered, :id, :name, hotel.plan_id),
                     include_blank: "— No plan —",
                     id: "hotel_plan_id",
                     class: input_classes %>
-              <p class="mt-1 text-xs text-slate-400">Controls which features this hotel can access. Manage feature gating in Plan Access.</p>
+              <p class="mt-1 text-xs text-muted-foreground">Controls which features this hotel can access. Manage feature gating in Plan Access.</p>
             </div>
           <% end %>
 
           <div class="sm:col-span-2">
-            <label for="address" class="mb-2 block text-sm font-medium text-slate-700">Address</label>
+            <label for="address" class="mb-2 block text-sm font-medium text-foreground">Address</label>
             <%= f.text_area :address, rows: 3, class: "#{input_classes} min-h-[112px]" %>
           </div>
 
           <div>
-            <label for="city" class="mb-2 block text-sm font-medium text-slate-700">City</label>
+            <label for="city" class="mb-2 block text-sm font-medium text-foreground">City</label>
             <%= f.text_field :city, class: input_classes %>
           </div>
 
           <div>
-            <label for="country" class="mb-2 block text-sm font-medium text-slate-700">Country</label>
+            <label for="country" class="mb-2 block text-sm font-medium text-foreground">Country</label>
             <%= f.text_field :country, class: input_classes %>
           </div>
 
@@ -73,46 +73,46 @@
                  data-multi-select-dropdown-selected-value="<%= (hotel.amenities || []).to_json %>"
                  data-multi-select-dropdown-all-value="<%= Hotel::HOTEL_AMENITIES.to_json %>"
                  data-action="click@window->multi-select-dropdown#hideDropdown">
-              <label class="mb-2 block text-sm font-medium text-slate-700">Property Amenities</label>
+              <label class="mb-2 block text-sm font-medium text-foreground">Property Amenities</label>
 
               <div class="relative">
                 <input type="hidden" name="hotel[amenities][]" value="">
-                <div class="min-h-[52px] w-full rounded-xl border border-slate-200 bg-white p-2 flex flex-wrap items-center gap-2 focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-300 transition-all cursor-text"
+                <div class="min-h-[52px] w-full rounded-xl border border-border bg-card p-2 flex flex-wrap items-center gap-2 focus-within:border-border-interactive focus-within:ring-2 focus-within:ring-ring transition-all cursor-text"
                      data-action="click->multi-select-dropdown#focusInput">
                   <div class="flex flex-wrap gap-2" data-multi-select-dropdown-target="pillsContainer">
                     <!-- Pills will be rendered here by Stimulus -->
                   </div>
-                  
-                  <input type="text" 
-                         class="flex-grow min-w-[150px] border-none bg-transparent focus:ring-0 focus:outline-none text-sm text-slate-900 placeholder:text-slate-400" 
+
+                  <input type="text"
+                         class="flex-grow min-w-[150px] border-none bg-transparent focus:ring-0 focus:outline-none text-sm text-foreground placeholder:text-muted-foreground"
                          data-multi-select-dropdown-target="input"
                          data-action="input->multi-select-dropdown#filterOptions focus->multi-select-dropdown#openDropdown click->multi-select-dropdown#stopProp keydown->multi-select-dropdown#navigate">
 
                   <div class="ml-auto pr-2">
-                    <svg class="w-4 h-4 text-slate-400 transition-transform duration-200" data-multi-select-dropdown-target="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    <svg class="w-4 h-4 text-muted-foreground transition-transform duration-200" data-multi-select-dropdown-target="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                   </div>
                 </div>
 
                 <!-- Dropdown Options with Categories -->
-                <div class="absolute z-50 mt-2 w-full max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl hidden custom-scrollbar" 
+                <div class="absolute z-50 mt-2 w-full max-h-80 overflow-y-auto rounded-xl border border-border bg-card shadow-xl hidden custom-scrollbar"
                      data-multi-select-dropdown-target="dropdown">
                   <% Hotel::CATEGORIZED_HOTEL_AMENITIES.each do |cat| %>
-                    <div data-category-container data-category-name="<%= cat[:category] %>" class="border-b border-slate-100 last:border-0">
-                      <button type="button" 
-                              class="w-full flex items-center justify-between px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-500 bg-slate-50/50 hover:bg-slate-50 transition-colors"
+                    <div data-category-container data-category-name="<%= cat[:category] %>" class="border-b border-border last:border-0">
+                      <button type="button"
+                              class="w-full flex items-center justify-between px-4 py-3 text-xs font-black uppercase tracking-widest text-muted-foreground bg-muted/50 hover:bg-muted transition-colors"
                               data-action="click->multi-select-dropdown#toggleCategory">
                         <span><%= cat[:category] %></span>
-                        <svg class="size-3.5 text-slate-400 transition-transform duration-200" data-category-chevron xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        <svg class="size-3.5 text-muted-foreground transition-transform duration-200" data-category-chevron xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                       </button>
-                      
-                      <div class="hidden bg-white" data-category-content>
+
+                      <div class="hidden bg-card" data-category-content>
                        <% cat[:items].each do |amenity| %>
-                         <label class="w-full flex items-center px-6 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer"
+                         <label class="w-full flex items-center px-6 py-3 text-sm text-foreground hover:bg-muted transition-colors border-b border-border last:border-0 cursor-pointer"
                                  data-multi-select-dropdown-target="option"
                                  data-name="<%= amenity[:name] %>"
                                  data-id="<%= amenity[:id] %>">
-                            <input type="checkbox" 
-                                   class="rounded border-slate-300 text-slate-900 focus:ring-slate-400 mr-3"
+                            <input type="checkbox"
+                                   class="rounded border-border-interactive text-foreground focus:ring-ring mr-3"
                                    data-id="<%= amenity[:id] %>"
                                    data-action="change->multi-select-dropdown#toggle"
                                    data-multi-select-dropdown-target="checkbox">
@@ -123,17 +123,17 @@
                     </div>
                   <% end %>
                   <div class="p-8 text-center hidden" data-multi-select-dropdown-target="placeholder">
-                    <p class="text-sm text-slate-400 italic">No amenities found matching your search.</p>
+                    <p class="text-sm text-muted-foreground italic">No amenities found matching your search.</p>
                   </div>
                 </div>
               </div>
 
               <!-- Template for Pills -->
               <template data-multi-select-dropdown-target="template">
-                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold">
                   <span data-name></span>
-                  <button type="button" 
-                          class="hover:text-slate-300 transition-colors"
+                  <button type="button"
+                          class="hover:text-muted-foreground transition-colors"
                           data-remove-id
                           data-action="click->multi-select-dropdown#remove">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -145,14 +145,14 @@
           </div>
 
           <div>
-            <label for="preferred_channel_manager" class="mb-2 block text-sm font-medium text-slate-700">Preferred Channel Manager</label>
+            <label for="preferred_channel_manager" class="mb-2 block text-sm font-medium text-foreground">Preferred Channel Manager</label>
             <%= f.select :preferred_channel_manager, [["None", ""], ["Channel Manager", "channex"]], {}, class: input_classes %>
           </div>
 
           <div>
-            <label for="hotel_default_currency" class="mb-2 block text-sm font-medium text-slate-700">Default Currency</label>
+            <label for="hotel_default_currency" class="mb-2 block text-sm font-medium text-foreground">Default Currency</label>
             <%= f.select :default_currency, CurrencyCatalog.options, {}, class: input_classes %>
-            <p class="mt-1 text-xs text-slate-400">The primary accounting and sell currency for this property.</p>
+            <p class="mt-1 text-xs text-muted-foreground">The primary accounting and sell currency for this property.</p>
           </div>
 
           <div>
@@ -171,12 +171,12 @@
             <div class="sm:col-span-2">
               <div class="grid gap-5 sm:grid-cols-2">
                 <div>
-                  <label for="hotel_salesperson_name" class="mb-2 block text-sm font-medium text-slate-700">Salesperson Name</label>
+                  <label for="hotel_salesperson_name" class="mb-2 block text-sm font-medium text-foreground">Salesperson Name</label>
                   <%= text_field_tag "hotel[salesperson_name]", hotel.salesperson&.name, id: "hotel_salesperson_name", class: input_classes, placeholder: "Enter salesperson name" %>
                 </div>
 
                 <div>
-                  <label for="hotel_salesperson_email" class="mb-2 block text-sm font-medium text-slate-700">Salesperson Email</label>
+                  <label for="hotel_salesperson_email" class="mb-2 block text-sm font-medium text-foreground">Salesperson Email</label>
                   <%= email_field_tag "hotel[salesperson_email]", hotel.salesperson&.email, id: "hotel_salesperson_email", class: input_classes, placeholder: "email@example.com" %>
                 </div>
               </div>
@@ -186,32 +186,32 @@
       </section>
 
       <% unless hotel.persisted? %>
-        <section class="space-y-5 border-t border-slate-200 pt-8">
+        <section class="space-y-5 border-t border-border pt-8">
           <div>
-            <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Account Credentials</h2>
-            <p class="mt-1 text-sm font-medium text-slate-600">A dedicated account will be created for this hotel.</p>
+            <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Account Credentials</h2>
+            <p class="mt-1 text-sm font-medium text-muted-foreground">A dedicated account will be created for this hotel.</p>
           </div>
 
           <div class="grid gap-5 sm:grid-cols-2">
             <div class="sm:col-span-2">
-              <label for="account_name" class="mb-2 block text-sm font-medium text-slate-700">Company / Group Name</label>
+              <label for="account_name" class="mb-2 block text-sm font-medium text-foreground">Company / Group Name</label>
               <%= text_field_tag "account[name]", params.dig(:account, :name), id: "account_name", required: true, class: input_classes %>
             </div>
 
             <div>
-              <label for="user_name" class="mb-2 block text-sm font-medium text-slate-700">Owner Full Name</label>
+              <label for="user_name" class="mb-2 block text-sm font-medium text-foreground">Owner Full Name</label>
               <%= text_field_tag "user[name]", params.dig(:user, :name), id: "user_name", required: true, class: input_classes %>
             </div>
 
             <div>
-              <label for="user_email" class="mb-2 block text-sm font-medium text-slate-700">Account Email</label>
+              <label for="user_email" class="mb-2 block text-sm font-medium text-foreground">Account Email</label>
               <%= email_field_tag "user[email]", params.dig(:user, :email), id: "user_email", required: true, class: input_classes %>
             </div>
 
             <div class="sm:col-span-2">
-              <label for="default_password" class="mb-2 block text-sm font-medium text-slate-700">Default Password</label>
-              <%= password_field_tag :default_password, HotelOps::CreateHotel::DEFAULT_PASSWORD, id: "default_password", readonly: true, class: "w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-500" %>
-              <p class="mt-2 text-sm text-slate-500">This password is assigned automatically when the hotel account is created.</p>
+              <label for="default_password" class="mb-2 block text-sm font-medium text-foreground">Default Password</label>
+              <%= password_field_tag :default_password, HotelOps::CreateHotel::DEFAULT_PASSWORD, id: "default_password", readonly: true, class: "w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-medium text-muted-foreground" %>
+              <p class="mt-2 text-sm text-muted-foreground">This password is assigned automatically when the hotel account is created.</p>
             </div>
           </div>
         </section>
@@ -219,8 +219,8 @@
     </div>
   </div>
 
-  <div class="flex flex-col gap-3 border-t border-slate-200 bg-slate-50/70 px-6 py-5 sm:flex-row sm:items-center sm:justify-end sm:px-8">
-    <%= link_to "Cancel", cancel_path, class: "inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100" %>
-    <%= f.submit hotel.persisted? ? "Update Hotel" : "Create Hotel", class: "inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
+  <div class="flex flex-col gap-3 border-t border-border bg-muted/70 px-6 py-5 sm:flex-row sm:items-center sm:justify-end sm:px-8">
+    <%= link_to "Cancel", cancel_path, class: "inline-flex items-center justify-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" %>
+    <%= f.submit hotel.persisted? ? "Update Hotel" : "Create Hotel", class: "inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
   </div>
 <% end %>

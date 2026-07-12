@@ -19,18 +19,18 @@
 
   <body class="h-full overflow-hidden" data-theme="panel-light" data-controller="<%= yield :body_controllers %>" <%= yield :body_attributes %>>
     <!-- Preline CMS-style layout: flex column (header + body row) -->
-    <div class="flex flex-col h-screen h-dvh min-h-screen min-h-dvh bg-layer-alt">
+    <div class="flex flex-col h-screen h-dvh min-h-screen min-h-dvh bg-background">
 
       <!-- ═══ Top Navbar ═══ -->
-      <header class="sticky top-0 z-[60] w-full bg-layer border-b border-layer-line">
+      <header class="sticky top-0 z-[60] w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border">
         <div class="flex items-center h-14 px-4 gap-x-3">
 
           <!-- Mobile hamburger -->
           <% unless locked_hotel_portal_shell? %>
-            <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" command="show-modal" commandfor="hotel-sidebar-mobile" aria-label="Toggle navigation">
+            <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-muted-foreground hover:bg-muted transition-colors" command="show-modal" commandfor="hotel-sidebar-mobile" aria-label="Toggle navigation">
               <%= cached_icon "menu", class: "size-4" %>
             </button>
-            <button type="button" class="hidden lg:inline-flex shrink-0 justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="panels-ui--sidebar-toggle" data-panels-ui--sidebar-toggle-key-value="hotel" data-action="click->panels-ui--sidebar-toggle#toggleDesktop" aria-label="Collapse sidebar">
+            <button type="button" class="hidden lg:inline-flex shrink-0 justify-center items-center size-8 rounded-lg text-muted-foreground hover:bg-muted transition-colors" data-controller="panels-ui--sidebar-toggle" data-panels-ui--sidebar-toggle-key-value="hotel" data-action="click->panels-ui--sidebar-toggle#toggleDesktop" aria-label="Collapse sidebar">
               <%= cached_icon "panel-left-close", class: "size-4" %>
             </button>
           <% end %>
@@ -60,22 +60,13 @@
             </a>
 
             <!-- Divider -->
-            <div class="w-px h-5 bg-layer-line mx-1 hidden sm:block"></div>
+            <div class="w-px h-5 bg-border mx-1 hidden sm:block"></div>
 
             <!-- Profile Dropdown -->
             <%= render "shared/navigation/hotel_profile_dropdown" %>
             </div>
             </div>
             </header>
-
-      <!-- ═══ Breadcrumb Bar ═══ -->
-      <% if hotel_breadcrumb_parts.present? %>
-        <div class="relative border-b border-layer-line bg-layer py-2 overflow-visible">
-          <div class="px-4 sm:px-6 overflow-x-auto overscroll-x-contain whitespace-nowrap custom-scrollbar">
-            <%= render_hotel_breadcrumbs %>
-          </div>
-        </div>
-      <% end %>
 
       <!-- ═══ Body: Sidebar + Content ═══ -->
       <div class="flex flex-1 overflow-hidden">
@@ -86,18 +77,29 @@
         <% end %>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col overflow-hidden <%= content_for?(:full_height_page) ? '' : 'overflow-y-auto' %> overscroll-contain custom-scrollbar">
-          <div class="flex min-h-0 flex-1 flex-col p-5 pb-36 sm:p-6 <%= content_for?(:full_height_page) ? '' : 'space-y-5' %>">
-            <div class="<%= content_for?(:full_height_page) ? 'flex min-h-0 flex-1 flex-col' : 'grid grid-cols-1' %> <%= (!locked_hotel_portal_shell? && content_for?(:right_sidebar)) ? 'xl:grid-cols-4 gap-6' : '' %>">
-              <div class="<%= content_for?(:full_height_page) ? 'flex min-h-0 flex-1 flex-col' : '' %> <%= (!locked_hotel_portal_shell? && content_for?(:right_sidebar)) ? 'xl:col-span-3' : '' %>">
-                <%= yield %>
+        <main class="flex-1 flex flex-col overflow-hidden">
+          <!-- ═══ Breadcrumb Bar ═══ -->
+          <% if hotel_breadcrumb_parts.present? %>
+            <div class="shrink-0 min-h-14 flex items-center border-b border-sidebar-border bg-sidebar text-sidebar-foreground px-4 sm:px-6">
+              <div class="w-full overflow-x-auto overscroll-x-contain whitespace-nowrap custom-scrollbar">
+                <%= render_hotel_breadcrumbs %>
               </div>
+            </div>
+          <% end %>
 
-              <% if !locked_hotel_portal_shell? && content_for?(:right_sidebar) %>
-                <div class="xl:col-span-1 space-y-6">
-                  <%= yield :right_sidebar %>
+          <div class="flex min-h-0 flex-1 flex-col <%= content_for?(:full_height_page) ? '' : 'overflow-y-auto' %> overscroll-contain custom-scrollbar">
+            <div class="panel-page <%= content_for?(:full_height_page) ? 'panel-page--workspace' : 'space-y-5' %>">
+              <div class="<%= content_for?(:full_height_page) ? 'flex min-h-0 flex-1 flex-col' : 'grid grid-cols-1' %> <%= (!locked_hotel_portal_shell? && content_for?(:right_sidebar)) ? 'xl:grid-cols-4 gap-6' : '' %>">
+                <div class="<%= content_for?(:full_height_page) ? 'flex min-h-0 flex-1 flex-col' : '' %> <%= (!locked_hotel_portal_shell? && content_for?(:right_sidebar)) ? 'xl:col-span-3' : '' %>">
+                  <%= yield %>
                 </div>
-              <% end %>
+
+                <% if !locked_hotel_portal_shell? && content_for?(:right_sidebar) %>
+                  <div class="xl:col-span-1 space-y-6">
+                    <%= yield :right_sidebar %>
+                  </div>
+                <% end %>
+              </div>
             </div>
           </div>
         </main>

@@ -39,34 +39,34 @@
      data-blocker-wizard-hotel-id-value="<%= current_hotel.id %>"
      data-blocker-wizard-steps-value="<%= steps.to_json %>"
      data-blocker-wizard-warning-steps-value="<%= warning_steps.to_json %>"
-     class="max-w-[1600px] mx-auto pb-20 space-y-8 px-4 md:px-0">
+     class="w-full space-y-8">
 
   <!-- WIZARD CONTAINER -->
   <div data-blocker-wizard-target="wizardContainer" class="space-y-8">
-    
+
     <!-- Header -->
     <div class="pt-5">
       <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+          <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Resolve Audit Blockers
           </h1>
-          <p class="text-sm font-medium text-slate-600 mt-1">
+          <p class="text-sm font-medium text-muted-foreground mt-1">
             Business Date: <%= @night_audit.business_date.strftime("%d %b %Y") %>
           </p>
         </div>
         <div class="flex flex-col gap-2 sm:flex-row">
-          <%= link_to "Back to Audit", hotel_night_audit_path(current_hotel, @night_audit), class: "inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
+          <%= link_to "Back to Audit", hotel_night_audit_path(current_hotel, @night_audit), class: "inline-flex items-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" %>
         </div>
       </div>
     </div>
 
     <!-- Progress Strip -->
     <div class="space-y-3">
-      <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-        <div data-blocker-wizard-target="progressBar" class="h-full bg-slate-900 transition-all duration-500 rounded-full" style="width: 0%;"></div>
+      <div class="h-2 w-full bg-muted rounded-full overflow-hidden">
+        <div data-blocker-wizard-target="progressBar" class="h-full bg-primary transition-all duration-500 rounded-full" style="width: 0%;"></div>
       </div>
-      <div class="flex justify-between items-center text-xs font-semibold text-slate-500 uppercase tracking-wider">
+      <div class="flex justify-between items-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
         <span data-blocker-wizard-target="progressText">Loading wizard state...</span>
         <span class="flex items-center gap-1">
           <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -76,8 +76,8 @@
     </div>
 
     <!-- Horizontal Step Indicators (Tab-like structure) -->
-    <div class="border border-slate-200 rounded-2xl bg-white shadow-sm overflow-hidden">
-      <div class="flex flex-wrap divide-x divide-y md:divide-y-0 divide-slate-150">
+    <div class="border border-border rounded-2xl bg-card shadow-sm overflow-hidden">
+      <div class="flex flex-wrap divide-x divide-y md:divide-y-0 divide-border">
         <% steps.each_with_index do |step_key, idx| %>
           <% is_warning = warning_steps.include?(step_key) %>
           <button type="button"
@@ -85,9 +85,9 @@
                   data-step-key="<%= step_key %>"
                   data-index="<%= idx %>"
                   data-action="click->blocker-wizard#goToStep"
-                  class="flex-1 py-3 text-center border-b-2 font-bold text-xs transition-all duration-300 border-slate-200 text-slate-400 hover:bg-slate-50/50">
+                  class="flex-1 py-3 text-center border-b-2 font-bold text-xs transition-all duration-300 border-border text-muted-foreground hover:bg-muted/50">
             <%= step_labels[step_key] %>
-            <span class="step-count-badge ml-1.5 inline-flex items-center justify-center size-5 rounded-full bg-slate-100 text-[10px] font-black text-slate-400">
+            <span class="step-count-badge ml-1.5 inline-flex items-center justify-center size-5 rounded-full bg-muted text-[10px] font-black text-muted-foreground">
               0
             </span>
           </button>
@@ -96,18 +96,18 @@
     </div>
 
     <!-- Wizard Main Content Card -->
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div class="border-b border-border bg-muted/70 px-6 py-5 sm:px-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div class="flex items-center gap-3">
-            <h2 data-blocker-wizard-target="stepTitle" class="text-lg font-bold tracking-tight text-slate-950">
+            <h2 data-blocker-wizard-target="stepTitle" class="text-lg font-bold tracking-tight text-foreground">
               Loading Step Title...
             </h2>
             <span data-blocker-wizard-target="warningBadge" class="hidden inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
               Warning Only
             </span>
           </div>
-          <p data-blocker-wizard-target="stepDescription" class="mt-1 text-sm font-medium text-slate-600">
+          <p data-blocker-wizard-target="stepDescription" class="mt-1 text-sm font-medium text-muted-foreground">
             Please wait while the page synchronizes...
           </p>
         </div>
@@ -124,11 +124,11 @@
       <!-- Table of items -->
       <div data-blocker-wizard-target="stepTableContainer" class="p-6 sm:p-8 space-y-4">
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead data-blocker-wizard-target="stepTableHeader" class="bg-slate-50/50">
+          <table class="min-w-full divide-y divide-border">
+            <thead data-blocker-wizard-target="stepTableHeader" class="bg-muted/50">
               <!-- Dynamically populated headers -->
             </thead>
-            <tbody data-blocker-wizard-target="stepTableBody" class="divide-y divide-slate-100">
+            <tbody data-blocker-wizard-target="stepTableBody" class="divide-y divide-border">
               <!-- Dynamically populated rows -->
             </tbody>
           </table>
@@ -137,7 +137,7 @@
 
       <!-- Success / Countdown Block -->
       <div data-blocker-wizard-target="countdownContainer" class="hidden p-12 text-center space-y-4 bg-emerald-50/20">
-        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">
+        <div class="w-full flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">
           <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
           </svg>
@@ -154,20 +154,20 @@
   </div>
 
   <!-- COMPLETION STATE CARD -->
-  <div data-blocker-wizard-target="completionContainer" class="hidden max-w-2xl mx-auto py-16 px-4 sm:px-6 lg:px-8 text-center space-y-6">
+  <div data-blocker-wizard-target="completionContainer" class="w-full hidden text-center space-y-6">
     <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 border border-emerald-250 shadow-md">
       <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     </div>
     <div class="space-y-3">
-      <h1 class="text-3xl font-extrabold tracking-tight text-slate-950">All Blockers Resolved!</h1>
-      <p class="text-base font-semibold text-slate-600 max-w-lg mx-auto">
+      <h1 class="text-3xl font-extrabold tracking-tight text-foreground">All Blockers Resolved!</h1>
+      <p class="text-base font-semibold text-muted-foreground max-w-lg mx-auto">
         All mandatory blockers have been successfully cleared. The night audit for <%= @night_audit.business_date.strftime("%d %b %Y") %> can now be re-evaluated.
       </p>
     </div>
     <div class="pt-6">
-      <%= link_to "Back to Audit &rarr;".html_safe, hotel_night_audit_path(current_hotel, @night_audit), class: "inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800" %>
+      <%= link_to "Back to Audit &rarr;".html_safe, hotel_night_audit_path(current_hotel, @night_audit), class: "inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" %>
     </div>
   </div>
 
@@ -184,13 +184,13 @@
         <p class="mt-2 text-sm font-medium text-red-800 max-w-md mx-auto mb-6">
           If these blockers cannot be resolved immediately and you must advance the business day for operational continuity, you can force-roll the audit.
         </p>
-        
+
         <%= form_with url: hotel_night_audits_path(current_hotel), method: :post, scope: :night_audit do |f| %>
           <%= f.hidden_field :business_date, value: @night_audit.business_date %>
           <%= f.hidden_field :force_roll, value: "1" %>
           <%= f.hidden_field :notes, value: "Force roll initiated from Blocker Dashboard (Resolve page)" %>
-          <%= f.submit "I Understand the Risks, Force Roll Now", 
-              class: "inline-flex items-center justify-center rounded-xl bg-red-600 px-8 py-3 text-sm font-black text-white shadow-lg transition hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98]",
+          <%= f.submit "I Understand the Risks, Force Roll Now",
+              class: "inline-flex items-center justify-center rounded-xl bg-red-600 px-8 py-3 text-sm font-black text-primary-foreground shadow-lg transition hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98]",
               data: { turbo_confirm: "CRITICAL ACTION: This will close the business date #{@night_audit.business_date.strftime('%d %b %Y')} and open the next date WITHOUT resolving blockers. This action is immutable and will be recorded in the financial audit ledger. Do you want to proceed?" } %>
         <% end %>
       </div>

@@ -1,86 +1,86 @@
 <% if feature_enabled_for_hotel?("excel_pdf_export") %>
-  <div class="flex justify-end px-4 md:px-0">
+  <div class="flex justify-end ">
     <% if @payout_history.blank? %>
-      <button type="button" disabled class="inline-flex min-w-[160px] cursor-not-allowed items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-400 shadow-sm" title="No data available to export">
+      <button type="button" disabled class="inline-flex min-w-[160px] cursor-not-allowed items-center justify-center rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-bold text-muted-foreground shadow-sm" title="No data available to export">
         <%= cached_icon "download", class: "me-2 size-4" %>
         Export
       </button>
     <% else %>
       <details class="relative min-w-[160px]">
-        <summary class="inline-flex w-full cursor-pointer list-none items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50">
+        <summary class="inline-flex w-full cursor-pointer list-none items-center justify-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted">
           <%= cached_icon "download", class: "me-2 size-4" %>
           Export
         </summary>
-        <div class="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-          <%= link_to "Export PDF", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :pdf), class: "block px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50", data: { turbo: false } %>
-          <%= link_to "Export Excel", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :xls), class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50", data: { turbo: false } %>
-          <%= link_to "Export CSV", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :csv), class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50", data: { turbo: false } %>
+        <div class="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+          <%= link_to "Export PDF", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :pdf), class: "block px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted", data: { turbo: false } %>
+          <%= link_to "Export Excel", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :xls), class: "block border-t border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted", data: { turbo: false } %>
+          <%= link_to "Export CSV", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :csv), class: "block border-t border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted", data: { turbo: false } %>
         </div>
       </details>
     <% end %>
   </div>
 <% end %>
 
-<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-  <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+  <div class="border-b border-border bg-muted/70 px-6 py-5 sm:px-8">
     <%= form_with url: payouts_hotel_reports_path(current_hotel), method: :get, class: "flex flex-col gap-4 md:flex-row md:items-end md:justify-end", data: { turbo_frame: "payouts_content" } do |f| %>
       <%= hidden_field_tag :tab, "paid" %>
       <div class="max-w-xs flex-1">
-        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">From Date</label>
-        <%= f.date_field :paid_start_date, value: @paid_start_date, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">From Date</label>
+        <%= f.date_field :paid_start_date, value: @paid_start_date, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
       </div>
       <div class="max-w-xs flex-1">
-        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">To Date</label>
-        <%= f.date_field :paid_end_date, value: @paid_end_date, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">To Date</label>
+        <%= f.date_field :paid_end_date, value: @paid_end_date, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
       </div>
       <div class="flex items-center gap-2">
-        <%= f.submit "Filter", class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
-        <%= link_to "Reset", payouts_hotel_reports_path(current_hotel, tab: "paid"), class: "inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50", data: { turbo_frame: "payouts_content" } %>
+        <%= f.submit "Filter", class: "inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" %>
+        <%= link_to "Reset", payouts_hotel_reports_path(current_hotel, tab: "paid"), class: "inline-flex items-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted", data: { turbo_frame: "payouts_content" } %>
       </div>
     <% end %>
   </div>
 
   <div class="overflow-x-auto">
     <table class="min-w-full table-fixed">
-      <thead class="bg-slate-100">
+      <thead class="bg-muted">
         <tr>
-          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Period</th>
-          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Settled At</th>
-          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
-          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Platform Reference</th>
-          <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Net Amount</th>
-          <th scope="col" class="px-6 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Receipt</th>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Period</th>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Settled At</th>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Platform Reference</th>
+          <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Net Amount</th>
+          <th scope="col" class="px-6 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Receipt</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-slate-200 bg-white">
+      <tbody class="divide-y divide-border bg-card">
         <% if @payout_history.any? %>
           <% @payout_history.each_with_index do |batch, index| %>
-            <tr class="align-top transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
-              <td class="px-6 py-4 sm:px-8"><span class="text-sm font-medium text-slate-900"><%= batch.period_start.strftime("%d %b") %> – <%= batch.period_end.strftime("%d %b %Y") %></span></td>
-              <td class="px-6 py-4 text-sm font-medium text-slate-600"><%= batch.payout_at&.strftime("%d %b %Y") || "Pending" %></td>
+            <tr class="align-top transition-colors hover:bg-muted/80 <%= index.even? ? 'bg-card' : 'bg-muted/55' %>">
+              <td class="px-6 py-4 sm:px-8"><span class="text-sm font-medium text-foreground"><%= batch.period_start.strftime("%d %b") %> – <%= batch.period_end.strftime("%d %b %Y") %></span></td>
+              <td class="px-6 py-4 text-sm font-medium text-muted-foreground"><%= batch.payout_at&.strftime("%d %b %Y") || "Pending" %></td>
               <td class="px-6 py-4"><span class="inline-flex items-center gap-x-1.5 rounded-lg border px-2 py-1 text-xs font-bold <%= payout_status_class(batch.status) %>"><%= batch.status.titleize %></span></td>
-              <td class="px-6 py-4 font-mono text-sm text-slate-500"><%= batch.payout_reference.presence || "—" %></td>
-              <td class="whitespace-nowrap px-6 py-4 text-right"><span class="text-sm font-bold text-slate-900">MYR <%= number_with_precision(batch.amount, precision: 2) %></span></td>
+              <td class="px-6 py-4 font-mono text-sm text-muted-foreground"><%= batch.payout_reference.presence || "—" %></td>
+              <td class="whitespace-nowrap px-6 py-4 text-right"><span class="text-sm font-bold text-foreground">MYR <%= number_with_precision(batch.amount, precision: 2) %></span></td>
               <td class="px-6 py-4 text-center sm:px-8">
                 <% if batch.receipt.attached? %>
-                  <%= link_to url_for(batch.receipt), target: "_blank", class: "inline-flex items-center gap-1 text-xs font-bold text-slate-700 underline underline-offset-4 hover:text-slate-950", data: { turbo: false } do %>
+                  <%= link_to url_for(batch.receipt), target: "_blank", class: "inline-flex items-center gap-1 text-xs font-bold text-foreground underline underline-offset-4 hover:text-foreground", data: { turbo: false } do %>
                     <%= cached_icon "download", class: "size-3" %>
                     PDF
                   <% end %>
                 <% else %>
-                  <span class="text-xs font-medium italic text-slate-400">None</span>
+                  <span class="text-xs font-medium italic text-muted-foreground">None</span>
                 <% end %>
               </td>
             </tr>
           <% end %>
         <% else %>
-          <tr><td colspan="6" class="px-6 py-20 text-center text-sm font-medium italic text-slate-500">No settlement history found for this criteria.</td></tr>
+          <tr><td colspan="6" class="px-6 py-20 text-center text-sm font-medium italic text-muted-foreground">No settlement history found for this criteria.</td></tr>
         <% end %>
       </tbody>
     </table>
   </div>
 
-  <div class="flex justify-center border-t border-slate-200 bg-slate-50/50 px-6 py-4 sm:px-8">
+  <div class="flex justify-center border-t border-border bg-muted/50 px-6 py-4 sm:px-8">
     <%= paginate @payout_history, params: { tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date } %>
   </div>
 </div>

@@ -1,19 +1,19 @@
-<section class="overflow-hidden rounded-lg border border-slate-200 bg-white">
-  <div class="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+<section class="overflow-hidden rounded-lg border border-border bg-card">
+  <div class="flex items-center justify-between gap-3 border-b border-border bg-muted px-4 py-3">
     <div>
-      <h2 class="inline-flex items-center gap-2 text-sm font-semibold text-slate-950"><span class="inline-flex size-6 items-center justify-center rounded-md bg-indigo-50 text-indigo-700"><%= cached_icon "users", class: "size-3.5" %></span> Guests</h2>
-      <p class="text-xs text-slate-500"><%= pluralize(presenter.registered_guest_count, "registered guest") %></p>
+      <h2 class="inline-flex items-center gap-2 text-sm font-semibold text-foreground"><span class="inline-flex size-6 items-center justify-center rounded-md bg-indigo-50 text-indigo-700"><%= cached_icon "users", class: "size-3.5" %></span> Guests</h2>
+      <p class="text-xs text-muted-foreground"><%= pluralize(presenter.registered_guest_count, "registered guest") %></p>
     </div>
     <% if presenter.can_add_guests?(current_user) %>
-      <%= link_to hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: "add"), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50" do %>
+      <%= link_to hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: "add"), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted" do %>
         <%= cached_icon "plus", class: "size-3" %> Add Additional Guest
       <% end %>
     <% end %>
   </div>
 
   <div class="overflow-x-auto">
-    <table class="w-full table-fixed min-w-[1100px] divide-y divide-slate-200 text-sm">
-      <thead class="bg-white text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+    <table class="w-full table-fixed min-w-[1100px] divide-y divide-border text-sm">
+      <thead class="bg-card text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         <tr>
           <th class="w-[13%] px-4 py-2">Guest</th>
           <th class="w-[10%] px-4 py-2">Guest Type</th>
@@ -21,34 +21,34 @@
           <th class="w-[16%] px-4 py-2">Identity</th>
           <th class="w-[12%] px-4 py-2">Guest Reg No.</th>
           <th class="w-[10%] px-4 py-2">Country</th>
-          <th class="w-[17%] sticky right-0 z-10 border-l border-slate-200 bg-white px-4 py-2 text-right shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">Action</th>
+          <th class="w-[17%] sticky right-0 z-10 border-l border-border bg-card px-4 py-2 text-right shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">Action</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-slate-100 bg-white">
+      <tbody class="divide-y divide-border bg-card">
         <tr>
           <td class="px-4 py-3 align-top">
-            <p class="font-semibold text-slate-950"><%= presenter.primary_guest_name %></p>
+            <p class="font-semibold text-foreground"><%= presenter.primary_guest_name %></p>
           </td>
           <td class="px-4 py-3 align-top">
             <span class="mt-1 inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Primary</span>
           </td>
-          <td class="px-4 py-3 align-top text-slate-700">
-            <p class="flex min-w-0 items-start gap-1"><%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= presenter.primary_guest_email.presence || "—" %></span></p>
-            <p class="flex min-w-0 items-start gap-1 text-xs text-slate-500"><%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= presenter.primary_guest_phone.presence || "—" %></span></p>
+          <td class="px-4 py-3 align-top text-foreground">
+            <p class="flex min-w-0 items-start gap-1"><%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-muted-foreground" %><span class="min-w-0 break-all"><%= presenter.primary_guest_email.presence || "—" %></span></p>
+            <p class="flex min-w-0 items-start gap-1 text-xs text-muted-foreground"><%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-muted-foreground" %><span class="min-w-0 break-all"><%= presenter.primary_guest_phone.presence || "—" %></span></p>
           </td>
-          <td class="px-4 py-3 align-top text-slate-700">
-            <p class="inline-flex items-center gap-1"><%= cached_icon "id-card", class: "size-3 text-slate-400" %><%= presenter.primary_guest_document_type.to_s.upcase %></p>
-            <p class="text-xs text-slate-500"><%= presenter.primary_guest_government_id %></p>
+          <td class="px-4 py-3 align-top text-foreground">
+            <p class="inline-flex items-center gap-1"><%= cached_icon "id-card", class: "size-3 text-muted-foreground" %><%= presenter.primary_guest_document_type.to_s.upcase %></p>
+            <p class="text-xs text-muted-foreground"><%= presenter.primary_guest_government_id %></p>
           </td>
-          <td class="px-4 py-3 align-top text-slate-700"><%= booking.formatted_guest_registration_number || "—" %></td>
-          <td class="px-4 py-3 align-top text-slate-700"><%= presenter.primary_guest_country %></td>
-          <td class="sticky right-0 z-10 border-l border-slate-200 bg-white px-4 py-3 text-right align-top shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">
+          <td class="px-4 py-3 align-top text-foreground"><%= booking.formatted_guest_registration_number || "—" %></td>
+          <td class="px-4 py-3 align-top text-foreground"><%= presenter.primary_guest_country %></td>
+          <td class="sticky right-0 z-10 border-l border-border bg-card px-4 py-3 text-right align-top shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">
             <% if presenter.can_manage_bookings?(current_user) %>
               <%= link_to hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: "edit_primary"), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100" do %>
                 <%= cached_icon "pencil", class: "size-3" %> Edit
               <% end %>
             <% else %>
-              <span class="text-xs text-slate-400">—</span>
+              <span class="text-xs text-muted-foreground">—</span>
             <% end %>
           </td>
         </tr>
@@ -57,22 +57,22 @@
           <% guest = booking_guest.guest %>
           <tr>
             <td class="px-4 py-3 align-top">
-              <p class="font-semibold text-slate-950"><%= guest.name %></p>
+              <p class="font-semibold text-foreground"><%= guest.name %></p>
             </td>
             <td class="px-4 py-3 align-top">
-              <span class="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">Additional</span>
+              <span class="mt-1 inline-flex rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Additional</span>
             </td>
-            <td class="px-4 py-3 align-top text-slate-700">
-              <p class="flex min-w-0 items-start gap-1"><%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= guest.email.presence || "—" %></span></p>
-              <p class="flex min-w-0 items-start gap-1 text-xs text-slate-500"><%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= guest.phone.presence || "—" %></span></p>
+            <td class="px-4 py-3 align-top text-foreground">
+              <p class="flex min-w-0 items-start gap-1"><%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-muted-foreground" %><span class="min-w-0 break-all"><%= guest.email.presence || "—" %></span></p>
+              <p class="flex min-w-0 items-start gap-1 text-xs text-muted-foreground"><%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-muted-foreground" %><span class="min-w-0 break-all"><%= guest.phone.presence || "—" %></span></p>
             </td>
-            <td class="px-4 py-3 align-top text-slate-700">
-              <p class="inline-flex items-center gap-1"><%= cached_icon "id-card", class: "size-3 text-slate-400" %><%= guest.document_type.presence&.upcase || "IC/PASSPORT" %></p>
-              <p class="text-xs text-slate-500"><%= guest.government_id.presence || "—" %></p>
+            <td class="px-4 py-3 align-top text-foreground">
+              <p class="inline-flex items-center gap-1"><%= cached_icon "id-card", class: "size-3 text-muted-foreground" %><%= guest.document_type.presence&.upcase || "IC/PASSPORT" %></p>
+              <p class="text-xs text-muted-foreground"><%= guest.government_id.presence || "—" %></p>
             </td>
-            <td class="px-4 py-3 align-top text-slate-700"><%= booking.formatted_guest_registration_number || "—" %></td>
-            <td class="px-4 py-3 align-top text-slate-700"><%= guest.country.presence || "—" %></td>
-            <td class="sticky right-0 z-10 border-l border-slate-200 bg-white px-4 py-3 text-right align-top shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">
+            <td class="px-4 py-3 align-top text-foreground"><%= booking.formatted_guest_registration_number || "—" %></td>
+            <td class="px-4 py-3 align-top text-foreground"><%= guest.country.presence || "—" %></td>
+            <td class="sticky right-0 z-10 border-l border-border bg-card px-4 py-3 text-right align-top shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">
               <% if presenter.can_manage_bookings?(current_user) %>
                 <div class="flex justify-end gap-1.5">
                   <%= link_to hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: "edit_additional", booking_guest_id: booking_guest.id), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100" do %>
@@ -83,7 +83,7 @@
                   <% end %>
                 </div>
               <% else %>
-                <span class="text-xs text-slate-400">—</span>
+                <span class="text-xs text-muted-foreground">—</span>
               <% end %>
             </td>
           </tr>

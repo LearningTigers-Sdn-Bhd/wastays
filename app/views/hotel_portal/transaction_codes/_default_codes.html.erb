@@ -1,10 +1,10 @@
 <% transaction_codes = local_assigns.fetch(:transaction_codes) %>
 
-<section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" data-testid="<%= local_assigns.fetch(:test_id) %>">
-  <div class="flex flex-col gap-4 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+<section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm" data-testid="<%= local_assigns.fetch(:test_id) %>">
+  <div class="flex flex-col gap-4 border-b border-border px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
     <div>
-      <h2 class="text-base font-bold tracking-tight text-slate-950"><%= local_assigns.fetch(:title) %></h2>
-      <p class="mt-1 text-sm font-medium text-slate-600"><%= local_assigns.fetch(:description) %></p>
+      <h2 class="text-base font-bold tracking-tight text-foreground"><%= local_assigns.fetch(:title) %></h2>
+      <p class="mt-1 text-sm font-medium text-muted-foreground"><%= local_assigns.fetch(:description) %></p>
     </div>
 
     <% if local_assigns[:action] == :taxes_fees %>
@@ -12,14 +12,14 @@
                   hotel_taxes_fees_path(current_hotel),
                   target: "_blank",
                   rel: "noopener",
-                  class: "inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50" %>
+                  class: "inline-flex items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-bold text-foreground transition hover:bg-muted" %>
     <% end %>
   </div>
 
   <% if transaction_codes.any? %>
     <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
-      <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <table class="min-w-full divide-y divide-border text-left text-sm">
+      <thead class="bg-muted text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         <tr>
           <th scope="col" class="px-5 py-3">Code</th>
           <th scope="col" class="px-5 py-3">Name</th>
@@ -32,20 +32,20 @@
           <th scope="col" class="px-5 py-3 text-right">Actions</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-slate-100 bg-white text-slate-700">
+      <tbody class="divide-y divide-border bg-card text-foreground">
         <% transaction_codes.each do |transaction_code| %>
-          <tr class="hover:bg-slate-50">
-            <td class="whitespace-nowrap px-5 py-4 font-mono text-sm font-semibold text-slate-950"><%= transaction_code.code %></td>
-            <td class="whitespace-nowrap px-5 py-4 font-semibold text-slate-900"><%= transaction_code.name %></td>
+          <tr class="hover:bg-muted">
+            <td class="whitespace-nowrap px-5 py-4 font-mono text-sm font-semibold text-foreground"><%= transaction_code.code %></td>
+            <td class="whitespace-nowrap px-5 py-4 font-semibold text-foreground"><%= transaction_code.name %></td>
             <td class="whitespace-nowrap px-5 py-4"><%= transaction_code.kind.titleize %></td>
             <td class="whitespace-nowrap px-5 py-4"><%= transaction_code.category.titleize %></td>
-            <td class="whitespace-nowrap px-5 py-4 font-mono text-slate-700"><%= transaction_code.gl_account_code.presence || "-" %></td>
+            <td class="whitespace-nowrap px-5 py-4 font-mono text-foreground"><%= transaction_code.gl_account_code.presence || "-" %></td>
             <td class="whitespace-nowrap px-5 py-4">
-              <% taxable_class = transaction_code.is_taxable? ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-600 ring-slate-200" %>
+              <% taxable_class = transaction_code.is_taxable? ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-muted text-muted-foreground ring-ring" %>
               <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset <%= taxable_class %>"><%= transaction_code.is_taxable? ? "Yes" : "No" %></span>
             </td>
             <td class="whitespace-nowrap px-5 py-4">
-              <% status_class = transaction_code.active? ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-600 ring-slate-200" %>
+              <% status_class = transaction_code.active? ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-muted text-muted-foreground ring-ring" %>
               <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset <%= status_class %>"><%= transaction_code.active? ? "Active" : "Inactive" %></span>
             </td>
             <td class="whitespace-nowrap px-5 py-4">
@@ -55,7 +55,7 @@
               <%= link_to "Edit",
                           hotel_edit_transaction_code_path(current_hotel, transaction_code),
                           data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" },
-                          class: "inline-flex items-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50" %>
+                          class: "inline-flex items-center rounded-md border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground transition hover:bg-muted" %>
             </td>
           </tr>
         <% end %>
@@ -64,7 +64,7 @@
     </div>
   <% else %>
     <div class="px-5 py-10 text-center">
-      <p class="text-sm font-medium text-slate-600"><%= local_assigns.fetch(:empty_message) %></p>
+      <p class="text-sm font-medium text-muted-foreground"><%= local_assigns.fetch(:empty_message) %></p>
     </div>
   <% end %>
 </section>

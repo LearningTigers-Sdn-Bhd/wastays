@@ -1,31 +1,31 @@
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8" data-controller="popup-modal matrix-mode matrix-search">
-  <div class="px-4 md:px-0">
-    <div class="mt-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+<div class="w-full space-y-8" data-controller="popup-modal matrix-mode matrix-search">
+  <div class="">
+ <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Roles & Permissions</h1>
-        <p class="mt-1 text-sm font-medium text-slate-600">Assign capabilities to staff roles using the matrix below.</p>
+        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Roles & Permissions</h1>
+        <p class="mt-1 text-sm font-medium text-muted-foreground">Assign capabilities to staff roles using the matrix below.</p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <div class="relative w-full sm:w-120">
           <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <svg class="size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+            <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
           </div>
-          <input type="text" 
-                 class="block w-full rounded-lg border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900/10 focus:outline-none transition-all shadow-sm" 
+          <input type="text"
+                 class="block w-full rounded-lg border border-border bg-card py-2 pl-10 pr-3 text-sm placeholder:text-muted-foreground focus:border-border-interactive focus:ring-1 focus:ring-ring/10 focus:outline-none transition-all shadow-sm"
                  placeholder="Search permissions..."
                  data-action="input->matrix-search#search"
                  data-matrix-search-target="query">
         </div>
 
         <button type="button"
-                class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                class="inline-flex items-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted"
                 data-matrix-mode-target="editButton"
                 data-action="click->matrix-mode#enableEdit">
           <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
           Edit Permissions
         </button>
         <button type="button"
-                class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                class="inline-flex items-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted"
                 data-action="click->popup-modal#open"
                 data-popup-modal-url-value="<%= new_hotel_role_path(current_hotel) %>">
           <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
@@ -35,26 +35,24 @@
     </div>
   </div>
 
-  <div class="px-4 md:px-0">
-    <%= render "hotel_portal/settings/group_tabs" %>
-  </div>
+  <%= render "hotel_portal/settings/group_tabs" %>
 
-  <div class="px-4 md:px-0">
+  <div>
     <%= form_with url: bulk_update_hotel_roles_path(current_hotel), method: :patch, local: true do %>
-      <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div class="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
         <div class="overflow-x-auto rounded-2xl">
-          <table class="min-w-full divide-y divide-slate-200 border-separate border-spacing-0">
-            <thead class="bg-slate-50/50">
+          <table class="min-w-full divide-y divide-border border-separate border-spacing-0">
+            <thead class="bg-muted/50">
               <tr>
-                <th scope="col" class="sticky left-0 z-10 bg-slate-50 px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500 border-r border-slate-200 min-w-[280px] w-[280px]">
+                <th scope="col" class="sticky left-0 z-10 bg-muted px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r border-border min-w-[280px] w-[280px]">
                   Permission
                 </th>
                 <% @roles.each do |role| %>
                   <th scope="col" class="px-4 py-4 text-center min-w-[180px] w-40">
                     <div class="flex items-center justify-center gap-2">
-                      <span class="text-sm font-bold text-slate-900"><%= role.name %></span>
+                      <span class="text-sm font-bold text-foreground"><%= role.name %></span>
                       <button type="button"
-                                  class="text-slate-400 hover:text-slate-600 transition"
+                                  class="text-muted-foreground hover:text-muted-foreground transition"
                                   title="Edit Role"
                                   data-action="click->popup-modal#open"
                                   data-popup-modal-url-value="<%= edit_hotel_role_path(current_hotel, role) %>">
@@ -65,13 +63,13 @@
                 <% end %>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 bg-white">
+            <tbody class="divide-y divide-border bg-card">
               <% @assignable_permissions.each do |permission| %>
-                <tr class="hover:bg-slate-50/50 transition"
+                <tr class="hover:bg-muted/50 transition"
                     data-matrix-search-target="row"
                     data-matrix-search-name="<%= permission.name %>">
-                  <td class="sticky left-0 z-10 bg-white px-6 py-3 border-r border-slate-200 min-w-[280px] w-[280px]">
-                    <p class="text-[13px] font-bold text-slate-900"><%= permission.name %></p>
+                  <td class="sticky left-0 z-10 bg-card px-6 py-3 border-r border-border min-w-[280px] w-[280px]">
+                    <p class="text-[13px] font-bold text-foreground"><%= permission.name %></p>
                   </td>
                   <% @roles.each do |role| %>
                     <td class="px-2 py-1.5 text-center">
@@ -89,7 +87,7 @@
                         <% end %>
                       </div>
                       <div data-matrix-mode-target="editOnly" class="hidden">
-                        <%= check_box_tag "roles[#{role.id}][permission_ids][]", permission.id, role.permission_ids.include?(permission.id), class: "rounded border-slate-300 text-slate-900 focus:ring-slate-900 size-4 transition cursor-pointer" %>
+                        <%= check_box_tag "roles[#{role.id}][permission_ids][]", permission.id, role.permission_ids.include?(permission.id), class: "rounded border-border-interactive text-foreground focus:ring-ring size-4 transition cursor-pointer" %>
                       </div>
                     </td>
                   <% end %>
@@ -99,18 +97,18 @@
           </table>
         </div>
 
-        <div class="border-t border-slate-200 bg-slate-50/50 px-6 py-4 flex items-center justify-end">
+        <div class="border-t border-border bg-muted/50 px-6 py-4 flex items-center justify-end">
           <div class="flex items-center gap-3">
             <% @roles.each do |role| %>
               <%= hidden_field_tag "roles[#{role.id}][permission_ids][]", "" %>
             <% end %>
             <div data-matrix-mode-target="saveSection" class="hidden flex items-center gap-3">
               <button type="button"
-                      class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 cursor-pointer"
+                      class="inline-flex items-center rounded-xl border border-border bg-card px-6 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted cursor-pointer"
                       data-action="click->matrix-mode#disableEdit">
                 Cancel
               </button>
-              <%= submit_tag "Save Permissions Matrix", class: "inline-flex items-center rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 cursor-pointer" %>
+              <%= submit_tag "Save Permissions Matrix", class: "inline-flex items-center rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover cursor-pointer" %>
             </div>
           </div>
         </div>
@@ -119,15 +117,15 @@
   </div>
 
   <%# Modal Container moved INSIDE the controller scope %>
-  <div id="role-modal" 
-       class="hidden fixed inset-0 z-[150] items-center justify-center p-4 sm:p-6 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300"
+  <div id="role-modal"
+       class="hidden fixed inset-0 z-[150] items-center justify-center p-4 sm:p-6 bg-primary/50 backdrop-blur-sm transition-opacity duration-300"
        data-popup-modal-target="dialog"
        data-action="click->popup-modal#handleBackgroundClick">
-    
-    <div class="modal-content w-full max-w-lg bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden transform transition-all duration-300 opacity-0 translate-y-4 sm:scale-95">
+
+    <div class="modal-content w-full max-w-lg bg-card border border-border shadow-2xl rounded-2xl overflow-hidden transform transition-all duration-300 opacity-0 translate-y-4 sm:scale-95">
       <%= turbo_frame_tag "role_modal_content", data: { popup_modal_target: "frame" } do %>
         <div class="p-12 flex items-center justify-center">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-border-interactive"></div>
         </div>
       <% end %>
     </div>

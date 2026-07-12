@@ -14,7 +14,7 @@
   <% action_class = case summary_action.tone
     when :danger then "text-rose-700 hover:bg-rose-50 focus-visible:bg-rose-50"
     when :warning then "text-amber-700 hover:bg-amber-50 focus-visible:bg-amber-50"
-    else "text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100"
+    else "text-foreground hover:bg-muted focus-visible:bg-muted"
     end %>
   <%= link_to action_path, role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: summary_action.offcanvas_variant }, class: "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold focus-visible:outline-none #{action_class}" do %>
     <%= cached_icon summary_action.icon, class: "size-4 shrink-0", aria: { hidden: true } %>

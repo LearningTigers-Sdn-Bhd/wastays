@@ -1,4 +1,4 @@
-<div class="rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm" data-testid="night-audit-index-tabs">
+<div class="rounded-xl border border-border bg-card p-1.5 shadow-sm" data-testid="night-audit-index-tabs">
   <nav class="flex items-center gap-1 overflow-x-auto" aria-label="Night Audit sections" role="tablist">
     <% [
       { name: "audit-history", label: "Audit History", icon: "history", count: presenter.history_rows.count },
@@ -9,13 +9,13 @@
               data-tab-name="<%= tab[:name] %>"
               data-tab-label="<%= tab[:label] %>"
               data-action="click->tabs#switch"
-              class="group inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-medium text-slate-600 transition-all duration-150 hover:bg-slate-50 hover:text-slate-900 data-[active=true]:bg-blue-600 data-[active=true]:font-semibold data-[active=true]:text-white"
+              class="group inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-medium text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground data-[active=true]:bg-blue-600 data-[active=true]:font-semibold data-[active=true]:text-primary-foreground"
               aria-controls="<%= tab[:name] %>-panel"
               role="tab">
         <%= cached_icon tab[:icon], class: "size-4", aria: { hidden: true } %>
         <span><%= tab[:label] %></span>
         <% unless tab[:count].nil? %>
-          <span class="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 transition-colors duration-150 group-data-[active=true]:bg-white/20 group-data-[active=true]:text-white"><%= tab[:count] %></span>
+          <span class="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground transition-colors duration-150 group-data-[active=true]:bg-card/20 group-data-[active=true]:text-primary-foreground"><%= tab[:count] %></span>
         <% end %>
       </button>
     <% end %>

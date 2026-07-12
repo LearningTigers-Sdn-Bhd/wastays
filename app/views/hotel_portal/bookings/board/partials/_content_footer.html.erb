@@ -1,17 +1,17 @@
 <%# app/views/hotel_portal/bookings/board/partials/_content_footer.html.erb %>
-<div class="px-6 py-4 bg-white border-t border-slate-200 shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+<div class="px-6 py-4 bg-card border-t border-border shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
   <div class="max-w-[1000px] mx-auto flex items-center justify-between">
     <% if show_full_page_link %>
-      <%= link_to full_page_path, class: "text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-2", data: { turbo: false } do %>
+      <%= link_to full_page_path, class: "text-xs font-bold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2", data: { turbo: false } do %>
         <%= cached_icon "external-link", stroke_width: 2.5, class: "size-3.5" %>
         <%= full_page_label %>
       <% end %>
     <% else %>
       <div></div>
     <% end %>
-    
+
     <div class="flex items-center gap-3">
-      <button type="button" data-action="click->offcanvas#close" class="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
+      <button type="button" data-action="click->offcanvas#close" class="px-5 py-2.5 bg-card border border-border rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-all shadow-sm">
         Cancel
       </button>
       <%= submit_button %>

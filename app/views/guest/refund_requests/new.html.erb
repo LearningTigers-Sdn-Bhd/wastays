@@ -26,8 +26,8 @@ end %>
   <% end %>
 
   <div class="space-y-1">
-    <h1 class="text-2xl font-semibold text-neutral-text-primary">Request Refund</h1>
-    <p class="text-sm text-neutral-text-secondary font-mono tracking-wider"><%= @booking.confirmation_token.upcase %></p>
+    <h1 class="text-2xl font-semibold text-foreground">Request Refund</h1>
+    <p class="text-sm text-muted-foreground font-mono tracking-wider"><%= @booking.confirmation_token.upcase %></p>
   </div>
 
   <div class="bg-red-50 border border-red-200 rounded-2xl p-5 flex gap-x-4">
@@ -40,34 +40,34 @@ end %>
     </div>
   </div>
 
-  <div class="bg-white rounded-2xl border border-layer-line shadow-sm p-6">
-    <h2 class="font-semibold text-neutral-text-primary mb-4">Booking Summary</h2>
+  <div class="bg-card rounded-2xl border border-border shadow-sm p-6">
+    <h2 class="font-semibold text-foreground mb-4">Booking Summary</h2>
     <div class="grid grid-cols-2 gap-4 text-sm">
       <div>
-        <p class="text-neutral-text-secondary">Hotel</p>
-        <p class="font-medium text-neutral-text-primary"><%= @booking.hotel.name %></p>
+        <p class="text-muted-foreground">Hotel</p>
+        <p class="font-medium text-foreground"><%= @booking.hotel.name %></p>
       </div>
       <div>
-        <p class="text-neutral-text-secondary">Check-in</p>
-        <p class="font-medium text-neutral-text-primary"><%= @booking.check_in.strftime("%d %b %Y") %></p>
+        <p class="text-muted-foreground">Check-in</p>
+        <p class="font-medium text-foreground"><%= @booking.check_in.strftime("%d %b %Y") %></p>
       </div>
       <div>
-        <p class="text-neutral-text-secondary">Total Paid</p>
-        <p class="font-medium text-neutral-text-primary"><%= number_to_currency(@booking.total_amount, unit: @booking.currency + " ") %></p>
+        <p class="text-muted-foreground">Total Paid</p>
+        <p class="font-medium text-foreground"><%= number_to_currency(@booking.total_amount, unit: @booking.currency + " ") %></p>
       </div>
       <div>
-        <p class="text-neutral-text-secondary">Check-out</p>
-        <p class="font-medium text-neutral-text-primary"><%= @booking.check_out.strftime("%d %b %Y") %></p>
+        <p class="text-muted-foreground">Check-out</p>
+        <p class="font-medium text-foreground"><%= @booking.check_out.strftime("%d %b %Y") %></p>
       </div>
     </div>
     <% if @refund_policy.present? %>
-      <div class="mt-4 border-t border-layer-line pt-4">
-        <p class="text-sm text-neutral-text-secondary">Refund Policy</p>
-        <p class="text-sm font-semibold text-neutral-text-primary">
+      <div class="mt-4 border-t border-border pt-4">
+        <p class="text-sm text-muted-foreground">Refund Policy</p>
+        <p class="text-sm font-semibold text-foreground">
           You are eligible for <%= number_to_percentage(@refund_percentage, precision: 0) %> refund
           (<%= number_to_currency(@estimated_refund_amount, unit: @booking.currency + " ") %> estimated).
         </p>
-        <p class="mt-1 text-xs text-neutral-text-secondary">
+        <p class="mt-1 text-xs text-muted-foreground">
           Request must be submitted at least <%= @refund_policy.min_days_before_checkin %> day<%= @refund_policy.min_days_before_checkin == 1 ? "" : "s" %> before check-in.
         </p>
       </div>
@@ -76,43 +76,43 @@ end %>
 
   <%= form_with model: @refund_request, url: guest_booking_refund_requests_path(@booking), method: :post, local: true, class: "space-y-6" do |f| %>
     <%= hidden_field_tag :return_to, @return_to %>
-    <div class="bg-white rounded-2xl border border-layer-line shadow-sm p-6 space-y-4">
-      <h2 class="font-semibold text-neutral-text-primary">Reason for Refund</h2>
+    <div class="bg-card rounded-2xl border border-border shadow-sm p-6 space-y-4">
+      <h2 class="font-semibold text-foreground">Reason for Refund</h2>
       <div>
-        <%= f.label :reason, "Please describe why you are requesting a refund", class: "block text-sm font-medium text-neutral-text-primary mb-1.5" %>
+        <%= f.label :reason, "Please describe why you are requesting a refund", class: "block text-sm font-medium text-foreground mb-1.5" %>
         <%= f.text_area :reason, rows: 4, placeholder: "e.g. Change of travel plans, medical emergency...",
-            class: "w-full px-3 py-2.5 text-sm border border-layer-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
+            class: "w-full px-3 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl border border-layer-line shadow-sm p-6 space-y-4">
-      <h2 class="font-semibold text-neutral-text-primary">Bank Account Details</h2>
-      <p class="text-sm text-neutral-text-secondary">Enter the bank account where you'd like to receive the refund.</p>
+    <div class="bg-card rounded-2xl border border-border shadow-sm p-6 space-y-4">
+      <h2 class="font-semibold text-foreground">Bank Account Details</h2>
+      <p class="text-sm text-muted-foreground">Enter the bank account where you'd like to receive the refund.</p>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <%= f.label :bank_name, "Bank Name", class: "block text-sm font-medium text-neutral-text-primary mb-1.5" %>
+          <%= f.label :bank_name, "Bank Name", class: "block text-sm font-medium text-foreground mb-1.5" %>
           <%= f.text_field :bank_name, required: true, placeholder: "e.g. Maybank",
-              class: "w-full px-3 py-2.5 text-sm border border-layer-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
+              class: "w-full px-3 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
         </div>
 
         <div>
-          <%= f.label :account_holder_name, "Account Holder Name", class: "block text-sm font-medium text-neutral-text-primary mb-1.5" %>
+          <%= f.label :account_holder_name, "Account Holder Name", class: "block text-sm font-medium text-foreground mb-1.5" %>
           <%= f.text_field :account_holder_name, required: true, placeholder: "Full name as per bank account",
-              class: "w-full px-3 py-2.5 text-sm border border-layer-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
+              class: "w-full px-3 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
         </div>
 
         <div>
-          <%= f.label :account_number, "Account Number", class: "block text-sm font-medium text-neutral-text-primary mb-1.5" %>
+          <%= f.label :account_number, "Account Number", class: "block text-sm font-medium text-foreground mb-1.5" %>
           <%= f.text_field :account_number, required: true, placeholder: "e.g. 1234567890",
-              class: "w-full px-3 py-2.5 text-sm border border-layer-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
+              class: "w-full px-3 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
         </div>
 
         <div>
-          <%= f.label :account_type, "Account Type", class: "block text-sm font-medium text-neutral-text-primary mb-1.5" %>
+          <%= f.label :account_type, "Account Type", class: "block text-sm font-medium text-foreground mb-1.5" %>
           <%= f.select :account_type, @presenter.account_type_options, { prompt: "Select type" },
               required: true,
-              class: "w-full px-3 py-2.5 text-sm border border-layer-line rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
+              class: "w-full px-3 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
         </div>
       </div>
     </div>
@@ -127,9 +127,9 @@ end %>
 
     <div class="flex items-center justify-end gap-x-3">
       <%= link_to "Go Back", go_back_path,
-          class: "px-5 py-2.5 text-sm font-semibold rounded-xl border border-layer-line text-neutral-text-primary hover:bg-surface-hover" %>
+          class: "px-5 py-2.5 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-muted" %>
       <%= f.submit submit_label,
-          class: "px-5 py-2.5 text-sm font-bold rounded-xl bg-red-600 text-white hover:bg-red-700 cursor-pointer",
+          class: "px-5 py-2.5 text-sm font-bold rounded-xl bg-red-600 text-primary-foreground hover:bg-red-700 cursor-pointer",
           data: { turbo_confirm: confirm_message,
                   turbo_confirm_title: confirm_title,
                   turbo_confirm_color: "red" } %>

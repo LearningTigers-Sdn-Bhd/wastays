@@ -3,49 +3,49 @@
     <!-- Basic Info -->
     <div class="space-y-6">
       <div>
-        <%= f.label :name, "Room Type Name", class: "block text-sm mb-2 font-semibold text-slate-800" %>
-        <%= f.text_field :name, class: "py-3.5 px-5 block w-full border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm", required: true, placeholder: "e.g. Deluxe Twin Room" %>
+        <%= f.label :name, "Room Type Name", class: "block text-sm mb-2 font-semibold text-foreground" %>
+        <%= f.text_field :name, class: "py-3.5 px-5 block w-full border border-border rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm", required: true, placeholder: "e.g. Deluxe Twin Room" %>
       </div>
 
       <div>
-        <%= f.label :description, "Description", class: "block text-sm mb-2 font-semibold text-slate-800" %>
-        <%= f.text_area :description, rows: 3, class: "py-3.5 px-5 block w-full border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm", placeholder: "e.g. Spacious room with two twin beds and city view." %>
+        <%= f.label :description, "Description", class: "block text-sm mb-2 font-semibold text-foreground" %>
+        <%= f.text_area :description, rows: 3, class: "py-3.5 px-5 block w-full border border-border rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm", placeholder: "e.g. Spacious room with two twin beds and city view." %>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <%= f.label :max_adults, "Max Adults", class: "block text-sm mb-2 font-semibold text-slate-800" %>
-          <%= f.number_field :max_adults, class: "py-3.5 px-5 block w-full border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm", required: true, min: 1 %>
+          <%= f.label :max_adults, "Max Adults", class: "block text-sm mb-2 font-semibold text-foreground" %>
+          <%= f.number_field :max_adults, class: "py-3.5 px-5 block w-full border border-border rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm", required: true, min: 1 %>
         </div>
         <div>
-          <%= f.label :max_children, "Max Children", class: "block text-sm mb-2 font-semibold text-slate-800" %>
-          <%= f.number_field :max_children, class: "py-3.5 px-5 block w-full border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm", required: true, min: 0 %>
+          <%= f.label :max_children, "Max Children", class: "block text-sm mb-2 font-semibold text-foreground" %>
+          <%= f.number_field :max_children, class: "py-3.5 px-5 block w-full border border-border rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm", required: true, min: 0 %>
         </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <%= f.label :quantity, "Total Number of Rooms", class: "block text-sm mb-2 font-semibold text-slate-800" %>
+          <%= f.label :quantity, "Total Number of Rooms", class: "block text-sm mb-2 font-semibold text-foreground" %>
           <%= f.number_field :quantity,
-              class: "py-3.5 px-5 block w-full border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm",
+              class: "py-3.5 px-5 block w-full border border-border rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm",
               required: true,
               min: 0,
               data: { room_number_generator_target: "quantity", action: "input->room-number-generator#generate" } %>
         </div>
         <div>
-          <%= f.label :base_price, "Base Nightly Rate (MYR)", class: "block text-sm mb-2 font-semibold text-slate-800" %>
-          <%= f.number_field :base_price, step: 0.01, class: "py-3.5 px-5 block w-full border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm", required: true, min: 0 %>
+          <%= f.label :base_price, "Base Nightly Rate (MYR)", class: "block text-sm mb-2 font-semibold text-foreground" %>
+          <%= f.number_field :base_price, step: 0.01, class: "py-3.5 px-5 block w-full border border-border rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm", required: true, min: 0 %>
         </div>
       </div>
 
       <div>
-        <%= f.label :room_group_id, "Room Group", class: "block text-sm mb-2 font-semibold text-slate-800" %>
-        <%= f.collection_select :room_group_id, 
-                                @hotel.room_groups.order(:name), 
-                                :id, 
-                                :name, 
-                                { include_blank: "No Group" }, 
-                                class: "py-3.5 px-5 block w-full border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm bg-white" %>
+        <%= f.label :room_group_id, "Room Group", class: "block text-sm mb-2 font-semibold text-foreground" %>
+        <%= f.collection_select :room_group_id,
+                                @hotel.room_groups.order(:name),
+                                :id,
+                                :name,
+                                { include_blank: "No Group" },
+                                class: "py-3.5 px-5 block w-full border border-border rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm bg-card" %>
       </div>
     </div>
 
@@ -55,47 +55,47 @@
          data-multi-select-dropdown-all-value="<%= all_room_amenities_json %>"
          data-action="click@window->multi-select-dropdown#hideDropdown">
       <div class="flex items-center justify-between mb-3">
-        <%= f.label :amenities, "Room Amenities", class: "block text-sm font-semibold text-slate-800" %>
+        <%= f.label :amenities, "Room Amenities", class: "block text-sm font-semibold text-foreground" %>
       </div>
 
       <div class="relative">
         <input type="hidden" name="room_type[amenities][]" value="">
-        <div class="min-h-[60px] w-full rounded-2xl border border-slate-200 bg-white p-3 flex flex-wrap items-center gap-2 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all cursor-text shadow-sm"
+        <div class="min-h-[60px] w-full rounded-2xl border border-border bg-card p-3 flex flex-wrap items-center gap-2 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all cursor-text shadow-sm"
              data-action="click->multi-select-dropdown#focusInput">
           <div class="flex flex-wrap gap-2" data-multi-select-dropdown-target="pillsContainer">
             <!-- Pills rendered here -->
           </div>
-          
-          <input type="text" 
-                 class="flex-grow min-w-[150px] border-none bg-transparent focus:ring-0 focus:outline-none text-sm text-slate-900 placeholder:text-slate-400" 
+
+          <input type="text"
+                 class="flex-grow min-w-[150px] border-none bg-transparent focus:ring-0 focus:outline-none text-sm text-foreground placeholder:text-muted-foreground"
                  data-multi-select-dropdown-target="input"
                  data-action="input->multi-select-dropdown#filterOptions focus->multi-select-dropdown#openDropdown click->multi-select-dropdown#stopProp keydown->multi-select-dropdown#navigate"
                  >
 
           <div class="ml-auto pr-2">
-            <%= cached_icon "chevron-down", class: "w-4 h-4 text-slate-400 transition-transform duration-200", data: { multi_select_dropdown_target: "chevron" } %>
+            <%= cached_icon "chevron-down", class: "w-4 h-4 text-muted-foreground transition-transform duration-200", data: { multi_select_dropdown_target: "chevron" } %>
           </div>
         </div>
 
         <!-- Dropdown Options with Categories -->
-        <div class="absolute z-50 mt-2 w-full max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl hidden custom-scrollbar"
+        <div class="absolute z-50 mt-2 w-full max-h-60 overflow-y-auto rounded-xl border border-border bg-card shadow-xl hidden custom-scrollbar"
              data-multi-select-dropdown-target="dropdown">
           <% categorized_room_amenities.each do |cat| %>
-            <div data-category-container data-category-name="<%= cat[:category] %>" class="border-b border-slate-100 last:border-0">
-              <button type="button" 
-                      class="w-full flex items-center justify-between px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-50/50 hover:bg-slate-50 transition-colors"
+            <div data-category-container data-category-name="<%= cat[:category] %>" class="border-b border-border last:border-0">
+              <button type="button"
+                      class="w-full flex items-center justify-between px-4 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-muted/50 hover:bg-muted transition-colors"
                       data-action="click->multi-select-dropdown#toggleCategory">
                 <span><%= cat[:category] %></span>
-                <%= cached_icon "chevron-down", class: "size-3 text-slate-400 transition-transform duration-200", data: { category_chevron: true } %>
+                <%= cached_icon "chevron-down", class: "size-3 text-muted-foreground transition-transform duration-200", data: { category_chevron: true } %>
               </button>
-              <div class="hidden bg-white" data-category-content>
+              <div class="hidden bg-card" data-category-content>
                 <% cat[:items].each do |amenity| %>
-                  <label class="w-full flex items-center px-5 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer"
+                  <label class="w-full flex items-center px-5 py-2 text-sm text-foreground hover:bg-muted transition-colors border-b border-border last:border-0 cursor-pointer"
                          data-multi-select-dropdown-target="option"
                          data-name="<%= amenity[:name] %>"
                          data-id="<%= amenity[:id] %>">
                     <input type="checkbox"
-                           class="rounded border-slate-300 text-slate-900 focus:ring-slate-400 mr-3"
+                           class="rounded border-border-interactive text-foreground focus:ring-ring mr-3"
                            data-id="<%= amenity[:id] %>"
                            data-action="change->multi-select-dropdown#toggle"
                            data-multi-select-dropdown-target="checkbox">
@@ -106,15 +106,15 @@
             </div>
           <% end %>
           <div class="p-8 text-center hidden" data-multi-select-dropdown-target="placeholder">
-            <p class="text-xs text-slate-400 italic">No amenities found matching your search.</p>
+            <p class="text-xs text-muted-foreground italic">No amenities found matching your search.</p>
           </div>
         </div>
       </div>
 
       <template data-multi-select-dropdown-target="template">
-        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold">
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold">
           <span data-name></span>
-          <button type="button" class="hover:text-slate-300 transition-colors" data-remove-id data-action="click->multi-select-dropdown#remove">
+          <button type="button" class="hover:text-muted-foreground transition-colors" data-remove-id data-action="click->multi-select-dropdown#remove">
             <%= cached_icon "x", class: "size-3.5" %>
           </button>
           <input type="hidden" name="room_type[amenities][]" value="">
@@ -124,48 +124,48 @@
 
     <!-- Room Restrictions -->
     <div class="space-y-4">
-      <h3 class="text-sm font-semibold text-slate-800">Room Restrictions</h3>
-      <div class="bg-slate-50 rounded-2xl p-6 space-y-4 border border-slate-100">
-        <div class="flex items-center justify-between py-2 border-b border-slate-200 last:border-0">
-          <%= f.label :smoking_allowed, "Smoking Allowed", class: "text-sm font-medium text-slate-700" %>
+      <h3 class="text-sm font-semibold text-foreground">Room Restrictions</h3>
+      <div class="bg-muted rounded-2xl p-6 space-y-4 border border-border">
+        <div class="flex items-center justify-between py-2 border-b border-border last:border-0">
+          <%= f.label :smoking_allowed, "Smoking Allowed", class: "text-sm font-medium text-foreground" %>
           <label class="relative inline-flex items-center cursor-pointer">
             <%= f.check_box :smoking_allowed, class: "sr-only peer" %>
-            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            <div class="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border-interactive after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
           </label>
         </div>
-        <div class="flex items-center justify-between py-2 border-b border-slate-200 last:border-0">
-          <%= f.label :pets_allowed, "Pets Allowed", class: "text-sm font-medium text-slate-700" %>
+        <div class="flex items-center justify-between py-2 border-b border-border last:border-0">
+          <%= f.label :pets_allowed, "Pets Allowed", class: "text-sm font-medium text-foreground" %>
           <label class="relative inline-flex items-center cursor-pointer">
             <%= f.check_box :pets_allowed, class: "sr-only peer" %>
-            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            <div class="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border-interactive after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
           </label>
         </div>
       </div>
     </div>
 
     <!-- Room Numbering -->
-    <div class="p-8 border border-slate-200 rounded-[2.5rem] bg-white space-y-8 shadow-sm">
+    <div class="p-8 border border-border rounded-[2.5rem] bg-card space-y-8 shadow-sm">
       <div class="flex items-center gap-x-3">
-        <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white">
+        <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground">
           <%= cached_icon "grid-3x3", class: "size-5" %>
         </div>
-        <h3 class="text-lg font-bold text-slate-900">Room Numbering</h3>
+        <h3 class="text-lg font-bold text-foreground">Room Numbering</h3>
       </div>
 
       <div data-room-number-generator-target="rangeFields" class="space-y-2">
-        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Start Number</label>
-        <input type="number" data-room-number-generator-target="start" data-action="input->room-number-generator#generate" placeholder="e.g. 101" class="py-4 px-6 block w-full border border-slate-100 rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 bg-slate-50/50">
+        <label class="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Start Number</label>
+        <input type="number" data-room-number-generator-target="start" data-action="input->room-number-generator#generate" placeholder="e.g. 101" class="py-4 px-6 block w-full border border-border rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 bg-muted/50">
       </div>
 
       <div data-room-number-generator-target="customFields" class="hidden space-y-2">
-        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Room Numbers</label>
-        <textarea data-room-number-generator-target="customList" data-action="input->room-number-generator#generate" rows="3" placeholder="101, 102, 103, 105, 107" class="py-4 px-6 block w-full border border-slate-100 rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 bg-slate-50/50"><%= room_type.room_numbers&.join(", ") %></textarea>
+        <label class="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Room Numbers</label>
+        <textarea data-room-number-generator-target="customList" data-action="input->room-number-generator#generate" rows="3" placeholder="101, 102, 103, 105, 107" class="py-4 px-6 block w-full border border-border rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 bg-muted/50"><%= room_type.room_numbers&.join(", ") %></textarea>
       </div>
 
       <div class="space-y-4">
-        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Preview</label>
-        <div data-room-number-generator-target="preview" class="flex flex-wrap gap-2 min-h-[80px] p-6 border border-dashed border-slate-200 rounded-[2rem] bg-slate-50/30 items-center justify-center">
-          <span class="text-slate-400 italic text-sm text-center">Enter a start number to generate a preview...</span>
+        <label class="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Preview</label>
+        <div data-room-number-generator-target="preview" class="flex flex-wrap gap-2 min-h-[80px] p-6 border border-dashed border-border rounded-[2rem] bg-muted/30 items-center justify-center">
+          <span class="text-muted-foreground italic text-sm text-center">Enter a start number to generate a preview...</span>
         </div>
 
         <div class="flex items-center gap-x-3 pt-2">
@@ -176,8 +176,8 @@
                    data-action="change->room-number-generator#toggleMode"
                    <%= 'checked' if room_type.room_number_mode == 'custom' %>
                    class="sr-only peer">
-            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            <span class="ml-3 text-xs font-bold text-slate-600 uppercase tracking-wide">Manual Customization</span>
+            <div class="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-border after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border-interactive after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            <span class="ml-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Manual Customization</span>
           </label>
         </div>
         <p data-room-number-generator-target="hint" class="text-xs hidden"></p>
@@ -196,21 +196,21 @@
          data-drag-drop-upload-existing-count-value="<%= room_type.photos.count %>"
          data-drag-drop-upload-max-count-value="<%= RoomType::MAX_PHOTOS %>">
       <div>
-        <%= f.label :photos, "Room Photos", class: "block text-sm mb-3 font-semibold text-slate-800" %>
+        <%= f.label :photos, "Room Photos", class: "block text-sm mb-3 font-semibold text-foreground" %>
         <div class="relative group">
-          <div data-drag-drop-upload-target="dropzone" class="flex justify-center px-8 pt-10 pb-12 border-2 border-slate-300 border-dashed rounded-[2.5rem] bg-white group-hover:bg-slate-50 transition-all group-hover:border-blue-400">
+          <div data-drag-drop-upload-target="dropzone" class="flex justify-center px-8 pt-10 pb-12 border-2 border-border-interactive border-dashed rounded-[2.5rem] bg-card group-hover:bg-muted transition-all group-hover:border-blue-400">
             <div class="space-y-4 text-center">
               <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto text-blue-500 mb-4 group-hover:scale-110 transition-transform">
                 <%= cached_icon "image", class: "size-8 text-blue-500" %>
               </div>
-              <div class="flex text-sm text-slate-600 justify-center">
-                <label for="<%= f.field_id(:photos) %>" class="relative cursor-pointer bg-white rounded-md font-bold text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 px-2">
+              <div class="flex text-sm text-muted-foreground justify-center">
+                <label for="<%= f.field_id(:photos) %>" class="relative cursor-pointer bg-card rounded-md font-bold text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 px-2">
                   <span>Click to upload photos</span>
                   <%= f.file_field :photos, multiple: true, accept: 'image/*', class: "sr-only", data: { drag_drop_upload_target: "input", action: "change->drag-drop-upload#onFileSelect" } %>
                 </label>
                 <p class="pl-1">or drag and drop them here</p>
               </div>
-              <p class="text-xs text-slate-400">Supported: PNG, JPG, JPEG • Max 10MB per file</p>
+              <p class="text-xs text-muted-foreground">Supported: PNG, JPG, JPEG • Max 10MB per file</p>
             </div>
           </div>
         </div>
@@ -223,9 +223,9 @@
       <div data-drag-drop-upload-target="previewContainer" class="hidden grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 p-6 border border-slate-200 rounded-3xl bg-slate-50/50 shadow-inner"></div>
 
       <% if room_type.photos.attached? %>
-        <div class="mt-8 p-8 border border-slate-200 rounded-[2.5rem] bg-white shadow-sm">
+        <div class="mt-8 p-8 border border-border rounded-[2.5rem] bg-card shadow-sm">
           <div class="flex items-center justify-between mb-6">
-            <h3 class="text-sm font-bold text-slate-900 uppercase tracking-widest">Manage Current Photos</h3>
+            <h3 class="text-sm font-bold text-foreground uppercase tracking-widest">Manage Current Photos</h3>
             <button type="submit" form="bulk-delete-photos-form" class="py-2 px-5 text-xs font-bold rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors shadow-sm" data-turbo-confirm="Delete selected photos?">
               Delete Selected
             </button>
@@ -233,9 +233,9 @@
           <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
             <% room_type.photos.each do |photo| %>
               <div class="relative group aspect-square">
-                <%= image_tag photo, class: "w-full h-full object-cover rounded-2xl border border-slate-100 shadow-sm group-hover:opacity-75 transition-opacity" %>
+                <%= image_tag photo, class: "w-full h-full object-cover rounded-2xl border border-border shadow-sm group-hover:opacity-75 transition-opacity" %>
                 <div class="absolute top-3 right-3">
-                  <input type="checkbox" name="photo_ids[]" value="<%= photo.id %>" form="bulk-delete-photos-form" class="h-5 w-5 rounded-lg border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer shadow-sm transition-transform active:scale-90">
+                  <input type="checkbox" name="photo_ids[]" value="<%= photo.id %>" form="bulk-delete-photos-form" class="h-5 w-5 rounded-lg border-border-interactive text-red-600 focus:ring-red-500 cursor-pointer shadow-sm transition-transform active:scale-90">
                 </div>
               </div>
             <% end %>
@@ -245,8 +245,8 @@
     </div>
 
     <!-- Submit -->
-    <div class="pt-10 border-t border-slate-100">
-      <%= f.submit class: "w-full py-5 px-8 text-base font-bold rounded-[2rem] bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all shadow-xl shadow-blue-500/20 active:scale-[0.98] cursor-pointer" %>
+    <div class="pt-10 border-t border-border">
+      <%= f.submit class: "w-full py-5 px-8 text-base font-bold rounded-[2rem] bg-blue-600 text-primary-foreground hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all shadow-xl shadow-blue-500/20 active:scale-[0.98] cursor-pointer" %>
     </div>
   </div>
 <% end %>

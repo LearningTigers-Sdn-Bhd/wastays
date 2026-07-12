@@ -1,7 +1,7 @@
-<div class="max-w-2xl mx-auto pb-20">
+<div class="w-full">
   <div class="mb-8">
-    <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Edit Mapping</h1>
-    <p class="mt-1 text-sm font-medium text-slate-600">Update General Ledger Code (GL Code) for <span class="font-bold text-slate-900"><%= @gl_map.transaction_category.humanize %></span>.</p>
+    <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Edit Mapping</h1>
+    <p class="mt-1 text-sm font-medium text-muted-foreground">Update General Ledger Code (GL Code) for <span class="font-bold text-foreground"><%= @gl_map.transaction_category.humanize %></span>.</p>
   </div>
 
   <%= form_with model: @gl_map, url: hotel_general_ledger_map_path(current_hotel, @gl_map), class: "space-y-6" do |f| %>
@@ -27,27 +27,27 @@
       </div>
     <% end %>
 
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <div class="p-8 space-y-6">
         <div>
-          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Category (Read-only)</label>
-          <input type="text" value="<%= @gl_map.transaction_category.humanize %>" disabled class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-500 cursor-not-allowed">
+          <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Category (Read-only)</label>
+          <input type="text" value="<%= @gl_map.transaction_category.humanize %>" disabled class="w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-bold text-muted-foreground cursor-not-allowed">
         </div>
 
         <div>
-          <%= f.label :gl_code, "General Ledger Code (GL Code)", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2" %>
-          <%= f.text_field :gl_code, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-900 focus:ring-0 transition-all placeholder:text-slate-300", placeholder: "e.g. 4010 or REV-ROOM" %>
+          <%= f.label :gl_code, "General Ledger Code (GL Code)", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2" %>
+          <%= f.text_field :gl_code, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground focus:border-border-interactive focus:ring-0 transition-all placeholder:text-muted-foreground", placeholder: "e.g. 4010 or REV-ROOM" %>
         </div>
 
         <div>
-          <%= f.label :description, class: "block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2" %>
-          <%= f.text_area :description, rows: 3, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-900 focus:ring-0 transition-all placeholder:text-slate-300", placeholder: "Optional description of this General Ledger (GL) mapping..." %>
+          <%= f.label :description, class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2" %>
+          <%= f.text_area :description, rows: 3, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground focus:border-border-interactive focus:ring-0 transition-all placeholder:text-muted-foreground", placeholder: "Optional description of this General Ledger (GL) mapping..." %>
         </div>
       </div>
 
-      <div class="bg-slate-50 px-8 py-4 flex items-center justify-between border-t border-slate-200">
-        <%= link_to "Cancel", hotel_general_ledger_maps_path(current_hotel), class: "text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors" %>
-        <%= f.submit "Update Mapping", class: "inline-flex items-center rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 cursor-pointer" %>
+      <div class="bg-muted px-8 py-4 flex items-center justify-between border-t border-border">
+        <%= link_to "Cancel", hotel_general_ledger_maps_path(current_hotel), class: "text-sm font-bold text-muted-foreground hover:text-foreground transition-colors" %>
+        <%= f.submit "Update Mapping", class: "inline-flex items-center rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover cursor-pointer" %>
       </div>
     </div>
   <% end %>

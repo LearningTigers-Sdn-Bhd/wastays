@@ -18,18 +18,18 @@
   </head>
 
   <body class="h-full" data-theme="panel-light">
-    <div class="flex flex-col h-screen bg-layer-alt">
+    <div class="flex flex-col h-screen bg-background">
 
       <!-- Top Navbar -->
-      <header class="sticky top-0 z-[60] w-full bg-layer border-b border-layer-line">
+      <header class="sticky top-0 z-[60] w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border">
         <div class="flex items-center h-14 px-4 gap-x-3">
 
           <!-- Mobile hamburger -->
           <% if guest_logged_in? %>
-            <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" command="show-modal" commandfor="guest-sidebar-mobile" aria-label="Toggle navigation">
+            <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-muted-foreground hover:bg-muted transition-colors" command="show-modal" commandfor="guest-sidebar-mobile" aria-label="Toggle navigation">
               <%= cached_icon "menu", class: "size-4" %>
             </button>
-            <button type="button" class="hidden lg:inline-flex shrink-0 justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="panels-ui--sidebar-toggle" data-panels-ui--sidebar-toggle-key-value="guest" data-action="click->panels-ui--sidebar-toggle#toggleDesktop" aria-label="Collapse sidebar">
+            <button type="button" class="hidden lg:inline-flex shrink-0 justify-center items-center size-8 rounded-lg text-muted-foreground hover:bg-muted transition-colors" data-controller="panels-ui--sidebar-toggle" data-panels-ui--sidebar-toggle-key-value="guest" data-action="click->panels-ui--sidebar-toggle#toggleDesktop" aria-label="Collapse sidebar">
               <%= cached_icon "panel-left-close", class: "size-4" %>
             </button>
           <% end %>
@@ -50,20 +50,12 @@
                 Help
               </a>
 
-              <div class="w-px h-5 bg-layer-line mx-1 hidden sm:block"></div>
+              <div class="w-px h-5 bg-border mx-1 hidden sm:block"></div>
               <%= render "shared/navigation/guest_profile_dropdown" %>
             <% end %>
           </div>
         </div>
       </header>
-
-      <% if guest_logged_in? && guest_breadcrumb_parts.present? %>
-        <div class="relative border-b border-layer-line bg-layer py-2 overflow-visible">
-          <div class="px-4 sm:px-6 overflow-x-auto overscroll-x-contain whitespace-nowrap custom-scrollbar">
-            <%= render_guest_breadcrumbs %>
-          </div>
-        </div>
-      <% end %>
 
       <!-- Body: Sidebar + Content -->
       <div class="flex flex-1 overflow-hidden">
@@ -72,9 +64,19 @@
           <%= render 'shared/navigation/guest_sidebar' %>
         <% end %>
 
-        <main class="flex-1 flex flex-col overflow-hidden overflow-y-auto custom-scrollbar">
-          <div class="p-5 sm:p-6 space-y-5">
-            <%= yield %>
+        <main class="flex-1 flex flex-col overflow-hidden">
+          <% if guest_logged_in? && guest_breadcrumb_parts.present? %>
+            <div class="shrink-0 min-h-14 flex items-center border-b border-sidebar-border bg-sidebar text-sidebar-foreground px-4 sm:px-6">
+              <div class="w-full overflow-x-auto overscroll-x-contain whitespace-nowrap custom-scrollbar">
+                <%= render_guest_breadcrumbs %>
+              </div>
+            </div>
+          <% end %>
+
+          <div class="flex-1 overflow-y-auto custom-scrollbar">
+            <div class="panel-page space-y-5">
+              <%= yield %>
+            </div>
           </div>
         </main>
       </div>

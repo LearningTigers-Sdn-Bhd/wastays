@@ -3,13 +3,13 @@
   "success" => "border-emerald-200 bg-emerald-50 text-emerald-950",
   "danger" => "border-red-200 bg-red-50 text-red-950",
   "info" => "border-blue-200 bg-blue-50 text-blue-950",
-  "neutral" => "border-slate-200 bg-slate-50 text-slate-900"
+  "neutral" => "border-border bg-muted text-foreground"
 } %>
 <% icon_classes = {
-  "success" => "bg-emerald-600 text-white",
-  "danger" => "bg-red-600 text-white",
-  "info" => "bg-blue-600 text-white",
-  "neutral" => "bg-slate-600 text-white"
+  "success" => "bg-emerald-600 text-primary-foreground",
+  "danger" => "bg-red-600 text-primary-foreground",
+  "info" => "bg-blue-600 text-primary-foreground",
+  "neutral" => "bg-muted text-muted-foreground"
 } %>
 
 <section class="flex items-start gap-3 rounded-xl border px-4 py-3 shadow-sm <%= tone_classes.fetch(banner[:tone]) %>" data-testid="night-audit-result-banner">

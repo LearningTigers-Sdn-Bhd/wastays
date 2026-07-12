@@ -9,13 +9,12 @@
     ) do |sidebar| %>
   <% sidebar.with_header do %>
     <div class="space-y-0.5 p-2">
-      <a href="<%= hotel_dashboard_path(current_hotel) %>"
-         class="panel-sidebar__link"
-         title="<%= current_hotel.name %>"
-         aria-label="Hotel: <%= current_hotel.name %>">
-        <%= cached_icon "building-2", class: "panel-sidebar__icon" %>
-        <span class="panel-sidebar__label truncate"><%= current_hotel.name.truncate(24) %></span>
-      </a>
+      <%= render PanelsUI::Tooltip.new(text: current_hotel.name, placement: :top, root_class: "w-full") do %>
+        <a href="<%= hotel_dashboard_path(current_hotel) %>" class="panel-sidebar__link" aria-label="Hotel: <%= current_hotel.name %>">
+          <%= cached_icon "building-2", class: "panel-sidebar__icon" %>
+          <span class="panel-sidebar__label truncate"><%= current_hotel.name.truncate(24) %></span>
+        </a>
+      <% end %>
       <% if current_user.superadmin? %>
         <a href="<%= admin_dashboard_path %>" target="_blank" rel="noopener noreferrer" class="panel-sidebar__link" aria-label="Go to Admin Panel">
           <%= cached_icon "external-link", class: "panel-sidebar__icon" %>

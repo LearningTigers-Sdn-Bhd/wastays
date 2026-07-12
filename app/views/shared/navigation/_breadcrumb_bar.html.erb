@@ -10,39 +10,39 @@
   <% parts.each_with_index do |part, index| %>
     <div class="contents <%= "hidden" if part[:subtab_label] && part[:hidden] %>" <%= "data-subtabs-breadcrumb-segment" if part[:subtab_label] %>>
     <% if index > 0 %>
-      <span class="text-slate-400">/</span>
+      <span class="text-muted-foreground">/</span>
     <% end %>
 
     <% case part[:type] %>
     <% when :section %>
-      <span class="cursor-default font-medium text-slate-600"><%= part[:label] %></span>
+      <span class="cursor-default font-medium text-muted-foreground"><%= part[:label] %></span>
 
     <% when :menu_group %>
-      <span class="cursor-default font-medium text-slate-600"><%= part[:label] %></span>
+      <span class="cursor-default font-medium text-muted-foreground"><%= part[:label] %></span>
 
     <% when :menu, :breakdown %>
       <% if part[:siblings].present? %>
         <%= render "shared/navigation/breadcrumb_dropdown", part: part %>
       <% elsif part[:path].present? && index < parts.size - 1 %>
-        <%= link_to part[:label], part[:path], class: "font-medium text-slate-600 hover:text-brand-primary transition-colors" %>
+        <%= link_to part[:label], part[:path], class: "font-medium text-muted-foreground hover:text-brand-primary transition-colors" %>
       <% else %>
-        <span class="cursor-default font-semibold text-slate-900"><%= part[:label] %></span>
+        <span class="cursor-default font-semibold text-foreground"><%= part[:label] %></span>
       <% end %>
     <% else %>
       <% if part[:subtab_label] %>
-        <span class="cursor-default font-semibold text-slate-900" data-subtabs-breadcrumb-label><%= part[:label] %></span>
+        <span class="cursor-default font-semibold text-foreground" data-subtabs-breadcrumb-label><%= part[:label] %></span>
       <% elsif part[:tab_label] %>
-        <span class="cursor-default font-semibold text-slate-900" data-tabs-breadcrumb-label><%= part[:label] %></span>
+        <span class="cursor-default font-semibold text-foreground" data-tabs-breadcrumb-label><%= part[:label] %></span>
       <% elsif part[:siblings].present? %>
         <%= render "shared/navigation/breadcrumb_dropdown", part: part %>
       <% elsif index < parts.size - 1 %>
         <% if part[:path].present? %>
-          <%= link_to part[:label], part[:path], class: "font-medium text-slate-600 hover:text-brand-primary transition-colors" %>
+          <%= link_to part[:label], part[:path], class: "font-medium text-muted-foreground hover:text-brand-primary transition-colors" %>
         <% else %>
-          <span class="cursor-default font-medium text-slate-600"><%= part[:label] %></span>
+          <span class="cursor-default font-medium text-muted-foreground"><%= part[:label] %></span>
         <% end %>
       <% else %>
-        <span class="cursor-default font-semibold text-slate-900">
+        <span class="cursor-default font-semibold text-foreground">
           <%= part[:label] %>
         </span>
       <% end %>

@@ -1,10 +1,10 @@
-      <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Communication & Notifications</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Configure guest notification automations and channels.</p>
+      <section class="rounded-2xl border border-border bg-card shadow-sm">
+        <div class="border-b border-border px-6 py-5 sm:px-8">
+          <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Communication & Notifications</h2>
+          <p class="mt-1 text-sm font-medium text-muted-foreground">Configure guest notification automations and channels.</p>
         </div>
 
-        <div class="px-4 py-5 sm:px-6 bg-slate-50/20">
+        <div class="px-4 py-5 sm:px-6 bg-muted/20">
           <%# Error handling for notification settings %>
           <% if params[:form_id] == "notification_settings" && (@notification_config&.errors&.any? || @hotel.errors.any?) %>
             <div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
@@ -48,12 +48,12 @@
                        <% } do |f| %>
               <div class="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Review Link</label>
-                  <%= text_field_tag "notification_config[settings][review_link]", post_stay_config.settings.to_h["review_link"], placeholder: "Google/Tripadvisor link...", class: "w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:outline-none focus:ring-0" %>
+                  <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Review Link</label>
+                  <%= text_field_tag "notification_config[settings][review_link]", post_stay_config.settings.to_h["review_link"], placeholder: "Google/Tripadvisor link...", class: "w-full rounded-lg border border-border px-3 py-1.5 text-xs text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
                 </div>
                 <div>
-                  <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Delay (Hours)</label>
-                  <%= number_field_tag "notification_config[settings][send_delay_hours]", post_stay_config.settings.to_h["send_delay_hours"], min: 0, step: 1, class: "w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:outline-none focus:ring-0" %>
+                  <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Delay (Hours)</label>
+                  <%= number_field_tag "notification_config[settings][send_delay_hours]", post_stay_config.settings.to_h["send_delay_hours"], min: 0, step: 1, class: "w-full rounded-lg border border-border px-3 py-1.5 text-xs text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
                 </div>
               </div>
             <% end %>
@@ -70,14 +70,14 @@
                          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                        <% } do |f| %>
               <div>
-                <span class="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Send Stages</span>
+                <span class="mb-2 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Send Stages</span>
                 <div class="flex gap-2">
                   <% stages = pre_arrival_config.settings.to_h["stages"] || [] %>
                   <%= hidden_field_tag "notification_config[settings][stages][]", "" %>
                   <% [["d2", "D-2"], ["d1", "D-1"]].each do |val, label| %>
-                    <label class="flex flex-1 cursor-pointer items-center justify-between rounded-lg border border-slate-200 p-2 transition-all hover:bg-slate-50 has-[:checked]:border-slate-900 has-[:checked]:bg-slate-50/50">
-                      <span class="text-xs font-bold text-slate-700"><%= label %></span>
-                      <%= check_box_tag "notification_config[settings][stages][]", val, stages.include?(val), class: "h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900" %>
+                    <label class="flex flex-1 cursor-pointer items-center justify-between rounded-lg border border-border p-2 transition-all hover:bg-muted has-[:checked]:border-border-interactive has-[:checked]:bg-muted/50">
+                      <span class="text-xs font-bold text-foreground"><%= label %></span>
+                      <%= check_box_tag "notification_config[settings][stages][]", val, stages.include?(val), class: "h-4 w-4 rounded border-border-interactive text-foreground focus:ring-ring" %>
                     </label>
                   <% end %>
                 </div>
@@ -114,47 +114,47 @@
                         ["upsell", "Upsell Prompt", "F&B or Spa offers"],
                         ["activity", "Activity Suggestion", "Local attractions"]].each do |rule_key, label, sub| %>
                       <% rule = in_stay_rules.fetch(rule_key, {}) %>
-                      <div class="rounded-lg border border-slate-200 bg-slate-50/50 p-3 transition-all hover:bg-white hover:shadow-sm">
+                      <div class="rounded-lg border border-border bg-muted/50 p-3 transition-all hover:bg-card hover:shadow-sm">
                         <div class="flex items-center justify-between mb-3">
                           <div>
-                            <span class="text-xs font-bold text-slate-900 block"><%= label %></span>
-                            <span class="text-[10px] text-slate-500 uppercase tracking-wider"><%= sub %></span>
+                            <span class="text-xs font-bold text-foreground block"><%= label %></span>
+                            <span class="text-[10px] text-muted-foreground uppercase tracking-wider"><%= sub %></span>
                           </div>
                           <label class="relative inline-flex items-center cursor-pointer">
                             <%= hidden_field_tag "notification_config[settings][rules][#{rule_key}][enabled]", "0" %>
                             <%= check_box_tag "notification_config[settings][rules][#{rule_key}][enabled]", "1", rule.fetch("enabled", true), class: "sr-only peer" %>
-                            <div class="peer h-5 w-9 rounded-full bg-slate-200 transition-all after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-900 peer-checked:after:translate-x-full"></div>
+                            <div class="peer h-5 w-9 rounded-full bg-muted transition-all after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-card after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full"></div>
                           </label>
                         </div>
                         <div>
-                          <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Send Time</label>
-                          <%= time_field_tag "notification_config[settings][rules][#{rule_key}][time]", rule.fetch("time", "12:00"), class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:ring-0" %>
+                          <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Send Time</label>
+                          <%= time_field_tag "notification_config[settings][rules][#{rule_key}][time]", rule.fetch("time", "12:00"), class: "w-full rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground focus:border-border-interactive focus:ring-0" %>
                         </div>
                       </div>
                     <% end %>
                   </div>
 
-                  <div class="rounded-lg border border-slate-200 bg-slate-50/30 p-4">
+                  <div class="rounded-lg border border-border bg-muted/30 p-4">
                     <% quiet_hours = in_stay_config.settings.to_h.fetch("quiet_hours", {}) %>
                     <div class="flex items-center justify-between mb-3">
-                      <div class="flex items-center gap-2 text-slate-700">
+                      <div class="flex items-center gap-2 text-foreground">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
                         <span class="text-xs font-bold">Do Not Disturb (Quiet Hours)</span>
                       </div>
                       <label class="relative inline-flex items-center cursor-pointer">
                         <%= hidden_field_tag "notification_config[settings][quiet_hours][enabled]", "0" %>
                         <%= check_box_tag "notification_config[settings][quiet_hours][enabled]", "1", quiet_hours.fetch("enabled", true), class: "sr-only peer" %>
-                        <div class="peer h-5 w-9 rounded-full bg-slate-200 transition-all after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-900 peer-checked:after:translate-x-full"></div>
+                        <div class="peer h-5 w-9 rounded-full bg-muted transition-all after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-card after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full"></div>
                       </label>
                     </div>
                     <div class="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">Start (No messages after)</label>
-                        <%= time_field_tag "notification_config[settings][quiet_hours][start]", quiet_hours.fetch("start", "22:00"), class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:ring-0" %>
+                        <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Start (No messages after)</label>
+                        <%= time_field_tag "notification_config[settings][quiet_hours][start]", quiet_hours.fetch("start", "22:00"), class: "w-full rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground focus:border-border-interactive focus:ring-0" %>
                       </div>
                       <div>
-                        <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400">End (Resume at)</label>
-                        <%= time_field_tag "notification_config[settings][quiet_hours][end]", quiet_hours.fetch("end", "08:00"), class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-900 focus:ring-0" %>
+                        <label class="mb-1 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">End (Resume at)</label>
+                        <%= time_field_tag "notification_config[settings][quiet_hours][end]", quiet_hours.fetch("end", "08:00"), class: "w-full rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground focus:border-border-interactive focus:ring-0" %>
                       </div>
                     </div>
                   </div>

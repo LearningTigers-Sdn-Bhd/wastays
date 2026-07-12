@@ -6,22 +6,22 @@
   <%= render "shared/navigation/admin_breadcrumbs", current: "Plan Access" %>
 <% end %>
 
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
-  <div class="px-4 md:px-0">
-    <div class="mt-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+<div class="w-full space-y-8">
+  <div class="">
+ <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Plan Access</h1>
-        <p class="mt-1 text-sm font-medium text-slate-600">Manage feature access across plan tiers. Changes apply immediately to all hotels on that plan.</p>
+        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Plan Access</h1>
+        <p class="mt-1 text-sm font-medium text-muted-foreground">Manage feature access across plan tiers. Changes apply immediately to all hotels on that plan.</p>
       </div>
     </div>
   </div>
 
   <%= form_with url: update_matrix_admin_plans_path, method: :patch do |f| %>
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5 sm:px-8">
+    <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div class="flex items-center justify-between border-b border-border px-6 py-5 sm:px-8">
         <div>
-          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Feature Matrix</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">
+          <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Feature Matrix</h2>
+          <p class="mt-1 text-sm font-medium text-muted-foreground">
             Toggle features per plan.
             <span class="inline-flex items-center gap-1 text-amber-600 font-semibold">+</span>
             indicates optional add-on. Level dropdown appears for tiered rows.
@@ -32,14 +32,14 @@
       <div class="overflow-x-auto">
         <table class="min-w-full text-sm">
           <thead>
-            <tr class="border-b border-slate-200 bg-slate-50">
-              <th class="sticky left-0 z-10 bg-slate-50 min-w-64 px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 border-r border-slate-200">
+            <tr class="border-b border-border bg-muted">
+              <th class="sticky left-0 z-10 bg-muted min-w-64 px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground border-r border-border">
                 Feature
               </th>
               <% @plans.each do |plan| %>
-                <th class="min-w-36 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th class="min-w-36 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <div class="flex flex-col items-center gap-1">
-                    <span class="text-slate-900 font-bold text-sm normal-case"><%= plan.name %></span>
+                    <span class="text-foreground font-bold text-sm normal-case"><%= plan.name %></span>
                     <% if plan.most_popular %>
                       <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 normal-case">Most Popular</span>
                     <% end %>
@@ -52,8 +52,8 @@
             <% idx = 0 %>
             <% @feature_groups.each do |group| %>
               <tr>
-                <td colspan="<%= @plans.size + 1 %>" class="bg-slate-800 px-6 py-2">
-                  <span class="text-xs font-bold uppercase tracking-widest text-slate-200"><%= group.name %></span>
+                <td colspan="<%= @plans.size + 1 %>" class="bg-primary px-6 py-2">
+                  <span class="text-xs font-bold uppercase tracking-widest text-primary-foreground"><%= group.name %></span>
                 </td>
               </tr>
               <% if group.slug == "aic" %>
@@ -71,13 +71,13 @@
                 </tr>
               <% end %>
               <% group.features.each do |feature| %>
-                <tr class="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
-                  <td class="sticky left-0 z-10 bg-white px-6 py-3 font-medium text-slate-700 min-w-64 border-r border-slate-100">
+                <tr class="border-b border-border hover:bg-muted/60 transition-colors">
+                  <td class="sticky left-0 z-10 bg-card px-6 py-3 font-medium text-foreground min-w-64 border-r border-border">
                     <%= feature.name %>
                     <% if external_aic_slugs.include?(feature.slug) %>
                       <span class="ml-2 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 align-middle">External</span>
                     <% elsif coming_soon_slugs.include?(feature.slug) %>
-                      <span class="ml-2 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 align-middle">Coming Soon</span>
+                      <span class="ml-2 inline-block rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground align-middle">Coming Soon</span>
                     <% elsif locked_slugs.include?(feature.slug) %>
                       <span class="ml-2 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-500 align-middle">Plan default</span>
                     <% elsif !wired_slugs.include?(feature.slug) %>
@@ -98,13 +98,13 @@
                       <div class="flex flex-col items-center gap-1.5">
                         <% unless feature.addon %>
                           <input type="checkbox" name="cells[<%= idx %>][enabled]" value="1"
-                                 class="size-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 <%= disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer' %>"
+                                 class="size-4 rounded border-border-interactive text-teal-600 focus:ring-teal-500 <%= disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer' %>"
                                  <%= "checked" if pf&.enabled %> <%= "disabled" if disabled %>>
                         <% end %>
                         <input type="hidden" name="cells[<%= idx %>][level]" value="<%= pf&.level %>">
                         <% if feature.addon %>
                           <input type="checkbox" name="cells[<%= idx %>][addon]" value="1"
-                                 class="size-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 <%= cs ? 'cursor-not-allowed opacity-40' : 'cursor-pointer' %>"
+                                 class="size-4 rounded border-border-interactive text-teal-600 focus:ring-teal-500 <%= cs ? 'cursor-not-allowed opacity-40' : 'cursor-pointer' %>"
                                  <%= "checked" if pf&.addon %> <%= "disabled" if cs %>>
                         <% end %>
                       </div>
@@ -118,9 +118,9 @@
         </table>
       </div>
 
-      <div class="flex items-center justify-end border-t border-slate-200 bg-slate-50/50 px-6 py-4">
+      <div class="flex items-center justify-end border-t border-border bg-muted/50 px-6 py-4">
         <%= f.submit "Save changes",
-              class: "inline-flex items-center justify-center gap-x-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800 cursor-pointer" %>
+              class: "inline-flex items-center justify-center gap-x-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-teal-800 cursor-pointer" %>
       </div>
     </div>
   <% end %>

@@ -2,17 +2,17 @@
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <% end %>
 
-<div class="mx-auto max-w-5xl space-y-6 pb-20">
+<div class="w-full space-y-6">
   <div>
-    <h1 class="text-3xl font-bold tracking-tight text-slate-950">Review Payment</h1>
-    <p class="mt-1 text-sm text-slate-600">Suggestions are sent to hotel finance as remittance instructions only.</p>
+    <h1 class="text-3xl font-bold tracking-tight text-foreground">Review Payment</h1>
+    <p class="mt-1 text-sm text-muted-foreground">Suggestions are sent to hotel finance as remittance instructions only.</p>
   </div>
 
-  <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+  <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
     <div class="grid gap-4 sm:grid-cols-3">
-      <div><p class="text-xs font-bold uppercase tracking-wider text-slate-500">Hotel</p><p class="mt-1 font-bold text-slate-950"><%= @presenter.hotel_name %></p></div>
-      <div><p class="text-xs font-bold uppercase tracking-wider text-slate-500">Payment amount</p><p class="mt-1 font-black text-slate-950"><%= @presenter.amount_label %></p></div>
-      <div><p class="text-xs font-bold uppercase tracking-wider text-slate-500">Selected outstanding</p><p class="mt-1 font-black text-slate-950"><%= @presenter.selected_total_label %></p></div>
+      <div><p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Hotel</p><p class="mt-1 font-bold text-foreground"><%= @presenter.hotel_name %></p></div>
+      <div><p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment amount</p><p class="mt-1 font-black text-foreground"><%= @presenter.amount_label %></p></div>
+      <div><p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Selected outstanding</p><p class="mt-1 font-black text-foreground"><%= @presenter.selected_total_label %></p></div>
     </div>
     <div class="mt-4 grid gap-3 sm:grid-cols-2">
       <p class="rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">Shortfall: <%= @presenter.shortfall_label %></p>
@@ -20,15 +20,15 @@
     </div>
   </section>
 
-  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 px-6 py-5"><h2 class="text-lg font-bold text-slate-950">Oldest Due First Suggestions</h2></div>
+  <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div class="border-b border-border px-6 py-5"><h2 class="text-lg font-bold text-foreground">Oldest Due First Suggestions</h2></div>
     <div class="overflow-x-auto">
       <table class="w-full min-w-[720px] text-left text-sm">
-        <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500"><tr><th class="px-6 py-3">Invoice</th><th class="px-6 py-3">Due</th><th class="px-6 py-3 text-right">Outstanding</th><th class="px-6 py-3 text-right">Suggested</th></tr></thead>
-        <tbody class="divide-y divide-slate-100">
+        <thead class="border-b border-border bg-muted text-xs uppercase tracking-wider text-muted-foreground"><tr><th class="px-6 py-3">Invoice</th><th class="px-6 py-3">Due</th><th class="px-6 py-3 text-right">Outstanding</th><th class="px-6 py-3 text-right">Suggested</th></tr></thead>
+        <tbody class="divide-y divide-border">
           <% @presenter.suggestions.each do |suggestion| %>
             <% due_on = suggestion["due_on"] || suggestion[:due_on] %>
-            <tr><td class="px-6 py-4 font-bold"><%= suggestion["invoice_label"] || suggestion[:invoice_label] || suggestion["invoice_number"] || suggestion[:invoice_number] %></td><td class="px-6 py-4 text-slate-600"><%= due_on.present? ? Date.iso8601(due_on).strftime("%d %b %Y") : "—" %></td><td class="px-6 py-4 text-right"><%= @presenter.currency %> <%= number_with_precision(suggestion["outstanding_amount"] || suggestion[:outstanding_amount], precision: 2) %></td><td class="px-6 py-4 text-right font-bold"><%= @presenter.currency %> <%= number_with_precision(suggestion["suggested_amount"] || suggestion[:suggested_amount], precision: 2) %></td></tr>
+            <tr><td class="px-6 py-4 font-bold"><%= suggestion["invoice_label"] || suggestion[:invoice_label] || suggestion["invoice_number"] || suggestion[:invoice_number] %></td><td class="px-6 py-4 text-muted-foreground"><%= due_on.present? ? Date.iso8601(due_on).strftime("%d %b %Y") : "—" %></td><td class="px-6 py-4 text-right"><%= @presenter.currency %> <%= number_with_precision(suggestion["outstanding_amount"] || suggestion[:outstanding_amount], precision: 2) %></td><td class="px-6 py-4 text-right font-bold"><%= @presenter.currency %> <%= number_with_precision(suggestion["suggested_amount"] || suggestion[:suggested_amount], precision: 2) %></td></tr>
           <% end %>
         </tbody>
       </table>
@@ -42,6 +42,6 @@
     <%= hidden_field_tag "payment_response[razorpay_payment_id]", "", data: { checkout_payment_target: "paymentIdField" } %>
     <%= hidden_field_tag "payment_response[razorpay_order_id]", "", data: { checkout_payment_target: "orderIdField" } %>
     <%= hidden_field_tag "payment_response[razorpay_signature]", "", data: { checkout_payment_target: "signatureField" } %>
-    <div class="flex justify-end"><%= submit_tag "Pay Securely", disabled: !@presenter.ready?, data: { checkout_payment_target: "submitButton" }, class: "rounded-xl bg-slate-950 px-6 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" %></div>
+    <div class="flex justify-end"><%= submit_tag "Pay Securely", disabled: !@presenter.ready?, data: { checkout_payment_target: "submitButton" }, class: "rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50" %></div>
   <% end %>
 </div>

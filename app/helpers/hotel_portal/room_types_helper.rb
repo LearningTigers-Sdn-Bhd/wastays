@@ -11,9 +11,9 @@ module HotelPortal::RoomTypesHelper
     end
 
     if is_active
-      "group inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-semibold bg-blue-600 text-white transition-all duration-150"
+      "group inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-semibold bg-blue-600 text-primary-foreground transition-all duration-150"
     else
-      "group inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-medium text-slate-600 transition-all duration-150 hover:bg-slate-50 hover:text-slate-900"
+      "group inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-medium text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground"
     end
   end
 

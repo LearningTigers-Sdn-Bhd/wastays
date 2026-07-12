@@ -1,23 +1,23 @@
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
+<div class="w-full space-y-8">
   <!-- Header -->
-  <div class="px-4 md:px-0">
-    <div class="mt-5 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+  <div class="">
+ <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Financial Breakdown</h1>
-        <p class="mt-1 text-sm font-medium text-slate-600">Detailed transaction log for your records.</p>
+        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Financial Breakdown</h1>
+        <p class="mt-1 text-sm font-medium text-muted-foreground">Detailed transaction log for your records.</p>
       </div>
 
       <div class="inline-flex gap-x-2">
         <% if feature_enabled_for_hotel?("excel_pdf_export") %>
         <details class="relative min-w-[160px]">
-          <summary class="list-none inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50">
+          <summary class="list-none inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted">
             <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export
           </summary>
-          <div class="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-            <%= link_to "Export PDF", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :pdf), class: "block px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50", data: { turbo: false } %>
-            <%= link_to "Export Excel", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :xls), class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50", data: { turbo: false } %>
-            <%= link_to "Export CSV", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :csv), class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50", data: { turbo: false } %>
+          <div class="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+            <%= link_to "Export PDF", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :pdf), class: "block px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted", data: { turbo: false } %>
+            <%= link_to "Export Excel", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :xls), class: "block border-t border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted", data: { turbo: false } %>
+            <%= link_to "Export CSV", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :csv), class: "block border-t border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted", data: { turbo: false } %>
           </div>
         </details>
         <% end %>
@@ -26,33 +26,33 @@
   </div>
 
   <%= turbo_frame_tag "breakdown_results" do %>
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <!-- Filters & Search -->
-      <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
+      <div class="border-b border-border bg-muted/70 px-6 py-5 sm:px-8">
         <%= form_with url: breakdown_hotel_reports_path(current_hotel), method: :get, class: "flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-end", data: { controller: "auto-submit", turbo_frame: "breakdown_results" } do |f| %>
           <div class="flex-1 max-w-xs">
-            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Time Period</label>
-            <%= f.select :date_preset, options_for_select(date_preset_options, @date_preset), {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
+            <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Time Period</label>
+            <%= f.select :date_preset, options_for_select(date_preset_options, @date_preset), {}, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
           </div>
 
           <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'flex' : 'hidden' %> flex-1 max-w-sm gap-3">
             <div class="flex-1">
-              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">From</label>
-              <%= f.date_field :start_date, value: @start_date, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
+              <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">From</label>
+              <%= f.date_field :start_date, value: @start_date, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
             </div>
             <div class="flex-1">
-              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">To</label>
-              <%= f.date_field :end_date, value: @end_date, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
+              <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">To</label>
+              <%= f.date_field :end_date, value: @end_date, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
             </div>
           </div>
 
           <div class="flex-1">
-            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Search Records</label>
+            <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Search Records</label>
             <div class="relative">
               <div class="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
-                <svg class="size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               </div>
-              <%= f.text_field :q, value: params[:q], placeholder: "Guest, email, or reference token...", class: "w-full rounded-xl border border-slate-200 bg-white ps-11 pe-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "input->auto-submit#submit" } %>
+              <%= f.text_field :q, value: params[:q], placeholder: "Guest, email, or reference token...", class: "w-full rounded-xl border border-border bg-card ps-11 pe-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { action: "input->auto-submit#submit" } %>
             </div>
           </div>
         <% end %>
@@ -69,42 +69,42 @@
             <col class="w-[13%]">
             <col class="w-[13%]">
           </colgroup>
-          <thead class="bg-slate-100">
+          <thead class="bg-muted">
             <tr>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Booking Reference</th>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Guest Name</th>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
-              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Gross Price</th>
-              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Taxes</th>
-              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Margin</th>
-              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Net Payout</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Booking Reference</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Guest Name</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
+              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Gross Price</th>
+              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Taxes</th>
+              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Margin</th>
+              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Net Payout</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-200 bg-white">
+          <tbody class="divide-y divide-border bg-card">
             <% if @grouped_bookings.any? %>
               <% @grouped_bookings.each do |date, bookings| %>
-                <tr class="bg-slate-50/80">
-                  <td colspan="7" class="px-6 py-2.5 sm:px-8 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                <tr class="bg-muted/80">
+                  <td colspan="7" class="px-6 py-2.5 sm:px-8 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
                     <%= date.strftime("%d %b %Y") %>
                   </td>
                 </tr>
                 <% bookings.each_with_index do |presenter, index| %>
-                  <tr class="align-top transition-colors hover:bg-slate-100/80">
+                  <tr class="align-top transition-colors hover:bg-muted/80">
                     <td class="px-6 py-4 sm:px-8">
-                      <%= link_to "##{presenter.confirmation_token}", hotel_booking_control_panel_path(current_hotel, presenter.booking, tab: "booking_details"), class: "text-sm font-mono font-bold text-slate-900 hover:underline", data: { turbo: false } %>
+                      <%= link_to "##{presenter.confirmation_token}", hotel_booking_control_panel_path(current_hotel, presenter.booking, tab: "booking_details"), class: "text-sm font-mono font-bold text-foreground hover:underline", data: { turbo: false } %>
                     </td>
                     <td class="px-6 py-4">
-                      <span class="text-sm font-semibold text-slate-900"><%= presenter.guest_name %></span>
+                      <span class="text-sm font-semibold text-foreground"><%= presenter.guest_name %></span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= booking_status_class(presenter.status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10">
                         <%= presenter.status %>
                       </span>
                     </td>
-                    <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-slate-600">
+                    <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-muted-foreground">
                       RM <%= presenter.total_amount %>
                     </td>
-                    <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-slate-500">
+                    <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-muted-foreground">
                       <%= presenter.tax_total %>
                     </td>
                     <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-red-500">
@@ -119,16 +119,16 @@
             <% else %>
               <tr>
                 <td colspan="7" class="px-6 py-20 text-center sm:px-8">
-                  <p class="text-sm font-medium text-slate-500 italic">No bookings found for the selected criteria.</p>
+                  <p class="text-sm font-medium text-muted-foreground italic">No bookings found for the selected criteria.</p>
                 </td>
               </tr>
             <% end %>
           </tbody>
         </table>
       </div>
-      
+
       <% if @paginated_bookings&.total_pages.to_i > 1 %>
-        <div class="px-6 py-4 border-t border-slate-200 bg-slate-50/50 sm:px-8">
+        <div class="px-6 py-4 border-t border-border bg-muted/50 sm:px-8">
           <%= paginate @paginated_bookings %>
         </div>
       <% end %>

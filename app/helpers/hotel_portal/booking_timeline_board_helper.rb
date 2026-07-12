@@ -23,8 +23,8 @@ module HotelPortal
       "review_no_show" => "text-amber-600",
       "checked_in" => "text-purple-600",
       "completed" => "text-emerald-600",
-      "cancelled" => "text-slate-500",
-      "no_show" => "text-slate-700",
+      "cancelled" => "text-muted-foreground",
+      "no_show" => "text-foreground",
       "review_due_out" => "text-amber-900",
       "checkout_required" => "text-orange-700",
       "overbooked" => "text-red-700",
@@ -40,8 +40,8 @@ module HotelPortal
       "review_due_out" => "border-amber-900/20 bg-amber-50/30 text-amber-900",
       "checkout_required" => "border-orange-300 bg-orange-50/50 text-orange-800",
       "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700",
-      "cancelled" => "border-slate-300 bg-slate-100 text-slate-600",
-      "no_show" => "border-slate-300 bg-slate-100 text-slate-700",
+      "cancelled" => "border-border-interactive bg-muted text-muted-foreground",
+      "no_show" => "border-border-interactive bg-muted text-foreground",
       "not_ready" => "border-red-200 bg-red-50 text-red-700",
       "available" => "border-green-200 bg-green-50 text-green-700"
     }.freeze
@@ -51,7 +51,7 @@ module HotelPortal
     end
 
     def booking_icon_class(status)
-      STATUS_ICON_CLASSES.fetch(status.to_s, "text-slate-500")
+      STATUS_ICON_CLASSES.fetch(status.to_s, "text-muted-foreground")
     end
 
     def booking_timeline_board_row_height(room, row_min_base, block_step, visible_start_date)
@@ -77,12 +77,12 @@ module HotelPortal
       case status.to_s
       when "out_of_service" then "bg-rose-50 border-rose-200 text-rose-700"
       when "cleaning" then "bg-amber-50 border-amber-200 text-amber-700"
-      else "bg-slate-50 border-slate-200 text-slate-700"
+      else "bg-muted border-border text-foreground"
       end
     end
 
     def legend_style_for(status)
-      BOOKING_STYLES.fetch(status, "border-slate-200 bg-slate-50 text-slate-600")
+      BOOKING_STYLES.fetch(status, "border-border bg-muted text-muted-foreground")
     end
 
     def legend_count_for(booking_timeline_board, status)
@@ -100,7 +100,7 @@ module HotelPortal
     end
 
     def layout_toggle_bg_class(comfortable_mode)
-      comfortable_mode ? "bg-slate-200" : "bg-slate-900"
+      comfortable_mode ? "bg-muted" : "bg-primary"
     end
 
     def layout_toggle_span_class(comfortable_mode)
@@ -116,7 +116,7 @@ module HotelPortal
     end
 
     def room_smoking_color_class(room_type)
-      room_type.smoking_allowed ? "text-emerald-500" : "text-slate-400"
+      room_type.smoking_allowed ? "text-emerald-500" : "text-muted-foreground"
     end
 
     def room_pets_label(room_type)
@@ -124,7 +124,7 @@ module HotelPortal
     end
 
     def room_pets_color_class(room_type)
-      room_type.pets_allowed ? "text-emerald-500" : "text-slate-400"
+      room_type.pets_allowed ? "text-emerald-500" : "text-muted-foreground"
     end
 
     def board_cell_bg_class(date)
@@ -171,8 +171,8 @@ module HotelPortal
         when "review_due_out" then "bg-amber-900"
         when "checkout_required" then "bg-orange-700"
         when "completed" then "bg-emerald-500"
-        when "no_show" then "bg-slate-700"
-        else "bg-slate-500"
+        when "no_show" then "bg-primary"
+        else "bg-muted"
         end
       else
         "bg-green-500"
@@ -196,11 +196,11 @@ module HotelPortal
     end
 
     def room_card_smoking_badge_color_class(room_type)
-      room_type.smoking_allowed ? "text-emerald-500" : "text-slate-400"
+      room_type.smoking_allowed ? "text-emerald-500" : "text-muted-foreground"
     end
 
     def room_card_pets_badge_color_class(room_type)
-      room_type.pets_allowed ? "text-emerald-500" : "text-slate-400"
+      room_type.pets_allowed ? "text-emerald-500" : "text-muted-foreground"
     end
 
     def room_card_checkout_badge(booking, visible_start_date)
@@ -234,7 +234,7 @@ module HotelPortal
     end
 
     def booking_block_classes(block, view_type, visible_start_date, visible_end_exclusive)
-      "absolute z-10 overflow-hidden #{booking_block_rounded_class(view_type)} border cursor-pointer #{booking_block_status_classes(block)} #{booking_block_clip_corner_class(block, visible_start_date, visible_end_exclusive)} transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-1"
+      "absolute z-10 overflow-hidden #{booking_block_rounded_class(view_type)} border cursor-pointer #{booking_block_status_classes(block)} #{booking_block_clip_corner_class(block, visible_start_date, visible_end_exclusive)} transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
     end
 
     def booking_block_style_attributes(block, visible_start_date, visible_end_exclusive, block_left_pad, block_top, block_index, block_step)

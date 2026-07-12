@@ -1,7 +1,7 @@
 <%# Shared undo-check-in booking transaction sheet. %>
 
 <%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "right" } do %>
-  <div class="flex flex-col h-full bg-white">
+  <div class="flex flex-col h-full bg-card">
     <%= form_with url: hotel_booking_transaction_undo_check_in_path(current_hotel, @booking), method: :post,
         class: "flex flex-col h-full",
         data: { controller: "group-lifecycle-targets", group_lifecycle_targets_selection_mode_value: "checkbox" } do |f| %>
@@ -24,11 +24,11 @@
         <% end %>
 
         <div>
-          <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Reason to change</label>
+          <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Reason to change</label>
           <%= text_field_tag :retroactive_reason, params[:retroactive_reason],
               placeholder: "Provide a reason for reverting this check-in",
               required: true,
-              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+              class: "w-full rounded-xl border border-border bg-card py-2.5 px-4 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
 
         <% if @booking.group_booking_id? %>
@@ -40,7 +40,7 @@
       <%# Modal Footer %>
       <%= render "hotel_portal/bookings/board/partials/content_footer",
                  show_full_page_link: false,
-                 submit_button: f.submit("Undo Check-In", class: "px-6 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-bold hover:bg-rose-700 transition-colors shadow-sm") %>
+                 submit_button: f.submit("Undo Check-In", class: "px-6 py-2.5 bg-rose-600 text-primary-foreground rounded-xl text-sm font-bold hover:bg-rose-700 transition-colors shadow-sm") %>
     <% end %>
   </div>
 <% end %>

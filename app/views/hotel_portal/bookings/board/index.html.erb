@@ -1,45 +1,45 @@
-<div class="max-w-[1600px] mx-auto pb-20">
+<div class="w-full">
   <%= turbo_frame_tag "booking_timeline_board", data: { turbo_action: "advance" } do %>
     <div class="<%= @presenter.page_spacing %>">
-      <div class="mt-5 <%= @presenter.container_padding %>">
+ <div class="<%= @presenter.container_padding %>">
       <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div class="space-y-3">
           <div>
-            <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Booking Timeline Board</h1>
-            <p class="mt-1 text-sm font-medium text-slate-600"><%= current_hotel.name %> · Centralized reservation management and planning</p>
+            <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Booking Timeline Board</h1>
+            <p class="mt-1 text-sm font-medium text-muted-foreground"><%= current_hotel.name %> · Centralized reservation management and planning</p>
           </div>
 
-          <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-            <span class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm">
+          <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            <span class="rounded-full border border-border bg-card px-3 py-1.5 text-foreground shadow-sm">
               <%= board_date_range_label(@board_view_type, @start_date, @board_days) %>
             </span>
           </div>
         </div>
 
         <div class="relative inline-block text-left" data-controller="dropdown">
-          <button data-action="click->dropdown#toggle click@window->dropdown#hide" type="button" class="inline-flex items-center gap-x-1.5 rounded-xl bg-slate-900 px-3.5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 active:scale-95 md:px-4" id="view-menu-button" aria-expanded="false" aria-haspopup="true">
-            <%= cached_icon board_view_icon(@board_view_type), stroke_width: 2.2, class: "size-4 text-slate-300" %>
+          <button data-action="click->dropdown#toggle click@window->dropdown#hide" type="button" class="inline-flex items-center gap-x-1.5 rounded-xl bg-primary px-3.5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover active:scale-95 md:px-4" id="view-menu-button" aria-expanded="false" aria-haspopup="true">
+            <%= cached_icon board_view_icon(@board_view_type), stroke_width: 2.2, class: "size-4 text-primary-foreground" %>
             <span><%= board_view_label(@board_view_type) %></span>
-            <%= cached_icon "chevron-down", stroke_width: 2.2, class: "-mr-1 size-4 text-slate-400" %>
+            <%= cached_icon "chevron-down", stroke_width: 2.2, class: "-mr-1 size-4 text-muted-foreground" %>
           </button>
 
-          <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-2xl bg-slate-900 border border-slate-800 p-1.5 shadow-xl shadow-slate-950/20 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="view-menu-button" tabindex="-1">
+          <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-2xl bg-foreground text-background border border-border-interactive p-1.5 shadow-xl shadow-foreground/20 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="view-menu-button" tabindex="-1">
             <div class="py-0.5" role="none">
-              <div class="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-800 mb-1">Switch Board View</div>
-              
-              <%= link_to board_hotel_bookings_path(current_hotel, @board_query_params.merge(view_type: "stay", room_type_id: nil, room_status: nil)), 
-                          class: "group flex items-center px-3 py-2 text-xs font-bold rounded-xl transition #{ @board_view_type == 'stay' ? 'text-white bg-slate-800' : 'text-slate-300 hover:text-white hover:bg-slate-800' }", 
-                          role: "menuitem", 
+              <div class="px-3 py-1.5 text-[9px] font-bold text-background/60 uppercase tracking-widest border-b border-background/20 mb-1">Switch Board View</div>
+
+              <%= link_to board_hotel_bookings_path(current_hotel, @board_query_params.merge(view_type: "stay", room_type_id: nil, room_status: nil)),
+                          class: "group flex items-center px-3 py-2 text-xs font-bold rounded-xl transition #{ @board_view_type == 'stay' ? 'text-primary-foreground bg-primary' : 'text-background/80 hover:text-background hover:bg-background/10' }",
+                          role: "menuitem",
                           data: { turbo_frame: "booking_timeline_board" } do %>
-                <%= cached_icon "calendar-days", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>
+                <%= cached_icon "calendar-days", stroke_width: 2.2, class: "mr-3 size-4 text-background/60 group-hover:text-background transition-colors" %>
                 Stay View
               <% end %>
-              
-              <%= link_to board_hotel_bookings_path(current_hotel, @board_query_params.merge(view_type: "room", start_date: Time.current.in_time_zone(current_hotel.hotel_time_zone).to_date.to_s)), 
-                          class: "group flex items-center px-3 py-2 text-xs font-bold rounded-xl transition #{ @board_view_type == 'room' ? 'text-white bg-slate-800' : 'text-slate-300 hover:text-white hover:bg-slate-800' }", 
-                          role: "menuitem", 
+
+              <%= link_to board_hotel_bookings_path(current_hotel, @board_query_params.merge(view_type: "room", start_date: Time.current.in_time_zone(current_hotel.hotel_time_zone).to_date.to_s)),
+                          class: "group flex items-center px-3 py-2 text-xs font-bold rounded-xl transition #{ @board_view_type == 'room' ? 'text-primary-foreground bg-primary' : 'text-background/80 hover:text-background hover:bg-background/10' }",
+                          role: "menuitem",
                           data: { turbo_frame: "booking_timeline_board" } do %>
-                <%= cached_icon "layout-grid", stroke_width: 2.2, class: "mr-3 size-4 text-slate-500 group-hover:text-slate-300 transition-colors" %>
+                <%= cached_icon "layout-grid", stroke_width: 2.2, class: "mr-3 size-4 text-background/60 group-hover:text-background transition-colors" %>
                 Room View
               <% end %>
             </div>
@@ -69,17 +69,17 @@
       </div>
     </div>
 
-    <div class="overflow-auto max-h-[calc(100vh-18rem)] rounded-2xl border border-slate-200 bg-white bg-[repeating-linear-gradient(-45deg,transparent,transparent_10px,#f8fafc_10px,#f8fafc_20px)] shadow-sm">
+    <div class="overflow-auto max-h-[calc(100vh-18rem)] rounded-2xl border border-border bg-card bg-[repeating-linear-gradient(-45deg,transparent,transparent_10px,#f8fafc_10px,#f8fafc_20px)] shadow-sm">
       <% if @presenter.board_groups.blank? %>
-        <div class="px-8 py-20 text-center bg-white">
-          <p class="text-sm font-medium text-slate-500">No rooms found for this property.</p>
+        <div class="px-8 py-20 text-center bg-card">
+          <p class="text-sm font-medium text-muted-foreground">No rooms found for this property.</p>
         </div>
       <% elsif @board_view_type == "room" %>
         <!-- Category Tab Bar (Sticky at the top of the room board) -->
-        <div class="sticky top-0 z-30 bg-slate-100 border-b border-slate-200 px-6 py-4 flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar">
+        <div class="sticky top-0 z-30 bg-muted border-b border-border px-6 py-4 flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar">
           <% @room_types.each do |rt| %>
             <%= link_to board_hotel_bookings_path(current_hotel, @board_query_params.merge(room_type_id: rt.id)),
-                        class: "cursor-pointer rounded-full border px-4 py-1.5 text-xs font-bold shadow-sm transition inline-flex items-center gap-1.5 uppercase tracking-wider #{ @selected_room_type_id.to_s == rt.id.to_s ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900' }",
+                        class: "cursor-pointer rounded-full border px-4 py-1.5 text-xs font-bold shadow-sm transition inline-flex items-center gap-1.5 uppercase tracking-wider #{ @selected_room_type_id.to_s == rt.id.to_s ? 'border-border-interactive bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground' }",
                         data: { turbo_frame: "booking_timeline_board" } do %>
               <%= cached_icon "bed", stroke_width: 2.5, class: "size-3.5" %>
               <span><%= rt.name %></span>
@@ -87,7 +87,7 @@
           <% end %>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 p-3 bg-slate-50">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 p-3 bg-muted">
           <% @presenter.board_groups.each do |group| %>
             <% group[:rooms].each do |room| %>
               <%= render "hotel_portal/bookings/board/partials/room_card",
@@ -111,20 +111,20 @@
                        summary_padding: @presenter.summary_padding %>
 
             <% @presenter.board_groups.each do |group| %>
-              <details open class="group border-b border-slate-200">
-                <summary class="list-none cursor-pointer bg-slate-100 [&::-webkit-details-marker]:hidden">
+              <details open class="group border-b border-border">
+                <summary class="list-none cursor-pointer bg-muted [&::-webkit-details-marker]:hidden">
                   <div class="grid" style="grid-template-columns: <%= @presenter.grid_template_columns %>;">
-                    <div class="sticky left-0 z-20 bg-slate-100 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
+                    <div class="sticky left-0 z-20 bg-muted text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                       <div class="flex items-center justify-between gap-2 opacity-0 <%= @presenter.summary_padding %> pointer-events-none">
-                        <span class="truncate whitespace-nowrap font-black text-slate-800"><%= group[:room_type].name %></span>
-                        <%= cached_icon "chevron-right", stroke_width: 2.25, class: "size-4 shrink-0 text-slate-500" %>
+                        <span class="truncate whitespace-nowrap font-black text-foreground"><%= group[:room_type].name %></span>
+                        <%= cached_icon "chevron-right", stroke_width: 2.25, class: "size-4 shrink-0 text-muted-foreground" %>
                       </div>
                       <div class="absolute inset-y-0 left-0 w-max min-w-full flex items-center justify-between gap-4 <%= @presenter.summary_padding %> pointer-events-auto">
-                        <span class="whitespace-nowrap font-black text-slate-800"><%= group[:room_type].name %></span>
-                        <%= cached_icon "chevron-right", stroke_width: 2.25, class: "size-4 shrink-0 text-slate-500 transition-transform duration-150 group-open:rotate-90" %>
+                        <span class="whitespace-nowrap font-black text-foreground"><%= group[:room_type].name %></span>
+                        <%= cached_icon "chevron-right", stroke_width: 2.25, class: "size-4 shrink-0 text-muted-foreground transition-transform duration-150 group-open:rotate-90" %>
                       </div>
                     </div>
-                    <div style="grid-column: 2 / -1;" class="bg-slate-100 border-r border-slate-200"></div>
+                    <div style="grid-column: 2 / -1;" class="bg-muted border-r border-border"></div>
                   </div>
                 </summary>
 

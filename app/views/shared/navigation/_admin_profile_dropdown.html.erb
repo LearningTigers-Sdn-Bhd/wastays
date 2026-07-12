@@ -1,21 +1,21 @@
 <!-- Preline CMS-style Profile Dropdown -->
 <div class="relative inline-flex" data-controller="dropdown">
-  <button id="admin-profile-toggle" type="button" class="p-0.5 inline-flex items-center gap-x-2 rounded-full hover:bg-surface-hover transition-colors" data-action="click->dropdown#toggle">
+  <button id="admin-profile-toggle" type="button" class="p-0.5 inline-flex items-center gap-x-2 rounded-full hover:bg-muted transition-colors" data-action="click->dropdown#toggle">
     <span class="inline-flex shrink-0 justify-center items-center size-8 rounded-full bg-brand-primary/10 border border-brand-primary/20">
       <%= cached_icon "user", class: "size-4 text-brand-primary" %>
     </span>
   </button>
 
-  <div class="absolute right-0 top-full mt-2 w-[280px] bg-layer shadow-dropdown rounded-xl hidden z-[100] border border-layer-line" data-dropdown-target="menu">
+  <div class="absolute right-0 top-full mt-2 w-[280px] bg-card shadow-dropdown rounded-xl hidden z-[100] border border-border" data-dropdown-target="menu">
 
     <!-- User Info -->
-    <div class="py-3 px-4 border-b border-layer-line">
+    <div class="py-3 px-4 border-b border-border">
       <div class="flex items-center gap-x-3">
         <span class="inline-flex shrink-0 justify-center items-center size-10 rounded-full bg-brand-primary/10 border border-brand-primary/20">
           <%= cached_icon "user", class: "size-5 text-brand-primary" %>
         </span>
         <div class="grow min-w-0">
-          <p class="text-sm font-semibold text-neutral-text-primary truncate"><%= current_user.name || "Admin User" %></p>
+          <p class="text-sm font-semibold text-foreground truncate"><%= current_user.name || "Admin User" %></p>
           <p class="text-xs text-muted-foreground truncate"><%= current_user.email %></p>
         </div>
       </div>
@@ -23,18 +23,18 @@
 
     <div class="p-1.5 space-y-0.5">
       <!-- Account links -->
-      <a class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-neutral-text-primary hover:bg-surface-hover focus:outline-none transition-colors" href="<%= edit_admin_profile_path %>">
+      <a class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-foreground hover:bg-muted focus:outline-none transition-colors" href="<%= edit_admin_profile_path %>">
         <%= cached_icon "user", class: "shrink-0 size-4 text-muted-foreground" %>
         My account
       </a>
-      <a class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-neutral-text-primary hover:bg-surface-hover focus:outline-none transition-colors" href="<%= edit_admin_profile_path %>">
+      <a class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-foreground hover:bg-muted focus:outline-none transition-colors" href="<%= edit_admin_profile_path %>">
         <svg class="shrink-0 size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         Settings
       </a>
 
       <!-- Sign out -->
-      <div class="py-1 border-t border-layer-line">
-        <%= button_to logout_path, method: :delete, class: "flex items-center gap-x-3 w-full py-2 px-3 rounded-lg text-sm text-neutral-text-primary hover:bg-surface-hover transition-colors text-left" do %>
+      <div class="py-1 border-t border-border">
+        <%= button_to logout_path, method: :delete, class: "flex items-center gap-x-3 w-full py-2 px-3 rounded-lg text-sm text-foreground hover:bg-muted transition-colors text-left" do %>
           <%= cached_icon "log-out", class: "shrink-0 size-4 text-muted-foreground" %>
           Sign out
         <% end %>

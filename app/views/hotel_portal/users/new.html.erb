@@ -1,30 +1,30 @@
-<div class="max-w-3xl mx-auto pb-20 space-y-8">
-  <div class="px-4 md:px-0">
-    <div class="mt-5">
-      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Invite Staff Member</h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">Send a secure invitation link so a staff member can accept access to this property.</p>
+<div class="w-full space-y-8">
+  <div class="">
+ <div>
+      <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Invite Staff Member</h1>
+      <p class="mt-1 text-sm font-medium text-muted-foreground">Send a secure invitation link so a staff member can accept access to this property.</p>
     </div>
   </div>
 
-  <div class="px-4 md:px-0">
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="">
+    <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <div class="p-6">
         <%= form_with url: hotel_users_path(current_hotel), method: :post, local: true, class: "space-y-6" do |f| %>
           <div>
-            <%= f.label :email, "Email Address", class: "mb-2 block text-sm font-medium text-slate-900" %>
-            <%= f.email_field :email, placeholder: "staff@example.com", required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm transition focus:border-slate-900 focus:ring-0 placeholder:text-slate-400" %>
-            <p class="mt-2 text-xs text-slate-500">They will receive an email invitation and create their account when accepting it.</p>
+            <%= f.label :email, "Email Address", class: "mb-2 block text-sm font-medium text-foreground" %>
+            <%= f.email_field :email, placeholder: "staff@example.com", required: true, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm transition focus:border-border-interactive focus:ring-0 placeholder:text-muted-foreground" %>
+            <p class="mt-2 text-xs text-muted-foreground">They will receive an email invitation and create their account when accepting it.</p>
           </div>
 
           <div>
-            <%= f.label :role_id, "Assigned Role", class: "mb-2 block text-sm font-medium text-slate-900" %>
-            <%= f.select :role_id, options_from_collection_for_select(@available_roles, :id, :name), { prompt: "Select a role..." }, required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm transition focus:border-slate-900 focus:ring-0" %>
-            <p class="mt-2 text-xs text-slate-500">This role controls what they can see and do at this specific property.</p>
+            <%= f.label :role_id, "Assigned Role", class: "mb-2 block text-sm font-medium text-foreground" %>
+            <%= f.select :role_id, options_from_collection_for_select(@available_roles, :id, :name), { prompt: "Select a role..." }, required: true, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm transition focus:border-border-interactive focus:ring-0" %>
+            <p class="mt-2 text-xs text-muted-foreground">This role controls what they can see and do at this specific property.</p>
           </div>
 
-          <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
-            <%= link_to "Cancel", hotel_users_path(current_hotel), class: "inline-flex items-center rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" %>
-            <%= f.submit "Send Invitation", class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+          <div class="pt-4 flex items-center justify-end gap-3 border-t border-border">
+            <%= link_to "Cancel", hotel_users_path(current_hotel), class: "inline-flex items-center rounded-xl bg-card border border-border px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted" %>
+            <%= f.submit "Send Invitation", class: "inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" %>
           </div>
         <% end %>
       </div>

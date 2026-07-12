@@ -1,17 +1,13 @@
-<div class="mx-auto max-w-[1600px] space-y-8 pb-20">
-  <div class="px-4 md:px-0">
-    <div class="mt-5">
-      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl"><%= @presenter.page_title %></h1>
-      <p class="mt-1 text-sm font-medium text-slate-600"><%= @presenter.page_description %></p>
-    </div>
+<div class="w-full space-y-8">
+  <div>
+    <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"><%= @presenter.page_title %></h1>
+    <p class="mt-1 text-sm font-medium text-muted-foreground"><%= @presenter.page_description %></p>
   </div>
 
   <% if @presenter %>
-    <div class="px-4 md:px-0">
-      <%= render "hotel_portal/settings/group_tabs" %>
-    </div>
+    <%= render "hotel_portal/settings/group_tabs" %>
 
-    <div class="space-y-6 px-4 md:px-0">
+    <div class="space-y-6">
       <% case @presenter.active_page %>
       <% when "general" %>
         <%= render "hotel_portal/settings/general_section" %>
@@ -26,9 +22,9 @@
       <% end %>
     </div>
   <% else %>
-    <div class="mx-4 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center md:mx-0">
-      <h2 class="text-lg font-bold text-slate-900">No settings yet</h2>
-      <p class="mt-2 text-sm text-slate-600">Settings will appear once a hotel is selected.</p>
+    <div class="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
+      <h2 class="text-lg font-bold text-foreground">No settings yet</h2>
+      <p class="mt-2 text-sm text-muted-foreground">Settings will appear once a hotel is selected.</p>
     </div>
   <% end %>
 </div>

@@ -35,11 +35,11 @@ not blind search-and-replace.
 
 | Portal | Files with legacy classes | Direct page templates | Partials / streams |
 |---|---:|---:|---:|
-| Admin | 51 | 32 | 19 |
-| Hotel | 293 | 96 | 197 |
-| Corporate | 17 | 6 | 11 |
-| Guest | 7 | 7 | 0 |
-| **Total** | **368** | **141** | **227** |
+| Admin | 0 | 0 | 0 |
+| Hotel | 0 | 0 | 0 |
+| Corporate | 0 | 0 | 0 |
+| Guest | 0 | 0 | 0 |
+| **Total** | **0** | **0** | **0** |
 
 An entry template without direct legacy classes may still render legacy partials. For
 example, the Hotel and Corporate AR invoice entry templates are relatively clean, but
@@ -49,7 +49,8 @@ their headers, metrics, filters, tables, and detail partials still use fixed pal
 
 ### Guest
 
-Every Guest page directly contains legacy palette classes:
+Guest is fully migrated. All seven page templates now use semantic panel tokens for
+neutral UI chrome:
 
 - `guest/dashboard/index.html.erb`
 - `guest/bookings/index.html.erb`
@@ -59,12 +60,12 @@ Every Guest page directly contains legacy palette classes:
 - `guest/refund_requests/show.html.erb`
 - `guest/sessions/new.html.erb`
 
-Highest concentrations are Refund Requests and Booking pages. Guest is the smallest
-complete portal and is a good candidate for a later end-to-end token migration.
+Intentional brand and domain-status colors remain explicit.
 
 ### Corporate
 
-All Corporate page families are legacy directly or through rendered partials:
+Corporate is fully migrated. The following page families now use semantic panel tokens
+for neutral UI chrome, including their rendered partials:
 
 - Dashboard
 - Corporate profile
@@ -73,56 +74,20 @@ All Corporate page families are legacy directly or through rendered partials:
 - Pay invoices
 - Payment review
 
-The largest direct concentration is `corporate_portal/ar_payments/pay_invoices.html.erb`,
-followed by payment details and the profile page.
+Intentional payment and status colors remain explicit.
 
 ### Admin
 
-Nearly every Admin feature area remains legacy. The largest page templates are:
-
-| Page | Approximate legacy class matches |
-|---|---:|
-| API developer documentation | 125 |
-| Dashboard | 122 |
-| Hotel details | 116 |
-| Observation Deck index | 108 |
-| Reconciliations index | 84 |
-| Exchange Rates | 84 |
-| Margin Rules | 83 |
-| Setup Fee Rules | 81 |
-| Observation Deck details | 78 |
-| Analytics | 76 |
-
-Other affected areas include Hotels and onboarding, Bookings, API keys, Audit Logs,
-Payouts, Plans, Refunds, Salespersons, Integrations, and Webhooks.
+Admin is fully migrated. All 55 page templates and partials now use semantic panel
+tokens for neutral UI chrome. Intentional status, alert, chart, integration-brand, and
+financial-state colors remain explicit.
 
 ### Hotel
 
-Hotel contains the largest legacy surface. High-concentration page templates include:
-
-| Page | Approximate legacy class matches |
-|---|---:|
-| Inventory dashboard | 140 |
-| Hotel profile edit | 139 |
-| Dashboard | 138 |
-| Guest records index | 126 |
-| Guest registration card | 123 |
-| Reports index | 122 |
-| Bookings index | 122 |
-| Requests index | 113 |
-| In-house guests | 105 |
-| Guest details | 100 |
-
-Affected feature families include:
-
-- Arrivals, in-house guests, checked-out guests, and guest records
-- Booking index, timeline board, control panel, lifecycle drawers, and registration cards
-- Inventory, room types, room status, and room groups
-- Folios, routing, transactions, and booking billing controls
-- AR invoices, payments, statements, and corporate accounts
-- Reports, Night Audit partials, taxes, transaction codes, and GL mappings
-- Settings, profiles, plans, users, roles, requests, refunds, and notifications
-- Knowledge management and diagnostics
+Hotel is fully migrated. All 329 page, partial, and Turbo Stream templates now use
+semantic panel tokens for neutral UI chrome. Hotel-specific helpers, presenters, and
+services that generate class strings were migrated as well. Intentional room-status,
+financial-state, operational, chart, and alert colors remain explicit.
 
 ## What `panel-light` changes
 
@@ -141,8 +106,8 @@ ring-ring
 
 It also sets `color-scheme: light`, affecting native browser controls. Fixed legacy
 classes such as `bg-white`, `text-slate-700`, and `border-layer-line` remain unchanged.
-The result is temporarily a hybrid UI: legacy fixed-color pages surrounding panel-themed
-navigation and PanelsUI components.
+All four role portals and the shared role-panel shell/navigation now follow
+`panel-light` semantic roles.
 
 ## Recommended migration mapping
 
@@ -169,10 +134,10 @@ contrast requirements.
 
 1. Apply `data-theme="panel-light"` to the four role-panel layouts.
 2. Complete the Phase 4 Sidebar, Breadcrumb, and Tabs migration.
-3. Migrate Guest pages as the smallest full vertical slice.
-4. Migrate Corporate pages, beginning with payments.
-5. Migrate shared Admin shells and high-use CRUD surfaces.
-6. Migrate Hotel by feature family rather than as one large rewrite.
+3. ~~Migrate Guest pages as the smallest full vertical slice.~~ Completed.
+4. ~~Migrate Corporate pages, beginning with payments.~~ Completed.
+5. ~~Migrate shared Admin shells and high-use CRUD surfaces.~~ Completed.
+6. ~~Migrate Hotel by feature family rather than as one large rewrite.~~ Completed.
 7. Remove legacy color aliases only after repository-wide reference checks.
 
 Each page migration should preserve behavior and test hooks, perform a light/dark contrast
@@ -198,5 +163,6 @@ layouts, shared partials, helpers that build class strings, JavaScript, and test
 ## Scope boundary
 
 Phase 4 standardizes role-panel navigation components. It does not need to migrate all
-368 legacy view files. Full page-token conversion should remain a separate, incremental
-frontend modernization phase.
+The role-panel view migration is complete. Repository-wide legacy aliases should only be
+removed after checking public pages, mailers, shared components, helpers, JavaScript, and
+tests that are outside the four role portals.

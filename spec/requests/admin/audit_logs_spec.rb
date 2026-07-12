@@ -15,10 +15,10 @@ RSpec.describe "Admin::AuditLogs", type: :request do
       get "/admin/audit_logs"
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Audit Logs')
+      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Audit Logs')
       expect(response.body).to include("Audit Logs")
       expect(response.body).to include("Review platform activity and operational changes across all hotels.")
-      expect(response.body).to include('class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Activity Feed')
+      expect(response.body).to include('class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Activity Feed')
       expect(response.body).to include("Activity Feed")
       expect(response.body).to include("All Hotels")
       expect(response.body).to include("All Actions")

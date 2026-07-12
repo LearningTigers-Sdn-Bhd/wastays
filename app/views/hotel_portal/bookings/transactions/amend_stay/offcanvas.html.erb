@@ -1,7 +1,7 @@
 <%# Shared amend-stay booking transaction sheet. %>
 
 <%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "right" } do %>
-  <div class="flex flex-col h-full bg-white">
+  <div class="flex flex-col h-full bg-card">
     <%= form_with model: @booking, url: hotel_booking_transaction_amend_stay_path(current_hotel, @booking), method: :patch,
         class: "flex flex-col h-full",
         data: {
@@ -29,70 +29,70 @@
         <% end %>
 
         <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
-        
+
         <div class="grid sm:grid-cols-2 gap-6">
           <div class="space-y-2">
-            <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Scheduled Check-in</label>
+            <label class="block text-[11px] font-black text-muted-foreground uppercase tracking-[0.15em]">Scheduled Check-in</label>
             <%= f.datetime_local_field :check_in, value: @booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M"),
-                class: "w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none focus:ring-0 transition-all shadow-sm", 
+                class: "w-full rounded-2xl border-2 border-border bg-muted py-3 px-4 text-sm font-bold text-foreground focus:border-border-interactive focus:bg-card focus:outline-none focus:ring-0 transition-all shadow-sm",
                 data: { booking_calc_target: "checkIn", action: "change->booking-calc#calculate" } %>
           </div>
           <div class="space-y-2">
-            <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Scheduled Check-out</label>
+            <label class="block text-[11px] font-black text-muted-foreground uppercase tracking-[0.15em]">Scheduled Check-out</label>
             <%= f.datetime_local_field :check_out, value: @booking.check_out.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M"),
-                class: "w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none focus:ring-0 transition-all shadow-sm", 
+                class: "w-full rounded-2xl border-2 border-border bg-muted py-3 px-4 text-sm font-bold text-foreground focus:border-border-interactive focus:bg-card focus:outline-none focus:ring-0 transition-all shadow-sm",
                 data: { booking_calc_target: "checkOut", action: "change->booking-calc#calculate" } %>
           </div>
         </div>
 
         <div class="space-y-2">
-          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Room Category</label>
+          <label class="block text-[11px] font-black text-muted-foreground uppercase tracking-[0.15em]">Room Category</label>
           <% current_room_type_id = @booking.booking_rooms.first&.room_type_id %>
-          <%= f.collection_select :room_type_id, @room_types, :id, :name, { selected: current_room_type_id }, 
-              { class: "w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none focus:ring-0 transition-all shadow-sm", 
-                data: { 
-                  booking_calc_target: "roomType", 
+          <%= f.collection_select :room_type_id, @room_types, :id, :name, { selected: current_room_type_id },
+              { class: "w-full rounded-2xl border-2 border-border bg-muted py-3 px-4 text-sm font-bold text-foreground focus:border-border-interactive focus:bg-card focus:outline-none focus:ring-0 transition-all shadow-sm",
+                data: {
+                  booking_calc_target: "roomType",
                   action: "change->booking-calc#updateRoomNumbers change->booking-calc#calculate",
                   prices: @room_types.map { |rt| [rt.id, rt.base_price] }.to_h.to_json,
                   room_numbers: @room_types.map { |rt| [rt.id, rt.room_numbers] }.to_h.to_json
-                } 
+                }
               } %>
         </div>
 
         <div class="space-y-2">
-          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Select Rates</label>
+          <label class="block text-[11px] font-black text-muted-foreground uppercase tracking-[0.15em]">Select Rates</label>
           <% current_rate_plan = @booking.booking_rooms.first&.rate_plan %>
           <%= f.select :rate_plan_id, (current_rate_plan ? [[current_rate_plan.name, current_rate_plan.id]] : []), { selected: current_rate_plan&.id, prompt: "Select room category and dates first" },
-              { class: "w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none focus:ring-0 transition-all shadow-sm",
+              { class: "w-full rounded-2xl border-2 border-border bg-muted py-3 px-4 text-sm font-bold text-foreground focus:border-border-interactive focus:bg-card focus:outline-none focus:ring-0 transition-all shadow-sm",
                 data: { booking_calc_target: "ratePlanSelect", action: "change->booking-calc#calculate" } } %>
         </div>
 
-        <div data-controller="room-lock" 
+        <div data-controller="room-lock"
              data-room-lock-url-value="<%= hotel_room_locks_path(current_hotel) %>"
              data-room-lock-room-type-id-value="<%= current_room_type_id %>"
              data-room-lock-current-room-value="<%= @booking.hotel_snapshot.is_a?(Hash) ? (@booking.hotel_snapshot['room_number'] || @booking.hotel_snapshot.dig('assignment', 'room_number')) : nil %>"
              data-booking-calc-target="roomNumberContainer"
              class="space-y-2">
-          <label for="booking_room_number" class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Room Number</label>
+          <label for="booking_room_number" class="block text-[11px] font-black text-muted-foreground uppercase tracking-[0.15em]">Room Number</label>
           <% current_room_number = @booking.hotel_snapshot.is_a?(Hash) ? @booking.hotel_snapshot['room_number'].presence || @booking.hotel_snapshot.dig('assignment', 'room_number').presence : nil %>
-          <%= f.select :room_number, [[current_room_number, current_room_number]], { selected: current_room_number }, 
+          <%= f.select :room_number, [[current_room_number, current_room_number]], { selected: current_room_number },
               { id: "booking_room_number",
-                class: "w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3 px-4 text-sm font-bold text-slate-700 focus:border-slate-200 focus:bg-white focus:outline-none focus:ring-0 transition-all shadow-sm", 
-                data: { 
+                class: "w-full rounded-2xl border-2 border-border bg-muted py-3 px-4 text-sm font-bold text-foreground focus:border-border-interactive focus:bg-card focus:outline-none focus:ring-0 transition-all shadow-sm",
+                data: {
                   booking_calc_target: "roomNumberSelect",
                   action: "change->room-lock#lock"
-                } 
+                }
               } %>
-          <p class="text-[10px] font-bold text-slate-400 mt-2 italic uppercase tracking-wider">Only available rooms for the selected dates are shown.</p>
+          <p class="text-[10px] font-bold text-muted-foreground mt-2 italic uppercase tracking-wider">Only available rooms for the selected dates are shown.</p>
         </div>
 
-        <div class="mt-8 p-6 rounded-3xl bg-slate-50 border-2 border-slate-100" data-booking-calc-target="estimatedTotalSection">
+        <div class="mt-8 p-6 rounded-3xl bg-muted border-2 border-border" data-booking-calc-target="estimatedTotalSection">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">Estimated Total</p>
-              <p class="text-[10px] font-bold text-slate-400 mt-1">Includes taxes & fees</p>
+              <p class="text-[11px] font-black text-muted-foreground uppercase tracking-[0.15em]">Estimated Total</p>
+              <p class="text-[10px] font-bold text-muted-foreground mt-1">Includes taxes & fees</p>
             </div>
-            <p class="text-2xl font-black text-slate-900 tracking-tight">MYR <span data-booking-calc-target="displayTotal"><%= number_with_precision(@booking.total_amount, precision: 2) %></span></p>
+            <p class="text-2xl font-black text-foreground tracking-tight">MYR <span data-booking-calc-target="displayTotal"><%= number_with_precision(@booking.total_amount, precision: 2) %></span></p>
           </div>
           <%= f.hidden_field :total_amount, data: { booking_calc_target: "totalInput" } %>
           <%= f.hidden_field :manual_rate_override, data: { booking_calc_target: "rateOverrideFlag" } %>
@@ -108,7 +108,7 @@
       <%# Modal Footer %>
       <%= render "hotel_portal/bookings/board/partials/content_footer",
                  show_full_page_link: false,
-                 submit_button: f.submit("Save Changes", class: "px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors shadow-sm") %>
+                 submit_button: f.submit("Save Changes", class: "px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-sm") %>
     <% end %>
   </div>
 <% end %>
