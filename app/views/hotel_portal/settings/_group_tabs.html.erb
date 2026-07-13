@@ -14,7 +14,7 @@
     <nav class="relative flex items-center gap-1.5 overflow-x-auto w-full" aria-label="Settings sections">
       <% tabs.each do |tab| %>
         <%= link_to tab[:path],
-                    class: "flex-1 flex items-center justify-center gap-2.5 whitespace-nowrap rounded-xl px-5 py-3 text-xs font-bold transition-all duration-200 hover:text-slate-800 active:scale-[0.98] #{tab[:active] ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 bg-transparent'}" do %>
+                    class: "flex-1 flex items-center justify-center gap-2.5 whitespace-nowrap rounded-xl px-5 py-3 text-xs font-bold transition-all duration-200 active:scale-[0.98] #{tab[:active] ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 bg-transparent'}" do %>
           <%= cached_icon tab[:icon], class: "size-4 #{tab[:active] ? 'text-white' : 'text-slate-400'}" %>
           <span><%= tab[:label] %></span>
         <% end %>

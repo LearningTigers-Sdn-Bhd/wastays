@@ -32,7 +32,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
         }
       }.to change(RatePlan, :count).by(1)
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: 'rates'))
+      expect(response).to redirect_to(hotel_rates_settings_path(hotel))
       follow_redirect!
       expect(response.body).to include("created successfully")
 
@@ -51,7 +51,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
         delete hotel_rate_plan_path(hotel, rate_plan)
       }.to change(RatePlan, :count).by(-1)
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: 'rates'))
+      expect(response).to redirect_to(hotel_rates_settings_path(hotel))
     end
 
     it 'prevents deleting standard rate plan' do
@@ -61,7 +61,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
         delete hotel_rate_plan_path(hotel, standard_rate)
       }.not_to change(RatePlan, :count)
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: 'rates'))
+      expect(response).to redirect_to(hotel_rates_settings_path(hotel))
       expect(flash[:alert]).to include("System rate plans cannot be deleted")
     end
   end

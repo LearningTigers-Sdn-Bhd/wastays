@@ -71,7 +71,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include(%(href="/hotel/#{hotel.slug}/arrivals"))
       expect(response.body).to include(%(href="/hotel/#{hotel.slug}/bookings"))
-      expect(response.body).to include(%(href="/hotel/#{hotel.slug}/settings"))
+      expect(response.body).to include(%(href="/hotel/#{hotel.slug}/settings/general"))
     end
   end
 

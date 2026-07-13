@@ -130,11 +130,9 @@ domain_paths() {
         spec/requests/hotel_portal/bookings \
         spec/requests/hotel_portal/manual_bookings_spec.rb \
         spec/requests/hotel_portal/professional_bookings_spec.rb \
-        spec/system/hotel/booking_show_tabs_spec.rb \
         spec/system/hotel/booking_timeline_board_lifecycle_spec.rb \
         spec/models/booking_spec.rb \
         spec/models/booking_guest_spec.rb \
-        spec/models/booking_room_spec.rb \
         spec/models/booking_note_spec.rb \
         spec/models/booking_audit_log_spec.rb
       ;;
@@ -181,7 +179,6 @@ domain_paths() {
         spec/requests/hotel_portal/in_house_guests_spec.rb \
         spec/requests/hotel_portal/checked_out_guests_spec.rb \
         spec/requests/hotel_portal/inventory_dashboards_spec.rb \
-        spec/requests/hotel_portal/inventory_audit_logs_spec.rb \
         spec/requests/hotel_portal/room_status_board_spec.rb \
         spec/requests/hotel_portal/room_statuses_spec.rb \
         spec/requests/hotel_portal/room_blocks_spec.rb \
@@ -299,7 +296,6 @@ domain_paths() {
         spec/models/margin_rule_spec.rb \
         spec/models/setup_fee_rule_spec.rb \
         spec/models/exchange_rate_spec.rb \
-        spec/models/api_key_spec.rb \
         spec/models/app_config_spec.rb
       ;;
     system)

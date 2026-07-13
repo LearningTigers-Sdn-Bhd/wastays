@@ -31,12 +31,23 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     expect(page).to have_no_css("h2", text: "AI Concierge Configuration")
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Notifications")
 
-    within("[data-testid='settings-tabs']") { click_link "AI Concierge" }
+    within("[data-controller='breadcrumb-dropdown']") do
+      expect(page).to have_text("General")
+      expect(page).to have_text("Notifications")
+    end
+    within("[data-testid='settings-tabs']") do
+      expect(page).to have_link("Notifications", href: hotel_notification_settings_path(hotel))
+      expect(all("a").map { |link| link.text.squish }).to eq([ "General Settings", "Rate Settings", "Notifications", "Plan & Billing" ])
+    end
+
+    visit hotel_ai_concierge_settings_path(hotel)
 
     expect(page).to have_current_path(hotel_ai_concierge_settings_path(hotel))
     expect(page).to have_css("h2", text: "AI Concierge Configuration")
     expect(page).to have_no_css("h2", text: "Communication & Notifications")
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "AI Concierge")
+    expect(page).to have_css("[data-controller='breadcrumb-dropdown']", text: "Guest Content")
+    within("[data-testid='settings-tabs']") { expect(page).to have_no_link("Notifications") }
   end
 
   it "falls back to General for an unknown tab parameter" do

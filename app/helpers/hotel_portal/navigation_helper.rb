@@ -102,15 +102,7 @@ module HotelPortal
 
 
     def hotel_sidebar_footer_items
-      first_item = if settings_sidebar_mode?
-                     NavItem.new(label: "Back to previous page", path: hotel_settings_back_path, icon: "arrow-left", active: false)
-                   else
-                     NavItem.new(label: "Settings", path: hotel_general_settings_path(current_hotel), search_text: "Settings Preferences Configuration", icon: "settings", active: false, permission: [ "manage_hotel_profile", "manage_account" ])
-                   end
-
       [
-        first_item,
-        NavItem.new(label: "Homepage", path: root_path, search_text: "Homepage Website", icon: "house", active: false),
         NavItem.new(label: "Help & support", path: help_center_path, search_text: "Help Support", icon: "circle-question-mark", active: false)
       ]
     end
@@ -190,6 +182,7 @@ module HotelPortal
         [
           hotel_permission_granted?("manage_hotel_profile") ? { label: "General Settings", path: hotel_general_settings_path(current_hotel), icon: "settings", active: controller_name == "settings" && settings_active_page == "general" } : nil,
           hotel_permission_granted?("manage_hotel_profile") ? { label: "Rate Settings", path: hotel_rates_settings_path(current_hotel), icon: "badge-dollar-sign", active: controller_name == "settings" && settings_active_page == "rates" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { label: "Notifications", path: hotel_notification_settings_path(current_hotel), icon: "bell", active: controller_name == "settings" && settings_active_page == "notifications" } : nil,
           { label: "Plan & Billing", path: hotel_plan_path(current_hotel), icon: "layers", active: controller_name == "plans" }
         ].compact
       when :property
@@ -211,8 +204,7 @@ module HotelPortal
           { label: "Policies", path: hotel_knowledge_policies_path(current_hotel), icon: "file-text", active: controller_name == "knowledge_policies" },
           { label: "FAQs", path: hotel_knowledge_faqs_path(current_hotel), icon: "circle-question-mark", active: controller_name == "knowledge_faqs" },
           { label: "General Info", path: hotel_knowledge_general_infos_path(current_hotel), icon: "info", active: controller_name == "knowledge_general_infos" },
-          { label: "Knowledge Diagnostics", path: hotel_knowledge_diagnostics_path(current_hotel), icon: "activity", active: controller_name == "knowledge_diagnostics" },
-          { label: "Notifications", path: hotel_notification_settings_path(current_hotel), icon: "bell", active: controller_name == "settings" && settings_active_page == "notifications" }
+          { label: "Knowledge Diagnostics", path: hotel_knowledge_diagnostics_path(current_hotel), icon: "activity", active: controller_name == "knowledge_diagnostics" }
         ]
       when :team
         [
@@ -227,14 +219,14 @@ module HotelPortal
     def settings_group_active?(group)
       case group
       when :general
-        (controller_name == "settings" && settings_active_page.in?(%w[general rates])) || controller_name == "plans"
+        (controller_name == "settings" && settings_active_page.in?(%w[general rates notifications])) || controller_name == "plans"
       when :property
         controller_name.in?(%w[profiles room_types nearby_attractions])
       when :finance
         (controller_name == "settings" && settings_active_page == "banking") ||
           controller_name.in?(%w[transaction_codes general_ledger_maps taxes_fees])
       when :guest_content
-        (controller_name == "settings" && settings_active_page.in?(%w[ai notifications])) ||
+        (controller_name == "settings" && settings_active_page == "ai") ||
           controller_name.in?(%w[knowledge_policies knowledge_faqs knowledge_general_infos knowledge_diagnostics])
       when :team
         controller_name.in?(%w[users roles])
@@ -261,11 +253,11 @@ module HotelPortal
     def hotel_settings_sidebar_sections
       [
         NavSection.new(label: "Settings", items: [
-          NavItem.new(label: "General", path: hotel_general_settings_path(current_hotel), icon: "settings", active: settings_group_active?(:general), permission: "manage_hotel_profile"),
-          NavItem.new(label: "Property", path: edit_hotel_profile_path(current_hotel), icon: "building-2", active: settings_group_active?(:property), permission: "manage_hotel_profile"),
-          NavItem.new(label: "Finance", path: finance_settings_path, icon: "landmark", active: settings_group_active?(:finance), permission: [ "manage_account", "manage_hotel_profile" ]),
-          NavItem.new(label: "Guest Content", path: hotel_ai_concierge_settings_path(current_hotel), icon: "message-square", active: settings_group_active?(:guest_content), permission: "manage_hotel_profile"),
-          NavItem.new(label: "Team", path: hotel_users_path(current_hotel), icon: "users", active: settings_group_active?(:team), permission: "manage_users")
+          NavItem.new(label: "General", path: hotel_general_settings_path(current_hotel), icon: "settings", active: settings_group_active?(:general), permission: "manage_hotel_profile", active_paths: [ hotel_rates_settings_path(current_hotel), hotel_notification_settings_path(current_hotel), hotel_plan_path(current_hotel) ]),
+          NavItem.new(label: "Property", path: edit_hotel_profile_path(current_hotel), icon: "building-2", active: settings_group_active?(:property), permission: "manage_hotel_profile", active_paths: [ hotel_room_types_path(current_hotel), hotel_nearby_attractions_path(current_hotel) ]),
+          NavItem.new(label: "Finance", path: finance_settings_path, icon: "landmark", active: settings_group_active?(:finance), permission: [ "manage_account", "manage_hotel_profile" ], active_paths: [ hotel_banking_details_settings_path(current_hotel), hotel_taxes_fees_path(current_hotel), hotel_transaction_codes_path(current_hotel), hotel_general_ledger_maps_path(current_hotel) ]),
+          NavItem.new(label: "Guest Content", path: hotel_ai_concierge_settings_path(current_hotel), icon: "message-square", active: settings_group_active?(:guest_content), permission: "manage_hotel_profile", active_paths: [ hotel_knowledge_policies_path(current_hotel), hotel_knowledge_faqs_path(current_hotel), hotel_knowledge_general_infos_path(current_hotel), hotel_knowledge_diagnostics_path(current_hotel) ]),
+          NavItem.new(label: "Team", path: hotel_users_path(current_hotel), icon: "users", active: settings_group_active?(:team), permission: "manage_users", active_paths: [ hotel_roles_path(current_hotel) ])
         ])
       ]
     end

@@ -23,16 +23,29 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
   describe 'GET /hotel/settings with legacy hotel_id param' do
     it 'redirects to the canonical hotel-scoped path' do
       get legacy_hotel_settings_path, params: { hotel_id: hotel.id }
+      follow_redirect!
 
       expect(response).to redirect_to(hotel_general_settings_path(hotel))
     end
   end
 
   describe "GET /hotel/:hotel_id/settings" do
+    it "uses the General group URL for notification settings" do
+      expect(hotel_notification_settings_path(hotel)).to eq("/hotel/#{hotel.to_param}/settings/general/notifications")
+    end
+
+    it "permanently redirects the old Guest Content notification URL" do
+      get "/hotel/#{hotel.to_param}/settings/guest-content/notifications"
+
+      expect(response).to redirect_to(hotel_notification_settings_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
+    end
+
     it "permanently redirects the settings root to General" do
       get hotel_settings_path(hotel)
 
-      expect(response).to redirect_to(hotel_general_settings_path(hotel), status: :moved_permanently)
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
     end
 
     it "uses the active destination as the page heading" do
@@ -84,22 +97,28 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
     it "redirects legacy tab URLs to canonical resource paths" do
       get hotel_settings_path(hotel, tab: "general")
-      expect(response).to redirect_to(hotel_general_settings_path(hotel), status: :moved_permanently)
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
 
       get hotel_settings_path(hotel, tab: "ai")
-      expect(response).to redirect_to(hotel_ai_concierge_settings_path(hotel), status: :moved_permanently)
+      expect(response).to redirect_to(hotel_ai_concierge_settings_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
 
       get hotel_settings_path(hotel, tab: "notifications")
-      expect(response).to redirect_to(hotel_notification_settings_path(hotel), status: :moved_permanently)
+      expect(response).to redirect_to(hotel_notification_settings_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
 
       get hotel_settings_path(hotel, tab: "banking")
-      expect(response).to redirect_to(hotel_banking_details_settings_path(hotel), status: :moved_permanently)
+      expect(response).to redirect_to(hotel_banking_details_settings_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
 
       get hotel_settings_path(hotel, tab: "hotel_details")
-      expect(response).to redirect_to(edit_hotel_profile_path(hotel), status: :moved_permanently)
+      expect(response).to redirect_to(edit_hotel_profile_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
 
       get hotel_settings_path(hotel, tab: "taxes_fees")
-      expect(response).to redirect_to(hotel_taxes_fees_path(hotel), status: :moved_permanently)
+      expect(response).to redirect_to(hotel_taxes_fees_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
     end
 
     it "hides concierge QR entry when AI concierge page is excluded from plan" do

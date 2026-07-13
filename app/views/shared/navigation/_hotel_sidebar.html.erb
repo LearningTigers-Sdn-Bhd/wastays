@@ -15,6 +15,12 @@
         <span class="sidebar-label">Go to Admin Panel</span>
       </a>
     <% end %>
+    <% if settings_sidebar_mode? %>
+      <a href="<%= hotel_settings_back_path %>" class="sidebar-nav-link sidebar-nav-link-default" data-sidebar-tooltip="Back to previous page" aria-label="Back to previous page">
+        <%= cached_icon "arrow-left", class: "size-4 shrink-0" %>
+        <span class="sidebar-label">Back to previous page</span>
+      </a>
+    <% end %>
   </div>
 <% end %>
 

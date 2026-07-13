@@ -153,7 +153,8 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
       expect(page).to have_link("Requests", href: hotel_requests_path(hotel), visible: :all)
       expect(page).to have_link("Folios", href: hotel_folios_path(hotel), visible: :all)
       expect(page).to have_link("Payouts", href: payouts_hotel_reports_path(hotel), visible: :all)
-      expect(page).to have_link("Settings", href: hotel_general_settings_path(hotel))
+      expect(page).to have_no_link("Settings")
+      expect(page).to have_no_link("Homepage")
       expect(page).to have_link("Night Audit", href: hotel_night_audits_path(hotel), visible: :all)
 
       expect(page).to have_css("summary.sidebar-group-parent", text: "Front Desk")
@@ -189,7 +190,8 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
 
   it "shows settings navigation mode inside hotel settings" do
     visit hotel_dashboard_path(hotel)
-    within("#hotel-sidebar") { click_link "Settings" }
+    find("#hotel-profile-toggle").click
+    click_link "Settings", href: hotel_general_settings_path(hotel)
 
     within("#hotel-sidebar") do
       expect(page).to have_link("Back to previous page", href: hotel_dashboard_path(hotel))

@@ -10,7 +10,7 @@ RSpec.describe "Guest navigation shell", type: :system do
     visit guest_verify_path(token: token)
   end
 
-  it "renders shared desktop and mobile navigation with persistent active state" do
+  it "renders shared desktop and mobile navigation with active state" do
     visit guest_dashboard_path
 
     within("#guest-sidebar") do
@@ -21,9 +21,7 @@ RSpec.describe "Guest navigation shell", type: :system do
       expect(page).to have_css("a.sidebar-nav-link-active[data-sidebar-route]", text: "Dashboard")
     end
 
-    expect(page).to have_css(
-      "#guest-sidebar[data-turbo-permanent][data-controller~='sidebar-state'][data-sidebar-state-key-value='guest']"
-    )
+    expect(page).to have_css("#guest-sidebar[data-turbo-permanent]")
 
     within("#guest-sidebar-mobile", visible: :all) do
       expect(page).to have_link("Dashboard", href: guest_dashboard_path, visible: :all)

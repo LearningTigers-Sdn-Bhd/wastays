@@ -53,6 +53,7 @@ export default class extends Controller {
     this.unbindHoverInteractions()
     this.element.dataset.sidebarMode = nextSidebar.dataset.sidebarMode
     this.element.innerHTML = nextSidebar.innerHTML
+    window.dispatchEvent(new CustomEvent("sidebar:refresh-desktop-state"))
     this.bindHoverInteractions()
     this.syncActiveLinks()
   }

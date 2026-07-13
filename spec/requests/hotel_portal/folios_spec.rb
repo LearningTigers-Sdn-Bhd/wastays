@@ -192,13 +192,13 @@ RSpec.describe "HotelPortal::Folios", type: :request do
     it "uses folios navigation when opened from the folios index" do
       booking = create_booking_with_folio(guest_name: "Folio Origin", confirmation_token: "BK-FOLIO", folio_number: 602, charges: 100)
 
-      get folio_operations_path(booking)
+      get folio_operations_path(booking, origin: "folios")
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Folios")
-      expect(response.body).to include(%(href="#{hotel_folios_path(hotel)}">Folios</a>))
-      expect(response.body).to include(%(href="#{hotel_folio_path(hotel, booking)}?origin=folios"))
-      expect(response.body).to include("Generate Report")
+      expect(response.body).to include('data-testid="booking-control-panel"')
+      expect(response.body).to include("Folio Operations")
+      expect(response.body).to include(%(href="#{folio_operations_path(booking)}"))
+      expect(response.body).to include('id="folio-operations-heading"')
       expect(response.body).not_to include("Back to All Folios")
       expect(response.body).not_to include("Back to Booking")
     end

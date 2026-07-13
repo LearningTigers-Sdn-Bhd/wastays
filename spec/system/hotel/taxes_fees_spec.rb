@@ -26,7 +26,7 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
   it "shows taxes and fees inside settings navigation mode" do
     visit hotel_taxes_fees_path(hotel)
 
-    expect(page).to have_css('h1', text: 'Settings')
+    expect(page).to have_css("h1", text: "Taxes & Fees")
     within('[data-testid="settings-tabs"]') do
       expect(page).to have_link('Taxes & Fees')
     end

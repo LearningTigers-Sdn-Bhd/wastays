@@ -37,11 +37,11 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
     within("#hotel-sidebar") do
       expect(page).to have_no_css("details.sidebar-group[open]")
 
-      homepage_link = find("a[data-sidebar-tooltip='Homepage']", visible: :all)
-      homepage_link.hover
+      help_link = find("a[data-sidebar-tooltip='Help & support']", visible: :all)
+      help_link.hover
 
-      expect(page).to have_css(".sidebar-tooltip", text: "Homepage", visible: :visible)
-      expect(page).to have_no_css("a[data-sidebar-tooltip='Homepage'][title]", visible: :all)
+      expect(page).to have_css(".sidebar-tooltip", text: "Help & support", visible: :visible)
+      expect(page).to have_no_css("a[data-sidebar-tooltip='Help & support'][title]", visible: :all)
 
       financial_group = find("summary.sidebar-group-parent", text: "Financial", visible: :all)
       financial_group.hover

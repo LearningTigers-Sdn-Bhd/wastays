@@ -474,6 +474,8 @@ Rails.application.routes.draw do
       patch "general", to: "settings#update", defaults: { settings_page: "general" }
       get "general/rates", to: "settings#index", as: :rates_settings, defaults: { settings_page: "rates" }
       patch "general/rates", to: "settings#update", defaults: { settings_page: "rates" }
+      get "general/notifications", to: "settings#index", as: :notification_settings, defaults: { settings_page: "notifications" }
+      patch "general/notifications", to: "settings#update", defaults: { settings_page: "notifications" }
       get "general/plan-and-billing", to: "plans#show", as: :plan
 
       scope "property" do
@@ -505,6 +507,7 @@ Rails.application.routes.draw do
         post "transaction-codes", to: "transaction_codes#create"
         patch "transaction-codes/configuration", to: "transaction_codes#update_configuration", as: :transaction_code_configuration
         get "transaction-codes/:id/edit", to: "transaction_codes#edit", as: :edit_transaction_code
+        patch "transaction-codes/:id/preview-hotel-tax-rules", to: "transaction_codes#preview_hotel_tax_rules", as: :preview_transaction_code_hotel_tax_rules
         patch "transaction-codes/:id", to: "transaction_codes#update", as: :transaction_code
         resources :general_ledger_maps, path: "general-ledger-mappings", only: [ :index, :edit, :update ]
       end
@@ -512,8 +515,6 @@ Rails.application.routes.draw do
       scope "guest-content" do
         get "ai-concierge", to: "settings#index", as: :ai_concierge_settings, defaults: { settings_page: "ai" }
         patch "ai-concierge", to: "settings#update", defaults: { settings_page: "ai" }
-        get "notifications", to: "settings#index", as: :notification_settings, defaults: { settings_page: "notifications" }
-        patch "notifications", to: "settings#update", defaults: { settings_page: "notifications" }
         resources :knowledge_policies, path: "policies" do
           member { post :reindex }
         end
@@ -540,6 +541,7 @@ Rails.application.routes.draw do
     end
 
     # Legacy Settings URLs remain read-only redirects for existing bookmarks.
+    get "settings/guest-content/notifications", to: redirect("/hotel/%{hotel_id}/settings/general/notifications")
     get "plan", to: redirect("/hotel/%{hotel_id}/settings/general/plan-and-billing")
     get "profile/edit", to: redirect("/hotel/%{hotel_id}/settings/property/hotel-details")
     get "room_types", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories")
