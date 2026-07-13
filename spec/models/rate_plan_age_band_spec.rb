@@ -44,8 +44,8 @@ RSpec.describe RatePlanAgeBand, type: :model do
   end
 
   describe '#price_for' do
-    it 'multiplies the anchor price for multiplier mode' do
-      band = build(:rate_plan_age_band, pricing_mode: 'multiplier', price_value: 0.4)
+    it 'takes price_value as a whole percent of the anchor price for multiplier mode' do
+      band = build(:rate_plan_age_band, pricing_mode: 'multiplier', price_value: 40)
       expect(band.price_for(100.to_d)).to eq(40.to_d)
     end
 

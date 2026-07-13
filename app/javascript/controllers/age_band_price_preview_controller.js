@@ -35,7 +35,11 @@ export default class extends Controller {
     const modeSelect = row.querySelector('[data-role="pricing-mode"]')
     const valueInput = row.querySelector('[data-role="price-value"]')
     const preview = row.querySelector('[data-role="price-preview"]')
+    const unitHint = row.querySelector('[data-role="value-unit-hint"]')
     if (!modeSelect || !valueInput || !preview) return
+
+    const isAmount = modeSelect.value === "amount"
+    if (unitHint) unitHint.textContent = isAmount ? "(currency amount)" : "(%)"
 
     const value = parseFloat(valueInput.value)
     if (Number.isNaN(value)) {
@@ -43,17 +47,17 @@ export default class extends Controller {
       return
     }
 
-    if (modeSelect.value === "amount") {
+    if (isAmount) {
       preview.textContent = `= ${this.currencyValue} ${value.toFixed(2)} per night (flat, regardless of room rate)`
       return
     }
 
     if (anchorPrice === null) {
-      preview.textContent = `= ${(value * 100).toFixed(0)}% of the room's Standard Rate`
+      preview.textContent = `= ${value.toFixed(0)}% of the room's Standard Rate`
       return
     }
 
-    const amount = (value * anchorPrice).toFixed(2)
-    preview.textContent = `= ${this.currencyValue} ${amount} (${(value * 100).toFixed(0)}% of ${this.currencyValue} ${anchorPrice.toFixed(2)}/night)`
+    const amount = (anchorPrice * (value / 100)).toFixed(2)
+    preview.textContent = `= ${this.currencyValue} ${amount} (${value.toFixed(0)}% of ${this.currencyValue} ${anchorPrice.toFixed(2)}/night)`
   }
 }

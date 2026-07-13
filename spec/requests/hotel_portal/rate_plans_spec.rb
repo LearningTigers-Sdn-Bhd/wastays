@@ -62,7 +62,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
     it 'wires up a live price preview for each age band, using the room type Standard Rate and a mode choice' do
       per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person', currency: 'MYR')
-      create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 0.4, label: 'Child')
+      create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 40, label: 'Child')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
 

@@ -17,12 +17,13 @@ class RatePlanAgeBand < ApplicationRecord
   end
 
   # The child's own nightly price for this band: either a flat amount
-  # (independent of the room rate) or a fraction of the given anchor price
-  # (typically the adult per-person rate for that night).
+  # (independent of the room rate) or a whole-percent share of the given
+  # anchor price (typically the adult per-person rate for that night).
+  # price_value for multiplier mode is a percent (40 = 40%), not a fraction.
   def price_for(anchor_price)
     return price_value if amount?
 
-    anchor_price.to_d * price_value
+    anchor_price.to_d * (price_value / 100.to_d)
   end
 
   private

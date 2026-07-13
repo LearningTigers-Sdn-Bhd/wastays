@@ -23,8 +23,8 @@
           class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
     </div>
     <div>
-      <label class="mb-1 block text-[11px] font-semibold text-slate-600">Value</label>
-      <%= number_field_tag "#{name_prefix}[price_value]", band&.price_value, step: 0.01, min: 0,
+      <label class="mb-1 block text-[11px] font-semibold text-slate-600">Value <span data-role="value-unit-hint" class="font-normal text-slate-400"><%= (band.nil? || band.pricing_mode != "amount") ? "(%)" : "(currency amount)" %></span></label>
+      <%= number_field_tag "#{name_prefix}[price_value]", band&.price_value, step: 1, min: 0,
           data: { role: "price-value" },
           class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
       <p class="mt-1 text-[11px] text-slate-500" data-role="price-preview"></p>

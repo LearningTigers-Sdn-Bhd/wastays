@@ -64,8 +64,8 @@ RSpec.describe Bookings::CalculateStayPrice do
     context "with age-banded child pricing" do
       before do
         rate_plan.update!(child_price_multiplier: 0.6)
-        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, price_value: 0.4, label: "Child")
-        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 12, max_age: 17, price_value: 0.2, label: "Teen")
+        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
+        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 12, max_age: 17, price_value: 20, label: "Teen")
       end
 
       it "prices a flat-amount band regardless of the nightly rate" do

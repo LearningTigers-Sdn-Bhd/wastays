@@ -224,8 +224,8 @@ RSpec.describe BookingEngine::AvailabilityService do
 
     before do
       RoomTypeRatePlan.create!(room_type: family_room, rate_plan: pax_rate_plan)
-      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_value: 0.4, label: "Child")
-      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 12, max_age: 17, price_value: 0.2, label: "Teen")
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 12, max_age: 17, price_value: 20, label: "Teen")
 
       stay_dates.each do |date|
         RoomInventory.create!(room_type: family_room, date: date, quantity: 3, status: "open")
@@ -282,8 +282,8 @@ RSpec.describe BookingEngine::AvailabilityService do
     before do
       hotel.update!(pax_pricing_only: true)
       RoomTypeRatePlan.create!(room_type: room_a, rate_plan: pax_rate_plan)
-      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 0, max_age: 5, price_value: 0.1, label: "Toddler")
-      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 13, max_age: 17, price_value: 0.9, label: "Teen")
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 0, max_age: 5, price_value: 10, label: "Toddler")
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 13, max_age: 17, price_value: 90, label: "Teen")
 
       stay_dates.each do |date|
         RoomInventory.create!(room_type: room_a, date: date, quantity: 2, status: "open")
