@@ -1,25 +1,40 @@
-<div class="grid gap-3 sm:grid-cols-5 items-end" data-rate-plan-age-bands-target="row">
-  <div>
-    <label class="mb-1 block text-[11px] font-semibold text-slate-600">Label</label>
-    <%= text_field_tag "#{name_prefix}[label]", band&.label, class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", placeholder: "e.g. Toddler" %>
+<div class="rounded-lg border border-slate-200 p-3 space-y-3" data-rate-plan-age-bands-target="row" data-role="age-band-row">
+  <div class="grid gap-3 sm:grid-cols-3">
+    <div>
+      <label class="mb-1 block text-[11px] font-semibold text-slate-600">Label</label>
+      <%= text_field_tag "#{name_prefix}[label]", band&.label, class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", placeholder: "e.g. Toddler" %>
+    </div>
+    <div>
+      <label class="mb-1 block text-[11px] font-semibold text-slate-600">Min Age</label>
+      <%= number_field_tag "#{name_prefix}[min_age]", band&.min_age, min: 0, class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+    </div>
+    <div>
+      <label class="mb-1 block text-[11px] font-semibold text-slate-600">Max Age</label>
+      <%= number_field_tag "#{name_prefix}[max_age]", band&.max_age, min: 0, class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+    </div>
   </div>
-  <div>
-    <label class="mb-1 block text-[11px] font-semibold text-slate-600">Min Age</label>
-    <%= number_field_tag "#{name_prefix}[min_age]", band&.min_age, min: 0, class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-  </div>
-  <div>
-    <label class="mb-1 block text-[11px] font-semibold text-slate-600">Max Age</label>
-    <%= number_field_tag "#{name_prefix}[max_age]", band&.max_age, min: 0, class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-  </div>
-  <div>
-    <label class="mb-1 block text-[11px] font-semibold text-slate-600">Price Multiplier</label>
-    <%= number_field_tag "#{name_prefix}[price_multiplier]", band&.price_multiplier, step: 0.01, min: 0, class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-  </div>
-  <div class="flex items-center pb-1">
-    <% if band&.persisted? %>
-      <%= hidden_field_tag "#{name_prefix}[id]", band.id %>
-      <%= hidden_field_tag "#{name_prefix}[_destroy]", "0", data: { role: "destroy" } %>
-    <% end %>
-    <button type="button" data-action="click->rate-plan-age-bands#remove" class="text-xs font-bold text-red-600 hover:text-red-700 transition">Remove</button>
+
+  <div class="grid gap-3 sm:grid-cols-3 items-end">
+    <div>
+      <label class="mb-1 block text-[11px] font-semibold text-slate-600">Pricing Mode</label>
+      <%= select_tag "#{name_prefix}[pricing_mode]",
+          options_for_select([ [ "% of Standard Rate", "multiplier" ], [ "Flat Amount", "amount" ] ], band&.pricing_mode || "multiplier"),
+          data: { role: "pricing-mode" },
+          class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+    </div>
+    <div>
+      <label class="mb-1 block text-[11px] font-semibold text-slate-600">Value</label>
+      <%= number_field_tag "#{name_prefix}[price_value]", band&.price_value, step: 0.01, min: 0,
+          data: { role: "price-value" },
+          class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+      <p class="mt-1 text-[11px] text-slate-500" data-role="price-preview"></p>
+    </div>
+    <div class="flex items-center justify-end pb-1">
+      <% if band&.persisted? %>
+        <%= hidden_field_tag "#{name_prefix}[id]", band.id %>
+        <%= hidden_field_tag "#{name_prefix}[_destroy]", "0", data: { role: "destroy" } %>
+      <% end %>
+      <button type="button" data-action="click->rate-plan-age-bands#remove" class="text-xs font-bold text-red-600 hover:text-red-700 transition">Remove</button>
+    </div>
   </div>
 </div>

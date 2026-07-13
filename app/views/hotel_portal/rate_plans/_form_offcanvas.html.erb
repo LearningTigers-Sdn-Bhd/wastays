@@ -73,7 +73,12 @@
           </section>
 
           <% if rate_plan.sell_mode == "per_person" %>
-            <section class="rounded-xl border border-slate-200 bg-white p-4 space-y-3" data-controller="rate-plan-age-bands">
+            <% preview_room_types = current_hotel.room_types.order(:id) %>
+            <% default_preview_room_type = rate_plan.room_types.first || preview_room_types.first %>
+            <section class="rounded-xl border border-slate-200 bg-white p-4 space-y-3"
+                     data-controller="rate-plan-age-bands age-band-price-preview"
+                     data-age-band-price-preview-currency-value="<%= rate_plan.currency %>"
+                     data-action="input->age-band-price-preview#update change->age-band-price-preview#update">
               <div class="flex items-center justify-between">
                 <div>
                   <h3 class="text-sm font-bold text-slate-900">Age Bands</h3>
@@ -81,6 +86,19 @@
                 </div>
                 <button type="button" data-action="click->rate-plan-age-bands#add" class="shrink-0 text-xs font-bold text-slate-900 hover:text-slate-700 transition">+ Add Band</button>
               </div>
+
+              <% if preview_room_types.any? %>
+                <div class="flex items-center gap-2">
+                  <label class="shrink-0 text-[11px] font-semibold text-slate-600">Preview using</label>
+                  <select data-age-band-price-preview-target="roomTypeSelect" class="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0">
+                    <% preview_room_types.each do |rt| %>
+                      <option value="<%= rt.id %>" data-base-price="<%= rt.base_price %>" <%= "selected" if rt == default_preview_room_type %>>
+                        <%= rt.name %> (Standard Rate: <%= rate_plan.currency %> <%= number_with_precision(rt.base_price, precision: 2) %>)
+                      </option>
+                    <% end %>
+                  </select>
+                </div>
+              <% end %>
 
               <div data-rate-plan-age-bands-target="rows" class="space-y-3">
                 <% rate_plan.rate_plan_age_bands.each_with_index do |band, index| %>

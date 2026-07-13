@@ -220,8 +220,8 @@ RSpec.describe BookingEngine::CreateQuote do
 
       before do
         RoomTypeRatePlan.create!(room_type: family_room, rate_plan: pax_rate_plan)
-        RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_multiplier: 0.4, label: "Child")
-        RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 12, max_age: 17, price_multiplier: 0.2, label: "Teen")
+        RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_value: 0.4, label: "Child")
+        RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 12, max_age: 17, price_value: 0.2, label: "Teen")
 
         stay_dates.each do |date|
           RoomInventory.create!(room_type: family_room, date: date, quantity: 3, status: "open")
@@ -254,9 +254,10 @@ RSpec.describe BookingEngine::CreateQuote do
         child_band = bands.find { |b| b["age"] == 6 }
         teen_band = bands.find { |b| b["age"] == 15 }
         expect(child_band["band_label"]).to eq("Child")
-        expect(child_band["multiplier"]).to eq("0.4")
+        expect(child_band["pricing_mode"]).to eq("multiplier")
+        expect(child_band["price_value"]).to eq("0.4")
         expect(teen_band["band_label"]).to eq("Teen")
-        expect(teen_band["multiplier"]).to eq("0.2")
+        expect(teen_band["price_value"]).to eq("0.2")
       end
 
       it "falls back to the flat child_price_multiplier and empty child_ages when no ages are supplied" do

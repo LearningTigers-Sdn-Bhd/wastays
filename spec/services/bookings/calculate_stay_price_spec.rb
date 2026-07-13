@@ -64,8 +64,15 @@ RSpec.describe Bookings::CalculateStayPrice do
     context "with age-banded child pricing" do
       before do
         rate_plan.update!(child_price_multiplier: 0.6)
-        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, price_multiplier: 0.4, label: "Child")
-        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 12, max_age: 17, price_multiplier: 0.2, label: "Teen")
+        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, price_value: 0.4, label: "Child")
+        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 12, max_age: 17, price_value: 0.2, label: "Teen")
+      end
+
+      it "prices a flat-amount band regardless of the nightly rate" do
+        create(:rate_plan_age_band, :amount, rate_plan: rate_plan, min_age: 18, max_age: 25, price_value: 15.0, label: "Young Adult")
+        service = described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_plan: rate_plan, adults: 2, children: 1, child_ages: [ 20 ])
+        # (2*100 + 15 flat) * 2 nights = 215 * 2 = 430
+        expect(service.call).to eq(430)
       end
 
       it "prices each child individually by their resolved age band" do

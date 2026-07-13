@@ -224,8 +224,8 @@ RSpec.describe BookingEngine::AvailabilityService do
 
     before do
       RoomTypeRatePlan.create!(room_type: family_room, rate_plan: pax_rate_plan)
-      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_multiplier: 0.4, label: "Child")
-      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 12, max_age: 17, price_multiplier: 0.2, label: "Teen")
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_value: 0.4, label: "Child")
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 12, max_age: 17, price_value: 0.2, label: "Teen")
 
       stay_dates.each do |date|
         RoomInventory.create!(room_type: family_room, date: date, quantity: 3, status: "open")
@@ -264,6 +264,15 @@ RSpec.describe BookingEngine::AvailabilityService do
 
       expect(total).to eq(320.0)
     end
+
+    it "prices a flat-amount band regardless of the nightly rate" do
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 18, max_age: 25, pricing_mode: "amount", price_value: 15.0, label: "Young Adult")
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 1, child_ages: [ 20 ])
+      total = service.calculate_total_price(family_room, rate_plan: pax_rate_plan, adults: 2, children: 1, child_ages: [ 20 ])
+
+      # 2 adults @ 50 + 1 flat-amount child @ 15 = 115/night, 2 nights = 230
+      expect(total).to eq(230.0)
+    end
   end
 
   describe "#allocation_options_for_hotel groups rooms by child ages, not just counts" do
@@ -273,8 +282,8 @@ RSpec.describe BookingEngine::AvailabilityService do
     before do
       hotel.update!(pax_pricing_only: true)
       RoomTypeRatePlan.create!(room_type: room_a, rate_plan: pax_rate_plan)
-      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 0, max_age: 5, price_multiplier: 0.1, label: "Toddler")
-      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 13, max_age: 17, price_multiplier: 0.9, label: "Teen")
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 0, max_age: 5, price_value: 0.1, label: "Toddler")
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 13, max_age: 17, price_value: 0.9, label: "Teen")
 
       stay_dates.each do |date|
         RoomInventory.create!(room_type: room_a, date: date, quantity: 2, status: "open")

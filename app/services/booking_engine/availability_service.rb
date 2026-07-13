@@ -269,8 +269,9 @@ module BookingEngine
 
     def per_child_price(price, rate_plan, age)
       band = rate_plan.age_banded? ? rate_plan.band_for_age(age) : nil
-      multiplier = band&.price_multiplier || rate_plan.child_price_multiplier || 1.to_d
-      price * multiplier
+      return band.price_for(price) if band
+
+      price * (rate_plan.child_price_multiplier || 1.to_d)
     end
 
     def human_rule_name(rule_type)

@@ -1672,11 +1672,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
     t.bigint "rate_plan_id", null: false
     t.integer "min_age", null: false
     t.integer "max_age", null: false
-    t.decimal "price_multiplier", precision: 5, scale: 2, default: "1.0", null: false
+    t.decimal "price_value", precision: 10, scale: 2, default: "1.0", null: false
     t.string "label"
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "pricing_mode", default: "multiplier", null: false
     t.index ["rate_plan_id", "position"], name: "index_rate_plan_age_bands_on_rate_plan_id_and_position"
     t.index ["rate_plan_id"], name: "index_rate_plan_age_bands_on_rate_plan_id"
   end

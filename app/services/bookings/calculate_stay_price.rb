@@ -61,8 +61,9 @@ module Bookings
 
     def per_child_price(base_nightly_rate, age)
       band = @rate_plan.age_banded? ? @rate_plan.band_for_age(age) : nil
-      multiplier = band&.price_multiplier || @rate_plan.child_price_multiplier || 1.to_d
-      base_nightly_rate * multiplier
+      return band.price_for(base_nightly_rate) if band
+
+      base_nightly_rate * (@rate_plan.child_price_multiplier || 1.to_d)
     end
 
     def tier_price(rate)

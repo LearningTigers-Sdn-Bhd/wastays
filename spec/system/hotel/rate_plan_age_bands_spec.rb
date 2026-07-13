@@ -6,7 +6,7 @@ RSpec.describe 'Hotel Portal Rate Plan Age Bands', type: :system do
   let(:hotel) { create(:hotel, account: account, status: 'registered', allow_pax_pricing: true) }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
   let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: "Per Person Plan", sell_mode: "per_person") }
-  let!(:band) { create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, price_multiplier: 0.4, label: "Child") }
+  let!(:band) { create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, price_value: 0.4, label: "Child") }
 
   before do
     driven_by(:rack_test)
@@ -29,13 +29,13 @@ RSpec.describe 'Hotel Portal Rate Plan Age Bands', type: :system do
     expect(page).to have_content('Age Bands')
 
     find("input[name='rate_plan[rate_plan_age_bands_attributes][0][max_age]']").set('12')
-    find("input[name='rate_plan[rate_plan_age_bands_attributes][0][price_multiplier]']").set('0.35')
+    find("input[name='rate_plan[rate_plan_age_bands_attributes][0][price_value]']").set('0.35')
     click_button 'Save Changes'
 
     expect(page).to have_content("updated successfully")
     band.reload
     expect(band.max_age).to eq(12)
-    expect(band.price_multiplier.to_f).to eq(0.35)
+    expect(band.price_value.to_f).to eq(0.35)
   end
 
   it 'removes an age band when marked for destruction' do

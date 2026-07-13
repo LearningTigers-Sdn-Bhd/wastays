@@ -19,8 +19,8 @@ FactoryBot.define do
       sell_mode { "per_person" }
 
       after(:create) do |rate_plan|
-        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, price_multiplier: 0.4, label: "Child")
-        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 12, max_age: 17, price_multiplier: 0.2, label: "Teen")
+        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, price_value: 0.4, label: "Child")
+        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 12, max_age: 17, price_value: 0.2, label: "Teen")
       end
     end
   end

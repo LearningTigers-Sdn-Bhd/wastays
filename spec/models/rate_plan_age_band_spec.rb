@@ -12,7 +12,8 @@ RSpec.describe RatePlanAgeBand, type: :model do
     it { is_expected.to validate_presence_of(:max_age) }
     it { is_expected.to validate_numericality_of(:min_age).only_integer.is_greater_than_or_equal_to(0) }
     it { is_expected.to validate_numericality_of(:max_age).only_integer.is_greater_than_or_equal_to(0) }
-    it { is_expected.to validate_numericality_of(:price_multiplier).is_greater_than_or_equal_to(0) }
+    it { is_expected.to validate_numericality_of(:price_value).is_greater_than_or_equal_to(0) }
+    it { is_expected.to validate_inclusion_of(:pricing_mode).in_array(%w[multiplier amount]) }
 
     it 'rejects a max_age below min_age' do
       band.min_age = 10
@@ -39,6 +40,18 @@ RSpec.describe RatePlanAgeBand, type: :model do
       gap_band = build(:rate_plan_age_band, rate_plan: rate_plan, min_age: 13, max_age: 17)
 
       expect(gap_band).to be_valid
+    end
+  end
+
+  describe '#price_for' do
+    it 'multiplies the anchor price for multiplier mode' do
+      band = build(:rate_plan_age_band, pricing_mode: 'multiplier', price_value: 0.4)
+      expect(band.price_for(100.to_d)).to eq(40.to_d)
+    end
+
+    it 'ignores the anchor price and returns the flat value for amount mode' do
+      band = build(:rate_plan_age_band, :amount, price_value: 30.0)
+      expect(band.price_for(999.to_d)).to eq(30.0.to_d)
     end
   end
 

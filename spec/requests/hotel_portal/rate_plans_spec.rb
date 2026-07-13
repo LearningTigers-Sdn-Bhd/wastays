@@ -59,6 +59,19 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include("rate_plan[room_type_pricing][#{room_type.id}][pricing_mode]")
       expect(response.body).to include('value="-15.0"')
     end
+
+    it 'wires up a live price preview for each age band, using the room type Standard Rate and a mode choice' do
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person', currency: 'MYR')
+      create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 0.4, label: 'Child')
+
+      get edit_hotel_rate_plan_path(hotel, per_person_plan)
+
+      expect(response.body).to include('data-controller="rate-plan-age-bands age-band-price-preview"')
+      expect(response.body).to include('data-age-band-price-preview-currency-value="MYR"')
+      expect(response.body).to include('data-age-band-price-preview-target="roomTypeSelect"')
+      expect(response.body).to include('data-role="price-preview"')
+      expect(response.body).to include('Flat Amount')
+    end
   end
 
   describe 'POST /hotel/:hotel_id/rate_plans' do

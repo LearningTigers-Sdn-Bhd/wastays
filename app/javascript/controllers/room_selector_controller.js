@@ -145,8 +145,10 @@ export default class extends Controller {
 
   perChildPrice(paxPrice, ageBands, flatMultiplier, age) {
     const band = ageBands.find((b) => age >= b.minAge && age <= b.maxAge)
-    const multiplier = band ? band.multiplier : flatMultiplier
-    return paxPrice * multiplier
+    if (band) {
+      return band.pricingMode === "amount" ? band.value : paxPrice * band.value
+    }
+    return paxPrice * flatMultiplier
   }
 
   updateUI() {

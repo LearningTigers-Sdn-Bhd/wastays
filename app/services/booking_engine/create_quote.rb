@@ -168,7 +168,8 @@ module BookingEngine
                     age: age,
                     band_id: band&.id,
                     band_label: band&.label,
-                    multiplier: (band&.price_multiplier || data[:rate_plan]&.child_price_multiplier).to_s
+                    pricing_mode: band&.pricing_mode || "multiplier",
+                    price_value: (band&.price_value || data[:rate_plan]&.child_price_multiplier).to_s
                   }
                 }
               }
