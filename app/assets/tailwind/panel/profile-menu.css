@@ -23,18 +23,6 @@
     background: color-mix(in oklab, var(--muted) 58%, var(--card));
   }
 
-  .panel-profile-menu__avatar {
-    @apply inline-flex shrink-0 items-center justify-center rounded-full border;
-    border-color: color-mix(in oklab, var(--primary) 25%, var(--border));
-    background: color-mix(in oklab, var(--primary) 12%, var(--card));
-    color: var(--primary);
-  }
-
-  .panel-profile-menu__avatar[data-size="sm"] { @apply size-7; }
-  .panel-profile-menu__avatar[data-size="md"] { @apply size-8; }
-  .panel-profile-menu__avatar[data-size="sm"] .panel-profile-menu__avatar-icon { @apply size-3.5; }
-  .panel-profile-menu__avatar[data-size="md"] .panel-profile-menu__avatar-icon { @apply size-4; }
-
   .panel-profile-menu__identity {
     @apply min-w-0 flex-1;
   }

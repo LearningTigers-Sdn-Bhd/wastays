@@ -25,6 +25,8 @@ RSpec.describe PanelsUI::ProfileMenu, type: :component do
     )
     expect(page).to have_css("#hotel-profile-menu .dropdown-menu__header[role='presentation']", text: "Aisha Rahman")
     expect(page).to have_css("#hotel-profile-menu .panel-profile-menu__secondary", text: "aisha@example.com")
+    expect(page).to have_css("#hotel-profile-trigger .panel-avatar[data-size='sm'] .panel-avatar__fallback", text: "AR")
+    expect(page).to have_css("#hotel-profile-menu .panel-avatar[data-size='default'] .panel-avatar__fallback", text: "AR")
   end
 
   it "renders supplied links and a method-aware sign-out action" do
@@ -48,6 +50,21 @@ RSpec.describe PanelsUI::ProfileMenu, type: :component do
     ))
 
     expect(page).to have_css("#corporate-profile-menu.panel-profile-menu__menu.w-80", visible: :all)
-    expect(page).to have_css("#corporate-profile-trigger .panel-profile-menu__avatar-icon", visible: :all)
+    expect(page).to have_css("#corporate-profile-trigger .panel-avatar__fallback-icon", visible: :all)
+  end
+
+  it "passes optional image and fallback values to both shared avatars" do
+    render_inline(described_class.new(
+      id: "image-profile",
+      display_name: "Aisha Rahman",
+      secondary_text: "aisha@example.com",
+      trigger_label: "Open account menu",
+      avatar_src: "/aisha.png",
+      avatar_fallback: "Guest"
+    ))
+
+    expect(page).to have_css("#image-profile-trigger .panel-avatar img[src='/aisha.png']")
+    expect(page).to have_css("#image-profile-menu .panel-avatar img[src='/aisha.png']", visible: :all)
+    expect(page).to have_css("#image-profile-trigger .panel-avatar__fallback", text: "Guest")
   end
 end

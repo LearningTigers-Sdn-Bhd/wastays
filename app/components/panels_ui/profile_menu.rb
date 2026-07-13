@@ -4,13 +4,15 @@ module PanelsUI
   class ProfileMenu < PanelsUI::BaseComponent
     Item = Data.define(:label, :href, :icon, :method, :variant, :attributes)
 
-    def initialize(id:, display_name:, secondary_text:, trigger_label:, trigger_icon: "user",
-                   menu_class: nil)
+    def initialize(id:, display_name:, secondary_text:, trigger_label:, trigger_icon: nil,
+                   avatar_src: nil, avatar_fallback: nil, menu_class: nil)
       @id = id
       @display_name = display_name
       @secondary_text = secondary_text
       @trigger_label = trigger_label
       @trigger_icon = trigger_icon
+      @avatar_src = avatar_src
+      @avatar_fallback = avatar_fallback
       @menu_class = menu_class
       @items = []
       @sign_out = nil
@@ -47,7 +49,7 @@ module PanelsUI
           size: :sm,
           aria_label: @trigger_label,
           class: "panel-profile-menu__trigger"
-        ) { avatar(size: :sm) }
+        ) { render_avatar(size: :sm) }
 
         menu.with_header { account_summary }
 
@@ -73,7 +75,7 @@ module PanelsUI
     def account_summary
       tag.div(class: "panel-profile-menu__summary") do
         safe_join([
-          avatar(size: :md),
+          render_avatar(size: :default),
           tag.div(class: "panel-profile-menu__identity") do
             safe_join([
               tag.p(@display_name, class: "panel-profile-menu__name"),
@@ -84,10 +86,14 @@ module PanelsUI
       end
     end
 
-    def avatar(size:)
-      tag.span(class: "panel-profile-menu__avatar", data: { size: }) do
-        helpers.app_icon(@trigger_icon, class: "panel-profile-menu__avatar-icon", aria: { hidden: "true" })
-      end
+    def render_avatar(size:)
+      render PanelsUI::Avatar.new(
+        name: @display_name,
+        src: @avatar_src,
+        fallback: @avatar_fallback,
+        icon: @trigger_icon,
+        size:
+      )
     end
 
     def item_content(item)
