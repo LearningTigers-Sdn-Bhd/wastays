@@ -23,7 +23,7 @@ module Bookings
 
       (@check_in..(@check_out - 1.day)).sum do |date|
         rate = room_rate_for(date)
-        base_nightly_rate = tier_price(rate) || rate&.price || @room_type.base_price
+        base_nightly_rate = tier_price(rate) || derived_or_fallback_rate(rate)
 
         if @rate_plan&.sell_mode == "per_person"
           infant_multiplier = @rate_plan.infant_price_multiplier || 0.to_d
@@ -91,6 +91,26 @@ module Bookings
       end
 
       nil
+    end
+
+    # An explicit RoomRate for @rate_plan itself always wins as-is. Otherwise
+    # `rate` (if any) is the anchor Standard Rate row we fell back to in
+    # room_rate_for; transform it through the rate plan's derived pricing
+    # (multiplier/offset) instead of copying it verbatim.
+    def derived_or_fallback_rate(rate)
+      anchor = rate&.price || @room_type.base_price
+      return anchor if rate.present? && rate.rate_plan_id == @rate_plan&.id
+
+      rtrp = room_type_rate_plan
+      return anchor unless rtrp&.derives_price?
+
+      rtrp.derive_price(anchor) || anchor
+    end
+
+    def room_type_rate_plan
+      return nil if @rate_plan.blank?
+
+      @room_type_rate_plan ||= @room_type.room_type_rate_plans.find { |rtrp| rtrp.rate_plan_id == @rate_plan.id }
     end
   end
 end

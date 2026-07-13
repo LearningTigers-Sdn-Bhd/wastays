@@ -106,6 +106,41 @@ RSpec.describe BookingEngine::AvailabilityService do
     end
   end
 
+  describe "#calculate_total_price with derived room-type pricing" do
+    let(:rate_plan) { RatePlan.create!(hotel: hotel, name: "Non-Refundable", sell_mode: "per_room", currency: "MYR") }
+
+    it "computes a multiplier off the room type's own Standard Rate price for that date" do
+      RoomTypeRatePlan.create!(room_type: room_type, rate_plan: rate_plan, pricing_mode: "multiplier", pricing_value: -10)
+
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
+      # Standard Rate is 100 both nights (per top-level before block) -10% = 90 * 2 nights = 180
+      expect(service.calculate_total_price(room_type, rate_plan: rate_plan, adults: 2)).to eq(180.0)
+    end
+
+    it "applies a flat offset off the anchor price" do
+      RoomTypeRatePlan.create!(room_type: room_type, rate_plan: rate_plan, pricing_mode: "offset", pricing_value: 25)
+
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
+      expect(service.calculate_total_price(room_type, rate_plan: rate_plan, adults: 2)).to eq(250.0) # (100 + 25) * 2 nights
+    end
+
+    it "lets an explicit RoomRate for the derived rate plan win over derivation" do
+      RoomTypeRatePlan.create!(room_type: room_type, rate_plan: rate_plan, pricing_mode: "offset", pricing_value: 25)
+      RoomRate.create!(room_type: room_type, rate_plan: rate_plan, date: check_in, price: 60, currency: "MYR")
+
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
+      # Night 1 explicit: 60. Night 2 derived: 100 + 25 = 125. Total 185.
+      expect(service.calculate_total_price(room_type, rate_plan: rate_plan, adults: 2)).to eq(185.0)
+    end
+
+    it "leaves fixed-mode rate plans unaffected (regression guard)" do
+      RoomTypeRatePlan.create!(room_type: room_type, rate_plan: rate_plan, pricing_mode: "fixed")
+
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
+      expect(service.calculate_total_price(room_type, rate_plan: rate_plan, adults: 2)).to eq(200.0) # falls back to base_price, unchanged
+    end
+  end
+
   describe "#allocation_options_for_hotel" do
     let!(:small_room) { RoomType.create!(hotel: hotel, name: "Single", quantity: 2, max_adults: 1, base_price: 50, room_number_mode: "range") }
 

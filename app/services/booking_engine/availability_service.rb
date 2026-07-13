@@ -334,6 +334,11 @@ module BookingEngine
         records: room_types,
         associations: :rate_plans
       ).call
+
+      ActiveRecord::Associations::Preloader.new(
+        records: room_types,
+        associations: :room_type_rate_plans
+      ).call
     end
 
     def nights
@@ -529,7 +534,7 @@ module BookingEngine
 
       stay_dates.each do |date|
         rate = rates_by_date[date]
-        price = nightly_price_for(date, rate, room_type)
+        price = nightly_price_for(date, rate, room_type, rate_plan)
         return nil if price.nil? # Stay is restricted or unpriced on this date
 
         if rate_plan&.sell_mode == "per_person"
@@ -598,7 +603,9 @@ module BookingEngine
       )
     end
 
-    def nightly_price_for(date, rate, room_type)
+    def nightly_price_for(date, rate, room_type, rate_plan)
+      std_rate = nil
+
       if rate.nil? || rate.rate_plan_id.nil?
         std_rate = standard_rate_for(date, room_type)
         if std_rate.present?
@@ -625,9 +632,27 @@ module BookingEngine
           rate.price
         end
       else
-        # 3. Fallback to base price if no specific rate record exists
-        room_type.base_price.presence
+        # 3. Fallback to the Standard Rate's price (or the room type's flat
+        # base price), transformed through the rate plan's derived pricing
+        # (multiplier/offset) when applicable.
+        anchor = std_rate&.price || room_type.base_price.presence
+        derive_if_needed(rate_plan, room_type, anchor)
       end
+    end
+
+    def derive_if_needed(rate_plan, room_type, anchor_price)
+      return anchor_price if rate_plan.blank? || anchor_price.nil?
+
+      rtrp = room_type_rate_plan_for(room_type, rate_plan)
+      return anchor_price unless rtrp&.derives_price?
+
+      rtrp.derive_price(anchor_price) || anchor_price
+    end
+
+    def room_type_rate_plan_for(room_type, rate_plan)
+      @room_type_rate_plans_by_pair ||= {}
+      @room_type_rate_plans_by_pair[[ room_type.id, rate_plan.id ]] ||=
+        room_type.room_type_rate_plans.find { |rtrp| rtrp.rate_plan_id == rate_plan.id }
     end
 
     def standard_rate_for(date, room_type)

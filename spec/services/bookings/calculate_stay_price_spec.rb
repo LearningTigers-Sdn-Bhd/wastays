@@ -108,6 +108,35 @@ RSpec.describe Bookings::CalculateStayPrice do
     end
   end
 
+  context "with derived room-type pricing" do
+    let(:rate_plan) { create(:rate_plan, hotel: hotel, sell_mode: "per_room", name: "Non-Refundable") }
+
+    it "computes a multiplier off the room type's own Standard Rate price for that date, not the flat base price" do
+      standard_plan = room_type.rate_plans.first
+      create(:room_rate, room_type: room_type, rate_plan: standard_plan, date: check_in, price: 200)
+      create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_mode: "multiplier", pricing_value: -10)
+
+      service = described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_plan: rate_plan)
+      # Night 1: anchor 200 (explicit standard rate) -10% = 180. Night 2: anchor 100 (base_price) -10% = 90.
+      expect(service.call).to eq(270)
+    end
+
+    it "applies a flat offset off the anchor price" do
+      create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_mode: "offset", pricing_value: 80)
+
+      service = described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_plan: rate_plan)
+      expect(service.call).to eq(360) # (100 + 80) * 2 nights
+    end
+
+    it "lets an explicit RoomRate for the derived rate plan win over derivation" do
+      create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_mode: "offset", pricing_value: 80)
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: check_in, price: 55)
+
+      service = described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_plan: rate_plan)
+      expect(service.call).to eq(235) # Night 1 explicit: 55. Night 2 derived: (100 + 80) = 180. Total 235.
+    end
+  end
+
   context "with corporate rates" do
     before do
       create(:room_rate, room_type: room_type, date: check_in, price: 100, corporate_price: 80)

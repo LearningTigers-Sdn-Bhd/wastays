@@ -49,6 +49,16 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       expect(response.body).not_to include("Delete Rate Plan")
     end
+
+    it 'shows per-room-type pricing mode controls, pre-filled from existing derived pricing' do
+      create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_mode: "multiplier", pricing_value: -15)
+
+      get edit_hotel_rate_plan_path(hotel, rate_plan)
+
+      expect(response.body).to include("% of Standard Rate")
+      expect(response.body).to include("rate_plan[room_type_pricing][#{room_type.id}][pricing_mode]")
+      expect(response.body).to include('value="-15.0"')
+    end
   end
 
   describe 'POST /hotel/:hotel_id/rate_plans' do
@@ -63,7 +73,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
             single_supplement: 30.0,
             child_price_multiplier: 0.5,
             infant_price_multiplier: 0.0,
-            room_type_ids: [ room_type.id ]
+            room_type_pricing: { room_type.id.to_s => { enabled: "1", pricing_mode: "fixed" } }
           }
         }
       }.to change(RatePlan, :count).by(1)
@@ -76,6 +86,35 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(rate_plan.name).to eq('Flexible Breakfast Rate')
       expect(rate_plan.sell_mode).to eq('per_person')
       expect(rate_plan.room_types).to include(room_type)
+    end
+
+    it 'creates a room type rate plan with derived multiplier pricing' do
+      post hotel_rate_plans_path(hotel), params: {
+        rate_plan: {
+          name: 'Non-Refundable',
+          sell_mode: 'per_room',
+          room_type_pricing: { room_type.id.to_s => { enabled: "1", pricing_mode: "multiplier", pricing_value: "-10" } }
+        }
+      }
+
+      rate_plan = RatePlan.last
+      rtrp = rate_plan.room_type_rate_plans.find_by(room_type: room_type)
+      expect(rtrp.pricing_mode).to eq('multiplier')
+      expect(rtrp.pricing_value.to_f).to eq(-10.0)
+    end
+
+    it 're-renders with errors when a derived room type row is missing its pricing value' do
+      expect {
+        post hotel_rate_plans_path(hotel), params: {
+          rate_plan: {
+            name: 'Non-Refundable',
+            sell_mode: 'per_room',
+            room_type_pricing: { room_type.id.to_s => { enabled: "1", pricing_mode: "multiplier", pricing_value: "" } }
+          }
+        }
+      }.not_to change(RatePlan, :count)
+
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it 're-renders the form with errors when invalid' do
@@ -92,12 +131,23 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
     it 'updates the rate plan' do
       patch hotel_rate_plan_path(hotel, rate_plan), params: {
-        rate_plan: { extra_pax_charge: 75.0, room_type_ids: [ room_type.id ] }
+        rate_plan: { extra_pax_charge: 75.0, room_type_pricing: { room_type.id.to_s => { enabled: "1", pricing_mode: "fixed" } } }
       }
 
       expect(response).to redirect_to(hotel_rates_settings_path(hotel))
       expect(rate_plan.reload.extra_pax_charge).to eq(75.0)
       expect(rate_plan.room_types).to include(room_type)
+    end
+
+    it 'removes a room type when unchecked' do
+      create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_mode: 'fixed')
+
+      patch hotel_rate_plan_path(hotel, rate_plan), params: {
+        rate_plan: { room_type_pricing: { room_type.id.to_s => { enabled: "0" } } }
+      }
+
+      expect(response).to redirect_to(hotel_rates_settings_path(hotel))
+      expect(rate_plan.reload.room_types).not_to include(room_type)
     end
   end
 

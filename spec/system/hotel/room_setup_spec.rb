@@ -28,7 +28,7 @@ RSpec.describe 'Room Setup', type: :system do
     fill_in 'Max Adults', with: 2
     fill_in 'Max Children', with: 1
     fill_in 'Total Number of Rooms', with: 5
-    fill_in 'Base Nightly Rate (MYR)', with: 250
+    fill_in 'Standard Rate (MYR)', with: 250
 
     click_button 'Create Room type'
 
