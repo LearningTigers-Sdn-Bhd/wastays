@@ -122,12 +122,17 @@
             <div class="space-y-2">
               <% current_hotel.room_types.order(:id).each do |room_type| %>
                 <% rtrp = rtrp_by_room_type_id[room_type.id] %>
-                <div class="rounded-lg border border-slate-200 p-3" data-controller="room-type-pricing-row">
+                <div class="rounded-lg border border-slate-200 p-3 space-y-2"
+                     data-controller="room-type-pricing-row"
+                     data-room-type-pricing-row-anchor-price-value="<%= room_type.base_price %>"
+                     data-room-type-pricing-row-currency-value="<%= rate_plan.currency %>"
+                     data-action="input->room-type-pricing-row#update">
                   <div class="flex flex-wrap items-center gap-3">
                     <label class="inline-flex items-center gap-x-2 text-sm text-slate-700 cursor-pointer">
                       <%= hidden_field_tag "rate_plan[room_type_pricing][#{room_type.id}][enabled]", "0" %>
                       <%= check_box_tag "rate_plan[room_type_pricing][#{room_type.id}][enabled]", "1", rate_plan.room_types.include?(room_type), id: "rate_plan_room_type_pricing_#{room_type.id}_enabled", class: "rounded border-slate-300 text-slate-900 focus:ring-slate-900 size-4" %>
                       <span class="font-medium"><%= room_type.name %></span>
+                      <span class="text-xs text-slate-400">(Standard Rate: <%= rate_plan.currency %> <%= number_with_precision(room_type.base_price, precision: 2) %>)</span>
                     </label>
 
                     <div class="ml-auto flex items-center gap-2">
@@ -145,6 +150,7 @@
                           data: { room_type_pricing_row_target: "value" } %>
                     </div>
                   </div>
+                  <p class="text-right text-[11px] text-slate-500" data-room-type-pricing-row-target="preview"></p>
                 </div>
               <% end %>
             </div>

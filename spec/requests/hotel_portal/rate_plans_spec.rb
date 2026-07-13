@@ -60,6 +60,14 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include('value="-15.0"')
     end
 
+    it 'wires up a live price preview per room type, anchored to that room type\'s own Standard Rate' do
+      get edit_hotel_rate_plan_path(hotel, rate_plan)
+
+      expect(response.body).to include('data-controller="room-type-pricing-row"')
+      expect(response.body).to include("data-room-type-pricing-row-anchor-price-value=\"#{room_type.base_price}\"")
+      expect(response.body).to include('data-room-type-pricing-row-target="preview"')
+    end
+
     it 'wires up a live price preview for each age band, using the room type Standard Rate and a mode choice' do
       per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person', currency: 'MYR')
       create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 40, label: 'Child')
