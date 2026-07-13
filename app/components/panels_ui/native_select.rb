@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module PanelsUI
-
   # A native <select> control, styled to sit alongside Input and TextArea. Rails'
   # form builder still owns option rendering and selection, so this wraps
   # `form.select` and splits the caller's keywords into the two hashes that helper

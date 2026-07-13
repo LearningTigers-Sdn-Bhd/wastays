@@ -16,7 +16,7 @@ RSpec.describe ApplicationHelper, type: :helper do
         flash[:toast] = { message: "Booking saved", description: "Guest checked in", type: "success" }
       end)
 
-      expect(messages).to eq([{ message: "Booking saved", options: { type: "success", description: "Guest checked in" } }])
+      expect(messages).to eq([ { message: "Booking saved", options: { type: "success", description: "Guest checked in" } } ])
     end
   end
 end

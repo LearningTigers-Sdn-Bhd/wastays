@@ -18,7 +18,7 @@
 <%= render PanelsUI::Tabs.new(id: "inventory-tabs", default: active_tab, param: "tab", breadcrumb_id: "hotel-breadcrumb", panels_class: "mt-6", aria_label: "Rates and inventory sections") do |tabs| %>
   <% tabs.with_tab(name: "calendar", label: "Rates & Availability", icon: "calendar-range", panel_id: "inventory-calendar-panel", data: { testid: "inventory-calendar-tab" }) %>
   <% tabs.with_tab(name: "advanced", label: "Advanced Pricing", icon: "settings-2", panel_id: "inventory-advanced-panel", show_subtab_breadcrumb: true) %>
-  <% tabs.with_tab(name: "channels", label: "Channels & OTAs", icon: "radio", panel_id: "inventory-channels-panel") %>
+  <% tabs.with_tab(name: "channels", label: "Channels & OTAs", icon: "radio", panel_id: "inventory-channels-panel", show_subtab_breadcrumb: true) %>
   <!-- Panel: Rates & Availability -->
   <% tabs.with_panel(name: "calendar", id: "inventory-calendar-panel", class: "space-y-6", data: { testid: "inventory-calendar-panel" }) do %>
     <% if @missing_rates.any? %>

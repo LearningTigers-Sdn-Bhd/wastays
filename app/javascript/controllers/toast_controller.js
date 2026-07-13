@@ -21,6 +21,7 @@ export default class extends Controller {
     window.toast = this.boundShowToast
     window.dismissToast = this.boundDismissToast
     document.addEventListener("turbo:before-cache", this.boundBeforeCache)
+    this.element.dispatchEvent(new CustomEvent("toast:ready", { bubbles: true }))
     this.updatePosition()
   }
 

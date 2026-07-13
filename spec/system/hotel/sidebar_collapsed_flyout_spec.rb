@@ -139,23 +139,22 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
     JS
 
     within("#hotel-sidebar") do
-      expect(page).to have_css("a.sidebar-child-link.sidebar-nav-link-active", text: "Summary")
-      expect(page).to have_css("details.sidebar-group-active[open] > summary[aria-label='Financial']")
-      expect(page).to have_no_css("details.sidebar-group details.sidebar-group", visible: :all)
+      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Summary")
+      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] .panel-sidebar__group[data-state='open']")
     end
   end
 
   it "keeps active and user-opened groups expanded through Turbo navigation" do
     within("#hotel-sidebar") do
-      expect(page).to have_css("details.sidebar-group-active[open] > summary[aria-label='Financial']")
-      find("summary.sidebar-group-parent", text: "Accounting", visible: :all).trigger("click")
-      expect(page).to have_css("details.sidebar-group[open] > summary[aria-label='Accounting']")
+      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
+      find("button.panel-sidebar__group-trigger", text: "Accounting", visible: :all).click
+      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Accounting")
     end
 
     page.execute_script(<<~JS)
       document.addEventListener("turbo:before-visit", () => {
         window.sidebarActiveGroupOpenBeforeVisit =
-          document.querySelector("#hotel-sidebar details.sidebar-group-active")?.open
+          document.querySelector("#hotel-sidebar [data-sidebar-group-item][data-sidebar-active] .panel-sidebar__group-trigger")?.getAttribute("aria-expanded") === "true"
       }, { once: true })
     JS
 
@@ -167,9 +166,9 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
     expect(page.evaluate_script("window.sidebarActiveGroupOpenBeforeVisit")).to be(true)
 
     within("#hotel-sidebar") do
-      expect(page).to have_css("a.sidebar-child-link.sidebar-nav-link-active", text: "Refund Report")
-      expect(page).to have_css("details.sidebar-group-active[open] > summary[aria-label='Financial']")
-      expect(page).to have_css("details.sidebar-group[open] > summary[aria-label='Accounting']")
+      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Refund Report")
+      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
+      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Accounting")
     end
   end
 end

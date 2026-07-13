@@ -28,6 +28,15 @@ export default class extends Controller {
     this.show(this.validTab(requested) ? requested : this.defaultTab, { updateUrl: false })
   }
 
+  panelsUiBreadcrumbOutletConnected(breadcrumb) {
+    if (!this.ownsBreadcrumb()) return
+
+    const activeTab = this.tabTargets.find((tab) => tab.dataset.tabName === this.activeName)
+    if (!activeTab) return
+
+    this.syncBreadcrumbOutlet(breadcrumb, activeTab)
+  }
+
   // Pointer activation.
   select(event) {
     event.preventDefault()
@@ -87,6 +96,7 @@ export default class extends Controller {
     const activeName = this.validTab(name) ? name : this.defaultTab
     this.activeName = activeName
     let activeTab = null
+    let activePanel = null
 
     this.tabTargets.forEach((tab) => {
       const active = tab.dataset.tabName === activeName
@@ -97,27 +107,44 @@ export default class extends Controller {
 
     this.panelTargets.forEach((panel) => {
       panel.classList.toggle("hidden", panel.dataset.tabPanel !== activeName)
+      if (panel.dataset.tabPanel === activeName) activePanel = panel
     })
 
     if (focus) activeTab?.focus()
     if (updateUrl) this.updateUrl(activeName)
     this.syncBreadcrumb(activeTab)
+    if (this.levelValue === "primary") this.syncNestedBreadcrumb(activePanel)
   }
 
   syncBreadcrumb(tab) {
-    if (!this.hasPanelsUiBreadcrumbOutlet || !tab) return
-
-    const label = tab.dataset.tabLabel
-    const showSubtab = tab.dataset.showSubtabBreadcrumb === "true"
+    if (!this.hasPanelsUiBreadcrumbOutlet || !tab || !this.ownsBreadcrumb()) return
 
     this.panelsUiBreadcrumbOutlets.forEach((breadcrumb) => {
-      if (this.levelValue === "secondary") {
-        breadcrumb.setSubtabLabel(label)
-      } else {
-        breadcrumb.setTabLabel(label)
-        breadcrumb.setSubtabSegmentVisible(showSubtab)
-      }
+      this.syncBreadcrumbOutlet(breadcrumb, tab)
     })
+  }
+
+  syncBreadcrumbOutlet(breadcrumb, tab) {
+    const label = tab.dataset.tabLabel
+    if (this.levelValue === "secondary") return breadcrumb.setSubtabLabel(label)
+
+    breadcrumb.setTabLabel(label)
+    breadcrumb.setSubtabSegmentVisible(tab.dataset.showSubtabBreadcrumb === "true")
+  }
+
+  syncNestedBreadcrumb(panel) {
+    if (!this.hasPanelsUiBreadcrumbOutlet) return
+
+    const activeTab = panel?.querySelector('[data-controller~="panels-ui--tabs"] [data-panels-ui--tabs-target~="tab"][aria-selected="true"]')
+    const label = activeTab?.dataset.tabLabel
+    if (!label) return
+
+    this.panelsUiBreadcrumbOutlets.forEach((breadcrumb) => breadcrumb.setSubtabLabel(label))
+  }
+
+  ownsBreadcrumb() {
+    const parentPanel = this.element.parentElement?.closest('[data-panels-ui--tabs-target~="panel"]')
+    return !parentPanel?.classList.contains("hidden")
   }
 
   updateUrl(name) {

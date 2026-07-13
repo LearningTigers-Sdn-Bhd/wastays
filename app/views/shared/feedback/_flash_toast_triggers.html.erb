@@ -1,7 +1,13 @@
 <% toast_flash_messages(flash).each do |toast| %>
-  <script>
-    document.addEventListener("turbo:load", () => {
-      window.toast?.(<%= raw json_escape(toast[:message].to_json) %>, <%= raw json_escape(toast[:options].to_json) %>);
-    }, { once: true });
-  </script>
+  <noscript>
+    <p role="<%= toast.dig(:options, :type).in?(%w[error danger]) ? "alert" : "status" %>">
+      <%= toast[:message] %>
+      <%= toast.dig(:options, :description) %>
+    </p>
+  </noscript>
+  <%= tag.div hidden: true, data: {
+    controller: "toast-trigger",
+    toast_trigger_message_value: toast[:message],
+    toast_trigger_options_value: toast[:options].to_json
+  } %>
 <% end %>

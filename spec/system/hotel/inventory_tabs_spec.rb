@@ -24,6 +24,8 @@ RSpec.describe "Hotel inventory tabs", type: :system, js: true do
     expect(page).to have_css("[data-testid='inventory-calendar-panel']", visible: :hidden)
     expect(page).to have_css("[data-testid='inventory-overrides-panel']")
     expect(page).to have_css("[data-testid='inventory-pricing-panel']", visible: :hidden)
+    expect(page).to have_css("#inventory-tabs-tab-advanced[aria-selected='true']")
+    expect(page).to have_css("#inventory-subtabs-tab-overrides[aria-selected='true']")
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Advanced Pricing")
     expect(page).to have_css("[data-subtabs-breadcrumb-label]", text: "Availability Overrides")
 
@@ -31,14 +33,27 @@ RSpec.describe "Hotel inventory tabs", type: :system, js: true do
 
     expect(page).to have_current_path(hotel_inventory_index_path(hotel, tab: "advanced", subtab: "pricing"))
     expect(page).to have_css("[data-testid='inventory-pricing-panel']")
+    expect(page).to have_css("#inventory-subtabs-tab-pricing[aria-selected='true']")
     expect(page).to have_css("[data-subtabs-breadcrumb-label]", text: "Pricing Rules")
 
     click_button "Rates & Availability"
 
     expect(page).to have_current_path(hotel_inventory_index_path(hotel, tab: "calendar", subtab: "pricing"))
     expect(page).to have_css("[data-testid='inventory-calendar-panel']")
+    expect(page).to have_css("#inventory-tabs-tab-calendar[aria-selected='true']")
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Rates & Availability")
     expect(page).to have_css("[data-subtabs-breadcrumb-segment]", visible: :hidden)
+
+    click_button "Channels & OTAs"
+
+    expect(page).to have_css("[data-testid='inventory-channels-panel']")
+    expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Channels & OTAs")
+    expect(page).to have_css("[data-subtabs-breadcrumb-label]", text: "Derived Pricing & Allocations")
+
+    click_button "Availability Rules"
+
+    expect(page).to have_current_path(hotel_inventory_index_path(hotel, tab: "channels", subtab: "availability_rules"))
+    expect(page).to have_css("[data-subtabs-breadcrumb-label]", text: "Availability Rules")
   end
 
   it "falls back to the default tab and subtab for unknown parameters" do
@@ -46,8 +61,11 @@ RSpec.describe "Hotel inventory tabs", type: :system, js: true do
 
     expect(page).to have_css("[data-testid='inventory-calendar-panel']")
     expect(page).to have_css("[data-testid='inventory-pricing-panel']", visible: :hidden)
+    expect(page).to have_css("#inventory-tabs-tab-calendar[aria-selected='true']")
+    expect(page).to have_css("#inventory-subtabs-tab-pricing[aria-selected='true']", visible: :all)
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Rates & Availability")
-    expect(page).to have_css("[data-subtabs-breadcrumb-label]", text: "Pricing Rules", visible: :hidden)
+    expect(page).to have_css("[data-subtabs-breadcrumb-label]", text: "Pricing Rules", visible: :all)
+    expect(page).to have_css("[data-panels-ui--breadcrumb-target='subtabSegment'].hidden", visible: :all)
   end
 
   it "preserves tab and filter state across calendar Turbo navigation" do

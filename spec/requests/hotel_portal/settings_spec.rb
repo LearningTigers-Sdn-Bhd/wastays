@@ -74,7 +74,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
       expect(response).to have_http_status(:ok)
       grc_settings = Nokogiri::HTML(response.body).at_css("#guest-registration-card")
-      expect(grc_settings["class"]).to include("rounded-2xl", "border", "bg-white")
+      expect(grc_settings["class"]).to include("rounded-2xl", "border", "bg-card")
     end
 
     it "shows setup tabs in the settings tab bar" do

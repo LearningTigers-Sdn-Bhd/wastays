@@ -10,7 +10,7 @@ RSpec.describe "PanelsUI::Card", type: :system do
     page.execute_script("arguments[0].focus()", link)
     link.send_keys(:enter)
 
-    expect(page.current_url).to end_with("/system-design#card-booking-1042")
+    expect(page).to have_current_path(%r{/system-design#card-booking-1042$}, url: true)
   end
 
   it "keeps a nested action independent from card navigation" do

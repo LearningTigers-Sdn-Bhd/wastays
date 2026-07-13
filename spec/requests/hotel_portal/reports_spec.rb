@@ -768,18 +768,23 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get payouts_hotel_reports_path(hotel), params: { tab: "paid" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('data-tabs-default-tab-value="paid"')
-      expect(response.body).to include('data-testid="payouts-upcoming-panel"')
-      expect(response.body).to include('data-testid="payouts-paid-panel"')
-      expect(response.body).to include("data-tabs-breadcrumb-label>Paid History</span>")
+      page = Capybara.string(response.body)
+      expect(page).to have_css('[data-panels-ui--tabs-active-value="paid"]')
+      expect(page).to have_css('[data-testid="payouts-upcoming-panel"]')
+      expect(page).to have_css('[data-testid="payouts-paid-panel"]')
+      expect(page).to have_css('[data-panels-ui--breadcrumb-target="tabLabel"]', text: "Paid History")
     end
 
     it "falls back to upcoming for an unknown tab" do
       get payouts_hotel_reports_path(hotel), params: { tab: "unknown" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('data-tabs-default-tab-value="upcoming"')
-      expect(response.body).to include("data-tabs-breadcrumb-label>Upcoming &amp; Processing</span>")
+      page = Capybara.string(response.body)
+      expect(page).to have_css('[data-panels-ui--tabs-active-value="upcoming"]')
+      expect(page).to have_css(
+        '[data-panels-ui--breadcrumb-target="tabLabel"]',
+        text: "Upcoming & Processing"
+      )
     end
 
     it "exports csv/xls/pdf for upcoming tab" do

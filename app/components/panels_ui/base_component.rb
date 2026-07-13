@@ -41,7 +41,7 @@ module PanelsUI
       return tw_merge(class_override) unless config
 
       chosen = config[:defaults].merge(selected.compact)
-      parts  = [config[:base]]
+      parts  = [ config[:base] ]
       chosen.each { |group, value| parts << config.dig(:variants, group, value) }
       parts << class_override
       tw_merge(parts)

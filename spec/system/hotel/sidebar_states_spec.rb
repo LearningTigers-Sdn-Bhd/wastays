@@ -44,11 +44,10 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
     visit hotel_reports_path(hotel)
 
     within("#hotel-sidebar") do
-      expect(page).to have_css("details.sidebar-group-active[open]")
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Financial")
-      expect(page).to have_no_css("summary.sidebar-nav-link-active", visible: :all)
-      expect(page).to have_css("a.sidebar-child-link.sidebar-nav-link-active", text: "Summary")
-      expect(page).to have_no_css("details.sidebar-group details.sidebar-group", visible: :all)
+      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] .panel-sidebar__group[data-state='open']")
+      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger[aria-current='page']", visible: :all)
+      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Summary")
     end
   end
 

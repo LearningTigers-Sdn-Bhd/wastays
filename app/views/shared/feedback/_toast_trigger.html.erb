@@ -1,4 +1,6 @@
 <% options = { type: type.to_s, description: description.presence }.compact %>
-<script>
-  window.toast?.(<%= raw json_escape(message.to_s.to_json) %>, <%= raw json_escape(options.to_json) %>);
-</script>
+<%= tag.div hidden: true, data: {
+  controller: "toast-trigger",
+  toast_trigger_message_value: message.to_s,
+  toast_trigger_options_value: options.to_json
+} %>
