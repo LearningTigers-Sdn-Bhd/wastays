@@ -79,10 +79,11 @@ module HotelPortal
       end
 
       def room_details(booking)
-        details = booking.booking_rooms.map do |room|
+        details = booking.booking_rooms.group_by do |room|
           snapshot_name = room.room_type_snapshot.is_a?(Hash) ? room.room_type_snapshot["name"].presence : nil
-          room_name = snapshot_name || room.room_type&.name || "Room"
-          "#{room.quantity}x #{room_name}"
+          snapshot_name || room.room_type&.name || "Room"
+        end.map do |room_name, rooms|
+          "#{rooms.size}x #{room_name}"
         end
 
         details.presence&.join(", ") || "No rooms assigned"

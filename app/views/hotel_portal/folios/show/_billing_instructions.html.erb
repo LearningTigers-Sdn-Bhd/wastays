@@ -14,11 +14,11 @@
     </div>
 
     <% if folio_show.can_manage_billing_instructions? %>
-      <%= link_to new_routing_rule_hotel_folio_path(hotel, booking, origin: folio_origin, tab: "billing_instructions", active_folio_id: active_folio_id),
+      <%= link_to billing_routes_hotel_booking_control_panel_path(hotel, booking),
           class: "inline-flex items-center justify-center gap-1.5 rounded-md bg-slate-900 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-slate-700",
           data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %>
         <%= cached_icon "plus", class: "size-3" %>
-        Add Rule
+        Change Billing Routes
       <% end %>
     <% end %>
   </div>

@@ -47,11 +47,31 @@ export default class extends Controller {
   }
 
   updateBreadcrumbLabel(label) {
+    if (!label) return
+
+    // Multiple subtabs controllers can exist on one page (one per top-level
+    // tab). Only the one whose enclosing top-level panel is currently
+    // visible should own the shared breadcrumb label, otherwise a hidden
+    // group's default tab silently overwrites the active tab's label.
+    const panel = this.element.closest("[data-tabs-target='panel']")
+    if (panel && panel.classList.contains("hidden")) return
+
     const breadcrumb = document.querySelector("[data-subtabs-breadcrumb-label]")
-    if (breadcrumb && label) breadcrumb.textContent = label
+    if (breadcrumb) breadcrumb.textContent = label
   }
 
   get defaultTab() {
     return this.defaultTabValue || this.tabTargets[0]?.dataset.tabName
+  }
+
+  togglePricingInput(event) {
+    const value = event.currentTarget.value
+    const form = event.currentTarget.closest("form")
+    if (form) {
+      const pricingValDiv = form.querySelector(".pricing-value-input")
+      if (pricingValDiv) {
+        pricingValDiv.classList.toggle("hidden", value === "same")
+      }
+    }
   }
 }

@@ -1,0 +1,97 @@
+<% booking_guest = presenter.selected_booking_guest %>
+<% guest = booking_guest&.guest %>
+<% guest_display = presenter.guest_display(booking_guest) %>
+<% can_manage = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+
+<section class="h-full min-h-0" aria-labelledby="guest-details-heading">
+  <% if booking_guest && guest %>
+    <% mode = booking_guest.primary? ? "edit_primary" : "edit_additional" %>
+    <% return_to = hotel_booking_control_panel_path(current_hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id) %>
+    <% snapshot_name = booking_guest.name_snapshot.presence || guest.name %>
+    <% snapshot_email = booking_guest.email_snapshot.presence || guest.email %>
+    <% snapshot_phone = booking_guest.phone_snapshot.presence || guest.phone %>
+    <% snapshot_country = booking_guest.country_snapshot.presence || guest.country.presence || current_hotel.country %>
+    <% snapshot_gender = booking_guest.gender_snapshot.presence || guest.gender %>
+    <% snapshot_document_type = booking_guest.document_type_snapshot.presence || guest.document_type.presence || "ic" %>
+    <% snapshot_government_id = booking_guest.government_id_snapshot.presence || guest.government_id %>
+    <% snapshot_date_of_birth = booking_guest.date_of_birth_snapshot.presence || guest.date_of_birth %>
+
+    <%= form_with model: guest,
+        url: hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: mode, booking_guest_id: booking_guest.id),
+        method: :patch,
+        id: "guest-details-form",
+        class: "flex h-full min-h-0 flex-col bg-white",
+        data: { turbo: false, controller: "guest-details-editor guest-dob", action: "input->guest-details-editor#markDirty change->guest-details-editor#markDirty submit->guest-details-editor#submit" } do |form| %>
+      <%= hidden_field_tag :return_to, return_to %>
+      <%= hidden_field_tag :presentation, "booking_control_panel" %>
+
+      <header class="shrink-0 border-b border-slate-200 px-5 py-4">
+        <p class="text-xs font-semibold text-slate-500">Booking No. <%= presenter.booking_number %></p>
+        <h2 id="guest-details-heading" class="mt-1 truncate text-lg font-bold text-slate-950"><%= guest_display[:name] %></h2>
+        <p class="mt-1 text-sm text-slate-600"><%= guest_display[:role] %></p>
+      </header>
+
+      <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar">
+        <div class="mx-auto max-w-5xl px-5 py-6 lg:px-8">
+          <div class="mb-5">
+            <h3 class="text-sm font-bold text-slate-950">Guest Details</h3>
+            <p class="mt-1 text-xs text-slate-500">Guest details recorded for this stay.</p>
+          </div>
+
+          <fieldset <%= "disabled" unless can_manage %> class="space-y-6 disabled:opacity-70">
+            <div class="grid gap-5 md:grid-cols-2">
+              <div class="md:col-span-2">
+                <%= form.label :name, "Full Name", class: "booking-form__label" %>
+                <%= form.text_field :name, value: snapshot_name, required: true, autocomplete: "name", placeholder: "Enter full name", class: "booking-form__control" %>
+              </div>
+              <div>
+                <%= form.label :email, "Email", class: "booking-form__label" %>
+                <%= form.email_field :email, value: snapshot_email, autocomplete: "email", spellcheck: false, placeholder: "guest@example.com", class: "booking-form__control" %>
+              </div>
+              <div>
+                <%= form.label :phone, "Phone", class: "booking-form__label" %>
+                <%= form.telephone_field :phone, value: snapshot_phone, autocomplete: "tel", placeholder: "+60 12-345 6789", class: "booking-form__control" %>
+              </div>
+              <div>
+                <%= form.label :country, "Country", class: "booking-form__label" %>
+                <%= form.select :country, options_for_select([["Select country", ""]] + COUNTRY_OPTIONS, snapshot_country), {}, class: "booking-form__control", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" } %>
+              </div>
+              <div>
+                <%= form.label :gender, "Gender", class: "booking-form__label" %>
+                <%= form.select :gender, options_for_select([["Select gender", ""], ["Male", "male"], ["Female", "female"], ["Other", "other"]], snapshot_gender), {}, class: "booking-form__control" %>
+              </div>
+            </div>
+
+            <section class="border-t border-slate-200 pt-6" aria-labelledby="guest-identity-heading">
+              <div class="mb-4">
+                <h3 id="guest-identity-heading" class="text-sm font-bold text-slate-950">Identity Information</h3>
+                <p class="mt-1 text-xs text-slate-500">Use the identification presented by the guest.</p>
+              </div>
+              <div class="grid gap-5 md:grid-cols-2">
+                <div>
+                  <%= form.label :document_type, "Document Type", class: "booking-form__label" %>
+                  <%= form.select :document_type, options_for_select([["Select document type", ""], ["IC", "ic"], ["Passport", "passport"]], snapshot_document_type), {}, class: "booking-form__control", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" } %>
+                </div>
+                <div>
+                  <%= form.label :government_id, "IC / Passport No.", class: "booking-form__label" %>
+                  <%= form.text_field :government_id, value: snapshot_government_id, autocomplete: "off", spellcheck: false, placeholder: "Enter IC or passport number", class: "booking-form__control", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
+                </div>
+                <div>
+                  <%= form.label :date_of_birth, "Date of Birth", class: "booking-form__label" %>
+                  <%= form.date_field :date_of_birth, value: snapshot_date_of_birth, autocomplete: "bday", placeholder: "Select date", class: "booking-form__control", data: { guest_dob_target: "dateOfBirth" } %>
+                </div>
+              </div>
+            </section>
+          </fieldset>
+        </div>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="flex h-full items-center justify-center px-5 py-12 text-center">
+      <div>
+        <p class="font-semibold text-slate-900">No guest is linked to this booking.</p>
+        <p class="mt-1 text-sm text-slate-500">Add a primary guest before check-in.</p>
+      </div>
+    </div>
+  <% end %>
+</section>

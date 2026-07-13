@@ -33,6 +33,10 @@ class Api::V1::QuotesController < Api::V1::BaseController
   private
 
   def quote_params
-    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :guest_name, :guest_email, :guest_phone, :special_requests)
+    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :infants, :room_count, :guest_name, :guest_email, :guest_phone, :special_requests)
+  end
+
+  def public_quote_url(token)
+    Rails.application.routes.url_helpers.quote_url(token, host: request.base_url)
   end
 end

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# LEGACY: frozen pending booking-control-panel migration. Do not add features here.
+
 class HotelPortal::BookingsController < HotelPortal::BaseController
   include BookingAuditable
 
@@ -7,7 +9,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   before_action :authorize_manage_bookings!, only: %i[update]
 
   def index
-    @bookings = current_hotel.bookings.recent_first.includes(:booking_folio)
+    @bookings = current_hotel.bookings.recent_first.includes(:booking_folio, booking_guests: :guest)
 
     @bookings = @bookings.search(params[:query]) if params[:query].present?
     @bookings = @bookings.where(status: params[:status]) if params[:status].present?
@@ -18,17 +20,9 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   end
 
   def show
-    @booking = current_hotel.bookings
-                            .includes(
-                              booking_folio: [ :folio_transactions, :folio_forecasted_charges ],
-                              booking_rooms: [ :room_type, :rate_plan ],
-                              booking_guests: :guest,
-                              booking_notes: :user
-                            )
-                            .find(params[:id])
-    set_breadcrumbs
-    @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-    set_audit_logs(@booking)
+    booking = current_hotel.bookings.find(params[:id])
+    tab = { "requests" => "housekeeping_requests", "history" => "audit_trails" }.fetch(params[:tab].to_s, "booking_details")
+    redirect_to hotel_booking_control_panel_path(current_hotel, booking, tab: tab), status: :moved_permanently
   end
 
   def update
@@ -44,18 +38,12 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     if result.success?
       release_room_locks(@booking)
       respond_to do |format|
-        format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking updated successfully." }
+        format.html { redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), notice: "Booking updated successfully." }
         format.json { render json: { success: true, booking: @booking } }
       end
     else
       respond_to do |format|
-        format.html do
-          @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-          set_breadcrumbs
-          set_audit_logs(@booking)
-          @booking.errors.add(:base, result.errors.to_sentence)
-          render :show, status: :unprocessable_content
-        end
+        format.html { render plain: result.errors.to_sentence, status: :unprocessable_content }
         format.json { render json: { success: false, errors: result.errors }, status: :unprocessable_content }
       end
     end
@@ -66,15 +54,6 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   def release_room_locks(booking)
     room_number = booking.hotel_snapshot.is_a?(Hash) ? (booking.hotel_snapshot["room_number"] || booking.hotel_snapshot.dig("assignment", "room_number")) : nil
     RoomLock.where(hotel: current_hotel, user: current_user, room_number: room_number).destroy_all if room_number.present?
-  end
-
-  def set_breadcrumbs
-    override_breadcrumbs(
-      { label: "Operations" },
-      { label: "Bookings", path: hotel_bookings_path(current_hotel) },
-      { label: @booking.confirmation_token, path: hotel_booking_path(current_hotel, @booking) },
-      { label: "Booking Details", tab_label: true }
-    )
   end
 
   def booking_params

@@ -56,6 +56,14 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response.body).to include("View QR")
     end
 
+    it "renders the guest registration card field selection" do
+      get hotel_general_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      grc_settings = Nokogiri::HTML(response.body).at_css("#guest-registration-card")
+      expect(grc_settings["class"]).to include("rounded-2xl", "border", "bg-white")
+    end
+
     it "shows setup tabs in the settings tab bar" do
       get hotel_general_settings_path(hotel)
 
@@ -117,6 +125,26 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
   end
 
   describe 'PATCH /hotel/settings' do
+    it "updates guest registration card fields" do
+      patch hotel_general_settings_path(hotel), params: {
+        form_id: "hotel_settings",
+        hotel: { guest_registration_card_fields: %w[phone room_type check_in] }
+      }
+
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+      expect(hotel.reload.guest_registration_card_fields).to eq(%w[phone room_type check_in])
+    end
+
+    it "discards unknown guest registration card fields and allows none" do
+      patch hotel_general_settings_path(hotel), params: {
+        form_id: "hotel_settings",
+        hotel: { guest_registration_card_fields: [ "", "unknown" ] }
+      }
+
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+      expect(hotel.reload.guest_registration_card_fields).to eq([])
+    end
+
     it 'updates check-in notification settings and channels' do
       patch hotel_general_settings_path(hotel), params: {
         form_id: 'notification_settings',

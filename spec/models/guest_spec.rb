@@ -153,4 +153,111 @@ RSpec.describe Guest, type: :model do
       expect(record.magic_token_expires_at).to be_nil
     end
   end
+
+  describe 'VIP propagation' do
+    let(:guest) { create(:guest, vip: false) }
+    let(:booking1) { create(:booking) }
+    let(:booking2) { create(:booking) }
+
+    before do
+      create(:booking_guest, booking: booking1, guest: guest, is_primary: true)
+      create(:booking_guest, booking: booking2, guest: guest, is_primary: false)
+    end
+
+    it 'propagates VIP status to all bookings when marked as VIP' do
+      expect { guest.update!(vip: true) }
+        .to change { booking1.reload.vip }.from(false).to(true)
+        .and change { booking2.reload.vip }.from(false).to(true)
+    end
+
+    it 'propagates non-VIP status to all bookings when VIP status is removed' do
+      guest.update!(vip: true)
+      expect(booking1.reload.vip).to be(true)
+      expect(booking2.reload.vip).to be(true)
+
+      expect { guest.update!(vip: false) }
+        .to change { booking1.reload.vip }.from(true).to(false)
+        .and change { booking2.reload.vip }.from(true).to(false)
+    end
+  end
+
+  describe 'blacklisted?' do
+    let!(:banned_guest) { create(:guest, name: "John Doe", email: "john@example.com", blacklisted: true) }
+    let!(:regular_guest) { create(:guest, name: "Jane Smith", email: "jane@example.com", blacklisted: false) }
+
+    it 'returns true if the email matches a blacklisted guest' do
+      expect(Guest.blacklisted?(email: "john@example.com")).to be(true)
+      expect(Guest.blacklisted?(email: "JOHN@EXAMPLE.COM")).to be(true)
+    end
+
+    it 'returns true if the name matches a blacklisted guest case-insensitively' do
+      expect(Guest.blacklisted?(name: "John Doe")).to be(true)
+      expect(Guest.blacklisted?(name: "john doe")).to be(true)
+    end
+
+    it 'returns false if the email/name matches a non-blacklisted guest' do
+      expect(Guest.blacklisted?(email: "jane@example.com")).to be(false)
+      expect(Guest.blacklisted?(name: "Jane Smith")).to be(false)
+    end
+
+    it 'returns false for unmatched email or name' do
+      expect(Guest.blacklisted?(email: "other@example.com")).to be(false)
+      expect(Guest.blacklisted?(name: "Other Guest")).to be(false)
+    end
+
+    context 'with hotel-scoped blacklisting' do
+      let(:hotel_a) { create(:hotel) }
+      let(:hotel_b) { create(:hotel) }
+      let!(:scoped_guest) do
+        create(:guest, name: "Scoped Guest", email: "scoped@example.com", blacklisted: true, metadata: {
+          "blacklisted_hotel_ids" => [ hotel_a.id ]
+        })
+      end
+
+      it 'returns true for blacklisted_at? at hotel A' do
+        expect(scoped_guest.blacklisted_at?(hotel_a)).to be(true)
+      end
+
+      it 'returns false for blacklisted_at? at hotel B' do
+        expect(scoped_guest.blacklisted_at?(hotel_b)).to be(false)
+      end
+
+      it 'respects hotel scoping in Guest.blacklisted? class method' do
+        expect(Guest.blacklisted?(email: "scoped@example.com", hotel: hotel_a)).to be(true)
+        expect(Guest.blacklisted?(email: "scoped@example.com", hotel: hotel_b)).to be(false)
+      end
+
+      it 'respects hotel scoping in Guest.banned? class method' do
+        expect(Guest.banned?(email: "scoped@example.com", hotel: hotel_a)).to be(true)
+        expect(Guest.banned?(email: "scoped@example.com", hotel: hotel_b)).to be(false)
+      end
+    end
+  end
+
+  describe 'repeat?' do
+    let(:guest) { create(:guest) }
+    let(:booking) { create(:booking) }
+
+    it 'returns false if there are no completed bookings' do
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+      booking.update_columns(status: 'confirmed', check_in: Date.current, check_out: Date.current + 2)
+      expect(guest.repeat?).to be(false)
+      expect(booking.repeat?).to be(false)
+    end
+
+    it 'returns true if there is at least one completed booking and want to book again' do
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+      booking.update_columns(status: 'completed', check_in: 3.days.ago, check_out: 2.days.ago)
+
+      expect(guest.repeat?).to be(false) # only 1 completed booking, no second booking yet
+      expect(booking.repeat?).to be(false) # first booking itself is not a repeat booking
+
+      second_booking = create(:booking)
+      create(:booking_guest, booking: second_booking, guest: guest, is_primary: true)
+      second_booking.update_columns(status: 'confirmed', check_in: 1.day.ago, check_out: Date.current)
+
+      expect(guest.repeat?).to be(true) # now has second booking
+      expect(second_booking.repeat?).to be(true) # second booking is a repeat booking
+    end
+  end
 end

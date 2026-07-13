@@ -91,7 +91,7 @@
                 <% bookings.each_with_index do |presenter, index| %>
                   <tr class="align-top transition-colors hover:bg-slate-100/80">
                     <td class="px-6 py-4 sm:px-8">
-                      <%= link_to "##{presenter.confirmation_token}", hotel_booking_path(current_hotel, presenter.booking), class: "text-sm font-mono font-bold text-slate-900 hover:underline", data: { turbo: false } %>
+                      <%= link_to "##{presenter.confirmation_token}", hotel_booking_control_panel_path(current_hotel, presenter.booking, tab: "booking_details"), class: "text-sm font-mono font-bold text-slate-900 hover:underline", data: { turbo: false } %>
                     </td>
                     <td class="px-6 py-4">
                       <span class="text-sm font-semibold text-slate-900"><%= presenter.guest_name %></span>

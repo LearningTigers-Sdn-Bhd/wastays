@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["input", "results", "guestId", "email", "phone", "country", "gender", "documentType", "governmentId", "dateOfBirth"]
+  static targets = ["input", "results", "guestId", "email", "phone", "country", "gender", "documentType", "governmentId", "dateOfBirth", "bannedWarning"]
   static values = { url: String }
 
   connect() {
@@ -56,6 +56,7 @@ export default class extends Controller {
     result.dataset.guestDocumentType = guest.document_type || ""
     result.dataset.guestGovernmentId = guest.government_id || ""
     result.dataset.guestDateOfBirth = guest.date_of_birth || ""
+    result.dataset.guestBlacklisted = guest.blacklisted ? "true" : "false"
 
     const name = document.createElement("div")
     name.className = "font-bold text-slate-900"
@@ -101,6 +102,7 @@ export default class extends Controller {
       }
     }))
 
+    this.checkBannedStatus()
     this.hideResults()
   }
 
@@ -118,5 +120,39 @@ export default class extends Controller {
   // Clear guest ID if user changes name manually
   clearGuestId() {
     this.guestIdTarget.value = ""
+    if (this.hasBannedWarningTarget) {
+      this.bannedWarningTarget.classList.add("hidden")
+    }
+  }
+
+  checkBannedStatus() {
+    const name = this.inputTarget.value.trim()
+    const email = this.hasEmailTarget ? this.emailTarget.value.trim() : ""
+    const phone = this.hasPhoneTarget ? this.phoneTarget.value.trim() : ""
+
+    if (!name && !email && !phone) {
+      if (this.hasBannedWarningTarget) {
+        this.bannedWarningTarget.classList.add("hidden")
+      }
+      return
+    }
+
+    const checkUrl = this.urlValue.replace("/search", "/check_banned")
+    fetch(`${checkUrl}?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(phone)}`)
+      .then(response => response.json())
+      .then(data => {
+        if (this.hasBannedWarningTarget) {
+          if (data.banned) {
+            this.bannedWarningTarget.classList.remove("hidden")
+          } else {
+            this.bannedWarningTarget.classList.add("hidden")
+          }
+        }
+      })
+      .catch(() => {
+        if (this.hasBannedWarningTarget) {
+          this.bannedWarningTarget.classList.add("hidden")
+        }
+      })
   }
 }

@@ -124,6 +124,57 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("Ravi Menon")
       expect(body_text).not_to include("Aisha Tan")
     end
+
+    it "filters guests by status tags" do
+      ravi = Guest.create!(
+        name: "Ravi Vip",
+        email: "vip@example.com",
+        phone: "+60123456789",
+        government_id: "A1234567",
+        country: "India",
+        gender: "male",
+        document_type: "passport",
+        date_of_birth: Date.new(1985, 1, 2),
+        vip: true
+      )
+      aisha = Guest.create!(
+        name: "Aisha Banned",
+        email: "banned@example.com",
+        phone: "+60199887766",
+        government_id: "900101015555",
+        country: "Malaysia",
+        gender: "female",
+        document_type: "ic",
+        blacklisted: true
+      )
+
+      ravi_booking = create(:booking, hotel: hotel, status: "completed", guest_name: ravi.name, guest_email: ravi.email, guest_phone: ravi.phone)
+      aisha_booking = create(:booking, hotel: hotel, status: "completed", guest_name: aisha.name, guest_email: aisha.email, guest_phone: aisha.phone)
+      create(:booking_guest, booking: ravi_booking, guest: ravi, is_primary: true)
+      create(:booking_guest, booking: aisha_booking, guest: aisha, is_primary: true)
+
+      get hotel_guests_path(hotel), params: { tag: "vip" }
+      expect(response).to have_http_status(:success)
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("Ravi Vip")
+      expect(body_text).not_to include("Aisha Banned")
+
+      get hotel_guests_path(hotel), params: { tag: "banned" }
+      expect(response).to have_http_status(:success)
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("Aisha Banned")
+      expect(body_text).not_to include("Ravi Vip")
+
+      # 3. Repeat filter
+      ravi_booking2 = create(:booking, hotel: hotel, status: "completed")
+      create(:booking_guest, booking: ravi_booking2, guest: ravi)
+
+      get hotel_guests_path(hotel), params: { tag: "repeat" }
+      expect(response).to have_http_status(:success)
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("Ravi Vip")
+      expect(body_text).not_to include("Aisha Banned")
+    end
   end
 
   describe "GET /search" do

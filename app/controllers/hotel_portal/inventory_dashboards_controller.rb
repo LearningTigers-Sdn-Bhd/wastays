@@ -1,14 +1,25 @@
 # frozen_string_literal: true
 
 class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
-  INVENTORY_TABS = %w[calendar advanced].freeze
-  INVENTORY_SUBTABS = %w[pricing overrides].freeze
+  INVENTORY_TABS = %w[calendar advanced channels].freeze
+  INVENTORY_SUBTABS = %w[pricing overrides derived_settings availability_rules].freeze
 
   def index
     authorize current_hotel, :update?, policy_class: HotelPolicy
 
-    @start_date = (params[:start_date] || Date.current).to_date
-    @end_date = @start_date + 13.days
+    @range_mode = params[:days] == "month" ? "month" : "days"
+
+    if @range_mode == "month"
+      @month = parsed_month(params[:month]) || (params[:start_date].presence&.to_date || Date.current).beginning_of_month
+      @start_date = @month.beginning_of_month
+      @end_date = @month.end_of_month
+      @days = (@end_date - @start_date).to_i + 1
+    else
+      @days = (params[:days] || 14).to_i
+      @days = 14 unless [ 14, 21 ].include?(@days)
+      @start_date = (params[:start_date] || Date.current).to_date
+      @end_date = @start_date + (@days - 1).days
+    end
     @view_mode = "combined"
 
     # Handle multiple view currencies
@@ -31,8 +42,32 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     @room_types = current_hotel.room_types.order(:id)
     @calendar = build_calendar
     @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_saved_rules(params[:room_type_ids])
+
+    load_channels_data
+
     set_active_tabs
     append_inventory_breadcrumbs
+  end
+
+  def occupancy_details
+    authorize current_hotel, :update?, policy_class: HotelPolicy
+
+    @date = begin
+      params[:date].present? ? params[:date].to_date : Date.current
+    rescue StandardError
+      Date.current
+    end
+
+    @booking_rooms = BookingRoom.joins(:booking)
+                                .includes(:room_type, :booking)
+                                .where(bookings: { hotel_id: current_hotel.id })
+                                .merge(Booking.revenue_generating)
+                                .where("bookings.check_in::date <= :date AND bookings.check_out::date > :date", date: @date)
+                                .order("booking_rooms.room_number ASC, bookings.guest_name ASC")
+
+    @grouped_booking_rooms = @booking_rooms.group_by(&:room_type).sort_by { |room_type, _| room_type.id }
+
+    render layout: false
   end
 
   def bulk_save_ari
@@ -106,6 +141,8 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
         :start_date, :end_date, :apply_inventory, :apply_rates, :apply_restrictions,
         :quantity, :status, :price, :currency, :min_stay, :max_stay,
         :closed_to_arrival, :closed_to_departure, :stop_sell, :mode,
+        :base_occupancy, :extra_pax_charge, :single_supplement,
+        :channel_id, :channel_rate_plan_id,
         room_type_ids: [], rate_plan_ids: [], modified_fields: []
       ).to_h.symbolize_keys
     end
@@ -143,15 +180,15 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       cr_price: pricing_params[:cr_price],
       cr_start_date: pricing_params[:cr_start_date],
       cr_end_date: pricing_params[:cr_end_date],
-      ota_price: pricing_params[:ota_price],
-      ota_start_date: pricing_params[:ota_start_date],
-      ota_end_date: pricing_params[:ota_end_date],
       public_holidays: pricing_params[:public_holidays]
     ).call
 
     unless sync_result[:success]
       @start_date = Date.current
-      @end_date = @start_date + 13.days
+      @days = (params[:days] || 14).to_i
+      @days = 14 unless [ 14, 21 ].include?(@days)
+      @end_date = @start_date + (@days - 1).days
+      @range_mode = "days"
       @view_mode = "combined"
       @room_types = current_hotel.room_types.order(:id)
 
@@ -167,6 +204,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       @calendar = build_calendar
       @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_params(pricing_params)
       @pricing_form.errors = sync_result[:errors] || {}
+      load_channels_data
       set_active_tabs
       append_inventory_breadcrumbs
       flash.now[:alert] = sync_result[:error] || "Error saving pricing rules."
@@ -259,6 +297,81 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     redirect_to hotel_inventory_index_path(current_hotel, start_date: params[:start_date], tab: "advanced", subtab: "pricing", anchor: "top"), notice: "#{rule_type.humanize} pricing removed successfully."
   end
 
+  def update_channel_derived_pricing
+    authorize current_hotel, :update?, policy_class: HotelPolicy
+
+    channel_id = params[:channel_id]
+    pricing_mode = params[:pricing_mode] || "same"
+    pricing_value = params[:pricing_value].presence&.to_d
+    room_allocation_mode = params[:room_allocation_mode] || "shared"
+    room_allocation_value = params[:room_allocation_value].presence&.to_i
+
+    setting = current_hotel.channel_derived_settings.find_or_initialize_by(channel_id: channel_id)
+    setting.pricing_mode = pricing_mode
+    setting.pricing_value = pricing_mode == "same" ? nil : pricing_value
+    setting.room_allocation_mode = room_allocation_mode
+    setting.room_allocation_value = room_allocation_mode == "shared" ? nil : room_allocation_value
+
+    if setting.save
+      redirect_to hotel_inventory_index_path(current_hotel, tab: "channels", subtab: "derived_settings"), notice: "Derived pricing settings for channel updated successfully."
+    else
+      redirect_to hotel_inventory_index_path(current_hotel, tab: "channels", subtab: "derived_settings"), alert: "Failed to update channel settings: #{setting.errors.full_messages.to_sentence}"
+    end
+  end
+
+  def create_channel_availability_rule
+    authorize current_hotel, :update?, policy_class: HotelPolicy
+
+    # Translate parameters
+    start_date = params[:start_date]
+    end_date = params[:end_date].presence
+    rule_type = params[:rule_type]
+    value = params[:value]
+    title = params[:title].presence || "PMS Override"
+
+    # Weekdays list
+    days_list = []
+    days_list << "mo" if params[:day_mo] == "1"
+    days_list << "tu" if params[:day_tu] == "1"
+    days_list << "we" if params[:day_we] == "1"
+    days_list << "th" if params[:day_th] == "1"
+    days_list << "fr" if params[:day_fr] == "1"
+    days_list << "sa" if params[:day_sa] == "1"
+    days_list << "su" if params[:day_su] == "1"
+    days_string = days_list.join(",")
+
+    affected_channels = Array(params[:affected_channels]).reject(&:blank?)
+    affected_room_types = Array(params[:affected_room_types]).reject(&:blank?).map(&:to_i)
+
+    rule = current_hotel.channel_availability_rules.build(
+      title: title,
+      start_date: start_date,
+      end_date: end_date,
+      rule_type: rule_type,
+      value: value,
+      days: days_string,
+      affected_channels: affected_channels,
+      affected_room_types: affected_room_types
+    )
+
+    if rule.save
+      redirect_to hotel_inventory_index_path(current_hotel, tab: "channels", subtab: "availability_rules"), notice: "Availability rule created and synced successfully."
+    else
+      redirect_to hotel_inventory_index_path(current_hotel, tab: "channels", subtab: "availability_rules"), alert: "Failed to create rule: #{rule.errors.full_messages.to_sentence}"
+    end
+  end
+
+  def destroy_channel_availability_rule
+    authorize current_hotel, :update?, policy_class: HotelPolicy
+
+    rule = current_hotel.channel_availability_rules.find(params[:id])
+    if rule.destroy
+      redirect_to hotel_inventory_index_path(current_hotel, tab: "channels", subtab: "availability_rules"), notice: "Availability rule deleted and synced successfully."
+    else
+      redirect_to hotel_inventory_index_path(current_hotel, tab: "channels", subtab: "availability_rules"), alert: "Failed to delete rule."
+    end
+  end
+
   private
 
   def build_calendar
@@ -294,9 +407,6 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :cr_price,
       :cr_start_date,
       :cr_end_date,
-      :ota_price,
-      :ota_start_date,
-      :ota_end_date,
       room_type_ids: [],
       weekend_days: [],
       school_holidays: [ :name, :price, :start_date, :end_date ],
@@ -332,6 +442,11 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :closed_to_departure,
       :stop_sell,
       :mode,
+      :base_occupancy,
+      :extra_pax_charge,
+      :single_supplement,
+      :channel_id,
+      :channel_rate_plan_id,
       room_type_ids: [],
       rate_plan_ids: [],
       view_currencies: [],
@@ -339,11 +454,21 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     )
   end
 
+  def parsed_month(value)
+    return nil if value.blank?
+
+    Date.strptime(value.to_s, "%Y-%m").beginning_of_month
+  rescue ArgumentError, TypeError
+    nil
+  end
+
   def redirect_query_params
     permitted_selection = selection_update_params
 
     {
       start_date: params[:start_date] || permitted_selection[:start_date],
+      days: params[:days],
+      month: params[:month],
       view_currencies: params[:view_currencies] || permitted_selection[:view_currencies],
       display_currency: params[:display_currency],
       room_type_id: Array(permitted_selection[:room_type_ids]).reject(&:blank?).first || params[:room_type_id],
@@ -374,7 +499,12 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
   def set_active_tabs
     @active_tab = INVENTORY_TABS.include?(params[:tab]) ? params[:tab] : "calendar"
-    @active_subtab = INVENTORY_SUBTABS.include?(params[:subtab]) ? params[:subtab] : "pricing"
+    default_subtab = if @active_tab == "channels"
+      "derived_settings"
+    else
+      "pricing"
+    end
+    @active_subtab = INVENTORY_SUBTABS.include?(params[:subtab]) ? params[:subtab] : default_subtab
   end
 
   def append_inventory_breadcrumbs
@@ -382,15 +512,38 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     append_breadcrumb({
       label: inventory_subtab_label,
       subtab_label: true,
-      hidden: @active_tab != "advanced"
+      hidden: !@active_tab.in?([ "advanced", "channels" ])
     })
   end
 
   def inventory_tab_label
-    @active_tab == "advanced" ? "Advanced Pricing" : "Rates & Availability"
+    case @active_tab
+    when "advanced" then "Advanced Pricing"
+    when "channels" then "Channels & OTAs"
+    else "Rates & Availability"
+    end
   end
 
   def inventory_subtab_label
-    @active_subtab == "overrides" ? "Availability Overrides" : "Pricing Rules"
+    case @active_subtab
+    when "overrides" then "Availability Overrides"
+    when "pricing" then "Pricing Rules"
+    when "derived_settings" then "Derived Pricing & Allocations"
+    when "availability_rules" then "Availability Rules"
+    end
+  end
+
+  def load_channels_data
+    if current_hotel.preferred_channel_manager == "channex"
+      adapter = ChannelManagers::SyncOrchestrator.adapter_for(current_hotel)
+      force = ActiveModel::Type::Boolean.new.cast(params[:force_refresh])
+      @channels = adapter.connected_channels(force_refresh: force)
+      @derived_settings_by_channel_id = current_hotel.channel_derived_settings.index_by(&:channel_id)
+      @availability_rules = current_hotel.channel_availability_rules.order(created_at: :desc)
+    else
+      @channels = []
+      @derived_settings_by_channel_id = {}
+      @availability_rules = []
+    end
   end
 end

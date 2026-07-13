@@ -4,6 +4,7 @@ module HotelPortal
   class SettingsPresenter
     PAGE_HEADINGS = {
       "general" => [ "General Settings", "Configure core hotel policies and operational defaults." ],
+      "rates" => [ "Rate Settings", "Configure how guest rates are calculated based on occupancy, extra guests, children, and infants." ],
       "ai" => [ "AI Concierge", "Configure AI concierge behavior and provider settings." ],
       "notifications" => [ "Notifications", "Configure guest notification automations and channels." ],
       "banking" => [ "Banking Details", "Manage the bank account used for hotel payouts." ]
@@ -104,6 +105,17 @@ module HotelPortal
       end
     end
 
+    def hotel_taxes
+      @hotel_taxes ||= hotel.hotel_taxes.order(:name)
+    end
+
+    def new_hotel_tax
+      hotel.hotel_taxes.build
+    end
+
+    def rate_plans
+      @rate_plans ||= hotel.rate_plans.includes(:room_types).order(:id)
+    end
     def settings_summary
       return {} unless hotel
 

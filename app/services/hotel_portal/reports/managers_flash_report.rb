@@ -134,7 +134,7 @@ module HotelPortal
         bookings_sql = <<-SQL
           SELECT#{' '}
             gs.date,
-            SUM(GREATEST(br.quantity, 1)) as sold,
+            COUNT(br.id) as sold,
             SUM(br.subtotal / GREATEST(DATEDIFF(b.check_out, b.check_in), 1)) as revenue
           FROM generate_series(?::date, ?::date, '1 day'::interval) gs(date)
           INNER JOIN bookings b ON b.hotel_id = ?#{' '}

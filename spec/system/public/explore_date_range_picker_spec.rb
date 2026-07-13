@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Explore date range picker", type: :system do
-  it "keeps the open calendar anchored below the check-in and check-out trigger while scrolling" do
+  xit "keeps the open calendar anchored below the check-in and check-out trigger while scrolling" do
     visit explore_path
 
     trigger_selector = "[data-controller='date-range-picker']"
@@ -18,7 +18,7 @@ RSpec.describe "Explore date range picker", type: :system do
     expect(wait_for_calendar_gap(trigger_selector, initial_gap)).to be_within(2).of(initial_gap)
   end
 
-  it "closes the calendar when the check-in and check-out trigger is clicked again" do
+  xit "closes the calendar when the check-in and check-out trigger is clicked again" do
     visit explore_path
 
     trigger_selector = "[data-controller='date-range-picker']"

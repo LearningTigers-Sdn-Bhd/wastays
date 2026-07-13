@@ -12,7 +12,10 @@ module ChannelManagers
       ActiveRecord::Base.transaction do
         @hotel.update!(preferred_channel_manager: nil)
         @hotel.channel_mapping&.destroy
-        @hotel.room_types.each { |rt| rt.channel_mapping&.destroy }
+        @hotel.room_types.each do |rt|
+          rt.channel_mapping&.destroy
+          rt.room_type_rate_plans.each { |rtrp| rtrp.channel_mapping&.destroy }
+        end
       end
       Result.new(true, nil)
     rescue => e

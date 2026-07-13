@@ -146,7 +146,7 @@
                   <%= render "hotel_portal/bookings/board/partials/room_card_booking_content", block: block %>
                 </div>
               <% else %>
-                <%= link_to hotel_booking_path(current_hotel, block[:booking]),
+                <%= link_to hotel_booking_control_panel_path(current_hotel, block[:booking], tab: "booking_details"),
                     aria: { label: booking_block_accessibility_label(block) },
                     class: "block w-full text-left rounded-md border p-2.5 hover:shadow-sm transition #{booking_block_status_classes(block)} focus:outline-none focus:ring-1 focus:ring-slate-900 focus:ring-offset-1",
                     data: { turbo_frame: "_top" } do %>

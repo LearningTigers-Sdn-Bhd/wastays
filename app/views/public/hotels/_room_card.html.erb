@@ -1,6 +1,19 @@
 <%# frozen_string_literal: true %>
 
-<div class="card overflow-hidden group hover:shadow-xl transition-all duration-300">
+<% available_qty = room_type.available_quantity %>
+
+<div class="card overflow-hidden group hover:shadow-xl transition-all duration-300 border-2 border-transparent"
+     data-role="card-container"
+     data-room-selector-target="roomCard"
+     data-room-type-id="<%= room_type.id %>"
+     data-room-name="<%= room_type.name %>"
+     data-room-price="<%= room_type.single_room_total_price_value %>"
+     data-room-pax-price="<%= room_type.pax_rate_value %>"
+     data-room-single-supplement="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.single_supplement&.to_f || 0.0) : 0 %>"
+     data-room-child-multiplier="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.child_price_multiplier&.to_f || 1.0) : 1.0 %>"
+     data-room-infant-multiplier="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.infant_price_multiplier&.to_f || 0.0) : 0.0 %>"
+     data-room-max-capacity="<%= room_type.max_capacity %>"
+     data-room-available-quantity="<%= available_qty %>">
   <div class="flex flex-col md:flex-row">
     <div class="md:w-80 lg:w-96 h-64 md:h-auto relative overflow-hidden cursor-pointer"
          data-action="click->room-details#open"
@@ -14,6 +27,7 @@
         </div>
       <% end %>
     </div>
+    
     <div class="flex-1 p-6 flex flex-col justify-between">
       <div>
         <h3 class="text-xl font-bold text-neutral-text-primary mb-2"><%= room_type.name %></h3>
@@ -31,6 +45,32 @@
             </div>
           <% end %>
         </div>
+
+        <% if search_ready && room_type.per_pax_billing? %>
+          <div class="mb-4 rounded-xl bg-indigo-50/50 border border-indigo-100/50 p-3.5 text-xs text-indigo-950 shadow-sm space-y-2">
+            <div class="flex items-center gap-1.5 font-black uppercase tracking-wider text-[10px] text-indigo-700">
+              <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" /></svg>
+              <span>Per-Pax Booking Rules</span>
+            </div>
+            <div class="grid grid-cols-2 gap-y-1.5 gap-x-4 text-[11px] font-semibold text-indigo-900/90">
+              <div>Base Occupancy: <span class="font-bold text-indigo-950"><%= room_type.rate_plan_base_occupancy %> pax</span></div>
+              <% if supplement = room_type.rate_plan_single_supplement(display_currency) %>
+                <div>Single Supplement: <span class="font-bold text-indigo-950"><%= supplement %></span></div>
+              <% end %>
+              <% if extra_charge = room_type.rate_plan_extra_pax_charge(display_currency) %>
+                <div>Extra Guest Charge: <span class="font-bold text-indigo-950"><%= extra_charge %></span></div>
+              <% end %>
+              <% if room_type.rate_plan_child_multiplier.to_f != 1.0 %>
+                <div>Child Rate: <span class="font-bold text-indigo-950"><%= (room_type.rate_plan_child_multiplier.to_f * 100).to_i %>%</span></div>
+              <% end %>
+              <% if room_type.rate_plan_infant_multiplier.to_f > 0 %>
+                <div>Infant Rate: <span class="font-bold text-indigo-950"><%= (room_type.rate_plan_infant_multiplier.to_f * 100).to_i %>%</span></div>
+              <% else %>
+                <div>Infant Rate: <span class="font-bold text-indigo-950">Free</span></div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
       </div>
 
       <div class="flex justify-between items-end border-t border-neutral-border pt-4">
@@ -42,33 +82,72 @@
                 <%= restriction_error %>
               </p>
             <% else %>
-              <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-widest mb-1">Total for Stay</p>
-              
+              <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-widest mb-1">
+                <%= room_type.per_pax_billing? ? "Price Per Person" : "Price Per Room" %>
+              </p>
               <p class="text-2xl font-black text-neutral-text-primary">
-                <%= room_type.display_total_price(display_currency) %>
+                <%= room_type.per_pax_billing? ? room_type.display_pax_rate(display_currency) : room_type.display_single_room_total_price(display_currency) %>
               </p>
               <p class="text-[10px] text-neutral-text-secondary italic">
-                <%= room_type.rate_plan_name %> · charged in <%= room_type.pricing_summary[:currency] %><%= display_currency != room_type.pricing_summary[:currency] ? " · estimate" : "" %>
+                <%= room_type.rate_plan_name %> · <%= display_currency != room_type.single_room_pricing_summary[:currency] ? "estimate" : "fixed rate" %>
               </p>
             <% end %>
           <% else %>
-            <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-widest">Total for Stay</p>
+            <p class="text-[10px] text-neutral-text-secondary uppercase font-black tracking-widest mb-1">
+              <%= @hotel.pax_pricing_only? ? "Price Per Person" : "Price Per Room" %>
+            </p>
             <p class="text-sm font-bold text-neutral-text-secondary">Select dates to see price</p>
           <% end %>
         </div>
 
-        <%= form_with url: quotes_path, method: :post do |f| %>
-          <%= f.hidden_field :hotel_id, value: hotel.id %>
-          <%= f.hidden_field :room_type_id, value: room_type.id %>
-          <%= f.hidden_field :check_in, value: check_in&.to_s %>
-          <%= f.hidden_field :check_out, value: check_out&.to_s %>
-          <%= f.hidden_field :adults, value: adults %>
-          <%= f.hidden_field :children, value: children %>
-          <%= f.hidden_field :room_count, value: room_count %>
-          <%= f.hidden_field :display_currency, value: display_currency %>
+        <% if search_ready %>
+          <% if room_type.stay_restriction_error.present? %>
+            <button type="button" class="btn border border-slate-200 text-slate-400 bg-slate-50 font-bold py-3 px-8 cursor-not-allowed" disabled>
+              Unavailable
+            </button>
+          <% elsif available_qty <= 0 %>
+            <button type="button" class="btn border border-slate-200 text-slate-400 bg-slate-50 font-bold py-3 px-8 cursor-not-allowed" disabled>
+              Sold Out
+            </button>
+          <% else %>
+            <div>
+              <%# 1. Add to Stay button (visible when selected quantity is 0) %>
+              <button type="button"
+                      data-role="add-button"
+                      data-action="click->room-selector#add"
+                      data-room-type-id="<%= room_type.id %>"
+                      class="btn bg-brand-navy hover:bg-brand-navy-hover text-white font-bold py-3 px-8 shadow-lg shadow-brand-navy/20 transition-all duration-200">
+                Add to Stay
+              </button>
 
-          <%= f.submit "Reserve Now",                       disabled: !search_ready || room_type.stay_restriction_error.present?,
-                       class: "btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 shadow-lg shadow-brand-primary/20 disabled:opacity-50 disabled:cursor-not-allowed" %>
+              <%# 2. Stepper control (visible when selected quantity > 0) %>
+              <div data-role="stepper" class="flex items-center gap-x-3 bg-neutral-bg rounded-xl border border-neutral-border p-1 hidden">
+                <button type="button"
+                        data-role="decrement-btn"
+                        data-action="click->room-selector#decrement"
+                        data-room-type-id="<%= room_type.id %>"
+                        class="w-10 h-10 rounded-lg flex items-center justify-center text-neutral-text-secondary hover:bg-white hover:shadow-sm border border-transparent hover:border-neutral-border transition font-black text-lg">
+                  −
+                </button>
+                <span data-room-selector-target="quantityDisplay"
+                      data-room-type-id="<%= room_type.id %>"
+                      class="w-6 text-center text-sm font-black text-neutral-text-primary">
+                  0
+                </span>
+                <button type="button"
+                        data-role="increment-btn"
+                        data-action="click->room-selector#increment"
+                        data-room-type-id="<%= room_type.id %>"
+                        class="w-10 h-10 rounded-lg flex items-center justify-center text-neutral-text-secondary hover:bg-white hover:shadow-sm border border-transparent hover:border-neutral-border transition font-black text-lg">
+                  +
+                </button>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <button type="button" class="btn bg-slate-100 text-slate-400 font-bold py-3 px-8 cursor-not-allowed" disabled>
+            Select Dates
+          </button>
         <% end %>
       </div>
     </div>

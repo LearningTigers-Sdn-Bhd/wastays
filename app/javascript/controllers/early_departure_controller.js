@@ -4,7 +4,8 @@ export default class extends Controller {
   static targets = ["reviewSection", "chargeChoice", "customFields", "amountInput", "displayAmount"]
   static values = {
     baseAmount: Number,
-    currency: { type: String, default: "MYR" }
+    currency: { type: String, default: "MYR" },
+    bookingId: String
   }
 
   connect() {
@@ -13,7 +14,7 @@ export default class extends Controller {
 
   updateUI() {
     const choice = this.chargeChoiceTargets.find(r => r.checked).value
-    
+
     if (choice === "true") {
       this.customFieldsTarget.classList.remove("hidden")
       this.updateCalculation()
@@ -25,8 +26,8 @@ export default class extends Controller {
   }
 
   updateCalculation() {
-    const type = this.element.querySelector('[name="early_departure[type]"]')?.value || "amount"
-    const value = parseFloat(this.element.querySelector('[name="early_departure[value]"]')?.value) || 0
+    const type = this.element.querySelector(`[name="early_departures[${this.bookingIdValue}][type]"]`)?.value || "amount"
+    const value = parseFloat(this.element.querySelector(`[name="early_departures[${this.bookingIdValue}][value]"]`)?.value) || 0
     let finalAmount = 0
 
     if (type === "percentage") {
@@ -43,7 +44,7 @@ export default class extends Controller {
   notifySettlement(amount) {
     this.element.dispatchEvent(new CustomEvent("checkout-settlement:charge-changed", {
       bubbles: true,
-      detail: { amount }
+      detail: { amount, bookingId: this.bookingIdValue }
     }))
   }
 }

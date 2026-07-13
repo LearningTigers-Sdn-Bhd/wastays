@@ -9,7 +9,7 @@ RSpec.describe Bookings::AssignRoom do
   let(:user) { create(:user) }
 
   before do
-    create(:booking_room, booking: booking, room_type: room_type, room_number: nil, quantity: 1, subtotal: 200)
+    create(:booking_room, booking: booking, room_type: room_type, room_number: nil, subtotal: 200)
   end
 
   it "assigns a ready room" do

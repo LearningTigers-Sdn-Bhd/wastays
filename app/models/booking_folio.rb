@@ -6,6 +6,8 @@ class BookingFolio < ApplicationRecord
 
   belongs_to :hotel
   belongs_to :booking
+  belongs_to :booking_room, optional: true
+  belongs_to :booking_billing_party, optional: true
   belongs_to :hotel_corporate_account, optional: true
   belongs_to :created_by, class_name: "User", optional: true
   belongs_to :closed_by, class_name: "User", optional: true
@@ -15,6 +17,7 @@ class BookingFolio < ApplicationRecord
   has_many :target_folio_routing_rules, class_name: "FolioRoutingRule", foreign_key: :target_folio_id, dependent: :restrict_with_error
   has_many :deposits, dependent: :restrict_with_error
   has_many :financial_audit_events, dependent: :restrict_with_error
+  has_many :group_deposit_allocations, dependent: :restrict_with_error
   has_many :source_operation_logs, class_name: "FolioOperationLog", foreign_key: :source_folio_id, dependent: :restrict_with_error
   has_many :target_operation_logs, class_name: "FolioOperationLog", foreign_key: :target_folio_id, dependent: :restrict_with_error
 
@@ -30,8 +33,11 @@ class BookingFolio < ApplicationRecord
   validates :invoice_number, uniqueness: { scope: :hotel_id, allow_nil: true }
   validates :folio_sequence, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validates :folio_sequence, uniqueness: { scope: :booking_id, allow_nil: true }
-  validates :is_primary, uniqueness: { scope: :booking_id, conditions: -> { where(is_primary: true) }, if: :is_primary? }
+  validates :is_primary, uniqueness: { scope: [ :booking_id, :booking_room_id ], conditions: -> { where(is_primary: true) }, if: :is_primary? }
   validate :hotel_matches_booking
+  validate :booking_room_matches_booking
+  validate :booking_billing_party_matches_booking
+  validate :booking_billing_party_matches_payer
   validate :company_payer_requires_active_hotel_corporate_account
   validate :closed_folio_reopen_must_be_authorized
   validate :last_primary_folio_cannot_be_unset
@@ -42,6 +48,9 @@ class BookingFolio < ApplicationRecord
   after_create :ensure_booking_folio_account_reference
   before_destroy :guard_night_audit_operational_change
   before_destroy :prevent_destroying_last_folio
+
+  scope :room_scoped, -> { where.not(booking_room_id: nil) }
+  scope :booking_level, -> { where(booking_room_id: nil) }
 
   def outstanding_balance
     total_charges - total_payments + total_adjustments
@@ -155,6 +164,37 @@ class BookingFolio < ApplicationRecord
     errors.add(:hotel, "must match booking hotel")
   end
 
+  def booking_room_matches_booking
+    return if booking_room.blank? || booking_id.blank? || booking_room.booking_id == booking_id
+
+    errors.add(:booking_room, "must belong to the same booking")
+  end
+
+  def booking_billing_party_matches_booking
+    return if booking_billing_party.blank?
+
+    if booking_id.present? && booking_billing_party.booking_id != booking_id
+      errors.add(:booking_billing_party, "must belong to the same booking")
+    end
+    if hotel_id.present? && booking_billing_party.hotel_id != hotel_id
+      errors.add(:booking_billing_party, "must belong to the same hotel")
+    end
+  end
+
+  def booking_billing_party_matches_payer
+    return if booking_billing_party.blank?
+
+    case booking_billing_party.party_kind
+    when "guest"
+      errors.add(:booking_billing_party, "must match guest payer type") unless payer_type == "guest"
+    when "company"
+      errors.add(:booking_billing_party, "must match company payer type") unless payer_type == "company"
+      if hotel_corporate_account_id.present? && hotel_corporate_account_id != booking_billing_party.hotel_corporate_account_id
+        errors.add(:booking_billing_party, "must match the selected company account")
+      end
+    end
+  end
+
   def company_payer_requires_active_hotel_corporate_account
     return unless payer_type == "company"
 
@@ -183,9 +223,13 @@ class BookingFolio < ApplicationRecord
   def last_primary_folio_cannot_be_unset
     return unless persisted? && will_save_change_to_is_primary? && !is_primary?
     return if booking.blank?
-    return if booking.booking_folios.where.not(id: id).where(is_primary: true).exists?
+    return if primary_scope.where.not(id: id).where(is_primary: true).exists?
 
-    errors.add(:is_primary, "must remain set until another primary folio exists")
+    errors.add(:is_primary, "must remain set until another primary folio exists in the same scope")
+  end
+
+  def primary_scope
+    booking.booking_folios.where(booking_room_id: booking_room_id)
   end
 
   def closed_folio_fields_are_restricted

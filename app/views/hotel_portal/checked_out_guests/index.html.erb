@@ -95,10 +95,9 @@
                 <td class="px-6 py-4">
                   <% if booking.booking_rooms.any? %>
                     <div class="flex flex-wrap gap-2">
-                      <% booking.booking_rooms.each do |room| %>
-                        <% room_name = room.room_type_snapshot["name"].presence || room.room_type.name %>
+                      <% booking.booking_rooms.group_by { |r| r.room_type_snapshot["name"].presence || r.room_type.name }.each do |room_name, rooms| %>
                         <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
-                          <%= room.quantity %>x <%= room_name %>
+                          <%= rooms.size %>x <%= room_name %>
                         </span>
                       <% end %>
                     </div>
@@ -107,7 +106,7 @@
                   <% end %>
                 </td>
                 <td class="px-6 py-4 text-right whitespace-nowrap sm:px-8">
-                  <%= link_to "View booking", hotel_booking_path(current_hotel, booking), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
+                  <%= link_to "View booking", hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
                 </td>
               </tr>
             <% end %>
@@ -175,10 +174,9 @@
                 <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Rooms</dt>
                 <dd class="mt-1 flex flex-wrap gap-1.5">
                   <% if booking.booking_rooms.any? %>
-                    <% booking.booking_rooms.each do |room| %>
-                      <% room_name = room.room_type_snapshot["name"].presence || room.room_type.name %>
+                    <% booking.booking_rooms.group_by { |r| r.room_type_snapshot["name"].presence || r.room_type.name }.each do |room_name, rooms| %>
                       <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700">
-                        <%= room.quantity %>x <%= room_name %>
+                        <%= rooms.size %>x <%= room_name %>
                       </span>
                     <% end %>
                   <% else %>
@@ -189,7 +187,7 @@
             </dl>
 
             <div class="mt-4 flex items-center justify-end gap-2">
-              <%= link_to "View booking", hotel_booking_path(current_hotel, booking), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
+              <%= link_to "View booking", hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
             </div>
           </div>
         <% end %>

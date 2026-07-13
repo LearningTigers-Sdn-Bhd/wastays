@@ -19,8 +19,7 @@ module Public::ConciergeHelper
     booking.booking_rooms.map do |booking_room|
       room_type_name = booking_room.room_type_snapshot&.dig("name").presence || "Room"
       room_number = booking_room.room_number.presence || "Not assigned yet"
-      quantity_label = booking_room.quantity.to_i > 1 ? "#{booking_room.quantity}x " : ""
-      "#{quantity_label}#{room_type_name} - Room #{room_number}"
+      "#{room_type_name} - Room #{room_number}"
     end
   end
 end

@@ -23,7 +23,6 @@ RSpec.describe ReceiptPdfService do
     create(:booking_room,
       booking: booking,
       room_type: room_type,
-      quantity: 1,
       subtotal: 300.0,
       room_type_snapshot: { "name" => "Deluxe King" }
     )

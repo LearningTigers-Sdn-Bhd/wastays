@@ -95,6 +95,15 @@ RSpec.describe Payments::InitializeCheckout do
     expect(result.error).to eq("Minimum stay is 3 nights")
   end
 
+  it "succeeds even when guest is blacklisted" do
+    create(:guest, email: "john@example.com", blacklisted: true)
+
+    expect(adapter).to receive(:create_checkout_session).and_return({ order_id: "order_123" })
+
+    result = subject.call
+    expect(result.success?).to be true
+  end
+
   it "handles standard errors" do
     allow(adapter).to receive(:create_checkout_session).and_raise(StandardError, "Unexpected error")
 

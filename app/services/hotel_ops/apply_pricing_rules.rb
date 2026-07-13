@@ -41,10 +41,9 @@ module HotelOps
         online_winner = winning_rule_for(date, category: :online)
         walk_in_winner = winning_rule_for(date, category: :walk_in)
         corporate_winner = winning_rule_for(date, category: :corporate)
-        ota_winner = winning_rule_for(date, category: :ota)
 
         rate = room_type.room_rates.find_or_initialize_by(date: date, currency: target_currency)
-        if online_winner.blank? && walk_in_winner.blank? && corporate_winner.blank? && ota_winner.blank?
+        if online_winner.blank? && walk_in_winner.blank? && corporate_winner.blank?
           rate.destroy! if rate.persisted?
           next
         end
@@ -52,7 +51,6 @@ module HotelOps
         old_price = rate.price
         old_wi_price = rate.walk_in_price
         old_cr_price = rate.corporate_price
-        old_ota_price = rate.ota_price
         old_rule_type = rate.applied_rule_type
         old_currency = rate.currency
 
@@ -61,25 +59,23 @@ module HotelOps
         rate.applied_rule_type = online_winner&.dig(:tier)&.to_s || "base"
         rate.walk_in_price = walk_in_winner&.dig(:price)
         rate.corporate_price = corporate_winner&.dig(:price)
-        rate.ota_price = ota_winner&.dig(:price)
         rate.currency = target_currency
         rate.rate_plan = standard_plan if standard_plan
         rate.save!
 
-        next if old_price == rate.price && old_wi_price == rate.walk_in_price && old_cr_price == rate.corporate_price && old_ota_price == rate.ota_price && old_currency == rate.currency && old_rule_type == rate.applied_rule_type
+        next if old_price == rate.price && old_wi_price == rate.walk_in_price && old_cr_price == rate.corporate_price && old_currency == rate.currency && old_rule_type == rate.applied_rule_type
 
         @hotel.inventory_audit_logs.create!(
           room_type: room_type,
           user: @user,
           action_type: "rate_update",
-          old_value: { date: date, price: old_price.to_f, walk_in_price: old_wi_price&.to_f, corporate_price: old_cr_price&.to_f, ota_price: old_ota_price&.to_f, rule_type: old_rule_type },
-          new_value: { date: date, price: rate.price&.to_f, walk_in_price: rate.walk_in_price&.to_f, corporate_price: rate.corporate_price&.to_f, ota_price: rate.ota_price&.to_f, rule_type: rate.applied_rule_type },
+          old_value: { date: date, price: old_price.to_f, walk_in_price: old_wi_price&.to_f, corporate_price: old_cr_price&.to_f, rule_type: old_rule_type },
+          new_value: { date: date, price: rate.price&.to_f, walk_in_price: rate.walk_in_price&.to_f, corporate_price: rate.corporate_price&.to_f, rule_type: rate.applied_rule_type },
           metadata: {
             source: "pricing_rules",
             online_tier: online_winner&.dig(:tier)&.to_s,
             walk_in_tier: walk_in_winner&.dig(:tier)&.to_s,
-            corporate_tier: corporate_winner&.dig(:tier)&.to_s,
-            ota_tier: ota_winner&.dig(:tier)&.to_s
+            corporate_tier: corporate_winner&.dig(:tier)&.to_s
           }
         )
       end

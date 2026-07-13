@@ -6,7 +6,7 @@ RSpec.describe Bookings::InventoryManager do
   let(:hotel) { create(:hotel) }
   let(:room_type) { create(:room_type, hotel: hotel, quantity: 10) }
   let(:booking) { create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 1.day) }
-  let!(:booking_room) { create(:booking_room, booking: booking, room_type: room_type, quantity: 1) }
+  let!(:booking_room) { create(:booking_room, booking: booking, room_type: room_type) }
 
   subject { described_class.new(booking) }
 

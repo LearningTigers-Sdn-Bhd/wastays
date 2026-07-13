@@ -9,12 +9,14 @@ RSpec.describe 'Channex ARI push flow' do
   before do
     create(:channel_mapping, mappable: hotel, provider: 'channex', external_id: 'prop_1')
     create(:channel_mapping, mappable: room_type, provider: 'channex', external_id: 'rt_1')
-    create(:channel_mapping, mappable: rate_plan, provider: 'channex', external_id: 'rp_1')
+    room_type_rate_plan = room_type.room_type_rate_plans.find_by!(rate_plan: rate_plan)
+    create(:channel_mapping, mappable: room_type_rate_plan, provider: 'channex', external_id: 'rp_1')
 
     create(:room_inventory, room_type: room_type, date: Date.new(2026, 6, 1), quantity: 2, status: 'open')
     create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.new(2026, 6, 1), price: 200, currency: 'MYR')
 
     allow(Channex::Client).to receive(:new).and_return(client_double)
+    allow(client_double).to receive(:get).with('/channels').and_return({ 'data' => [] })
   end
 
   it 'posts availability and restrictions payloads successfully' do

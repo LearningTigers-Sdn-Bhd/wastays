@@ -139,7 +139,8 @@ module Bookings
 
     def rate_plan_for(attributes, room_type, booking_room)
       if attributes[:rate_plan_id].blank?
-        return booking_room.rate_plan if booking_room.rate_plan&.room_type_id == room_type.id
+        # Check if the existing rate plan is still valid for the (potentially new) room type
+        return booking_room.rate_plan if booking_room.rate_plan && room_type.room_type_rate_plans.exists?(rate_plan_id: booking_room.rate_plan_id)
 
         return
       end

@@ -15,10 +15,7 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
     # Login
-    visit login_path
-    fill_in 'Email Address', with: user.email
-    fill_in 'Password', with: 'password123'
-    click_button 'Sign In to Portal'
+    sign_in_through_ui(user)
   end
 
   it 'allows the user to update the hotel profile' do

@@ -21,7 +21,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
         .and_return({ "data" => { "id" => "ch_rt_123" } })
 
       # Mock Rate Plan Creation
-      expect(client_double).to receive(:post).with("/rate_plans", hash_including(rate_plan: hash_including(title: "Standard Rate", room_type_id: "ch_rt_123")))
+      expect(client_double).to receive(:post).with("/rate_plans", hash_including(rate_plan: hash_including(title: "Standard Rate (Deluxe)", room_type_id: "ch_rt_123")))
         .and_return({ "data" => { "id" => "ch_rp_123" } })
 
       result = adapter.onboard_hotel
@@ -29,20 +29,25 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       expect(result.success?).to be true
       expect(hotel.channel_mapping.external_id).to eq("ch_prop_123")
       expect(room_type.channel_mapping.external_id).to eq("ch_rt_123")
-      expect(room_type.rate_plans.first.channel_mapping.external_id).to eq("ch_rp_123")
-    end
-  end
+      expect(room_type.room_type_rate_plans.first.channel_mapping.external_id).to eq("ch_rp_123")
+      end
+      end
 
   describe '#push_ari' do
     let(:start_date) { Date.current }
     let(:end_date) { start_date + 2.days }
-    let!(:rate_plan) { create(:rate_plan, room_type: room_type, name: "Standard Rate") }
+    let!(:rate_plan) { create(:rate_plan, hotel: hotel, room_type: room_type, name: "Standard Rate") }
 
     before do
       # Setup mappings
       hotel.create_channel_mapping(provider: "channex", external_id: "ch_prop_123")
       room_type.create_channel_mapping(provider: "channex", external_id: "ch_rt_123")
-      rate_plan.create_channel_mapping(provider: "channex", external_id: "ch_rp_123")
+      room_type.room_type_rate_plans.find_by!(rate_plan: rate_plan).create_channel_mapping(provider: "channex", external_id: "ch_rp_123")
+      allow(client_double).to receive(:get).with("/channels").and_return({ "data" => [] })
+
+      # push_restrictions_values looks up connected channels to apply per-channel
+      # derived pricing overrides; stub an empty channel list for these specs.
+      allow(client_double).to receive(:get).with("/channels").and_return({ "data" => [] })
 
       # Create ARI data - ensure contiguous dates with SAME values for grouping
       (start_date..end_date).each do |date|
@@ -201,12 +206,12 @@ RSpec.describe ChannelManagers::ChannexAdapter do
 
   describe "#push_booking" do
     it "records the channel reference revision in the booking history" do
-      rate_plan = create(:rate_plan, room_type: room_type)
+      rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type)
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, rate_plan: rate_plan)
       hotel.create_channel_mapping!(provider: "channex", external_id: "ch_prop_123")
       room_type.create_channel_mapping!(provider: "channex", external_id: "ch_rt_123")
-      rate_plan.create_channel_mapping!(provider: "channex", external_id: "ch_rp_123")
+      room_type.room_type_rate_plans.find_by!(rate_plan: rate_plan).create_channel_mapping!(provider: "channex", external_id: "ch_rp_123")
       allow(client_double).to receive(:post).and_return(
         { "data" => { "id" => "ch_booking_123", "revision_id" => 7 } }
       )

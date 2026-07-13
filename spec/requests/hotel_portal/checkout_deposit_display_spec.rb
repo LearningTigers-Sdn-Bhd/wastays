@@ -29,6 +29,7 @@ RSpec.describe "Checkout Deposit Display", type: :request do
       status: "held",
       payment_method: "cash"
     )
+    create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100)
 
     get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Accept" => "text/html" }
 

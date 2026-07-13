@@ -75,7 +75,7 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
 
       get board_hotel_bookings_path(hotel)
 
-      booking_link = response.parsed_body.at_css("a[href='#{hotel_booking_path(hotel, booking)}']")
+      booking_link = response.parsed_body.at_css("a[href='#{hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")}']")
       expect(booking_link).to be_present
       expect(booking_link["aria-label"]).to include(booking.guest_name)
       expect(response.parsed_body.at_css("[data-id='#{booking.id}']")).to be_nil

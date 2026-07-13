@@ -5,6 +5,7 @@ RSpec.describe Hotel, type: :model do
     it { should belong_to(:account) }
     it { should have_many(:user_hotel_accesses).dependent(:destroy) }
     it { should have_many(:users).through(:user_hotel_accesses) }
+    it { should have_many(:room_groups).dependent(:destroy) }
   end
 
   describe 'validations' do
@@ -67,12 +68,14 @@ RSpec.describe Hotel, type: :model do
     it 'syncs SST and tourism tax code active state when settings change' do
       hotel = create(:hotel, sst_enabled: true, tourism_tax_enabled: true)
 
-      hotel.update!(sst_enabled: false, tourism_tax_enabled: false)
+      form = HotelPortal::TaxSettingsForm.new(hotel, ActionController::Parameters.new(hotel: { sst_enabled: false, tourism_tax_enabled: false }))
+      form.save
 
       expect(hotel.transaction_codes.find_by!(system_key: 'sst_tax')).not_to be_active
       expect(hotel.transaction_codes.find_by!(system_key: 'tourism_tax')).not_to be_active
 
-      hotel.update!(sst_enabled: true, tourism_tax_enabled: true)
+      form = HotelPortal::TaxSettingsForm.new(hotel, ActionController::Parameters.new(hotel: { sst_enabled: true, tourism_tax_enabled: true }))
+      form.save
 
       expect(hotel.transaction_codes.find_by!(system_key: 'sst_tax')).to be_active
       expect(hotel.transaction_codes.find_by!(system_key: 'tourism_tax')).to be_active
@@ -177,6 +180,57 @@ RSpec.describe Hotel, type: :model do
       hotel = build(:hotel, google_map_link: 'https://www.google.com/maps/place/Sample+Hotel/@5.9771228,116.0622732,15z')
       expect(hotel.latitude).to eq(5.9771228)
       expect(hotel.longitude).to eq(116.0622732)
+    end
+  end
+
+  describe 'pax pricing settings' do
+    let(:hotel) { create(:hotel, allow_pax_pricing: false, pax_pricing_only: false) }
+
+    it 'defaults allow_pax_pricing to false' do
+      expect(hotel.allow_pax_pricing).to be false
+    end
+
+    it 'defaults pax_pricing_only to false' do
+      expect(hotel.pax_pricing_only).to be false
+    end
+
+    context 'when allow_pax_pricing is false' do
+      it 'resets pax_pricing_only to false before validation' do
+        hotel.pax_pricing_only = true
+        expect(hotel).to be_valid
+        expect(hotel.pax_pricing_only).to be false
+      end
+    end
+
+    context 'when allow_pax_pricing is true' do
+      before do
+        hotel.allow_pax_pricing = true
+      end
+
+      it 'allows pax_pricing_only to be true' do
+        hotel.pax_pricing_only = true
+        expect(hotel).to be_valid
+        expect(hotel.pax_pricing_only).to be true
+      end
+
+      it 'resets pax_pricing_only to false when allow_pax_pricing is disabled' do
+        hotel.pax_pricing_only = true
+        hotel.save!
+
+        hotel.allow_pax_pricing = false
+        expect(hotel).to be_valid
+        expect(hotel.pax_pricing_only).to be false
+      end
+
+      it 'resets rate plans to per_room when allow_pax_pricing is disabled' do
+        hotel.allow_pax_pricing = true
+        hotel.save!
+        rate_plan = create(:rate_plan, hotel: hotel, sell_mode: 'per_person')
+
+        hotel.allow_pax_pricing = false
+        expect(hotel).to be_valid
+        expect(rate_plan.reload.sell_mode).to eq('per_room')
+      end
     end
   end
 end

@@ -25,7 +25,8 @@ module Bookings
       },
       "checked_in" => {
         "check_out" => "completed",
-        "detect_late_checkout" => "review_due_out"
+        "detect_late_checkout" => "review_due_out",
+        "undo_check_in" => "confirmed"
       },
       "review_due_out" => {
         "resolve_late_checkout" => "checked_in",

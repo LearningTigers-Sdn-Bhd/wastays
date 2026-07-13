@@ -260,9 +260,11 @@ module Bookings
         # For now, let's just ensure the primary guest is updated if it matches the new email
         # or create a new link if none exists.
 
-        # Remove old primary if it exists and we're adding a new one?
-        # Actually, standardizing on one primary guest per booking.
-        booking.booking_guests.where(is_primary: true).destroy_all
+        # Preserve the old guest and its billing identity; changing the primary role
+        # must never erase folio ownership or financial lineage.
+        booking.booking_guests.where(is_primary: true).find_each do |booking_guest|
+          booking_guest.update!(is_primary: false, role: "additional")
+        end
         booking.booking_guests.create!(guest: guest_result.guest, is_primary: true)
       end
     end

@@ -1,0 +1,12 @@
+<% if folio_show.can_manage_folio_windows? %>
+  <div class="flex flex-wrap gap-2">
+    <% if folio.open? %>
+      <%= link_to "Edit", edit_folio_window_hotel_booking_control_panel_path(current_hotel, booking, folio),
+        data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" },
+        class: "rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" %>
+      <button type="button" onclick="document.getElementById('close-control-panel-folio-<%= folio.id %>').showModal()" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Close</button>
+    <% elsif folio.closed? %>
+      <button type="button" onclick="document.getElementById('reopen-control-panel-folio-<%= folio.id %>').showModal()" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Reopen</button>
+    <% end %>
+  </div>
+<% end %>

@@ -27,10 +27,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
       create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: slug), enabled: true)
     end
 
-    visit login_path
-    fill_in 'Email Address', with: user.email
-    fill_in 'Password', with: 'password123'
-    click_button 'Sign In to Portal'
+    sign_in_through_ui(user)
   end
 
   it 'renders the hotel navigation shell for approved hotel owners' do

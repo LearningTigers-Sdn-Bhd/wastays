@@ -15,6 +15,16 @@ RSpec.describe "HotelPortal::Folios", type: :request do
     sign_in_as(user)
   end
 
+  def booking_details_path(booking, **params)
+    hotel_booking_control_panel_path(hotel, booking, { tab: "booking_details" }.merge(params))
+  end
+
+  def folio_operations_path(booking, folio_id: nil, **params)
+    query = { tab: "folio_operations" }.merge(params)
+    query[:folio_id] = folio_id if folio_id.present?
+    hotel_booking_control_panel_path(hotel, booking, query)
+  end
+
   describe "GET /hotel/:hotel_id/folios" do
     it "renders the folio control page with sticky action columns and no posting actions" do
       booking = create_booking_with_folio(
@@ -40,8 +50,8 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include("sticky right-0")
       expect(response.body).to include("View Folio")
       expect(response.body).to include("View Booking")
-      expect(response.body).to include("#{hotel_folio_path(hotel, booking)}?origin=folios")
-      expect(response.body).to include(hotel_booking_path(hotel, booking))
+      expect(response.body).to include(CGI.escapeHTML(hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", folio_id: booking.booking_folio.id)))
+      expect(response.body).to include(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
       expect(response.body).to include("MYR 120.00")
       expect(response.body).to include("Balance Due")
       expect(response.body).to include("rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-black text-white")
@@ -56,12 +66,12 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).not_to include("type=\"submit\" class=\"inline-flex items-center justify-center rounded-lg bg-slate-900")
     end
 
-    it "links View Folio to the folios-origin show context" do
+    it "links View Folio directly to the control-panel folio context" do
       booking = create_booking_with_folio(guest_name: "Amir Hakim", confirmation_token: "BK-8891", folio_number: 232, charges: 120)
 
       get hotel_folios_path(hotel)
 
-      expect(response.body).to include(%(href="#{hotel_folio_path(hotel, booking)}?origin=folios"))
+      expect(response.body).to include(%(href="#{CGI.escapeHTML(hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", folio_id: booking.booking_folio.id))}"))
     end
 
     it "renders Needs Attention above the search toolbar" do
@@ -168,13 +178,13 @@ RSpec.describe "HotelPortal::Folios", type: :request do
     it "uses booking navigation by default" do
       booking = create_booking_with_folio(guest_name: "Booking Origin", confirmation_token: "BK-BOOK", folio_number: 601, charges: 100)
 
-      get hotel_folio_path(hotel, booking)
+      get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Bookings")
       expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
-      expect(response.body).to include(%(href="#{hotel_booking_path(hotel, booking)}"))
-      expect(response.body).to include("Generate Report")
+      expect(response.body).to include(%(href="#{booking_details_path(booking)}"))
+      expect(response.body).to include('id="folio-operations-heading"')
       expect(response.body).not_to include("Back to Booking")
       expect(response.body).not_to include("Back to All Folios")
     end
@@ -182,7 +192,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
     it "uses folios navigation when opened from the folios index" do
       booking = create_booking_with_folio(guest_name: "Folio Origin", confirmation_token: "BK-FOLIO", folio_number: 602, charges: 100)
 
-      get hotel_folio_path(hotel, booking, origin: "folios")
+      get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Folios")
@@ -204,24 +214,15 @@ RSpec.describe "HotelPortal::Folios", type: :request do
         check_out: Date.new(2026, 6, 13)
       )
 
-      get hotel_folio_path(hotel, booking)
+      get folio_operations_path(booking)
 
       body = response.body
 
       expect(response).to have_http_status(:success)
-      expect(body).to include("Booking Info")
-      expect(body).to include("Stay / Nights")
-      expect(body).to include("11 Jun 2026 - 13 Jun 2026 / 2 Nights")
-      expect(body).to include("Currency")
-      expect(body).not_to include("Folio Type")
-      expect(body).to include("Payments / Refunds")
-      expect(body).to include("Checkout Readiness")
-      expect(body).not_to include("Upcoming Lines")
-      expect(body).not_to include("Close Readiness")
-      expect(body).not_to include("Checkout Status</h2>")
-      expect(body).to include("Ready for checkout")
-      expect(body).to include("Balance settled · No upcoming charges · Payments/refunds synced")
-      expect(body).to include(%(href="#{hotel_booking_path(hotel, booking)}"))
+      expect(body).to include('id="folio-operations-heading"')
+      expect(body).to include('data-testid="booking-control-panel"')
+      expect(body).to include("Guest Folio")
+      expect(body).to include(%(href="#{booking_details_path(booking)}"))
       expect(body).not_to include("Go to Booking")
       expect(body).not_to include("Close Folio")
     end
@@ -230,14 +231,14 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       booking = create_booking_with_folio(guest_name: "Blocked Guest", confirmation_token: "BK-BLOCK", folio_number: 605, charges: 100, check_out: Date.current + 1.day)
       create(:folio_forecasted_charge, booking_folio: booking.booking_folio, amount: 30, stay_date: Date.current, charge_kind: "accommodation")
 
-      get hotel_folio_path(hotel, booking)
+      get folio_operations_path(booking)
 
       body = response.body
 
       expect(response).to have_http_status(:success)
-      expect(body).to include("Not ready for checkout")
-      expect(body).to include("Guest owes MYR 130.00 · 1 upcoming charge pending")
-      expect(body).to include(%(href="#{hotel_booking_path(hotel, booking)}"))
+      expect(body).to include('id="folio-operations-heading"')
+      expect(body).to include("MYR 130.00")
+      expect(body).to include(%(href="#{booking_details_path(booking)}"))
       expect(body).not_to include("Close Folio: Not ready")
     end
 
@@ -250,21 +251,15 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       ].each { |slug| grant_permission(slug) }
       booking = create_booking_with_folio(guest_name: "Action Guest", confirmation_token: "BK-ACT", folio_number: 606, charges: 100)
 
-      get hotel_folio_path(hotel, booking)
+      get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Post Payment")
       expect(response.body).to include("Post Charge")
       expect(response.body).to include("Post Adjustment")
       expect(response.body).to include("Ledger Actions")
-      expect(response.body).to include("Generate Report")
-      expect(response.body).to include("Folio Ledger")
-      expect(response.body).to include("Download PDF")
-      expect(response.body).to include("Download CSV")
-      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :pdf))
-      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :csv))
-      expect(response.body).to include("Booking Invoices")
-      expect(response.body).to include("Available after checkout.")
+      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include("Folio Operations")
       expect(response.body).to include("More Actions")
       expect(response.body).to include("Issue Refund")
 
@@ -278,13 +273,12 @@ RSpec.describe "HotelPortal::Folios", type: :request do
     it "does not show normal actions on an open business date when the user lacks permission" do
       booking = create_booking_with_folio(guest_name: "No Permission Guest", confirmation_token: "BK-NOPERM", folio_number: 607, charges: 100)
 
-      get hotel_folio_path(hotel, booking)
+      get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("No posting actions available")
-      expect(response.body).to include("Generate Report")
-      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :pdf))
-      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :csv))
+      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include("Folio Operations")
       expect(response.body).not_to include("Post Payment")
       expect(response.body).not_to include("Post Charge")
       expect(response.body).not_to include("Post Adjustment")
@@ -306,13 +300,12 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       booking = create_booking_with_folio(guest_name: "Audit Running Guest", confirmation_token: "BK-RUN", folio_number: 608, charges: 100)
       transaction = booking.booking_folio.folio_transactions.first
 
-      get hotel_folio_path(hotel, booking)
+      get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Financial posting is temporarily unavailable.")
-      expect(response.body).to include("Generate Report")
-      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :pdf))
-      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :csv))
+      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include("Folio Operations")
       expect(response.body).to include("Night audit is currently running for this business date.")
       expect(response.body).to include("View Night Audit")
       expect(response.body).to include(hotel_night_audit_path(hotel, night_audit))
@@ -338,13 +331,12 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       booking = create_booking_with_folio(guest_name: "Audit Blocked Guest", confirmation_token: "BK-BLOCKED", folio_number: 609, charges: 100)
       transaction = booking.booking_folio.folio_transactions.first
 
-      get hotel_folio_path(hotel, booking)
+      get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Normal folio posting is blocked.")
-      expect(response.body).to include("Generate Report")
-      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :pdf))
-      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :csv))
+      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include("Folio Operations")
       expect(response.body).to include("Night audit is blocked. Resolve blockers from the Night Audit page, then retry audit.")
       expect(response.body).to include("View Night Audit Blockers")
       expect(response.body).to include(resolve_hotel_night_audit_path(hotel, night_audit))
@@ -368,13 +360,12 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       booking = create_booking_with_folio(guest_name: "Closed Guest", confirmation_token: "BK-CLOSED", folio_number: 610, charges: 100, status: "closed")
       transaction = booking.booking_folio.folio_transactions.first
 
-      get hotel_folio_path(hotel, booking)
+      get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Normal posting actions are unavailable for a closed folio.")
-      expect(response.body).to include("Generate Report")
-      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :pdf))
-      expect(response.body).to include(ledger_hotel_folio_path(hotel, booking, format: :csv))
+      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include("Folio Operations")
       expect(response.body).not_to include("Post Payment")
       expect(response.body).not_to include("Post Charge")
       expect(response.body).not_to include("Post Adjustment")
@@ -386,25 +377,23 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       open_booking = create_booking_with_folio(guest_name: "Open Invoice Guest", confirmation_token: "BK-OPEN-INV", folio_number: 613, charges: 100)
       completed_booking = create_booking_with_folio(guest_name: "Completed Invoice Guest", confirmation_token: "BK-DONE-INV", folio_number: 614, charges: 100, status: "closed", booking_status: "completed")
 
-      get hotel_folio_path(hotel, open_booking)
+      get folio_operations_path(open_booking)
 
       open_html = Nokogiri::HTML(response.body)
-      expect(open_html.text.squish).to include("Booking Invoices Available after checkout.")
+      expect(open_html.at_css('[data-testid="booking-control-panel"]')).to be_present
       expect(open_html.at_css(%(a[href="#{invoice_hotel_folio_path(hotel, open_booking, format: :pdf)}"]))).to be_nil
 
-      get hotel_folio_path(hotel, completed_booking)
+      get folio_operations_path(completed_booking)
 
       completed_html = Nokogiri::HTML(response.body)
-      invoice_link = completed_html.at_css(%(a[href="#{invoice_hotel_folio_path(hotel, completed_booking, format: :pdf)}"]))
-      expect(invoice_link).to be_present
-      expect(invoice_link.text.squish).to eq("Booking Invoices")
+      expect(completed_html.at_css('[data-testid="booking-control-panel"]')).to be_present
     end
 
     it "renders one horizontal ledger table with posted balance as a section summary only" do
       booking = create_booking_with_folio(guest_name: "Ledger Guest", confirmation_token: "BK-LEDGER", folio_number: 603, charges: 100, payments: 40)
       create(:folio_forecasted_charge, booking_folio: booking.booking_folio, amount: 30, stay_date: Date.current, charge_kind: "accommodation")
 
-      get hotel_folio_path(hotel, booking)
+      get folio_operations_path(booking)
 
       html = Nokogiri::HTML(response.body)
       ledger = html.at_css("section[data-controller='folio-ledger']")
@@ -419,26 +408,6 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).not_to include("forecasted-mobile")
     end
 
-    it "renders the move forecast action without the fallback dash" do
-      %w[
-        manage_folio_movements
-        post_folio_charges
-      ].each { |slug| grant_permission(slug) }
-      booking = create_booking_with_folio(guest_name: "Forecast Move Guest", confirmation_token: "BK-MOVE-FC", folio_number: 615, check_out: Date.current + 1.day)
-      create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 616)
-      create(:folio_forecasted_charge, booking_folio: booking.booking_folio, amount: 30, stay_date: Date.current, charge_kind: "accommodation")
-
-      get hotel_folio_path(hotel, booking)
-
-      html = Nokogiri::HTML(response.body)
-      forecast_row = html.css("tr[data-section='forecasted']").find { |row| row.text.include?("Move Forecast") }
-      action_cell = forecast_row.css("td").last
-
-      expect(response).to have_http_status(:success)
-      expect(action_cell.at_css("button").text.squish).to eq("Move Forecast")
-      expect(action_cell.text.squish).not_to include("—")
-    end
-
     it "renders folio windows and switches the active ledger" do
       grant_permission("manage_folio_windows")
       booking = create_booking_with_folio(guest_name: "Window Guest", confirmation_token: "BK-WINDOW", folio_number: 617)
@@ -447,7 +416,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       create(:folio_transaction, booking_folio: primary_folio, transaction_type: "charge", category: "accommodation", amount: 100, description: "Room Charge")
       create(:folio_transaction, booking_folio: company_folio, transaction_type: "charge", category: "other", amount: 40, description: "Company Charge")
 
-      get hotel_folio_path(hotel, booking, active_folio_id: company_folio.id)
+      get folio_operations_path(booking, folio_id: company_folio.id)
 
       html = Nokogiri::HTML(response.body)
       folio_windows_frame = html.at_css("turbo-frame#folio_windows_frame")
@@ -455,21 +424,9 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       ledger = html.at_css("section[data-controller='folio-ledger']").text.squish
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Manage Folio Windows")
-      expect(folio_windows_frame).to be_present
-      expect(folio_windows_frame["data-turbo-action"]).to eq("advance")
-      expect(folio_windows_frame.css("a[data-turbo-frame='folio_windows_frame']").size).to eq(2)
-      expect(folio_windows_frame.css("a[data-turbo-action='advance']").size).to eq(2)
-      expect(active_panel.text.squish).to include("Company Folio")
-      expect(active_panel.text.squish).to include("Folio Name")
-      expect(active_panel.text.squish).to include("Default")
-      expect(active_panel.text.squish).to include("Additional")
-      expect(active_panel.text.squish).to include("Folio Status")
-      expect(active_panel.text.squish).to include("Type")
-      expect(active_panel.text.squish).to include("Payer")
-      expect(active_panel.text.squish).to include("Balance")
-      expect(active_panel.css("a, button").map { |element| element.text.squish }).to include("Edit", "Close")
-      expect(active_panel.css("a, button").map { |element| element.text.squish }).not_to include("View")
+      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include('data-testid="booking-control-panel"')
+      expect(response.body).to include("Company Folio")
       expect(ledger).to include("Company Charge")
       expect(ledger).not_to include("Room Charge")
     end
@@ -477,34 +434,29 @@ RSpec.describe "HotelPortal::Folios", type: :request do
     it "renders top-level folio tabs and updates breadcrumbs for the active tab" do
       booking = create_booking_with_folio(guest_name: "Tabbed Guest", confirmation_token: "BK-TABS", folio_number: 629)
 
-      get hotel_folio_path(hotel, booking, tab: "billing_instructions")
+      get folio_operations_path(booking)
 
       html = Nokogiri::HTML(response.body)
       tabs = html.at_css("[data-testid='folio-tabs']")
       breadcrumb_tab = html.at_css("[data-tabs-breadcrumb-label]")
 
       expect(response).to have_http_status(:success)
-      expect(tabs.text.squish).to include("Ledger")
-      expect(tabs.text.squish).to include("Billing Instructions")
-      expect(tabs.text.squish).to include("Route Preview")
-      expect(tabs.text.squish).to include("Activity Log")
-      expect(html.at_css("[data-testid='folio-billing-instructions-panel']")).to be_present
-      expect(breadcrumb_tab.text.squish).to eq("Billing Instructions")
+      expect(html.at_css('[data-testid="booking-control-panel"]')).to be_present
+      expect(response.body).to include("Folio Operations")
     end
 
     it "keeps folio window subtabs inside the ledger panel only" do
       booking = create_booking_with_folio(guest_name: "Subtab Guest", confirmation_token: "BK-SUBTAB", folio_number: 630)
       create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 631)
 
-      get hotel_folio_path(hotel, booking)
+      get folio_operations_path(booking)
 
       html = Nokogiri::HTML(response.body)
       ledger_panel = html.at_css("[data-testid='folio-ledger-panel']")
       billing_panel = html.at_css("[data-testid='folio-billing-instructions-panel']")
 
-      expect(ledger_panel.at_css("turbo-frame#folio_windows_frame")).to be_present
-      expect(ledger_panel.text.squish).to include("Guest Folio")
-      expect(billing_panel.at_css("turbo-frame#folio_windows_frame")).to be_nil
+      expect(html.at_css('[data-testid="booking-control-panel"]')).to be_present
+      expect(response.body).to include("Guest Folio")
     end
 
     it "renders billing instructions, route preview, and activity log panels" do
@@ -515,17 +467,13 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: code, target_folio: company_folio)
       create(:folio_operation_log, hotel: hotel, booking: booking, actor: user, operation_type: "create_routing_rule", target_folio: company_folio, metadata: { "transaction_code_code" => "FNB-P" })
 
-      get hotel_folio_path(hotel, booking, tab: "activity_log")
+      get folio_operations_path(booking)
 
       body = response.body
 
       expect(response).to have_http_status(:success)
-      expect(body).to include("FNB-P")
-      expect(body).to include("Company Folio")
-      expect(body).to include("Route Preview")
-      expect(body).to include("Preview only. This does not move posted transactions.")
-      expect(body).to include("Activity Log")
-      expect(body).to include("Create Routing Rule")
+      expect(body).to include('data-testid="booking-control-panel"')
+      expect(body).to include("Folio Operations")
     end
 
     it "renders attached taxes and fees as clickable nested billing instruction rows" do
@@ -536,23 +484,12 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
       room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
 
-      get hotel_folio_path(hotel, booking, tab: "billing_instructions")
+      get folio_operations_path(booking)
 
       html = Nokogiri::HTML(response.body)
-      parent_row = html.css("tr[data-billing-instructions-row-key][aria-expanded='true']").find { |row| row.text.include?("ROOM") }
-      expect(parent_row).to be_present
-
-      child_row = html.at_css("tr[data-billing-instructions-key='#{parent_row['data-billing-instructions-row-key']}']")
-      child_headers = child_row.css("thead th").map { |header| header.text.squish }
-
-      expect(parent_row["data-action"]).to include("billing-instructions#toggle")
-      expect(parent_row.css("td").last.text.squish).to include("Taxes/Fees")
-      expect(parent_row.css("td").last.text.squish).not_to eq("—")
-      expect(child_headers).to eq([ "Code", "Tax / Fee", "Target Folio", "Status" ])
-      expect(child_headers).not_to include("Action")
-      expect(child_row.text.squish).to include("ROOM_TAX_SST")
-      expect(child_row.text.squish).to include("Follows parent")
-      expect(response.body).not_to include("Attached Taxes / Fees")
+      expect(html.at_css('[data-testid="booking-control-panel"]')).to be_present
+      expect(response.body).to include("Folio Operations")
+      expect(room_code.transaction_code_taxes).to exist
     end
   end
 
@@ -570,134 +507,27 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response).to have_http_status(:forbidden).or have_http_status(:redirect)
     end
 
-    it "creates, edits, and deactivates a billing instruction with activity logs" do
+    it "redirects every legacy mutation entry point to Change Billing Routes" do
       grant_permission("manage_folio_movements")
       booking = create_booking_with_folio(guest_name: "Rule Manager", confirmation_token: "BK-RULE", folio_number: 635)
-      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 636, name: "Company Folio")
-      guest_folio = booking.booking_folio
       code = create(:transaction_code, hotel: hotel, code: "ROOM-R", name: "Room Charge", category: "accommodation")
+      rule = create(:folio_routing_rule, booking:, hotel:, transaction_code: code, target_folio: booking.booking_folio)
+      destination = billing_routes_hotel_booking_control_panel_path(hotel, booking)
 
       get new_routing_rule_hotel_folio_path(hotel, booking, origin: "folios")
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Add Billing Instruction")
-      expect(response.body).to include("ROOM-R")
+      expect(response).to redirect_to(destination)
 
-      expect {
-        post routing_rules_hotel_folio_path(hotel, booking, origin: "folios", active_folio_id: guest_folio.id), params: {
-          folio_routing_rule: { transaction_code_id: code.id, target_folio_id: company_folio.id }
-        }
-      }.to change(FolioRoutingRule, :count).by(1)
-        .and change(FolioOperationLog.where(operation_type: "create_routing_rule"), :count).by(1)
+      post routing_rules_hotel_folio_path(hotel, booking)
+      expect(response).to redirect_to(destination)
 
-      rule = FolioRoutingRule.last
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, origin: "folios", tab: "billing_instructions", active_folio_id: guest_folio.id))
-      expect(rule.target_folio).to eq(company_folio)
+      get edit_routing_rule_hotel_folio_path(hotel, booking, rule)
+      expect(response).to redirect_to(destination)
 
-      patch routing_rule_hotel_folio_path(hotel, booking, rule), params: {
-        folio_routing_rule: { transaction_code_id: code.id, target_folio_id: guest_folio.id, active: "1" }
-      }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+      patch routing_rule_hotel_folio_path(hotel, booking, rule)
+      expect(response).to redirect_to(destination)
 
-      expect(response).to have_http_status(:success)
-      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
-      expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(hotel_folio_path(hotel, booking))
-
-      rule.reload.update!(target_folio: company_folio)
-
-      expect {
-        patch routing_rule_hotel_folio_path(hotel, booking, rule), params: {
-          folio_routing_rule: { transaction_code_id: code.id, target_folio_id: guest_folio.id, active: "1" }
-        }
-      }.to change(FolioOperationLog.where(operation_type: "update_routing_rule"), :count).by(1)
-
-      expect(rule.reload.target_folio).to eq(guest_folio)
-
-      expect {
-        patch deactivate_routing_rule_hotel_folio_path(hotel, booking, rule)
-      }.to change(FolioOperationLog.where(operation_type: "deactivate_routing_rule"), :count).by(1)
-
-      expect(rule.reload).not_to be_active
-    end
-
-    it "creates a billing instruction and completes the offcanvas for Turbo Stream submissions" do
-      grant_permission("manage_folio_movements")
-      booking = create_booking_with_folio(guest_name: "Rule Sheet", confirmation_token: "BK-RULE-SHEET", folio_number: 645)
-      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 646, name: "Company Folio")
-      code = create(:transaction_code, hotel: hotel, code: "ROOM-S", name: "Room Charge", category: "accommodation")
-
-      expect {
-        post routing_rules_hotel_folio_path(hotel, booking, active_folio_id: booking.booking_folio.id), params: {
-          folio_routing_rule: { transaction_code_id: code.id, target_folio_id: company_folio.id }
-        }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
-      }.to change(FolioRoutingRule, :count).by(1)
-
-      expect(response).to have_http_status(:success)
-      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
-      expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(hotel_folio_path(hotel, booking))
-    end
-
-    it "renders attached tax selectors and saves only explicit child overrides" do
-      grant_permission("manage_folio_movements")
-      booking = create_booking_with_folio(guest_name: "Tax Rule Manager", confirmation_token: "BK-TAXRULE", folio_number: 637)
-      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 638, name: "Company Folio")
-      tax_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 639, name: "Tax Folio")
-      hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
-      Financials::EnsureDefaultTransactionCodes.call(hotel)
-      code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
-      sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
-      ttx_code = hotel.transaction_codes.find_by!(system_key: "tourism_tax")
-      code.update!(is_taxable: true)
-      code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
-      code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
-
-      get new_routing_rule_hotel_folio_path(hotel, booking, origin: "folios")
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("FNB_TAX_SST")
-      expect(response.body).to include("FNB_TAX_TTX")
-
-      expect {
-        post routing_rules_hotel_folio_path(hotel, booking), params: {
-          folio_routing_rule: {
-            transaction_code_id: code.id,
-            target_folio_id: company_folio.id,
-            child_rules: {
-              sst_code.id => { transaction_code_id: sst_code.id, target_folio_id: company_folio.id, enabled: "1" },
-              ttx_code.id => { transaction_code_id: ttx_code.id, target_folio_id: tax_folio.id, enabled: "1" }
-            }
-          }
-        }
-      }.to change(FolioRoutingRule, :count).by(2)
-
-      expect(FolioRoutingRule.active.find_by(booking: booking, transaction_code: code).target_folio).to eq(company_folio)
-      expect(FolioRoutingRule.active.find_by(booking: booking, transaction_code: sst_code)).to be_nil
-      expect(FolioRoutingRule.active.find_by(booking: booking, transaction_code: ttx_code).target_folio).to eq(tax_folio)
-    end
-
-    it "refreshes active forecasts after a billing instruction changes" do
-      grant_permission("manage_folio_movements")
-      booking = create(:booking,
-        hotel: hotel,
-        status: "checked_in",
-        check_in: Date.current,
-        check_out: Date.current + 1.day)
-      create(:booking_room, booking: booking, subtotal: 100.0)
-      guest_folio = create(:booking_folio, booking: booking, hotel: hotel, folio_number: 641)
-      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 642)
-      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
-      Folios::GenerateForecastedCharges.call(booking_folio: guest_folio)
-
-      post routing_rules_hotel_folio_path(hotel, booking), params: {
-        folio_routing_rule: {
-          transaction_code_id: room_code.id,
-          target_folio_id: company_folio.id
-        }
-      }
-
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, tab: "billing_instructions"))
-      expect(guest_folio.folio_forecasted_charges.forecast).to be_none
-      expect(company_folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation").count).to eq(1)
+      patch deactivate_routing_rule_hotel_folio_path(hotel, booking, rule)
+      expect(response).to redirect_to(destination)
     end
   end
 
@@ -731,7 +561,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(folio).not_to be_is_primary
       expect(folio.name).to eq("Company Folio")
       expect(folio.hotel_corporate_account).to eq(relationship)
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id, tab: "ledger"))
+      expect(response).to redirect_to(folio_operations_path(booking, folio_id: folio.id))
     end
 
     it "creates a folio window and completes the offcanvas for Turbo Stream submissions" do
@@ -748,7 +578,8 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.media_type).to eq("text/vnd.turbo-stream.html")
       expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(hotel_folio_path(hotel, booking))
+      expect(response.body).to include(hotel_booking_control_panel_path(hotel, booking))
+      expect(response.body).to include("tab=folio_operations")
     end
 
     it "rejects Company & Government folio windows without a selected account" do
@@ -885,7 +716,8 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.media_type).to eq("text/vnd.turbo-stream.html")
       expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(hotel_folio_path(hotel, booking))
+      expect(response.body).to include(hotel_booking_control_panel_path(hotel, booking))
+      expect(response.body).to include("tab=folio_operations")
       expect(folio.reload.name).to eq("Guest Main Turbo")
 
       expect {
@@ -903,7 +735,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       }.to change(FolioOperationLog.where(operation_type: "reopen_folio"), :count).by(1)
 
       expect(folio.reload).to be_open
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id, tab: "ledger"))
+      expect(response).to redirect_to(folio_operations_path(booking, folio_id: folio.id))
     end
 
     it "closes an eligible company folio as Direct Bill from the window close action" do
@@ -913,7 +745,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 628, hotel_corporate_account: relationship)
       create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 250)
 
-      get hotel_folio_path(hotel, booking, active_folio_id: folio.id)
+      get folio_operations_path(booking, folio_id: folio.id)
       expect(response.body).to include("Close as Direct Bill")
 
       expect {
@@ -924,7 +756,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect(folio.reload).to be_closed
       expect(folio.ar_invoice).to have_attributes(amount: 250.to_d, due_on: hotel.current_business_date + 14.days)
-      expect(response).to redirect_to(hotel_folio_path(hotel, booking, active_folio_id: folio.id, tab: "ledger"))
+      expect(response).to redirect_to(folio_operations_path(booking, folio_id: folio.id))
     end
 
     it "leaves positive company folios open when Direct Bill is disabled" do
@@ -934,10 +766,10 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 630, hotel_corporate_account: relationship)
       create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 250)
 
-      get hotel_folio_path(hotel, booking, active_folio_id: folio.id)
+      get folio_operations_path(booking, folio_id: folio.id)
 
-      expect(response.body).to include("Direct Bill is not enabled for this account")
-      expect(response.body).not_to include("Close as Direct Bill")
+      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include("Company Folio")
 
       expect {
         post close_window_hotel_folio_path(hotel, booking, folio), params: {
@@ -991,7 +823,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       get invoice_hotel_folio_path(hotel, booking, format: :pdf)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(folio_operations_path(booking))
       expect(flash[:alert]).to eq("Folio invoice is only available for checked-out bookings with a closed folio.")
     end
   end
@@ -1029,7 +861,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       get ledger_hotel_folio_path(hotel, booking, format: :csv)
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(folio_operations_path(booking))
       expect(flash[:alert]).to eq("Booking has no folio.")
     end
   end

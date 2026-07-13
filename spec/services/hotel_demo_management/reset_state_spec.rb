@@ -121,7 +121,7 @@ RSpec.describe HotelDemoManagement::ResetState do
 
       expect {
         described_class.new(hotel: hotel, logger: logger).call
-      }.to have_enqueued_job(ChannelManagers::SyncJob)
+      }.to enqueue_job(ChannelManagers::SyncJob).at_least(:once)
     end
 
     it "returns failure instead of raising when room setup is invalid" do

@@ -189,6 +189,7 @@ module HotelPortal
       when :general
         [
           hotel_permission_granted?("manage_hotel_profile") ? { label: "General Settings", path: hotel_general_settings_path(current_hotel), icon: "settings", active: controller_name == "settings" && settings_active_page == "general" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { label: "Rate Settings", path: hotel_rates_settings_path(current_hotel), icon: "badge-dollar-sign", active: controller_name == "settings" && settings_active_page == "rates" } : nil,
           { label: "Plan & Billing", path: hotel_plan_path(current_hotel), icon: "layers", active: controller_name == "plans" }
         ].compact
       when :property
@@ -226,7 +227,7 @@ module HotelPortal
     def settings_group_active?(group)
       case group
       when :general
-        (controller_name == "settings" && settings_active_page == "general") || controller_name == "plans"
+        (controller_name == "settings" && settings_active_page.in?(%w[general rates])) || controller_name == "plans"
       when :property
         controller_name.in?(%w[profiles room_types nearby_attractions])
       when :finance

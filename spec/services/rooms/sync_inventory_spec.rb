@@ -16,7 +16,7 @@ RSpec.describe Rooms::SyncInventory, type: :service do
 
     # 2. Create one booking for the other room
     booking = create(:booking, hotel: hotel, check_in: start_date, check_out: start_date + 1.day, status: "confirmed")
-    create(:booking_room, booking: booking, room_type: room_type, room_number: "102", quantity: 1)
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "102")
 
     subject.call
 

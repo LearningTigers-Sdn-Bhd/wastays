@@ -42,7 +42,6 @@ module Bookings
     def booking_room
       @booking_room ||= @booking.booking_rooms.first || @booking.booking_rooms.build(
         room_type: room_type,
-        quantity: 1,
         subtotal: @booking.total_amount
       )
     end

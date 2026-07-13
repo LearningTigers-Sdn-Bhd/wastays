@@ -18,10 +18,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
     UserRole.create!(user: user, role: role)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
-    visit login_path
-    fill_in 'Email Address', with: user.email
-    fill_in 'Password', with: 'password123'
-    click_button 'Sign In to Portal'
+    sign_in_through_ui(user)
   end
 
   it 'allows the hotel admin to update the editable settings card fields' do
@@ -112,10 +109,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
     superadmin = create(:user, account: account, role: 'superadmin')
 
     page.driver.submit :delete, logout_path, {}
-    visit login_path
-    fill_in 'Email Address', with: superadmin.email
-    fill_in 'Password', with: 'password123'
-    click_button 'Sign In to Portal'
+    sign_in_through_ui(superadmin)
 
     visit hotel_general_settings_path(hotel)
 

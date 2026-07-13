@@ -214,4 +214,24 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(approve_account.reload.status).to eq('active')
     end
   end
+
+  describe 'PATCH /admin/hotels/:id' do
+    let(:hotel_account) { create(:account, name: "Luma Hospitality Group #{token}", status: 'active') }
+    let(:hotel) { create(:hotel, account: hotel_account, name: "Luma Stay #{token}", status: 'approved', allow_pax_pricing: false, pax_pricing_only: false) }
+
+    it 'allows superadmin to update allow_pax_pricing' do
+      patch admin_hotel_path(hotel), params: { hotel: { allow_pax_pricing: '1' } }
+      expect(response).to redirect_to(admin_hotel_path(hotel))
+      expect(hotel.reload.allow_pax_pricing).to be true
+    end
+
+    it 'automatically resets pax_pricing_only to false if allow_pax_pricing is set to false' do
+      hotel.update!(allow_pax_pricing: true, pax_pricing_only: true)
+
+      patch admin_hotel_path(hotel), params: { hotel: { allow_pax_pricing: '0' } }
+      expect(response).to redirect_to(admin_hotel_path(hotel))
+      expect(hotel.reload.allow_pax_pricing).to be false
+      expect(hotel.reload.pax_pricing_only).to be false
+    end
+  end
 end

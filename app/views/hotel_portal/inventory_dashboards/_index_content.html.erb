@@ -9,7 +9,9 @@
     display_currency: @display_currency,
     room_type_id: @calendar.selected_room_type_id,
     tab: active_tab,
-    subtab: active_subtab
+    subtab: active_subtab,
+    days: @range_mode == "month" ? "month" : @days,
+    month: @range_mode == "month" ? @month.strftime("%Y-%m") : nil
   }.compact
 %>
 
@@ -18,7 +20,7 @@
 <% end %>
 
 <!-- Top-Level Tabs -->
-<nav class="<%= dashboard_tab_container_classes %>" data-testid="inventory-tabs">
+<nav class="<%= dashboard_tab_container_classes %>" data-testid="inventory-tabs" data-inventory-calendar-target="topPanel">
   <div class="flex min-w-max items-center gap-1" role="tablist" aria-label="Rates and inventory sections">
     <button type="button"
             data-tabs-target="tab"
@@ -45,6 +47,18 @@
       <%= cached_icon "settings-2", class: "size-4", aria: { hidden: true } %>
       Advanced Pricing
     </button>
+    <button type="button"
+            data-tabs-target="tab"
+            data-tab-name="channels"
+            data-tab-label="Channels & OTAs"
+            data-action="click->tabs#switch"
+            data-active="<%= active_tab == 'channels' %>"
+            class="<%= dashboard_tab_classes %>"
+            aria-controls="inventory-channels-panel"
+            role="tab">
+      <%= cached_icon "radio", class: "size-4", aria: { hidden: true } %>
+      Channels & OTAs
+    </button>
   </div>
 </nav>
 
@@ -55,9 +69,7 @@
     <% if @missing_rates.any? %>
       <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
         <div class="flex items-center gap-3 text-rose-800">
-          <svg class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-          </svg>
+          <%= cached_icon "triangle-alert", class: "size-5 shrink-0", stroke_width: 2.5 %>
           <div class="text-sm">
             <span class="font-bold">Exchange Rates Missing:</span>
             Conversion rates for <span class="font-bold"><%= @missing_rates.to_sentence %></span> are not set relative to <%= @hotel_base_currency %>. 
@@ -69,114 +81,171 @@
       </div>
     <% end %>
 
-    <section class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <div class="flex flex-col gap-4 border-b border-slate-200 p-3 sm:p-4 xl:flex-row xl:items-center xl:justify-between">
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-          <h1 class="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-900">Rates & Availability</h1>
-          <div class="h-4 w-px bg-slate-200 hidden sm:block"></div>
-          <div class="flex items-center gap-1">
-            <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(start_date: @start_date - 14.days)),
-                        class: "inline-flex size-9 sm:size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900",
-                        title: "Previous 14 days" do %>
-              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-            <% end %>
+    <!-- Page Header -->
+    <div class="fixed bottom-6 right-6 z-40 flex flex-wrap items-end justify-end gap-4 hidden" data-inventory-calendar-target="syncHeader">
+      <div class="flex items-center gap-3.5 rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
+        <div class="flex items-center gap-1">
+          <span class="hidden text-xs text-slate-400 sm:block">
+            Last synced <%= Time.current.strftime("%-I:%M %p") %>
+          </span>
+        </div>
+        <button type="button"
+                data-inventory-calendar-target="syncButton"
+                data-action="inventory-calendar#openReview"
+                disabled
+                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed">
+          <%= cached_icon "refresh-cw", class: "size-4 shrink-0", stroke_width: 2.5 %>
+          <span>Confirm Update</span>
+          <span data-inventory-calendar-target="syncCounter" class="hidden rounded-full bg-white/20 px-1.5 py-0.5 text-xs font-semibold tabular-nums">0</span>
+        </button>
+      </div>
+    </div>
 
+    <!-- Toolbar -->
+    <div class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm" data-inventory-calendar-target="topPanel">
+      <!-- Date navigation -->
+      <div class="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+        <% prev_target = @range_mode == "month" ? { month: (@month.prev_month).strftime("%Y-%m") } : { start_date: @start_date - @days.days } %>
+        <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(prev_target)),
+                    class: "rounded-md p-1.5 text-slate-500 transition-colors hover:bg-white hover:text-slate-800 hover:shadow-sm",
+                    title: @range_mode == "month" ? "Previous month" : "Previous #{@days} days" do %>
+          <%= cached_icon "chevron-left", class: "h-4 w-4", stroke_width: 2.5 %>
+        <% end %>
+        <% if @range_mode == "month" %>
+          <label class="relative flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm font-medium text-slate-700 hover:bg-white hover:shadow-sm">
+            <%= cached_icon "calendar", class: "h-4 w-4 text-slate-400", stroke_width: 2.5 %>
+            <span class="tabular-nums"><%= @month.strftime("%B %Y") %></span>
+            <input type="month"
+                   value="<%= @month.strftime("%Y-%m") %>"
+                   class="absolute inset-0 cursor-pointer opacity-0"
+                   data-inventory-calendar-target="navMonth"
+                   data-action="change->inventory-calendar#navigateMonth">
+          </label>
+        <% else %>
+          <label class="relative flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm font-medium text-slate-700 hover:bg-white hover:shadow-sm">
+            <%= cached_icon "calendar", class: "h-4 w-4 text-slate-400", stroke_width: 2.5 %>
+            <span class="tabular-nums"><%= @start_date.strftime("%b %-d") %> – <%= @end_date.strftime("%b %-d, %Y") %></span>
             <input type="date"
                    value="<%= @start_date %>"
-                   class="h-9 sm:h-8 rounded-lg border border-slate-200 bg-white px-2 py-0 text-xs font-bold text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-0"
+                   class="absolute inset-0 cursor-pointer opacity-0"
                    data-inventory-calendar-target="navStartDate"
                    data-action="change->inventory-calendar#navigate">
+          </label>
+        <% end %>
+        <% next_target = @range_mode == "month" ? { month: (@month.next_month).strftime("%Y-%m") } : { start_date: @start_date + @days.days } %>
+        <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(next_target)),
+                    class: "rounded-md p-1.5 text-slate-500 transition-colors hover:bg-white hover:text-slate-800 hover:shadow-sm",
+                    title: @range_mode == "month" ? "Next month" : "Next #{@days} days" do %>
+          <%= cached_icon "chevron-right", class: "h-4 w-4", stroke_width: 2.5 %>
+        <% end %>
+      </div>
 
-            <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(start_date: @start_date + 14.days)),
-                        class: "inline-flex size-9 sm:size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900",
-                        title: "Next 14 days" do %>
-              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-            <% end %>
-          </div>
-        </div>
+      <% today_target = @range_mode == "month" ? { month: Date.current.strftime("%Y-%m") } : { start_date: Date.current } %>
+      <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(today_target)),
+                  class: "rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50" do %>
+        Today
+      <% end %>
 
-        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-          <!-- Room Filter -->
-          <select id="room_type_id_nav" name="room_type_id" class="h-10 sm:h-9 flex-1 sm:flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs font-bold text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-0"
-                  data-inventory-calendar-target="navRoomType"
-                  data-action="change->inventory-calendar#navigate">
-            <option value="">All room types</option>
-            <%= options_from_collection_for_select(@calendar.room_type_options, :id, :name, @calendar.selected_room_type_id) %>
-          </select>
+      <!-- Days toggle -->
+      <div class="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-1">
+        <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(days: 14, month: nil)),
+                    class: "rounded-md px-3 py-1 text-sm font-medium transition-all #{@range_mode == 'days' && @days == 14 ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}" do %>
+          14 days
+        <% end %>
+        <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(days: 21, month: nil)),
+                    class: "rounded-md px-3 py-1 text-sm font-medium transition-all #{@range_mode == 'days' && @days == 21 ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}" do %>
+          21 days
+        <% end %>
+        <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(days: "month", month: (@range_mode == "month" ? @month : Date.current.beginning_of_month).strftime("%Y-%m"))),
+                    class: "rounded-md px-3 py-1 text-sm font-medium transition-all #{@range_mode == 'month' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}" do %>
+          Month
+        <% end %>
+      </div>
 
-          <!-- View Currencies -->
-          <div class="inline-flex h-10 sm:h-9 items-center rounded-lg border border-slate-200 bg-slate-50 p-1 shadow-sm gap-1 overflow-x-auto no-scrollbar">
-            <% @view_currencies.each do |currency| %>
-              <div class="group relative flex h-full items-center">
-                <%= link_to currency,
-                            hotel_inventory_index_path(current_hotel, navigation_state.merge(start_date: @start_date, display_currency: currency)),
-                            class: "flex h-full items-center rounded-md px-3 text-[10px] font-black tracking-wider transition #{@display_currency == currency ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-900'}" %>
-                <% if @view_currencies.size > 1 && currency != @hotel_base_currency %>
-                  <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(start_date: @start_date, view_currencies: (@view_currencies - [currency]))),
-                              title: "Remove from view",
-                              class: "absolute -top-1 -right-1 hidden group-hover:flex size-4 items-center justify-center rounded-full bg-slate-900 text-white text-[8px] font-bold shadow-sm" do %>
-                    ✕
-                  <% end %>
-                <% end %>
-              </div>
-            <% end %>
-            
-            <div class="relative h-full" data-controller="dropdown" data-dropdown-floating="true">
-              <button type="button" 
-                      data-action="click->dropdown#toggle"
-                      class="flex h-full w-7 items-center justify-center rounded-md text-slate-400 hover:bg-white hover:text-slate-900 transition-all border border-transparent hover:border-slate-200">
-                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v16m7.5-7.5h-16" />
-                </svg>
-              </button>
-              <div data-dropdown-target="menu" class="absolute right-0 top-full z-[100] mt-2 hidden w-48 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
-                <div class="max-h-60 overflow-y-auto p-1 custom-scrollbar">
-                  <div class="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 mb-1">Add Currency</div>
-                  <% (CurrencyCatalog::COMMON_CODES - @view_currencies).each do |c| %>
-                    <%= link_to c, 
-                                hotel_inventory_index_path(current_hotel, navigation_state.merge(start_date: @start_date, view_currencies: (@view_currencies + [c]))),
-                                class: "block rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors" %>
-                  <% end %>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div class="mx-1 hidden h-6 w-px bg-slate-200 sm:block"></div>
 
-          <div class="h-4 w-px bg-slate-200 hidden xl:block"></div>
-
-          <div class="flex items-center gap-2 w-full sm:w-auto">
-            <button type="button" 
-                    data-action="inventory-calendar#openBulk" 
-                    class="h-10 sm:h-9 flex-1 sm:flex-none inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all active:scale-95">
-              Bulk Edit
-            </button>
-
-            <button type="button" 
-                    data-inventory-calendar-target="syncButton"
-                    data-action="inventory-calendar#openReview"
-                    disabled
-                    class="h-10 sm:h-9 flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-lg bg-slate-200 px-5 text-xs font-black uppercase tracking-widest text-slate-500 shadow-sm transition-all enabled:bg-indigo-600 enabled:text-white enabled:hover:bg-indigo-700 disabled:cursor-not-allowed">
-              <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-              <span>Sync</span>
-              <span data-inventory-calendar-target="syncCounter" class="hidden rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-black tabular-nums">0</span>
-            </button>
+      <!-- OTAs Toggle / Refresh -->
+      <div class="flex items-center gap-3 select-none">
+        <% if @channels.present? %>
+          <label class="relative inline-flex items-center cursor-pointer select-none">
+            <input type="checkbox"
+                   data-action="change->inventory-calendar#toggleOtas"
+                   data-inventory-calendar-target="otasToggleCheckbox"
+                   class="sr-only peer">
+            <div class="relative w-9 h-5 bg-slate-200 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+            <span class="ml-2.5 text-xs font-bold uppercase tracking-wider text-slate-400">Show OTAs</span>
+          </label>
+        <% end %>
+        <div class="relative flex items-center">
+          <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(force_refresh: true)),
+                      class: "text-slate-400 hover:text-indigo-600 transition-all hover:rotate-180 duration-500 p-1 rounded-md hover:bg-slate-100 flex items-center justify-center size-7",
+                      data: { tooltip_id: "refresh-channels-tip", action: "mouseenter->inventory-calendar#showTooltip mouseleave->inventory-calendar#hideTooltip" } do %>
+            <%= cached_icon "refresh-cw", class: "size-3.5" %>
+          <% end %>
+          <!-- Tooltip Box -->
+          <div id="refresh-channels-tip"
+               class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 p-2.5 bg-slate-900 text-white text-[11px] font-semibold leading-relaxed rounded-xl shadow-xl z-50 transition-all duration-200 hidden opacity-0 scale-95 origin-top">
+            <div class="absolute bottom-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-b-slate-900"></div>
+            Refresh channel connections to detect newly connected OTAs.
           </div>
         </div>
       </div>
 
+      <!-- Legend -->
+      <div class="ml-auto hidden items-center gap-4 text-[11px] text-slate-500 lg:flex">
+        <span class="flex items-center gap-1.5">
+          <span class="h-2 w-2 rounded-full bg-emerald-400"></span> Available
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="h-2 w-2 rounded-full bg-amber-400"></span> Low inventory
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="h-2 w-2 rounded-full bg-rose-400"></span> Sold out
+        </span>
+      </div>
+
+      <!-- Focus Mode Toggle -->
+      <button type="button"
+              data-action="click->inventory-calendar#toggleFullscreen"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-850 hover:border-slate-350 hover:shadow-sm active:scale-[0.98] cursor-pointer"
+              title="Focus Mode (Hide top panels)">
+        <%= cached_icon "maximize-2", class: "size-4 text-slate-500", stroke_width: 2.5 %>
+        <span>Expand</span>
+      </button>
+    </div>
+
+    <!-- Table Section -->
+    <section class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
       <div class="overflow-x-auto custom-scrollbar">
-        <table class="min-w-full table-fixed border-separate border-spacing-0" data-testid="inventory-calendar-grid">
+        <table class="w-full border-collapse border-separate border-spacing-0" data-testid="inventory-calendar-grid">
           <thead>
-            <tr class="bg-slate-50">
-              <th class="sticky left-0 z-30 w-[140px] sm:w-[260px] border-b border-r border-slate-200 bg-slate-50 px-2 sm:px-4 py-1.5 text-left shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)]">
-                <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Room / Plan</span>
+            <tr class="border-b border-slate-200">
+              <th class="sticky left-0 z-30 w-60 min-w-60 max-w-60 border-b border-r border-slate-200 bg-slate-50 px-4 py-3 text-left shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)]">
+                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Room / Rate plan</span>
               </th>
               <% @calendar.dates.each do |date| %>
-                <th class="min-w-[60px] sm:min-w-[80px] border-b border-r border-slate-200 px-1 sm:px-2 py-1.5 text-center last:border-r-0 transition-colors <%= date == Date.current ? 'bg-blue-50' : '' %>"
+                <% 
+                  weekend = [5, 6].include?(date.wday)
+                  
+                  th_class = "min-w-[86px] border-b border-r border-slate-200 px-2 py-2 text-center last:border-r-0 transition-colors "
+                  th_class += weekend ? "bg-indigo-100/70" : "bg-slate-50"
+
+                  day_class = "text-[10px] font-semibold uppercase tracking-wide "
+                  day_class += weekend ? "text-indigo-600 font-bold" : "text-slate-400"
+
+                  num_class = weekend ? "text-sm font-bold tabular-nums text-indigo-700" : "text-sm font-semibold tabular-nums text-slate-700"
+
+                  month_class = "ml-1 text-[12px] font-medium text-slate-400"
+                %>
+                <th class="<%= th_class %>"
                     data-inventory-highlight-target="columnHeader"
-                    data-column-id="<%= date %>">
-                  <span class="block text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.1em] <%= date == Date.current ? 'text-blue-700' : 'text-slate-500' %>"><%= date.strftime("%a") %></span>
-                  <span class="mt-0.5 block text-[10px] sm:text-xs font-bold <%= date == Date.current ? 'text-blue-900' : 'text-slate-900' %>"><%= date.strftime("%d %b") %></span>
+                    data-column-id="<%= date %>"
+                    data-is-weekend="<%= weekend %>">
+                  <div class="<%= day_class %>" data-day-label><%= date.strftime("%a") %></div>
+                  <div class="<%= num_class %>" data-num-label>
+                    <%= date.strftime("%d") %>
+                    <span class="<%= month_class %>" data-month-label><%= date.strftime("%b") %></span>
+                  </div>
                 </th>
               <% end %>
             </tr>
@@ -185,40 +254,34 @@
           <tbody class="bg-white">
             <% if @calendar.rows.any? %>
               <% @calendar.rows.each do |row| %>
-                <tr class="<%= inventory_parent_row?(row) ? 'bg-slate-50/40' : 'bg-white hover:bg-slate-50/70 transition-colors' %>"
-                    data-inventory-row-target="row"
-                    data-parent-room-type-id="<%= inventory_parent_room_type_id_for(row) %>">
-                  <td class="sticky left-0 z-20 border-b border-r border-slate-200 bg-white px-2 sm:px-3 py-0.5 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)]"
-                      data-inventory-highlight-target="rowHeader">
-                    <div class="space-y-0.5">
-                      <div>
-                        <% if inventory_parent_row?(row) %>
-                          <div class="flex items-center justify-between gap-1 sm:gap-2">
-                            <div class="flex items-center gap-1 sm:gap-1.5">
-                              <button type="button" 
-                                      data-action="inventory-row#toggle" 
-                                      data-room-type-id="<%= row.room_type_id %>"
-                                      data-collapsed="false"
-                                      class="text-slate-400 hover:text-slate-600 transition-transform">
-                                <svg class="size-3 sm:size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                              </button>
-                              <p class="truncate text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-slate-950 transition-colors" data-inventory-highlight-target="rowLabel"><%= row.label %></p>
-                            </div>
+                <% if row.inventory_row? %>
+                  <tr class="border-b border-slate-100" data-inventory-row-target="row">
+                    <td class="sticky left-0 z-20 border-b border-r border-slate-200 bg-white px-3 py-2.5 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
+                      <button type="button"
+                              data-action="inventory-row#toggle"
+                              data-room-type-id="<%= row.room_type_id %>"
+                              data-collapsed="false"
+                              class="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left transition-colors hover:bg-slate-50">
+                        <%= cached_icon "chevron-down", class: "h-4 w-4 shrink-0 text-slate-400 transition-transform", stroke_width: 2, data: { original_color: "text-slate-400", highlight_color: "text-indigo-200" } %>
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-2 flex-wrap">
+                            <span class="truncate text-sm font-semibold text-slate-800" data-original-color="text-slate-800" data-highlight-color="text-white"><%= row.label %></span>
+                            <span class="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider select-none border border-slate-200/60">
+                              Base: <%= @hotel_base_currency %> <%= number_with_precision(row.room_type.base_price, precision: 2) %>
+                            </span>
                           </div>
-                          <p class="mt-0.5 ms-4 sm:ms-5 text-[8px] sm:text-[10px] font-semibold text-slate-500"><%= pluralize(row.room_type.quantity, "unit") %></p>
-                        <% else %>
-                          <p class="ms-4 sm:ms-5 truncate text-[8px] sm:text-[10px] font-bold text-slate-600 uppercase tracking-tight transition-colors" data-inventory-highlight-target="rowLabel"><span class="me-1 sm:me-1.5 text-slate-300">↳</span><%= row.sublabel %></p>
-                        <% end %>
-                      </div>
-                    </div>
-                  </td>
-
-                  <% @calendar.dates.each do |date| %>
-                    <% cell = inventory_calendar_cell(@calendar, row, date) %>
-                    <td class="border-b border-r border-slate-100 p-0 last:border-r-0">
-                      <% if row.inventory_row? %>
+                          <div class="text-[11px] text-slate-400 mt-0.5" data-original-color="text-slate-400" data-highlight-color="text-indigo-200">
+                            <%= pluralize(row.room_type.quantity, "unit") %> · <%= @calendar.connected_channels.size %> channels
+                          </div>
+                        </div>
+                      </button>
+                    </td>
+                    <% @calendar.dates.each do |date| %>
+                      <% cell = inventory_calendar_cell(@calendar, row, date) %>
+                      <% weekend = [5, 6].include?(date.wday) %>
+                      <td class="min-w-[86px] border-b border-r border-slate-100 px-2 py-2 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
                         <button type="button"
-                                class="min-h-[48px] sm:min-h-[54px] w-full px-1 sm:px-2 py-2 text-center transition <%= cell[:closed] ? 'bg-rose-100' : 'bg-emerald-200 hover:bg-emerald-300' %>"
+                                class="w-full px-1 sm:px-2 py-2 text-center transition hover:bg-slate-50 rounded-lg group"
                                 data-testid="availability-cell-<%= row.room_type_id %>-<%= date %>"
                                 data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
                                 data-mode="availability"
@@ -226,81 +289,158 @@
                                 data-date="<%= date %>"
                                 data-quantity="<%= cell[:quantity] %>"
                                 data-status="<%= cell[:status] %>">
-                          <div class="flex flex-col items-center justify-center">
-                            <% if cell[:closed] %>
-                              <span class="block truncate text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.1em] text-rose-800"><%= cell[:status_label] %></span>
-                            <% else %>
-                              <span class="block truncate text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.1em] <%= cell[:sold_count] > 0 ? 'text-emerald-800' : 'text-slate-400' %>"><%= cell[:sold_count] %> Sold</span>
-                            <% end %>
-                            <span class="mt-0.5 block text-xs sm:text-sm font-black text-slate-950"><%= cell[:quantity] %></span>
+                          <% 
+                            total_units = row.room_type.quantity
+                            open = cell[:quantity].to_i
+                            sold = cell[:sold_count].to_i
+                            
+                            if cell[:closed]
+                              open = 0
+                              sold = total_units
+                            end
+
+                            pct = total_units > 0 ? (sold.to_f / total_units) : 0.0
+                            pct = 1.0 if pct > 1.0
+
+                            tone = if cell[:closed] || open == 0
+                              { text: "text-rose-600", bar: "bg-rose-400", track: "bg-rose-100" }
+                            elsif pct >= 0.7
+                              { text: "text-amber-600", bar: "bg-amber-400", track: "bg-amber-100" }
+                            else
+                              { text: "text-emerald-600", bar: "bg-emerald-400", track: "bg-emerald-100" }
+                            end
+                          %>
+                          <div class="flex flex-col items-center gap-1">
+                            <div class="flex items-baseline gap-1">
+                              <span class="text-xs font-semibold tabular-nums <%= tone[:text] %>"><%= open %></span>
+                              <span class="text-[12px] text-slate-400">open</span>
+                            </div>
+                            <div class="h-1 w-12 overflow-hidden rounded-full <%= tone[:track] %>">
+                              <div class="h-full rounded-full <%= tone[:bar] %>" style="width: <%= (pct * 100).round %>%"></div>
+                            </div>
+                            <span class="text-[12px] tabular-nums text-slate-400"><%= sold %> sold</span>
                           </div>
                         </button>
-                      <% elsif row.walk_in_row? %>
+                      </td>
+                    <% end %>
+                  </tr>
+                <% elsif row.channel_summary_row? %>
+                  <tr data-channel-summary-row="true"
+                      data-inventory-row-target="row"
+                      data-parent-room-type-id="<%= row.room_type_id %>"
+                      class="border-b border-slate-100 bg-slate-50/60">
+                    <td class="sticky left-0 z-20 border-b border-r border-slate-200 bg-slate-50 px-3 py-1.5 pl-10 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader" data-original-color="bg-slate-50">
+                      <% if @calendar.connected_channels.any? %>
                         <button type="button"
-                             class="min-h-[48px] sm:min-h-[54px] w-full bg-emerald-50/30 px-1 sm:px-2 py-2 text-center transition hover:bg-emerald-100/50"
-                             data-testid="walk-in-cell-<%= row.room_type_id %>-<%= date %>"
-                             data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
-                             data-column-id="<%= date %>"
-                             data-mode="rates"
-                             data-rate-plan-id="tier_walk_in_<%= row.room_type_id %>"
-                             data-room-type-id="<%= row.room_type_id %>"
-                             data-date="<%= date %>"
-                             data-price="<%= cell[:price] %>">
-                          <div class="flex flex-col items-center justify-center min-h-[28px] sm:min-h-[32px]">
-                            <% if cell[:conversion_missing] %>
-                              <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
-                            <% else %>
-                              <span class="block truncate text-xs sm:text-sm font-bold tabular-nums <%= cell[:is_modified] ? 'text-blue-700' : 'text-slate-950' %>">
-                                <%= cell[:formatted_price] %>
+                                data-action="inventory-row#toggleAvailability"
+                                data-room-type-id="<%= row.room_type_id %>"
+                                data-collapsed="false"
+                                class="flex w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-left text-xs font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-800">
+                          <%= cached_icon "chevron-down", class: "h-3.5 w-3.5 text-slate-400 transition-transform", stroke_width: 2.5, data: { original_color: "text-slate-400", highlight_color: "text-indigo-200" } %>
+                          <span data-original-color="text-slate-500" data-highlight-color="text-white">Channel details</span>
+                        </button>
+                      <% end %>
+                    </td>
+                    <% @calendar.dates.each do |date| %>
+                      <% cell = inventory_calendar_cell(@calendar, row, date) %>
+                      <td class="min-w-[86px] border-b border-r border-slate-100 px-2 py-1.5 text-center last:border-r-0">
+                        <div class="flex flex-col items-center gap-1">
+                          <div class="flex items-center justify-center gap-0.5">
+                            <% cell[:channels].each do |ch| %>
+                              <span title="<%= ch[:channel_name] %> · <%= ch[:open] ? 'open' : 'closed' %>"
+                                    class="h-1.5 w-1.5 rounded-full transition-transform hover:scale-150 <%= ch[:open] ? ch[:color] : 'bg-slate-300' %>">
                               </span>
                             <% end %>
                           </div>
-                        </button>
-                      <% elsif row.corporate_row? %>
+                          <% 
+                            open_count = cell[:open_count]
+                            total = cell[:total]
+                            text_color = if open_count == total
+                              "text-emerald-600"
+                            elsif open_count == 0
+                              "text-rose-600"
+                            else
+                              "text-amber-600"
+                            end
+                          %>
+                          <span class="text-[10px] font-medium tabular-nums <%= text_color %>">
+                            <%= open_count %>/<%= total %>
+                          </span>
+                        </div>
+                      </td>
+                    <% end %>
+                  </tr>
+                <% elsif row.channel_availability_row? %>
+                  <tr data-channel-detail-row="true"
+                      data-channel-availability-row="true"
+                      data-inventory-row-target="row"
+                      data-parent-room-type-id="<%= row.room_type_id %>"
+                      class="border-b border-slate-100 bg-white">
+                    <td class="sticky left-0 z-20 border-b border-r border-slate-200 bg-white py-1.5 pl-14 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
+                      <% 
+                        channel_name = row.channel["attributes"]["title"]
+                        channel_code = row.channel["attributes"]["channel"]
+                        color_class = @calendar.channel_color_for(channel_code)
+                        short_name = @calendar.channel_short_for(channel_code)
+                      %>
+                      <div class="flex items-center gap-2">
+                        <span class="flex h-4 w-4 items-center justify-center rounded text-[9px] font-bold text-white <%= color_class %>">
+                          <%= short_name %>
+                        </span>
+                        <span class="text-xs text-slate-500" data-original-color="text-slate-500" data-highlight-color="text-white"><%= channel_name %></span>
+                        <%= cached_icon "lock", class: "ml-auto h-3 w-3 text-slate-300", stroke_width: 2, data: { original_color: "text-slate-300", highlight_color: "text-indigo-200" } %>
+                      </div>
+                    </td>
+                    <% @calendar.dates.each do |date| %>
+                      <% cell = inventory_calendar_cell(@calendar, row, date) %>
+                      <td class="min-w-[86px] border-b border-r border-slate-100 px-2 py-1 text-center last:border-r-0">
                         <button type="button"
-                             class="min-h-[48px] sm:min-h-[54px] w-full bg-blue-50/30 px-1 sm:px-2 py-2 text-center transition hover:bg-blue-100/50"
-                             data-testid="corporate-cell-<%= row.room_type_id %>-<%= date %>"
-                             data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
-                             data-column-id="<%= date %>"
-                             data-mode="rates"
-                             data-rate-plan-id="tier_corporate_<%= row.room_type_id %>"
-                             data-room-type-id="<%= row.room_type_id %>"
-                             data-date="<%= date %>"
-                             data-price="<%= cell[:price] %>">
-                          <div class="flex flex-col items-center justify-center min-h-[28px] sm:min-h-[32px]">
-                            <% if cell[:conversion_missing] %>
-                              <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
-                            <% else %>
-                              <span class="block truncate text-xs sm:text-sm font-bold tabular-nums <%= cell[:is_modified] ? 'text-blue-700' : 'text-slate-950' %>">
-                                <%= cell[:formatted_price] %>
-                              </span>
-                            <% end %>
-                          </div>
+                                class="relative inline-flex min-w-[52px] items-center justify-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums transition cursor-not-allowed opacity-75 <%= cell[:closed] ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600' %>"
+                                data-testid="channel-availability-cell-<%= row.room_type_id %>-<%= cell[:channel_id] %>-<%= date %>"
+                                data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#showLockTip"
+                                data-mode="channel_availability"
+                                data-room-type-id="<%= row.room_type_id %>"
+                                data-channel-id="<%= cell[:channel_id] %>"
+                                data-channel-name="<%= channel_name %>"
+                                data-date="<%= date %>"
+                                data-quantity="<%= cell[:quantity] %>"
+                                data-status="<%= cell[:status] %>">
+                          <%= cached_icon "lock", class: "h-2.5 w-2.5 shrink-0 opacity-70" %>
+                          <%= cell[:closed] ? "Closed" : "#{cell[:quantity]} open" %>
                         </button>
-                      <% elsif row.ota_row? %>
+                      </td>
+                    <% end %>
+                  </tr>
+                <% elsif row.rate_row? %>
+                  <tr data-inventory-row-target="row"
+                      data-parent-room-type-id="<%= row.room_type_id %>"
+                      class="border-b border-slate-100 bg-white transition-colors hover:bg-slate-50/50">
+                    <td class="sticky left-0 z-20 border-b border-r border-slate-200 bg-white py-2 pl-10 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
+                      <%
+                        rtrp = row.room_type.room_type_rate_plans.find_by(rate_plan: row.rate_plan)
+                        ext_rp_id = rtrp&.channel_mapping&.external_id
+                        has_channels = ext_rp_id.present? && ext_rp_id != "pending" && @calendar.connected_channels.any?
+                      %>
+                      <div class="flex items-center gap-1.5 w-full">
+                        <%= cached_icon "corner-down-right", class: "h-3 w-3 shrink-0 text-slate-300", stroke_width: 2.5, data: { original_color: "text-slate-300", highlight_color: "text-indigo-200" } %>
+                        <span class="text-[13px] font-medium text-slate-600" data-original-color="text-slate-600" data-highlight-color="text-white"><%= row.rate_plan.name %></span>
+                        <% if has_channels %>
+                          <button type="button"
+                                  data-action="inventory-row#toggleRatePlan"
+                                  data-row-id="room-<%= row.room_type_id %>-rate-<%= row.rate_plan_id %>"
+                                  data-collapsed="false"
+                                  class="text-slate-400 hover:text-slate-600 transition-transform ml-auto">
+                            <%= cached_icon "chevron-down", class: "h-3 w-3", stroke_width: 2.5, data: { original_color: "text-slate-400", highlight_color: "text-indigo-200" } %>
+                          </button>
+                        <% end %>
+                      </div>
+                    </td>
+                    <% @calendar.dates.each do |date| %>
+                      <% cell = inventory_calendar_cell(@calendar, row, date) %>
+                      <% weekend = [5, 6].include?(date.wday) %>
+                      <td class="min-w-[86px] border-b border-r border-slate-100 px-2 py-1.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
                         <button type="button"
-                             class="min-h-[48px] sm:min-h-[54px] w-full bg-purple-50/30 px-1 sm:px-2 py-2 text-center transition hover:bg-purple-100/50"
-                             data-testid="ota-cell-<%= row.room_type_id %>-<%= date %>"
-                             data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
-                             data-column-id="<%= date %>"
-                             data-mode="rates"
-                             data-rate-plan-id="tier_ota_<%= row.room_type_id %>"
-                             data-room-type-id="<%= row.room_type_id %>"
-                             data-date="<%= date %>"
-                             data-price="<%= cell[:price] %>">
-                          <div class="flex flex-col items-center justify-center min-h-[28px] sm:min-h-[32px]">
-                            <% if cell[:conversion_missing] %>
-                              <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
-                            <% else %>
-                              <span class="block truncate text-xs sm:text-sm font-bold tabular-nums <%= cell[:is_modified] ? 'text-blue-700' : 'text-slate-950' %>">
-                                <%= cell[:formatted_price] %>
-                              </span>
-                            <% end %>
-                          </div>
-                        </button>
-                      <% else %>
-                        <button type="button"
-                                class="relative min-h-[48px] sm:min-h-[54px] w-full bg-white px-1 sm:px-2 py-2 text-center transition hover:bg-slate-100"
+                                class="group relative mx-auto block rounded-md px-2 py-1 text-sm font-medium tabular-nums text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors w-full"
                                 data-testid="rate-cell-<%= row.room_type_id %>-<%= row.rate_plan_id %>-<%= date %>"
                                 data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
                                 data-mode="rates"
@@ -313,26 +453,18 @@
                                 data-max-stay="<%= cell[:max_stay] %>"
                                 data-closed-to-arrival="<%= cell[:closed_to_arrival] %>"
                                 data-closed-to-departure="<%= cell[:closed_to_departure] %>"
-                                data-stop-sell="<%= cell[:stop_sell] %>">
-                          <div class="flex flex-col items-center justify-center min-h-[28px] sm:min-h-[32px]">
-                            <% if cell[:applied_rule_type].present? && cell[:applied_rule_type] != "base" %>
-                              <% 
-                                badge_class = case cell[:applied_rule_type]
-                                  when "ph" then "bg-amber-100 text-amber-700"
-                                  when "sh" then "bg-purple-100 text-purple-700"
-                                  when "wk" then "bg-blue-100 text-blue-700"
-                                  else "bg-slate-100 text-slate-700"
-                                end
-                              %>
-                              <span class="absolute top-0.5 right-0.5 text-[7px] font-black px-1 rounded-sm uppercase tracking-tighter <%= badge_class %>">
-                                <%= cell[:applied_rule_type] %>
-                              </span>
-                            <% end %>
-
+                                data-stop-sell="<%= cell[:stop_sell] %>"
+                                data-single-supplement="<%= cell[:single_supplement] %>"
+                                data-base-occupancy="<%= cell[:base_occupancy] %>"
+                                data-extra-pax-charge="<%= cell[:extra_pax_charge] %>"
+                                data-sell-mode="<%= cell[:sell_mode] %>">
+                          
+                          <div class="flex flex-col items-center justify-center min-h-[20px] relative">
                             <% if cell[:conversion_missing] %>
                               <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
                             <% else %>
-                              <span class="block truncate text-xs sm:text-sm font-bold tabular-nums <%= cell[:is_modified] ? 'text-indigo-600' : 'text-slate-950' %>">                                <%= cell[:formatted_price] %>
+                              <span class="block truncate text-xs sm:text-sm font-bold tabular-nums text-slate-700">
+                                <%= cell[:formatted_price] %>
                               </span>
                             <% end %>
                           </div>
@@ -340,11 +472,198 @@
                             <span class="mt-1 block truncate text-center text-[7px] sm:text-[8px] font-bold uppercase tracking-[0.02em] text-amber-700 bg-amber-50 rounded px-0.5 sm:px-1"><%= cell[:restriction_compact] %></span>
                           <% end %>
                         </button>
-                      <% end %>
+                      </td>
+                    <% end %>
+                  </tr>
+                <% elsif row.channel_rate_row? %>
+                  <tr data-channel-detail-row="true"
+                      data-inventory-row-target="row"
+                      data-parent-room-type-id="<%= row.room_type_id %>"
+                      data-parent-rate-plan-row-id="room-<%= row.room_type_id %>-rate-<%= row.rate_plan_id %>"
+                      class="border-b border-slate-100 bg-slate-50/40">
+                    <td class="sticky left-0 z-20 border-b border-r border-slate-200 bg-slate-50 py-1 pl-14 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader" data-original-color="bg-slate-50">
+                      <% 
+                        channel_name = row.channel["attributes"]["title"]
+                        channel_code = row.channel["attributes"]["channel"]
+                        color_class = @calendar.channel_color_for(channel_code)
+                        short_name = @calendar.channel_short_for(channel_code)
+                        
+                        derived_setting = current_hotel.channel_derived_settings.find_by(channel_id: row.channel["id"])
+                        markup_pct = derived_setting&.pricing_mode == "multiplier" ? derived_setting.pricing_value : nil
+                      %>
+                      <div class="flex items-center gap-2">
+                        <span class="flex h-4 w-4 items-center justify-center rounded text-[9px] font-bold text-white <%= color_class %>">
+                          <%= short_name %>
+                        </span>
+                        <span class="text-xs text-slate-400" data-original-color="text-slate-400" data-highlight-color="text-white"><%= channel_name %></span>
+                        <% if markup_pct.present? && markup_pct > 0 %>
+                          <span class="rounded-sm bg-slate-200/70 px-1 py-px text-[9px] font-semibold text-slate-500" data-original-color="text-slate-500 bg-slate-200/70" data-highlight-color="text-indigo-100 bg-indigo-700">
+                            +<%= markup_pct.to_i %>%
+                          </span>
+                        <% end %>
+                        <%= cached_icon "lock", class: "ml-auto h-3 w-3 text-slate-300", stroke_width: 2, data: { original_color: "text-slate-300", highlight_color: "text-indigo-200" } %>
+                      </div>
                     </td>
-                  <% end %>
-                </tr>
+                    <% @calendar.dates.each do |date| %>
+                      <% cell = inventory_calendar_cell(@calendar, row, date) %>
+                      <td class="min-w-[86px] border-b border-r border-slate-100 px-2 py-1 text-center last:border-r-0">
+                        <button type="button"
+                                class="relative w-full bg-transparent px-1 py-1 text-center transition cursor-not-allowed"
+                                disabled
+                                data-testid="channel-rate-cell-<%= row.room_type_id %>-<%= row.rate_plan_id %>-<%= cell[:channel_rate_plan_id] %>-<%= date %>"
+                                data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear"
+                                data-mode="channel_rates"
+                                data-room-type-id="<%= row.room_type_id %>"
+                                data-rate-plan-id="<%= row.rate_plan_id %>"
+                                data-channel-id="<%= cell[:channel_id] %>"
+                                data-channel-rate-plan-id="<%= cell[:channel_rate_plan_id] %>"
+                                data-channel-name="<%= channel_name %>"
+                                data-date="<%= date %>"
+                                data-price="<%= cell[:price] %>"
+                                data-parent-price="<%= cell[:parent_price] %>"
+                                data-currency="<%= cell[:currency] %>"
+                                data-min-stay="<%= cell[:min_stay] %>"
+                                data-max-stay="<%= cell[:max_stay] %>"
+                                data-closed-to-arrival="<%= cell[:closed_to_arrival] %>"
+                                data-closed-to-departure="<%= cell[:closed_to_departure] %>"
+                                data-stop-sell="<%= cell[:stop_sell] %>"
+                                data-single-supplement="<%= cell[:single_supplement] %>"
+                                data-base-occupancy="<%= cell[:base_occupancy] %>"
+                                data-extra-pax-charge="<%= cell[:extra_pax_charge] %>"
+                                data-sell-mode="<%= cell[:sell_mode] %>">
+                          <div class="flex flex-col items-center justify-center min-h-[20px]">
+                            <% if cell[:conversion_missing] %>
+                              <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
+                            <% else %>
+                              <span class="block truncate text-xs tabular-nums text-slate-600">
+                                <%= cell[:formatted_price] %>
+                              </span>
+                            <% end %>
+                          </div>
+                        </button>
+                      </td>
+                    <% end %>
+                  </tr>
+                <% elsif row.walk_in_row? || row.corporate_row? %>
+                  <tr data-inventory-row-target="row"
+                      data-parent-room-type-id="<%= row.room_type_id %>"
+                      class="border-b border-slate-100 bg-white transition-colors hover:bg-slate-50/50">
+                    <td class="sticky left-0 z-20 border-b border-r border-slate-200 bg-white py-2 pl-10 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
+                      <div class="flex items-center gap-1.5">
+                        <%= cached_icon "corner-down-right", class: "h-3 w-3 shrink-0 text-slate-300", stroke_width: 2.5, data: { original_color: "text-slate-300", highlight_color: "text-indigo-200" } %>
+                        <span class="text-[13px] font-medium text-slate-600" data-original-color="text-slate-600" data-highlight-color="text-white"><%= row.sublabel %></span>
+                      </div>
+                    </td>
+                    <% @calendar.dates.each do |date| %>
+                      <% cell = inventory_calendar_cell(@calendar, row, date) %>
+                      <% weekend = [5, 6].include?(date.wday) %>
+                      <td class="min-w-[86px] border-b border-r border-slate-100 px-2 py-1.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
+                          <%
+                            testid = case row.kind
+                              when :walk_in then "walk-in-cell-#{row.room_type_id}-#{date}"
+                              when :corporate then "corporate-cell-#{row.room_type_id}-#{date}"
+                            end
+                            rate_plan_id = case row.kind
+                              when :walk_in then "tier_walk_in_#{row.room_type_id}"
+                              when :corporate then "tier_corporate_#{row.room_type_id}"
+                            end
+                          %>
+                          <button type="button"
+                                  class="group relative mx-auto block rounded-md px-2 py-1 text-sm font-medium tabular-nums text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors w-full"
+                                  data-testid="<%= testid %>"
+                                  data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
+                                  data-mode="rates"
+                                  data-rate-plan-id="<%= rate_plan_id %>"
+                                  data-room-type-id="<%= row.room_type_id %>"
+                                  data-date="<%= date %>"
+                                  data-price="<%= cell[:price] %>"
+                                  data-currency="<%= cell[:currency] %>"
+                                  data-sell-mode="<%= cell[:sell_mode] %>">
+                            
+                            <div class="flex flex-col items-center justify-center min-h-[20px] relative">
+                              <% if cell[:conversion_missing] %>
+                                <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
+                              <% else %>
+                                <span class="block truncate text-xs sm:text-sm font-bold tabular-nums text-slate-700">
+                                  <%= cell[:formatted_price] %>
+                                </span>
+                              <% end %>
+                            </div>
+                          </button>
+                      </td>
+                    <% end %>
+                  </tr>
+                <% end %>
               <% end %>
+
+              <!-- Occupancy Rate Row -->
+              <tr class="border-t-2 border-b border-slate-300 bg-slate-50 font-semibold">
+                <td class="sticky left-0 z-20 border-b border-r border-slate-300 bg-slate-100 px-3 py-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60 font-extrabold text-slate-800" data-original-color="bg-slate-100">
+                  <div class="text-[11px] font-black uppercase tracking-wider text-slate-600">Occupancy Rate</div>
+                </td>
+                <% @calendar.dates.each do |date| %>
+                  <%
+                    total_sold = 0
+                    total_capacity = 0
+                    
+                    @calendar.rows.each do |row|
+                      next unless row.inventory_row?
+                      
+                      cell = inventory_calendar_cell(@calendar, row, date)
+                      capacity = row.room_type.quantity.to_i
+                      sold = cell[:sold_count].to_i
+                      
+                      if cell[:closed]
+                        sold = capacity
+                      end
+                      
+                      total_sold += sold
+                      total_capacity += capacity
+                    end
+                    
+                    rate = total_capacity > 0 ? (total_sold.to_f / total_capacity * 100).round : 0
+                    
+                    rate_text = if rate == 100
+                      "FULL"
+                    else
+                      "#{rate}%"
+                    end
+
+                    text_color = if rate == 100
+                      "text-rose-700 font-black tracking-wider"
+                    elsif rate >= 70
+                      "text-rose-600 font-extrabold"
+                    elsif rate >= 40
+                      "text-amber-600 font-bold"
+                    elsif rate > 0
+                      "text-emerald-600 font-semibold"
+                    else
+                      "text-slate-400 font-medium"
+                    end
+
+                    bg_color = if rate == 100
+                      "bg-rose-50"
+                    elsif rate >= 70
+                      "bg-rose-50/40"
+                    elsif rate >= 40
+                      "bg-amber-50/40"
+                    elsif rate > 0
+                      "bg-emerald-50/30"
+                    else
+                      "bg-slate-50/30"
+                    end
+                  %>
+                  <td class="min-w-[86px] border-b border-r border-slate-200 p-0 text-center last:border-r-0 <%= bg_color %> hover:bg-black/[0.02] active:bg-black/[0.04] transition-colors">
+                    <button type="button"
+                            class="w-full h-full px-2 py-3 flex flex-col items-center justify-center focus:outline-none cursor-pointer"
+                            data-action="click->inventory-calendar#openOccupancyDetails"
+                            data-date="<%= date %>">
+                      <span class="text-xs sm:text-sm tabular-nums font-bold leading-none <%= text_color %>"><%= rate_text %></span>
+                      <span class="text-[10px] text-slate-500 tabular-nums mt-1 font-semibold leading-none"><%= total_sold %>/<%= total_capacity %></span>
+                    </button>
+                  </td>
+                <% end %>
+              </tr>
             <% else %>
               <tr>
                 <td colspan="<%= @calendar.dates.count + 1 %>" class="px-6 py-16 text-center text-sm font-semibold text-slate-500">
@@ -356,6 +675,25 @@
         </table>
       </div>
     </section>
+
+    <p class="mt-3 text-center text-xs text-slate-400">
+      Click any rate to edit inline · OTA channel rates are synced automatically and read-only
+    </p>
+
+    <!-- Shared tooltip for locked OTA availability cells -->
+    <div data-inventory-calendar-target="lockTip" class="hidden w-72 rounded-xl border border-slate-200 bg-white p-4 shadow-xl">
+      <div class="flex items-start gap-2.5">
+        <%= cached_icon "lock", class: "size-4 text-slate-400 shrink-0 mt-0.5" %>
+        <div class="flex-1">
+          <p class="text-xs font-bold text-slate-900">Managed via Availability Rules</p>
+          <p class="mt-1 text-[11px] text-slate-500 leading-relaxed">OTA-specific stop sells and allotments are configured in Availability Rules.</p>
+          <%= link_to "Go to Availability Rules", hotel_inventory_index_path(current_hotel, tab: "channels", subtab: "availability_rules"), class: "mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-700", target: "_blank" %>
+        </div>
+        <button type="button" data-action="click->inventory-calendar#hideLockTip" class="shrink-0 rounded-md p-0.5 text-slate-300 hover:bg-slate-100 hover:text-slate-500" aria-label="Close">
+          <%= cached_icon "x", class: "size-3.5", stroke_width: 2.5 %>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Panel: Advanced Pricing -->
@@ -401,5 +739,10 @@
         <%= render "availability_override" %>
       </div>
     </div>
+  </div>
+
+  <!-- Panel: Channels & OTAs -->
+  <div id="inventory-channels-panel" data-tabs-target="panel" data-tab-panel="channels" class="<%= active_tab == 'channels' ? 'space-y-6' : 'hidden space-y-6' %>" role="tabpanel" data-testid="inventory-channels-panel">
+    <%= render "channels_and_otas" %>
   </div>
 </div>

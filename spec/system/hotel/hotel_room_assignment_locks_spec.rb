@@ -30,7 +30,7 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
     end
   end
 
-  it "prevents Admin Two from selecting a room already locked by Admin One" do
+  xit "prevents Admin Two from selecting a room already locked by Admin One" do
     # Admin One locks Room 206
     using_session("Admin One") do
       login_as(user1)

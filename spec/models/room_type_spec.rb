@@ -16,4 +16,17 @@ RSpec.describe RoomType, type: :model do
     it { is_expected.to validate_presence_of(:base_price) }
     it { is_expected.to validate_numericality_of(:base_price).is_greater_than_or_equal_to(0) }
   end
+
+  describe 'scopes' do
+    describe '.unassigned' do
+      let!(:hotel) { create(:hotel) }
+      let!(:grouped_room_type) { create(:room_type, hotel: hotel, room_group: create(:room_group, hotel: hotel)) }
+      let!(:ungrouped_room_type) { create(:room_type, hotel: hotel, room_group: nil) }
+
+      it 'returns only unassigned room types' do
+        expect(described_class.unassigned).to include(ungrouped_room_type)
+        expect(described_class.unassigned).not_to include(grouped_room_type)
+      end
+    end
+  end
 end

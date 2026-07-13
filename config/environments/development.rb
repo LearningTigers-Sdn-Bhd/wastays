@@ -80,4 +80,12 @@ Rails.application.configure do
 
   config.hosts << "wastays.jesseltonpixel.com"
   config.hosts << /.*\.wastays\.com/
+
+  # Enable Bullet N+1 query detection in development
+  config.after_initialize do
+    Bullet.enable = true
+    Bullet.bullet_logger = true
+    Bullet.rails_logger = true # Logs warnings to log/development.log
+    Bullet.console = true      # Outputs warnings directly to browser console
+  end
 end

@@ -9,6 +9,10 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
   def index
     @all_room_types = RoomTypesQuery.new(@hotel.room_types).call(params)
     @room_types = @all_room_types.page(params[:page]).per(25)
+
+    @room_groups = @hotel.room_groups.order(:name)
+    @unassigned_count = @hotel.room_types.unassigned.count
+    @active_group_id = params[:room_group_id]
   end
 
   def new
@@ -46,10 +50,12 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
   end
 
   def destroy
-    if @room_type.destroy
+    result = HotelPortal::RoomTypes::DestroyRoomType.new(room_type: @room_type).call
+
+    if result.success?
       redirect_to hotel_room_types_path(@hotel), notice: "Room type deleted successfully."
     else
-      redirect_to hotel_room_types_path(@hotel), alert: "Cannot delete room type: #{@room_type.errors.full_messages.to_sentence}"
+      redirect_to hotel_room_types_path(@hotel), alert: "Cannot delete room type: #{result.errors.full_messages.to_sentence}"
     end
   end
 
@@ -103,6 +109,6 @@ class HotelPortal::RoomTypesController < HotelPortal::BaseController
   end
 
   def room_type_params
-    params.require(:room_type).permit(:name, :description, :max_adults, :max_children, :quantity, :base_price, :room_number_mode, :smoking_allowed, :pets_allowed, photos: [], room_numbers: [], amenities: [])
+    params.require(:room_type).permit(:name, :description, :max_adults, :max_children, :quantity, :base_price, :room_number_mode, :smoking_allowed, :pets_allowed, :room_group_id, photos: [], room_numbers: [], amenities: [])
   end
 end

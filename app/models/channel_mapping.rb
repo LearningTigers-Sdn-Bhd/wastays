@@ -4,7 +4,7 @@ class ChannelMapping < ApplicationRecord
   validates :provider, presence: true
   validates :external_id, presence: true
   validates :provider, uniqueness: { scope: [ :mappable_type, :mappable_id ] }
-  validates :external_id, uniqueness: { scope: :provider }
+  validates :external_id, uniqueness: { scope: :provider }, unless: -> { external_id == "pending" }
 
   PROVIDERS = %w[channex].freeze
 end

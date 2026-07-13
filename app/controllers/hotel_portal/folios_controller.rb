@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# LEGACY: frozen pending booking-control-panel migration. Do not add features here.
+
 module HotelPortal
   class FoliosController < BaseController
     include OffcanvasTransactionCompletion
@@ -15,21 +17,10 @@ module HotelPortal
     end
 
     def show
-      @booking = current_hotel.bookings
-        .includes(
-          { booking_rooms: :room_type },
-          :payment_transactions,
-          :refund_request,
-          booking_folios: [ :ar_invoice, { folio_transactions: [ :user, :transaction_code ] }, :folio_forecasted_charges, { hotel_corporate_account: :corporate_account } ],
-          folio_routing_rules: [ :transaction_code, :target_folio, :created_by, :updated_by ],
-          folio_operation_logs: [ :actor, :source_folio, :target_folio, :source_transaction, :target_transaction ]
-        )
-        .find(params[:booking_id])
-      @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-      @folio_show = HotelPortal::Folios::ShowPresenter.new(booking: @booking, hotel: current_hotel, user: current_user, active_folio_id: params[:active_folio_id], active_tab: params[:tab])
-      set_navigation_context
-      set_breadcrumbs
-      render "hotel_portal/folios/show/index"
+      booking = current_hotel.bookings.find(params[:booking_id])
+      query = { tab: "folio_operations" }
+      query[:folio_id] = params[:active_folio_id] if params[:active_folio_id].present?
+      redirect_to hotel_booking_control_panel_path(current_hotel, booking, query), status: :moved_permanently
     end
 
     def new_window
@@ -72,12 +63,12 @@ module HotelPortal
 
       if result.success?
         respond_with_offcanvas_completion(
-          hotel_folio_path(current_hotel, booking, active_folio_id: result.folio.id, **folio_redirect_state(tab: "ledger")),
+          hotel_booking_control_panel_path(current_hotel, booking, tab: "folio_operations", folio_id: result.folio.id),
           notice: "Folio window created."
         )
       else
         respond_with_offcanvas_completion(
-          hotel_folio_path(current_hotel, booking, **folio_redirect_state(tab: "ledger")),
+          hotel_booking_control_panel_path(current_hotel, booking, tab: "folio_operations"),
           alert: result.error
         )
       end
@@ -94,7 +85,7 @@ module HotelPortal
       )
 
       respond_with_offcanvas_completion(
-        hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_redirect_state(tab: "ledger")),
+        hotel_booking_control_panel_path(current_hotel, booking, tab: "folio_operations", folio_id: folio.id),
         **(result.success? ? { notice: "Folio window updated." } : { alert: result.error })
       )
     end
@@ -110,7 +101,7 @@ module HotelPortal
         settlement_method: folio_window_params[:settlement_method]
       )
 
-      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_redirect_state(tab: "ledger")),
+      redirect_to hotel_booking_control_panel_path(current_hotel, booking, tab: "folio_operations", folio_id: folio.id),
         result.success? ? { notice: "Folio window closed." } : { alert: result.error }
     end
 
@@ -120,30 +111,14 @@ module HotelPortal
       folio = booking.booking_folios.find(params[:folio_id])
       result = ::Folios::ReopenFolio.call(folio: folio, user: current_user, reason: folio_window_params[:reason])
 
-      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: folio.id, **folio_redirect_state(tab: "ledger")),
+      redirect_to hotel_booking_control_panel_path(current_hotel, booking, tab: "folio_operations", folio_id: folio.id),
         result.success? ? { notice: "Folio window reopened." } : { alert: result.error }
-    end
-
-    def move_forecast
-      authorize_manage_folio_movements!
-      booking = current_hotel.bookings.includes(:booking_folios).find(params[:booking_id])
-      forecast = FolioForecastedCharge.joins(:booking_folio).where(booking_folios: { booking_id: booking.id, hotel_id: current_hotel.id }).find(params[:forecast_id])
-      target_folio = booking.booking_folios.find(folio_operation_params[:target_folio_id])
-      result = ::Folios::MoveForecast.call(
-        forecast: forecast,
-        target_folio: target_folio,
-        user: current_user,
-        reason: folio_operation_params[:reason]
-      )
-
-      redirect_to hotel_folio_path(current_hotel, booking, active_folio_id: (result.success? ? target_folio.id : forecast.booking_folio_id), **folio_redirect_state(tab: "ledger")),
-        result.success? ? { notice: "Upcoming charge moved." } : { alert: result.error }
     end
 
     def invoice
       @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions, booking_rooms: :room_type).find(params[:booking_id])
       unless @booking.booking_folio&.status == "closed"
-        return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Folio invoice is only available for checked-out bookings with a closed folio."
+        return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations"), alert: "Folio invoice is only available for checked-out bookings with a closed folio."
       end
 
       send_data ::Reports::Bookings::GenerateInvoice.new(booking: @booking, printed_by: current_user&.name).generate,
@@ -154,7 +129,7 @@ module HotelPortal
 
     def ledger
       @booking = current_hotel.bookings.includes(:booking_rooms, booking_folios: [ { folio_transactions: :transaction_code }, { hotel_corporate_account: :corporate_account } ]).find(params[:booking_id])
-      return redirect_to hotel_booking_path(current_hotel, @booking), alert: "Booking has no folio." unless @booking.booking_folio
+      return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations"), alert: "Booking has no folio." unless @booking.booking_folio
 
       ledger_report = ::Reports::Bookings::GenerateFolioLedger.new(booking: @booking, printed_by: current_user&.name)
       filename = "folio-ledger-#{@booking.folio_account_reference_display.presence || @booking.confirmation_token}"
@@ -178,36 +153,6 @@ module HotelPortal
 
     private
 
-    def set_navigation_context
-      if params[:origin] == "folios"
-        @folio_origin = "folios"
-        @folio_back_path = hotel_folios_path(current_hotel)
-        @folio_back_label = "Back to All Folios"
-      else
-        @folio_back_path = hotel_booking_path(current_hotel, @booking)
-        @folio_back_label = "Back to Booking"
-      end
-    end
-
-    def set_breadcrumbs
-      if @folio_origin == "folios"
-        override_breadcrumbs(
-          { label: "Finance" },
-          { label: "Folios", path: hotel_folios_path(current_hotel) },
-          { label: @booking.folio_account_reference_display.presence || @booking.confirmation_token, path: hotel_folio_path(current_hotel, @booking, origin: "folios") },
-          { label: @folio_show.active_tab_label, tab_label: true }
-        )
-      else
-        override_breadcrumbs(
-          { label: "Operations" },
-          { label: "Bookings", path: hotel_bookings_path(current_hotel) },
-          { label: @booking.confirmation_token, path: hotel_booking_path(current_hotel, @booking) },
-          { label: "Folio Ledger", path: hotel_folio_path(current_hotel, @booking) },
-          { label: @folio_show.active_tab_label, tab_label: true }
-        )
-      end
-    end
-
     def authorize_view_bookings!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_bookings", hotel: current_hotel)
     end
@@ -215,12 +160,6 @@ module HotelPortal
     def authorize_manage_folio_windows!
       allowed = current_user.respond_to?(:superadmin?) && current_user.superadmin? ||
         current_user.has_permission?("manage_folio_windows", hotel: current_hotel)
-      raise Pundit::NotAuthorizedError unless allowed
-    end
-
-    def authorize_manage_folio_movements!
-      allowed = current_user.respond_to?(:superadmin?) && current_user.superadmin? ||
-        current_user.has_permission?("manage_folio_movements", hotel: current_hotel)
       raise Pundit::NotAuthorizedError unless allowed
     end
 
@@ -233,10 +172,6 @@ module HotelPortal
         .active
         .includes(corporate_account: :users)
         .order(created_at: :desc)
-    end
-
-    def folio_operation_params
-      params.fetch(:folio_operation, {}).permit(:target_folio_id, :reason)
     end
 
     def folio_origin_params

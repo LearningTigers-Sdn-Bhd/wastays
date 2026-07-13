@@ -22,7 +22,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
     it "marks a guest no-show, applies charge, then reinstates them the next day with catch-up charges" do
       # Guest booked for 2 nights at 100/night
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 2.days, total_amount: 200.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0, quantity: 1, room_number: "101")
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0, room_number: "101")
 
       # Assign inventory explicitly (simulating pre-assigned room)
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")
@@ -65,7 +65,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
     it "truncates a long stay and settles the folio correctly" do
       # Guest booked for 5 nights
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 5.days, total_amount: 500.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 500.0, quantity: 1, nightly_rate_snapshot: {
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 500.0, nightly_rate_snapshot: {
         business_date.iso8601 => { "price" => 100.0 },
         (business_date + 1.day).iso8601 => { "price" => 100.0 },
         (business_date + 2.days).iso8601 => { "price" => 100.0 },
@@ -116,7 +116,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
     it "blocks checkout for unpaid balance, forcing staff to write-off before closure" do
       # 1 Night stay
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 1.day, total_amount: 100.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0)
 
       booking.transition_status_to!("checked_in", event: "check_in")
       folio = Folios::InitializeForBooking.call(booking: booking, user: user)
@@ -155,7 +155,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       # 1. Day 1: Guest booked into a Standard Room at 100/night
       check_in = business_date
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: check_in, check_out: check_in + 2.days, total_amount: 200.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0, quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0)
 
       # 2. Night Audit Day 1: No Show
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
@@ -205,7 +205,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
     it "blocks checkout for credit balance and requires a refund" do
       # 1. Guest pays 500 booking payment for a long stay
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 5.days, total_amount: 500.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 500.0, quantity: 1, nightly_rate_snapshot: {
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 500.0, nightly_rate_snapshot: {
         business_date.iso8601 => { "price" => 100.0 },
         (business_date + 1.day).iso8601 => { "price" => 100.0 },
         (business_date + 2.days).iso8601 => { "price" => 100.0 },
@@ -258,7 +258,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
   describe "6. Mid-Audit Crash & Recovery (Idempotency)" do
     it "ensures night audit can be safely resumed without double-charging" do
       booking = create(:booking, hotel: hotel, status: "checked_in", check_in: business_date, check_out: business_date + 2.days, total_amount: 200.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0, quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0)
       folio = Folios::InitializeForBooking.call(booking: booking, user: user)
 
       audit = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
@@ -287,7 +287,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
   describe "7. Late Checkout Lifecycle" do
     it "transitions booking to review_due_out via housekeeping and applies charge" do
       booking = create(:booking, hotel: hotel, status: "checked_in", check_in: business_date, check_out: business_date + 1.day, total_amount: 100.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, quantity: 1, room_number: "101")
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, room_number: "101")
       folio = Folios::InitializeForBooking.call(booking: booking, user: user)
       room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
@@ -313,7 +313,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
     it "truncates stay and applies charge in one service call" do
       # 3 night stay @ 100/night
       booking = create(:booking, hotel: hotel, status: "checked_in", check_in: business_date, check_out: business_date + 3.days, total_amount: 300.0)
-      create(:booking_room, booking: booking, room_type: room_type, subtotal: 300.0, quantity: 1, nightly_rate_snapshot: {
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 300.0, nightly_rate_snapshot: {
         business_date.iso8601 => { "price" => 100.0 },
         (business_date + 1.day).iso8601 => { "price" => 100.0 },
         (business_date + 2.days).iso8601 => { "price" => 100.0 }

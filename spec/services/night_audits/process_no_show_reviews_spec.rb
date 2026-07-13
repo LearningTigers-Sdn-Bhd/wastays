@@ -29,7 +29,7 @@ RSpec.describe NightAudits::ProcessNoShowReviews do
       check_out: business_date + 3.days,
       tax_lines: []
     )
-    create(:booking_room, booking: booking, room_type: room_type, subtotal: 300.0, quantity: 1, room_number: "101")
+    create(:booking_room, booking: booking, room_type: room_type, subtotal: 300.0, room_number: "101")
     booking
   end
 

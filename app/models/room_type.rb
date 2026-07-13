@@ -3,9 +3,15 @@
 class RoomType < ApplicationRecord
   include HotelScopable
 
+  belongs_to :room_group, optional: true
+
+  scope :unassigned, -> { where(room_group_id: nil) }
+
   has_many :room_rates, dependent: :destroy
+  has_many :channel_room_rates, dependent: :destroy
   has_many :room_inventories, dependent: :destroy
-  has_many :rate_plans, dependent: :destroy
+  has_many :room_type_rate_plans, dependent: :destroy
+  has_many :rate_plans, through: :room_type_rate_plans
   has_many :inventory_audit_logs, dependent: :nullify
   has_many :booking_rooms, dependent: :restrict_with_error
   has_many :booking_quote_items, dependent: :restrict_with_error
@@ -16,10 +22,7 @@ class RoomType < ApplicationRecord
   MAX_PHOTOS = 10
 
   before_validation :set_default_room_number_mode, on: :create
-
   after_create :ensure_standard_rate_plan
-  after_commit :sync_with_channel_manager, on: [ :create, :update ]
-  after_destroy_commit :delete_from_channel_manager, if: :synced_with_channel_manager?
 
   validates :name, presence: true
   validates :quantity, presence: true, numericality: { greater_than_or_equal_to: 0 }
@@ -30,6 +33,10 @@ class RoomType < ApplicationRecord
 
   def room_numbers
     Array(super).flatten.compact.map(&:to_s).reject(&:blank?)
+  end
+
+  def max_capacity
+    max_adults.to_i + max_children.to_i
   end
 
   def attach_photos_with_limit(photo_files)
@@ -46,22 +53,16 @@ class RoomType < ApplicationRecord
     }
   end
 
-  private
-
-  def ensure_standard_rate_plan
-    return if rate_plans.exists?
-
-    rate_plans.create!(
-      name: "Standard Rate",
-      sell_mode: "per_room",
-      currency: hotel.default_currency || "MYR"
-    )
+  def self.allowed_amenity_slugs
+    @allowed_amenity_slugs ||= Amenity.room.pluck(:slug)
   end
+
+  private
 
   def amenities_must_be_from_list
     return if amenities.blank?
 
-    allowed_ids = Amenity.room.pluck(:slug)
+    allowed_ids = self.class.allowed_amenity_slugs
     invalid_amenities = amenities - allowed_ids
 
     if invalid_amenities.any?
@@ -71,6 +72,21 @@ class RoomType < ApplicationRecord
 
   def set_default_room_number_mode
     self.room_number_mode = room_number_mode.presence || "range"
+  end
+
+  def ensure_standard_rate_plan
+    return if rate_plans.exists?
+
+    # Create a dedicated standard rate plan for this room type.
+    # Each room type must have its own plan; sharing one across room
+    # types would make rate updates on one room type bleed into others.
+    rate_plan = hotel.rate_plans.create!(
+      name: "Standard Rate",
+      sell_mode: "per_room",
+      currency: hotel.default_currency || "MYR"
+    )
+
+    room_type_rate_plans.create!(rate_plan: rate_plan)
   end
 
   def sync_with_channel_manager
@@ -84,6 +100,6 @@ class RoomType < ApplicationRecord
   end
 
   def synced_with_channel_manager?
-    hotel.preferred_channel_manager.present? && channel_mapping.present? && channel_mapping.external_id != "pending"
+    hotel.preferred_channel_manager.present? && channel_mapping.present? && !channel_mapping.external_id.to_s.start_with?("pending")
   end
 end

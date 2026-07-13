@@ -14,7 +14,7 @@ module HotelPortal
 
     def bulk_update
       roles_params = params.require(:roles)
-      @roles = current_hotel.account.roles.where(id: roles_params.keys)
+      @roles = current_hotel.account.roles.includes(:permissions).where(id: roles_params.keys)
       load_permissions
 
       Role.transaction do

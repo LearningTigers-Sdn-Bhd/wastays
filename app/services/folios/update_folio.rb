@@ -88,8 +88,9 @@ module Folios
       @folio.errors.add(:base, "Reason for setting primary folio can't be blank.")
       raise ActiveRecord::RecordInvalid.new(@folio) if reason.blank?
 
-      previous_primary = @booking.booking_folios.where(is_primary: true).where.not(id: @folio.id).first
-      @booking.booking_folios.where.not(id: @folio.id).update_all(is_primary: false, updated_at: Time.current)
+      scope = @booking.booking_folios.where(booking_room_id: @folio.booking_room_id)
+      previous_primary = scope.where(is_primary: true).where.not(id: @folio.id).first
+      scope.where.not(id: @folio.id).update_all(is_primary: false, updated_at: Time.current)
       @folio.update!(is_primary: true)
 
       FolioOperationLog.create!(
@@ -103,7 +104,8 @@ module Folios
         reason: reason,
         metadata: {
           previous_primary_folio_id: previous_primary&.id,
-          new_primary_folio_id: @folio.id
+          new_primary_folio_id: @folio.id,
+          booking_room_id: @folio.booking_room_id
         }
       )
     end

@@ -83,6 +83,28 @@ RSpec.describe Booking, type: :model do
     end
   end
 
+  describe "#group_booking?" do
+    let(:booking) { create(:booking) }
+    let(:room_type) { create(:room_type, hotel: booking.hotel) }
+
+    it "is false without booking rooms" do
+      expect(booking).not_to be_group_booking
+    end
+
+    it "is false for one booked room" do
+      create(:booking_room, booking: booking, room_type: room_type)
+
+      expect(booking.reload).not_to be_group_booking
+    end
+
+    it "is true for multiple booking room rows" do
+      create(:booking_room, booking: booking, room_type: room_type)
+      create(:booking_room, booking: booking, room_type: room_type)
+
+      expect(booking.reload).to be_group_booking
+    end
+  end
+
   describe "status lifecycle" do
     def expect_transition(from:, to:, event:)
       booking = create(

@@ -21,7 +21,7 @@ module ChannelManagers
     private
 
     def mapping_for(mappable)
-      mappable.channel_mapping || mappable.create_channel_mapping(provider: provider_name, external_id: "pending")
+      mappable.channel_mapping || mappable.create_channel_mapping(provider: provider_name, external_id: "pending-#{mappable.class.name}-#{mappable.id}")
     end
 
     def provider_name
