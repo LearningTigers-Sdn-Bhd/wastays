@@ -6,6 +6,7 @@ RSpec.describe PanelsUI::DropdownMenu, type: :component do
   def render_menu(placement: :bottom_start, class_name: nil)
     render_inline(described_class.new(id: "actions", placement: placement, class: class_name)) do |menu|
       menu.with_trigger(variant: :secondary, size: :sm, class: "btn") { "Actions" }
+      menu.with_header { "Booking actions" }
       menu.with_item(href: "/edit", variant: :primary) { "Edit" }
       menu.with_checkbox(name: "columns[]", value: "rates", checked: true) { "Rates" }
       menu.with_radio_group(name: "sort", label: "Sort by") do |group|
@@ -29,6 +30,20 @@ RSpec.describe PanelsUI::DropdownMenu, type: :component do
     expect(page).to have_button("Actions")
     expect(page).to have_css("button#actions-trigger.panel-button[aria-haspopup='menu'][aria-expanded='false'][aria-controls='actions-menu'][data-variant='secondary'][data-size='sm']")
     expect(page).to have_css("#actions-menu[role='menu'][popover='manual'][aria-labelledby='actions-trigger']")
+    expect(page).to have_css("#actions-menu .dropdown-menu__header[role='presentation']", text: "Booking actions")
+  end
+
+  it "renders non-GET entries as form buttons while keeping GET entries as anchors" do
+    render_inline(described_class.new(id: "account")) do |menu|
+      menu.with_trigger { "Account" }
+      menu.with_item(href: "/profile") { "Profile" }
+      menu.with_item(href: "/logout", method: :delete, variant: :danger) { "Sign out" }
+    end
+
+    expect(page).to have_css("a[href='/profile'][role='menuitem']", text: "Profile")
+    expect(page).to have_css("form.contents[action='/logout'][method='post']")
+    expect(page).to have_css("form.contents input[name='_method'][value='delete']", visible: :all)
+    expect(page).to have_css("form.contents button[type='submit'][role='menuitem'][data-variant='danger']", text: "Sign out")
   end
 
   it "renders command, checkbox, and radio items with native form inputs" do

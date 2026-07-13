@@ -1,0 +1,45 @@
+<section aria-labelledby="navbar-preview-heading" class="border-t border-border pt-8">
+  <h2 id="navbar-preview-heading" class="text-lg font-semibold text-foreground">Navbar &amp; profile menu</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    The authenticated portal shell header, composed with the canonical dropdown menu.
+  </p>
+
+  <div class="mt-6 space-y-6 overflow-hidden rounded-xl border border-border bg-background">
+    <%= render PanelsUI::Navbar.new(key: "preview-default", sticky: false) do |navbar| %>
+      <% navbar.with_brand do %>
+        <a href="#navbar-preview-heading" class="flex items-center" aria-label="WAStays">
+          <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>
+        </a>
+      <% end %>
+      <% navbar.with_actions do %>
+        <a href="#help" class="panel-navbar__action">
+          <%= cached_icon "circle-question-mark", class: "size-4" %>
+          Help
+        </a>
+      <% end %>
+      <% navbar.with_profile do %>
+        <%= render PanelsUI::ProfileMenu.new(
+              id: "preview-profile",
+              display_name: "Aisha Rahman",
+              secondary_text: "aisha@wastays.com",
+              trigger_label: "Open account menu"
+            ) do |menu| %>
+          <% menu.with_item(label: "My account", href: "#account", icon: "user") %>
+          <% menu.with_item(label: "Settings", href: "#settings", icon: "settings") %>
+          <% menu.with_sign_out(label: "Sign out", path: "#sign-out") %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <div class="px-4 pb-4">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Navigation disabled</p>
+      <div class="overflow-hidden rounded-lg border border-border">
+        <%= render PanelsUI::Navbar.new(key: "preview-reduced", navigation: false, sticky: false) do |navbar| %>
+          <% navbar.with_brand do %>
+            <a href="#navbar-preview-heading" class="text-sm font-semibold text-sidebar-foreground">WAStays</a>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</section>

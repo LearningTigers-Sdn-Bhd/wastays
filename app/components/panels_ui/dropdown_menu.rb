@@ -9,8 +9,10 @@ module PanelsUI
     VARIANTS = %i[default primary info success warning danger].freeze
 
     class Entry < PanelsUI::BaseComponent
-      def initialize(href: nil, variant: :default, disabled: false, class: nil, **attributes)
+      def initialize(href: nil, method: nil, form: {}, variant: :default, disabled: false, class: nil, **attributes)
         @href = href
+        @method = method&.to_sym
+        @form = form
         @variant = VARIANTS.include?(variant) ? variant : :default
         @disabled = disabled
         @class = binding.local_variable_get(:class)
@@ -18,10 +20,26 @@ module PanelsUI
       end
 
       def call
+        return method_button if method_button?
+
         tag.public_send(tag_name, content, **item_attributes)
       end
 
       private
+
+      def method_button?
+        @href.present? && @method.present? && @method != :get
+      end
+
+      def method_button
+        helpers.button_to(
+          @href,
+          **item_attributes.merge(
+            method: @method,
+            form: { class: "contents" }.merge(@form)
+          )
+        ) { content }
+      end
 
       def tag_name = @href.present? ? :a : :button
 
@@ -30,7 +48,7 @@ module PanelsUI
         data = attributes.delete(:data) || {}
         aria = attributes.delete(:aria) || {}
         attributes.merge(
-          href: @href,
+          href: (method_button? ? nil : @href),
           type: (@href.present? ? nil : "button"),
           role: "menuitem",
           tabindex: "-1",
@@ -269,6 +287,8 @@ module PanelsUI
     renders_one :trigger, lambda { |**args|
       Trigger.new(id: trigger_id, menu_id: menu_id, **args)
     }
+
+    renders_one :header
 
     renders_many :entries, types: {
       item: Entry,

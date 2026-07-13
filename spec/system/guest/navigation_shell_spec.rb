@@ -24,6 +24,9 @@ RSpec.describe "Guest navigation shell", type: :system do
     expect(page).to have_css(
       "#guest-sidebar[data-turbo-permanent][data-controller~='panels-ui--sidebar'][data-panels-ui--sidebar-key-value='guest']"
     )
+    expect(page).to have_css("header.panel-navbar[data-sticky='true']")
+    expect(page).to have_css("#guest-profile[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_css("button[command='show-modal'][commandfor='guest-sidebar-mobile']")
 
     within("#guest-sidebar-mobile", visible: :all) do
       expect(page).to have_link("Dashboard", href: guest_dashboard_path, visible: :all)

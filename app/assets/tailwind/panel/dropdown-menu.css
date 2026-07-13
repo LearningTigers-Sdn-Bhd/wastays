@@ -32,6 +32,11 @@
     min-width: 11rem;
   }
 
+  .dropdown-menu__header {
+    margin: -0.375rem -0.375rem 0.375rem;
+    border-bottom: 1px solid var(--border);
+  }
+
   .dropdown-menu__item {
     @apply flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm font-medium;
     color: var(--card-foreground);

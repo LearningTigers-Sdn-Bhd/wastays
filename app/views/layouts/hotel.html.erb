@@ -21,52 +21,36 @@
     <!-- Preline CMS-style layout: flex column (header + body row) -->
     <div class="flex flex-col h-screen h-dvh min-h-screen min-h-dvh bg-background">
 
-      <!-- ═══ Top Navbar ═══ -->
-      <header class="sticky top-0 z-[60] w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border">
-        <div class="flex items-center h-14 px-4 gap-x-3">
-
-          <!-- Mobile hamburger -->
-          <% unless locked_hotel_portal_shell? %>
-            <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-muted-foreground hover:bg-muted transition-colors" command="show-modal" commandfor="hotel-sidebar-mobile" aria-label="Toggle navigation">
-              <%= cached_icon "menu", class: "size-4" %>
-            </button>
-            <button type="button" class="hidden lg:inline-flex shrink-0 justify-center items-center size-8 rounded-lg text-muted-foreground hover:bg-muted transition-colors" data-controller="panels-ui--sidebar-toggle" data-panels-ui--sidebar-toggle-key-value="hotel" data-action="click->panels-ui--sidebar-toggle#toggleDesktop" aria-label="Collapse sidebar">
-              <%= cached_icon "panel-left-close", class: "size-4" %>
-            </button>
-          <% end %>
-
-          <!-- Brand -->
-          <a href="<%= current_hotel ? hotel_dashboard_path(current_hotel) : '#' %>" class="shrink-0 flex items-center" aria-label="WAStays">
+      <%= render PanelsUI::Navbar.new(key: "hotel", navigation: !locked_hotel_portal_shell?) do |navbar| %>
+        <% navbar.with_brand do %>
+          <a href="<%= current_hotel ? hotel_dashboard_path(current_hotel) : '#' %>" class="flex items-center" aria-label="WAStays">
             <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>
           </a>
-
-          <!-- Spacer -->
-          <div class="flex-1"></div>
-
-          <!-- Right Actions -->
-          <div class="flex items-center gap-x-1">
-            <% if content_for?(:header_actions) %>
-              <%= yield :header_actions %>
+        <% end %>
+        <% navbar.with_actions do %>
+          <% unless locked_hotel_portal_shell? %>
+            <%= render PanelsUI::CommandPalette.new(endpoint: hotel_global_search_index_path(current_hotel), placeholder: "Search dashboard pages...") %>
+          <% end %>
+          <a class="panel-navbar__action" href="<%= help_center_path %>">
+            <%= cached_icon "circle-question-mark", class: "size-4" %>
+            Help
+          </a>
+        <% end %>
+        <% navbar.with_profile do %>
+          <%= render PanelsUI::ProfileMenu.new(
+                id: "hotel-profile",
+                display_name: current_user.name || "Hotel Admin",
+                secondary_text: current_user.email,
+                trigger_label: "Open account menu"
+              ) do |menu| %>
+            <% menu.with_item(label: "My account", href: edit_hotel_user_profile_path(current_hotel), icon: "user") %>
+            <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) || current_user.has_permission?("manage_account") %>
+              <% menu.with_item(label: "Settings", href: hotel_general_settings_path(current_hotel), icon: "settings") %>
             <% end %>
-
-            <% unless locked_hotel_portal_shell? %>
-              <%= render PanelsUI::CommandPalette.new(endpoint: hotel_global_search_index_path(current_hotel), placeholder: "Search dashboard pages...") %>
-            <% end %>
-
-            <!-- Help Link -->
-            <a class="navbar-link hidden sm:flex" href="<%= help_center_path %>">
-              <%= cached_icon "circle-question-mark", class: "size-4" %>
-              Help
-            </a>
-
-            <!-- Divider -->
-            <div class="w-px h-5 bg-border mx-1 hidden sm:block"></div>
-
-            <!-- Profile Dropdown -->
-            <%= render "shared/navigation/hotel_profile_dropdown" %>
-            </div>
-            </div>
-            </header>
+            <% menu.with_sign_out(label: "Sign out", path: logout_path) %>
+          <% end %>
+        <% end %>
+      <% end %>
 
       <!-- ═══ Body: Sidebar + Content ═══ -->
       <div class="flex flex-1 overflow-hidden">
@@ -106,9 +90,6 @@
       </div>
     </div>
 
-    <% unless locked_hotel_portal_shell? %>
-      <%= render 'shared/navigation/hotel_mobile_nav' %>
-    <% end %>
     <%= render 'shared/turbo_confirm' %>
     <%= render 'shared/room_lock_alert' %>
     <%= render 'shared/offcanvas_drawer' %>

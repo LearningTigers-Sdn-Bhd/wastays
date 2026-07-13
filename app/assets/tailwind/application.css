@@ -30,6 +30,7 @@
 @import "./panel/table.css";
 @import "./panel/floating.css";
 @import "./panel/dropdown-menu.css";
+@import "./panel/profile-menu.css";
 @import "./panel/tooltip.css";
 @import "./panel/popover.css";
 @import "./panel/toast.css";
@@ -38,6 +39,7 @@
 @import "./panel/collapsible.css";
 @import "./panel/scroll-area.css";
 @import "./panel/sidebar.css";
+@import "./panel/navbar.css";
 
 /* ─── Role tokens (shadcn-style naming) ───
    Values come from public/theme.css (:root) and panel/theme.css
@@ -564,11 +566,6 @@
 
   .sidebar-tooltip {
     @apply fixed z-[100] pointer-events-none whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg;
-  }
-
-  /* ─── Navbar Items (Preline CMS Style) ─── */
-  .navbar-link {
-    @apply flex items-center gap-x-1.5 py-1.5 px-2.5 text-sm text-navbar-nav-foreground rounded-lg hover:bg-navbar-nav-hover transition-colors duration-150;
   }
 
   /* ─── Input Styles (legacy) ───

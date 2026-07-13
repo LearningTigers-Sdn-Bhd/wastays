@@ -49,8 +49,24 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_link('Summary', href: hotel_reports_path(hotel), visible: :all)
     expect(page).to have_link('Night Audit', href: hotel_night_audits_path(hotel), visible: :all)
     expect(page).to have_css('#toast-viewport[data-controller="toast"]')
+    expect(page).to have_css("header.panel-navbar[data-sticky='true']")
+    expect(page).to have_css("#hotel-profile[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_css("button[command='show-modal'][commandfor='hotel-sidebar-mobile']")
+    expect(page).to have_no_css("nav[aria-label='Mobile navigation']", visible: :all)
     expect(page).to have_css("#hotel-sidebar a.panel-sidebar__link[data-sidebar-route][aria-current='page']", text: "Dashboard")
     expect(page).to have_css("#hotel-sidebar button.panel-sidebar__group-trigger", text: "Financial", visible: :all)
     expect(page).to have_no_css("#hotel-sidebar button.panel-sidebar__group-trigger[aria-current='page']", visible: :all)
+  end
+
+  it "renders the reduced Navbar while the hotel shell is locked" do
+    hotel.update!(status: "pending_review")
+
+    visit hotel_dashboard_path(hotel)
+
+    expect(page).to have_css("header.panel-navbar")
+    expect(page).to have_css("#hotel-profile[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_no_css("#hotel-sidebar", visible: :all)
+    expect(page).to have_no_css("button[command='show-modal'][commandfor='hotel-sidebar-mobile']", visible: :all)
+    expect(page).to have_no_css("[data-controller='panels-ui--sidebar-toggle']", visible: :all)
   end
 end

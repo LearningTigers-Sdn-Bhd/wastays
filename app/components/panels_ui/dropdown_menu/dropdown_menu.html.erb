@@ -14,6 +14,9 @@
        aria-labelledby="<%= trigger_id %>"
        data-panels-ui--dropdown-menu-target="menu"
        data-action="keydown->panels-ui--dropdown-menu#onMenuKeydown click->panels-ui--dropdown-menu#onMenuClick toggle->panels-ui--dropdown-menu#onPopoverToggle">
+    <% if header? %>
+      <div class="dropdown-menu__header" role="presentation"><%= header %></div>
+    <% end %>
     <%= safe_join(entries) %>
   </div>
 </div>

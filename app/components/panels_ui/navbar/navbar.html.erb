@@ -1,0 +1,31 @@
+<%= tag.header(**navbar_attributes) do %>
+  <div class="panel-navbar__inner">
+    <% if navigation? %>
+      <button type="button"
+              class="panel-navbar__navigation-trigger lg:hidden"
+              command="show-modal"
+              commandfor="<%= mobile_sidebar_id %>"
+              aria-label="Open navigation">
+        <%= helpers.app_icon "menu", class: "panel-navbar__icon", aria: { hidden: "true" } %>
+      </button>
+
+      <button type="button"
+              class="panel-navbar__navigation-trigger hidden lg:inline-flex"
+              data-controller="panels-ui--sidebar-toggle"
+              data-panels-ui--sidebar-toggle-key-value="<%= key %>"
+              data-action="click->panels-ui--sidebar-toggle#toggleDesktop"
+              aria-label="Collapse navigation">
+        <%= helpers.app_icon "panel-left-close", class: "panel-navbar__icon", aria: { hidden: "true" } %>
+      </button>
+    <% end %>
+
+    <div class="panel-navbar__brand"><%= brand %></div>
+
+    <% if actions? || profile? %>
+      <div class="panel-navbar__end">
+        <% if actions? %><div class="panel-navbar__actions"><%= actions %></div><% end %>
+        <% if profile? %><div class="panel-navbar__profile"><%= profile %></div><% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
