@@ -72,7 +72,6 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
             extra_pax_charge: 50.0,
             single_supplement: 30.0,
             child_price_multiplier: 0.5,
-            infant_price_multiplier: 0.0,
             room_type_pricing: { room_type.id.to_s => { enabled: "1", pricing_mode: "fixed" } }
           }
         }

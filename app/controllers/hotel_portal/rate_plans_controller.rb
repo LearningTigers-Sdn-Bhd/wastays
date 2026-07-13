@@ -81,7 +81,6 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
       :extra_pax_charge,
       :single_supplement,
       :child_price_multiplier,
-      :infant_price_multiplier,
       rate_plan_age_bands_attributes: [ :id, :min_age, :max_age, :price_multiplier, :label, :position, :_destroy ],
       room_type_pricing: {}
     )

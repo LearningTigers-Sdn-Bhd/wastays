@@ -5,7 +5,6 @@ export default class extends Controller {
   static values = {
     adults: Number,
     children: Number,
-    infants: Number,
     currency: String,
     paxPricingOnly: Boolean,
     childAges: Array
@@ -13,7 +12,7 @@ export default class extends Controller {
 
   connect() {
     this.selections = {} // Format: { roomTypeId: quantity }
-    this.roomData = {} // Format: { roomTypeId: { price, paxPrice, name, maxCapacity, availableQty, singleSupplement, childMultiplier, infantMultiplier } }
+    this.roomData = {} // Format: { roomTypeId: { price, paxPrice, name, maxCapacity, availableQty, singleSupplement, childMultiplier } }
 
     this.initializeRoomData()
     this.updateUI()
@@ -34,7 +33,6 @@ export default class extends Controller {
 
       const singleSupplement = parseFloat(card.dataset.roomSingleSupplement || 0)
       const childMultiplier = parseFloat(card.dataset.roomChildMultiplier || 1)
-      const infantMultiplier = parseFloat(card.dataset.roomInfantMultiplier || 0)
       let ageBands = []
       try {
         ageBands = JSON.parse(card.dataset.roomAgeBands || "[]")
@@ -50,7 +48,6 @@ export default class extends Controller {
         availableQty,
         singleSupplement,
         childMultiplier,
-        infantMultiplier,
         ageBands
       }
       this.selections[id] = 0
@@ -85,7 +82,7 @@ export default class extends Controller {
     }
   }
 
-  distributeGuests(adults, children, infants, selectedRooms, childAges = []) {
+  distributeGuests(adults, children, selectedRooms, childAges = []) {
     const sortedRooms = [...selectedRooms].sort((a, b) => b.maxCapacity - a.maxCapacity)
     const numRooms = sortedRooms.length
     if (adults < numRooms) return null
@@ -96,18 +93,15 @@ export default class extends Controller {
       room: sortedRooms[i],
       adults: 1,
       children: 0,
-      infants: 0,
       childAges: []
     }))
 
     let tempAdults = adults - numRooms
     let tempChildren = children
-    let tempInfants = infants
 
     const guestPool = [
       { key: 'adults', count: tempAdults },
-      { key: 'children', count: tempChildren },
-      { key: 'infants', count: tempInfants }
+      { key: 'children', count: tempChildren }
     ]
 
     for (const pool of guestPool) {
@@ -116,7 +110,7 @@ export default class extends Controller {
 
       for (let i = 0; i < numRooms; i++) {
         const room = occupancies[i].room
-        const currentTotal = occupancies[i].adults + occupancies[i].children + occupancies[i].infants
+        const currentTotal = occupancies[i].adults + occupancies[i].children
         let spaceLeft = room.maxCapacity - currentTotal
 
         let specificLimit = room.maxCapacity
@@ -125,12 +119,9 @@ export default class extends Controller {
         if (pool.key === 'adults') {
           specificLimit = room.maxCapacity
           currentSpecific = occupancies[i].adults
-        } else if (pool.key === 'children') {
-          specificLimit = room.maxCapacity
-          currentSpecific = occupancies[i].children
         } else {
           specificLimit = room.maxCapacity
-          currentSpecific = occupancies[i].infants
+          currentSpecific = occupancies[i].children
         }
 
         const specificSpace = Math.max(specificLimit - currentSpecific, 0)
@@ -223,14 +214,13 @@ export default class extends Controller {
         const occupancies = this.distributeGuests(
           this.adultsValue,
           this.childrenValue,
-          this.infantsValue,
           selectedRoomsList,
           this.hasChildAgesValue ? this.childAgesValue : []
         )
         if (occupancies) {
           occupancies.forEach(occ => {
             const room = occ.room
-            const roomPax = occ.adults + occ.children + occ.infants
+            const roomPax = occ.adults + occ.children
 
             let roomPrice = occ.adults * room.paxPrice
             if (occ.childAges.length === occ.children && occ.childAges.length > 0) {
@@ -238,7 +228,6 @@ export default class extends Controller {
             } else {
               roomPrice += occ.children * room.paxPrice * room.childMultiplier
             }
-            roomPrice += occ.infants * room.paxPrice * room.infantMultiplier
 
             if (roomPax === 1) {
               roomPrice += room.singleSupplement

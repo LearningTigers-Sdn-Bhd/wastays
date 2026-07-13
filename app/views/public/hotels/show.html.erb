@@ -13,7 +13,6 @@
     check_out: @check_out,
     adults: @adults,
     children: @children,
-    infants: @infants,
     room_count: @room_count,
     child_ages: @child_ages %>
 
@@ -97,8 +96,7 @@
   <div class="max-w-[85rem] mx-auto px-4 py-6 sm:px-6 lg:px-8" 
        data-controller="room-selector" 
        data-room-selector-adults-value="<%= @adults %>" 
-       data-room-selector-children-value="<%= @children %>" 
-       data-room-selector-infants-value="<%= @infants %>"
+       data-room-selector-children-value="<%= @children %>"
        data-room-selector-currency-value="<%= @display_currency %>"
        data-room-selector-pax-pricing-only-value="<%= @hotel.pax_pricing_only? %>"
        data-room-selector-child-ages-value="<%= @child_ages.to_json %>">
@@ -251,7 +249,6 @@
                           <%= f.hidden_field :check_out, value: @check_out %>
                           <%= f.hidden_field :adults, value: @adults %>
                           <%= f.hidden_field :children, value: @children %>
-                          <%= f.hidden_field :infants, value: @infants %>
                           <% Array(@child_ages).each do |age| %>
                             <%= hidden_field_tag "child_ages[]", age %>
                           <% end %>
@@ -288,7 +285,6 @@
                   check_out: @check_out,
                   adults: @adults,
                   children: @children,
-                  infants: @infants,
                   room_count: @room_count,
                   display_currency: @display_currency 
                 %>
@@ -417,7 +413,6 @@
             <%= f.hidden_field :check_out, value: @check_out %>
             <%= f.hidden_field :adults, value: @adults %>
             <%= f.hidden_field :children, value: @children %>
-            <%= f.hidden_field :infants, value: @infants %>
             <% Array(@child_ages).each do |age| %>
               <%= hidden_field_tag "child_ages[]", age %>
             <% end %>

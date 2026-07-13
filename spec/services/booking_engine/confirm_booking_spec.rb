@@ -85,7 +85,6 @@ RSpec.describe BookingEngine::ConfirmBooking do
         occupancy_snapshot: {
           "adults" => 2,
           "children" => 2,
-          "infants" => 0,
           "child_ages" => [ 6, 15 ],
           "child_age_bands" => [
             { "age" => 6, "band_id" => 1, "band_label" => "Child", "multiplier" => "0.4" },

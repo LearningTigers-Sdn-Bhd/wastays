@@ -68,7 +68,6 @@ module BookingEngine
           check_out: @quote.check_out,
           adults: @quote.adults,
           children: @quote.children,
-          infants: @quote.infants,
           hotel_snapshot: @quote.hotel_snapshot,
           cancellation_policy_snapshot: @quote.cancellation_policy_snapshot,
           status: "confirmed",

@@ -56,7 +56,7 @@ class Public::QuotesController < ApplicationController
   private
 
   def quote_params
-    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :infants, :room_count, :display_currency, :rate_plan_id, :corporate_rate, :agent_account_id, allocations: [ :room_type_id, :quantity ], child_ages: [])
+    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :display_currency, :rate_plan_id, :corporate_rate, :agent_account_id, allocations: [ :room_type_id, :quantity ], child_ages: [])
   end
 
   def display_currency_for_request(quote)

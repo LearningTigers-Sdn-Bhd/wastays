@@ -18,7 +18,6 @@ class RatePlan < ApplicationRecord
   validates :currency, presence: true, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validates :single_supplement, numericality: { greater_than_or_equal_to: 0 }
   validates :child_price_multiplier, numericality: { greater_than_or_equal_to: 0 }
-  validates :infant_price_multiplier, numericality: { greater_than_or_equal_to: 0 }
   validates :base_occupancy, numericality: { only_integer: true, greater_than: 0 }
   validates :extra_pax_charge, numericality: { greater_than_or_equal_to: 0 }
 

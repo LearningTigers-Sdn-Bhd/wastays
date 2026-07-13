@@ -2,7 +2,7 @@
 
 module Bookings
   class CalculateStayPrice
-    def initialize(room_type:, check_in:, check_out:, rate_plan: nil, corporate_rate: false, rate_tier: :standard, pax: nil, adults: nil, children: nil, infants: nil, child_ages: [])
+    def initialize(room_type:, check_in:, check_out:, rate_plan: nil, corporate_rate: false, rate_tier: :standard, pax: nil, adults: nil, children: nil, child_ages: [])
       @room_type = room_type
       @check_in = check_in&.to_date
       @check_out = check_out&.to_date
@@ -12,8 +12,7 @@ module Bookings
 
       @adults = (adults || pax || 2).to_i
       @children = (children || 0).to_i
-      @infants = (infants || 0).to_i
-      @pax = @adults + @children + @infants
+      @pax = @adults + @children
       ages = Array(child_ages).map(&:to_i)
       @child_ages = (ages.size == @children) ? ages : []
     end
@@ -26,8 +25,6 @@ module Bookings
         base_nightly_rate = tier_price(rate) || derived_or_fallback_rate(rate)
 
         if @rate_plan&.sell_mode == "per_person"
-          infant_multiplier = @rate_plan.infant_price_multiplier || 0.to_d
-
           adults_cost = @adults * base_nightly_rate
           children_cost =
             if @child_ages.any?
@@ -35,9 +32,8 @@ module Bookings
             else
               @children * base_nightly_rate * (@rate_plan.child_price_multiplier || 1.to_d)
             end
-          infants_cost = @infants * base_nightly_rate * infant_multiplier
 
-          price = adults_cost + children_cost + infants_cost
+          price = adults_cost + children_cost
 
           if @pax == 1
             supplement = rate&.single_supplement || @rate_plan.single_supplement || 0.to_d

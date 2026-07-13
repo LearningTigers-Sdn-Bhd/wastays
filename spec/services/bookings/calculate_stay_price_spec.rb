@@ -52,12 +52,12 @@ RSpec.describe Bookings::CalculateStayPrice do
       end
     end
 
-    context "with child and infant multipliers" do
-      subject { described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_plan: rate_plan, adults: 2, children: 1, infants: 1) }
+    context "with child multipliers" do
+      subject { described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_plan: rate_plan, adults: 2, children: 1) }
 
       it "calculates correct rates using multipliers" do
-        rate_plan.update!(child_price_multiplier: 0.5, infant_price_multiplier: 0.1)
-        expect(subject.call).to eq(520) # (2 * 100 + 1 * 50 + 1 * 10) * 2 nights
+        rate_plan.update!(child_price_multiplier: 0.5)
+        expect(subject.call).to eq(500) # (2 * 100 + 1 * 50) * 2 nights
       end
     end
 
