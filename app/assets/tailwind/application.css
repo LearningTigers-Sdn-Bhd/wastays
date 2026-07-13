@@ -20,6 +20,7 @@
 @import "./panel/command-palette.css";
 @import "./panel/button.css";
 @import "./panel/badge.css";
+@import "./panel/avatar.css";
 @import "./panel/skeleton.css";
 @import "./panel/spinner.css";
 @import "./panel/progress.css";
