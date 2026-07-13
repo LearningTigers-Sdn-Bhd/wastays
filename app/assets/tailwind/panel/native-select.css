@@ -3,14 +3,14 @@
     display: block;
     width: 100%;
     min-width: 0;
-    min-height: 2.5rem;
+    min-height: 2rem;
     border: 1px solid var(--border-interactive);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     background-color: var(--card);
     color: var(--card-foreground);
     padding-inline: 0.75rem;
     padding-inline-end: 2.25rem;
-    font-size: 1rem;
+    font-size: 0.875rem;
     line-height: 1.5;
     outline: none;
     cursor: pointer;
@@ -75,22 +75,22 @@
   }
 
   .panel-native-select[data-size="sm"] {
-    min-height: 2rem;
+    min-height: 1.75rem;
     padding-inline: 0.625rem;
     padding-inline-end: 2rem;
     @apply text-xs;
   }
 
   .panel-native-select[data-size="lg"] {
-    min-height: 2.75rem;
-    padding-inline: 1rem;
-    padding-inline-end: 2.5rem;
-    @apply text-base;
+    min-height: 2.25rem;
+    padding-inline: 0.875rem;
+    padding-inline-end: 2.25rem;
+    @apply text-sm;
   }
 
   .panel-control-group[data-layout="inline"] .panel-native-select {
     grid-area: control;
-    min-height: 2.5rem;
+    min-height: 2rem;
     border: 0;
     border-radius: 0;
     background-color: transparent;
@@ -101,9 +101,10 @@
     outline: 0;
   }
 
-  @media (min-width: 640px) {
-    .panel-native-select {
-      @apply text-sm;
+  @media (pointer: coarse) {
+    .panel-native-select,
+    .panel-control-group[data-layout="inline"] .panel-native-select {
+      min-height: 2.5rem;
     }
   }
 }

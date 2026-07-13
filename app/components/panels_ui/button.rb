@@ -3,7 +3,7 @@
 module PanelsUI
   class Button < PanelsUI::BaseComponent
     VARIANTS = %i[primary secondary accent neutral ghost destructive success warning info].freeze
-    SIZES = %i[sm md lg icon_sm icon].freeze
+    SIZES = %i[xs sm md lg icon_xs icon_sm icon icon_lg].freeze
 
     def initialize(label: nil, variant: :primary, size: :md, href: nil, disabled: false, icon_only: false,
                    aria_label: nil, class: nil, **attributes)
@@ -12,7 +12,7 @@ module PanelsUI
       @size = SIZES.include?(size) ? size : :md
       @href = href
       @disabled = disabled
-      @icon_only = icon_only || %i[icon_sm icon].include?(@size)
+      @icon_only = icon_only || %i[icon_xs icon_sm icon icon_lg].include?(@size)
       @aria_label = aria_label
       @class = binding.local_variable_get(:class)
       @attributes = attributes

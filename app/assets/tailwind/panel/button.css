@@ -1,8 +1,8 @@
 @layer components {
   .panel-button {
-    @apply relative inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border text-sm font-semibold no-underline outline-none select-none;
+    @apply relative inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-sm font-medium no-underline outline-none select-none;
     @apply transition-colors duration-150 ease-standard motion-reduce:transition-none;
-    min-height: 2.25rem;
+    min-height: 2rem;
     border-color: color-mix(in oklab, currentColor 12%, transparent);
   }
 
@@ -15,29 +15,53 @@
     @apply size-4 shrink-0;
   }
 
+  .panel-button[data-size="xs"] {
+    @apply h-6 gap-1 px-2 text-xs;
+    min-height: 1.5rem;
+  }
+
+  .panel-button[data-size="xs"] svg,
+  .panel-button[data-size="icon_xs"] svg {
+    @apply size-3;
+  }
+
   .panel-button[data-size="sm"] {
-    @apply h-8 px-3 text-xs;
-    min-height: 2rem;
+    @apply h-7 px-2.5 text-xs;
+    min-height: 1.75rem;
   }
 
   .panel-button[data-size="md"] {
+    @apply h-8 px-3 text-sm;
+    min-height: 2rem;
+  }
+
+  .panel-button[data-size="lg"] {
     @apply h-9 px-4 text-sm;
     min-height: 2.25rem;
   }
 
-  .panel-button[data-size="lg"] {
-    @apply h-11 px-6 text-base;
-    min-height: 2.75rem;
+  .panel-button[data-size="icon_xs"] {
+    @apply size-6 p-0;
+    min-width: 1.5rem;
+    min-height: 1.5rem;
+    aspect-ratio: 1 / 1;
   }
 
   .panel-button[data-size="icon_sm"] {
+    @apply size-7 p-0;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    aspect-ratio: 1 / 1;
+  }
+
+  .panel-button[data-size="icon"] {
     @apply size-8 p-0;
     min-width: 2rem;
     min-height: 2rem;
     aspect-ratio: 1 / 1;
   }
 
-  .panel-button[data-size="icon"] {
+  .panel-button[data-size="icon_lg"] {
     @apply size-9 p-0;
     min-width: 2.25rem;
     min-height: 2.25rem;
@@ -163,5 +187,12 @@
 
   .panel-button[aria-disabled="true"] {
     pointer-events: none;
+  }
+
+  @media (pointer: coarse) {
+    .panel-button { min-height: 2.5rem; }
+    .panel-button[data-icon-only="true"] { min-width: 2.5rem; }
+    .panel-dialog__dismiss,
+    .panel-sheet__dismiss { min-width: 2.5rem; min-height: 2.5rem; }
   }
 }

@@ -16,7 +16,7 @@
   }
 
   .panel-sidebar__header {
-    @apply shrink-0 flex items-center min-h-14 border-b;
+    @apply shrink-0 flex items-center min-h-12 border-b;
     border-color: var(--sidebar-border);
   }
 
@@ -31,11 +31,11 @@
 
   /* ── Nav ── */
   .panel-sidebar__nav {
-    @apply px-2 py-3 space-y-6;
+    @apply px-2 py-2.5 space-y-4;
   }
 
   .panel-sidebar__section-label {
-    @apply block px-2 mb-2 text-[11px] font-semibold uppercase tracking-wide;
+    @apply block px-2 mb-1.5 text-[10px] font-semibold uppercase tracking-wide;
     color: var(--sidebar-muted-foreground);
   }
 
@@ -44,8 +44,8 @@
   }
 
   .panel-sidebar__link {
-    @apply relative flex w-full items-center gap-x-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors;
-    min-height: 2rem;
+    @apply relative flex w-full items-center gap-x-1.5 rounded-md px-2 py-1 text-sm font-medium transition-colors;
+    min-height: 1.75rem;
     background: transparent;
     color: var(--sidebar-muted-foreground);
   }
@@ -110,7 +110,7 @@
 
   /* ── Search ── */
   .panel-sidebar__search {
-    @apply p-3 pb-2;
+    @apply p-2.5 pb-2;
   }
 
   .panel-sidebar__search-field {
@@ -118,12 +118,12 @@
   }
 
   .panel-sidebar__search-icon {
-    @apply pointer-events-none absolute inset-y-0 left-0 my-auto ml-3 size-4;
+    @apply pointer-events-none absolute inset-y-0 left-0 my-auto ml-2.5 size-3.5;
     color: var(--sidebar-muted-foreground);
   }
 
   .panel-sidebar__search-input {
-    @apply w-full rounded-sm border py-2 pl-9 pr-3 text-sm;
+    @apply h-8 w-full rounded-md border py-1 pl-8 pr-2.5 text-sm;
     background: var(--sidebar);
     border-color: var(--sidebar-border);
     color: var(--sidebar-foreground);
@@ -140,7 +140,7 @@
   }
 
   .panel-sidebar__empty {
-    @apply mx-2 mb-3 rounded-sm border border-dashed px-4 py-5 text-center text-sm;
+    @apply mx-2 mb-2 rounded-md border border-dashed px-3 py-4 text-center text-sm;
     border-color: var(--sidebar-border);
     color: var(--sidebar-muted-foreground);
   }
@@ -154,7 +154,10 @@
   }
 
   .panel-sidebar[data-collapsed="true"] .panel-sidebar__link {
-    @apply mx-auto size-8 shrink-0 justify-center px-0 py-0;
+    @apply mx-auto shrink-0 justify-center px-0 py-0;
+    width: 2rem;
+    height: 2rem;
+    min-height: 2rem;
   }
 
   .panel-sidebar[data-collapsed="true"] .panel-sidebar__nav,
@@ -179,7 +182,7 @@
 
   .panel-sidebar__flyout {
     width: 13rem;
-    padding: 0.375rem;
+    padding: 0.25rem;
     background: var(--sidebar-popup);
     border-color: var(--sidebar-popup-border);
     border-radius: var(--radius-md);
@@ -195,7 +198,7 @@
   }
 
   .panel-sidebar[data-collapsed="true"] .panel-sidebar__flyout .panel-sidebar__child {
-    @apply mx-0 size-auto w-full justify-start px-2 py-1.5;
+    @apply mx-0 min-h-7 size-auto w-full justify-start px-2 py-1;
     color: var(--sidebar-popup-muted-foreground);
   }
 
@@ -224,7 +227,7 @@
   }
 
   .panel-sidebar__mobile-head {
-    @apply flex items-center justify-between border-b border-border p-4;
+    @apply flex items-center justify-between border-b border-border p-3;
   }
 
   .panel-sidebar__brand {
@@ -232,7 +235,7 @@
   }
 
   .panel-sidebar__brand-badge {
-    @apply inline-flex size-8 items-center justify-center rounded-sm text-sm font-bold;
+    @apply inline-flex size-7 items-center justify-center rounded-md text-sm font-bold;
     background: var(--sidebar-accent);
     color: var(--sidebar-accent-foreground);
   }
@@ -243,7 +246,7 @@
   }
 
   .panel-sidebar__close {
-    @apply inline-flex size-8 items-center justify-center rounded-sm transition-colors;
+    @apply inline-flex size-7 items-center justify-center rounded-md transition-colors;
     color: var(--sidebar-muted-foreground);
   }
 
@@ -257,6 +260,14 @@
     .panel-sidebar__link,
     .panel-sidebar__chevron {
       transition: none;
+    }
+  }
+
+  @media (pointer: coarse) {
+    .panel-sidebar__link,
+    .panel-sidebar__close {
+      min-width: 2.5rem;
+      min-height: 2.5rem;
     }
   }
 

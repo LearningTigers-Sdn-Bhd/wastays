@@ -5,11 +5,11 @@
   }
 
   .tabs-list {
-    @apply inline-flex items-center gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1.5 shadow-sm;
+    @apply inline-flex items-center gap-0.5 overflow-x-auto rounded-lg border border-border bg-card p-1 shadow-sm;
   }
 
   .tabs-tab {
-    @apply inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-medium text-muted-foreground transition-colors;
+    @apply inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors;
   }
 
   .tabs-tab:hover {
@@ -35,7 +35,7 @@
   }
 
   .tabs-panel {
-    @apply mt-4;
+    @apply mt-3;
   }
 
   .tabs-panel.hidden {
@@ -47,7 +47,7 @@
   }
 
   .tabs-tab--underline {
-    @apply h-12 shrink-0 rounded-none border-b-2 border-transparent px-4 font-semibold;
+    @apply h-10 shrink-0 rounded-none border-b-2 border-transparent px-3 font-semibold;
   }
 
   .tabs-tab--underline:hover {
@@ -57,5 +57,9 @@
   .tabs-tab--underline[aria-selected="true"],
   .tabs-tab--underline[aria-current="page"] {
     @apply border-border-interactive bg-transparent font-bold text-foreground;
+  }
+
+  @media (pointer: coarse) {
+    .tabs-tab { min-height: 2.5rem; }
   }
 }

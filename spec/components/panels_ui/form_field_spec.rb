@@ -74,6 +74,28 @@ RSpec.describe PanelsUI::FormField, type: :component do
     expect(page).to have_css("span.sr-only", text: "(required)", visible: :all)
   end
 
+  it "propagates the selected size through every typed control" do
+    controls = {
+      input: ".panel-input[data-size='sm']",
+      date_picker: ".panel-date-picker[data-size='sm']",
+      time_picker: ".panel-time-picker[data-size='sm']",
+      date_time_picker: ".panel-date-time-picker[data-size='sm']",
+      text_area: ".panel-text-area[data-size='sm']",
+      native_select: ".panel-native-select[data-size='sm']",
+      select_menu: ".panel-select-menu[data-size='sm']",
+      combobox: ".panel-combobox[data-size='sm']",
+      multi_select: ".panel-multi-select[data-size='sm']"
+    }
+
+    controls.each do |kind, selector|
+      render_field(size: :sm) do |field|
+        choices = [ [ "One", "1" ] ] if %i[native_select select_menu combobox multi_select].include?(kind)
+        choices ? field.public_send("with_#{kind}", choices) : field.public_send("with_#{kind}")
+      end
+      expect(page).to have_css(selector)
+    end
+  end
+
   it "creates an inline control group for start and end addons after the input in the DOM" do
     render_field(label: "Rate") do |field|
       field.with_input(type: :number)

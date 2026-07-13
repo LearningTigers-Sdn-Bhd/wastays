@@ -60,6 +60,20 @@ RSpec.describe PanelsUI::Button, type: :component do
     expect(page.find("button", text: "Fallback")["data-size"]).to eq("md")
   end
 
+  it "supports the complete Nova size scale" do
+    %i[xs sm md lg].each do |size|
+      render_button(size: size) { size.to_s }
+      expect(page.find("button", text: size.to_s)["data-size"]).to eq(size.to_s)
+    end
+
+    %i[icon_xs icon_sm icon icon_lg].each do |size|
+      render_button(size: size, aria_label: size.to_s) { '<svg aria-hidden="true"></svg>'.html_safe }
+      button = page.find("button[aria-label='#{size}']")
+      expect(button["data-size"]).to eq(size.to_s)
+      expect(button["data-icon-only"]).to eq("true")
+    end
+  end
+
   it "uses a real disabled attribute for button elements" do
     render_button(disabled: true) { "Disabled" }
 

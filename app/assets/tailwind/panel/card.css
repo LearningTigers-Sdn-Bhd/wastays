@@ -1,6 +1,6 @@
 @layer components {
   .panel-card {
-    @apply relative isolate rounded-2xl border border-border bg-card text-card-foreground shadow-sm;
+    @apply relative isolate rounded-lg border border-border bg-card text-card-foreground shadow-sm;
   }
 
   .panel-card[data-variant="muted"] { @apply bg-muted; }
@@ -21,35 +21,35 @@
   }
 
   .panel-card[data-density="compact"] .panel-card__header,
-  .panel-card[data-density="compact"] .panel-card__content { @apply px-4 py-3; }
-  .panel-card[data-density="compact"] .panel-card__footer { @apply px-4 py-3; }
+  .panel-card[data-density="compact"] .panel-card__content { @apply px-3 py-2.5; }
+  .panel-card[data-density="compact"] .panel-card__footer { @apply px-3 py-2.5; }
   .panel-card[data-density="default"] .panel-card__header,
-  .panel-card[data-density="default"] .panel-card__content { @apply px-4 py-5 sm:px-6; }
-  .panel-card[data-density="default"] .panel-card__footer { @apply px-4 py-4 sm:px-6; }
+  .panel-card[data-density="default"] .panel-card__content { @apply px-4 py-3; }
+  .panel-card[data-density="default"] .panel-card__footer { @apply px-4 py-3; }
   .panel-card[data-density="spacious"] .panel-card__header,
-  .panel-card[data-density="spacious"] .panel-card__content { @apply px-6 py-6 sm:px-8; }
-  .panel-card[data-density="spacious"] .panel-card__footer { @apply px-6 py-5 sm:px-8; }
+  .panel-card[data-density="spacious"] .panel-card__content { @apply px-5 py-4; }
+  .panel-card[data-density="spacious"] .panel-card__footer { @apply px-5 py-4; }
 
   .panel-card[data-dividers="always"] .panel-card__sections > * + *,
   .panel-card[data-dividers="automatic"] .panel-card__sections > * + * { @apply border-t border-border; }
   .panel-card[data-dividers="none"] .panel-card__sections > * { @apply border-0; }
 
-  .panel-card__header-row { @apply flex min-w-0 items-start justify-between gap-4; }
+  .panel-card__header-row { @apply flex min-w-0 items-start justify-between gap-3; }
   .panel-card__heading { @apply min-w-0; }
-  .panel-card__title { @apply min-w-0 text-lg font-semibold leading-6 text-foreground; }
+  .panel-card__title { @apply min-w-0 text-base font-semibold leading-5 text-foreground; }
   .panel-card__description { @apply mt-1 text-sm text-muted-foreground; }
-  .panel-card__badges { @apply mb-2 flex flex-wrap items-center gap-2; }
-  .panel-card__actions { @apply relative z-[2] flex shrink-0 items-center gap-2; }
-  .panel-card__header-content { @apply mt-3; }
+  .panel-card__badges { @apply mb-1.5 flex flex-wrap items-center gap-1.5; }
+  .panel-card__actions { @apply relative z-[2] flex shrink-0 items-center gap-1.5; }
+  .panel-card__header-content { @apply mt-2; }
 
   .panel-card__primary-link { @apply rounded-sm outline-none; }
-  .panel-card__primary-link::after { content: ""; @apply absolute inset-0 z-[1] rounded-2xl; }
+  .panel-card__primary-link::after { content: ""; @apply absolute inset-0 z-[1] rounded-lg; }
   .panel-card__primary-link:focus-visible { @apply outline-none; }
   .panel-card__content :is(a, button, input, select, textarea, summary),
   .panel-card__footer :is(a, button, input, select, textarea, summary) { @apply relative z-[2]; }
 
-  .panel-card__footer { @apply flex flex-wrap items-center gap-3 rounded-b-2xl bg-muted/50; }
-  .panel-card[data-orientation="horizontal"] .panel-card__footer { @apply md:rounded-bl-none md:rounded-br-2xl; }
+  .panel-card__footer { @apply flex flex-wrap items-center gap-2 rounded-b-lg bg-muted/50; }
+  .panel-card[data-orientation="horizontal"] .panel-card__footer { @apply md:rounded-bl-none md:rounded-br-lg; }
   .panel-card__footer[data-align="start"] { @apply justify-start; }
   .panel-card__footer[data-align="center"] { @apply justify-center; }
   .panel-card__footer[data-align="end"] { @apply justify-end; }
@@ -62,9 +62,9 @@
   .panel-card__media[data-ratio="portrait"] { aspect-ratio: 3 / 4; }
   .panel-card__media[data-ratio="auto"] { aspect-ratio: auto; }
   .panel-card__media :is(img, picture, video) { @apply size-full object-cover; }
-  .panel-card__media[data-position="top"] { @apply rounded-t-2xl; }
-  .panel-card__media[data-position="leading"] { @apply rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none; }
-  .panel-card__media[data-position="background"] { @apply absolute inset-0 z-[-1] rounded-2xl; }
+  .panel-card__media[data-position="top"] { @apply rounded-t-lg; }
+  .panel-card__media[data-position="leading"] { @apply rounded-t-lg md:rounded-l-lg md:rounded-tr-none; }
+  .panel-card__media[data-position="background"] { @apply absolute inset-0 z-[-1] rounded-lg; }
   /* Keep at least a 60% black scrim over arbitrary imagery. White text then
      remains above 5.7:1 even when the underlying pixel is pure white. */
   .panel-card__media-overlay { @apply absolute inset-0 bg-gradient-to-t from-black/90 via-black/65 to-black/60; }

@@ -1,6 +1,6 @@
 @layer components {
   .panel-profile-menu__trigger.panel-button {
-    @apply size-9 rounded-full p-0;
+    @apply size-8 rounded-full p-0;
     min-height: 0;
     background: transparent;
     color: var(--sidebar-foreground);
@@ -19,7 +19,7 @@
   }
 
   .panel-profile-menu__summary {
-    @apply flex items-center gap-3 px-4 py-3;
+    @apply flex items-center gap-2.5 px-3 py-2.5;
     background: color-mix(in oklab, var(--muted) 58%, var(--card));
   }
 
@@ -30,10 +30,10 @@
     color: var(--primary);
   }
 
-  .panel-profile-menu__avatar[data-size="sm"] { @apply size-8; }
-  .panel-profile-menu__avatar[data-size="md"] { @apply size-10; }
-  .panel-profile-menu__avatar[data-size="sm"] .panel-profile-menu__avatar-icon { @apply size-4; }
-  .panel-profile-menu__avatar[data-size="md"] .panel-profile-menu__avatar-icon { @apply size-5; }
+  .panel-profile-menu__avatar[data-size="sm"] { @apply size-7; }
+  .panel-profile-menu__avatar[data-size="md"] { @apply size-8; }
+  .panel-profile-menu__avatar[data-size="sm"] .panel-profile-menu__avatar-icon { @apply size-3.5; }
+  .panel-profile-menu__avatar[data-size="md"] .panel-profile-menu__avatar-icon { @apply size-4; }
 
   .panel-profile-menu__identity {
     @apply min-w-0 flex-1;

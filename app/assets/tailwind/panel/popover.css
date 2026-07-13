@@ -7,9 +7,9 @@
     inset: auto;
     margin: 0;
     max-width: min(22rem, calc(100vw - 1rem));
-    padding: 0.75rem;
+    padding: 0.5rem;
     border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     /* Same elevated card surface as dropdown-menu (proven AAA text contrast). Border +
        shadow separate it from the page; the shared .floating-arrow continues the border. */
     background: var(--card);

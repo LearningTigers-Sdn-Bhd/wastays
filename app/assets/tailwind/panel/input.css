@@ -3,13 +3,13 @@
     display: block;
     width: 100%;
     min-width: 0;
-    min-height: 2.5rem;
+    min-height: 2rem;
     border: 1px solid var(--border-interactive);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     background: var(--card);
     color: var(--card-foreground);
     padding-inline: 0.75rem;
-    font-size: 1rem;
+    font-size: 0.875rem;
     line-height: 1.5;
     outline: none;
     transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
@@ -50,20 +50,20 @@
   }
 
   .panel-input[data-size="sm"] {
-    min-height: 2rem;
+    min-height: 1.75rem;
     padding-inline: 0.625rem;
     @apply text-xs;
   }
 
   .panel-input[data-size="lg"] {
-    min-height: 2.75rem;
-    padding-inline: 1rem;
-    @apply text-base;
+    min-height: 2.25rem;
+    padding-inline: 0.875rem;
+    @apply text-sm;
   }
 
   .panel-control-group[data-layout="inline"] .panel-input {
     grid-area: control;
-    min-height: 2.5rem;
+    min-height: 2rem;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -75,16 +75,17 @@
   }
 
   .panel-control-group[data-layout="inline"] .panel-input[data-size="sm"] {
-    min-height: 2rem;
+    min-height: 1.75rem;
   }
 
   .panel-control-group[data-layout="inline"] .panel-input[data-size="lg"] {
-    min-height: 2.75rem;
+    min-height: 2.25rem;
   }
 
-  @media (min-width: 640px) {
-    .panel-input {
-      @apply text-sm;
+  @media (pointer: coarse) {
+    .panel-input,
+    .panel-control-group[data-layout="inline"] .panel-input {
+      min-height: 2.5rem;
     }
   }
 }
