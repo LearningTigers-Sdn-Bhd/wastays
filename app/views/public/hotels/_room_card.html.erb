@@ -102,11 +102,11 @@
 
         <% if search_ready %>
           <% if room_type.stay_restriction_error.present? %>
-            <button type="button" class="btn border border-slate-200 text-slate-400 bg-slate-50 font-bold py-3 px-8 cursor-not-allowed" disabled>
+            <button type="button" class="btn border border-border text-muted-foreground bg-muted font-bold py-3 px-8 cursor-not-allowed" disabled>
               Unavailable
             </button>
           <% elsif available_qty <= 0 %>
-            <button type="button" class="btn border border-slate-200 text-slate-400 bg-slate-50 font-bold py-3 px-8 cursor-not-allowed" disabled>
+            <button type="button" class="btn border border-border text-muted-foreground bg-muted font-bold py-3 px-8 cursor-not-allowed" disabled>
               Sold Out
             </button>
           <% else %>
@@ -145,7 +145,7 @@
             </div>
           <% end %>
         <% else %>
-          <button type="button" class="btn bg-slate-100 text-slate-400 font-bold py-3 px-8 cursor-not-allowed" disabled>
+          <button type="button" class="btn bg-muted text-muted-foreground font-bold py-3 px-8 cursor-not-allowed" disabled>
             Select Dates
           </button>
         <% end %>

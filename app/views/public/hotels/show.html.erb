@@ -21,7 +21,7 @@
     <div class="max-w-[85rem] mx-auto px-4 py-2.5">
       <nav class="flex text-sm text-muted-foreground" aria-label="Breadcrumb">
         <%= link_to "Hotels", hotels_path(request.query_parameters), class: "hover:text-primary" %>
-        <svg class="mx-2 h-4 w-4 text-gray-400 self-center" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+        <svg class="mx-2 h-4 w-4 text-muted-foreground self-center" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
         <span class="font-semibold text-foreground truncate"><%= @hotel.name %></span>
       </nav>
     </div>
@@ -217,11 +217,11 @@
                                   <%= room_type.description %>
                                 </p>
                                 <div class="flex items-center gap-x-2 mt-1.5">
-                                  <span class="inline-flex items-center gap-x-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-neutral-100 text-neutral-700">
+                                  <span class="inline-flex items-center gap-x-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-foreground">
                                     Up to <%= room_type.max_adults.to_i %> adults
                                   </span>
                                   <% if room_type.max_children.to_i > 0 %>
-                                    <span class="inline-flex items-center gap-x-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-neutral-100 text-neutral-700">
+                                    <span class="inline-flex items-center gap-x-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-foreground">
                                       <%= room_type.max_children.to_i %> children
                                     </span>
                                   <% end %>
