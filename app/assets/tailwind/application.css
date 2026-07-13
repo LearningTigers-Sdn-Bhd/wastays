@@ -31,6 +31,7 @@
 @import "./panel/alert.css";
 @import "./panel/banner.css";
 @import "./panel/card.css";
+@import "./panel/metric-card.css";
 @import "./panel/table.css";
 @import "./panel/floating.css";
 @import "./panel/dropdown-menu.css";
