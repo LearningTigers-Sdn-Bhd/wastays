@@ -2,6 +2,7 @@
 @import "./public/theme.css";
 @import "./panel/theme.css";
 @import "./panel/page.css";
+@import "./panel/page-header.css";
 @import "./panel/form.css";
 @import "./panel/field.css";
 @import "./panel/checkbox.css";

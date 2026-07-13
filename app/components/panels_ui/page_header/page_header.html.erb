@@ -1,0 +1,12 @@
+<%= tag.header(**root_attributes) do %>
+  <div class="panel-page-header__heading">
+    <%= tag.public_send(@title_as, @title, class: "panel-page-header__title") %>
+    <% if @subtitle.present? %>
+      <p class="panel-page-header__subtitle"><%= @subtitle %></p>
+    <% end %>
+  </div>
+
+  <% if actions? %>
+    <div class="panel-page-header__actions"><%= actions %></div>
+  <% end %>
+<% end %>

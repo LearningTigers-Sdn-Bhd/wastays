@@ -12,6 +12,8 @@ RSpec.describe "System design showcase", type: :request do
     expect(response.body).to include("data-system-design-showcase")
     expect(response.body).to include("button-preview-heading")
     expect(response.body).to include("panel-button")
+    expect(response.body).to include("page-header-preview-heading")
+    expect(response.body).to include("panel-page-header")
     expect(response.body).to include("badge-preview-heading")
     expect(response.body).to include("panel-badge-rounded")
     expect(response.body).to include("alert-preview-heading")
