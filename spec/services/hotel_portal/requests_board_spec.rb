@@ -71,5 +71,18 @@ RSpec.describe HotelPortal::RequestsBoard do
         expect(total_cards).to eq(1)
       end
     end
+
+    context 'checkout room cleaning tasks' do
+      let!(:checkout_cleaning) do
+        create(:housekeeping_request, booking: booking, status: 'new', request_details: 'Checkout Room Cleaning', archived_at: nil)
+      end
+
+      it 'groups checkout room cleaning under checkout column' do
+        board = described_class.new(hotel)
+        columns = board.board_columns
+        expect(columns[:checkout].map { |c| c[:request_id] }).to include(checkout_cleaning.id)
+        expect(columns[:housekeeping].map { |c| c[:request_id] }).not_to include(checkout_cleaning.id)
+      end
+    end
   end
 end

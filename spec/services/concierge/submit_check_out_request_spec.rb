@@ -8,7 +8,7 @@ RSpec.describe Concierge::SubmitCheckOutRequest do
     result = described_class.new(booking: booking).call
     expect(result.success?).to be true
     expect(result.check_out_request).to be_persisted
-    expect(result.check_out_request.status).to eq("pending")
+    expect(result.check_out_request.status).to eq("new")
   end
 
   it "fails for a non-checked-in booking" do

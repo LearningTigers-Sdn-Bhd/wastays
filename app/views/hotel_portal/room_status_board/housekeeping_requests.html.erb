@@ -2,11 +2,11 @@
   <div class="flex h-full flex-col bg-white">
     <%= render "hotel_portal/bookings/board/partials/content_header",
       title: "Housekeeping Requests",
-      subtitle: "Active tasks for Room #{@room_number}",
+      subtitle: "Active tasks for Room #{@presenter.room_number}",
       icon: cached_icon("clipboard-text", library: "phosphor", variant: "light", class: "size-5") %>
       
     <div class="flex-1 overflow-y-auto p-8 space-y-6">
-      <% if @room_status&.active_dnd? %>
+      <% if @presenter.dnd_active? %>
         <div class="rounded-2xl border border-orange-200 bg-orange-50/50 p-4 flex items-start gap-3">
           <div class="p-1 rounded-lg bg-orange-100 text-orange-600">
             <%= cached_icon "hand", library: "phosphor", variant: "fill", class: "size-5" %>
@@ -18,20 +18,20 @@
         </div>
       <% end %>
 
-      <% if @housekeeping_requests.any? %>
-        <% @housekeeping_requests.each do |req| %>
+      <% if @presenter.requests? %>
+        <% @presenter.request_rows.each do |req| %>
           <div class="border-b border-slate-100 pb-6 last:border-0 last:pb-0 space-y-4">
             <div>
               <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Request Details</label>
-              <% if req.request_details.present? %>
+              <% if req.details_present? %>
                 <textarea readonly 
                           rows="3" 
-                          class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-500 cursor-not-allowed shadow-sm focus:outline-none resize-none"><%= req.request_details %></textarea>
+                          class="<%= req.readonly_input_class %> resize-none"><%= req.details %></textarea>
               <% else %>
                 <input type="text" 
                        value="No details provided." 
                        readonly 
-                       class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-400 italic cursor-not-allowed shadow-sm focus:outline-none" />
+                       class="<%= req.readonly_input_class %> text-slate-400 italic" />
               <% end %>
             </div>
 
@@ -39,18 +39,55 @@
               <div>
                 <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Status</label>
                 <input type="text" 
-                       value="<%= req.status.humanize %>" 
+                       value="<%= req.humanized_status %>" 
                        readonly 
-                       class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-500 cursor-not-allowed shadow-sm focus:outline-none" />
+                       class="<%= req.readonly_input_class %>" />
               </div>
               <div>
                 <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Requested At</label>
                 <input type="text" 
-                       value="<%= display_housekeeping_datetime(req.display_requested_at) %>" 
+                       value="<%= req.formatted_requested_at %>" 
                        readonly 
-                       class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-500 cursor-not-allowed shadow-sm focus:outline-none" />
+                       class="<%= req.readonly_input_class %>" />
               </div>
             </div>
+
+            <% if req.assigned_to_name %>
+              <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Assigned To</label>
+                <input type="text" 
+                       value="<%= req.assigned_to_name %>" 
+                       readonly 
+                       class="<%= req.readonly_input_class %>" />
+              </div>
+            <% end %>
+
+            <% if req.assignment_history? %>
+              <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Assignment History</label>
+                <div class="rounded-xl border border-slate-100 bg-slate-50/30 p-4 space-y-3">
+                  <% req.assignment_history.each do |event| %>
+                    <div class="flex items-start justify-between gap-4 text-xs">
+                      <div class="space-y-0.5">
+                        <% if event.assigned? %>
+                          <p class="font-bold text-slate-800">
+                            Assigned to <span class="text-blue-600"><%= event.assigned_to_name %></span>
+                          </p>
+                        <% else %>
+                          <p class="font-bold text-slate-500">Unassigned</p>
+                        <% end %>
+                        <p class="text-slate-400 text-[10px]">
+                          by <%= event.assigned_by_name %>
+                        </p>
+                      </div>
+                      <span class="text-slate-400 text-[10px] whitespace-nowrap shrink-0 mt-0.5">
+                        <%= event.formatted_timestamp %>
+                      </span>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
           </div>
         <% end %>
       <% else %>

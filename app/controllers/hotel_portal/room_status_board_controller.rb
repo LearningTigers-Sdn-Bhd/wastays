@@ -1,13 +1,15 @@
 # frozen_string_literal: true
 
-require_dependency Rails.root.join("app/presenters/hotel_portal/room_status_board_presenter").to_s
-
 module HotelPortal
   class RoomStatusBoardController < BaseController
     before_action :authorize_room_status_board!
     before_action -> { require_feature!("room_status_board") }
 
     def index
+      if params[:tab] == "housekeeping"
+        redirect_to hotel_housekeeping_tasks_path(current_hotel) and return
+      end
+
       @start_date = parse_start_date
       @board_days = parse_board_days
       @board_layout = parse_board_layout
@@ -25,12 +27,18 @@ module HotelPortal
     end
 
     def housekeeping_requests
-      @room_number = params[:room_number]
-      @room_status = current_hotel.room_statuses.find_by(room_number: @room_number)
-      @housekeeping_requests = HotelPortal::HousekeepingRequestsQuery.new(
+      room_number = params[:room_number]
+      room_status = current_hotel.room_statuses.find_by(room_number: room_number)
+      requests = HotelPortal::HousekeepingRequestsQuery.new(
         hotel: current_hotel,
-        room_number: @room_number
+        room_number: room_number
       ).call
+
+      @presenter = HotelPortal::HousekeepingRequestsPresenter.new(
+        room_number: room_number,
+        room_status: room_status,
+        housekeeping_requests: requests
+      )
 
       render "hotel_portal/room_status_board/housekeeping_requests", layout: false
     end

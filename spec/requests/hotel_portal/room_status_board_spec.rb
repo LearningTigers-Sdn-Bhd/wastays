@@ -97,6 +97,14 @@ RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
       expect(response.body).to include("Carryover Guest")
     end
 
+    it "redirects the housekeeping tab request to the standalone housekeeping tasks page" do
+      sign_in_with_permissions("view_room_readiness")
+
+      get hotel_room_status_board_path(hotel), params: { tab: "housekeeping" }
+
+      expect(response).to redirect_to(hotel_housekeeping_tasks_path(hotel))
+    end
+
     it "renders density controls, legends, and room amenity chips from query params" do
       sign_in_with_permissions("view_room_readiness")
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")

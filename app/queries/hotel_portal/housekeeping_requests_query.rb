@@ -15,7 +15,7 @@ module HotelPortal
         .where(bookings: { hotel_id: @hotel.id })
         .where(booking_rooms: { room_number: @room_number })
         .where(archived_at: nil)
-        .where(status: "in_progress")
+        .where(status: %w[new assigned in_progress])
         .order(created_at: :desc)
     end
   end

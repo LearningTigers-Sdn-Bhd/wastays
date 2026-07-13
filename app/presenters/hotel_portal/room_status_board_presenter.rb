@@ -115,17 +115,27 @@ module HotelPortal
 
       def smoking_icon
         if room_type.smoking_allowed
-          helpers.cached_icon("cigarette", library: "phosphor", variant: "light", class: "size-3")
+          helpers.cached_icon("cigarette", stroke_width: 2.75, class: "size-3")
         else
-          helpers.cached_icon("cigarette-slash", library: "phosphor", variant: "light", class: "size-3")
+          helpers.content_tag(:span, class: "relative inline-flex items-center justify-center size-3") do
+            helpers.safe_join([
+              helpers.cached_icon("cigarette", stroke_width: 2.75, class: "size-3"),
+              helpers.cached_icon("ban", stroke_width: 2.75, class: "absolute size-4")
+            ])
+          end
         end
       end
 
       def pets_icon
         if room_type.pets_allowed
-          helpers.cached_icon("paw-print", library: "phosphor", variant: "light", class: "size-3")
+          helpers.cached_icon("paw-print", stroke_width: 2.75, class: "size-3")
         else
-          helpers.cached_icon("paw-print", library: "phosphor", variant: "light", class: "size-3 opacity-50")
+          helpers.content_tag(:span, class: "relative inline-flex items-center justify-center size-3") do
+            helpers.safe_join([
+              helpers.cached_icon("paw-print", stroke_width: 2.75, class: "size-3"),
+              helpers.cached_icon("ban", stroke_width: 2.75, class: "absolute size-4")
+            ])
+          end
         end
       end
 
@@ -442,6 +452,23 @@ module HotelPortal
 
     def status_counts
       room_status_board[:status_counts]
+    end
+
+    def status_count_badge(status)
+      count = status_counts[status]
+      return nil unless count&.positive?
+
+      count
+    end
+
+    def occupancy_legend_items
+      [
+        { label: "Available", border_class: "border-emerald-200", bg_class: "bg-emerald-50", text_class: "text-emerald-700" },
+        { label: "Completed Booking", border_class: "border-slate-200", bg_class: "bg-white", text_class: "text-slate-700" },
+        { label: "Arriving", border_class: "border-amber-200", bg_class: "bg-amber-50", text_class: "text-amber-700" },
+        { label: "Occupied", border_class: "border-rose-200", bg_class: "bg-rose-50", text_class: "text-rose-700" },
+        { label: "Blocked / Maintenance", border_class: "border-slate-200", bg_class: "bg-slate-100", text_class: "text-slate-700" }
+      ]
     end
 
     private
