@@ -49,164 +49,190 @@
 
   <%= turbo_frame_tag "requests_board_results" do %>
   <div class="grid gap-4 xl:grid-cols-4 xl:h-[calc(100vh-12rem)] xl:items-stretch px-4 md:px-0" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>" data-requests-board-target="board">
-    <%# Standard request columns %>
     <% @presenter.columns.each do |column| %>
       <% bucket_key = column[:key] %>
       <section
         data-requests-board-target="column"
         data-board-column="<%= bucket_key %>"
-        data-action="dragover->requests-board#dragOver dragleave->requests-board#dragLeave drop->requests-board#drop"
+        <% if column[:draggable] %>
+          data-action="dragover->requests-board#dragOver dragleave->requests-board#dragLeave drop->requests-board#drop"
+        <% end %>
         class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/40 border-t-4 <%= column[:accent_class] %>"
       >
         <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 bg-white">
           <div>
             <h2 class="text-sm font-bold uppercase tracking-wider text-slate-900"><%= column[:label] %></h2>
-            <p class="text-[11px] font-medium text-slate-500"><%= pluralize(@presenter.board_counts[bucket_key], "active request") %></p>
+            <p class="text-[11px] font-medium text-slate-500"><%= pluralize(@presenter.board_counts[bucket_key], @presenter.column_request_label(column)) %></p>
           </div>
           <div class="flex items-center gap-2">
-            <span class="inline-flex size-7 items-center justify-center rounded-full bg-slate-100 text-xs font-black text-slate-700">
+            <span class="inline-flex size-7 items-center justify-center rounded-full <%= @presenter.column_count_badge_class(column) %> text-xs font-black">
               <%= @presenter.board_columns[bucket_key].size %>
             </span>
           </div>
-          <button
-            type="button"
-            draggable="true"
-            data-action="dragstart->requests-board#columnDragStart dragend->requests-board#columnDragEnd"
-            class="p-1.5 rounded-lg text-slate-300 hover:text-slate-900 hover:bg-slate-50 cursor-grab"
-          >
-            <%= cached_icon "grip-vertical", stroke_width: 3, class: "size-4" %>
-          </button>
+          <% if column[:draggable] %>
+            <button
+              type="button"
+              draggable="true"
+              data-action="dragstart->requests-board#columnDragStart dragend->requests-board#columnDragEnd"
+              class="p-1.5 rounded-lg text-slate-300 hover:text-slate-900 hover:bg-slate-50 cursor-grab"
+            >
+              <%= cached_icon "grip-vertical", stroke_width: 3, class: "size-4" %>
+            </button>
+          <% end %>
         </div>
 
         <div class="flex-1 min-h-0 space-y-3 overflow-y-auto p-3 custom-scrollbar">
           <% if @presenter.board_columns[bucket_key].any? %>
             <% @presenter.board_columns[bucket_key].each do |card| %>
-              <% kind_badge_class = @presenter.kind_badge_class(card) %>
-              <article
-                data-controller="request-dialog"
-                draggable="true"
-                data-requests-board-target="card"
-                data-request-kind="<%= card[:kind] %>"
-                data-request-id="<%= card[:request_id] %>"
-                data-update-url="<%= card[:update_url] %>"
-                data-current-status="<%= card[:status] %>"
-                data-action="dragstart->requests-board#dragStart dragend->requests-board#dragEnd"
-                class="group cursor-grab rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-400 hover:shadow-md active:cursor-grabbing"
-              >
-                <div class="mb-3 flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= kind_badge_class %>">
-                      <%= card[:kind] %>
-                    </span>
-                    <span class="font-mono text-[10px] font-bold tracking-tight text-slate-400"><%= card[:booking_token] %></span>
-                  </div>
-                  <span class="rounded border border-slate-100 bg-slate-50 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600">
-                    <%= card[:status] %>
-                  </span>
-                </div>
+              <% action = @presenter.card_action(card, bucket_key) %>
+              <% badge_class = @presenter.kind_badge_class(card) %>
 
-                <button
-                  type="button"
-                  class="block w-full text-left"
-                  data-action="request-dialog#open"
+              <% if @presenter.card_actionable?(card) %>
+                <article
+                  data-controller="request-dialog"
+                  draggable="true"
+                  data-requests-board-target="card"
+                  data-request-kind="<%= card[:kind] %>"
+                  data-request-id="<%= card[:request_id] %>"
+                  data-update-url="<%= card[:update_url] %>"
+                  data-current-status="<%= card[:status] %>"
+                  data-action="dragstart->requests-board#dragStart dragend->requests-board#dragEnd"
+                  class="group cursor-grab rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-400 hover:shadow-md active:cursor-grabbing"
                 >
-                  <p class="line-clamp-2 text-sm font-bold leading-snug text-slate-900 transition-colors group-hover:text-blue-600"><%= card[:title] %></p>
-                </button>
-
-                <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
-                  <div class="flex flex-col">
-                    <span class="max-w-[140px] truncate text-xs font-bold text-slate-700"><%= card[:guest_name] %></span>
-                    <span class="text-[10px] font-medium uppercase tracking-tight text-slate-400"><%= display_housekeeping_datetime(card[:requested_at]) %></span>
+                  <div class="mb-3 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= badge_class %>">
+                        <%= card[:kind] %>
+                      </span>
+                      <span class="font-mono text-[10px] font-bold tracking-tight text-slate-400"><%= @presenter.card_token_label(card) %></span>
+                    </div>
+                    <span class="rounded border border-slate-100 bg-slate-50 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600">
+                      <%= card[:status] %>
+                    </span>
                   </div>
-                  <div class="flex items-center gap-2">
-                    <% if bucket_key == :completed && card[:archive_url].present? %>
-                      <%= button_to card[:archive_url], method: :patch, class: "flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 shadow-sm transition-all hover:border-slate-900 hover:text-slate-900", title: "Archive Request" do %>
-                        <%= cached_icon "cube", library: "phosphor", variant: "regular", class: "size-4" %>
-                      <% end %>
-                    <% elsif card[:kind] == "housekeeping" && card[:status] == "pending" %>
-                      <%= button_to card[:update_url], params: { status: "new" }, method: :patch, class: "flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-blue-700 shadow-sm transition-all hover:border-blue-500 hover:bg-blue-500 hover:text-white", title: "Dispatch Request" do %>
-                        <%= cached_icon "arrow-right", stroke_width: 3, class: "size-3.5" %>
-                        Dispatch
-                      <% end %>
-                    <% else %>
-                      <%= button_to card[:update_url], params: { status: @presenter.target_status(card) }, method: :patch, class: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all hover:border-emerald-500 hover:bg-emerald-500 hover:text-white", title: "Mark as Done" do %>
-                        <%= cached_icon "check", stroke_width: 3, class: "size-3.5" %>
-                        Done
-                      <% end %>
+
+                  <button type="button" class="block w-full text-left" data-action="request-dialog#open">
+                    <p class="line-clamp-2 text-sm font-bold leading-snug text-slate-900 transition-colors group-hover:text-blue-600"><%= card[:title] %></p>
+                  </button>
+
+                  <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
+                    <div class="flex flex-col">
+                      <span class="max-w-[140px] truncate text-xs font-bold text-slate-700"><%= card[:guest_name] %></span>
+                      <span class="text-[10px] font-medium uppercase tracking-tight text-slate-400"><%= @presenter.formatted_requested_at(card) %></span>
+                    </div>
+                    <% if action %>
+                      <div class="flex items-center gap-2">
+                        <%= button_to action[:url], params: action[:params], method: :patch, class: action[:css], title: action[:title] do %>
+                          <%= cached_icon action[:icon], **(action[:icon_opts] || {}), class: "size-3.5" %>
+                          <%= action[:label] %>
+                        <% end %>
+                      </div>
                     <% end %>
                   </div>
-                </div>
-              </article>
+                </article>
 
-              <dialog data-request-dialog-target="dialog" data-action="click->request-dialog#closeOnBackdrop" class="fixed inset-0 m-auto w-[min(94vw,44rem)] rounded-3xl p-0 shadow-2xl backdrop:bg-slate-900/60">
-                <div class="flex flex-col overflow-hidden bg-white">
-                  <div class="flex items-center justify-between border-b border-slate-100 px-8 py-6">
-                    <div class="flex items-center gap-4">
-                      <span class="rounded-lg border px-3 py-1 text-[11px] font-black uppercase tracking-widest <%= kind_badge_class %>"><%= card[:kind] %></span>
-                      <h3 class="text-xl font-black text-slate-950"><%= card[:booking_token] %></h3>
-                    </div>
-                    <button type="button" class="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900" data-action="request-dialog#close">
-                      <%= cached_icon "x", stroke_width: 3, class: "size-5" %>
-                    </button>
-                  </div>
-
-                  <div class="grid divide-y divide-slate-100 md:grid-cols-2 md:divide-x md:divide-y-0">
-                    <div class="space-y-6 p-8">
-                      <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Guest Details</label>
-                        <p class="mt-1 text-lg font-bold text-slate-900"><%= card[:guest_name] %></p>
+                <%# Detail Dialog %>
+                <dialog data-request-dialog-target="dialog" data-action="click->request-dialog#closeOnBackdrop" class="fixed inset-0 m-auto w-[min(94vw,44rem)] rounded-3xl p-0 shadow-2xl backdrop:bg-slate-900/60">
+                  <div class="flex flex-col overflow-hidden bg-white">
+                    <div class="flex items-center justify-between border-b border-slate-100 px-8 py-6">
+                      <div class="flex items-center gap-4">
+                        <span class="rounded-lg border px-3 py-1 text-[11px] font-black uppercase tracking-widest <%= badge_class %>"><%= card[:kind] %></span>
+                        <h3 class="text-xl font-black text-slate-950"><%= card[:booking_token] %></h3>
                       </div>
-                      <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Status</label>
-                        <div class="mt-2 flex items-center gap-2">
-                          <span class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600"><%= card[:status] %></span>
+                      <button type="button" class="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900" data-action="request-dialog#close">
+                        <%= cached_icon "x", stroke_width: 3, class: "size-5" %>
+                      </button>
+                    </div>
+
+                    <div class="grid divide-y divide-slate-100 md:grid-cols-2 md:divide-x md:divide-y-0">
+                      <div class="space-y-6 p-8">
+                        <div>
+                          <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Guest Details</label>
+                          <p class="mt-1 text-lg font-bold text-slate-900"><%= card[:guest_name] %></p>
+                        </div>
+                        <div>
+                          <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Status</label>
+                          <div class="mt-2 flex items-center gap-2">
+                            <span class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600"><%= card[:status] %></span>
+                          </div>
+                        </div>
+                        <div>
+                          <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Timeline</label>
+                          <div class="mt-3 space-y-2">
+                            <div class="flex items-center gap-3 text-sm">
+                              <span class="w-12 text-[10px] font-bold uppercase text-slate-400">Entry:</span>
+                              <span class="font-bold text-slate-900"><%= @presenter.formatted_requested_at(card) %></span>
+                            </div>
+                            <% if @presenter.completed_at?(card) %>
+                              <div class="flex items-center gap-3 text-sm">
+                                <span class="w-12 text-[10px] font-bold uppercase text-emerald-500">Exit:</span>
+                                <span class="font-bold text-slate-900"><%= @presenter.formatted_completed_at(card) %></span>
+                              </div>
+                            <% end %>
+                          </div>
                         </div>
                       </div>
-                      <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Timeline</label>
-                        <div class="mt-3 space-y-2">
-                          <div class="flex items-center gap-3 text-sm">
-                            <span class="w-12 text-[10px] font-bold uppercase text-slate-400">Entry:</span>
-                            <span class="font-bold text-slate-900"><%= display_housekeeping_datetime(card[:requested_at]) %></span>
-                          </div>
-                          <% if card[:completed_at].present? %>
-                            <div class="flex items-center gap-3 text-sm">
-                              <span class="w-12 text-[10px] font-bold uppercase text-emerald-500">Exit:</span>
-                              <span class="font-bold text-slate-900"><%= display_housekeeping_datetime(card[:completed_at]) %></span>
+
+                      <div class="space-y-6 bg-slate-50/40 p-8">
+                        <div>
+                          <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Request Body</label>
+                          <p class="mt-2 rounded-xl border border-slate-100 bg-white p-4 text-sm font-bold leading-relaxed text-slate-700 shadow-sm"><%= card[:title] %></p>
+                        </div>
+                        <div>
+                          <label class="mb-3 block text-[10px] font-black uppercase tracking-widest text-slate-400">Internal Staff Notes</label>
+                          <% if @presenter.internal_notes?(card) %>
+                            <div class="space-y-3">
+                              <% @presenter.internal_notes_for(card).each do |note| %>
+                                <div class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                                  <p class="whitespace-pre-wrap text-sm font-medium text-slate-800"><%= note["body"] %></p>
+                                </div>
+                              <% end %>
                             </div>
+                          <% else %>
+                            <p class="text-xs font-bold uppercase tracking-widest italic text-slate-300">No notes recorded</p>
                           <% end %>
                         </div>
                       </div>
                     </div>
 
-                    <div class="space-y-6 bg-slate-50/40 p-8">
-                      <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Request Body</label>
-                        <p class="mt-2 rounded-xl border border-slate-100 bg-white p-4 text-sm font-bold leading-relaxed text-slate-700 shadow-sm"><%= card[:title] %></p>
-                      </div>
-                      <div>
-                        <label class="mb-3 block text-[10px] font-black uppercase tracking-widest text-slate-400">Internal Staff Notes</label>
-                        <% if card[:internal_notes].any? %>
-                          <div class="space-y-3">
-                            <% card[:internal_notes].each do |note| %>
-                              <div class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-                                <p class="whitespace-pre-wrap text-sm font-medium text-slate-800"><%= note["body"] %></p>
-                              </div>
-                            <% end %>
-                          </div>
-                        <% else %>
-                          <p class="text-xs font-bold uppercase tracking-widest italic text-slate-300">No notes recorded</p>
-                        <% end %>
-                      </div>
+                    <div class="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 px-8 py-6">
+                      <button type="button" class="px-6 py-2.5 text-sm font-black uppercase tracking-widest text-slate-500 transition hover:text-slate-800" data-action="request-dialog#close">Close</button>
+                      <%= link_to "Full Booking Details", hotel_booking_path(current_hotel, card[:booking_id]), class: "rounded-xl bg-slate-950 px-6 py-2.5 text-sm font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-slate-800", data: { turbo: false } %>
                     </div>
                   </div>
+                </dialog>
 
-                  <div class="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 px-8 py-6">
-                    <button type="button" class="px-6 py-2.5 text-sm font-black uppercase tracking-widest text-slate-500 transition hover:text-slate-800" data-action="request-dialog#close">Close</button>
-                    <%= link_to "Full Booking Details", hotel_booking_path(current_hotel, card[:booking_id]), class: "rounded-xl bg-slate-950 px-6 py-2.5 text-sm font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-slate-800", data: { turbo: false } %>
+              <% else %>
+                <%# Non-actionable card (e.g. checkout without update_url) %>
+                <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-amber-300 hover:shadow-md">
+                  <div class="mb-3 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= badge_class %>">
+                        <%= card[:kind] %>
+                      </span>
+                      <span class="font-mono text-[10px] font-bold tracking-tight text-slate-400"><%= @presenter.card_token_label(card) %></span>
+                    </div>
+                    <span class="rounded border border-slate-100 bg-slate-50 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600"><%= card[:status] %></span>
                   </div>
-                </div>
-              </dialog>
+
+                  <p class="text-sm font-bold leading-snug text-slate-900 mb-4"><%= card[:title] %></p>
+
+                  <div class="flex items-center justify-between border-t border-slate-50 pt-3">
+                    <div class="flex flex-col">
+                      <span class="max-w-[140px] truncate text-xs font-bold text-slate-700"><%= card[:guest_name] %></span>
+                      <span class="text-[10px] font-medium uppercase tracking-tight text-slate-400"><%= @presenter.formatted_requested_at(card) %></span>
+                    </div>
+                    <% if card[:complete_url].present? %>
+                      <div class="flex items-center gap-2">
+                        <%= button_to card[:complete_url], method: :patch, class: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all hover:border-emerald-500 hover:bg-emerald-500 hover:text-white" do %>
+                          <%= cached_icon "check", stroke_width: 3, class: "size-3.5" %>
+                          Complete
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                </article>
+              <% end %>
             <% end %>
           <% else %>
             <div class="flex flex-col items-center justify-center h-40 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50">
@@ -216,193 +242,10 @@
         </div>
 
         <div class="border-t border-slate-200 bg-white px-4 py-4 flex justify-center">
-          <% if bucket_key == :housekeeping %>
-            <%= paginate @presenter.board_columns[:housekeeping], param_name: :housekeeping_page, params: @presenter.page_params %>
-          <% elsif bucket_key == :complaint %>
-            <%= paginate @presenter.board_columns[:complaint], param_name: :complaint_page, params: @presenter.page_params %>
-          <% else %>
-            <%= paginate @presenter.board_columns[:completed], param_name: :completed_page, params: @presenter.page_params %>
-          <% end %>
+          <%= paginate @presenter.board_columns[bucket_key], param_name: @presenter.pagination_param_name(bucket_key), params: @presenter.page_params %>
         </div>
       </section>
     <% end %>
-
-    <%# Checkout requests column %>
-    <section class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/40 border-t-4 border-t-amber-500">
-      <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 bg-white">
-        <div>
-          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-900">Checkout Requests</h2>
-          <p class="text-[11px] font-medium text-slate-500"><%= pluralize(@presenter.board_counts[:checkout], "pending request") %></p>
-        </div>
-        <span class="inline-flex size-7 items-center justify-center rounded-full bg-amber-100 text-xs font-black text-amber-700">
-          <%= @presenter.board_columns[:checkout].size %>
-        </span>
-      </div>
-
-      <div class="flex-1 min-h-0 space-y-3 overflow-y-auto p-3 custom-scrollbar">
-        <% if @presenter.board_columns[:checkout].any? %>
-          <% @presenter.board_columns[:checkout].each do |card| %>
-            <% if card[:update_url].present? %>
-              <% kind_badge_class = @presenter.kind_badge_class(card) %>
-              <article
-                data-controller="request-dialog"
-                draggable="true"
-                data-requests-board-target="card"
-                data-request-kind="<%= card[:kind] %>"
-                data-request-id="<%= card[:request_id] %>"
-                data-update-url="<%= card[:update_url] %>"
-                data-current-status="<%= card[:status] %>"
-                data-action="dragstart->requests-board#dragStart dragend->requests-board#dragEnd"
-                class="group cursor-grab rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-400 hover:shadow-md active:cursor-grabbing"
-              >
-                <div class="mb-3 flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= kind_badge_class %>">
-                      <%= card[:kind] %>
-                    </span>
-                    <span class="font-mono text-[10px] font-bold tracking-tight text-slate-400"><%= card[:booking_token] %> · Room <%= card[:room_number] %></span>
-                  </div>
-                  <span class="rounded border border-slate-100 bg-slate-50 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600">
-                    <%= card[:status] %>
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  class="block w-full text-left"
-                  data-action="request-dialog#open"
-                >
-                  <p class="line-clamp-2 text-sm font-bold leading-snug text-slate-900 transition-colors group-hover:text-blue-600"><%= card[:title] %></p>
-                </button>
-
-                <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
-                  <div class="flex flex-col">
-                    <span class="max-w-[140px] truncate text-xs font-bold text-slate-700"><%= card[:guest_name] %></span>
-                    <span class="text-[10px] font-medium uppercase tracking-tight text-slate-400"><%= display_housekeeping_datetime(card[:requested_at]) %></span>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <% if card[:status] == "pending" %>
-                      <%= button_to card[:update_url], params: { status: "new" }, method: :patch, class: "flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-blue-700 shadow-sm transition-all hover:border-blue-500 hover:bg-blue-500 hover:text-white", title: "Dispatch Request" do %>
-                        <%= cached_icon "arrow-right", stroke_width: 3, class: "size-3.5" %>
-                        Dispatch
-                      <% end %>
-                    <% else %>
-                      <%= button_to card[:update_url], params: { status: @presenter.target_status(card) }, method: :patch, class: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all hover:border-emerald-500 hover:bg-emerald-500 hover:text-white", title: "Mark as Done" do %>
-                        <%= cached_icon "check", stroke_width: 3, class: "size-3.5" %>
-                        Done
-                      <% end %>
-                    <% end %>
-                  </div>
-                </div>
-              </article>
-
-              <dialog data-request-dialog-target="dialog" data-action="click->request-dialog#closeOnBackdrop" class="fixed inset-0 m-auto w-[min(94vw,44rem)] rounded-3xl p-0 shadow-2xl backdrop:bg-slate-900/60">
-                <div class="flex flex-col overflow-hidden bg-white">
-                  <div class="flex items-center justify-between border-b border-slate-100 px-8 py-6">
-                    <div class="flex items-center gap-4">
-                      <span class="rounded-lg border px-3 py-1 text-[11px] font-black uppercase tracking-widest <%= kind_badge_class %>"><%= card[:kind] %></span>
-                      <h3 class="text-xl font-black text-slate-950"><%= card[:booking_token] %></h3>
-                    </div>
-                    <button type="button" class="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900" data-action="request-dialog#close">
-                      <%= cached_icon "x", stroke_width: 3, class: "size-5" %>
-                    </button>
-                  </div>
-
-                  <div class="grid divide-y divide-slate-100 md:grid-cols-2 md:divide-x md:divide-y-0">
-                    <div class="space-y-6 p-8">
-                      <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Guest Details</label>
-                        <p class="mt-1 text-lg font-bold text-slate-900"><%= card[:guest_name] %></p>
-                      </div>
-                      <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Status</label>
-                        <div class="mt-2 flex items-center gap-2">
-                          <span class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600"><%= card[:status] %></span>
-                        </div>
-                      </div>
-                      <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Timeline</label>
-                        <div class="mt-3 space-y-2">
-                          <div class="flex items-center gap-3 text-sm">
-                            <span class="w-12 text-[10px] font-bold uppercase text-slate-400">Entry:</span>
-                            <span class="font-bold text-slate-900"><%= display_housekeeping_datetime(card[:requested_at]) %></span>
-                          </div>
-                          <% if card[:completed_at].present? %>
-                            <div class="flex items-center gap-3 text-sm">
-                              <span class="w-12 text-[10px] font-bold uppercase text-emerald-500">Exit:</span>
-                              <span class="font-bold text-slate-900"><%= display_housekeeping_datetime(card[:completed_at]) %></span>
-                            </div>
-                          <% end %>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="space-y-6 bg-slate-50/40 p-8">
-                      <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Request Body</label>
-                        <p class="mt-2 rounded-xl border border-slate-100 bg-white p-4 text-sm font-bold leading-relaxed text-slate-700 shadow-sm"><%= card[:title] %></p>
-                      </div>
-                      <div>
-                        <label class="mb-3 block text-[10px] font-black uppercase tracking-widest text-slate-400">Internal Staff Notes</label>
-                        <% if card[:internal_notes]&.any? %>
-                          <div class="space-y-3">
-                            <% card[:internal_notes].each do |note| %>
-                              <div class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-                                <p class="whitespace-pre-wrap text-sm font-medium text-slate-800"><%= note["body"] %></p>
-                              </div>
-                            <% end %>
-                          </div>
-                        <% else %>
-                          <p class="text-xs font-bold uppercase tracking-widest italic text-slate-300">No notes recorded</p>
-                        <% end %>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 px-8 py-6">
-                    <button type="button" class="px-6 py-2.5 text-sm font-black uppercase tracking-widest text-slate-500 transition hover:text-slate-800" data-action="request-dialog#close">Close</button>
-                    <%= link_to "Full Booking Details", hotel_booking_path(current_hotel, card[:booking_id]), class: "rounded-xl bg-slate-950 px-6 py-2.5 text-sm font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-slate-800", data: { turbo: false } %>
-                  </div>
-                </div>
-              </dialog>
-            <% else %>
-              <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-amber-300 hover:shadow-md">
-                <div class="mb-3 flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <span class="rounded border border-amber-100 bg-amber-50 px-2 py-0.5 text-[9px] font-black uppercase text-amber-700">Checkout</span>
-                    <span class="font-mono text-[10px] font-bold tracking-tight text-slate-400"><%= card[:booking_token] %> · Room <%= card[:room_number] %></span>
-                  </div>
-                  <span class="rounded border border-slate-100 bg-slate-50 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600"><%= card[:status] %></span>
-                </div>
-
-                <p class="text-sm font-bold leading-snug text-slate-900 mb-4"><%= card[:title] %></p>
-
-                <div class="flex items-center justify-between border-t border-slate-50 pt-3">
-                  <div class="flex flex-col">
-                    <span class="max-w-[140px] truncate text-xs font-bold text-slate-700"><%= card[:guest_name] %></span>
-                    <span class="text-[10px] font-medium uppercase tracking-tight text-slate-400"><%= card[:requested_at]&.strftime("%d %b, %H:%M") %></span>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <%= button_to card[:complete_url], method: :patch, class: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all hover:border-emerald-500 hover:bg-emerald-500 hover:text-white" do %>
-                      <%= cached_icon "check", stroke_width: 3, class: "size-3.5" %>
-                      Complete
-                    <% end %>
-                  </div>
-                </div>
-              </article>
-            <% end %>
-          <% end %>
-        <% else %>
-          <div class="flex flex-col items-center justify-center h-40 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50">
-            <p class="text-[10px] font-black uppercase tracking-widest text-slate-300">No checkout requests</p>
-          </div>
-        <% end %>
-      </div>
-
-      <div class="border-t border-slate-200 bg-white px-4 py-4 flex justify-center">
-        <%= paginate @presenter.board_columns[:checkout], param_name: :checkout_page, params: @presenter.page_params %>
-      </div>
-    </section>
   </div>
   <% end %>
 </div>

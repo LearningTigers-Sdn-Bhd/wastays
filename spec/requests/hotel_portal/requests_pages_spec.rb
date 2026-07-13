@@ -55,4 +55,25 @@ RSpec.describe "Hotel portal request pages", type: :request do
     expect(response.body).to include("Maintenance informed")
     expect(response.body).not_to include("onclick=")
   end
+
+  it "renders completed checkout requests on the board with an archive button" do
+    booking = create(:booking, hotel: hotel, guest_name: "John completed")
+    checkout = create(:check_out_request, booking: booking, status: "completed", guest_notes: "Clean up completed")
+
+    get hotel_requests_path(hotel)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Clean up completed")
+    expect(response.body).to include(hotel_archive_request_path(hotel, kind: "checkout", request_id: checkout.id))
+  end
+
+  it "can archive completed checkout requests" do
+    booking = create(:booking, hotel: hotel, guest_name: "John completed")
+    checkout = create(:check_out_request, booking: booking, status: "completed", guest_notes: "Clean up completed")
+
+    patch hotel_archive_request_path(hotel, kind: "checkout", request_id: checkout.id)
+
+    expect(response).to redirect_to(hotel_requests_path(hotel))
+    expect(checkout.reload.metadata["archived_at"]).to be_present
+  end
 end

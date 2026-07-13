@@ -114,7 +114,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       get hotel_housekeeping_tasks_path(hotel, date: Date.tomorrow.to_s)
 
       expect(response.body).to include("101")
-      expect(response.body).to include("Alice Smith")
+      expect(response.body).to include(Date.tomorrow.strftime("%d %b %Y"))
       expect(response.body).to include("Sheets")
       expect(response.body).to include("Trash")
     end

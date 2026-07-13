@@ -454,6 +454,23 @@ module HotelPortal
       room_status_board[:status_counts]
     end
 
+    def status_count_badge(status)
+      count = status_counts[status]
+      return nil unless count&.positive?
+
+      count
+    end
+
+    def occupancy_legend_items
+      [
+        { label: "Available", border_class: "border-emerald-200", bg_class: "bg-emerald-50", text_class: "text-emerald-700" },
+        { label: "Completed Booking", border_class: "border-slate-200", bg_class: "bg-white", text_class: "text-slate-700" },
+        { label: "Arriving", border_class: "border-amber-200", bg_class: "bg-amber-50", text_class: "text-amber-700" },
+        { label: "Occupied", border_class: "border-rose-200", bg_class: "bg-rose-50", text_class: "text-rose-700" },
+        { label: "Blocked / Maintenance", border_class: "border-slate-200", bg_class: "bg-slate-100", text_class: "text-slate-700" }
+      ]
+    end
+
     private
 
     def maintenance_block_path(block, finish: false)

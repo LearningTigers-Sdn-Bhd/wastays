@@ -3,7 +3,7 @@
 <div class="space-y-6">
   <!-- Search and Filters Form -->
   <div class="mx-4 md:mx-0">
-    <%= form_with url: form_url, method: :get, id: "hk-filters-form", data: { controller: "auto-submit", turbo_frame: "housekeeping_tasks_results" }, class: "grid gap-4 sm:grid-cols-2 lg:grid-cols-5" do |f| %>
+    <%= form_with url: form_url, method: :get, id: "hk-filters-form", data: { controller: "auto-submit export-sync", turbo_frame: "housekeeping_tasks_results", action: "input->export-sync#sync change->export-sync#sync" }, class: "grid gap-4 sm:grid-cols-2 lg:grid-cols-5" do |f| %>
 
       <!-- Text Search -->
       <div class="relative lg:col-span-2">
@@ -20,18 +20,7 @@
 
       <!-- Room Status Filter -->
       <div>
-        <% status_options = [
-          ["All Room Statuses", ""],
-          ["Ready", "ready"],
-          ["Dirty", "dirty"],
-          ["Cleaning", "cleaning"],
-          ["Occupied", "occupied"],
-          ["Awaiting Inspection", "awaiting_inspection"],
-          ["Inspection Failed", "inspection_failed"],
-          ["Out of Service", "out_of_service"],
-          ["Late Checkout Detected", "late_checkout_detected"]
-        ] %>
-        <%= select_tag :room_status, options_for_select(status_options, params[:room_status]), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
+        <%= select_tag :room_status, options_for_select(room_status_filter_options, params[:room_status]), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
       </div>
 
       <!-- Date Filter -->
@@ -83,66 +72,30 @@
                   </td>
                 </tr>
 
-                <!-- Rooms Row -->
+                <!-- Room Rows -->
                 <% group[:rooms].each do |room| %>
-                  <% room_no = room[:room_number] %>
-                  <% resolved_status = room[:resolved_status] %>
-                  <% active_booking = room[:active_booking] %>
-                  <% hk_requests = room[:hk_requests] %>
-                  <% room_type = room[:room_type] %>
-
-                  <% display_status = resolved_status == "dirty" ? "Dirty" : resolved_status.humanize.titleize %>
-                  <% status_badge_class = case resolved_status
-                                          when "ready" then "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                          when "dirty" then "bg-amber-50 text-amber-700 border-amber-100"
-                                          when "cleaning" then "bg-blue-50 text-blue-700 border-blue-100"
-                                          when "occupied" then "bg-rose-50 text-rose-700 border-rose-100"
-                                          else "bg-slate-50 text-slate-700 border-slate-100"
-                                          end %>
-
                   <tr class="group hover:bg-slate-50/70 transition-colors duration-150 align-middle" data-table-group-target="row">
                     <!-- Room -->
                     <td class="px-6 py-4 whitespace-nowrap align-middle border-r border-slate-200 pr-6">
                       <div class="flex items-center justify-between gap-2 w-full">
                         <div class="min-w-0">
-                          <span class="block text-sm font-bold text-slate-950"><%= room_no %></span>
-
+                          <span class="block text-sm font-bold text-slate-950"><%= room.room_number %></span>
                         </div>
-                        <% if room_type %>
+                        <% if room.room_type %>
                           <div class="flex items-center gap-1.5 shrink-0">
-                            <!-- Smoking Icon -->
-                            <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
-                              <span data-floating-target="reference" class="<%= room_type.smoking_allowed ? 'text-emerald-500' : 'text-slate-400' %> translate-y-[1px]">
-                                <% if room_type.smoking_allowed %>
-                                  <%= cached_icon "cigarette", stroke_width: 2.75, class: "size-3.5" %>
-                                <% else %>
-                                  <span class="relative inline-flex items-center justify-center size-3.5">
-                                    <%= cached_icon "cigarette", stroke_width: 2.75, class: "size-3.5" %>
-                                    <%= cached_icon "ban", stroke_width: 2.75, class: "absolute size-4" %>
-                                  </span>
-                                <% end %>
-                              </span>
-                              <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap text-[9px] font-bold uppercase tracking-wider">
-                                <%= room_type.smoking_allowed ? "Smoking Allowed" : "No Smoking" %>
-                              </div>
-                            </div>
+                            <%= render "shared/room_attribute_icon",
+                                       allowed: room.smoking_allowed?,
+                                       icon_name: "cigarette",
+                                       allowed_label: "Smoking Allowed",
+                                       disallowed_label: "No Smoking",
+                                       extra_class: "translate-y-[1px]" %>
 
-                            <!-- Pet Icon -->
-                            <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
-                              <span data-floating-target="reference" class="<%= room_type.pets_allowed ? 'text-emerald-500' : 'text-slate-400' %>">
-                                <% if room_type.pets_allowed %>
-                                  <%= cached_icon "paw-print", stroke_width: 2.75, class: "size-3.5" %>
-                                <% else %>
-                                  <span class="relative inline-flex items-center justify-center size-3.5">
-                                    <%= cached_icon "paw-print", stroke_width: 2.75, class: "size-3" %>
-                                    <%= cached_icon "ban", stroke_width: 2.75, class: "absolute size-4" %>
-                                  </span>
-                                <% end %>
-                              </span>
-                              <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap text-[9px] font-bold uppercase tracking-wider">
-                                <%= room_type.pets_allowed ? "Pets Allowed" : "No Pets" %>
-                              </div>
-                            </div>
+                            <%= render "shared/room_attribute_icon",
+                                       allowed: room.pets_allowed?,
+                                       icon_name: "paw-print",
+                                       allowed_label: "Pets Allowed",
+                                       disallowed_label: "No Pets",
+                                       disallowed_icon_size: "size-3" %>
                           </div>
                         <% end %>
                       </div>
@@ -151,15 +104,10 @@
                     <!-- Assign To -->
                     <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
                       <div class="py-1 min-h-[38px] flex items-center">
-                        <% first_req = hk_requests.first %>
-                        <% if first_req && first_req.id.present? %>
-                          <% assign_url = if first_req.respond_to?(:checkout_request?) && first_req.checkout_request?
-                                            hotel_assign_checkout_request_path(current_hotel, first_req.id)
-                                          else
-                                            assign_hotel_housekeeping_task_path(current_hotel, first_req.id)
-                                          end %>
-                          <%= form_with url: assign_url, method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
-                            <%= select_tag :assigned_to, options_for_select([["Unassigned", ""]] + @staff_members.map { |s| [s.name, s.id] }, first_req.respond_to?(:assigned_to_id) ? first_req.assigned_to_id.to_s.presence&.to_i : first_req.metadata&.dig("assigned_to").to_s.presence&.to_i), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
+                        <% first_req = room.first_task_request %>
+                        <% if first_req&.assignable? %>
+                          <%= form_with url: first_req.assign_url, method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
+                            <%= select_tag :assigned_to, options_for_select([["Unassigned", ""]] + @staff_members.map { |s| [s.name, s.id] }, first_req.assigned_to_value), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
                           <% end %>
                         <% else %>
                           <span class="text-xs font-bold text-slate-400">-</span>
@@ -169,37 +117,37 @@
 
                     <!-- Room Status -->
                     <td class="px-3 py-4 whitespace-nowrap">
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border <%= status_badge_class %>">
-                        <%= display_status %>
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border <%= room.status_badge_class %>">
+                        <%= room.display_status %>
                       </span>
                     </td>
 
                     <!-- Arrival Time -->
                     <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
-                      <%= (active_booking && active_booking.checked_in_at&.strftime("%I:%M %p")) || "-" %>
+                      <%= room.arrival_time %>
                     </td>
 
                     <!-- Arrival Date -->
                     <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
-                      <%= active_booking ? display_housekeeping_date(active_booking.check_in) : "-" %>
+                      <%= room.arrival_date %>
                     </td>
 
                     <!-- Departure -->
                     <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
-                      <%= active_booking ? display_housekeeping_date(active_booking.check_out) : "-" %>
+                      <%= room.departure_date %>
                     </td>
 
                     <!-- Nights -->
                     <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900 text-center">
-                      <%= active_booking ? active_booking.duration_in_nights : "-" %>
+                      <%= room.nights %>
                     </td>
 
                     <!-- Task Details -->
                     <td class="px-3 py-4">
                       <div class="flex flex-col gap-2">
-                        <% hk_requests.each do |req| %>
+                        <% room.task_requests.each do |req| %>
                           <div class="py-1 min-h-[38px] flex items-center">
-                            <% if req && req.request_details.present? && req.request_details != "-" %>
+                            <% if req.has_details? %>
                               <p class="text-sm font-medium text-slate-700 line-clamp-2" title="<%= req.request_details %>">
                                 <%= req.request_details %>
                               </p>
@@ -214,24 +162,16 @@
                     <!-- Task Status -->
                     <td class="py-4 pl-3 pr-6 text-right whitespace-nowrap text-xs font-bold text-slate-900">
                       <div class="flex flex-col gap-2 items-end">
-                        <% hk_requests.each do |req| %>
+                        <% room.task_requests.each do |req| %>
                           <div class="py-1 min-h-[38px] flex items-center">
-                            <% if req && req.id.present? %>
-                              <% request_kind = (req.respond_to?(:checkout_request?) && req.checkout_request?) ? "checkout" : "housekeeping" %>
-                              <% status_url = if request_kind == "checkout"
-                                                hotel_checkout_request_status_path(current_hotel, req.id)
-                                              else
-                                                hotel_request_status_path(current_hotel, kind: request_kind, request_id: req.id)
-                                              end %>
-                              <%= form_with url: status_url, method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
+                            <% if req.assignable? %>
+                              <%= form_with url: req.status_url, method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
                                 <%= hidden_field_tag :redirect_to, request.original_url %>
-                                <% status_value = req.respond_to?(:display_status) ? req.display_status : req.status %>
-                                <% status_options = [["No Task", "no_task"], ["New", "new"], ["Assigned", "assigned"], ["In Progress", "in_progress"], ["Completed", "completed"]] %>
-                                <%= select_tag :status, options_for_select(status_options, req.respond_to?(:checkout_request?) && req.checkout_request? ? status_value : req.status), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
+                                <%= select_tag :status, options_for_select(task_status_options, req.selected_status_value), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
                               <% end %>
                             <% else %>
                               <span class="inline-flex items-center rounded-xl border border-amber-100 bg-amber-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-amber-700">
-                                <%= req.respond_to?(:display_status) ? req.display_status.to_s.humanize.titleize : req&.status.to_s.humanize.titleize.presence || "No Task" %>
+                                <%= req.fallback_status_label %>
                               </span>
                             <% end %>
                           </div>
@@ -258,50 +198,3 @@
     </div>
   <% end %>
 </div>
-
-<script>
-  (function() {
-    const initExportSync = () => {
-      const form = document.getElementById("hk-filters-form");
-      if (!form) return;
-      
-      const updateLinks = () => {
-        const q = form.querySelector('[name="q"]').value;
-        const assignedTo = form.querySelector('[name="assigned_to"]').value;
-        const roomStatus = form.querySelector('[name="room_status"]').value;
-        const dateField = form.querySelector('[name="date"]');
-        const date = dateField ? dateField.value : "";
-        
-        const pdfLink = document.getElementById("export-pdf-link");
-        const excelLink = document.getElementById("export-excel-link");
-        
-        if (pdfLink) {
-          const url = new URL(pdfLink.href, window.location.origin);
-          url.searchParams.set("q", q);
-          url.searchParams.set("assigned_to", assignedTo);
-          url.searchParams.set("room_status", roomStatus);
-          url.searchParams.set("date", date);
-          pdfLink.href = url.pathname + url.search;
-        }
-        if (excelLink) {
-          const url = new URL(excelLink.href, window.location.origin);
-          url.searchParams.set("q", q);
-          url.searchParams.set("assigned_to", assignedTo);
-          url.searchParams.set("room_status", roomStatus);
-          url.searchParams.set("date", date);
-          excelLink.href = url.pathname + url.search;
-        }
-      };
-      
-      form.addEventListener("input", updateLinks);
-      form.addEventListener("change", updateLinks);
-      updateLinks();
-    };
-    
-    document.addEventListener("turbo:load", initExportSync);
-    // Fallback for Turbo Frame navigation updates
-    document.addEventListener("turbo:frame-render", initExportSync);
-    // Initialize immediately in case script loads after turbo:load
-    initExportSync();
-  })();
-</script>

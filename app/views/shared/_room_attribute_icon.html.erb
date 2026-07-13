@@ -1,0 +1,16 @@
+<%# locals: (allowed:, icon_name:, allowed_label:, disallowed_label:, extra_class: nil, disallowed_icon_size: "size-3.5", tooltip_class: "px-2 py-1 whitespace-nowrap text-[9px] font-bold uppercase tracking-wider") %>
+<div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
+  <span data-floating-target="reference" class="<%= allowed ? 'text-emerald-500' : 'text-slate-400' %> <%= extra_class %>">
+    <% if allowed %>
+      <%= cached_icon icon_name, stroke_width: 2.75, class: "size-3.5" %>
+    <% else %>
+      <span class="relative inline-flex items-center justify-center size-3.5">
+        <%= cached_icon icon_name, stroke_width: 2.75, class: disallowed_icon_size %>
+        <%= cached_icon "ban", stroke_width: 2.75, class: "absolute size-4" %>
+      </span>
+    <% end %>
+  </span>
+  <div data-floating-target="floating" class="hidden z-[100] bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white <%= tooltip_class %>">
+    <%= allowed ? allowed_label : disallowed_label %>
+  </div>
+</div>

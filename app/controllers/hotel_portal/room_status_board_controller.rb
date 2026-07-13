@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require_dependency Rails.root.join("app/presenters/hotel_portal/room_status_board_presenter").to_s
-
 module HotelPortal
   class RoomStatusBoardController < BaseController
     before_action :authorize_room_status_board!
@@ -29,12 +27,18 @@ module HotelPortal
     end
 
     def housekeeping_requests
-      @room_number = params[:room_number]
-      @room_status = current_hotel.room_statuses.find_by(room_number: @room_number)
-      @housekeeping_requests = HotelPortal::HousekeepingRequestsQuery.new(
+      room_number = params[:room_number]
+      room_status = current_hotel.room_statuses.find_by(room_number: room_number)
+      requests = HotelPortal::HousekeepingRequestsQuery.new(
         hotel: current_hotel,
-        room_number: @room_number
+        room_number: room_number
       ).call
+
+      @presenter = HotelPortal::HousekeepingRequestsPresenter.new(
+        room_number: room_number,
+        room_status: room_status,
+        housekeeping_requests: requests
+      )
 
       render "hotel_portal/room_status_board/housekeeping_requests", layout: false
     end
