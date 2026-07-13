@@ -6,11 +6,13 @@
       data-panels-ui--popover-close-delay-value="<%= @close_delay %>"
       data-panels-ui--popover-trigger-on-value="<%= @trigger_on %>"
       data-panels-ui--popover-focus-value="<%= focus? %>"
+      <%= tag.attributes(data: { panels_ui__popover_owner_value: @owner }) if @owner.present? %>
       <%= tag.attributes(data: { action: root_action }.compact) if root_action %>>
   <%= trigger %>
 
   <div id="<%= panel_id %>"
        <%= tag.attributes(role: @role) if @role %>
+       <%= tag.attributes(aria: { labelledby: trigger_id }) if @role %>
        popover="manual"
        tabindex="-1"
        data-state="closed"

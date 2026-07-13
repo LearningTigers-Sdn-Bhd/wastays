@@ -10,23 +10,18 @@
         <h3 class="text-sm font-semibold"><%= theme_label %> keycaps</h3>
 
         <div class="mt-4 flex flex-wrap items-center gap-2" aria-label="Keyboard shortcut examples">
-          <kbd class="panel-kbd">⌘</kbd>
-          <kbd class="panel-kbd">K</kbd>
-          <kbd class="panel-kbd">Ctrl</kbd>
-          <kbd class="panel-kbd">Shift</kbd>
-          <kbd class="panel-kbd">P</kbd>
-          <kbd class="panel-kbd">⇧</kbd>
-          <kbd class="panel-kbd">Enter</kbd>
+          <% %w[⌘ K Ctrl Shift P ⇧ Enter].each do |key| %>
+            <%= render PanelsUI::Kbd.new(label: key) %>
+          <% end %>
         </div>
 
         <div class="mt-5 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           <span class="inline-flex items-center gap-1.5">
-            <kbd class="panel-kbd" data-size="sm">⌘</kbd>
-            <kbd class="panel-kbd" data-size="sm">K</kbd>
+            <%= render PanelsUI::Kbd.new(keys: ["⌘", "K"], size: :sm) %>
             <span>Search</span>
           </span>
           <span class="inline-flex items-center gap-1.5">
-            <kbd class="panel-kbd" data-size="lg">Enter</kbd>
+            <%= render PanelsUI::Kbd.new(label: "Enter", size: :lg) %>
             <span>Confirm</span>
           </span>
         </div>

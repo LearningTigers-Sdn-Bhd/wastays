@@ -35,6 +35,14 @@
     outline: none;
   }
 
+  /* Calendar sheets size to their calendar grid instead of the generic popover cap. */
+  .popover.panel-date-picker__popover,
+  .popover.panel-date-time-picker__popover {
+    width: max-content;
+    max-width: calc(100vw - 1rem);
+    padding: 0;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .popover {
       transition: none;

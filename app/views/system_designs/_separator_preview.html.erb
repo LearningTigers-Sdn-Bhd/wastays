@@ -11,15 +11,15 @@
 
         <div class="mt-4">
           <p class="text-sm font-medium">Booking details</p>
-          <div class="panel-separator my-4" data-orientation="horizontal" role="separator" aria-orientation="horizontal"></div>
+          <%= render PanelsUI::Separator.new(class: "my-4") %>
           <p class="text-sm text-muted-foreground">Guest and stay information</p>
         </div>
 
         <div class="mt-6 flex h-10 items-center gap-4 text-sm">
           <span>Overview</span>
-          <div class="panel-separator" data-orientation="vertical" role="separator" aria-orientation="vertical"></div>
+          <%= render PanelsUI::Separator.new(orientation: :vertical) %>
           <span>Activity</span>
-          <div class="panel-separator" data-orientation="vertical" role="separator" aria-orientation="vertical"></div>
+          <%= render PanelsUI::Separator.new(orientation: :vertical) %>
           <span>Notes</span>
         </div>
       </div>

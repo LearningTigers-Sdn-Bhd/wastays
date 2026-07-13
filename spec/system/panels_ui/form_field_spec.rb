@@ -8,7 +8,9 @@ RSpec.describe "PanelsUI::FormField", type: :system do
   def inline_geometry(theme)
     page.evaluate_script(<<~JS)
       (() => {
-        const card = document.querySelector(`[data-theme="#{theme}"]`)
+        const section = document.querySelector('[aria-labelledby="form-fields-preview-heading"]')
+        const card = [...section.querySelectorAll(':scope > div > [data-theme]')]
+          .find((element) => element.dataset.theme === '#{theme}')
         const input = card.querySelector('input[name$="[nightly_rate]"]')
         const group = input.closest('.panel-control-group')
         const start = group.querySelector('[data-align="inline-start"]')
@@ -46,7 +48,10 @@ RSpec.describe "PanelsUI::FormField", type: :system do
     %w[inline-end inline-start].each do |removed_alignment|
       geometry = page.evaluate_script(<<~JS)
         (() => {
-          const original = document.querySelector('[data-theme="panel-light"] input[name$="[nightly_rate]"]')
+          const section = document.querySelector('[aria-labelledby="form-fields-preview-heading"]')
+          const card = [...section.querySelectorAll(':scope > div > [data-theme]')]
+            .find((element) => element.dataset.theme === 'panel-light')
+          const original = card.querySelector('input[name$="[nightly_rate]"]')
             .closest('.panel-control-group[data-layout="inline"]')
           const group = original.cloneNode(true)
           group.querySelector('[data-align="#{removed_alignment}"]').remove()
@@ -77,7 +82,9 @@ RSpec.describe "PanelsUI::FormField", type: :system do
   it "keeps block addons above and below the textarea" do
     geometry = page.evaluate_script(<<~JS)
       (() => {
-        const card = document.querySelector('[data-theme="panel-light"]')
+        const section = document.querySelector('[aria-labelledby="form-fields-preview-heading"]')
+        const card = [...section.querySelectorAll(':scope > div > [data-theme]')]
+          .find((element) => element.dataset.theme === 'panel-light')
         const textarea = card.querySelector('textarea[name$="[notes]"]')
         const group = textarea.closest('.panel-control-group')
         const start = group.querySelector('[data-align="block-start"]').getBoundingClientRect()
@@ -100,7 +107,9 @@ RSpec.describe "PanelsUI::FormField", type: :system do
   it "renders bare addons without separators and gives bordered textarea addons extra padding" do
     styles = page.evaluate_script(<<~JS)
       (() => {
-        const card = document.querySelector('[data-theme="panel-light"]')
+        const section = document.querySelector('[aria-labelledby="form-fields-preview-heading"]')
+        const card = [...section.querySelectorAll(':scope > div > [data-theme]')]
+          .find((element) => element.dataset.theme === 'panel-light')
         const bare = card.querySelector('input[name$="[nightly_rate]"]')
           .closest('.panel-control-group')
           .querySelector('[data-variant="bare"]')

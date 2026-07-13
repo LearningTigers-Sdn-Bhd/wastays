@@ -13,6 +13,9 @@
 @import "./panel/select-menu.css";
 @import "./panel/combobox.css";
 @import "./panel/multi-select.css";
+@import "./panel/date-picker.css";
+@import "./panel/time-picker.css";
+@import "./panel/date-time-picker.css";
 @import "./panel/command-palette.css";
 @import "./panel/button.css";
 @import "./panel/badge.css";
@@ -23,6 +26,8 @@
 @import "./panel/separator.css";
 @import "./panel/alert.css";
 @import "./panel/banner.css";
+@import "./panel/card.css";
+@import "./panel/table.css";
 @import "./panel/floating.css";
 @import "./panel/dropdown-menu.css";
 @import "./panel/tooltip.css";
@@ -131,8 +136,8 @@
   --color-neutral-text-primary: #0F172A;
   --color-neutral-text-secondary: #64748B;
 
-  /* Muted Text */
-  --color-muted-foreground: #64748B;
+  /* Secondary muted text. The primary muted-foreground utility is registered
+     above as a role token so it follows the active public/panel theme. */
   --color-muted-foreground-2: #94A3B8;
 
   /* Status Colors */

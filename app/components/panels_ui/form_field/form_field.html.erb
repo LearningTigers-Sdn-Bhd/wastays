@@ -1,6 +1,6 @@
 <%= tag.div(**field_attributes) do %>
   <% if @label.present? %>
-    <%= tag.label(for: control_id, class: label_classes) do %>
+    <%= tag.label(id: label_id, for: control_id, class: label_classes) do %>
       <%= @label %>
       <% if @required %>
         <span class="panel-form-field__required" aria-hidden="true">*</span>

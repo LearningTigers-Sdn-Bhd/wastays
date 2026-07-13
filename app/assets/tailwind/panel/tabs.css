@@ -41,4 +41,21 @@
   .tabs-panel.hidden {
     display: none;
   }
+
+  .tabs-list--underline {
+    @apply flex w-full items-center gap-0 overflow-x-auto rounded-none border-0 bg-transparent p-0 shadow-none;
+  }
+
+  .tabs-tab--underline {
+    @apply h-12 shrink-0 rounded-none border-b-2 border-transparent px-4 font-semibold;
+  }
+
+  .tabs-tab--underline:hover {
+    @apply border-border-interactive bg-transparent text-foreground;
+  }
+
+  .tabs-tab--underline[aria-selected="true"],
+  .tabs-tab--underline[aria-current="page"] {
+    @apply border-border-interactive bg-transparent font-bold text-foreground;
+  }
 }

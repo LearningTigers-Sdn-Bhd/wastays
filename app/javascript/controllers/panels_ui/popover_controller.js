@@ -18,7 +18,8 @@ export default class extends Controller {
     delay: { type: Number, default: 120 },
     closeDelay: { type: Number, default: 0 },
     triggerOn: { type: String, default: "click" },
-    focus: { type: Boolean, default: false }
+    focus: { type: Boolean, default: false },
+    owner: String
   }
 
   connect() {
@@ -29,17 +30,23 @@ export default class extends Controller {
     this.closeTimer = null
     this.pinned = false
     this.onOtherLayerOpen = this.handleOtherLayerOpen.bind(this)
+    this.onLayerClose = this.handleLayerClose.bind(this)
     window.addEventListener("panels-ui:layer-open", this.onOtherLayerOpen)
+    window.addEventListener("panels-ui:layer-close", this.onLayerClose)
   }
 
   disconnect() {
     window.removeEventListener("panels-ui:layer-open", this.onOtherLayerOpen)
+    window.removeEventListener("panels-ui:layer-close", this.onLayerClose)
     this.cancelShow()
     this.cancelClose()
     this.trap?.deactivate()
     this.stopPositioning()
     this.cleanupDismiss?.()
-    if (this.isOpen) this.panelTarget.hidePopover()
+    if (this.isOpen) {
+      if (this.openedEmbedded) delete this.panelTarget.dataset.embeddedOpen
+      else this.panelTarget.hidePopover()
+    }
   }
 
   // ── Open / close ─────────────────────────────────────────────────────────────
@@ -69,21 +76,30 @@ export default class extends Controller {
     if (this.isOpen) return
     this.cancelClose()
 
-    window.dispatchEvent(new CustomEvent("panels-ui:layer-open", { detail: { controller: this } }))
-    this.panelTarget.showPopover()
+    window.dispatchEvent(new CustomEvent("panels-ui:layer-open", { detail: { controller: this, owner: this.hasOwnerValue ? this.ownerValue : null } }))
+    this.openedEmbedded = this.embeddedMobile
+    if (this.openedEmbedded) this.panelTarget.dataset.embeddedOpen = "true"
+    else this.panelTarget.showPopover()
     this.panelTarget.dataset.state = "open"
+    this.element.dispatchEvent(new CustomEvent("panels-ui:popover-open", { bubbles: true }))
     this.triggerTarget?.setAttribute("aria-expanded", "true")
     this.startPositioning()
 
     // onDismiss owns Escape + outside-pointer for both modes; createTrap is configured
     // to defer dismissal to it (escapeDeactivates:false, allowOutsideClick:true).
     this.cleanupDismiss = onDismiss(this.element, {
-      onEscape: () => this.close(true),
-      onOutside: () => this.close()
+      onEscape: () => { if (!this.hasOpenOwnedPanel) this.close(true) },
+      onOutside: (event) => {
+        if (this.ownedOpenPanelContains(event.target)) return
+        this.close()
+      }
     })
 
     if (this.focusValue) {
-      this.trap = createTrap(this.panelTarget)
+      // Focus the dialog surface first. This avoids painting a misleading focus ring
+      // on the first calendar navigation control when the popover was pointer-opened;
+      // keyboard users reach that control with the next Tab press.
+      this.trap = createTrap(this.panelTarget, { initialFocus: this.panelTarget })
       this.trap.activate()
     }
   }
@@ -97,13 +113,20 @@ export default class extends Controller {
     this.trap?.deactivate()
     this.trap = null
     this.panelTarget.dataset.state = "closed"
-    this.panelTarget.hidePopover()
+    if (this.openedEmbedded) delete this.panelTarget.dataset.embeddedOpen
+    else this.panelTarget.hidePopover()
+    this.openedEmbedded = false
     this.triggerTarget?.setAttribute("aria-expanded", "false")
     this.stopPositioning()
     this.cleanupDismiss?.()
     this.cleanupDismiss = null
-    // A focus trap moved focus away, so always restore it; otherwise only when asked.
-    if (restoreFocus || this.focusValue) this.triggerTarget?.focus()
+    window.dispatchEvent(new CustomEvent("panels-ui:layer-close", { detail: { controller: this, owner: this.hasOwnerValue ? this.ownerValue : null } }))
+    // Resume an owning trap before restoring focus so it does not pull focus back to
+    // the parent surface after the child trigger has been focused.
+    if (restoreFocus || this.focusValue) {
+      if (this.hasOwnerValue) window.setTimeout(() => this.triggerTarget?.focus(), 0)
+      else this.triggerTarget?.focus()
+    }
   }
 
   // ── Hover trigger (only wired when trigger_on: :hover) ─────────────────────────
@@ -133,16 +156,46 @@ export default class extends Controller {
   }
 
   handleOtherLayerOpen(event) {
-    if (event.detail?.controller !== this) this.close()
+    const other = event.detail?.controller
+    if (other === this) return
+    if (event.detail?.owner === this.panelTarget.id) {
+      this.trap?.pause()
+      return
+    }
+    if (this.hasOwnerValue && other?.panelTarget?.id === this.ownerValue) return
+    this.close()
+  }
+
+  handleLayerClose(event) {
+    if (event.detail?.owner === this.panelTarget.id && this.isOpen) {
+      this.trap?.unpause()
+      const trigger = event.detail.controller?.triggerTarget
+      window.setTimeout(() => trigger?.focus(), 0)
+    }
+  }
+
+  get hasOpenOwnedPanel() {
+    return [...document.querySelectorAll(`[data-panels-ui--popover-owner-value="${this.panelTarget.id}"]`)]
+      .some((root) => root.querySelector(":scope > .popover[data-state='open']"))
+  }
+
+  ownedOpenPanelContains(target) {
+    return [...document.querySelectorAll(`[data-panels-ui--popover-owner-value="${this.panelTarget.id}"]`)]
+      .some((root) => root.querySelector(":scope > .popover[data-state='open']")?.contains(target))
   }
 
   get isOpen() {
-    return this.panelTarget.matches(":popover-open")
+    return this.panelTarget.matches(":popover-open") || this.panelTarget.dataset.embeddedOpen === "true"
+  }
+
+  get embeddedMobile() {
+    return this.hasOwnerValue && window.matchMedia("(max-width: 639px)").matches
   }
 
   // ── Positioning ────────────────────────────────────────────────────────────────
   startPositioning() {
     this.stopPositioning()
+    if (this.embeddedMobile) return
     const reference = this.triggerTarget ?? this.element
     this.cleanupPosition = autoUpdate(reference, this.panelTarget, () => this.position(reference))
   }
@@ -161,7 +214,14 @@ export default class extends Controller {
       strategy: "fixed",
       middleware
     }).then(({ x, y, placement, middlewareData }) => {
-      Object.assign(this.panelTarget.style, { left: `${x}px`, top: `${y}px` })
+      // Custom elements such as Cally can grow after their first measurement. Clamp
+      // the final coordinates against the upgraded panel size as a last collision
+      // guard; autoUpdate will continue to refine placement after later resizes.
+      const rect = this.panelTarget.getBoundingClientRect()
+      const padding = 8
+      const clampedX = Math.max(padding, Math.min(x, window.innerWidth - rect.width - padding))
+      const clampedY = Math.max(padding, Math.min(y, window.innerHeight - rect.height - padding))
+      Object.assign(this.panelTarget.style, { left: `${clampedX}px`, top: `${clampedY}px` })
       if (this.hasArrowTarget) positionArrow(this.arrowTarget, placement, middlewareData.arrow)
     })
   }

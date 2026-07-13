@@ -1,0 +1,151 @@
+/* PanelsUI::TimePicker — a themed field opening shared direct-entry and scroll columns. */
+@layer components {
+  .panel-time-picker {
+    position: relative;
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .panel-time-picker__anchor {
+    display: block;
+    width: 100%;
+  }
+
+  .panel-time-picker__display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: start;
+    font-weight: 400;
+    color: var(--foreground);
+    cursor: pointer;
+  }
+  .panel-time-picker__display[disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .panel-time-picker__value {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .panel-time-picker__value:empty::before {
+    content: attr(data-placeholder);
+    color: var(--muted-foreground);
+  }
+
+  .panel-time-picker__icon {
+    flex: none;
+    color: var(--muted-foreground);
+  }
+
+  .panel-time-picker__popover {
+    padding: 0.5rem;
+    width: max-content;
+    max-width: calc(100vw - 1rem);
+  }
+
+  .panel-time-control {
+    width: max-content;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--card);
+    color: var(--card-foreground);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .panel-time-control__columns {
+    display: flex;
+    align-items: stretch;
+  }
+
+  .panel-time-control__column {
+    flex: 0 0 4.5rem;
+    width: 4.5rem;
+    min-width: 0;
+    background: var(--card);
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-time-control__column[data-time-kind="period"] {
+    flex-basis: 4.75rem;
+    width: 4.75rem;
+  }
+
+  .panel-time-control__column[data-active="true"] { background: var(--muted); }
+
+  .panel-time-control__input-row {
+    display: grid;
+    place-items: center;
+    height: 2.75rem;
+    padding: 0.375rem;
+  }
+
+  .panel-time-control__input {
+    width: 100%;
+    min-width: 0;
+    height: 2rem;
+    padding: 0.25rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    outline: 0;
+    background: transparent;
+    color: var(--foreground);
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .panel-time-control__input::placeholder { color: var(--muted-foreground); opacity: 1; }
+  .panel-time-control__input:focus { background: var(--card); }
+  .panel-time-control__input:disabled { opacity: 1; cursor: default; }
+
+  .panel-time-control__divider {
+    display: block;
+    height: 1px;
+    background: var(--border);
+    box-shadow: none;
+  }
+
+  .panel-time-control__column[data-active="true"] .panel-time-control__divider {
+    background: var(--ring);
+    box-shadow: 0 1px 0 var(--ring);
+  }
+
+  .panel-time-control__column > .panel-scroll-area { height: 9.375rem; }
+
+  /* Reserve the thumb lane inside the list. Padding here narrows option fills while
+     leaving the touching column geometry and ScrollArea viewport unchanged. */
+  .panel-time-control__list {
+    display: grid;
+    gap: 0.125rem;
+    padding: 0 1rem 0 0.25rem;
+  }
+
+  .panel-time-control__option {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 2.25rem;
+    border-radius: var(--radius-md);
+    color: var(--muted-foreground);
+    transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-time-control__option:hover { background: var(--muted); color: var(--foreground); }
+  .panel-time-control__option[aria-selected="true"] {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font-weight: 600;
+  }
+
+}

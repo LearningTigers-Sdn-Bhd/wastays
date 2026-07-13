@@ -22,13 +22,15 @@ module PanelsUI
   # `:secondary` (subtab) Tabs sets the subtab label. Absent breadcrumb → no-op.
   class Tabs < PanelsUI::BaseComponent
     LEVELS = %i[primary secondary].freeze
+    VARIANTS = %i[pill underline].freeze
 
     # One tab button (role="tab"). `show_subtab_breadcrumb` (primary level only) reveals
     # the breadcrumb's subtab segment when this tab is active.
     class Tab < PanelsUI::BaseComponent
       def initialize(tabs_id:, name:, label:, icon: nil, count: nil,
                      show_subtab_breadcrumb: false, id: nil, panel_id: nil,
-                     data: {}, aria: {}, active: false, class: nil)
+                     href: nil, data: {}, aria: {}, active: false, variant: :pill,
+                     navigation: false, class: nil)
         @tabs_id = tabs_id
         @name = name
         @label = label
@@ -37,20 +39,25 @@ module PanelsUI
         @show_subtab_breadcrumb = show_subtab_breadcrumb
         @id = id || "#{@tabs_id}-tab-#{@name}"
         @panel_id = panel_id || "#{@tabs_id}-panel-#{@name}"
+        @href = href
         @data = data
         @aria = aria
         @active = active
+        @variant = variant
+        @navigation = navigation
         @class = binding.local_variable_get(:class)
       end
 
       def call
+        return navigation_link if @navigation
+
         tag.button(
           safe_join([ icon_tag, tag.span(@label), count_tag ].compact),
           type: "button",
           role: "tab",
           id: @id,
           tabindex: (@active ? "0" : "-1"),
-          class: tw_merge("tabs-tab", @class),
+          class: tab_classes,
           aria: { selected: (@active ? "true" : "false"), controls: @panel_id }.merge(@aria),
           data: {
             panels_ui__tabs_target: "tab",
@@ -63,6 +70,28 @@ module PanelsUI
       end
 
       private
+
+      def navigation_link
+        helpers.link_to(
+          @href,
+          id: @id,
+          class: tab_classes,
+          aria: { current: (@active ? "page" : nil) }.merge(@aria).compact,
+          data: {
+            panels_ui__tabs_target: "tab",
+            tab_name: @name,
+            tab_label: @label,
+            show_subtab_breadcrumb: (@show_subtab_breadcrumb ? "true" : nil),
+            action: "click->panels-ui--tabs#selectNavigation"
+          }.compact.merge(@data)
+        ) do
+          safe_join([ icon_tag, tag.span(@label), count_tag ].compact)
+        end
+      end
+
+      def tab_classes
+        tw_merge("tabs-tab", "tabs-tab--#{@variant}", @class)
+      end
 
       def icon_tag
         return if @icon.blank?
@@ -104,7 +133,13 @@ module PanelsUI
     end
 
     renders_many :tabs, ->(**args) {
-      Tab.new(tabs_id: @id, active: args[:name].to_s == @default.to_s, **args)
+      Tab.new(
+        tabs_id: @id,
+        active: args[:name].to_s == @default.to_s,
+        variant: @variant,
+        navigation: @navigation,
+        **args
+      )
     }
     renders_many :panels, ->(**args) {
       Panel.new(tabs_id: @id, active: args[:name].to_s == @default.to_s, **args)
@@ -112,7 +147,8 @@ module PanelsUI
 
     def initialize(id: nil, default: nil, param: "tab", level: :primary,
                    sync_url: true, aria_label: nil, breadcrumb_id: nil,
-                   list_class: nil, panels_class: nil, class: nil)
+                   variant: :pill, navigation: false, list_class: nil,
+                   panels_class: nil, class: nil)
       @id = id || "tabs-#{object_id}"
       @default = default
       @param = param
@@ -120,6 +156,8 @@ module PanelsUI
       @sync_url = ActiveModel::Type::Boolean.new.cast(sync_url) || false
       @aria_label = aria_label
       @breadcrumb_id = breadcrumb_id
+      @variant = VARIANTS.include?(variant.to_sym) ? variant.to_sym : :pill
+      @navigation = ActiveModel::Type::Boolean.new.cast(navigation) || false
       @list_class = list_class
       @panels_class = panels_class
       @class = binding.local_variable_get(:class)
@@ -129,6 +167,8 @@ module PanelsUI
 
     def default_value = @default
     def sync_url? = @sync_url
+    def navigation? = @navigation
+    def variant = @variant
 
     def breadcrumb_outlet_selector
       "##{@breadcrumb_id}" if @breadcrumb_id.present?

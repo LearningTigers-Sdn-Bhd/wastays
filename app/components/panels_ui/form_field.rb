@@ -38,6 +38,9 @@ module PanelsUI
 
     renders_one :control, types: {
       input: ->(**attributes) { build_input(**attributes) },
+      date_picker: ->(**attributes) { build_date_picker(**attributes) },
+      time_picker: ->(**attributes) { build_time_picker(**attributes) },
+      date_time_picker: ->(**attributes) { build_date_time_picker(**attributes) },
       text_area: ->(**attributes) { build_text_area(**attributes) },
       native_select: ->(choices = nil, **attributes) { build_native_select(choices, **attributes) },
       select_menu: ->(choices = nil, **attributes) { build_select_menu(choices, **attributes) },
@@ -66,6 +69,9 @@ module PanelsUI
     end
 
     def with_input(...) = with_control_input(...)
+    def with_date_picker(...) = with_control_date_picker(...)
+    def with_time_picker(...) = with_control_time_picker(...)
+    def with_date_time_picker(...) = with_control_date_time_picker(...)
     def with_text_area(...) = with_control_text_area(...)
     def with_native_select(...) = with_control_native_select(...)
     def with_select_menu(...) = with_control_select_menu(...)
@@ -78,6 +84,7 @@ module PanelsUI
 
     def hint_id = "#{control_id}-hint"
     def error_id = "#{control_id}-error"
+    def label_id = "#{control_id}-label"
 
     def error_message
       return @error unless @error.equal?(AUTO_ERROR)
@@ -132,6 +139,25 @@ module PanelsUI
     def build_input(**attributes)
       @control_kind = :input
       Input.new(**attributes, **control_options)
+    end
+
+    # Cally-backed date control (popover calendar). Renders its own wrapper (like
+    # combobox/select_menu), so it does not support addons.
+    def build_date_picker(**attributes)
+      @control_kind = :date_picker
+      DatePicker.new(**attributes, labelled_by: (@label.present? ? label_id : nil), **control_options)
+    end
+
+    # Segmented time control (popover HH:MM). Own wrapper, no addons.
+    def build_time_picker(**attributes)
+      @control_kind = :time_picker
+      TimePicker.new(**attributes, labelled_by: (@label.present? ? label_id : nil), **control_options)
+    end
+
+    # Cally calendar + segmented time (popover). Own wrapper, no addons.
+    def build_date_time_picker(**attributes)
+      @control_kind = :date_time_picker
+      DateTimePicker.new(**attributes, labelled_by: (@label.present? ? label_id : nil), **control_options)
     end
 
     def build_text_area(**attributes)

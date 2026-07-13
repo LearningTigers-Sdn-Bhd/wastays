@@ -64,6 +64,39 @@ RSpec.describe PanelsUI::Tabs, type: :component do
     expect(page).to have_no_css(".tabs-panels")
   end
 
+  it "renders underline navigation tabs as links without client-side tab behavior" do
+    render_inline(described_class.new(
+      id: "booking",
+      default: "details",
+      variant: :underline,
+      navigation: true,
+      aria_label: "Booking sections"
+    )) do |tabs|
+      tabs.with_tab(
+        name: "details",
+        label: "Details",
+        href: "/bookings/1?tab=details",
+        data: { turbo_frame: "workspace" }
+      )
+      tabs.with_tab(name: "folio", label: "Folio", href: "/bookings/1?tab=folio")
+    end
+
+    expect(page).to have_css(
+      ".tabs-root--underline[data-controller='panels-ui--tabs']" \
+      "[data-panels-ui--tabs-navigation-value='true']" \
+      "[data-action='popstate@window->panels-ui--tabs#syncNavigationFromUrl']"
+    )
+    expect(page).to have_css("nav.tabs-list--underline[aria-label='Booking sections']")
+    expect(page).to have_css(
+      "a#booking-tab-details.tabs-tab--underline[aria-current='page'][data-turbo-frame='workspace']" \
+      "[data-panels-ui--tabs-target='tab'][data-action='click->panels-ui--tabs#selectNavigation']",
+      text: "Details"
+    )
+    expect(page).to have_css("a#booking-tab-folio[href='/bookings/1?tab=folio']", text: "Folio")
+    expect(page).to have_no_css("[role='tablist']")
+    expect(page).to have_no_css("[role='tab']")
+  end
+
   it "omits breadcrumb outlet wiring when no breadcrumb id is supplied" do
     render_tabs
 

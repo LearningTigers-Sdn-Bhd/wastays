@@ -1,0 +1,133 @@
+/* PanelsUI::DateTimePicker — a native <input type="datetime-local"> beside an icon
+   button that opens a nested PanelsUI::Popover holding a Cally calendar above a
+   child time-column surface. The calendar reuses .panel-date-picker__calendar's
+   ::part() theming; this file adds the field and nested time-surface layout. */
+@layer components {
+  .panel-date-time-picker {
+    position: relative;
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .panel-date-time-picker__anchor {
+    display: block;
+    width: 100%;
+  }
+
+  .panel-date-time-picker__display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: start;
+    font-weight: 400;
+    color: var(--foreground);
+    cursor: pointer;
+  }
+  .panel-date-time-picker__display[disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .panel-date-time-picker__value {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .panel-date-time-picker__value:empty::before {
+    content: attr(data-placeholder);
+    color: var(--muted-foreground);
+  }
+
+  .panel-date-time-picker__icon {
+    flex: none;
+    color: var(--muted-foreground);
+  }
+
+  .popover.panel-date-time-picker__popover {
+    padding: 0;
+    width: max-content;
+    max-width: calc(100vw - 1rem);
+    overflow-x: auto;
+  }
+
+  /* ─── Popover body: calendar over a time row ────────────────────────────── */
+  .panel-date-time-picker__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .panel-date-time-picker__time {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .panel-date-time-picker__time[data-range="true"] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .popover-root.panel-date-time-picker__time-group {
+    display: block;
+    width: 100%;
+  }
+
+  @media (max-width: 639px) {
+    .panel-date-time-picker__time[data-range="true"] { grid-template-columns: 1fr; }
+  }
+
+  .panel-date-time-picker__time-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--muted-foreground);
+  }
+
+  .panel-date-time-picker__time-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    height: 2.5rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: var(--radius-md);
+    color: var(--foreground);
+  }
+
+  .panel-date-time-picker__time-trigger:hover { background: var(--muted); }
+  .panel-date-time-picker__time-trigger:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  .panel-date-time-picker__time-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .popover.panel-date-time-picker__time-popover {
+    width: max-content;
+    max-width: calc(100vw - 1rem);
+    padding: 0.5rem;
+  }
+
+  @media (max-width: 639px) {
+    .popover.panel-date-time-picker__popover { max-height: calc(100dvh - 1rem); overflow-y: auto; }
+    .popover.panel-date-time-picker__time-popover[data-embedded-open="true"] {
+      position: static;
+      display: block;
+      width: 100%;
+      max-width: none;
+      margin-top: 0.5rem;
+      transform: none;
+      box-shadow: var(--shadow-base);
+    }
+
+    .panel-date-time-picker__time-popover[data-embedded-open="true"] .panel-time-control {
+      margin-inline: auto;
+    }
+  }
+}

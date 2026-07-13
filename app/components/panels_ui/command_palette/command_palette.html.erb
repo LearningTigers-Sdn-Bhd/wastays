@@ -21,7 +21,11 @@
       <%= helpers.cached_icon "search", class: "size-4 text-muted-foreground shrink-0" %>
       <span class="panel-command-palette__trigger-label"><%= placeholder %></span>
     </span>
-    <kbd class="panel-kbd" data-size="sm" data-panels-ui--command-palette-target="shortcut">⌘K</kbd>
+    <%= render PanelsUI::Kbd.new(
+          label: "⌘K",
+          size: :sm,
+          data: { panels_ui__command_palette_target: "shortcut" }
+        ) %>
   </button>
 
   <%# ─── Overlay dialog (native <dialog>, reuses panels-ui--dialog) ─── %>
@@ -60,8 +64,8 @@
              data-panels-ui--command-palette-target="loading">
           <% 5.times do %>
             <div class="panel-command-palette__skeleton-row">
-              <span class="panel-skeleton panel-command-palette__skeleton-title"></span>
-              <span class="panel-skeleton panel-command-palette__skeleton-subtitle"></span>
+              <%= render PanelsUI::Skeleton.new(variant: :line, class: "panel-command-palette__skeleton-title") %>
+              <%= render PanelsUI::Skeleton.new(variant: :line, class: "panel-command-palette__skeleton-subtitle") %>
             </div>
           <% end %>
         </div>

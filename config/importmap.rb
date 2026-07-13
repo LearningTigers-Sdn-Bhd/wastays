@@ -11,8 +11,7 @@ pin_all_from "app/javascript/controllers", under: "controllers"
 pin "@floating-ui/dom", to: "@floating-ui--dom.js" # @1.7.6
 pin "focus-trap" # @8.2.2
 pin "body-scroll-lock" # @4.0.0
-pin "air-datepicker", to: "https://esm.sh/air-datepicker@3.6.0"
-pin "air-datepicker/locale/en", to: "https://esm.sh/air-datepicker@3.6.0/locale/en"
+pin "cally" # @0.8.0
 pin "@floating-ui/core", to: "@floating-ui--core.js" # @1.7.5
 pin "@floating-ui/utils", to: "@floating-ui--utils.js" # @0.2.11
 pin "@floating-ui/utils/dom", to: "@floating-ui--utils--dom.js" # @0.2.11

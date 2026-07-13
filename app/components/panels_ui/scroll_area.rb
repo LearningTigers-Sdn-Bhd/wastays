@@ -18,7 +18,7 @@ module PanelsUI
 
     style base: "panel-scroll-area"
 
-    def initialize(orientation: :vertical, scroll_fade: :none, hide_delay: 600,
+    def initialize(orientation: :vertical, scroll_fade: :none, hide_delay: 600, tabindex: 0,
                    height: nil, max_height: nil, class: nil, viewport_class: nil,
                    **attributes)
       @orientation = ORIENTATIONS.include?(orientation.to_sym) ? orientation.to_sym : :vertical
@@ -28,6 +28,7 @@ module PanelsUI
       @max_height = max_height
       @class = binding.local_variable_get(:class)
       @viewport_class = viewport_class
+      @tabindex = tabindex
       @attributes = attributes
     end
 
@@ -55,7 +56,7 @@ module PanelsUI
     def viewport_attributes
       {
         class: tw_merge("panel-scroll-area__viewport", @height, @max_height, @viewport_class),
-        tabindex: "0",
+        tabindex: @tabindex,
         data: {
           panels_ui__scroll_area_target: "viewport",
           action: "scroll->panels-ui--scroll-area#onViewportScroll"

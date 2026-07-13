@@ -1,6 +1,8 @@
 @layer components {
   .panel-form-field {
     display: grid;
+    width: 100%;
+    min-width: 0;
     gap: 0.375rem;
     color: var(--foreground);
   }

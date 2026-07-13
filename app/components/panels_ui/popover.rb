@@ -67,7 +67,7 @@ module PanelsUI
 
     def initialize(id:, placement: :bottom, offset: 8, delay: 120, close_delay: 0, arrow: true,
                    trigger_on: :click, focus: false, class: nil, root_class: nil,
-                   role: "dialog", aria_haspopup: "dialog")
+                   role: "dialog", aria_haspopup: "dialog", owner: nil)
       @id = id
       @placement = PLACEMENTS.include?(placement) ? placement : :bottom
       @offset = offset.to_f
@@ -81,6 +81,7 @@ module PanelsUI
       @root_class = root_class
       @role = role
       @aria_haspopup = aria_haspopup
+      @owner = owner
     end
 
     def arrow? = @arrow

@@ -17,10 +17,13 @@ export default class extends Controller {
     active: String,
     param: { type: String, default: "tab" },
     level: { type: String, default: "primary" },
+    navigation: { type: Boolean, default: false },
     syncUrl: { type: Boolean, default: true }
   }
 
   connect() {
+    if (this.navigationValue) return this.syncNavigationFromUrl()
+
     const requested = this.paramValue && new URLSearchParams(window.location.search).get(this.paramValue)
     this.show(this.validTab(requested) ? requested : this.defaultTab, { updateUrl: false })
   }
@@ -29,6 +32,35 @@ export default class extends Controller {
   select(event) {
     event.preventDefault()
     this.show(event.currentTarget.dataset.tabName)
+  }
+
+  // Server-navigation tabs remain ordinary links. Update the persistent tab bar and
+  // breadcrumb immediately, then allow Turbo to follow the link and replace its frame.
+  selectNavigation(event) {
+    this.showNavigation(event.currentTarget.dataset.tabName)
+  }
+
+  syncNavigationFromUrl() {
+    const requested = this.paramValue && new URLSearchParams(window.location.search).get(this.paramValue)
+    this.showNavigation(this.validTab(requested) ? requested : this.defaultTab)
+  }
+
+  showNavigation(name) {
+    const activeName = this.validTab(name) ? name : this.defaultTab
+    this.activeName = activeName
+    let activeTab = null
+
+    this.tabTargets.forEach((tab) => {
+      const active = tab.dataset.tabName === activeName
+      if (active) {
+        tab.setAttribute("aria-current", "page")
+        activeTab = tab
+      } else {
+        tab.removeAttribute("aria-current")
+      }
+    })
+
+    this.syncBreadcrumb(activeTab)
   }
 
   // Keyboard activation (automatic — focus follows selection).

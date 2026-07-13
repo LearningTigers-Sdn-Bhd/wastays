@@ -1,16 +1,19 @@
-<div class="<%= tw_merge("tabs-root", @class) %>"
+<div class="<%= tw_merge("tabs-root", "tabs-root--#{variant}", @class) %>"
      data-controller="panels-ui--tabs"
+     <% if navigation? %>data-action="popstate@window->panels-ui--tabs#syncNavigationFromUrl"<% end %>
+     data-panels-ui--tabs-navigation-value="<%= navigation? %>"
      data-panels-ui--tabs-param-value="<%= param %>"
      data-panels-ui--tabs-level-value="<%= level %>"
      data-panels-ui--tabs-sync-url-value="<%= sync_url? %>"
      <% if default_value %>data-panels-ui--tabs-active-value="<%= default_value %>"<% end %>
      <% if breadcrumb_outlet_selector %>data-panels-ui--tabs-panels-ui--breadcrumb-outlet="<%= breadcrumb_outlet_selector %>"<% end %>>
-  <div class="<%= tw_merge("tabs-list", @list_class) %>"
-       role="tablist"
-       <% if aria_label %>aria-label="<%= aria_label %>"<% end %>
-       data-action="keydown->panels-ui--tabs#onKeydown">
+  <% list_tag = navigation? ? :nav : :div %>
+  <%= content_tag list_tag, class: tw_merge("tabs-list", "tabs-list--#{variant}", @list_class),
+       role: ("tablist" unless navigation?),
+       aria: { label: aria_label },
+       data: ({ action: "keydown->panels-ui--tabs#onKeydown" } unless navigation?) do %>
     <%= safe_join(tabs) %>
-  </div>
+  <% end %>
 
   <% if panels? %>
     <div class="<%= tw_merge("tabs-panels", @panels_class) %>">

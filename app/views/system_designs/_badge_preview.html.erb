@@ -1,7 +1,7 @@
 <section aria-labelledby="badge-preview-heading" class="border-t border-border pt-8">
   <h2 id="badge-preview-heading" class="text-lg font-semibold text-foreground">Badges</h2>
   <p class="mt-1 text-sm text-muted-foreground">
-    CSS-only metadata and status labels. Rectangular and pill shapes share semantic variants;
+    Metadata and status labels. Rectangular and pill shapes share semantic variants;
     an optional indicator dot identifies live operational states.
   </p>
 
@@ -13,8 +13,8 @@
         <h3 class="text-sm font-semibold"><%= label %> variants</h3>
         <div class="mt-4 flex flex-wrap gap-2">
           <% variants.each do |variant| %>
-            <span class="panel-badge" data-variant="<%= variant %>"><%= variant.to_s.humanize %></span>
-            <span class="panel-badge-rounded" data-variant="<%= variant %>" data-indicator="true"><%= variant.to_s.humanize %></span>
+            <%= render PanelsUI::Badge.new(label: variant.to_s.humanize, variant: variant) %>
+            <%= render PanelsUI::Badge.new(label: variant.to_s.humanize, variant: variant, shape: :rounded, indicator: true) %>
           <% end %>
         </div>
       </div>
@@ -24,24 +24,24 @@
   <div class="mt-5 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
     <h3 class="text-sm font-semibold">Sizes and hotel statuses</h3>
     <div class="mt-3 flex flex-wrap items-center gap-2">
-      <span class="panel-badge-rounded" data-size="sm" data-variant="warning" data-indicator="true">Pending</span>
-      <span class="panel-badge-rounded" data-size="md" data-variant="success" data-indicator="true">In house</span>
-      <span class="panel-badge-rounded" data-size="lg" data-variant="destructive" data-indicator="true">Overbooked</span>
-      <span class="panel-badge" data-variant="info" data-indicator="true">Open folio</span>
-      <span class="panel-badge" data-variant="neutral">Closed folio</span>
-      <span class="panel-badge-rounded" data-variant="info" data-indicator="true">Cleaning</span>
-      <span class="panel-badge-rounded" data-variant="destructive" data-indicator="true">Inspection failed</span>
+      <%= render PanelsUI::Badge.new(label: "Pending", size: :sm, variant: :warning, shape: :rounded, indicator: true) %>
+      <%= render PanelsUI::Badge.new(label: "In house", variant: :success, shape: :rounded, indicator: true) %>
+      <%= render PanelsUI::Badge.new(label: "Overbooked", size: :lg, variant: :destructive, shape: :rounded, indicator: true) %>
+      <%= render PanelsUI::Badge.new(label: "Open folio", variant: :info, indicator: true) %>
+      <%= render PanelsUI::Badge.new(label: "Closed folio") %>
+      <%= render PanelsUI::Badge.new(label: "Cleaning", variant: :info, shape: :rounded, indicator: true) %>
+      <%= render PanelsUI::Badge.new(label: "Inspection failed", variant: :destructive, shape: :rounded, indicator: true) %>
     </div>
 
     <div class="mt-4 flex flex-wrap items-center gap-2">
-      <span class="panel-badge" data-variant="info">
+      <%= render PanelsUI::Badge.new(variant: :info) do %>
         <%= app_icon("calendar-days", class: "size-3.5", aria: { hidden: "true" }) %>
         Confirmed
-      </span>
-      <span class="panel-badge" data-variant="destructive">
+      <% end %>
+      <%= render PanelsUI::Badge.new(variant: :destructive) do %>
         <%= app_icon("circle-x", class: "size-3.5", aria: { hidden: "true" }) %>
         Voided
-      </span>
+      <% end %>
     </div>
   </div>
 </section>

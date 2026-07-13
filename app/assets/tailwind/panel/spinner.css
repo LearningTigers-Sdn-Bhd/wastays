@@ -7,6 +7,13 @@
     color: inherit;
   }
 
+  .panel-loading[data-orientation="horizontal"] { flex-direction: row; }
+
+  .panel-loading[data-orientation="vertical"] {
+    flex-direction: column;
+    text-align: center;
+  }
+
   .panel-spinner {
     display: inline-block;
     width: 1rem;
