@@ -41,6 +41,7 @@ module PanelsUI
       date_picker: ->(**attributes) { build_date_picker(**attributes) },
       time_picker: ->(**attributes) { build_time_picker(**attributes) },
       date_time_picker: ->(**attributes) { build_date_time_picker(**attributes) },
+      dropzone: ->(**attributes) { build_dropzone(**attributes) },
       text_area: ->(**attributes) { build_text_area(**attributes) },
       native_select: ->(choices = nil, **attributes) { build_native_select(choices, **attributes) },
       select_menu: ->(choices = nil, **attributes) { build_select_menu(choices, **attributes) },
@@ -72,6 +73,7 @@ module PanelsUI
     def with_date_picker(...) = with_control_date_picker(...)
     def with_time_picker(...) = with_control_time_picker(...)
     def with_date_time_picker(...) = with_control_date_time_picker(...)
+    def with_dropzone(...) = with_control_dropzone(...)
     def with_text_area(...) = with_control_text_area(...)
     def with_native_select(...) = with_control_native_select(...)
     def with_select_menu(...) = with_control_select_menu(...)
@@ -96,7 +98,7 @@ module PanelsUI
     def invalid? = error_message.present?
     def hint? = @hint.present? && !invalid?
     def control_group? = addons?
-    def control_layout = @control_kind == :text_area ? :block : :inline
+    def control_layout = @control_kind.in?(%i[text_area dropzone]) ? :block : :inline
 
     def field_attributes
       attributes = @attributes.deep_dup
@@ -122,9 +124,11 @@ module PanelsUI
     end
 
     def before_render
-      raise ArgumentError, "Form fields require an input or text area control" unless control?
+      raise ArgumentError, "Form fields require a control" unless control?
 
       return unless control_group?
+
+      raise ArgumentError, "Dropzones do not support addons" if @control_kind == :dropzone
 
       allowed_aligns = @control_kind == :text_area ? %i[block_start block_end] : %i[inline_start inline_end]
       invalid_aligns = addons.map(&:align) - allowed_aligns
@@ -158,6 +162,15 @@ module PanelsUI
     def build_date_time_picker(**attributes)
       @control_kind = :date_time_picker
       DateTimePicker.new(**attributes, labelled_by: (@label.present? ? label_id : nil), **control_options)
+    end
+
+    def build_dropzone(**attributes)
+      @control_kind = :dropzone
+      Dropzone.new(
+        **attributes,
+        labelled_by: (@label.present? ? label_id : nil),
+        **control_options.except(:readonly)
+      )
     end
 
     def build_text_area(**attributes)

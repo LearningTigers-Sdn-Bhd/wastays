@@ -1,0 +1,19 @@
+<%= tag.div(**root_attributes) do %>
+  <% if media? %>
+    <%= media %>
+  <% else %>
+    <div class="panel-attachment__media" data-variant="icon" aria-hidden="true">
+      <%= helpers.app_icon(default_icon, class: "panel-attachment__state-icon size-4", aria: { hidden: "true" }) %>
+    </div>
+  <% end %>
+
+  <div class="panel-attachment__content">
+    <p class="panel-attachment__title"><%= @title %></p>
+    <% if display_description.present? %>
+      <p class="panel-attachment__description"><%= display_description %></p>
+    <% end %>
+  </div>
+
+  <%= actions if actions? %>
+  <%= trigger if trigger? %>
+<% end %>

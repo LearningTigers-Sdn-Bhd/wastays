@@ -23,6 +23,8 @@
 @import "./panel/skeleton.css";
 @import "./panel/spinner.css";
 @import "./panel/progress.css";
+@import "./panel/attachment.css";
+@import "./panel/dropzone.css";
 @import "./panel/kbd.css";
 @import "./panel/separator.css";
 @import "./panel/alert.css";

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PanelsUI::FormField, type: :component do
   FormFieldObject = Class.new do
     include ActiveModel::Model
-    attr_accessor :email, :notes, :nightly_rate, :reference
+    attr_accessor :email, :notes, :nightly_rate, :reference, :files
   end
 
   def form_for(object = FormFieldObject.new)
@@ -80,6 +80,7 @@ RSpec.describe PanelsUI::FormField, type: :component do
       date_picker: ".panel-date-picker[data-size='sm']",
       time_picker: ".panel-time-picker[data-size='sm']",
       date_time_picker: ".panel-date-time-picker[data-size='sm']",
+      dropzone: ".panel-dropzone[data-size='sm']",
       text_area: ".panel-text-area[data-size='sm']",
       native_select: ".panel-native-select[data-size='sm']",
       select_menu: ".panel-select-menu[data-size='sm']",
@@ -143,6 +144,34 @@ RSpec.describe PanelsUI::FormField, type: :component do
   end
 
   it "requires a typed control slot" do
-    expect { render_field(label: "Email") }.to raise_error(ArgumentError, "Form fields require an input or text area control")
+    expect { render_field(label: "Email") }.to raise_error(ArgumentError, "Form fields require a control")
+  end
+
+  it "composes a dropzone with field-owned label, hint, and state" do
+    render_inline(
+      described_class.new(
+        form: form_for,
+        attribute: :files,
+        label: "Room photos",
+        hint: "Add up to five photos.",
+        required: true
+      )
+    ) do |field|
+      field.with_dropzone(accept: "image/*", multiple: true, max_files: 5)
+    end
+
+    expect(page).to have_css("label#profile_files-label[for='profile_files']", text: "Room photos")
+    expect(page).to have_css(".panel-dropzone[aria-labelledby='profile_files-label']")
+    expect(page).to have_css("input#profile_files[type='file'][required][aria-describedby~='profile_files-hint']", visible: :all)
+    expect(page).to have_css("#profile_files-hint", text: "Add up to five photos.")
+  end
+
+  it "does not allow control-group addons on a dropzone" do
+    expect do
+      render_field(label: "Files") do |field|
+        field.with_dropzone
+        field.with_addon(align: :block_end) { "Unsupported" }
+      end
+    end.to raise_error(ArgumentError, "Dropzones do not support addons")
   end
 end
