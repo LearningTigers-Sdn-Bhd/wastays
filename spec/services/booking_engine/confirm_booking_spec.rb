@@ -80,6 +80,27 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_confirmed, booking: booking)
     end
 
+    it 'copies occupancy_snapshot (including age-band data) verbatim from the quote item to the booking room' do
+      quote_item.update!(
+        occupancy_snapshot: {
+          "adults" => 2,
+          "children" => 2,
+          "infants" => 0,
+          "child_ages" => [ 6, 15 ],
+          "child_age_bands" => [
+            { "age" => 6, "band_id" => 1, "band_label" => "Child", "multiplier" => "0.4" },
+            { "age" => 15, "band_id" => 2, "band_label" => "Teen", "multiplier" => "0.2" }
+          ]
+        }
+      )
+
+      result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
+
+      expect(result.success?).to be(true), result.message
+      booking_room = result.booking.booking_rooms.first
+      expect(booking_room.occupancy_snapshot).to eq(quote_item.reload.occupancy_snapshot)
+    end
+
     it 'saves special requests to both booking and quote' do
       details = payment_details.merge(special_requests: 'Late arrival at 10 PM')
 

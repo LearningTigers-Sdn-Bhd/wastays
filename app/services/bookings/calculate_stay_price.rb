@@ -2,7 +2,7 @@
 
 module Bookings
   class CalculateStayPrice
-    def initialize(room_type:, check_in:, check_out:, rate_plan: nil, corporate_rate: false, rate_tier: :standard, pax: nil, adults: nil, children: nil, infants: nil)
+    def initialize(room_type:, check_in:, check_out:, rate_plan: nil, corporate_rate: false, rate_tier: :standard, pax: nil, adults: nil, children: nil, infants: nil, child_ages: [])
       @room_type = room_type
       @check_in = check_in&.to_date
       @check_out = check_out&.to_date
@@ -14,6 +14,8 @@ module Bookings
       @children = (children || 0).to_i
       @infants = (infants || 0).to_i
       @pax = @adults + @children + @infants
+      ages = Array(child_ages).map(&:to_i)
+      @child_ages = (ages.size == @children) ? ages : []
     end
 
     def call
@@ -24,11 +26,15 @@ module Bookings
         base_nightly_rate = tier_price(rate) || rate&.price || @room_type.base_price
 
         if @rate_plan&.sell_mode == "per_person"
-          child_multiplier = @rate_plan.child_price_multiplier || 1.to_d
           infant_multiplier = @rate_plan.infant_price_multiplier || 0.to_d
 
           adults_cost = @adults * base_nightly_rate
-          children_cost = @children * base_nightly_rate * child_multiplier
+          children_cost =
+            if @child_ages.any?
+              @child_ages.sum { |age| per_child_price(base_nightly_rate, age) }
+            else
+              @children * base_nightly_rate * (@rate_plan.child_price_multiplier || 1.to_d)
+            end
           infants_cost = @infants * base_nightly_rate * infant_multiplier
 
           price = adults_cost + children_cost + infants_cost
@@ -56,6 +62,12 @@ module Bookings
     end
 
     private
+
+    def per_child_price(base_nightly_rate, age)
+      band = @rate_plan.age_banded? ? @rate_plan.band_for_age(age) : nil
+      multiplier = band&.price_multiplier || @rate_plan.child_price_multiplier || 1.to_d
+      base_nightly_rate * multiplier
+    end
 
     def tier_price(rate)
       return nil if rate.blank?

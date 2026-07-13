@@ -1,297 +1,118 @@
-<section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
-  <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
-    <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Rate Settings & Per-Pax Rules</h2>
-    <p class="mt-1 text-sm font-medium text-slate-600">Configure how guest rates are calculated based on occupancy, extra guests, children, and infants.</p>
+<section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5 sm:px-8">
+    <div>
+      <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Rate Settings & Per-Pax Rules</h2>
+      <p class="mt-1 text-sm font-medium text-slate-600">Configure how guest rates are calculated based on occupancy, extra guests, children, and infants.</p>
+    </div>
+    <%= link_to new_hotel_rate_plan_path(@hotel),
+        data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" },
+        class: "inline-flex shrink-0 items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white transition hover:bg-slate-700",
+        aria: { label: "New rate plan" } do %>
+      <%= cached_icon "plus", class: "size-4" %>
+      <span class="hidden sm:inline">New Rate Plan</span>
+    <% end %>
   </div>
 
-  <div class="px-6 py-5 sm:px-8">
-    <%= form_with url: hotel_rates_settings_path(@hotel), method: :patch, local: true, class: "space-y-8" do |f| %>
-      <div class="space-y-6">
-        <% @presenter.rate_plans.each do |rate_plan| %>
-          <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-5 space-y-4" data-controller="rate-simulator" data-currency="<%= rate_plan.currency %>">
-            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+  <% rate_plans = @presenter.rate_plans.reject { |rp| rp.special_tier_kind == :walk_in && @hotel.pax_pricing_only? } %>
+
+  <div class="hidden overflow-x-auto md:block">
+    <table class="w-full min-w-[820px] text-left text-sm">
+      <thead class="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
+        <tr>
+          <th class="px-6 py-3">Name</th>
+          <th class="px-6 py-3">Sell Mode</th>
+          <th class="px-6 py-3">Currency</th>
+          <th class="px-6 py-3">Room Categories</th>
+          <th class="px-6 py-3 text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <% if rate_plans.empty? %>
+          <tr>
+            <td colspan="5" class="px-6 py-8 text-center text-sm font-medium text-slate-400">No rate plans configured yet.</td>
+          </tr>
+        <% else %>
+          <% rate_plans.each do |rate_plan| %>
+            <tr>
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-x-2">
+                  <p class="font-semibold text-slate-950"><%= rate_plan.name %></p>
+                  <% if rate_plan.special_tier? %>
+                    <span class="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">Virtual Tier</span>
+                  <% elsif rate_plan.standard_rate? %>
+                    <span class="inline-flex items-center rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">System Default</span>
+                  <% end %>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-slate-600">
+                <%= rate_plan.sell_mode == "per_person" ? "Per Person" : "Per Room" %>
+              </td>
+              <td class="px-6 py-4 text-slate-600"><%= rate_plan.currency %></td>
+              <td class="px-6 py-4 text-slate-600">
+                <% if rate_plan.room_types.any? %>
+                  <%= rate_plan.room_types.map(&:name).join(", ") %>
+                <% else %>
+                  <span class="text-slate-400">None assigned</span>
+                <% end %>
+              </td>
+              <td class="px-6 py-4 text-right">
+                <%= link_to edit_hotel_rate_plan_path(@hotel, rate_plan),
+                    data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" },
+                    class: "inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50" do %>
+                  <%= cached_icon "pencil", class: "size-3.5", aria: { hidden: true } %>
+                  Edit
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="divide-y divide-slate-100 md:hidden">
+    <% if rate_plans.empty? %>
+      <div class="px-6 py-8 text-center text-sm font-medium text-slate-400">No rate plans configured yet.</div>
+    <% else %>
+      <% rate_plans.each do |rate_plan| %>
+        <article class="p-5">
+          <div class="flex items-start justify-between gap-4">
+            <div>
               <div class="flex items-center gap-x-2">
-                <h3 class="text-sm font-bold text-slate-900"><%= rate_plan.name %></h3>
+                <p class="font-semibold text-slate-950"><%= rate_plan.name %></p>
                 <% if rate_plan.special_tier? %>
                   <span class="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">Virtual Tier</span>
-                <% elsif rate_plan.name.to_s.strip.downcase == "standard rate" %>
+                <% elsif rate_plan.standard_rate? %>
                   <span class="inline-flex items-center rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">System Default</span>
                 <% end %>
               </div>
-              <div class="flex items-center gap-x-3">
-                <span class="inline-flex items-center rounded-md bg-slate-950/5 px-2.5 py-1 text-xs font-bold text-slate-600">
-                  <%= rate_plan.currency %>
-                </span>
-                <% unless rate_plan.special_tier? || rate_plan.name.to_s.strip.downcase == "standard rate" %>
-                  <%= link_to "Delete", hotel_rate_plan_path(@hotel, rate_plan), data: { turbo_method: :delete, turbo_confirm: "Are you sure you want to delete '#{rate_plan.name}'? This will permanently remove the rate plan." }, class: "text-xs font-bold text-red-600 hover:text-red-700 transition" %>
-                <% end %>
-              </div>
-            </div>
-
-            <div class="grid gap-6 md:grid-cols-3">
-              <div>
-                <%= label_tag "rate_plans[#{rate_plan.id}][sell_mode]", "Sell Mode", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <% sell_mode_options = [["Per Room (Extra guest charges)", "per_room"]] %>
-                <% sell_mode_options << ["Per Person (Pax rates + single supplement)", "per_person"] if @hotel.allow_pax_pricing? %>
-                <%= select_tag "rate_plans[#{rate_plan.id}][sell_mode]", options_for_select(sell_mode_options, rate_plan.sell_mode), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "sellModeInput" } %>
-              </div>
-
-              <div>
-                <%= label_tag "rate_plans[#{rate_plan.id}][base_occupancy]", "Base Occupancy (Per Room)", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= number_field_tag "rate_plans[#{rate_plan.id}][base_occupancy]", rate_plan.base_occupancy, min: 1, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "baseOccupancyInput" } %>
-              </div>
-
-              <div>
-                <%= label_tag "rate_plans[#{rate_plan.id}][extra_pax_charge]", "Extra Guest Charge (#{rate_plan.currency})", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= number_field_tag "rate_plans[#{rate_plan.id}][extra_pax_charge]", rate_plan.extra_pax_charge, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "extraPaxChargeInput" } %>
-              </div>
-            </div>
-
-            <div class="grid gap-6 md:grid-cols-3">
-              <div>
-                <%= label_tag "rate_plans[#{rate_plan.id}][single_supplement]", "Single Supplement (#{rate_plan.currency})", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= number_field_tag "rate_plans[#{rate_plan.id}][single_supplement]", rate_plan.single_supplement, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "singleSupplementInput" } %>
-              </div>
-
-              <div>
-                <%= label_tag "rate_plans[#{rate_plan.id}][child_price_multiplier]", "Child Price Multiplier", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= number_field_tag "rate_plans[#{rate_plan.id}][child_price_multiplier]", rate_plan.child_price_multiplier, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "childMultiplierInput" } %>
-              </div>
-
-              <div>
-                <%= label_tag "rate_plans[#{rate_plan.id}][infant_price_multiplier]", "Infant Price Multiplier", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= number_field_tag "rate_plans[#{rate_plan.id}][infant_price_multiplier]", rate_plan.infant_price_multiplier, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "infantMultiplierInput" } %>
-              </div>
-            </div>
-
-            <!-- Rate Simulator Widget -->
-            <div class="rounded-xl border border-indigo-100 bg-indigo-50/20 p-4 space-y-3 shadow-sm">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-700">
-                  <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V18m-3-9h.008v.008H12.75V9zm0 3h.008v.008H12.75v-.008zm0 3h.008v.008H12.75V15zm0 3h.008v.008H12.75V18zm3-9h.008v.008H15.75V9zm0 3h.008v.008H15.75v-.008zm0 3h.008v.008H15.75V15zm0 3h.008v.008H15.75V18zm3-9h.008v.008H18.75V9zm0 3h.008v.008H18.75v-.008zm-9-6.75h.008v.008H9.75V5.25zm0 3h.008v.008H9.75V8.25zm0 3h.008v.008H9.75v-.008zm0 3h.008v.008H9.75V15zm0 3h.008v.008H9.75V18zm3-12.75h.008v.008H12.75V5.25zm3 0h.008v.008H15.75V5.25zm3 0h.008v.008H18.75V5.25zm-9 3h.008v.008H9.75V8.25zm12 0h.008v.008H21.75V8.25z" /></svg>
-                  <span>Rate Simulator / Calculator</span>
-                </div>
-                <button type="button"
-                        data-action="click->rate-simulator#toggle"
-                        data-rate-simulator-target="toggleBtn"
-                        class="text-[10px] font-black uppercase tracking-wider text-indigo-600 hover:text-indigo-800 transition-colors focus:outline-none">
-                  Show Simulator
-                </button>
-              </div>
-
-              <!-- Simulator Panel (Hidden by default) -->
-              <div data-rate-simulator-target="panel" class="hidden space-y-4 pt-2 border-t border-indigo-100/50">
-                <div class="grid gap-3 sm:grid-cols-4">
-                  <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Base Price to Simulate</label>
-                    <input type="number"
-                           data-rate-simulator-target="basePriceInput"
-                           value="100.00"
-                           step="0.01"
-                           min="1"
-                           class="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-0">
-                  </div>
-                  <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Adults</label>
-                    <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-1">
-                      <button type="button" data-action="click->rate-simulator#decrementAdults" class="size-6 rounded-md hover:bg-slate-50 font-bold text-sm select-none flex items-center justify-center">−</button>
-                      <span data-rate-simulator-target="adultsCount" class="text-xs font-bold text-slate-800">2</span>
-                      <button type="button" data-action="click->rate-simulator#incrementAdults" class="size-6 rounded-md hover:bg-slate-50 font-bold text-sm select-none flex items-center justify-center">+</button>
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Children</label>
-                    <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-1">
-                      <button type="button" data-action="click->rate-simulator#decrementChildren" class="size-6 rounded-md hover:bg-slate-50 font-bold text-sm select-none flex items-center justify-center">−</button>
-                      <span data-rate-simulator-target="childrenCount" class="text-xs font-bold text-slate-800">0</span>
-                      <button type="button" data-action="click->rate-simulator#incrementChildren" class="size-6 rounded-md hover:bg-slate-50 font-bold text-sm select-none flex items-center justify-center">+</button>
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Infants</label>
-                    <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-1">
-                      <button type="button" data-action="click->rate-simulator#decrementInfants" class="size-6 rounded-md hover:bg-slate-50 font-bold text-sm select-none flex items-center justify-center">−</button>
-                      <span data-rate-simulator-target="infantsCount" class="text-xs font-bold text-slate-800">0</span>
-                      <button type="button" data-action="click->rate-simulator#incrementInfants" class="size-6 rounded-md hover:bg-slate-50 font-bold text-sm select-none flex items-center justify-center">+</button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Simulation Results Comparison -->
-                <div class="rounded-lg bg-white border border-indigo-100/80 p-3 space-y-2">
-                  <div class="flex items-center justify-between text-xs text-slate-600 font-semibold">
-                    <span data-rate-simulator-target="roomModeLabel">Per-Room Mode Cost:</span>
-                    <span class="font-bold text-slate-800" data-rate-simulator-target="roomModeResult">-</span>
-                  </div>
-                  <% if @hotel.allow_pax_pricing? %>
-                    <div class="flex items-center justify-between text-xs text-slate-600 font-semibold">
-                      <span data-rate-simulator-target="paxModeLabel">Per-Pax Mode Cost:</span>
-                      <span class="font-bold text-indigo-700" data-rate-simulator-target="paxModeResult">-</span>
-                    </div>
-                  <% end %>
-                </div>
-              </div>
-            </div>
-
-            <div class="border-t border-slate-200/60 pt-4">
-              <span class="mb-2 block text-sm font-semibold text-slate-900">Applies to Room Categories</span>
-              <div class="flex flex-wrap gap-x-6 gap-y-2">
-                <% @hotel.room_types.order(:id).each do |room_type| %>
-                  <label class="inline-flex items-center gap-x-2 text-sm text-slate-700 cursor-pointer">
-                    <%= check_box_tag "rate_plans[#{rate_plan.id}][room_type_ids][]", room_type.id, rate_plan.room_types.include?(room_type), class: "rounded border-slate-300 text-slate-900 focus:ring-slate-900 size-4" %>
-                    <span><%= room_type.name %></span>
-                  </label>
-                <% end %>
-                <%= hidden_field_tag "rate_plans[#{rate_plan.id}][room_type_ids][]", "" %>
-              </div>
-            </div>
-          </div>
-        <% end %>
-      </div>
-
-      <div class="flex justify-end border-t border-slate-200 pt-4">
-        <%= f.submit "Save Rate Settings", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
-      </div>
-    <% end %>
-  </div>
-</section>
-
-<!-- Create Rate Plan Card -->
-<section class="mt-8 rounded-2xl border border-slate-200 bg-white shadow-sm">
-  <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
-    <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Create New Rate Plan</h2>
-    <p class="mt-1 text-sm font-medium text-slate-600">Add a custom pricing rate plan for your rooms.</p>
-  </div>
-
-  <div class="px-6 py-5 sm:px-8">
-    <%= form_with model: [@hotel, RatePlan.new], url: hotel_rate_plans_path(@hotel), local: true, class: "space-y-6", data: { controller: "rate-simulator", currency: @hotel.default_currency || "MYR" } do |f| %>
-      <div class="grid gap-6 md:grid-cols-2">
-        <div>
-          <%= f.label :name, "Rate Plan Name", class: "mb-2 block text-sm font-medium text-slate-900" %>
-          <%= f.text_field :name, placeholder: "e.g. Non-Refundable Rate, Bed & Breakfast", required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-        </div>
-
-        <div>
-          <%= f.label :sell_mode, "Sell Mode", class: "mb-2 block text-sm font-medium text-slate-900" %>
-          <% sell_mode_options = [["Per Room (Extra guest charges)", "per_room"]] %>
-          <% sell_mode_options << ["Per Person (Pax rates + single supplement)", "per_person"] if @hotel.allow_pax_pricing? %>
-          <%= f.select :sell_mode, sell_mode_options, {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "sellModeInput" } %>
-        </div>
-      </div>
-
-      <div class="grid gap-6 md:grid-cols-3">
-        <div>
-          <%= f.label :base_occupancy, "Base Occupancy (Per Room)", class: "mb-2 block text-sm font-medium text-slate-900" %>
-          <%= f.number_field :base_occupancy, value: 2, min: 1, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "baseOccupancyInput" } %>
-        </div>
-
-        <div>
-          <%= f.label :extra_pax_charge, "Extra Guest Charge", class: "mb-2 block text-sm font-medium text-slate-900" %>
-          <%= f.number_field :extra_pax_charge, value: 0.00, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "extraPaxChargeInput" } %>
-        </div>
-
-        <div>
-          <%= f.label :single_supplement, "Single Supplement", class: "mb-2 block text-sm font-medium text-slate-900" %>
-          <%= f.number_field :single_supplement, value: 0.00, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "singleSupplementInput" } %>
-        </div>
-      </div>
-
-      <div class="grid gap-6 md:grid-cols-2">
-        <div>
-          <%= f.label :child_price_multiplier, "Child Price Multiplier", class: "mb-2 block text-sm font-medium text-slate-900" %>
-          <%= f.number_field :child_price_multiplier, value: 1.00, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "childMultiplierInput" } %>
-        </div>
-
-        <div>
-          <%= f.label :infant_price_multiplier, "Infant Price Multiplier", class: "mb-2 block text-sm font-medium text-slate-900" %>
-          <%= f.number_field :infant_price_multiplier, value: 0.00, step: 0.01, min: 0, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", data: { rate_simulator_target: "infantMultiplierInput" } %>
-        </div>
-      </div>
-
-      <!-- Rate Simulator Widget -->
-      <div class="rounded-xl border border-indigo-100 bg-indigo-50/20 p-4 space-y-3 shadow-sm">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-700">
-            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V18m-3-9h.008v.008H12.75V9zm0 3h.008v.008H12.75v-.008zm0 3h.008v.008H12.75V15zm0 3h.008v.008H12.75V18zm3-9h.008v.008H15.75V9zm0 3h.008v.008H15.75v-.008zm0 3h.008v.008H15.75V15zm0 3h.008v.008H15.75V18zm3-9h.008v.008H18.75V9zm0 3h.008v.008H18.75v-.008zm-9-6.75h.008v.008H9.75V5.25zm0 3h.008v.008H9.75V8.25zm0 3h.008v.008H9.75v-.008zm0 3h.008v.008H9.75V15zm0 3h.008v.008H9.75V18zm3-12.75h.008v.008H12.75V5.25zm3 0h.008v.008H15.75V5.25zm3 0h.008v.008H18.75V5.25zm-9 3h.008v.008H9.75V8.25zm12 0h.008v.008H21.75V8.25z" /></svg>
-            <span>Rate Simulator / Calculator</span>
-          </div>
-          <button type="button"
-                  data-action="click->rate-simulator#toggle"
-                  data-rate-simulator-target="toggleBtn"
-                  class="text-[10px] font-black uppercase tracking-wider text-indigo-600 hover:text-indigo-800 transition-colors focus:outline-none">
-            Show Simulator
-          </button>
-        </div>
-
-        <!-- Simulator Panel (Hidden by default) -->
-        <div data-rate-simulator-target="panel" class="hidden space-y-4 pt-2 border-t border-indigo-100/50">
-          <div class="grid gap-3 sm:grid-cols-4">
-            <div>
-              <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Base Price to Simulate</label>
-              <input type="number"
-                     data-rate-simulator-target="basePriceInput"
-                     value="100.00"
-                     step="0.01"
-                     min="1"
-                     class="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-0">
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Adults</label>
-              <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-1">
-                <button type="button" data-action="click->rate-simulator#decrementAdults" class="size-6 rounded-md hover:bg-slate-50 font-bold text-sm select-none flex items-center justify-center">−</button>
-                <span data-rate-simulator-target="adultsCount" class="text-xs font-bold text-slate-800">2</span>
-                <button type="button" data-action="click->rate-simulator#incrementAdults" class="size-6 rounded-md hover:bg-slate-50 font-bold text-sm select-none flex items-center justify-center">+</button>
-              </div>
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Children</label>
-              <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-1">
-                <button type="button" data-action="click->rate-simulator#decrementChildren" class="size-6 rounded-md hover:bg-slate-50 font-bold text-sm select-none flex items-center justify-center">−</button>
-                <span data-rate-simulator-target="childrenCount" class="text-xs font-bold text-slate-800">0</span>
-                <button type="button" data-action="click->rate-simulator#incrementChildren" class="size-6 rounded-md hover:bg-slate-50 font-bold text-sm select-none flex items-center justify-center">+</button>
-              </div>
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Infants</label>
-              <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-1">
-                <button type="button" data-action="click->rate-simulator#decrementInfants" class="size-6 rounded-md hover:bg-slate-50 font-bold text-sm select-none flex items-center justify-center">−</button>
-                <span data-rate-simulator-target="infantsCount" class="text-xs font-bold text-slate-800">0</span>
-                <button type="button" data-action="click->rate-simulator#incrementInfants" class="size-6 rounded-md hover:bg-slate-50 font-bold text-sm select-none flex items-center justify-center">+</button>
-              </div>
+              <p class="mt-1 text-sm font-medium text-slate-500">
+                <%= rate_plan.sell_mode == "per_person" ? "Per Person" : "Per Room" %> · <%= rate_plan.currency %>
+              </p>
             </div>
           </div>
 
-          <!-- Simulation Results Comparison -->
-          <div class="rounded-lg bg-white border border-indigo-100/80 p-3 space-y-2">
-            <div class="flex items-center justify-between text-xs text-slate-600 font-semibold">
-              <span data-rate-simulator-target="roomModeLabel">Per-Room Mode Cost:</span>
-              <span class="font-bold text-slate-800" data-rate-simulator-target="roomModeResult">-</span>
-            </div>
-            <% if @hotel.allow_pax_pricing? %>
-              <div class="flex items-center justify-between text-xs text-slate-600 font-semibold">
-                <span data-rate-simulator-target="paxModeLabel">Per-Pax Mode Cost:</span>
-                <span class="font-bold text-indigo-700" data-rate-simulator-target="paxModeResult">-</span>
-              </div>
+          <div class="mt-4 space-y-1">
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Room Categories</p>
+            <p class="text-sm font-medium text-slate-600">
+              <% if rate_plan.room_types.any? %>
+                <%= rate_plan.room_types.map(&:name).join(", ") %>
+              <% else %>
+                <span class="text-slate-400">None assigned</span>
+              <% end %>
+            </p>
+          </div>
+
+          <div class="mt-4 flex justify-end">
+            <%= link_to edit_hotel_rate_plan_path(@hotel, rate_plan),
+                data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" },
+                class: "inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50" do %>
+              <%= cached_icon "pencil", class: "size-3.5", aria: { hidden: true } %>
+              Edit
             <% end %>
           </div>
-        </div>
-      </div>
-
-      <div class="border-t border-slate-200/60 pt-4">
-        <span class="mb-2 block text-sm font-semibold text-slate-900">Assign to Room Categories</span>
-        <div class="flex flex-wrap gap-x-6 gap-y-2">
-          <% @hotel.room_types.order(:id).each do |room_type| %>
-            <label class="inline-flex items-center gap-x-2 text-sm text-slate-700 cursor-pointer">
-              <%= check_box_tag "room_type_ids[]", room_type.id, true, class: "rounded border-slate-300 text-slate-900 focus:ring-slate-900 size-4" %>
-              <span><%= room_type.name %></span>
-            </label>
-          <% end %>
-        </div>
-      </div>
-
-      <div class="flex justify-end border-t border-slate-200 pt-4">
-        <%= f.submit "Create Rate Plan", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
-      </div>
+        </article>
+      <% end %>
     <% end %>
   </div>
 </section>

@@ -104,6 +104,17 @@
               </div>
             </div>
 
+            <%# Child ages — one select per child, kept in sync with the Children stepper %>
+            <% child_ages = local_assigns[:child_ages] || [] %>
+            <div class="<%= "hidden" if children.zero? %> py-1 space-y-1.5" data-hotel-search-bar-target="childAgesWrapper">
+              <p class="text-xs text-neutral-text-secondary">Child ages</p>
+              <div class="flex flex-wrap gap-1.5" data-hotel-search-bar-target="childAgesContainer">
+                <% children.times do |i| %>
+                  <%= select_tag "child_ages[]", options_for_select((0..17).to_a, child_ages[i]), class: "rounded-lg border border-neutral-border text-xs px-2 py-1", data: { hotel_search_bar_target: "childAgeInput" } %>
+                <% end %>
+              </div>
+            </div>
+
             <%# Infants row %>
             <div class="flex items-center justify-between py-2 border-t border-border">
               <div>

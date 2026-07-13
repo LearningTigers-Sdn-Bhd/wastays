@@ -615,7 +615,7 @@ Rails.application.routes.draw do
     get "roles-and-permissions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions/%{id}/edit")
 
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
-    resources :rate_plans, only: %i[create destroy]
+    resources :rate_plans, only: %i[new create edit update destroy]
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
   end

@@ -22,6 +22,7 @@ class Public::HotelsController < ApplicationController
 
     @adults = (params[:adults].presence || 2).to_i
     @children = (params[:children].presence || 0).to_i
+    @child_ages = Array(params[:child_ages]).map(&:to_i)
     @room_count = (params[:room_count].presence || params[:rooms].presence || 1).to_i
     @display_currency = display_currency_for_request
 
@@ -33,6 +34,7 @@ class Public::HotelsController < ApplicationController
           check_in: @check_in,
           check_out: @check_out,
           room_count: @room_count,
+          child_ages: @child_ages,
           corporate_rate: current_agent_account.present?
         )
       )

@@ -5,11 +5,16 @@ class RatePlan < ApplicationRecord
   has_many :room_types, through: :room_type_rate_plans
   has_many :room_rates, dependent: :destroy
   has_many :channel_room_rates, dependent: :destroy
+  has_many :booking_rooms, dependent: :restrict_with_error
+  has_many :rate_plan_age_bands, -> { order(:position, :min_age) }, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
+
+  accepts_nested_attributes_for :rate_plan_age_bands, allow_destroy: true, reject_if: :all_blank
 
   validates :name, presence: true
   validates :sell_mode, presence: true, inclusion: { in: %w[per_room per_person] }
   validate :pax_pricing_allowed_for_person_mode
+  validate :sell_mode_matches_hotel_exclusivity
   validates :currency, presence: true, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validates :single_supplement, numericality: { greater_than_or_equal_to: 0 }
   validates :child_price_multiplier, numericality: { greater_than_or_equal_to: 0 }
@@ -28,6 +33,22 @@ class RatePlan < ApplicationRecord
 
   def special_tier?
     special_tier_kind.present?
+  end
+
+  def standard_rate?
+    name.to_s.strip.downcase == "standard rate"
+  end
+
+  def deletable?
+    !special_tier? && !standard_rate? && !booking_rooms.exists?
+  end
+
+  def age_banded?
+    sell_mode == "per_person" && rate_plan_age_bands.any?
+  end
+
+  def band_for_age(age)
+    rate_plan_age_bands.find { |band| age.to_i.between?(band.min_age, band.max_age) }
   end
 
   def special_tier_kind
@@ -53,8 +74,22 @@ class RatePlan < ApplicationRecord
     end
   end
 
+  # Per-pax hotels sell exclusively to premium/package guests: once a hotel
+  # is flipped to pax_pricing_only, its bookable rate plans cannot mix
+  # per_room and per_person. Special tiers (walk-in/corporate/ota) and the
+  # system "Standard Rate" plan are exempt because they carry data (e.g.
+  # walk_in_price) other parts of the system still read regardless of mode.
+  def sell_mode_matches_hotel_exclusivity
+    return unless hotel&.pax_pricing_only?
+    return unless sell_mode == "per_room"
+    return if special_tier? || standard_rate?
+
+    errors.add(:sell_mode, "must be Per Person while this hotel is set to pax-pricing only")
+  end
+
   def sync_with_channel_manager
     return if hotel.preferred_channel_manager.blank?
+    return if sell_mode == "per_person"
 
     ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
   end

@@ -60,6 +60,32 @@ RSpec.describe Bookings::CalculateStayPrice do
         expect(subject.call).to eq(520) # (2 * 100 + 1 * 50 + 1 * 10) * 2 nights
       end
     end
+
+    context "with age-banded child pricing" do
+      before do
+        rate_plan.update!(child_price_multiplier: 0.6)
+        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, price_multiplier: 0.4, label: "Child")
+        create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 12, max_age: 17, price_multiplier: 0.2, label: "Teen")
+      end
+
+      it "prices each child individually by their resolved age band" do
+        service = described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_plan: rate_plan, adults: 2, children: 2, child_ages: [ 6, 15 ])
+        # (2*100 + 100*0.4 + 100*0.2) * 2 nights = 260 * 2 = 520
+        expect(service.call).to eq(520)
+      end
+
+      it "falls back to the flat child_price_multiplier when ages are not supplied" do
+        service = described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_plan: rate_plan, adults: 2, children: 2)
+        # (2*100 + 2*100*0.6) * 2 nights = 320 * 2 = 640
+        expect(service.call).to eq(640)
+      end
+
+      it "falls back to the flat child_price_multiplier for an age not covered by any band" do
+        service = described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_plan: rate_plan, adults: 2, children: 1, child_ages: [ 1 ])
+        # (2*100 + 100*0.6) * 2 nights = 260 * 2 = 520
+        expect(service.call).to eq(520)
+      end
+    end
   end
 
   context "with per_room sell mode and extra guest charges" do

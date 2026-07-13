@@ -183,6 +183,85 @@ RSpec.describe BookingEngine::AvailabilityService do
     end
   end
 
+  describe "#calculate_total_price with age-banded per_person rate plan" do
+    let!(:family_room) { RoomType.create!(hotel: hotel, name: "Family", quantity: 3, max_adults: 2, max_children: 3, base_price: 100, room_number_mode: "range") }
+    let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Age Banded Plan", sell_mode: "per_person", child_price_multiplier: 0.6, currency: "MYR") }
+
+    before do
+      RoomTypeRatePlan.create!(room_type: family_room, rate_plan: pax_rate_plan)
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_multiplier: 0.4, label: "Child")
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 12, max_age: 17, price_multiplier: 0.2, label: "Teen")
+
+      stay_dates.each do |date|
+        RoomInventory.create!(room_type: family_room, date: date, quantity: 3, status: "open")
+        RoomRate.create!(room_type: family_room, rate_plan: pax_rate_plan, date: date, price: 50.0, currency: "MYR")
+      end
+    end
+
+    it "prices each child individually by their resolved age band" do
+      # 2 adults @ 50 + 1 child(6) @ 50*0.4 + 1 child(15) @ 50*0.2 = 100 + 20 + 10 = 130/night, 2 nights = 260
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 2, child_ages: [ 6, 15 ])
+      total = service.calculate_total_price(family_room, rate_plan: pax_rate_plan, adults: 2, children: 2, child_ages: [ 6, 15 ])
+
+      expect(total).to eq(260.0)
+    end
+
+    it "falls back to the flat child_price_multiplier when no ages are supplied (regression guard)" do
+      # 2 adults @ 50 + 2 children @ 50*0.6 = 100 + 60 = 160/night, 2 nights = 320
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 2)
+      total = service.calculate_total_price(family_room, rate_plan: pax_rate_plan, adults: 2, children: 2)
+
+      expect(total).to eq(320.0)
+    end
+
+    it "falls back to the flat child_price_multiplier for an age not covered by any band" do
+      # child age 1 falls in a gap -> flat multiplier 0.6 applies
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 1, child_ages: [ 1 ])
+      total = service.calculate_total_price(family_room, rate_plan: pax_rate_plan, adults: 2, children: 1, child_ages: [ 1 ])
+
+      # 2 adults @ 50 + 1 child @ 50*0.6 = 130/night, 2 nights = 260
+      expect(total).to eq(260.0)
+    end
+
+    it "ignores mismatched child_ages (count mismatch) and falls back to the flat multiplier" do
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 2, child_ages: [ 6 ])
+      total = service.calculate_total_price(family_room, rate_plan: pax_rate_plan, adults: 2, children: 2, child_ages: [ 6 ])
+
+      expect(total).to eq(320.0)
+    end
+  end
+
+  describe "#allocation_options_for_hotel groups rooms by child ages, not just counts" do
+    let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Age Banded Plan", sell_mode: "per_person", child_price_multiplier: 1.0, currency: "MYR") }
+    let!(:room_a) { RoomType.create!(hotel: hotel, name: "Room A", quantity: 2, max_adults: 1, max_children: 1, base_price: 100, room_number_mode: "range") }
+
+    before do
+      hotel.update!(pax_pricing_only: true)
+      RoomTypeRatePlan.create!(room_type: room_a, rate_plan: pax_rate_plan)
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 0, max_age: 5, price_multiplier: 0.1, label: "Toddler")
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 13, max_age: 17, price_multiplier: 0.9, label: "Teen")
+
+      stay_dates.each do |date|
+        RoomInventory.create!(room_type: room_a, date: date, quantity: 2, status: "open")
+        RoomRate.create!(room_type: room_a, rate_plan: pax_rate_plan, date: date, price: 100.0, currency: "MYR")
+      end
+    end
+
+    it "prices two same-headcount rooms with different child ages independently, not batched together" do
+      # 2 adults, 2 children (ages 2 and 16) split across 2 rooms of capacity 2 (1 adult + 1 child each).
+      # Room 1: adult @ 100 + child(2) @ 100*0.1 = 110/night
+      # Room 2: adult @ 100 + child(16) @ 100*0.9 = 190/night
+      # Total nightly = 300, 2 nights = 600 (NOT 2x110 or 2x190, which would happen if incorrectly batched)
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 2, child_ages: [ 2, 16 ], room_count: 2)
+      options = service.allocation_options_for_hotel(hotel)
+
+      best = options.min_by(&:total_price)
+      expect(best.total_price).to eq(600.0)
+      expect(best.rooms.size).to eq(2)
+      expect(best.rooms.map(&:quantity)).to all(eq(1))
+    end
+  end
+
   describe "#available_rooms_for_hotel with restrictions" do
     let(:tomorrow) { Date.current + 1.day }
     let(:check_out_date) { tomorrow + 1.day } # 1 night stay

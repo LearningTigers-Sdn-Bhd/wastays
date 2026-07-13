@@ -9,7 +9,10 @@ export default class extends Controller {
     "infantsCount",
     "adultsInput",
     "childrenInput",
-    "infantsInput"
+    "infantsInput",
+    "childAgesWrapper",
+    "childAgesContainer",
+    "childAgeInput"
   ]
 
   step(event) {
@@ -29,7 +32,36 @@ export default class extends Controller {
 
     countTarget.textContent = String(next)
     inputTarget.value = String(next)
+
+    if (field === "children") this._syncChildAges(next)
     this._syncDisplay()
+  }
+
+  _syncChildAges(count) {
+    if (!this.hasChildAgesContainerTarget) return
+
+    const current = this.childAgeInputTargets.length
+    if (count > current) {
+      for (let i = current; i < count; i++) {
+        const select = document.createElement("select")
+        select.name = "child_ages[]"
+        select.className = "rounded-lg border border-neutral-border text-xs px-2 py-1"
+        select.dataset.hotelSearchBarTarget = "childAgeInput"
+        for (let age = 0; age <= 17; age++) {
+          const option = document.createElement("option")
+          option.value = String(age)
+          option.textContent = String(age)
+          select.appendChild(option)
+        }
+        this.childAgesContainerTarget.appendChild(select)
+      }
+    } else if (count < current) {
+      this.childAgeInputTargets.slice(count).forEach((el) => el.remove())
+    }
+
+    if (this.hasChildAgesWrapperTarget) {
+      this.childAgesWrapperTarget.classList.toggle("hidden", count === 0)
+    }
   }
 
   submit(event) {

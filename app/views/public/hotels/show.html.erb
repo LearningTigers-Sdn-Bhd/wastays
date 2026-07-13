@@ -14,7 +14,8 @@
     adults: @adults,
     children: @children,
     infants: @infants,
-    room_count: @room_count %>
+    room_count: @room_count,
+    child_ages: @child_ages %>
 
   <%# Breadcrumb %>
   <div class="bg-white border-b border-border">
@@ -97,9 +98,10 @@
        data-controller="room-selector" 
        data-room-selector-adults-value="<%= @adults %>" 
        data-room-selector-children-value="<%= @children %>" 
-       data-room-selector-infants-value="<%= @infants %>" 
+       data-room-selector-infants-value="<%= @infants %>"
        data-room-selector-currency-value="<%= @display_currency %>"
-       data-room-selector-pax-pricing-only-value="<%= @hotel.pax_pricing_only? %>">
+       data-room-selector-pax-pricing-only-value="<%= @hotel.pax_pricing_only? %>"
+       data-room-selector-child-ages-value="<%= @child_ages.to_json %>">
     <div class="flex flex-col md:flex-row gap-8 items-start">
       <%# Main Content %>
       <div class="flex-1 w-full space-y-8 min-w-0">
@@ -250,6 +252,9 @@
                           <%= f.hidden_field :adults, value: @adults %>
                           <%= f.hidden_field :children, value: @children %>
                           <%= f.hidden_field :infants, value: @infants %>
+                          <% Array(@child_ages).each do |age| %>
+                            <%= hidden_field_tag "child_ages[]", age %>
+                          <% end %>
                           <% option.allocations_params.each_with_index do |alloc, index| %>
                             <%= hidden_field_tag "allocations[][room_type_id]", alloc[:room_type_id] %>
                             <%= hidden_field_tag "allocations[][quantity]", alloc[:quantity] %>
@@ -413,8 +418,11 @@
             <%= f.hidden_field :adults, value: @adults %>
             <%= f.hidden_field :children, value: @children %>
             <%= f.hidden_field :infants, value: @infants %>
+            <% Array(@child_ages).each do |age| %>
+              <%= hidden_field_tag "child_ages[]", age %>
+            <% end %>
             <%= f.hidden_field :display_currency, value: @display_currency %>
-            
+
             <div data-room-selector-target="formInputs" class="hidden"></div>
 
             <%= f.submit "Book Selected",

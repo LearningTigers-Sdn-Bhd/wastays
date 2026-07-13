@@ -279,6 +279,27 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
   end
 
+  describe "GET /hotel/:hotel_id/settings?tab=rates" do
+    it "renders the rate settings tab with a rate plan list and a New Rate Plan trigger" do
+      get hotel_settings_path(hotel, tab: "rates")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Rate Settings")
+      expect(response.body).to include("New Rate Plan")
+    end
+
+    it "hides the Walk-in Rate plan row when the hotel is pax_pricing_only" do
+      hotel.update!(allow_pax_pricing: true, pax_pricing_only: true)
+      create(:rate_plan, hotel: hotel, name: "Standard Rate", sell_mode: "per_person")
+      create(:rate_plan, hotel: hotel, name: "Walk-in Rate", sell_mode: "per_room")
+
+      get hotel_settings_path(hotel, tab: "rates")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("Walk-in Rate")
+    end
+  end
+
   describe "GET /hotel/:hotel_id/concierge_qr" do
     it "renders an almost-full Panels UI dialog as a Turbo Frame payload" do
       get hotel_concierge_qr_path(hotel), headers: { "Turbo-Frame" => "concierge_qr_dialog" }

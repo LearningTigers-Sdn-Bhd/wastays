@@ -21,6 +21,7 @@ module BookingEngine
       @adults = (params[:adults].presence || 2).to_i
       @children = (params[:children].presence || 0).to_i
       @infants = (params[:infants].presence || 0).to_i
+      @child_ages = normalize_child_ages(params[:child_ages], @children)
       @guest_name = params[:guest_name]
       @guest_email = params[:guest_email]
       @guest_phone = params[:guest_phone]
@@ -62,22 +63,24 @@ module BookingEngine
 
         # 2. Distribute guests
         flat_rooms = flat_rooms.sort_by { |rt| -rt.max_capacity }
-        occupancies = availability_service.send(:distribute_guests, @adults, @children, @infants, flat_rooms)
+        occupancies = availability_service.send(:distribute_guests, @adults, @children, @infants, flat_rooms, child_ages: @child_ages)
         if occupancies.nil?
           return OpenStruct.new(success?: false, message: "The selected rooms do not have enough capacity or require more adults to supervise each room.")
         end
 
-        # Group rooms by [room_type, adults, children, infants]
+        # Group rooms by [room_type, adults, children, infants, child_ages] so rooms with
+        # the same headcount but different child ages (and thus different prices) don't
+        # get incorrectly batched together.
         grouped_allocations = Hash.new(0)
         occupancies.each do |occ|
-          grouped_allocations[[ occ[:room_type], occ[:adults], occ[:children], occ[:infants] ]] += 1
+          grouped_allocations[[ occ[:room_type], occ[:adults], occ[:children], occ[:infants], occ[:child_ages].to_a.sort ]] += 1
         end
 
         allocation_data = []
         total_quote_amount = 0.to_d
         quote_currency = nil
 
-        grouped_allocations.each do |(room_type, r_adults, r_children, r_infants), quantity|
+        grouped_allocations.each do |(room_type, r_adults, r_children, r_infants, r_child_ages), quantity|
           rate_plan = if @hotel.pax_pricing_only?
             @rate_plan_id.present? ? room_type.rate_plans.where(sell_mode: "per_person").find_by(id: @rate_plan_id) : nil
           else
@@ -89,7 +92,8 @@ module BookingEngine
             adults: r_adults,
             children: r_children,
             infants: r_infants,
-            room_count: 1
+            room_count: 1,
+            child_ages: r_child_ages
           )
 
           if pricing_summary.blank?
@@ -99,7 +103,7 @@ module BookingEngine
           # Check inventory
           stay_dates_list = (@check_in...@check_out).to_a
           inventories = room_type.room_inventories.select { |inv| stay_dates_list.include?(inv.date) }
-          total_qty_needed = grouped_allocations.select { |(rt, _a, _c, _i), _q| rt.id == room_type.id }.sum { |_, q| q }
+          total_qty_needed = grouped_allocations.select { |(rt, _a, _c, _i, _ages), _q| rt.id == room_type.id }.sum { |_, q| q }
           unless inventories.count == stay_dates_list.count && inventories.all? { |inv| inv.status == "open" && inv.quantity >= total_qty_needed }
             return OpenStruct.new(success?: false, message: "Room #{room_type.name} is no longer available.")
           end
@@ -115,7 +119,9 @@ module BookingEngine
             pricing_summary: pricing_summary,
             adults: r_adults,
             children: r_children,
-            infants: r_infants
+            infants: r_infants,
+            child_ages: r_child_ages,
+            rate_plan: pricing_summary[:rate_plan]
           }
         end
 
@@ -160,7 +166,17 @@ module BookingEngine
                 actual_occupancy: data[:adults] + data[:children] + data[:infants],
                 adults: data[:adults],
                 children: data[:children],
-                infants: data[:infants]
+                infants: data[:infants],
+                child_ages: data[:child_ages] || [],
+                child_age_bands: (data[:child_ages] || []).map { |age|
+                  band = data[:rate_plan]&.band_for_age(age)
+                  {
+                    age: age,
+                    band_id: band&.id,
+                    band_label: band&.label,
+                    multiplier: (band&.price_multiplier || data[:rate_plan]&.child_price_multiplier).to_s
+                  }
+                }
               }
             )
           end
@@ -187,6 +203,12 @@ module BookingEngine
     end
 
     private
+
+    def normalize_child_ages(raw_ages, children_count)
+      ages = Array(raw_ages).map(&:to_i)
+      return [] if ages.size != children_count
+      ages
+    end
 
     def parse_date(date_param)
       return date_param if date_param.is_a?(Date)
