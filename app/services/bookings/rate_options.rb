@@ -13,7 +13,7 @@ module Bookings
     end
 
     def call
-      all_plans = @room_type.rate_plans.order(:name, :id).to_a
+      all_plans = @room_type.rate_plans.active.order(:name, :id).to_a
       return [ base_rate_option ] if all_plans.empty?
 
       # Filter out plans that are actually special tiers
@@ -35,6 +35,7 @@ module Bookings
 
     def allowed?(rate_plan)
       return true if rate_plan.blank?
+      return false if rate_plan.archived?
       return true if rate_plan.special_tier? # Tiers are handled via standard plan restrictions
 
       !restricted?(rate_plan)

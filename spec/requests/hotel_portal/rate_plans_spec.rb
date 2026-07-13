@@ -80,6 +80,26 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include('data-role="price-preview"')
       expect(response.body).to include('Flat Amount')
     end
+
+    it 'shows the prominent empty-state Add Band button when there are no age bands yet' do
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person', currency: 'MYR')
+
+      get edit_hotel_rate_plan_path(hotel, per_person_plan)
+
+      empty_state = Nokogiri::HTML(response.body).at_css('[data-rate-plan-age-bands-target="emptyState"]')
+      expect(empty_state.text).to include('Add your first age band')
+      expect(empty_state["class"]).not_to include("hidden")
+    end
+
+    it 'hides the empty-state Add Band button once age bands already exist' do
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person', currency: 'MYR')
+      create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 40, label: 'Child')
+
+      get edit_hotel_rate_plan_path(hotel, per_person_plan)
+
+      empty_state = Nokogiri::HTML(response.body).at_css('[data-rate-plan-age-bands-target="emptyState"]')
+      expect(empty_state["class"]).to include("hidden")
+    end
   end
 
   describe 'POST /hotel/:hotel_id/rate_plans' do
@@ -203,6 +223,51 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       expect(response).to redirect_to(hotel_rates_settings_path(hotel))
       expect(flash[:alert]).to include("cannot be deleted")
+    end
+  end
+
+  describe 'PATCH /hotel/:hotel_id/rate_plans/:id/archive' do
+    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate') }
+
+    it 'archives a custom rate plan, including one with existing bookings' do
+      booking = create(:booking, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room_type, rate_plan: rate_plan)
+
+      patch archive_hotel_rate_plan_path(hotel, rate_plan)
+
+      expect(response).to redirect_to(hotel_rates_settings_path(hotel))
+      expect(rate_plan.reload.archived?).to be true
+    end
+
+    it 'prevents archiving the standard rate plan' do
+      standard_rate = hotel.rate_plans.find_by(name: 'Standard Rate') || create(:rate_plan, hotel: hotel, name: 'Standard Rate')
+
+      patch archive_hotel_rate_plan_path(hotel, standard_rate)
+
+      expect(response).to redirect_to(hotel_rates_settings_path(hotel))
+      expect(flash[:alert]).to include("cannot be archived")
+      expect(standard_rate.reload.archived?).to be false
+    end
+
+    it 'excludes an archived rate plan from availability search results' do
+      create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan)
+      rate_plan.archive!
+
+      service = BookingEngine::AvailabilityService.new(check_in: Date.tomorrow, check_out: Date.tomorrow + 2.days, adults: 2)
+      options = service.send(:candidate_rate_plans_for, room_type)
+
+      expect(options).not_to include(rate_plan)
+    end
+  end
+
+  describe 'PATCH /hotel/:hotel_id/rate_plans/:id/unarchive' do
+    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate', archived_at: Time.current) }
+
+    it 'restores an archived rate plan' do
+      patch unarchive_hotel_rate_plan_path(hotel, rate_plan)
+
+      expect(response).to redirect_to(hotel_rates_settings_path(hotel))
+      expect(rate_plan.reload.archived?).to be false
     end
   end
 end

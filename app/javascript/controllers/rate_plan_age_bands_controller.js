@@ -4,7 +4,7 @@ import { Controller } from "@hotwired/stimulus"
 // price multiplier, label). Mirrors the INDEX-template pattern used by
 // booking_room_rows_controller.js.
 export default class extends Controller {
-  static targets = ["rows", "row", "template"]
+  static targets = ["rows", "row", "template", "addButton", "emptyState"]
 
   connect() {
     this.nextIndex = Date.now()
@@ -14,6 +14,7 @@ export default class extends Controller {
     event.preventDefault()
     const html = this.templateTarget.innerHTML.replaceAll("NEW_RECORD", this.nextIndex++)
     this.rowsTarget.insertAdjacentHTML("beforeend", html)
+    this.syncEmptyState()
   }
 
   remove(event) {
@@ -27,5 +28,15 @@ export default class extends Controller {
     } else {
       row.remove()
     }
+
+    this.syncEmptyState()
+  }
+
+  syncEmptyState() {
+    if (!this.hasEmptyStateTarget) return
+
+    const hasVisibleRows = this.rowTargets.some((row) => !row.classList.contains("hidden"))
+    this.emptyStateTarget.classList.toggle("hidden", hasVisibleRows)
+    if (this.hasAddButtonTarget) this.addButtonTarget.classList.toggle("hidden", !hasVisibleRows)
   }
 }

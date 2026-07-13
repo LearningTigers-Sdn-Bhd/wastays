@@ -79,12 +79,13 @@
                      data-controller="rate-plan-age-bands age-band-price-preview"
                      data-age-band-price-preview-currency-value="<%= rate_plan.currency %>"
                      data-action="input->age-band-price-preview#update change->age-band-price-preview#update">
+              <% has_bands = rate_plan.rate_plan_age_bands.any? %>
               <div class="flex items-center justify-between">
                 <div>
                   <h3 class="text-sm font-bold text-slate-900">Age Bands</h3>
                   <p class="mt-0.5 text-xs text-slate-500">Override the flat Child Price Multiplier above for specific age ranges. Ages outside any band fall back to it.</p>
                 </div>
-                <button type="button" data-action="click->rate-plan-age-bands#add" class="shrink-0 text-xs font-bold text-slate-900 hover:text-slate-700 transition">+ Add Band</button>
+                <button type="button" data-action="click->rate-plan-age-bands#add" data-rate-plan-age-bands-target="addButton" class="shrink-0 text-xs font-bold text-slate-900 hover:text-slate-700 transition <%= "hidden" unless has_bands %>">+ Add Band</button>
               </div>
 
               <% if preview_room_types.any? %>
@@ -105,6 +106,13 @@
                   <%= render "hotel_portal/settings/rate_plan_age_band_row", band: band, name_prefix: "rate_plan[rate_plan_age_bands_attributes][#{index}]" %>
                 <% end %>
               </div>
+
+              <button type="button"
+                      data-action="click->rate-plan-age-bands#add"
+                      data-rate-plan-age-bands-target="emptyState"
+                      class="w-full rounded-lg border-2 border-dashed border-slate-300 py-6 text-center text-sm font-semibold text-slate-500 transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-700 <%= "hidden" if has_bands %>">
+                + Add your first age band
+              </button>
 
               <template data-rate-plan-age-bands-target="template">
                 <%= render "hotel_portal/settings/rate_plan_age_band_row", band: nil, name_prefix: "rate_plan[rate_plan_age_bands_attributes][NEW_RECORD]" %>
@@ -161,19 +169,46 @@
 
       <footer class="z-10 shrink-0 border-t border-slate-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(15,23,42,0.06)] sm:px-6">
         <div class="flex items-center justify-between gap-2">
-          <% if persisted && rate_plan.deletable? %>
-            <%= link_to hotel_rate_plan_path(current_hotel, rate_plan),
+          <% if persisted && rate_plan.archived? %>
+            <%= link_to unarchive_hotel_rate_plan_path(current_hotel, rate_plan),
                 data: {
-                  turbo_method: :delete,
-                  turbo_confirm: "Are you sure you want to delete '#{rate_plan.name}'? This will permanently remove the rate plan.",
-                  turbo_confirm_title: "Delete Rate Plan",
-                  turbo_confirm_color: "red",
+                  turbo_method: :patch,
                   turbo_frame: "_top",
                   action: "click->offcanvas#close"
                 },
-                class: "rounded-md px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50" do %>
-              Delete Rate Plan
+                class: "rounded-md px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100" do %>
+              Unarchive Rate Plan
             <% end %>
+          <% elsif persisted && (rate_plan.archivable? || rate_plan.deletable?) %>
+            <div class="flex items-center gap-2">
+              <% if rate_plan.archivable? %>
+                <%= link_to archive_hotel_rate_plan_path(current_hotel, rate_plan),
+                    data: {
+                      turbo_method: :patch,
+                      turbo_confirm: "Archive '#{rate_plan.name}'? It will no longer be offered for new bookings, but existing bookings and history are kept. You can unarchive it anytime.",
+                      turbo_confirm_title: "Archive Rate Plan",
+                      turbo_frame: "_top",
+                      action: "click->offcanvas#close"
+                    },
+                    class: "rounded-md px-4 py-2 text-sm font-bold text-amber-700 transition hover:bg-amber-50" do %>
+                  Archive Rate Plan
+                <% end %>
+              <% end %>
+              <% if rate_plan.deletable? %>
+                <%= link_to hotel_rate_plan_path(current_hotel, rate_plan),
+                    data: {
+                      turbo_method: :delete,
+                      turbo_confirm: "Are you sure you want to delete '#{rate_plan.name}'? This will permanently remove the rate plan.",
+                      turbo_confirm_title: "Delete Rate Plan",
+                      turbo_confirm_color: "red",
+                      turbo_frame: "_top",
+                      action: "click->offcanvas#close"
+                    },
+                    class: "rounded-md px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50" do %>
+                  Delete Rate Plan
+                <% end %>
+              <% end %>
+            </div>
           <% else %>
             <span></span>
           <% end %>

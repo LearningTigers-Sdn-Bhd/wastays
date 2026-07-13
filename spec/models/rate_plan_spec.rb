@@ -84,6 +84,53 @@ RSpec.describe RatePlan, type: :model do
     end
   end
 
+  describe 'archiving' do
+    let(:hotel) { create(:hotel) }
+
+    it 'is not archived by default' do
+      rate_plan = create(:rate_plan, hotel: hotel, name: 'Non-Refundable')
+      expect(rate_plan.archived?).to be false
+    end
+
+    it 'archives and unarchives a custom rate plan' do
+      rate_plan = create(:rate_plan, hotel: hotel, name: 'Non-Refundable')
+
+      rate_plan.archive!
+      expect(rate_plan.archived?).to be true
+      expect(rate_plan.archived_at).to be_present
+
+      rate_plan.unarchive!
+      expect(rate_plan.archived?).to be false
+      expect(rate_plan.archived_at).to be_nil
+    end
+
+    it 'is archivable for a custom rate plan' do
+      rate_plan = create(:rate_plan, hotel: hotel, name: 'Non-Refundable')
+      expect(rate_plan.archivable?).to be true
+    end
+
+    it 'is not archivable for the standard rate plan' do
+      rate_plan = create(:rate_plan, hotel: hotel, name: 'Standard Rate')
+      expect(rate_plan.archivable?).to be false
+    end
+
+    it 'is not archivable for a special-tier plan' do
+      rate_plan = create(:rate_plan, hotel: hotel, name: 'Walk-in Rate')
+      expect(rate_plan.archivable?).to be false
+    end
+
+    it 'scopes .active to non-archived plans and .archived to archived plans' do
+      active_plan = create(:rate_plan, hotel: hotel, name: 'Room Only')
+      archived_plan = create(:rate_plan, hotel: hotel, name: 'Non-Refundable')
+      archived_plan.archive!
+
+      expect(RatePlan.active).to include(active_plan)
+      expect(RatePlan.active).not_to include(archived_plan)
+      expect(RatePlan.archived).to include(archived_plan)
+      expect(RatePlan.archived).not_to include(active_plan)
+    end
+  end
+
   describe '#age_banded?' do
     let(:hotel) { create(:hotel, allow_pax_pricing: true) }
 

@@ -418,9 +418,9 @@ module BookingEngine
 
     def candidate_rate_plans_for(room_type)
       if room_type.hotel.pax_pricing_only?
-        room_type.rate_plans.where(sell_mode: "per_person").to_a
+        room_type.rate_plans.active.where(sell_mode: "per_person").to_a
       else
-        [ nil ] + room_type.rate_plans.where(sell_mode: "per_room").to_a
+        [ nil ] + room_type.rate_plans.active.where(sell_mode: "per_room").to_a
       end
     end
 

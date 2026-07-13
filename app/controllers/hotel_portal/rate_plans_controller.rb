@@ -2,7 +2,7 @@
 
 class HotelPortal::RatePlansController < HotelPortal::BaseController
   before_action :authorize!
-  before_action :set_rate_plan, only: %i[edit update destroy]
+  before_action :set_rate_plan, only: %i[edit update destroy archive unarchive]
 
   def new
     @rate_plan = current_hotel.rate_plans.build(sell_mode: default_sell_mode)
@@ -61,6 +61,21 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     else
       redirect_to hotel_rates_settings_path(current_hotel), alert: "Failed to delete rate plan."
     end
+  end
+
+  def archive
+    unless @rate_plan.archivable?
+      redirect_to hotel_rates_settings_path(current_hotel), alert: "System rate plans cannot be archived."
+      return
+    end
+
+    @rate_plan.archive!
+    redirect_to hotel_rates_settings_path(current_hotel), notice: "Rate plan '#{@rate_plan.name}' archived. It will no longer be offered for new bookings."
+  end
+
+  def unarchive
+    @rate_plan.unarchive!
+    redirect_to hotel_rates_settings_path(current_hotel), notice: "Rate plan '#{@rate_plan.name}' restored."
   end
 
   private

@@ -23,6 +23,9 @@ class RatePlan < ApplicationRecord
 
   before_validation :normalize_currency
 
+  scope :active, -> { where(archived_at: nil) }
+  scope :archived, -> { where.not(archived_at: nil) }
+
   after_commit :sync_with_channel_manager, on: [ :create, :update ]
   after_destroy_commit :delete_from_channel_manager, if: :synced_with_channel_manager?
 
@@ -40,6 +43,24 @@ class RatePlan < ApplicationRecord
 
   def deletable?
     !special_tier? && !standard_rate? && !booking_rooms.exists?
+  end
+
+  def archived?
+    archived_at.present?
+  end
+
+  # Standard Rate and special tiers (walk-in/corporate/ota) are structurally
+  # required and must always stay bookable, so they can't be archived either.
+  def archivable?
+    !special_tier? && !standard_rate?
+  end
+
+  def archive!
+    update!(archived_at: Time.current)
+  end
+
+  def unarchive!
+    update!(archived_at: nil)
   end
 
   def age_banded?

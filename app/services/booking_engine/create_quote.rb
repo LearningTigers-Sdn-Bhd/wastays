@@ -80,9 +80,9 @@ module BookingEngine
 
         grouped_allocations.each do |(room_type, r_adults, r_children, r_child_ages), quantity|
           rate_plan = if @hotel.pax_pricing_only?
-            @rate_plan_id.present? ? room_type.rate_plans.where(sell_mode: "per_person").find_by(id: @rate_plan_id) : nil
+            @rate_plan_id.present? ? room_type.rate_plans.active.where(sell_mode: "per_person").find_by(id: @rate_plan_id) : nil
           else
-            @rate_plan_id.present? ? room_type.rate_plans.find_by(id: @rate_plan_id) : nil
+            @rate_plan_id.present? ? room_type.rate_plans.active.find_by(id: @rate_plan_id) : nil
           end
           pricing_summary = availability_service.pricing_summary_for(
             room_type,

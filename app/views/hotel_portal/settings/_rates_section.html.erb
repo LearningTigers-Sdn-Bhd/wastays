@@ -33,11 +33,13 @@
           </tr>
         <% else %>
           <% rate_plans.each do |rate_plan| %>
-            <tr>
+            <tr class="<%= "opacity-60" if rate_plan.archived? %>">
               <td class="px-6 py-4">
                 <div class="flex items-center gap-x-2">
                   <p class="font-semibold text-slate-950"><%= rate_plan.name %></p>
-                  <% if rate_plan.special_tier? %>
+                  <% if rate_plan.archived? %>
+                    <span class="inline-flex items-center rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">Archived</span>
+                  <% elsif rate_plan.special_tier? %>
                     <span class="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">Virtual Tier</span>
                   <% elsif rate_plan.standard_rate? %>
                     <span class="inline-flex items-center rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">System Default</span>
@@ -56,12 +58,22 @@
                 <% end %>
               </td>
               <td class="px-6 py-4 text-right">
-                <%= link_to edit_hotel_rate_plan_path(@hotel, rate_plan),
-                    data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" },
-                    class: "inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50" do %>
-                  <%= cached_icon "pencil", class: "size-3.5", aria: { hidden: true } %>
-                  Edit
-                <% end %>
+                <div class="inline-flex items-center gap-2">
+                  <%= link_to edit_hotel_rate_plan_path(@hotel, rate_plan),
+                      data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" },
+                      class: "inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50" do %>
+                    <%= cached_icon "pencil", class: "size-3.5", aria: { hidden: true } %>
+                    Edit
+                  <% end %>
+                  <% if rate_plan.archived? %>
+                    <%= link_to unarchive_hotel_rate_plan_path(@hotel, rate_plan),
+                        data: { turbo_method: :patch, turbo_frame: "_top" },
+                        class: "inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50" do %>
+                      <%= cached_icon "archive-restore", class: "size-3.5", aria: { hidden: true } %>
+                      Unarchive
+                    <% end %>
+                  <% end %>
+                </div>
               </td>
             </tr>
           <% end %>
@@ -75,12 +87,14 @@
       <div class="px-6 py-8 text-center text-sm font-medium text-slate-400">No rate plans configured yet.</div>
     <% else %>
       <% rate_plans.each do |rate_plan| %>
-        <article class="p-5">
+        <article class="p-5 <%= "opacity-60" if rate_plan.archived? %>">
           <div class="flex items-start justify-between gap-4">
             <div>
               <div class="flex items-center gap-x-2">
                 <p class="font-semibold text-slate-950"><%= rate_plan.name %></p>
-                <% if rate_plan.special_tier? %>
+                <% if rate_plan.archived? %>
+                  <span class="inline-flex items-center rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">Archived</span>
+                <% elsif rate_plan.special_tier? %>
                   <span class="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">Virtual Tier</span>
                 <% elsif rate_plan.standard_rate? %>
                   <span class="inline-flex items-center rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">System Default</span>
@@ -103,12 +117,20 @@
             </p>
           </div>
 
-          <div class="mt-4 flex justify-end">
+          <div class="mt-4 flex justify-end gap-2">
             <%= link_to edit_hotel_rate_plan_path(@hotel, rate_plan),
                 data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" },
                 class: "inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50" do %>
               <%= cached_icon "pencil", class: "size-3.5", aria: { hidden: true } %>
               Edit
+            <% end %>
+            <% if rate_plan.archived? %>
+              <%= link_to unarchive_hotel_rate_plan_path(@hotel, rate_plan),
+                  data: { turbo_method: :patch, turbo_frame: "_top" },
+                  class: "inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50" do %>
+                <%= cached_icon "archive-restore", class: "size-3.5", aria: { hidden: true } %>
+                Unarchive
+              <% end %>
             <% end %>
           </div>
         </article>
