@@ -44,6 +44,11 @@
                 <%= f.label :sell_mode, "Sell Mode", class: "mb-1.5 block text-sm font-medium text-slate-900" %>
                 <% sell_mode_options = if current_hotel.pax_pricing_only?
                      [["Per Person (Pax rates + single supplement)", "per_person"]]
+                   elsif current_hotel.allow_pax_pricing?
+                     [
+                       ["Per Room (Extra guest charges)", "per_room"],
+                       ["Per Person (Pax rates + single supplement)", "per_person"]
+                     ]
                    else
                      [["Per Room (Extra guest charges)", "per_room"]]
                    end %>

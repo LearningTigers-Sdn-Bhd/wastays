@@ -35,6 +35,35 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include("Promo Rate")
     end
 
+    it 'offers both sell modes when the hotel allows pax pricing but is not pax-only' do
+      get edit_hotel_rate_plan_path(hotel, rate_plan)
+
+      select = Nokogiri::HTML(response.body).at_css('select#rate_plan_sell_mode')
+      option_values = select.css('option').map { |o| o['value'] }
+      expect(option_values).to contain_exactly('per_room', 'per_person')
+    end
+
+    it 'offers only Per Person when the hotel is pax-pricing only' do
+      hotel.update!(pax_pricing_only: true)
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person')
+
+      get edit_hotel_rate_plan_path(hotel, per_person_plan)
+
+      select = Nokogiri::HTML(response.body).at_css('select#rate_plan_sell_mode')
+      option_values = select.css('option').map { |o| o['value'] }
+      expect(option_values).to contain_exactly('per_person')
+    end
+
+    it 'offers only Per Room when the hotel does not allow pax pricing' do
+      hotel.update!(allow_pax_pricing: false)
+
+      get edit_hotel_rate_plan_path(hotel, rate_plan)
+
+      select = Nokogiri::HTML(response.body).at_css('select#rate_plan_sell_mode')
+      option_values = select.css('option').map { |o| o['value'] }
+      expect(option_values).to contain_exactly('per_room')
+    end
+
     it 'shows a delete action when the plan has no bookings' do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
