@@ -1,0 +1,138 @@
+@layer components {
+  .panel-button-group {
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    min-width: 0;
+    align-items: stretch;
+  }
+
+  .panel-button-group[data-orientation="vertical"] {
+    flex-direction: column;
+  }
+
+  /* Nested groups are separate action clusters rather than connected controls. */
+  .panel-button-group:has(> .panel-button-group) {
+    gap: 0.5rem;
+  }
+
+  .panel-button-group > .panel-button-group {
+    flex-shrink: 0;
+  }
+
+  /* Connected neutral controls need a clearer silhouette and seam on Nova's
+     dark card surface than standalone buttons do. */
+  :is([data-theme="panel"], [data-theme="panel-dark"]) .panel-button-group .panel-button[data-variant="neutral"] {
+    border-color: color-mix(in oklab, var(--border) 60%, var(--muted-foreground));
+  }
+
+  [data-theme="panel-light"] .panel-button-group .panel-button[data-variant="neutral"] {
+    border-color: var(--border);
+  }
+
+  .panel-button-group .panel-button[data-variant="neutral"]:not(:disabled):not([aria-disabled="true"]):hover {
+    border-color: var(--border-interactive);
+  }
+
+  .panel-button-group > :is(.panel-input, .panel-native-select, .panel-select-menu) {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .panel-button-group > :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text),
+  .panel-button-group > :is(.panel-select-menu, .dropdown-menu-root, .popover-root) > :is(.panel-select-menu__trigger, .panel-button) {
+    position: relative;
+  }
+
+  .panel-button-group > :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text):focus-visible,
+  .panel-button-group > :is(.panel-select-menu, .dropdown-menu-root, .popover-root):focus-within {
+    z-index: 10;
+  }
+
+  .panel-button-group > :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text):hover,
+  .panel-button-group > :is(.panel-select-menu, .dropdown-menu-root, .popover-root):hover {
+    z-index: 1;
+  }
+
+  .panel-button-group__text {
+    display: inline-flex;
+    min-height: 2rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--muted);
+    color: var(--muted-foreground);
+    padding-inline: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    white-space: nowrap;
+  }
+
+  .panel-button-group__separator {
+    flex: none;
+    align-self: stretch;
+    border: 0;
+    background: color-mix(in oklab, var(--border) 78%, currentColor);
+    pointer-events: none;
+  }
+
+  .panel-button-group__separator[data-orientation="vertical"] {
+    width: 1px;
+    min-height: 1rem;
+  }
+
+  .panel-button-group__separator[data-orientation="horizontal"] {
+    width: 100%;
+    height: 1px;
+  }
+
+  /* Horizontal groups use logical corners so the joined shape follows RTL. */
+  .panel-button-group[data-orientation="horizontal"] > :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text):not(:first-child),
+  .panel-button-group[data-orientation="horizontal"] > :is(.panel-select-menu, .dropdown-menu-root, .popover-root):not(:first-child) > :is(.panel-native-select, .panel-select-menu__trigger, .panel-button) {
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+  }
+
+  .panel-button-group[data-orientation="horizontal"] > :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text, .panel-select-menu, .dropdown-menu-root, .popover-root):not(:first-child) {
+    margin-inline-start: -1px;
+  }
+
+  .panel-button-group[data-orientation="horizontal"] > :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text):not(:last-child),
+  .panel-button-group[data-orientation="horizontal"] > :is(.panel-select-menu, .dropdown-menu-root, .popover-root):not(:last-child) > :is(.panel-native-select, .panel-select-menu__trigger, .panel-button) {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+  }
+
+  /* Vertical groups collapse their shared top edge and preserve the outer radius. */
+  .panel-button-group[data-orientation="vertical"] > :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text):not(:first-child),
+  .panel-button-group[data-orientation="vertical"] > :is(.panel-select-menu, .dropdown-menu-root, .popover-root):not(:first-child) > :is(.panel-native-select, .panel-select-menu__trigger, .panel-button) {
+    border-start-start-radius: 0;
+    border-start-end-radius: 0;
+  }
+
+  .panel-button-group[data-orientation="vertical"] > :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text, .panel-select-menu, .dropdown-menu-root, .popover-root):not(:first-child) {
+    margin-block-start: -1px;
+  }
+
+  .panel-button-group[data-orientation="vertical"] > :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text):not(:last-child),
+  .panel-button-group[data-orientation="vertical"] > :is(.panel-select-menu, .dropdown-menu-root, .popover-root):not(:last-child) > :is(.panel-native-select, .panel-select-menu__trigger, .panel-button) {
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+  }
+
+  .panel-button-group[data-orientation="vertical"] > :is(.panel-select-menu, .dropdown-menu-root, .popover-root),
+  .panel-button-group[data-orientation="vertical"] > :is(.panel-select-menu, .dropdown-menu-root, .popover-root) > :is(.panel-native-select, .panel-select-menu__trigger, .panel-button) {
+    width: 100%;
+  }
+
+  @media (pointer: coarse) {
+    .panel-button-group__text {
+      min-height: 2.5rem;
+    }
+  }
+}

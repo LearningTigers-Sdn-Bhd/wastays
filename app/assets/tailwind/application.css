@@ -37,6 +37,7 @@
 @import "./panel/profile-menu.css";
 @import "./panel/tooltip.css";
 @import "./panel/popover.css";
+@import "./panel/button-group.css";
 @import "./panel/toast.css";
 @import "./panel/breadcrumb.css";
 @import "./panel/tabs.css";
