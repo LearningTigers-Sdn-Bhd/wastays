@@ -84,5 +84,19 @@ RSpec.describe HotelPortal::RequestsBoard do
         expect(columns[:housekeeping].map { |c| c[:request_id] }).not_to include(checkout_cleaning.id)
       end
     end
+
+    context 'checkout requests' do
+      let!(:checkout_request) do
+        create(:check_out_request, booking: booking, status: 'pending', metadata: {})
+      end
+
+      it 'maps the checkout status to its workflow status' do
+        card = described_class.new(hotel).board_columns[:checkout].find do |checkout_card|
+          checkout_card[:request_id] == checkout_request.id
+        end
+
+        expect(card[:status]).to eq('new')
+      end
+    end
   end
 end
