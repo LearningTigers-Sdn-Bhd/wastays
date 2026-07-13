@@ -12,6 +12,7 @@ module PanelsUI
       url: :url_field,
       date: :date_field,
       datetime_local: :datetime_local_field,
+      file: :file_field,
       month: :month_field,
       time: :time_field,
       week: :week_field
@@ -51,7 +52,7 @@ module PanelsUI
         class: tw_merge("panel-input", @class),
         required: @required || attributes.delete(:required),
         disabled: @disabled || attributes.delete(:disabled),
-        readonly: @readonly || attributes.delete(:readonly),
+        readonly: (@type == :file ? nil : @readonly || attributes.delete(:readonly)),
         data: data.merge(size: @size),
         aria: aria.merge(describedby: described_by, invalid: (@invalid ? "true" : nil)).compact
       ).compact

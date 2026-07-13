@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PanelsUI::Input, type: :component do
   InputObject = Class.new do
     include ActiveModel::Model
-    attr_accessor :email, :amount
+    attr_accessor :email, :amount, :document
   end
 
   def form_for(object = InputObject.new)
@@ -56,5 +56,25 @@ RSpec.describe PanelsUI::Input, type: :component do
     expect(input[:required]).to eq("required")
     expect(input[:disabled]).to eq("disabled")
     expect(input[:readonly]).to eq("readonly")
+  end
+
+  it "renders a Rails file field without an unsupported readonly attribute" do
+    render_inline(
+      described_class.new(
+        form: form_for,
+        attribute: :document,
+        type: :file,
+        accept: ".pdf,image/*",
+        multiple: true,
+        readonly: true
+      )
+    )
+
+    input = page.find("input#profile_document", visible: :all)
+    expect(input[:type]).to eq("file")
+    expect(input[:accept]).to eq(".pdf,image/*")
+    expect(input[:multiple]).to eq("multiple")
+    expect(input[:readonly]).to be_nil
+    expect(input[:class]).to include("panel-input")
   end
 end
