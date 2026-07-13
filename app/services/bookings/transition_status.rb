@@ -26,6 +26,12 @@ module Bookings
         else
           check_in
         end
+      when "confirmed"
+        if @booking.status == "checked_in"
+          undo_check_in
+        else
+          failure("Unsupported status transition to confirmed from #{@booking.status}")
+        end
       when "completed"
         check_out
       when "cancelled"
@@ -79,9 +85,26 @@ module Bookings
             repair_options = @booking.booking_folio.present? ? @options : @options.reverse_merge(override_night_audit: true)
             Folios::InitializeForBooking.call(booking: @booking, user: @user, options: repair_options, lock: false)
 
-            if @options[:attributes].present?
-              @booking.update!(@options[:attributes])
+            updates = (@options[:attributes] || {}).dup
+            if @options[:reason].present? && @timestamp.present?
+              updates[:checked_in_at] = @timestamp
+            end
+
+            if updates.present?
+              old_attributes = @booking.attributes.slice(*updates.keys.map(&:to_s))
+              @booking.update!(updates)
               sync_room_number_to_snapshot
+
+              Bookings::RecordAuditLog.call!(
+                auditable: @booking,
+                user: @user,
+                action_type: "edit_check_in",
+                source: @options[:source],
+                old_value: old_attributes,
+                new_value: updates.stringify_keys,
+                reason: @options[:reason],
+                metadata: { room_number: @booking.booking_rooms.first&.room_number }
+              )
             end
             tourism_tax_result = record_tourism_tax_payment_if_requested
             unless tourism_tax_result.success?
@@ -94,6 +117,16 @@ module Bookings
           was_review_no_show = @booking.status == "review_no_show"
           unless @booking.status.in?(%w[confirmed review_no_show])
             error = "Cannot check in booking with status #{@booking.status}"
+            next
+          end
+
+          if unassigned_booking_room?
+            error = "Assign a room number to every room before check-in."
+            next
+          end
+
+          if BookingRedesign.enabled? && !@booking.booking_guests.exists?(role: "primary")
+            error = "A primary guest is required before check-in."
             next
           end
 
@@ -190,6 +223,22 @@ module Bookings
         payment_method: deposit_options[:payment_method],
         external_reference: deposit_options[:external_reference]
       )
+    end
+
+    def unassigned_booking_room?
+      nested = @options.dig(:attributes, :booking_rooms_attributes) ||
+        @options.dig(:attributes, "booking_rooms_attributes")
+      submitted_rooms = nested.respond_to?(:each_value) ? nested.each_value.to_a : Array(nested)
+
+      @booking.booking_rooms.any? do |booking_room|
+        submitted = submitted_rooms.find { |room| (room[:id] || room["id"]).to_s == booking_room.id.to_s }
+        room_number = if submitted && (submitted.key?(:room_number) || submitted.key?("room_number"))
+          submitted[:room_number] || submitted["room_number"]
+        else
+          booking_room.room_number
+        end
+        room_number.blank?
+      end
     end
 
     def record_tourism_tax_payment_if_requested
@@ -415,6 +464,33 @@ module Bookings
         @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => room_number)
         @booking.update_columns(hotel_snapshot: @booking.hotel_snapshot) if @booking.persisted?
       end
+    end
+
+    def undo_check_in
+      Booking.transaction do
+        @booking.with_lock do
+          @booking.reload
+          if @booking.status != "checked_in"
+            raise "Booking must be checked in to undo check-in."
+          end
+
+          @booking.transition_status_to!("confirmed", event: "undo_check_in", attributes: { checked_in_at: nil })
+
+          Bookings::RecordAuditLog.call!(
+            auditable: @booking,
+            user: @user,
+            action_type: "undo_check_in",
+            source: @options[:source],
+            old_value: { "status" => "checked_in" },
+            new_value: { "status" => "confirmed" },
+            reason: @options[:reason],
+            metadata: { from: "checked_in", to: "confirmed", event: "undo_check_in" }
+          )
+        end
+      end
+      success
+    rescue ActiveRecord::RecordInvalid => e
+      failure(e.record.errors.full_messages.to_sentence)
     end
 
     def success

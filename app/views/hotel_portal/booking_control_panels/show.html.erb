@@ -1,0 +1,10 @@
+<% content_for :full_height_page, true %>
+
+<div class="mx-auto flex min-h-0 w-full max-w-[1800px] flex-1 flex-col px-4 md:px-0" data-testid="booking-control-panel">
+  <%= render "summary_row", booking: @booking, presenter: @presenter %>
+
+  <section class="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" data-testid="booking-control-panel-workspace">
+    <%= render "tabs", booking: @booking, presenter: @presenter, audit_logs: @audit_logs %>
+    <%= render "work_area", booking: @booking, presenter: @presenter, booking_presenter: @booking_presenter, folio_show: @folio_show, audit_logs: @audit_logs, audit_history: @audit_history %>
+  </section>
+</div>

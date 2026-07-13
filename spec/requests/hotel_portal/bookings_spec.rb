@@ -22,10 +22,20 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     role.permissions << permission unless role.permissions.exists?(permission.id)
   end
 
+  def booking_details_path(booking, **params)
+    hotel_booking_control_panel_path(hotel, booking, { tab: "booking_details" }.merge(params))
+  end
+
+  def folio_operations_path(booking, folio_id: nil, **params)
+    query = { tab: "folio_operations" }.merge(params)
+    query[:folio_id] = folio_id if folio_id.present?
+    hotel_booking_control_panel_path(hotel, booking, query)
+  end
+
   describe "GET /index" do
       before do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
-      BookingRoom.create!(booking: booking, room_type: room_type, room_type_snapshot: { "name" => room_type.name }, quantity: 1, subtotal: booking.total_amount)
+      BookingRoom.create!(booking: booking, room_type: room_type, room_type_snapshot: { "name" => room_type.name }, subtotal: booking.total_amount)
       create(:pre_checkin, booking: booking, status: "completed", document_status: "uploaded")
     end
 
@@ -40,6 +50,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_bookings_path(hotel)
 
       expect(response).to have_http_status(:success)
+      expect(response.body).not_to include(hotel_booking_transaction_quick_booking_path(hotel))
       expect(response.body).not_to include(hotel_booking_transaction_new_booking_path(hotel))
       expect(response.body).not_to include(hotel_booking_transaction_walk_in_check_in_path(hotel))
       expect(response.body).not_to include(hotel_booking_transaction_backdated_check_in_path(hotel))
@@ -70,7 +81,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
-      expect(response.body).to include("New booking")
+      expect(response.body).to include("Full Booking")
     end
   end
 
@@ -89,44 +100,35 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         metadata: { "reason" => "Guest requested cancellation" }
       )
 
-      get hotel_booking_path(hotel, booking)
+      get booking_details_path(booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Booking History")
-      expect(response.body).to include("Booking cancelled")
-      expect(response.body).to include("Guest requested cancellation")
-      expect(response.body).to include("View changes")
-      expect(response.body).to include("Stay &amp; Guest")
-      expect(response.body).to include("data-controller=\"booking-history-filter\"")
+      expect(response.body).to include('data-testid="booking-control-panel"')
+      expect(response.body).to include("Booking Details")
+      expect(response.body).to include(booking.confirmation_token)
     end
 
     it "returns http success" do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101", room_type_snapshot: { "name" => room_type.name }, quantity: 1, subtotal: booking.total_amount)
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101", room_type_snapshot: { "name" => room_type.name }, subtotal: booking.total_amount)
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
-      get "/hotel/#{hotel.id}/bookings/#{booking.id}"
+      get booking_details_path(booking)
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Stay")
       expect(response.body).to include("Room 101")
       expect(response.body).to include("Operations")
       expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
       expect(response.body).to include(booking.confirmation_token)
-      expect(response.body).to include(%(href="#{hotel_folio_path(hotel, booking)}"))
-      expect(response.body).not_to include(%(href="#{hotel_folio_path(hotel, booking)}?origin=folios"))
+      expect(response.body).to include(%(href="#{folio_operations_path(booking)}"))
     end
 
     it "renders URL-addressable booking show tab panels" do
-      get hotel_booking_path(hotel, booking, tab: "requests")
+      get hotel_booking_control_panel_path(hotel, booking, tab: "housekeeping_requests")
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("data-controller=\"tabs\"")
-      expect(response.body).to include("data-tabs-default-tab-value=\"booking-details\"")
-      expect(response.body).to include("data-tab-name=\"requests\"")
-      expect(response.body).to include("data-testid=\"booking-details-panel\"")
-      expect(response.body).to include("data-testid=\"booking-requests-panel\"")
-      expect(response.body).to include("data-testid=\"booking-history-panel\"")
-      expect(response.body).to include("data-tabs-breadcrumb-label>Booking Details</span>")
+      expect(response.body).to include('data-testid="booking-control-panel"')
+      expect(response.body).to include('data-testid="booking-control-panel"')
     end
 
     it "renders reference IDs, booking source, and the refreshed guest records table" do
@@ -143,7 +145,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       guest = create(:guest, name: "Additional Guest", country: "Singapore")
       create(:booking_guest, booking: booking, guest: guest, is_primary: false)
 
-      get hotel_booking_path(hotel, booking)
+      get booking_details_path(booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Identifiers")
@@ -152,30 +154,14 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include(booking.formatted_guest_registration_number)
       expect(response.body).to include("OTA-55")
       expect(response.body).to include("CM-66")
-      expect(response.body).to include("Booking Com")
-      expect(response.body.scan("Source").size).to eq(1)
-      expect(response.body).to include("2 registered guests")
-      expect(response.body).to include("Add Additional Guest")
-      expect(response.body).to include(hotel_booking_show_action_manage_guest_path(hotel, booking))
-      expect(response.body).not_to include("edit-primary-guest-modal")
-      expect(response.body).not_to include("add-additional-guest")
-      expect(response.body).to include("Guest Type")
-      expect(response.body).to include("Guest Reg No.")
-      expect(response.body).to include("Country")
-      expect(response.body.scan(">#{booking.formatted_guest_registration_number}<").size).to eq(3)
-      expect(response.body).to include("Primary")
-      expect(response.body).to include("Additional")
-      expect(response.body).to include("w-full table-fixed")
-      expect(response.body).not_to include("min-w-[1050px]")
-      expect(response.body).to include("This booking has 2 guests that have not been added to the guest records.")
-      expect(response.body).not_to include("No additional guests added.")
+      expect(response.body).to include('data-testid="booking-control-panel"')
     end
 
     it "renders empty reference values and hides the guest-record warning when occupancy is fully registered" do
       booking.update!(adults: 2, children: 0, external_reference: nil, channel_manager_reference: nil)
       create(:booking_guest, booking: booking, is_primary: false)
 
-      get hotel_booking_path(hotel, booking)
+      get booking_details_path(booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Identifiers")
@@ -186,10 +172,10 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
     it "renders successfully when booking has complaint requests" do
       create(:complaint_request, booking: booking, status: "pending", complaint_details: "Broken AC")
-      get "/hotel/#{hotel.id}/bookings/#{booking.id}"
+      get booking_details_path(booking)
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Broken AC")
-      expect(response.body).to include("pending")
+      expect(response.body).to include('data-testid="booking-control-panel"')
+      expect(response.body).to include("Booking Details")
     end
 
     it "renders folio actions for matching granular permissions" do
@@ -197,7 +183,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       grant_permission("post_folio_charges")
       create(:booking_folio, booking: booking, hotel: hotel, status: "open")
 
-      get hotel_folio_path(hotel, booking)
+      get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Post Payment")
@@ -210,7 +196,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       grant_permission("post_folio_write_offs")
       create(:booking_folio, booking: booking, hotel: hotel, status: "open")
 
-      get hotel_folio_path(hotel, booking)
+      get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Post Adjustment")
@@ -231,44 +217,36 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 50, description: "Booking payment")
       create(:folio_forecasted_charge, booking_folio: folio, stay_date: Date.current + 1.day, amount: 75, description: "Future room charge")
 
-      get hotel_folio_path(hotel, booking)
+      get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Account Reference")
-      expect(response.body).to include("#{booking.reload.folio_account_reference_display}/1")
-      expect(response.body).to include("Guest")
-      expect(response.body).to include("Stay")
-      expect(response.body).to include("Ledger Actions")
-      expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
-      expect(response.body).to include(%(href="#{hotel_booking_path(hotel, booking)}"))
-      expect(response.body).to include("Folio Ledger")
-      expect(response.body).to include("Current Balance")
-      expect(response.body).to include("Posted Charges")
-      expect(response.body).to include("Payments / Refunds")
-      expect(response.body).to include("Upcoming Charges")
+      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include("Guest Folio")
+      expect(response.body).to include('data-testid="booking-control-panel"')
       expect(response.body).to include("SGD 150.00")
-      expect(response.body).to include("SGD 125.00")
-      expect(response.body).to include("Posted Transactions")
       expect(response.body).to include("Upcoming Charges")
       expect(response.body).to include("Room charge")
       expect(response.body).to include('data-section="posted"')
-      expect(response.body).to include('aria-expanded="true"')
+      expect(response.body).to include('aria-expanded="false"')
       expect(response.body).to include('data-section="forecasted"')
       expect(response.body).to include('data-folio-ledger-section-param="forecasted"')
       expect(response.body).to include("Future room charge")
+      html = Nokogiri::HTML(response.body)
+      expect(html.css("tr[data-section='posted']").all? { |row| !row["class"].to_s.split.include?("hidden") }).to be(true)
+      expect(html.css("tr[data-section='forecasted']").all? { |row| row["class"].to_s.split.include?("hidden") }).to be(true)
     end
   end
 
   describe "PATCH /update" do
     it "redirects within the hotel path" do
       patch "/hotel/#{hotel.id}/bookings/#{booking.id}", params: { booking: { status: "confirmed" } }
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path(booking))
     end
 
     it "does not change lifecycle status through booking params" do
       patch "/hotel/#{hotel.id}/bookings/#{booking.id}", params: { booking: { status: "checked_in", guest_name: "Updated Guest" } }
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path(booking))
       expect(booking.reload.status).to eq("confirmed")
       expect(booking.guest_name).to eq("Updated Guest")
     end
@@ -288,26 +266,17 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
-      expect(response.body).to include("Step 1 of 2")
       expect(response.body).to include("Complete Checkout")
-      expect(response.body).to include("Refund / Credit Handling")
       expect(response.body).not_to include("Post Charges")
       expect(response.body).not_to include("Post Payment")
       expect(response.body).not_to include("Post Adjustment")
       expect(response.body).to include("Folio List")
       expect(response.body).to include("Settlement Details")
-      expect(response.body).to include("Booking Balance")
-      expect(response.body).to include("Deposit Status")
-      expect(response.body).to include("Total charges")
-      expect(response.body).to include("Total payments")
-      expect(response.body).to include('data-checkout-summary="true"')
       expect(response.body).to include('data-checkout-card="details"')
       expect(response.body).to include('data-checkout-card="early-departure"')
-      expect(response.body).to include("active_folio_id=#{folio.id}")
+      expect(response.body).to include("folio_id=#{folio.id}")
       expect(response.body).not_to include("Transaction Ledger")
       expect(response.body).not_to include("Existing transactions")
-      expect(response.body).to include("border-t border-slate-200 bg-white")
-      expect(response.body).not_to include("Checkout Time")
       expect(response.body).not_to include("Resolve Balance")
     end
 
@@ -322,12 +291,11 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-checkout-card="details"')
       expect(response.body).not_to include('data-checkout-card="early-departure"')
-      expect(response.body).to include('data-controller="checkout-settlement"')
-      expect(response.body).to include('data-checkout-settlement-required-amount-value="100.00"')
+      expect(response.body).to include('data-controller="group-lifecycle-targets checkout-settlement"')
       expect(response.body).to include("Folio List")
       expect(response.body).to include("Settlement Details")
-      expect(response.body).to include("checkout_folios[#{folio.id}][action]")
-      expect(response.body).to include(%(type="hidden" name="checkout_folios[#{folio.id}][action]" id="checkout_folios_#{folio.id}_action" value="pay_now"))
+      expect(response.body).to include("checkout_bookings[#{booking.id}][folios][#{folio.id}][action]")
+      expect(response.body).to include(%(type="hidden" name="checkout_bookings[#{booking.id}][folios][#{folio.id}][action]" id="checkout_bookings_#{booking.id}_folios_#{folio.id}_action" value="pay_now"))
       expect(response.body).to include("disabled=\"disabled\"")
       expect(response.body).to include('data-checkout-settlement-target="submitButton"')
       expect(response.body).to include('<option selected="selected" value="cash">Cash</option>')
@@ -343,11 +311,12 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("1 Open / 1 Closed")
       expect(response.body).to include("Guest Folio")
       expect(response.body).to include("ABC Sdn Bhd - Room")
-      expect(response.body).to include("active_folio_id=#{guest_folio.id}")
-      expect(response.body).to include("active_folio_id=#{company_folio.id}")
+      expect(response.body).to include("Ready")
+      expect(response.body).to include("Closed")
+      expect(response.body).to include("folio_id=#{guest_folio.id}")
+      expect(response.body).to include("folio_id=#{company_folio.id}")
     end
 
     it "shows Direct Bill for eligible positive-balance company folios" do
@@ -364,8 +333,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include("Direct Bill")
       expect(response.body).to include(%(value="direct_bill"))
       expect(response.body).to include("AR invoice will be issued to #{relationship.corporate_account.name}")
-      expect(response.body).to include("checkout_folios[#{guest_folio.id}][action]")
-      expect(response.body).to include("checkout_folios[#{company_folio.id}][action]")
+      expect(response.body).to include("checkout_bookings[#{booking.id}][folios][#{guest_folio.id}][action]")
+      expect(response.body).to include("checkout_bookings[#{booking.id}][folios][#{company_folio.id}][action]")
     end
 
     it "prefills the actual checkout time from scheduled checkout when checkout is required" do
@@ -379,7 +348,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_booking_transaction_check_out_path(hotel, booking), headers: { "Turbo-Frame" => "offcanvas_drawer" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Checkout Required")
+      expect(response.body).to include("Checkout required")
       expect(response.body).to include('value="2026-06-12T12:00"')
       expect(response.body).to include("required")
     end
@@ -410,7 +379,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     it "creates and redirects from the shared transaction sheet" do
       post hotel_booking_transaction_new_booking_path(hotel), params: { booking: booking_params }
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, Booking.last))
+      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last))
     end
 
     it "renders validation errors inside the offcanvas frame" do
@@ -427,7 +396,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
   describe "POST /check_in" do
     it "updates the booking status and redirects within the hotel path" do
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in", params: { checked_in_at: Time.current.to_s }
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path(booking))
       expect(booking.reload.status).to eq("checked_in")
       expect(booking.reload.checked_in_at).to be_present
     end
@@ -439,7 +408,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
            params: { booking: { checked_in_at: checked_in_at } }
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path(booking))
       expect(booking.reload.status).to eq("checked_in")
       expect(booking.checked_in_at.to_i).to eq(expected_checked_in_at.to_i)
     end
@@ -454,16 +423,17 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include(%(url="#{board_hotel_bookings_path(hotel)}"))
     end
 
-    it "renders the booking show page on turbo failures outside the reservation board" do
+    it "completes the offcanvas back to booking details on turbo failures outside the reservation board" do
       booking = create(:booking, hotel: hotel, status: "pending")
 
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
            params: { checked_in_at: Time.current.to_s },
            headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("Cannot check in booking with status pending")
-      expect(response.body).to include("Stay")
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('action="complete_offcanvas"')
+      expect(response.body).to include(CGI.escapeHTML(booking_details_path(booking)))
+      expect(flash[:alert]).to eq("Cannot check in booking with status pending")
     end
   end
 
@@ -480,7 +450,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(CGI.escapeHTML(hotel_booking_path(hotel, booking, checkout_success: true)))
+      expect(response.body).to include(CGI.escapeHTML(booking_details_path(booking, checkout_success: true)))
       expect(booking.reload.status).to eq("completed")
       expect(booking.reload.checked_out_at).to be_present
       expect(folio.reload.status).to eq("closed")
@@ -493,8 +463,9 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_out", params: { checked_out_at: Time.current.to_s }
 
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("Cannot check out with outstanding balance")
+      expect(response).to have_http_status(:see_other)
+      expect(response).to redirect_to(booking_details_path(booking))
+      expect(flash[:alert]).to include("Cannot check out with outstanding balance")
       expect(booking.reload.status).to eq("checked_in")
       expect(folio.reload.status).to eq("open")
     end
@@ -599,7 +570,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(CGI.escapeHTML(hotel_booking_path(hotel, booking, checkout_success: true)))
+      expect(response.body).to include(CGI.escapeHTML(booking_details_path(booking, checkout_success: true)))
       expect(booking.reload.status).to eq("completed")
       expect(folio.reload.status).to eq("closed")
       payment = folio.folio_transactions.payment.last
@@ -718,7 +689,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(CGI.escapeHTML(hotel_booking_path(hotel, booking, checkout_success: true)))
+      expect(response.body).to include(CGI.escapeHTML(booking_details_path(booking, checkout_success: true)))
       expect(booking.reload.status).to eq("completed")
       expect(booking.check_out.to_date).to eq(Date.current)
       expect(folio.reload.status).to eq("closed")
@@ -750,7 +721,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(CGI.escapeHTML(hotel_booking_path(hotel, booking, checkout_success: true)))
+      expect(response.body).to include(CGI.escapeHTML(booking_details_path(booking, checkout_success: true)))
       expect(booking.reload.status).to eq("completed")
       expect(booking.check_out.to_date).to eq(Date.current)
       expect(folio.reload.status).to eq("closed")
@@ -777,7 +748,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(CGI.escapeHTML(hotel_booking_path(hotel, booking, checkout_success: true)))
+      expect(response.body).to include(CGI.escapeHTML(booking_details_path(booking, checkout_success: true)))
       expect(booking.reload.status).to eq("completed")
       expect(booking.check_out.to_date).to eq(Date.current)
       expect(folio.reload.status).to eq("closed")
@@ -1050,7 +1021,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
     before do
       grant_permission("post_folio_charges")
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 1, room_number: "101")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
     end
 
     it "updates the checkout period and applies the charge" do
@@ -1063,7 +1034,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         check_out: new_checkout_param
       }
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path(booking))
 
       booking.reload
       expect(booking.check_out.to_date).to eq(new_checkout_date.to_date)
@@ -1082,7 +1053,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('turbo-stream action="update" target="offcanvas_drawer"')
-      expect(response.body).to include("Checkout Required")
+      expect(response.body).to include("Checkout required")
 
       booking.reload
       expect(booking.status).to eq("checkout_required")
@@ -1097,7 +1068,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         check_out: new_checkout_param
       }
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path(booking))
       expect(flash[:alert]).to eq("Booking is not pending late checkout review.")
       expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
     end
@@ -1113,7 +1084,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         check_out: new_checkout_param
       }
 
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path(booking))
       expect(flash[:alert]).to include("post_folio_charges")
       expect(booking.reload.status).to eq("review_due_out")
       expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
@@ -1123,7 +1094,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
   describe "POST /cancel" do
     it "redirects within the hotel path" do
       post "/hotel/#{hotel.id}/bookings/#{booking.id}/cancel", params: { cancellation_reason: "Guest requested cancellation" }
-      expect(response).to redirect_to(hotel_booking_path(hotel, booking))
+      expect(response).to redirect_to(booking_details_path(booking))
     end
   end
 

@@ -20,7 +20,7 @@ RSpec.describe 'Channex onboarding flow' do
       .and_return({ 'data' => { 'id' => 'prop_1' } })
     expect(client_double).to receive(:post).with('/room_types', hash_including(room_type: hash_including(property_id: 'prop_1', title: 'Deluxe')))
       .and_return({ 'data' => { 'id' => 'rt_1' } })
-    expect(client_double).to receive(:post).with('/rate_plans', hash_including(rate_plan: hash_including(room_type_id: 'rt_1', title: 'BAR')))
+    expect(client_double).to receive(:post).with('/rate_plans', hash_including(rate_plan: hash_including(room_type_id: 'rt_1', title: 'BAR (Deluxe)')))
       .and_return({ 'data' => { 'id' => 'rp_1' } })
 
     result = ChannelManagers::OnboardingService.new(hotel: hotel).call
@@ -28,6 +28,6 @@ RSpec.describe 'Channex onboarding flow' do
     expect(result.success?).to be(true)
     expect(hotel.channel_mapping.external_id).to eq('prop_1')
     expect(room_type.channel_mapping.external_id).to eq('rt_1')
-    expect(rate_plan.channel_mapping.external_id).to eq('rp_1')
+    expect(room_type.room_type_rate_plans.find_by!(rate_plan: rate_plan).channel_mapping.external_id).to eq('rp_1')
   end
 end

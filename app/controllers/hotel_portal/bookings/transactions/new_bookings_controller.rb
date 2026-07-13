@@ -14,12 +14,10 @@ module HotelPortal
         private
 
         def create
-          result = create_manual_booking
-          return complete_new_booking(result.booking, notice: "Booking created successfully.") if result.success?
+          result = create_staff_booking
+          return complete_new_booking(result.booking, notice: result.group_booking ? "Group booking created successfully." : "Booking created successfully.") if result.success?
 
-          @booking = current_hotel.bookings.build(model_booking_params)
-          result.errors.each { |error| @booking.errors.add(:base, error) }
-          render_new_booking(transaction: :new_booking, status: :unprocessable_content)
+          render_new_booking_failure(transaction: :new_booking, errors: result.errors)
         end
       end
     end

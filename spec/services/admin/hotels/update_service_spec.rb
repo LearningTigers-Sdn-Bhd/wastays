@@ -33,5 +33,15 @@ RSpec.describe Admin::Hotels::UpdateService, type: :service do
         expect(result.error).to include("Name can't be blank")
       end
     end
+
+    context "when allow_pax_pricing is updated" do
+      let(:hotel_params) { { name: "Updated Hotel", allow_pax_pricing: true } }
+
+      it "updates the allow_pax_pricing field successfully" do
+        result = subject.call
+        expect(result.success?).to be true
+        expect(hotel.reload.allow_pax_pricing).to be true
+      end
+    end
   end
 end

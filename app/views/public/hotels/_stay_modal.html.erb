@@ -26,7 +26,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <%= f.label :adults, "Adults", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
             <%= f.select :adults, options_for_select(1..8, adults), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
@@ -35,10 +35,7 @@
             <%= f.label :children, "Children", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
             <%= f.select :children, options_for_select(0..6, children), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
           </div>
-          <div>
-            <%= f.label :room_count, "Rooms", class: "block text-xs font-bold uppercase tracking-wider text-neutral-text-secondary mb-2" %>
-            <%= f.select :room_count, options_for_select(1..5, room_count), {}, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm font-semibold text-neutral-text-primary" %>
-          </div>
+          <%= f.hidden_field :room_count, value: 1 %>
         </div>
 
         <div>

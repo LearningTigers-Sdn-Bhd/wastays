@@ -98,7 +98,7 @@ module HotelPortal
         kind_class: kind_class_for(kind),
         archive_url: request.archived? ? hotel_unarchive_request_path(hotel, kind: kind, request_id: request.id) : hotel_archive_request_path(hotel, kind: kind, request_id: request.id),
         archive_action: request.archived? ? "Unarchive" : "Archive",
-        booking_url: hotel_booking_path(hotel, booking, tab: "requests")
+        booking_url: hotel_booking_control_panel_path(hotel, booking, tab: "housekeeping_requests")
       }
     end
 

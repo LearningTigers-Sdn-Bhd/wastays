@@ -11,6 +11,7 @@ module Bookings
       "cancel" => "status",
       "reinstate" => "status",
       "no_show" => "status",
+      "undo_check_in" => "status",
       "room_assignment" => "room",
       "room_removed" => "room",
       "charge_added" => "financial",

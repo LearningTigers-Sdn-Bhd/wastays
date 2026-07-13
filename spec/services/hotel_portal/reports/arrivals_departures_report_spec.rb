@@ -31,8 +31,8 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesReport, type: :service do
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, adults: 2, children: 1, confirmation_token: "WS-ROOMS")
       deluxe = create(:room_type, hotel: hotel, name: "Deluxe King")
       twin = create(:room_type, hotel: hotel, name: "Twin Share")
-      create(:booking_room, booking: booking, room_type: deluxe, quantity: 1, room_number: "301", room_type_snapshot: { "name" => "Snapshot Deluxe" })
-      create(:booking_room, booking: booking, room_type: twin, quantity: 2, room_number: nil, room_type_snapshot: {})
+      create(:booking_room, booking: booking, room_type: deluxe, room_number: "301", room_type_snapshot: { "name" => "Snapshot Deluxe" })
+      create_list(:booking_room, 2, booking: booking, room_type: twin, room_number: nil, room_type_snapshot: {})
       create(:booking_note, booking: booking, body: "Older note", created_at: 2.hours.ago)
       create(:booking_note, booking: booking, body: "VIP guest", created_at: 1.hour.ago)
 
@@ -41,7 +41,7 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesReport, type: :service do
       expect(row[:booking_id]).to eq(booking.id)
       expect(row[:confirmation_token]).to eq("WS-ROOMS")
       expect(row[:room_details]).to eq("1x Snapshot Deluxe, 2x Twin Share")
-      expect(row[:room_numbers]).to eq("301, TBA")
+      expect(row[:room_numbers]).to eq("301, TBA, TBA")
       expect(row[:guest_count]).to eq("2 adults, 1 child")
       expect(row[:latest_note]).to eq("VIP guest")
     end

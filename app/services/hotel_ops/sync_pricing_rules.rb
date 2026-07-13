@@ -1,6 +1,6 @@
 module HotelOps
   class SyncPricingRules
-    def initialize(hotel:, gp_price:, gp_start_date:, gp_end_date:, wk_price:, wk_start_date:, wk_end_date:, weekend_days:, school_holidays:, wi_price: nil, wi_start_date: nil, wi_end_date: nil, cr_price: nil, cr_start_date: nil, cr_end_date: nil, ota_price: nil, ota_start_date: nil, ota_end_date: nil, public_holidays:)
+    def initialize(hotel:, gp_price:, gp_start_date:, gp_end_date:, wk_price:, wk_start_date:, wk_end_date:, weekend_days:, school_holidays:, wi_price: nil, wi_start_date: nil, wi_end_date: nil, cr_price: nil, cr_start_date: nil, cr_end_date: nil, public_holidays:)
       @hotel = hotel
       @gp_price = decimal_or_nil(gp_price)
       @gp_start_date = date_or_nil(gp_start_date)
@@ -16,9 +16,6 @@ module HotelOps
       @cr_price = decimal_or_nil(cr_price)
       @cr_start_date = date_or_nil(cr_start_date)
       @cr_end_date = date_or_nil(cr_end_date) || @cr_start_date
-      @ota_price = decimal_or_nil(ota_price)
-      @ota_start_date = date_or_nil(ota_start_date)
-      @ota_end_date = date_or_nil(ota_end_date) || @ota_start_date
       @public_holidays = Array(public_holidays)
     end
 
@@ -133,25 +130,6 @@ module HotelOps
           price: @cr_price,
           start_date: @cr_start_date,
           end_date: @cr_end_date
-        }
-      end
-
-      if @ota_price
-        if @ota_start_date.blank?
-          @errors[:base] << "OTA rate requires a start date."
-          raise ArgumentError, "OTA rate requires a start date."
-        end
-        if @ota_end_date < @ota_start_date
-          @errors[:base] << "OTA rate end date cannot be earlier than start date."
-          raise ArgumentError, "OTA rate end date cannot be earlier than start date."
-        end
-
-        rows << {
-          rule_type: "ota_rate",
-          name: "OTA Rate",
-          price: @ota_price,
-          start_date: @ota_start_date,
-          end_date: @ota_end_date
         }
       end
 

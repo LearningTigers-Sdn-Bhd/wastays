@@ -67,6 +67,52 @@ RSpec.describe Bookings::TransitionStatus do
         expect(log.auditable).to eq(booking)
       end
 
+      it "requires every booking room to be assigned" do
+        room_type = create(:room_type, hotel: booking.hotel)
+        create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+        create(:booking_room, booking: booking, room_type: room_type, room_number: nil)
+
+        result = subject.call
+
+        expect(result.success?).to be(false)
+        expect(result.error).to eq("Assign a room number to every room before check-in.")
+        expect(booking.reload.status).to eq("confirmed")
+      end
+
+      it "accepts submitted room assignments without applying them before the transition" do
+        room_type = create(:room_type, hotel: booking.hotel)
+        booking_room = create(:booking_room, booking: booking, room_type: room_type, room_number: nil)
+        attributes = ActionController::Parameters.new(
+          "booking_rooms_attributes" => { "0" => { "id" => booking_room.id.to_s, "room_number" => "101" } }
+        ).permit!
+
+        result = described_class.new(
+          booking: booking,
+          status: "checked_in",
+          timestamp: timestamp,
+          options: { attributes: attributes }
+        ).call
+
+        expect(result.success?).to be(true)
+        expect(booking_room.reload.room_number).to eq("101")
+      end
+
+      it "treats a submitted blank room number as unassigned" do
+        room_type = create(:room_type, hotel: booking.hotel)
+        booking_room = create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+
+        result = described_class.new(
+          booking: booking,
+          status: "checked_in",
+          timestamp: timestamp,
+          options: { attributes: { booking_rooms_attributes: [ { id: booking_room.id, room_number: "" } ] } }
+        ).call
+
+        expect(result.success?).to be(false)
+        expect(result.error).to eq("Assign a room number to every room before check-in.")
+        expect(booking_room.reload.room_number).to eq("101")
+      end
+
       it "rolls back the folio when payment sync fails" do
         create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
 
@@ -128,7 +174,7 @@ RSpec.describe Bookings::TransitionStatus do
       end
 
       it "silently no-ops when the booking is already checked in" do
-        create(:booking_room, booking: booking, subtotal: 100.0)
+        create(:booking_room, booking: booking, subtotal: 100.0, room_number: "101")
         first_result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp).call
         expect(first_result.success?).to be true
         create(:night_audit, hotel: booking.hotel, business_date: (timestamp + 1.hour).to_date, status: "completed")
@@ -158,7 +204,7 @@ RSpec.describe Bookings::TransitionStatus do
         checked_in_at = 1.hour.ago
         booking.status_transition_event = "check_in"
         booking.update!(status: "checked_in", checked_in_at: checked_in_at, guest_registration_number: 99)
-        create(:booking_room, booking: booking, subtotal: 100.0)
+        create(:booking_room, booking: booking, subtotal: 100.0, room_number: "101")
         create(:night_audit, hotel: booking.hotel, business_date: booking.check_in, status: "completed")
 
         expect {
@@ -562,7 +608,7 @@ RSpec.describe Bookings::TransitionStatus do
       let(:business_date) { booking.check_in }
 
       before do
-        create(:booking_room, booking: booking, subtotal: 100.0)
+        create(:booking_room, booking: booking, subtotal: 100.0, room_number: "101")
       end
 
       context "when booking was finalized as no_show" do

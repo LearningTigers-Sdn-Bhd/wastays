@@ -253,11 +253,11 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       expect(rate.corporate_price.to_f).to eq(200.0) # Corporate price should REMAIN unchanged
     end
 
-    it "updates only the ota price when only ota tier is selected" do
+
+
+    it "updates base_occupancy, extra_pax_charge, and single_supplement when rates are modified" do
       room_type = create(:room_type, hotel: hotel, base_price: 100)
-      rate_plan = room_type.rate_plans.first # Use auto-created plan
-      # Pre-create a rate record with standard and corporate prices
-      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150, corporate_price: 200)
+      rate_plan = room_type.rate_plans.first
 
       result = described_class.new(
         hotel: hotel,
@@ -265,9 +265,11 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
           start_date: start_date,
           end_date: start_date,
           room_type_ids: [ room_type.id ],
-          rate_plan_ids: [ "tier_ota_#{room_type.id}" ],
+          rate_plan_ids: [ rate_plan.id ],
           apply_rates: "1",
-          price: "250.00",
+          base_occupancy: "3",
+          extra_pax_charge: "60.00",
+          single_supplement: "30.00",
           currency: "MYR"
         },
         user: user
@@ -275,9 +277,145 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
 
       expect(result[:success]).to be(true)
       rate = rate_plan.room_rates.find_by(date: start_date, currency: "MYR")
-      expect(rate.ota_price.to_f).to eq(250.0)
-      expect(rate.price.to_f).to eq(150.0)
-      expect(rate.corporate_price.to_f).to eq(200.0)
+      expect(rate.base_occupancy).to eq(3)
+      expect(rate.extra_pax_charge.to_f).to eq(60.0)
+      expect(rate.single_supplement.to_f).to eq(30.0)
+    end
+
+    it "creates channel overrides in channel_room_rates table when channel_id is present" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      rate_plan = room_type.rate_plans.first
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ rate_plan.id ],
+          apply_rates: "1",
+          price: "150.00",
+          channel_id: "booking_com",
+          channel_rate_plan_id: "b_test_rate_plan",
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result[:success]).to be(true)
+      override = ChannelRoomRate.find_by(
+        room_type_id: room_type.id,
+        rate_plan_id: rate_plan.id,
+        channel_id: "booking_com",
+        channel_rate_plan_id: "b_test_rate_plan",
+        date: start_date
+      )
+      expect(override).to be_present
+      expect(override.price.to_f).to eq(150.0)
+    end
+
+    it "creates channel availability overrides when channel_id is present for channel_availability" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          apply_inventory: "1",
+          quantity: "2",
+          status: "closed",
+          channel_id: "booking_com"
+        },
+        user: user
+      ).call
+
+      expect(result[:success]).to be(true)
+      override = ChannelRoomRate.find_by(
+        room_type_id: room_type.id,
+        rate_plan_id: nil,
+        channel_id: "booking_com",
+        date: start_date
+      )
+      expect(override).to be_present
+      expect(override.availability).to eq(2)
+      expect(override.stop_sell).to be(true)
+    end
+    context "when a Standard Rate plan is shared across multiple room types" do
+      it "does NOT affect other room types when updating only Double Room's standard rate" do
+        # Reproduces bug: updating Double Room standard rate was bleeding into Executive Room
+        # because find_or_initialize_by was missing room_type_id
+        shared_rate_plan = create(:rate_plan, hotel: hotel, name: "Standard Rate", currency: "MYR")
+
+        double_room = create(:room_type, hotel: hotel, base_price: 200)
+        executive_room = create(:room_type, hotel: hotel, base_price: 300)
+
+        double_room.room_type_rate_plans.create!(rate_plan: shared_rate_plan)
+        executive_room.room_type_rate_plans.create!(rate_plan: shared_rate_plan)
+
+        # Pre-seed executive room's rate so there is a record to be found first
+        exec_rate = create(:room_rate, room_type: executive_room, rate_plan: shared_rate_plan,
+                           date: start_date, currency: "MYR", price: 300)
+
+        result = described_class.new(
+          hotel: hotel,
+          selection: {
+            start_date: start_date,
+            end_date: start_date,
+            room_type_ids: [ double_room.id ],         # Only Double Room selected
+            rate_plan_ids: [ shared_rate_plan.id ],    # Standard Rate
+            apply_rates: "1",
+            price: "250.00",
+            currency: "MYR"
+          },
+          user: user
+        ).call
+
+        expect(result[:success]).to be(true)
+
+        double_rate = shared_rate_plan.room_rates.find_by(date: start_date, currency: "MYR", room_type: double_room)
+        expect(double_rate&.price.to_f).to eq(250.0), "Double Room rate should be updated to 250"
+
+        exec_rate.reload
+        expect(exec_rate.price.to_f).to eq(300.0), "Executive Room rate must NOT be changed"
+      end
+
+      it "does NOT clear walk_in_price or corporate_price when updating standard rate for a single room type" do
+        shared_rate_plan = create(:rate_plan, hotel: hotel, name: "Standard Rate", currency: "MYR")
+        double_room = create(:room_type, hotel: hotel, base_price: 200)
+        double_room.room_type_rate_plans.create!(rate_plan: shared_rate_plan)
+
+        existing_rate = create(
+          :room_rate,
+          room_type: double_room,
+          rate_plan: shared_rate_plan,
+          date: start_date,
+          currency: "MYR",
+          price: 200,
+          walk_in_price: 220,
+          corporate_price: 180
+        )
+
+        described_class.new(
+          hotel: hotel,
+          selection: {
+            start_date: start_date,
+            end_date: start_date,
+            room_type_ids: [ double_room.id ],
+            rate_plan_ids: [ shared_rate_plan.id ],
+            apply_rates: "1",
+            price: "250.00",
+            currency: "MYR"
+          },
+          user: user
+        ).call
+
+        existing_rate.reload
+        expect(existing_rate.price.to_f).to eq(250.0)
+        expect(existing_rate.walk_in_price.to_f).to eq(220.0), "Walk-in price must NOT be touched"
+        expect(existing_rate.corporate_price.to_f).to eq(180.0), "Corporate price must NOT be touched"
+      end
     end
   end
 end

@@ -89,6 +89,17 @@ module HotelPortal
       end
     end
 
+    def hotel_taxes
+      @hotel_taxes ||= hotel.hotel_taxes.order(:name)
+    end
+
+    def new_hotel_tax
+      hotel.hotel_taxes.build
+    end
+
+    def rate_plans
+      @rate_plans ||= hotel.rate_plans.includes(:room_types).order(:id)
+    end
     def settings_summary
       return {} unless hotel
 

@@ -81,9 +81,9 @@ module HotelPortal
           label: "Property",
           items: [
             NavItem.new(label: "Room Categories", path: hotel_room_types_path(current_hotel), search_text: "Room Categories Rooms Property", active: controller_name == "room_types", icon: "layers", permission: "manage_hotel_profile"),
-            NavItem.new(label: "Nearby Attractions", path: hotel_nearby_attractions_path(current_hotel), search_text: "Nearby Attractions Places Around Property", active: controller_name == "nearby_attractions", icon: "map-pin", permission: "manage_hotel_profile"),
             NavItem.new(label: "Rates & Inventory", path: hotel_inventory_index_path(current_hotel), search_text: "Rates Inventory Calendar Property", active: controller_name == "inventory_dashboards", icon: "calendar-range", permission: "manage_hotel_profile"),
             NavItem.new(label: "Hotel Details", path: edit_hotel_profile_path(current_hotel), search_text: "Hotel Details Profile Property", active: controller_name == "profiles", icon: "building-2", permission: "manage_hotel_profile"),
+            NavItem.new(label: "Nearby Attractions", path: hotel_nearby_attractions_path(current_hotel), search_text: "Nearby Attractions Places Around Property", active: controller_name == "nearby_attractions", icon: "map-pin", permission: "manage_hotel_profile"),
             NavItem.new(label: "Knowledge", path: hotel_knowledge_policies_path(current_hotel), search_text: "Knowledge Policies FAQ General Info Property", active: knowledge_nav_active, icon: "file-text", children: knowledge_nav_items, permission: "manage_hotel_profile", plan_feature: "ai_concierge_page")
           ]
         ),

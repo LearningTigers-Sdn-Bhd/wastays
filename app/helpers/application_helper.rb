@@ -106,6 +106,19 @@ module ApplicationHelper
     date.to_s
   end
 
+  def status_badge_classes(tone, active: false)
+    return "border-white/20 bg-white/15 text-white" if active
+
+    case tone.to_s
+    when "blue" then "border-blue-200 bg-blue-50 text-blue-700"
+    when "emerald" then "border-emerald-200 bg-emerald-50 text-emerald-700"
+    when "amber" then "border-amber-200 bg-amber-50 text-amber-700"
+    when "orange" then "border-orange-200 bg-orange-50 text-orange-700"
+    when "rose" then "border-rose-200 bg-rose-50 text-rose-700"
+    else "border-slate-200 bg-slate-50 text-slate-600"
+    end
+  end
+
   def display_housekeeping_date(value)
     return "Not provided" if value.blank?
 
@@ -164,5 +177,108 @@ module ApplicationHelper
 
   def id_scanner_side_label(side)
     side == :front ? "Front Side" : "Back Side"
+  end
+
+  def display_amount(amount, quote_currency:, display_currency:, hotel:)
+    conversion = CurrencyConverter.convert(amount, from: quote_currency, to: display_currency)
+    target_currency = conversion.present? ? display_currency : quote_currency
+    value = conversion&.amount || amount
+
+    CurrencyFormatter.format(value, currency: target_currency)
+  end
+
+  def pax_pricing_breakdown_items(item, hotel, display_currency)
+    occ = item.occupancy_snapshot || {}
+    adults = (occ["adults"] || occ[:adults] || 0).to_i
+    children = (occ["children"] || occ[:children] || 0).to_i
+    infants = (occ["infants"] || occ[:infants] || 0).to_i
+    total_pax = adults + children + infants
+
+    quantity = item.respond_to?(:quantity) ? item.quantity : 1
+
+    rate_plan_id = nil
+    if item.nightly_rate_snapshot.present?
+      first_rate_data = item.nightly_rate_snapshot.values.first
+      rate_plan_id = first_rate_data["rate_plan_id"] if first_rate_data.is_a?(Hash)
+    end
+    rate_plan = RatePlan.find_by(id: rate_plan_id)
+    return [] unless rate_plan
+
+    child_multiplier = rate_plan.child_price_multiplier || 1.to_d
+    infant_multiplier = rate_plan.infant_price_multiplier || 0.to_d
+
+    # Sum up for the stay
+    dates = item.nightly_rate_snapshot.keys.map { |d| Date.parse(d) }
+    nights_count = dates.size
+    return [] if nights_count.zero?
+
+    total_adults_cost = 0.to_d
+    total_children_cost = 0.to_d
+    total_infants_cost = 0.to_d
+    total_supplement = 0.to_d
+
+    item.nightly_rate_snapshot.each do |date_str, snapshot|
+      date = Date.parse(date_str)
+      room_rate = RoomRate.find_by(room_type_id: item.room_type_id, rate_plan_id: rate_plan_id, date: date)
+      base_price = room_rate&.price || item.room_type.base_price || 0.to_d
+
+      total_adults_cost += adults * base_price
+      total_children_cost += children * base_price * child_multiplier
+      total_infants_cost += infants * base_price * infant_multiplier
+
+      if total_pax == 1
+        supplement = room_rate&.single_supplement || rate_plan.single_supplement || 0.to_d
+        total_supplement += supplement
+      end
+    end
+
+    lines = []
+    quote_curr = item.respond_to?(:booking_quote) ? item.booking_quote&.currency : nil
+    quote_curr ||= item.respond_to?(:booking) ? item.booking&.currency : nil
+    quote_curr ||= hotel.default_currency || "MYR"
+
+    if adults > 0
+      avg_adult_rate = (total_adults_cost / (adults * nights_count)).round(2)
+      formatted_rate = display_amount(avg_adult_rate, quote_currency: quote_curr, display_currency: display_currency, hotel: hotel)
+      formatted_total = display_amount(total_adults_cost * quantity, quote_currency: quote_curr, display_currency: display_currency, hotel: hotel)
+      lines << {
+        label: "#{adults * quantity} Adult(s)",
+        detail: "#{nights_count} night(s) @ #{formatted_rate}",
+        amount: formatted_total
+      }
+    end
+
+    if children > 0
+      avg_child_rate = (total_children_cost / (children * nights_count)).round(2)
+      formatted_rate = display_amount(avg_child_rate, quote_currency: quote_curr, display_currency: display_currency, hotel: hotel)
+      formatted_total = display_amount(total_children_cost * quantity, quote_currency: quote_curr, display_currency: display_currency, hotel: hotel)
+      lines << {
+        label: "#{children * quantity} Child(ren)",
+        detail: "#{nights_count} night(s) @ #{formatted_rate} (#{(child_multiplier * 100).to_i}%)",
+        amount: formatted_total
+      }
+    end
+
+    if infants > 0
+      avg_infant_rate = (total_infants_cost / (infants * nights_count)).round(2)
+      formatted_rate = display_amount(avg_infant_rate, quote_currency: quote_curr, display_currency: display_currency, hotel: hotel)
+      formatted_total = display_amount(total_infants_cost * quantity, quote_currency: quote_curr, display_currency: display_currency, hotel: hotel)
+      lines << {
+        label: "#{infants * quantity} Infant(s)",
+        detail: "#{nights_count} night(s) @ #{formatted_rate} (#{(infant_multiplier * 100).to_i}%)",
+        amount: formatted_total
+      }
+    end
+
+    if total_supplement > 0
+      formatted_total = display_amount(total_supplement * quantity, quote_currency: quote_curr, display_currency: display_currency, hotel: hotel)
+      lines << {
+        label: "Single Supplement",
+        detail: "#{nights_count} night(s)",
+        amount: formatted_total
+      }
+    end
+
+    lines
   end
 end

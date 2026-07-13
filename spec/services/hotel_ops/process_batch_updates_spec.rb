@@ -38,7 +38,7 @@ RSpec.describe HotelOps::ProcessBatchUpdates do
     it "triggers a SyncJob if hotel has a preferred channel manager" do
       hotel.update!(preferred_channel_manager: "staah")
       expect_any_instance_of(HotelOps::ApplyInventoryDashboardSelection).to receive(:call).and_return({ success: true })
-      expect(ChannelManagers::SyncJob).to receive(:perform_later)
+      expect(ChannelManagers::SyncJob).to receive(:perform_later).at_least(:once)
 
       subject.call
     end

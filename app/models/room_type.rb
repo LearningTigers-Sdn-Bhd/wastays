@@ -8,8 +8,10 @@ class RoomType < ApplicationRecord
   scope :unassigned, -> { where(room_group_id: nil) }
 
   has_many :room_rates, dependent: :destroy
+  has_many :channel_room_rates, dependent: :destroy
   has_many :room_inventories, dependent: :destroy
-  has_many :rate_plans, dependent: :destroy
+  has_many :room_type_rate_plans, dependent: :destroy
+  has_many :rate_plans, through: :room_type_rate_plans
   has_many :inventory_audit_logs, dependent: :nullify
   has_many :booking_rooms, dependent: :restrict_with_error
   has_many :booking_quote_items, dependent: :restrict_with_error
@@ -31,6 +33,10 @@ class RoomType < ApplicationRecord
 
   def room_numbers
     Array(super).flatten.compact.map(&:to_s).reject(&:blank?)
+  end
+
+  def max_capacity
+    max_adults.to_i + max_children.to_i
   end
 
   def attach_photos_with_limit(photo_files)
@@ -71,10 +77,29 @@ class RoomType < ApplicationRecord
   def ensure_standard_rate_plan
     return if rate_plans.exists?
 
-    rate_plans.create!(
+    # Create a dedicated standard rate plan for this room type.
+    # Each room type must have its own plan; sharing one across room
+    # types would make rate updates on one room type bleed into others.
+    rate_plan = hotel.rate_plans.create!(
       name: "Standard Rate",
       sell_mode: "per_room",
       currency: hotel.default_currency || "MYR"
     )
+
+    room_type_rate_plans.create!(rate_plan: rate_plan)
+  end
+
+  def sync_with_channel_manager
+    return if hotel.preferred_channel_manager.blank?
+
+    ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
+  end
+
+  def delete_from_channel_manager
+    ChannelManagers::SyncStructureJob.perform_later(self.class.name, nil, "delete", hotel_id: hotel_id, external_id: channel_mapping.external_id)
+  end
+
+  def synced_with_channel_manager?
+    hotel.preferred_channel_manager.present? && channel_mapping.present? && !channel_mapping.external_id.to_s.start_with?("pending")
   end
 end

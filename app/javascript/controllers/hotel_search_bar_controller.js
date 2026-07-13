@@ -6,10 +6,10 @@ export default class extends Controller {
     "compactDisplay",
     "adultsCount",
     "childrenCount",
-    "roomCountCount",
+    "infantsCount",
     "adultsInput",
     "childrenInput",
-    "roomCountInput"
+    "infantsInput"
   ]
 
   step(event) {
@@ -48,26 +48,31 @@ export default class extends Controller {
   _syncDisplay() {
     const adults = Number(this.adultsCountTarget.textContent.trim())
     const children = Number(this.childrenCountTarget.textContent.trim())
-    const roomCount = Number(this.roomCountCountTarget.textContent.trim())
-    const roomLabel = roomCount === 1 ? " Room" : " Rooms"
+    const infants = this.hasInfantsCountTarget ? Number(this.infantsCountTarget.textContent.trim()) : 0
 
-    this.displayTarget.textContent = `${adults} Adults · ${children} Children · ${roomCount}${roomLabel}`
+    let displayVal = `${adults} Adults · ${children} Children`
+    if (infants > 0) {
+      displayVal += ` · ${infants} Infant${infants > 1 ? 's' : ''}`
+    }
+
+    this.displayTarget.textContent = displayVal
     if (this.hasCompactDisplayTarget) {
-      this.compactDisplayTarget.textContent = String(adults + children)
+      this.compactDisplayTarget.textContent = String(adults + children + infants)
     }
   }
 
   _countTargetFor(field) {
     if (field === "adults") return this.adultsCountTarget
     if (field === "children") return this.childrenCountTarget
-    if (field === "roomCount") return this.roomCountCountTarget
+    if (field === "infants") return this.infantsCountTarget
     return null
   }
 
   _inputTargetFor(field) {
     if (field === "adults") return this.adultsInputTarget
     if (field === "children") return this.childrenInputTarget
-    if (field === "roomCount") return this.roomCountInputTarget
+    if (field === "infants") return this.infantsInputTarget
     return null
   }
 }
+

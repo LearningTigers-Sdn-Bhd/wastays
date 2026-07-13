@@ -81,21 +81,18 @@ RSpec.describe "Hotel today's check-outs page", type: :system do
       booking: earlier_checkout_booking,
       room_type: room_type,
       room_type_snapshot: { "name" => room_type.name },
-      quantity: 1,
       subtotal: earlier_checkout_booking.total_amount
     )
-    BookingRoom.create!(
-      booking: latest_checkout_booking,
-      room_type: secondary_room_type,
-      room_type_snapshot: { "name" => secondary_room_type.name },
-      quantity: 2,
-      subtotal: latest_checkout_booking.total_amount
-    )
+    2.times do
+      BookingRoom.create!(
+        booking: latest_checkout_booking,
+        room_type: secondary_room_type,
+        room_type_snapshot: { "name" => secondary_room_type.name },
+        subtotal: latest_checkout_booking.total_amount / 2
+      )
+    end
 
-    visit login_path
-    fill_in "Email Address", with: user.email
-    fill_in "Password", with: "password123"
-    click_button "Sign In to Portal"
+    sign_in_through_ui(user)
   end
 
   it "renders today's check-outs with search, summary, rows, and actions" do
@@ -117,7 +114,7 @@ RSpec.describe "Hotel today's check-outs page", type: :system do
     expect(rows.first).to have_content(latest_checkout_booking.checked_in_at.in_time_zone(user.time_zone).strftime("%d %b %Y, %I:%M %p"))
     expect(rows.first).to have_content(latest_checkout_booking.checked_out_at.in_time_zone(user.time_zone).strftime("%d %b %Y, %I:%M %p"))
     expect(rows.first).to have_content("2x Suite Room")
-    expect(rows.first).to have_link("View booking", href: hotel_booking_path(hotel, latest_checkout_booking))
+    expect(rows.first).to have_link("View booking", href: hotel_booking_control_panel_path(hotel, latest_checkout_booking, tab: "booking_details"))
 
     expect(page).to have_content("Aisha Tan")
     expect(page).not_to have_content("Checked Out Earlier")

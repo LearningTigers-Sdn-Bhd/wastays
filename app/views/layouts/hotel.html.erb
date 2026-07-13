@@ -86,12 +86,12 @@
         <% end %>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col overflow-hidden overflow-y-auto overscroll-contain custom-scrollbar">
-          <div class="p-5 pb-36 sm:p-6 space-y-5">
+        <main class="flex-1 flex flex-col overflow-hidden <%= content_for?(:full_height_page) ? '' : 'overflow-y-auto' %> overscroll-contain custom-scrollbar">
+          <div class="flex min-h-0 flex-1 flex-col p-5 pb-36 sm:p-6 <%= content_for?(:full_height_page) ? '' : 'space-y-5' %>">
             <%= render "shared/feedback/flash_toasts", flash: flash %>
 
-            <div class="grid grid-cols-1 <%= (!locked_hotel_portal_shell? && content_for?(:right_sidebar)) ? 'xl:grid-cols-4 gap-6' : '' %>">
-              <div class="<%= (!locked_hotel_portal_shell? && content_for?(:right_sidebar)) ? 'xl:col-span-3' : '' %>">
+            <div class="<%= content_for?(:full_height_page) ? 'flex min-h-0 flex-1 flex-col' : 'grid grid-cols-1' %> <%= (!locked_hotel_portal_shell? && content_for?(:right_sidebar)) ? 'xl:grid-cols-4 gap-6' : '' %>">
+              <div class="<%= content_for?(:full_height_page) ? 'flex min-h-0 flex-1 flex-col' : '' %> <%= (!locked_hotel_portal_shell? && content_for?(:right_sidebar)) ? 'xl:col-span-3' : '' %>">
                 <%= yield %>
               </div>
 
@@ -112,6 +112,7 @@
     <%= render 'shared/turbo_confirm' %>
     <%= render 'shared/room_lock_alert' %>
     <%= render 'shared/offcanvas_drawer' %>
+    <%= render 'shared/offcanvas_drawer_secondary' %>
     <%= yield :body_end %>
   </body>
 </html>

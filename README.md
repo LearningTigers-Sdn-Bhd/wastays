@@ -4,10 +4,10 @@ WAStays is a modern hotel platform for small and budget hotels across Malaysia a
 
 ## Prerequisites
 
-- **Ruby:** 3.3+ (Check `.ruby-version`)
-- **Node.js:** 20+
-- **PostgreSQL:** 14+
-- **Redis:** (Optional, but recommended for background jobs)
+- **Ruby:** 3.4.7 (see `.ruby-version`, managed via mise)
+- **PostgreSQL:** 14+ with pgvector
+
+No Node.js required — the app uses Import Maps and Tailwind via Ruby gems. No Redis required — background jobs, cache, and Action Cable use the database-backed Solid Queue/Cache/Cable.
 
 ## Getting Started
 
@@ -84,7 +84,7 @@ Use `bin/test <domain> --serial` for serial execution and `bin/test <domain> --p
 
 ## Documentation
 
-Detailed technical specifications and implementation roadmaps are available in the `markdowns/` directory. Operational guides for admins are loaded from `guides/`, with `markdowns/guides/` still supported when present.
+Domain documentation and plan/design specs live in `docs/` (including `docs/superpowers/plans/` and `docs/superpowers/specs/`). Operational guides for hotel admins are loaded from `guides/`. AI assistant instructions are in `CLAUDE.md`.
 
 ## Production Deployment
 

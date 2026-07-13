@@ -29,6 +29,29 @@ RSpec.describe Bookings::FinalizeNoShow do
     expect(result.skipped_folios.sole.balance).to eq(100.0)
   end
 
+  it "records the staff reason on no-show audit metadata" do
+    hotel = create(:hotel)
+    user = create(:user, account: hotel.account)
+    business_date = hotel.current_business_date
+    reason = "Guest did not arrive after follow-up call"
+    booking = create(
+      :booking,
+      hotel: hotel,
+      status: "review_no_show",
+      no_show_review_business_date: business_date,
+      check_in: business_date,
+      check_out: business_date + 1.day,
+      tax_lines: []
+    )
+    create(:booking_room, booking: booking, subtotal: 100.0)
+
+    result = described_class.call(booking: booking, user: user, reason: reason)
+
+    expect(result).to be_success
+    audit = BookingAuditLog.where(auditable: booking, action_type: "no_show").sole
+    expect(audit.metadata["reason"]).to eq(reason)
+  end
+
   it "does not post tourism tax but keeps other no-show taxes" do
     hotel = create(:hotel)
     user = create(:user, account: hotel.account)

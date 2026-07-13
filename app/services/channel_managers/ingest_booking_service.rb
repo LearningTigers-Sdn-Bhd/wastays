@@ -244,25 +244,32 @@ module ChannelManagers
       booking.booking_rooms.destroy_all
 
       @data[:rooms].each do |room_item|
-        booking.booking_rooms.create!(
-          room_type: room_item[:room_type],
-          rate_plan: room_item[:rate_plan],
-          quantity: room_item[:quantity],
-          subtotal: room_item[:amount]
-          # snapshots to be added if needed
-        )
+        qty = [ room_item[:quantity].to_i, 1 ].max
+        qty.times do
+          booking.booking_rooms.create!(
+            room_type: room_item[:room_type],
+            rate_plan: room_item[:rate_plan],
+            subtotal: (room_item[:amount].to_d / qty).round(2)
+            # snapshots to be added if needed
+          )
+        end
       end
     end
 
     def audit_values(booking)
+      rooms_grouped = booking.booking_rooms.group_by { |room| room_summary(room) }
+      rooms_array = rooms_grouped.map do |summary, rooms|
+        rooms.size > 1 ? "#{rooms.size}x #{summary}" : summary
+      end
+
       booking.slice(
         "guest_name", "guest_email", "guest_phone", "guest_country", "check_in", "check_out",
         "status", "adults", "total_amount", "currency", "payment_status"
-      ).merge("rooms" => booking.booking_rooms.map { |room| room_summary(room) })
+      ).merge("rooms" => rooms_array)
     end
 
     def room_summary(room)
-      parts = [ "#{room.quantity}x #{room.room_type&.name || 'Room category not provided'}" ]
+      parts = [ room.room_type&.name || "Room category not provided" ]
       parts << room.rate_plan.name if room.rate_plan
       parts.join(" - ")
     end

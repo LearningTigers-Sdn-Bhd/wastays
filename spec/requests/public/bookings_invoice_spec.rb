@@ -25,7 +25,6 @@ RSpec.describe "Public::Bookings invoice", type: :request do
     create(:booking_room,
       booking: booking,
       room_type: room_type,
-      quantity: 1,
       subtotal: 200.0,
       room_type_snapshot: { "name" => "Standard Room" }
     )

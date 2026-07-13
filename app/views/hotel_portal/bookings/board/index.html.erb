@@ -1,5 +1,5 @@
 <div class="max-w-[1600px] mx-auto pb-20">
-  <%= turbo_frame_tag "booking_timeline_board" do %>
+  <%= turbo_frame_tag "booking_timeline_board", data: { turbo_action: "advance" } do %>
     <div class="<%= @presenter.page_spacing %>">
       <div class="mt-5 <%= @presenter.container_padding %>">
       <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">

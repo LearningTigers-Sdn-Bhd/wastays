@@ -31,6 +31,7 @@ class BookingAuditLog < ApplicationRecord
     when "update" then "Updated"
     when "status_change" then "Status Changed"
     when "check_in" then "Checked In"
+    when "undo_check_in" then "Undo Check-in"
     when "check_out" then "Checked Out"
     when "cancel" then "Cancelled"
     when "reinstate" then "Reinstated"
@@ -49,6 +50,7 @@ class BookingAuditLog < ApplicationRecord
     when "update" then "pencil"
     when "status_change" then "refresh-cw"
     when "check_in" then "log-in"
+    when "undo_check_in" then "rotate-ccw"
     when "check_out" then "log-out"
     when "cancel" then "circle-x"
     when "reinstate" then "rotate-ccw"
@@ -65,6 +67,7 @@ class BookingAuditLog < ApplicationRecord
     case action_type
     when "create" then "text-blue-600 bg-blue-50"
     when "check_in", "pre_checkin_completed" then "text-emerald-600 bg-emerald-50"
+    when "undo_check_in" then "text-amber-600 bg-amber-50"
     when "check_out" then "text-slate-600 bg-slate-50"
     when "cancel" then "text-rose-600 bg-rose-50"
     when "reinstate" then "text-amber-600 bg-amber-50"

@@ -16,7 +16,7 @@ RSpec.describe "HotelPortal::Arrivals", type: :request do
   describe "GET /index" do
       before do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
-      BookingRoom.create!(booking: booking, room_type: room_type, room_type_snapshot: { "name" => room_type.name }, quantity: 1, subtotal: booking.total_amount)
+      BookingRoom.create!(booking: booking, room_type: room_type, room_type_snapshot: { "name" => room_type.name }, subtotal: booking.total_amount)
       create(:pre_checkin, booking: booking, status: "completed", document_status: "uploaded")
     end
 

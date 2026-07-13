@@ -31,7 +31,7 @@
       view_type: board_view_type %>
   </div>
 <% else %>
-  <%= link_to hotel_booking_path(current_hotel, block[:booking]),
+  <%= link_to hotel_booking_control_panel_path(current_hotel, block[:booking], tab: "booking_details"),
       aria: { label: booking_block_accessibility_label(block) },
       class: booking_block_classes(block, board_view_type, visible_start_date, visible_end_exclusive),
       style: booking_block_style_attributes(block, visible_start_date, visible_end_exclusive, block_left_pad, block_top, block_index, block_step),

@@ -18,7 +18,7 @@ export default class extends Controller {
     if (event) { event.preventDefault(); event.stopPropagation() }
 
     const hotelId = window.location.pathname.split('/')[2]
-    const url = `/hotel/${hotelId}/booking-transactions/edit-booking/${this.idValue}?source=booking_timeline_board`
+    const url = `/hotel/${hotelId}/booking-transactions/show-booking/${this.idValue}?source=booking_timeline_board`
 
     this.triggerOffcanvas(url, "compact-right")
   }

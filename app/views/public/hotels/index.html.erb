@@ -164,13 +164,22 @@
 
                     <div class="flex justify-between items-end border-t border-neutral-border pt-6">
                       <div>
-                        <p class="text-[10px] text-neutral-text-secondary uppercase font-bold tracking-wider">Starts from</p>
+                        <p class="text-[10px] text-neutral-text-secondary uppercase font-bold tracking-wider">
+                          Starts from<%= hotel.pax_pricing_only? ? " (Per Person)" : "" %>
+                        </p>
                         <% lowest_room = hotel.room_types.first %>
                         <% if lowest_room %>
                           <p class="text-2xl font-extrabold text-neutral-text-primary">
-                            RM <%= number_with_precision(@availability_service.calculate_total_price(lowest_room), precision: 2) %>
+                            <% if hotel.pax_pricing_only? %>
+                              <% presenter = Public::RoomTypePresenter.new(lowest_room, hotel, @availability_service, self) %>
+                              <%= presenter.display_pax_rate(@display_currency) %>
+                            <% else %>
+                              RM <%= number_with_precision(@availability_service.calculate_total_price(lowest_room), precision: 2) %>
+                            <% end %>
                           </p>
-                          <p class="text-[10px] text-neutral-text-secondary italic">Excludes taxes & fees</p>
+                          <p class="text-[10px] text-neutral-text-secondary italic">
+                            <%= hotel.pax_pricing_only? ? "Per Person" : "Excludes taxes & fees" %>
+                          </p>
                         <% else %>
                           <p class="text-sm font-medium text-neutral-text-secondary italic">Check availability</p>
                         <% end %>

@@ -11,11 +11,11 @@ class HotelPortal::Bookings::NoShowFolioRepairsController < HotelPortal::BaseCon
 
     if result.success?
       offcanvas_transaction_response(
-        destination: offcanvas_return_to(fallback: hotel_booking_path(current_hotel, @booking)),
+        destination: offcanvas_return_to(fallback: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details")),
         notice: repair_notice(result)
       )
     else
-      redirect_to hotel_booking_path(current_hotel, @booking), alert: result.error
+      redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: result.error
     end
   end
 

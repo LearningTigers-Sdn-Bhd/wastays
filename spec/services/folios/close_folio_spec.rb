@@ -129,4 +129,27 @@ RSpec.describe Folios::CloseFolio do
     expect(result.error).to eq("AR invoice already exists for this folio.")
     expect(company_folio.reload).to be_open
   end
+
+  it "blocks Direct Bill above the corporate credit limit unless explicitly overridden" do
+    relationship = create(:hotel_corporate_account, hotel: booking.hotel, direct_bill_enabled: true, credit_limit: 100)
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, hotel_corporate_account: relationship)
+    create(:folio_transaction, booking_folio: company_folio, amount: 125)
+
+    blocked = described_class.call(folio: company_folio, user: user, settlement_method: "direct_bill")
+    overridden = described_class.call(
+      folio: company_folio,
+      user: user,
+      settlement_method: "direct_bill",
+      credit_override: true,
+      credit_override_reason: "Approved by finance"
+    )
+
+    expect(blocked).not_to be_success
+    expect(blocked.error).to include("credit limit exceeded")
+    expect(overridden).to be_success
+    expect(FolioOperationLog.last.metadata).to include(
+      "corporate_credit_override" => true,
+      "corporate_credit_override_reason" => "Approved by finance"
+    )
+  end
 end

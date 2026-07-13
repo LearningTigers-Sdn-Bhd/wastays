@@ -10,7 +10,7 @@ RSpec.describe "Retroactive Check-in", type: :service do
   let(:timestamp) { past_date.to_time + 14.hours } # 2 PM yesterday
 
   before do
-    create(:booking_room, booking: booking, subtotal: 200.0)
+    create(:booking_room, booking: booking, room_number: "101", subtotal: 200.0)
     booking.update(tax_lines: [ { "name" => "SST", "amount" => "12.00" } ])
     create(:night_audit, hotel: hotel, business_date: past_date, status: "completed")
     create(:hotel_business_date, hotel: hotel, business_date: past_date, status: "closed")

@@ -7,7 +7,9 @@ class Booking < ApplicationRecord
 
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
+  belongs_to :group_booking, optional: true
   belongs_to :payout_batch, optional: true
+  belongs_to :agent_account, optional: true
   has_many :booking_rooms, dependent: :destroy
   accepts_nested_attributes_for :booking_rooms
   has_many :booking_notes, dependent: :destroy
@@ -17,8 +19,12 @@ class Booking < ApplicationRecord
   has_one :guest_registration_card, dependent: :destroy
   has_one :refund_request, dependent: :destroy
   has_many :booking_folios, dependent: :destroy
-  has_one :booking_folio, -> { where(is_primary: true) }, dependent: :destroy
+  has_one :booking_folio, -> { where(is_primary: true, booking_room_id: nil) }, dependent: :destroy
   has_many :folio_routing_rules, dependent: :destroy
+  has_many :booking_billing_parties, dependent: :restrict_with_error
+  has_many :booking_billing_terms, through: :booking_billing_parties, source: :billing_terms
+  has_many :booking_tax_inclusion_overrides, dependent: :destroy
+  has_many :billing_route_batches, dependent: :destroy
   has_many :deposits, dependent: :restrict_with_error
   has_one_attached :id_front
   has_one_attached :id_back
@@ -104,15 +110,17 @@ class Booking < ApplicationRecord
   validates :check_in, :check_out, :adults, :total_amount, :confirmation_token, presence: true
   validates :confirmation_token, uniqueness: true
   validates :folio_account_reference, uniqueness: { scope: :hotel_id, allow_blank: true }
+  validates :group_position, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  validate :group_booking_belongs_to_hotel
 
-  before_validation :generate_confirmation_token, on: :create
+  before_validation :assign_confirmation_token, on: :create
+  before_create :assign_document_counters
   before_validation :normalize_guest_data
   before_create :assign_guest_registration_number
 
   scope :recent_first, -> { order(created_at: :desc) }
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }
-  scope :checkout_required, -> { where(status: "checkout_required") }
   scope :completed, -> { where(status: "completed") }
   scope :no_show, -> { where(status: "no_show") }
   scope :active, -> { where(status: [ "confirmed", "review_no_show", "checked_in", "review_due_out", "checkout_required" ]) }
@@ -240,6 +248,10 @@ class Booking < ApplicationRecord
 
   def guest_registration_card_number_display
     formatted_guest_registration_number.presence || "Pending check-in"
+  end
+
+  def group_booking?
+    group_booking_id.present? || booking_rooms.size > 1
   end
 
   def payout_eligible?
@@ -412,6 +424,12 @@ class Booking < ApplicationRecord
 
   private
 
+  def group_booking_belongs_to_hotel
+    return if group_booking.blank? || hotel_id.blank? || group_booking.hotel_id == hotel_id
+
+    errors.add(:group_booking, "must belong to the same hotel")
+  end
+
   def status_changed_on_persisted_record?
     persisted? && will_save_change_to_status?
   end
@@ -426,13 +444,8 @@ class Booking < ApplicationRecord
     errors.add(:status, Bookings::StatusLifecycle.transition_error(from: from, to: to, event: event))
   end
 
-  DOCUMENT_NUMBER_PAD_LENGTH = 7
-
   def format_number(number, type_code:)
-    return nil unless number
-    prefix = hotel&.hotel_prefix.presence || "WS"
-    padded = number.to_s.rjust(DOCUMENT_NUMBER_PAD_LENGTH, "0")
-    "#{prefix}-#{type_code}#{padded}"
+    DocumentIdentifiers::HotelReferences.format(hotel: hotel, number: number, type_code: type_code)
   end
 
   def set_payout_status
@@ -451,19 +464,13 @@ class Booking < ApplicationRecord
     SendInvoiceEmailJob.perform_later(id)
   end
 
-  CONFIRMATION_TOKEN_CHARSET = (("A".."Z").to_a + ("2".."9").to_a - %w[I O L]).freeze
-  CONFIRMATION_TOKEN_LENGTH = 6
+  def assign_confirmation_token
+    DocumentIdentifiers::HotelReferences.assign_confirmation_token(self, unique_against: [ Booking, GroupBooking ])
+  end
 
-  def generate_confirmation_token
-    return if confirmation_token.present?
-
-    loop do
-      candidate = Array.new(CONFIRMATION_TOKEN_LENGTH) { CONFIRMATION_TOKEN_CHARSET.sample }.join
-      next if Booking.exists?(confirmation_token: candidate)
-
-      self.confirmation_token = candidate
-      break
-    end
+  def assign_document_counters
+    DocumentIdentifiers::HotelReferences.assign_counter(self, attribute: :reservation_number, counter_type: "reservation")
+    DocumentIdentifiers::HotelReferences.assign_counter(self, attribute: :receipt_number, counter_type: "receipt")
   end
 
   def assign_guest_registration_number

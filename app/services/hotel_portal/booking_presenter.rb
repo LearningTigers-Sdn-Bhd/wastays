@@ -347,7 +347,7 @@ module HotelPortal
       return 0.to_d unless primary_room&.room_type
 
       room_type = primary_room.room_type
-      quantity = primary_room.quantity.to_i
+      quantity = booking.booking_rooms.count
 
       today = Time.current.to_date
       rate = room_type.room_rates.find_by(date: today)&.price || room_type.base_price

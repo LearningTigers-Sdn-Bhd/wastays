@@ -1354,7 +1354,6 @@ module DemoSeeds
     BookingRoom.create!(
       booking: booking,
       room_type: room_type,
-      quantity: 1,
       subtotal: booking.total_amount,
       room_type_snapshot: room_type_snapshot_for(room_type),
       nightly_rate_snapshot: nightly_rate_snapshot_for(room_type, check_in, check_out),

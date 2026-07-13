@@ -389,7 +389,7 @@ module HotelPortal
     end
 
     def booking_show_url
-      Rails.application.routes.url_helpers.hotel_booking_path(hotel, booking)
+      Rails.application.routes.url_helpers.hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
     end
 
     def action_section_state

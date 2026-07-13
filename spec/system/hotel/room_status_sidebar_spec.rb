@@ -19,10 +19,7 @@ RSpec.describe "Hotel room status sidebar", type: :system do
     slugs.each { |slug| grant_permission(role, slug) }
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
 
-    visit login_path
-    fill_in "Email Address", with: user.email
-    fill_in "Password", with: "password123"
-    click_button "Sign In to Portal"
+    sign_in_through_ui(user)
 
     user
   end

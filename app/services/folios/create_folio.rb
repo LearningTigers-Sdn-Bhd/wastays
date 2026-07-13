@@ -6,15 +6,16 @@ module Folios
   class CreateFolio
     PERMISSION = "manage_folio_windows"
 
-    def self.call(booking:, user:, attributes: {})
-      new(booking: booking, user: user, attributes: attributes).call
+    def self.call(booking:, user:, attributes: {}, skip_authorization: false)
+      new(booking: booking, user: user, attributes: attributes, skip_authorization: skip_authorization).call
     end
 
-    def initialize(booking:, user:, attributes: {})
+    def initialize(booking:, user:, attributes: {}, skip_authorization: false)
       @booking = booking
       @hotel = booking.hotel
       @user = user
       @attributes = attributes.to_h.with_indifferent_access
+      @skip_authorization = skip_authorization
     end
 
     def call
@@ -45,12 +46,14 @@ module Folios
 
       {
         hotel: @hotel,
+        booking_room_id: @attributes[:booking_room_id].presence,
         folio_number: folio_number,
         folio_sequence: next_folio_sequence,
         name: @attributes[:name].presence || default_name,
         folio_type: @attributes[:folio_type].presence || "external",
         payer_type: @attributes[:payer_type].presence || "company",
         payer_id: @attributes[:payer_id].presence,
+        booking_billing_party_id: @attributes[:booking_billing_party_id].presence,
         hotel_corporate_account_id: @attributes[:hotel_corporate_account_id].presence,
         is_primary: false,
         status: "open",
@@ -93,7 +96,8 @@ module Folios
           folio_type: folio.folio_type,
           payer_type: folio.payer_type,
           payer_id: folio.payer_id,
-          hotel_corporate_account_id: folio.hotel_corporate_account_id
+          hotel_corporate_account_id: folio.hotel_corporate_account_id,
+          booking_room_id: folio.booking_room_id
         }
       )
     end
@@ -102,8 +106,9 @@ module Folios
       reason = @attributes[:set_folio_as_primary_reason].to_s.strip.presence
       raise ActiveRecord::RecordInvalid.new(folio.tap { |record| record.errors.add(:base, "Reason for setting primary folio can't be blank.") }) if reason.blank?
 
-      previous_primary = @booking.booking_folios.where(is_primary: true).where.not(id: folio.id).first
-      @booking.booking_folios.where.not(id: folio.id).update_all(is_primary: false, updated_at: Time.current)
+      scope = @booking.booking_folios.where(booking_room_id: folio.booking_room_id)
+      previous_primary = scope.where(is_primary: true).where.not(id: folio.id).first
+      scope.where.not(id: folio.id).update_all(is_primary: false, updated_at: Time.current)
       folio.update!(is_primary: true)
 
       FolioOperationLog.create!(
@@ -117,7 +122,8 @@ module Folios
         reason: reason,
         metadata: {
           previous_primary_folio_id: previous_primary&.id,
-          new_primary_folio_id: folio.id
+          new_primary_folio_id: folio.id,
+          booking_room_id: folio.booking_room_id
         }
       )
     end
@@ -127,6 +133,8 @@ module Folios
     end
 
     def permitted?
+      return true if @skip_authorization
+
       @user&.respond_to?(:superadmin?) && @user.superadmin? ||
         @user&.respond_to?(:has_permission?) && @user.has_permission?(PERMISSION, hotel: @hotel)
     end

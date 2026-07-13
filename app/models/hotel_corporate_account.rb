@@ -5,9 +5,15 @@ class HotelCorporateAccount < ApplicationRecord
   belongs_to :corporate_account, class_name: "Account"
   has_many :ar_invoices, dependent: :restrict_with_error
   has_many :ar_payments, dependent: :restrict_with_error
+  has_many :group_deposits, dependent: :restrict_with_error
+  has_many :booking_billing_parties, dependent: :restrict_with_error
+
+  ACCOUNT_TYPES = %w[company government travel_agent].freeze
+  UNAVAILABLE_ACCOUNT_TYPES = %w[travel_agent].freeze
 
   enum :relationship_type, { standard: "standard", direct_bill: "direct_bill" }, prefix: true, validate: true
   enum :status, { active: "active", suspended: "suspended" }, validate: true
+  enum :account_type, ACCOUNT_TYPES.index_by(&:itself), validate: true
 
   validates :corporate_account_id, uniqueness: { scope: :hotel_id }
   validates :credit_currency, presence: true, inclusion: { in: ->(_) { CurrencyCatalog.codes } }

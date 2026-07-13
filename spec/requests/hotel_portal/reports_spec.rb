@@ -462,7 +462,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       create(:room_inventory, room_type: room_type, date: start_date, quantity: 8, status: "open")
       create(:room_inventory, room_type: room_type, date: end_date, quantity: 9, status: "open")
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, guest_name: "Occ Guest")
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 2, subtotal: 300)
+      create_list(:booking_room, 2, booking: booking, room_type: room_type, subtotal: 150.0)
 
       get daily_occupancy_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -474,7 +474,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "does not include data from another hotel" do
       room_type = create(:room_type, hotel: create(:hotel), quantity: 10)
       booking = create(:booking, hotel: room_type.hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 5, subtotal: 500)
+      create_list(:booking_room, 5, booking: booking, room_type: room_type, subtotal: 100.0)
 
       get daily_occupancy_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -490,7 +490,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         create(:room_inventory, room_type: room_type, date: Date.new(2026, 6, 15), quantity: 9, status: "open")
 
         booking = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 6, 1), check_out: Date.new(2026, 6, 16), guest_name: "Month Guest")
-        create(:booking_room, booking: booking, room_type: room_type, quantity: 2, subtotal: 300)
+        create(:booking_room, booking: booking, room_type: room_type, subtotal: 300)
 
         get daily_occupancy_hotel_reports_path(hotel)
         doc = Nokogiri::HTML(response.body)
@@ -506,7 +506,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "exports CSV" do
       room_type = create(:room_type, hotel: hotel, quantity: 10)
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 2, subtotal: 300)
+      create_list(:booking_room, 2, booking: booking, room_type: room_type, subtotal: 150.0)
 
       get daily_occupancy_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -518,7 +518,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "exports PDF" do
       room_type = create(:room_type, hotel: hotel, quantity: 10)
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 1, subtotal: 120)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 120.0)
 
       get daily_occupancy_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -530,7 +530,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "exports XLS" do
       room_type = create(:room_type, hotel: hotel, quantity: 10)
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 1, subtotal: 120)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 120.0)
 
       get daily_occupancy_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -715,7 +715,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "renders the manager flash report for the selected range" do
       room_type = create(:room_type, hotel: hotel, quantity: 10)
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 2, subtotal: 400)
+      create_list(:booking_room, 2, booking: booking, room_type: room_type, subtotal: 200.0)
 
       get managers_flash_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -816,7 +816,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       booking = create(:booking, hotel: hotel, guest_name: "Refund Guest", confirmation_token: "WS-RFD")
       folio = create(:booking_folio, booking: booking, hotel: hotel)
       room_type = create(:room_type, hotel: hotel, name: "Deluxe King")
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 1)
+      create(:booking_room, booking: booking, room_type: room_type)
       refund_request = create(:refund_request, booking: booking, status: "completed", refund_amount: 80.0, reason: "Guest cancelled")
       create(
         :folio_transaction,

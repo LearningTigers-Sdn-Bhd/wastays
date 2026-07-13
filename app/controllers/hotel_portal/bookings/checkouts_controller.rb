@@ -3,15 +3,9 @@
 class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   include BookingAuditable
   include OffcanvasTransactionCompletion
+  include GroupLifecycleTargeting
 
-  before_action :authorize_view_bookings!, only: [ :show ]
   before_action :authorize_manage_bookings!, only: [ :create, :process_late_checkout ]
-
-  def show
-    @booking = checkout_booking_scope.find(params[:id])
-    @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-    render "hotel_portal/bookings/transactions/check_out/offcanvas"
-  end
 
   def create
     timestamp = transition_timestamp(:checked_out_at)
@@ -36,7 +30,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
             flash[:notice] = "Guest has been checked out with early departure."
             render_offcanvas_completion(checkout_success_path)
           end
-          format.html { redirect_to hotel_booking_path(current_hotel, @booking, checkout_success: true), notice: "Guest has been checked out with early departure." }
+          format.html { redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details", checkout_success: true), notice: "Guest has been checked out with early departure." }
         end
       else
         @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
@@ -47,13 +41,12 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
             if booking_timeline_board_request?
               render turbo_stream: turbo_stream.append("booking_timeline_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
             else
-              flash.now[:alert] = result.error
-              render "hotel_portal/bookings/show", formats: [ :html ], status: :unprocessable_content
+              flash[:alert] = result.error
+              render_offcanvas_completion(booking_details_path)
             end
           end
           format.html do
-            flash.now[:alert] = result.error
-            render "hotel_portal/bookings/show", status: :unprocessable_content
+            redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: result.error, status: :see_other
           end
         end
       end
@@ -64,13 +57,15 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
 
   def process_late_checkout
     @booking = current_hotel.bookings.find(params[:id])
+    return batch_process_late_checkout if selected_lifecycle_batch?(@booking)
+
     result = Bookings::ProcessLateCheckout.call(
       booking: @booking,
       user: current_user,
       params: late_checkout_params
     )
 
-    return redirect_to hotel_booking_path(current_hotel, @booking), alert: result.error unless result.success?
+    return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: result.error unless result.success?
 
     if result.rejected?
       return render_checkout_required_response("Late checkout rejected. Complete checkout to resolve the booking.")
@@ -78,12 +73,34 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
 
     notice = result.charged? ? "Late checkout charge applied." : "Late checkout resolved without charge."
     offcanvas_transaction_response(
-      destination: offcanvas_return_to(fallback: hotel_booking_path(current_hotel, @booking)),
+      destination: offcanvas_return_to(fallback: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details")),
       notice: notice
     )
   end
 
   private
+
+  def batch_process_late_checkout
+    bookings = selected_lifecycle_bookings(fallback_booking: @booking, action: :late_checkout)
+    results = []
+
+    ActiveRecord::Base.transaction do
+      bookings.each do |booking|
+        result = Bookings::ProcessLateCheckout.call(booking: booking, user: current_user, params: late_checkout_params)
+        raise BatchTargetError, result.error unless result.success?
+
+        results << result
+      end
+    end
+
+    past_tense_action = results.first.rejected? ? "late checkout rejected" : "resolved for late checkout"
+    offcanvas_transaction_response(
+      destination: offcanvas_return_to(fallback: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details")),
+      notice: batch_lifecycle_notice(bookings, past_tense_action)
+    )
+  rescue BatchTargetError => e
+    redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: e.message, status: :see_other
+  end
 
   def transition_timestamp(attribute)
     params[attribute].presence || booking_params[attribute].presence
@@ -118,7 +135,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
           flash[:notice] = success_notice
           render_offcanvas_completion(checkout_success_path)
         end
-        format.html { redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice }
+        format.html { redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), notice: success_notice }
       end
     else
       @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
@@ -129,13 +146,12 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
           if booking_timeline_board_request?
             render turbo_stream: turbo_stream.append("booking_timeline_board", partial: "shared/toast", locals: { key: "alert", value: result.error })
           else
-            flash.now[:alert] = result.error
-            render "hotel_portal/bookings/show", formats: [ :html ], status: :unprocessable_content
+            flash[:alert] = result.error
+            render_offcanvas_completion(booking_details_path)
           end
         end
         format.html do
-          flash.now[:alert] = result.error
-          render "hotel_portal/bookings/show", status: :unprocessable_content
+          redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: result.error, status: :see_other
         end
       end
     end
@@ -148,52 +164,18 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   def check_out_from_sheet(timestamp)
     @booking = checkout_booking_scope.find(params[:id])
     error = nil
-    if @booking.checkout_required? && timestamp.blank?
-      return render_checkout_sheet_error("Check-out date and time can't be blank.")
-    end
+    completed_bookings = []
+    targets = checkout_targets
 
     ActiveRecord::Base.transaction do
-      if early_departure_checkout?(timestamp)
-        options = { timestamp: timestamp }
-
-        res = Bookings::ProcessEarlyDeparture.call(
-          booking: @booking,
-          user: current_user,
-          params: params.permit(:apply_charge, :charge_amount),
-          options: options.merge(defer_checkout: true, defer_side_effects: true)
-        )
-
-        if res.success?
-          @booking.reload
-        else
-          error = res.error
+      targets.each do |booking|
+        result = process_checkout_for_booking(booking, timestamp)
+        unless result.success?
+          error = targets.one? ? result.error : "#{checkout_booking_label(booking)}: #{result.error}"
           raise ActiveRecord::Rollback
         end
 
-        @booking.association(:booking_folio).reset
-      end
-
-      settlement_result = process_checkout_folio_actions
-      if settlement_result&.success? == false
-        error = settlement_result.error
-        raise ActiveRecord::Rollback
-      end
-
-      result = Bookings::TransitionStatus.new(
-        booking: @booking,
-        status: "completed",
-        timestamp: timestamp,
-        user: current_user,
-          options: {
-            defer_side_effects: true,
-            exception_folio_ids: settlement_result&.exception_folio_ids.to_a,
-            direct_bill_folio_ids: settlement_result&.direct_bill_folio_ids.to_a
-          }.merge(checkout_blocker_resolution_options).merge(security_deposit_release_options)
-      ).call
-
-      unless result.success?
-        error = result.error
-        raise ActiveRecord::Rollback
+        completed_bookings << booking
       end
     end
 
@@ -201,23 +183,43 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
       return render_checkout_sheet_error(error)
     end
 
-    dispatch_checkout_side_effects
-    offcanvas_transaction_response(destination: checkout_success_path, notice: "Guest has been checked out.")
+    completed_bookings.each { |booking| dispatch_checkout_side_effects(booking) }
+    notice = completed_bookings.one? ? "Guest has been checked out." : "#{completed_bookings.size} bookings checked out."
+    offcanvas_transaction_response(destination: checkout_success_path, notice: notice)
+  rescue BatchTargetError => e
+    render_checkout_sheet_error(e.message)
   end
 
-  def process_checkout_folio_actions
-    Folios::ProcessCheckoutActions.call(
-      booking: @booking,
+  def process_checkout_for_booking(booking, timestamp)
+    Checkouts::ProcessBookingCheckout.call(
+      booking: booking,
       hotel: current_hotel,
       user: current_user,
-      action_params: checkout_folio_action_params,
+      timestamp: timestamp,
+      folio_action_params: checkout_folio_action_params(booking),
       posting_date: current_hotel.current_business_date,
-      options: checkout_blocker_resolution_options
+      early_departure_params: early_departure_params_for(booking),
+      checkout_options: checkout_blocker_resolution_options(booking),
+      security_deposit_options: security_deposit_release_options
     )
   end
 
-  def checkout_blocker_resolution_options
-    return {} unless @booking&.checkout_required?
+  def early_departure_params_for(booking)
+    scoped = params.dig(:early_departures, booking.id.to_s) || params.dig(:early_departures, booking.id)
+    return params.permit(:apply_charge, :charge_amount).to_h.symbolize_keys if scoped.blank?
+
+    permitted = scoped.respond_to?(:to_unsafe_h) ? scoped.to_unsafe_h : scoped.to_h
+    { apply_charge: permitted["apply_charge"], charge_amount: permitted["charge_amount"] }
+  end
+
+  def checkout_targets
+    return [ @booking ] unless selected_lifecycle_batch?(@booking)
+
+    selected_lifecycle_bookings(fallback_booking: @booking, action: :checkout)
+  end
+
+  def checkout_blocker_resolution_options(booking = @booking)
+    return {} unless booking&.checkout_required?
     return {} unless current_hotel.current_business_date_record&.audit_blocked?
 
     audit = current_hotel.night_audits.where(business_date: current_hotel.current_business_date).order(created_at: :desc).first
@@ -229,17 +231,28 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
       blocker_resolution: {
         night_audit_id: audit.id,
         blocker_type: "due_out_not_checked_out",
-        booking_id: @booking.id
+        booking_id: booking.id
       }
     }
   end
 
-  def checkout_folio_action_params
-    raw_params = params[:checkout_folios]
-    return {} if raw_params.blank?
+  def checkout_folio_action_params(booking = @booking)
+    scoped = params.dig(:checkout_bookings, booking.id.to_s, :folios) || params.dig(:checkout_bookings, booking.id, :folios)
+    raw_params = scoped.presence || params[:checkout_folios]
+    return default_checkout_folio_action_params(booking) if raw_params.blank?
 
-    raw_params.to_unsafe_h.transform_values do |value|
+    permitted = raw_params.respond_to?(:to_unsafe_h) ? raw_params.to_unsafe_h : raw_params.to_h
+    permitted.transform_values do |value|
       value.to_h.slice("action", "amount", "payment_method", "payment_reference", "reason")
+    end
+  end
+
+  def default_checkout_folio_action_params(booking)
+    HotelPortal::Checkouts::SheetPresenter.new(booking: booking, hotel: current_hotel, user: current_user).folio_rows.each_with_object({}) do |row, actions|
+      actions[row.folio.id.to_s] = {
+        "action" => row.default_action,
+        "amount" => format("%.2f", row.balance.to_d)
+      }
     end
   end
 
@@ -301,7 +314,7 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
             hotel: current_hotel,
             checkout_error: nil,
             checkout_source: params[:source],
-            transaction_return_to: offcanvas_return_to(fallback: hotel_booking_path(current_hotel, @booking))
+            transaction_return_to: offcanvas_return_to(fallback: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"))
           }
         )
       end
@@ -309,22 +322,30 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
     end
   end
 
-  def dispatch_checkout_side_effects
-    Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
-    Notifications::Dispatcher.new(event: :booking_completed, booking: @booking).call
-    SendInvoiceEmailJob.perform_later(@booking.id)
+  def checkout_booking_label(booking)
+    room = booking.booking_rooms.first
+    room_type = room&.room_type&.name.presence || room&.room_type_snapshot.to_h["name"].presence || "Room type unavailable"
+    room_number = room&.room_number.presence || "Unassigned room"
+    number = booking.formatted_reservation_number.presence || booking.confirmation_token.presence || booking.id
+    "Booking ##{number} / #{room_type} - #{room_number}"
+  end
+
+  def dispatch_checkout_side_effects(booking = @booking)
+    Bookings::WebhookTriggerService.new(booking).trigger(:booking_completed)
+    Notifications::Dispatcher.new(event: :booking_completed, booking: booking).call
+    SendInvoiceEmailJob.perform_later(booking.id)
   end
 
   def checkout_success_path
-    fallback = hotel_booking_path(current_hotel, @booking, checkout_success: true)
+    fallback = hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details", checkout_success: true)
     return offcanvas_return_to(fallback: fallback) if params[:return_to].present?
     return board_hotel_bookings_path(current_hotel) if booking_timeline_board_request?
 
     fallback
   end
 
-  def authorize_view_bookings!
-    raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_bookings", hotel: current_hotel)
+  def booking_details_path
+    hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details")
   end
 
   def authorize_manage_bookings!
