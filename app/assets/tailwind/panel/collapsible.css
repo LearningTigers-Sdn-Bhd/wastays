@@ -29,7 +29,7 @@
     @apply shrink-0 transition-transform duration-200;
   }
 
-  .panel-collapsible[data-state="open"] .panel-collapsible__indicator {
+  .panel-collapsible__trigger[data-state="open"] .panel-collapsible__indicator {
     transform: rotate(180deg);
   }
 

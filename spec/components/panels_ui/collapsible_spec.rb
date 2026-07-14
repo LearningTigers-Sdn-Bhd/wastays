@@ -50,6 +50,13 @@ RSpec.describe PanelsUI::Collapsible, type: :component do
     expect(page).to have_css("#booking-details-content.text-sm", visible: :all)
   end
 
+  it "optionally wraps its trigger in a heading and names a panel region" do
+    render_collapsible(heading_level: 3, region: true)
+
+    expect(page).to have_css("h3.panel-collapsible__heading > #booking-details-trigger")
+    expect(page).to have_css("#booking-details-content[role='region'][aria-labelledby='booking-details-trigger']", visible: :all)
+  end
+
   it "requires both composition slots" do
     expect do
       render_inline(described_class.new(id: "incomplete")) { |collapsible| collapsible.with_trigger { "Trigger" } }

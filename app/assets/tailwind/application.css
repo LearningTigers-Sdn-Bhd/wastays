@@ -43,6 +43,7 @@
 @import "./panel/breadcrumb.css";
 @import "./panel/tabs.css";
 @import "./panel/collapsible.css";
+@import "./panel/accordion.css";
 @import "./panel/scroll-area.css";
 @import "./panel/sidebar.css";
 @import "./panel/navbar.css";

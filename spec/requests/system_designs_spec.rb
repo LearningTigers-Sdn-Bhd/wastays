@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe "System design showcase", type: :request do
   PREVIEW_PARTIALS = %w[
+    accordion_preview
     alert_preview
     avatar_preview
     badge_preview
@@ -107,6 +108,9 @@ RSpec.describe "System design showcase", type: :request do
     expect(response.body).to include("importmap")
     expect(document.at_css('body > header, body > nav[aria-label="Global"], body > footer')).to be_nil
     expect(response.body).not_to include("widget.1automations.com")
+    expect(response.body).to include("accordion-preview-heading")
+    expect(response.body).to include("panel-accordion--default")
+    expect(response.body).to include("panel-accordion--bordered")
   end
 
   it "renders the Turbo form-submission preview with its frame and controller" do

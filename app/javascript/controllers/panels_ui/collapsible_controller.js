@@ -30,7 +30,7 @@ export default class extends Controller {
 
   toggle(event) {
     event?.preventDefault()
-    if (this.disabledValue) return
+    if (this.disabledValue || this.triggerTarget.getAttribute("aria-disabled") === "true") return
 
     this.openValue = !this.openValue
   }
