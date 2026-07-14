@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe HotelPortal::Reports::BiboReport, type: :service do
-  let(:hotel) { create(:hotel, hotel_time_zone: "UTC") }
+  let(:hotel) { create(:hotel, time_zone: "UTC") }
   let(:other_hotel) { create(:hotel) }
   let(:start_date) { Date.new(2026, 5, 7) }
   let(:end_date) { Date.new(2026, 5, 7) }
@@ -35,7 +35,7 @@ RSpec.describe HotelPortal::Reports::BiboReport, type: :service do
     end
 
     it "formats boat times in the hotel timezone" do
-      hotel.update!(hotel_time_zone: "Asia/Kuala_Lumpur")
+      hotel.update!(time_zone: "Asia/Kuala_Lumpur")
       booking = create(:booking, hotel: hotel, check_in: start_date, check_out: start_date + 2.days)
       guest = create(:guest, name: "John Doe")
       # 10:00 UTC is 18:00 (6:00 PM) in Asia/Kuala_Lumpur
