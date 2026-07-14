@@ -314,6 +314,9 @@ Rails.application.routes.draw do
       resources :refund_requests, only: [ :new, :create ]
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
       resource :guest_registration_card, only: [ :show, :update, :destroy ], module: :bookings
+      resource :tourism_tax_voucher, only: [ :show ], module: :bookings do
+        post :issue
+      end
     end
     resources :booking_control_panels, only: :show, param: :booking_id, path: "booking-control-panels" do
       member do

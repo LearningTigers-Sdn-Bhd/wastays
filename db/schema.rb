@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_13_100100) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_14_051300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -482,6 +482,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100100) do
     t.integer "infants", default: 0, null: false
     t.bigint "group_booking_id"
     t.integer "group_position"
+    t.integer "tourism_tax_voucher_number"
     t.index ["agent_account_id"], name: "index_bookings_on_agent_account_id"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
@@ -496,6 +497,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100100) do
     t.index ["hotel_id", "receipt_number"], name: "idx_bookings_on_hotel_receipt_number", unique: true, where: "(receipt_number IS NOT NULL)"
     t.index ["hotel_id", "reservation_number"], name: "idx_bookings_on_hotel_reservation_number", unique: true, where: "(reservation_number IS NOT NULL)"
     t.index ["hotel_id", "status", "no_show_review_business_date"], name: "index_bookings_on_hotel_status_no_show_review_date"
+    t.index ["hotel_id", "tourism_tax_voucher_number"], name: "idx_bookings_on_hotel_tourism_tax_voucher_number", unique: true, where: "(tourism_tax_voucher_number IS NOT NULL)"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
     t.index ["source"], name: "index_bookings_on_source"
