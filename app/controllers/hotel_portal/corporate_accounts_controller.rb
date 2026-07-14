@@ -71,6 +71,7 @@ module HotelPortal
     def corporate_invitation_params
       params.require(:corporate_invitation).permit(
         :email,
+        :account_type,
         :relationship_type,
         :direct_bill_enabled,
         :credit_limit,

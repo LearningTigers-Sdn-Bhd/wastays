@@ -31,6 +31,13 @@
               <p class="mt-1 text-xs font-medium text-muted-foreground">Invitations are tied to the recipient email, not a hotel-entered company name.</p>
             </div>
             <div>
+              <%= f.label :account_type, "Account type", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
+              <%= f.select :account_type,
+                HotelCorporateAccount::ACCOUNT_TYPES.map { |type| [ type.humanize, type ] },
+                { selected: @corporate_invitation.account_type },
+                class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
+            </div>
+            <div>
               <%= f.label :email, "Corporate contact email", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
               <%= f.email_field :email, value: @corporate_invitation.email, required: true, autocomplete: "email", class: "w-full rounded-xl border border-border px-4 py-3 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
             </div>

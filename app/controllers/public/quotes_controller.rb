@@ -5,7 +5,7 @@ class Public::QuotesController < ApplicationController
     result = BookingEngine::CreateQuote.new(
       quote_params.merge(
         corporate_rate: current_agent_account.present?,
-        agent_account_id: current_agent_account&.id
+        hotel_corporate_account_id: current_agent_account&.id
       )
     ).call
 
@@ -56,7 +56,7 @@ class Public::QuotesController < ApplicationController
   private
 
   def quote_params
-    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :display_currency, :rate_plan_id, :corporate_rate, :agent_account_id, allocations: [ :room_type_id, :quantity ], child_ages: [])
+    params.permit(:hotel_id, :room_type_id, :check_in, :check_out, :adults, :children, :room_count, :display_currency, :rate_plan_id, :corporate_rate, :hotel_corporate_account_id, allocations: [ :room_type_id, :quantity ], child_ages: [])
   end
 
   def display_currency_for_request(quote)

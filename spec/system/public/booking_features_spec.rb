@@ -24,7 +24,8 @@ RSpec.describe "Booking Features (Agent & Per Pax)", type: :system do
     @pax_rate = create(:room_rate, room_type: @room_type, rate_plan: @pax_plan, date: Date.current, price: 80.0)
 
     # Setup agent
-    @agent = create(:agent_account, hotel: hotel, name: "Test Agent", agent_code: "AGENT123")
+    @agent = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent", agent_code: "AGENT123",
+      corporate_account: create(:account, :corporate, name: "Test Agent"))
 
     # Ensure hotel is publicly bookable
     hotel.update!(status: "approved")
@@ -76,7 +77,7 @@ RSpec.describe "Booking Features (Agent & Per Pax)", type: :system do
 
     # Verify the booking
     booking = Booking.last
-    expect(booking.agent_account_id).to eq(@agent.id)
+    expect(booking.hotel_corporate_account_id).to eq(@agent.id)
     expect(booking.total_amount).to be_within(1.0).of(120.0)
   end
 

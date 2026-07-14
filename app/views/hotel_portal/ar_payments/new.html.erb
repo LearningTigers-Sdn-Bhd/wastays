@@ -11,8 +11,18 @@
     <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800"><%= @ar_payment_error %></div>
   <% end %>
 
+  <% if @ar_payment_submission.present? %>
+    <div class="flex items-start justify-between gap-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+      <div class="text-sm font-semibold text-blue-900">
+        Recording this against the agent's submitted payment slip from <%= l(@ar_payment_submission.created_at, format: :short) %>.
+        <%= link_to "View slip", rails_blob_path(@ar_payment_submission.slip, disposition: "inline"), target: "_blank", rel: "noopener", class: "underline" %>
+      </div>
+    </div>
+  <% end %>
+
   <%= form_with url: hotel_ar_payments_path(current_hotel), method: :post, local: true, class: "space-y-6" do %>
     <%= hidden_field_tag "ar_payment[ar_invoice_id]", @source_invoice&.id if @source_invoice.present? %>
+    <%= hidden_field_tag "ar_payment_submission_id", @ar_payment_submission&.id if @ar_payment_submission.present? %>
     <%= render "payment_fields" %>
     <%= render "allocation_summary", currency: params.dig(:ar_payment, :currency).presence || current_hotel.default_currency %>
     <%= render "invoice_allocations", open_invoices: @open_invoices, source_invoice: @source_invoice %>

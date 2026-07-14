@@ -106,13 +106,14 @@ module HotelPortal
             money(row[:gateway_payment]),
             money(row[:cash_payment]),
             money(row[:booking_payment]),
+            money(row[:ar_bank_transfer]),
             money(row[:refund]),
             money(row[:net_amount])
           ]
         end
 
         pdf.table([
-          [ "Date", "Bkgs", "Accom", "Other", "Tax", "Charges", "Disc", "Online", "Cash", "Deposit", "Refund", "Net" ]
+          [ "Date", "Bkgs", "Accom", "Other", "Tax", "Charges", "Disc", "Online", "Cash", "Deposit", "Agent", "Refund", "Net" ]
         ] + rows, width: pdf.bounds.width, cell_style: { size: 7, padding: [ 4, 4, 4, 4 ] }) do
           row(0).font_style = :bold
           row(0).background_color = "F1F5F9"

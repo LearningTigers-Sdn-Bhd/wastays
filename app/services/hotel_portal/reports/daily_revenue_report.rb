@@ -44,6 +44,7 @@ module HotelPortal
             gateway_payment: 0.to_d,
             cash_payment: 0.to_d,
             booking_payment: 0.to_d,
+            ar_bank_transfer: 0.to_d,
             refund: 0.to_d
           }
         end
@@ -107,10 +108,14 @@ module HotelPortal
           end
         end
 
+        ArPayment.where(hotel_id: @hotel.id, payment_method: "bank_transfer", received_at: @start_date..@end_date).each do |payment|
+          daily_stats[payment.received_at][:ar_bank_transfer] += payment.amount.to_d
+        end
+
         rows = (@start_date..@end_date).map do |date|
           stats = daily_stats[date]
           total_charges = stats[:accommodation] + stats[:tax] + stats[:other_charges]
-          total_payments = stats[:gateway_payment] + stats[:cash_payment] + stats[:booking_payment]
+          total_payments = stats[:gateway_payment] + stats[:cash_payment] + stats[:booking_payment] + stats[:ar_bank_transfer]
           net_amount = total_payments - stats[:refund]
 
           {
@@ -124,6 +129,7 @@ module HotelPortal
             gateway_payment: stats[:gateway_payment].round(2),
             cash_payment: stats[:cash_payment].round(2),
             booking_payment: stats[:booking_payment].round(2),
+            ar_bank_transfer: stats[:ar_bank_transfer].round(2),
             total_payments: total_payments.round(2),
             refund: stats[:refund].round(2),
             net_amount: net_amount.round(2)
@@ -164,6 +170,7 @@ module HotelPortal
           gateway_payment: rows.sum { |r| r[:gateway_payment] },
           cash_payment: rows.sum { |r| r[:cash_payment] },
           booking_payment: rows.sum { |r| r[:booking_payment] },
+          ar_bank_transfer: rows.sum { |r| r[:ar_bank_transfer] },
           total_payments: rows.sum { |r| r[:total_payments] },
           refund: rows.sum { |r| r[:refund] },
           net_amount: rows.sum { |r| r[:net_amount] }
@@ -201,6 +208,7 @@ module HotelPortal
             gateway_payment: month_rows.sum { |row| row[:gateway_payment].to_d }.round(2),
             cash_payment: month_rows.sum { |row| row[:cash_payment].to_d }.round(2),
             booking_payment: month_rows.sum { |row| row[:booking_payment].to_d }.round(2),
+            ar_bank_transfer: month_rows.sum { |row| row[:ar_bank_transfer].to_d }.round(2),
             total_payments: total_payments.round(2),
             refund: month_rows.sum { |row| row[:refund].to_d }.round(2),
             net_amount: month_rows.sum { |row| row[:net_amount].to_d }.round(2)

@@ -28,7 +28,7 @@ module BookingEngine
       @display_currency = CurrencyCatalog.normalize(params[:display_currency], fallback: nil)
       @rate_plan_id = params[:rate_plan_id]
       @corporate_rate = [ true, "true", 1, "1" ].include?(params[:corporate_rate])
-      @agent_account_id = params[:agent_account_id]
+      @hotel_corporate_account_id = params[:hotel_corporate_account_id]
     end
 
     def call
@@ -143,7 +143,7 @@ module BookingEngine
           guest_email: @guest_email,
           guest_phone: @guest_phone,
           special_requests: @special_requests,
-          agent_account_id: @agent_account_id
+          hotel_corporate_account_id: @hotel_corporate_account_id
         )
 
         if quote.save

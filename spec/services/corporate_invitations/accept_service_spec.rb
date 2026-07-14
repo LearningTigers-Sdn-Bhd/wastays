@@ -94,6 +94,16 @@ RSpec.describe CorporateInvitations::AcceptService do
     expect(result.error).to include("expired")
   end
 
+  it "carries the invitation's account_type onto the relationship and generates an agent_code" do
+    invitation.update!(account_type: "travel_agent")
+
+    result = described_class.new(invitation: invitation, user_attributes: user_attributes).call
+
+    expect(result).to be_success
+    expect(result.relationship).to have_attributes(account_type: "travel_agent")
+    expect(result.relationship.agent_code).to match(/\A[A-Z0-9]{6}\z/)
+  end
+
   it "rejects an existing suspended corporate account" do
     user = create(:user, :corporate, email: invitation.email)
     user.account.update!(status: "suspended")

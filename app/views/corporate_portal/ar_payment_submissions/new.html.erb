@@ -1,0 +1,61 @@
+<div class="mx-auto max-w-2xl space-y-6 pb-20">
+  <div>
+    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Payment Submissions</p>
+    <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-950">Submit a Payment</h1>
+    <p class="mt-1 text-sm text-slate-600">Upload your transaction slip and enter the amount. The hotel will verify it and apply it to your account.</p>
+  </div>
+
+  <% if @ar_payment_submission.errors.any? %>
+    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+      <%= @ar_payment_submission.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <%= form_with model: @ar_payment_submission, url: corporate_ar_payment_submissions_path, local: true, multipart: true, class: "space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" do |f| %>
+    <div>
+      <%= f.label :hotel_corporate_account_id, "Hotel", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+      <%= f.select :hotel_corporate_account_id,
+        options_from_collection_for_select(corporate_hotel_corporate_accounts, :id, ->(relationship) { relationship.hotel.name }),
+        {},
+        required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+    </div>
+    <div>
+      <%= f.label :reference_number, "Reference / transaction number", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+      <%= f.text_field :reference_number, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <%= f.label :amount, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.number_field :amount, step: "0.01", min: "0.01", required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+      </div>
+      <div>
+        <%= f.label :currency, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.text_field :currency, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold uppercase text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <%= f.label :received_at, "Date paid", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.date_field :received_at, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+      </div>
+      <div>
+        <%= f.label :payment_method, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.select :payment_method, options_for_select(ArPayment::PAYMENT_METHODS.map { |method| [ method.humanize, method ] }, @ar_payment_submission.payment_method),
+          {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+      </div>
+    </div>
+    <div>
+      <%= f.label :slip, "Transaction slip (image or PDF)", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+      <%= f.file_field :slip, required: true, accept: "image/*,application/pdf", class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700" %>
+    </div>
+    <div>
+      <%= f.label :notes, "Notes (optional)", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+      <%= f.text_area :notes, rows: 3, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+    </div>
+
+    <div class="flex justify-end gap-2">
+      <%= link_to "Cancel", corporate_ar_payment_submissions_path, class: "rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100" %>
+      <%= f.submit "Submit Payment", class: "rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-700" %>
+    </div>
+  <% end %>
+</div>

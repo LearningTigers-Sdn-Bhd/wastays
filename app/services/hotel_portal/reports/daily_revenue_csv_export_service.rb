@@ -11,7 +11,7 @@ module HotelPortal
 
       def generate
         CSV.generate(headers: true) do |csv|
-          csv << [ "Date", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Discount", "Online", "Cash", "Deposit", "Refund", "Net" ]
+          csv << [ "Date", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Discount", "Online", "Cash", "Deposit", "Agent Transfer", "Refund", "Net" ]
 
           @report.rows.each do |row|
             csv << [
@@ -25,6 +25,7 @@ module HotelPortal
               money(row[:gateway_payment]),
               money(row[:cash_payment]),
               money(row[:booking_payment]),
+              money(row[:ar_bank_transfer]),
               money(row[:refund]),
               money(row[:net_amount])
             ]

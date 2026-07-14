@@ -9,7 +9,7 @@ class Booking < ApplicationRecord
   belongs_to :hotel
   belongs_to :group_booking, optional: true
   belongs_to :payout_batch, optional: true
-  belongs_to :agent_account, optional: true
+  belongs_to :hotel_corporate_account, optional: true
   has_many :booking_rooms, dependent: :destroy
   accepts_nested_attributes_for :booking_rooms
   has_many :booking_notes, dependent: :destroy

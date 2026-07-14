@@ -24,11 +24,18 @@ module HotelPortal
     end
 
     def new
+      @ar_payment_submission = current_hotel.ar_payment_submissions.pending.find_by(id: params[:ar_payment_submission_id])
       set_context
+      if @ar_payment_submission.present?
+        @hotel_corporate_account = @ar_payment_submission.hotel_corporate_account
+        @open_invoices = open_invoices
+      end
     end
 
     def create
       @hotel_corporate_account = current_hotel.hotel_corporate_accounts.find(ar_payment_params[:hotel_corporate_account_id])
+      submission = current_hotel.ar_payment_submissions.pending.find_by(id: params[:ar_payment_submission_id])
+
       result = ::ArPayments::RecordPayment.call(
         hotel: current_hotel,
         hotel_corporate_account: @hotel_corporate_account,
@@ -43,9 +50,11 @@ module HotelPortal
       )
 
       if result.success?
+        submission&.approve!(ar_payment: result.ar_payment, reviewed_by: current_user)
         redirect_to hotel_ar_payment_path(current_hotel, result.ar_payment), notice: "Corporate payment recorded."
       else
         set_context
+        @ar_payment_submission = submission
         @ar_payment_error = result.error
         flash.now[:alert] = result.error
         render :new, status: :unprocessable_content

@@ -3,7 +3,6 @@ require_relative "../app/constraints/superadmin_constraint"
 Rails.application.routes.draw do
   mount RailsIcons::Engine, at: "/rails_icons"
   namespace :hotel_portal do
-    resources :agent_accounts
     get "room_blocks/create"
     get "room_blocks/destroy"
   end
@@ -157,6 +156,7 @@ Rails.application.routes.draw do
         post :verify
       end
     end
+    resources :ar_payment_submissions, only: [ :index, :new, :create ], path: "payment-submissions"
   end
 
   # Superadmin dashboard
@@ -283,12 +283,18 @@ Rails.application.routes.draw do
         end
       end
       get "aging", to: "ar_invoices#aging", as: :ar_aging
+      get "agent-summary", to: "ar_invoices#agent_summary", as: :ar_agent_summary
       resources :ar_invoices, only: [ :index, :show ], path: "invoices"
       resources :ar_statements, only: [ :index, :show ], path: "statements"
       resources :ar_payments, only: [ :index, :show, :new, :create ], path: "payments" do
         get :eligible_invoices, on: :collection
         resources :allocations, only: [ :create ], controller: "ar_payment_allocations" do
           resource :reversal, only: [ :create ], controller: "ar_payment_allocation_reversals"
+        end
+      end
+      resources :ar_payment_submissions, only: [ :index, :show ], path: "payment-submissions" do
+        member do
+          patch :reject
         end
       end
     end

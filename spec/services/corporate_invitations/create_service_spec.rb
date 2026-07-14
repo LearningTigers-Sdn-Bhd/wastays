@@ -56,6 +56,18 @@ RSpec.describe CorporateInvitations::CreateService do
     expect(invitation.relationship_type).to eq("direct_bill")
   end
 
+  it "defaults account_type to company when not specified" do
+    result = described_class.new(hotel: hotel, invited_by_user: inviter, attributes: attributes).call
+
+    expect(result.invitation.account_type).to eq("company")
+  end
+
+  it "carries a specified account_type through to the invitation" do
+    result = described_class.new(hotel: hotel, invited_by_user: inviter, attributes: attributes.merge(account_type: "airline")).call
+
+    expect(result.invitation.account_type).to eq("airline")
+  end
+
   it "blocks a suspended corporate account" do
     user = create(:user, :corporate, email: attributes[:email])
     user.account.update!(status: "suspended")
