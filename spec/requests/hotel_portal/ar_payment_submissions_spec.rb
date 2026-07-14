@@ -17,20 +17,6 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     sign_in_as(user)
   end
 
-  it "lists only submissions for the current hotel" do
-    visible = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-VISIBLE")
-    hidden_relationship = create(:hotel_corporate_account, hotel: other_hotel)
-    hidden = create(:ar_payment_submission, hotel: other_hotel, hotel_corporate_account: hidden_relationship, reference_number: "SLIP-HIDDEN")
-
-    get hotel_ar_payment_submissions_path(hotel)
-
-    expect(response).to have_http_status(:success)
-    expect(response.body).to include("SLIP-VISIBLE")
-    expect(response.body).not_to include("SLIP-HIDDEN")
-    expect(visible.hotel).to eq(hotel)
-    expect(hidden.hotel).to eq(other_hotel)
-  end
-
   it "shows submission details with a link to the slip and the record-payment handoff" do
     submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-1", amount: 300)
 
@@ -51,6 +37,30 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     expect(response.body).to include("SLIP-PREFILL")
     expect(response.body).to include('value="275.0"')
     expect(response.body).to include("submitted payment slip")
+  end
+
+  it "renders agent-submitted fields as read-only, not editable inputs" do
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-READONLY", amount: 275, payment_method: "bank_transfer")
+
+    get new_hotel_ar_payment_path(hotel, hotel_corporate_account_id: relationship.id, ar_payment_submission_id: submission.id)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).not_to include('type="text" name="ar_payment[reference_number]"')
+    expect(response.body).not_to include('type="number" name="ar_payment[amount]"')
+    expect(response.body).to include('type="hidden" name="ar_payment[reference_number]"')
+    expect(response.body).to include('type="hidden" name="ar_payment[amount]"')
+    expect(response.body).to include('type="hidden" name="ar_payment[payment_method]"')
+    expect(response.body).to include("can't be edited here")
+  end
+
+  it "offers a reject-with-remarks form directly on the review page" do
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-REVIEW-REJECT")
+
+    get new_hotel_ar_payment_path(hotel, hotel_corporate_account_id: relationship.id, ar_payment_submission_id: submission.id)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include(reject_hotel_ar_payment_submission_path(hotel, submission))
+    expect(response.body).to include("rejection_reason")
   end
 
   it "approving the prefilled payment marks the submission approved and links the real ArPayment" do
@@ -83,15 +93,22 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     patch reject_hotel_ar_payment_submission_path(hotel, submission), params: { rejection_reason: "Slip amount mismatch" }
 
     expect(submission.reload).to have_attributes(status: "rejected", rejection_reason: "Slip amount mismatch", reviewed_by: user)
-    expect(response).to redirect_to(hotel_ar_payment_submissions_path(hotel))
+    expect(response).to redirect_to(hotel_ar_payments_path(hotel))
+  end
+
+  it "requires a rejection reason and re-shows the submission with an alert" do
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship)
+
+    patch reject_hotel_ar_payment_submission_path(hotel, submission), params: { rejection_reason: "" }
+
+    expect(submission.reload.status).to eq("pending")
+    expect(response).to redirect_to(hotel_ar_payment_submission_path(hotel, submission))
+    expect(flash[:alert]).to include("Rejection reason can't be blank")
   end
 
   it "requires manage_ar_payments permission" do
     role.permissions.delete(manage_ar_payments)
     submission = create(:ar_payment_submission, hotel_corporate_account: relationship)
-
-    get hotel_ar_payment_submissions_path(hotel)
-    expect(flash[:alert]).to include("not authorized")
 
     get hotel_ar_payment_submission_path(hotel, submission)
     expect(flash[:alert]).to include("not authorized")

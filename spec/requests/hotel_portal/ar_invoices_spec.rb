@@ -224,7 +224,7 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       get hotel_ar_payments_path(hotel)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("AR Payments")
+      expect(response.body).to include("Payment Record")
       expect(response.body).to include("BANK-IDX-1")
       expect(response.body).to include(invoice.corporate_account.name)
       expect(response.body).to include("MYR 100.00")

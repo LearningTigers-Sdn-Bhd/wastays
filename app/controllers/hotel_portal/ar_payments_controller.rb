@@ -6,7 +6,7 @@ module HotelPortal
     before_action :authorize_manage_ar_payments!, only: %i[new create eligible_invoices]
 
     def index
-      @presenter = HotelPortal::ArPayments::IndexPresenter.new(hotel: current_hotel, params: params)
+      @presenter = HotelPortal::AccountsReceivable::PaymentRecordPresenter.new(hotel: current_hotel, params: params)
     end
 
     def show

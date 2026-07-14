@@ -156,7 +156,7 @@ Rails.application.routes.draw do
         post :verify
       end
     end
-    resources :ar_payment_submissions, only: [ :index, :new, :create ], path: "payment-submissions"
+    resources :ar_payment_submissions, only: [ :index, :show, :new, :create ], path: "payment-submissions"
   end
 
   # Superadmin dashboard
@@ -292,7 +292,7 @@ Rails.application.routes.draw do
           resource :reversal, only: [ :create ], controller: "ar_payment_allocation_reversals"
         end
       end
-      resources :ar_payment_submissions, only: [ :index, :show ], path: "payment-submissions" do
+      resources :ar_payment_submissions, only: [ :show ], path: "payment-submissions" do
         member do
           patch :reject
         end

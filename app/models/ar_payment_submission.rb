@@ -17,6 +17,7 @@ class ArPaymentSubmission < ApplicationRecord
   validates :currency, :reference_number, :received_at, :payment_method, presence: true
   validates :payment_method, inclusion: { in: ArPayment::PAYMENT_METHODS }
   validates :slip, presence: true, on: :create
+  validates :rejection_reason, presence: true, if: :rejected?
   validate :hotel_corporate_account_matches_hotel
 
   scope :pending, -> { where(status: "pending") }
@@ -26,7 +27,7 @@ class ArPaymentSubmission < ApplicationRecord
   end
 
   def reject!(reason:, reviewed_by:)
-    update!(status: "rejected", rejection_reason: reason, reviewed_by: reviewed_by, reviewed_at: Time.current)
+    update(status: "rejected", rejection_reason: reason, reviewed_by: reviewed_by, reviewed_at: Time.current)
   end
 
   private

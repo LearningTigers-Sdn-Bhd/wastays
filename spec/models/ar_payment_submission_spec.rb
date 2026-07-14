@@ -38,4 +38,14 @@ RSpec.describe ArPaymentSubmission, type: :model do
 
     expect(submission.reload).to have_attributes(status: "rejected", rejection_reason: "Amount does not match slip.", reviewed_by: reviewer)
   end
+
+  it "requires a rejection reason before it can be rejected" do
+    submission = create(:ar_payment_submission)
+    reviewer = create(:user)
+
+    result = submission.reject!(reason: "", reviewed_by: reviewer)
+
+    expect(result).to eq(false)
+    expect(submission.reload.status).to eq("pending")
+  end
 end

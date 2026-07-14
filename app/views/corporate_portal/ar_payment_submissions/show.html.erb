@@ -1,0 +1,44 @@
+<div class="mx-auto max-w-3xl space-y-6 pb-20">
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Payment Submission</p>
+      <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-950"><%= @submission.hotel.name %></h1>
+      <p class="mt-1 text-sm text-slate-600">Submitted on <%= l(@submission.created_at, format: :short) %></p>
+    </div>
+    <%= link_to "Back to Payment Submissions", corporate_ar_payment_submissions_path, class: "rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm" %>
+  </div>
+
+  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-6 py-5"><h2 class="text-lg font-bold text-slate-950">Details</h2></div>
+    <dl class="grid grid-cols-2 gap-4 p-6 text-sm">
+      <div><dt class="text-slate-500">Reference</dt><dd class="font-bold text-slate-950"><%= @submission.reference_number %></dd></div>
+      <div><dt class="text-slate-500">Amount</dt><dd class="font-bold text-slate-950"><%= @submission.currency %> <%= number_with_precision(@submission.amount, precision: 2) %></dd></div>
+      <div><dt class="text-slate-500">Date paid</dt><dd class="font-bold text-slate-950"><%= l(@submission.received_at, format: :short) %></dd></div>
+      <div><dt class="text-slate-500">Method</dt><dd class="font-bold text-slate-950"><%= @submission.payment_method.humanize %></dd></div>
+      <% if @submission.notes.present? %>
+        <div class="col-span-2"><dt class="text-slate-500">Notes</dt><dd class="font-semibold text-slate-800"><%= @submission.notes %></dd></div>
+      <% end %>
+      <div class="col-span-2">
+        <dt class="text-slate-500">Slip</dt>
+        <dd class="mt-1">
+          <%= link_to "View transaction slip", rails_blob_path(@submission.slip, disposition: "inline"), target: "_blank", rel: "noopener", class: "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 hover:bg-slate-50" %>
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <% case @submission.status %>
+  <% when "pending" %>
+    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+      Pending review — the hotel hasn't confirmed this payment yet.
+    </div>
+  <% when "approved" %>
+    <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+      Approved — recorded as payment <%= @submission.ar_payment&.reference_number %>.
+    </div>
+  <% when "rejected" %>
+    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+      Rejected: <%= @submission.rejection_reason %>
+    </div>
+  <% end %>
+</div>

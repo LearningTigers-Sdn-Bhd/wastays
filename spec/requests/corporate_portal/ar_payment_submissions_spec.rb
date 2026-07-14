@@ -26,6 +26,25 @@ RSpec.describe "CorporatePortal::ArPaymentSubmissions", type: :request do
     expect(hidden.hotel_corporate_account).to eq(hidden_relationship)
   end
 
+  it "shows the submission's own detail page with a link to the uploaded slip" do
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-DETAIL", amount: 320)
+
+    get corporate_ar_payment_submission_path(submission)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("SLIP-DETAIL")
+    expect(response.body).to include("View transaction slip")
+  end
+
+  it "does not allow viewing a submission belonging to another corporate account" do
+    other_relationship = create(:hotel_corporate_account)
+    hidden = create(:ar_payment_submission, hotel_corporate_account: other_relationship)
+
+    get corporate_ar_payment_submission_path(hidden)
+
+    expect(response).to have_http_status(:not_found)
+  end
+
   it "submits a payment with an attached slip" do
     relationship
 

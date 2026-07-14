@@ -19,6 +19,7 @@
               <th class="px-6 py-3">Amount</th>
               <th class="px-6 py-3">Submitted</th>
               <th class="px-6 py-3">Status</th>
+              <th class="px-6 py-3"><span class="sr-only">View</span></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -37,6 +38,9 @@
                   <% when "rejected" %>
                     <span class="rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-800" title="<%= submission.rejection_reason %>">Rejected</span>
                   <% end %>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <%= link_to "View", corporate_ar_payment_submission_path(submission), class: "font-bold text-slate-700 hover:underline" %>
                 </td>
               </tr>
             <% end %>

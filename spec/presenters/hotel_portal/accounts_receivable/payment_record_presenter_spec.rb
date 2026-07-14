@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe HotelPortal::ArPayments::IndexPresenter do
+RSpec.describe HotelPortal::AccountsReceivable::PaymentRecordPresenter do
   let(:hotel) { create(:hotel) }
   let(:relationship) { create(:hotel_corporate_account, hotel: hotel) }
 
@@ -34,6 +34,32 @@ RSpec.describe HotelPortal::ArPayments::IndexPresenter do
     presenter = described_class.new(hotel: hotel, params: { status: "fully_allocated" })
 
     expect(presenter.paginated_rows.map(&:payment)).to contain_exactly(fully_allocated)
+  end
+
+  it "merges in pending and rejected submissions, excluding approved ones" do
+    pending_submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship)
+    rejected_submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship, status: "rejected", rejection_reason: "mismatch", reviewed_by: create(:user), reviewed_at: Time.current)
+    approved_payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 50)
+    create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship, status: "approved", ar_payment: approved_payment, reviewed_by: create(:user), reviewed_at: Time.current)
+
+    presenter = described_class.new(hotel: hotel, params: {})
+    kinds_by_reference = presenter.paginated_rows.index_by(&:reference).transform_values(&:kind)
+
+    expect(kinds_by_reference).to include(
+      pending_submission.reference_number => :submission,
+      rejected_submission.reference_number => :submission,
+      approved_payment.reference_number => :payment
+    )
+    expect(presenter.paginated_rows.count { |row| row.kind == :submission }).to eq(2)
+  end
+
+  it "filters to pending submissions only" do
+    pending_submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship)
+    create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 100)
+
+    presenter = described_class.new(hotel: hotel, params: { status: "pending" })
+
+    expect(presenter.paginated_rows.map(&:reference)).to contain_exactly(pending_submission.reference_number)
   end
 
   def create_invoice(amount:)

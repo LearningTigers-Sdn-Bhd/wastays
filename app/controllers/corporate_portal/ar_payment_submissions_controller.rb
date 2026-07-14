@@ -8,6 +8,12 @@ module CorporatePortal
         .order(created_at: :desc)
     end
 
+    def show
+      @submission = corporate_ar_payment_submissions
+        .includes(:hotel, :ar_payment, hotel_corporate_account: :corporate_account)
+        .find(params[:id])
+    end
+
     def new
       @ar_payment_submission = ArPaymentSubmission.new(
         currency: corporate_hotel_corporate_accounts.first&.credit_currency,

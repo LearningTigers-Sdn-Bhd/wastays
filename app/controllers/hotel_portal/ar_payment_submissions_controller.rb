@@ -5,17 +5,11 @@ module HotelPortal
     before_action :authorize_manage_ar_payments!
     before_action :set_submission, only: %i[show reject]
 
-    def index
-      @submissions = current_hotel.ar_payment_submissions
-        .includes(:ar_payment, hotel_corporate_account: :corporate_account)
-        .order(created_at: :desc)
-    end
-
     def show; end
 
     def reject
       if @submission.reject!(reason: reject_params[:rejection_reason], reviewed_by: current_user)
-        redirect_to hotel_ar_payment_submissions_path(current_hotel), notice: "Payment submission rejected."
+        redirect_to hotel_ar_payments_path(current_hotel), notice: "Payment submission rejected."
       else
         redirect_to hotel_ar_payment_submission_path(current_hotel, @submission), alert: @submission.errors.full_messages.to_sentence
       end

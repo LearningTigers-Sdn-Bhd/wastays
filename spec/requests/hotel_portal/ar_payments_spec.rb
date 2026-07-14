@@ -32,6 +32,22 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     expect(response.body).to include(hotel_ar_payment_path(hotel, payment))
   end
 
+  it "combines confirmed payments and pending submissions into one Payment Record list" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 250, reference_number: "COMBINED-PAY")
+    submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship, amount: 175, reference_number: "COMBINED-SLIP")
+    approved_submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship, amount: 90, reference_number: "COMBINED-APPROVED", status: "approved", ar_payment: payment, reviewed_by: user, reviewed_at: Time.current)
+
+    get hotel_ar_payments_path(hotel)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("COMBINED-PAY")
+    expect(response.body).to include("COMBINED-SLIP")
+    expect(response.body).to include("Pending Review")
+    expect(response.body).not_to include("COMBINED-APPROVED")
+    expect(response.body).to include(new_hotel_ar_payment_path(hotel, ar_payment_submission_id: submission.id))
+  end
+
   it "filters by query, account, date, and allocation status" do
     payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 200, received_at: Date.current, reference_number: "FILTER-ME")
     create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 300, reference_number: "HIDE-ME")

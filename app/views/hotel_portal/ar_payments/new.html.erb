@@ -27,9 +27,22 @@
     <%= render "allocation_summary", currency: params.dig(:ar_payment, :currency).presence || current_hotel.default_currency %>
     <%= render "invoice_allocations", open_invoices: @open_invoices, source_invoice: @source_invoice %>
 
-    <div class="flex justify-end gap-2">
+    <div class="flex justify-end gap-2 pt-2.5">
       <%= link_to "Cancel", hotel_ar_payments_path(current_hotel), class: "rounded-xl px-5 py-2.5 text-sm font-bold text-muted-foreground hover:bg-muted" %>
       <%= submit_tag "Record Received Payment", class: "rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary-hover" %>
     </div>
+  <% end %>
+
+  <% if @ar_payment_submission.present? && @ar_payment_submission.pending? %>
+    <section class="rounded-2xl border border-red-200 bg-red-50/40 p-6">
+      <h2 class="text-sm font-bold text-red-900">Not a valid payment? Reject this submission instead</h2>
+      <p class="mt-1 text-xs text-red-800/80">The agent will see your remarks on their submission.</p>
+      <%= form_with url: reject_hotel_ar_payment_submission_path(current_hotel, @ar_payment_submission), method: :patch, local: true, class: "mt-3 space-y-3" do %>
+        <%= text_area_tag "rejection_reason", nil, rows: 2, required: true, placeholder: "Explain why you're rejecting this submission...", class: "w-full rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-slate-700" %>
+        <div class="flex justify-end">
+          <%= submit_tag "Reject Submission", data: { turbo_confirm: "Reject this payment submission?" }, class: "rounded-xl border border-red-300 bg-white px-5 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100" %>
+        </div>
+      <% end %>
+    </section>
   <% end %>
 </div>

@@ -1,13 +1,15 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  module ArPayments
-    class IndexPresenter
+  module AccountsReceivable
+    class PaymentRecordPresenter
       PER_PAGE = 25
       STATUS_OPTIONS = [
         [ "Unapplied", "unapplied" ],
         [ "Partially allocated", "partially_allocated" ],
-        [ "Fully allocated", "fully_allocated" ]
+        [ "Fully allocated", "fully_allocated" ],
+        [ "Pending Review", "pending" ],
+        [ "Rejected", "rejected" ]
       ].freeze
       ALLOCATED_SQL = <<~SQL.squish.freeze
         COALESCE((
@@ -31,11 +33,11 @@ module HotelPortal
       end
 
       def paginated_rows
-        @paginated_rows ||= paginated_payments.map { |payment| Row.new(payment) }
+        @paginated_rows ||= Kaminari.paginate_array(all_rows.sort_by(&:sort_time).reverse).page(params[:page]).per(PER_PAGE)
       end
 
       def pagination
-        paginated_payments
+        paginated_rows
       end
 
       def summary_metrics
@@ -43,7 +45,8 @@ module HotelPortal
           metric("Received This Month", received_this_month, "Payments received in the current business month", "landmark", "bg-blue-50 text-blue-700"),
           metric("Allocated This Month", allocated_this_month, "Active allocations from this month's receipts", "circle-check", "bg-emerald-50 text-emerald-700"),
           metric("Total Unapplied", total_unapplied, "Received funds not assigned to invoices", "wallet-cards", "bg-amber-50 text-amber-700"),
-          Metric.new(label: "Needs Allocation", amounts: [ needs_allocation_count.to_s ], description: "Payments with an unapplied balance", icon: "triangle-alert", class_name: "bg-red-50 text-red-700")
+          Metric.new(label: "Needs Allocation", amounts: [ needs_allocation_count.to_s ], description: "Payments with an unapplied balance", icon: "triangle-alert", class_name: "bg-red-50 text-red-700"),
+          Metric.new(label: "Pending Submissions", amounts: [ pending_submissions_count.to_s ], description: "Agent bank-transfer slips awaiting review", icon: "upload", class_name: "bg-violet-50 text-violet-700")
         ]
       end
 
@@ -86,30 +89,34 @@ module HotelPortal
 
       private
 
-      def base_scope
+      def all_rows
+        payment_rows + submission_rows
+      end
+
+      def payment_scope
         hotel.ar_payments
           .select("ar_payments.*, #{ALLOCATED_SQL} AS active_allocated_amount")
           .includes(hotel_corporate_account: :corporate_account)
-          .order(received_at: :desc, created_at: :desc)
       end
 
-      def filtered_payments
-        @filtered_payments ||= begin
-          scope = base_scope
-          if query.present?
-            pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
-            scope = scope.joins(hotel_corporate_account: :corporate_account)
-              .where("ar_payments.reference_number ILIKE :query OR accounts.name ILIKE :query", query: pattern)
-          end
-          scope = scope.where(hotel_corporate_account_id: selected_corporate_account_id) if selected_corporate_account_id.present?
-          scope = scope.where(received_at: received_from..) if received_from.present?
-          scope = scope.where(received_at: ..received_to) if received_to.present?
-          scope = apply_status(scope)
-          scope
+      def payment_rows
+        return [] if %w[pending rejected].include?(selected_status)
+
+        scope = payment_scope
+        if query.present?
+          pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
+          scope = scope.joins(hotel_corporate_account: :corporate_account)
+            .where("ar_payments.reference_number ILIKE :query OR accounts.name ILIKE :query", query: pattern)
         end
+        scope = scope.where(hotel_corporate_account_id: selected_corporate_account_id) if selected_corporate_account_id.present?
+        scope = scope.where(received_at: received_from..) if received_from.present?
+        scope = scope.where(received_at: ..received_to) if received_to.present?
+        scope = apply_payment_status(scope)
+
+        scope.map { |payment| PaymentRow.new(payment) }
       end
 
-      def apply_status(scope)
+      def apply_payment_status(scope)
         case selected_status
         when "unapplied"
           scope.where("#{ALLOCATED_SQL} = 0")
@@ -122,8 +129,24 @@ module HotelPortal
         end
       end
 
-      def paginated_payments
-        @paginated_payments ||= filtered_payments.page(params[:page]).per(PER_PAGE)
+      def submission_rows
+        return [] if %w[unapplied partially_allocated fully_allocated].include?(selected_status)
+
+        scope = hotel.ar_payment_submissions
+          .where.not(status: "approved")
+          .includes(hotel_corporate_account: :corporate_account)
+
+        if query.present?
+          pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
+          scope = scope.joins(hotel_corporate_account: :corporate_account)
+            .where("ar_payment_submissions.reference_number ILIKE :query OR accounts.name ILIKE :query", query: pattern)
+        end
+        scope = scope.where(hotel_corporate_account_id: selected_corporate_account_id) if selected_corporate_account_id.present?
+        scope = scope.where(received_at: received_from..) if received_from.present?
+        scope = scope.where(received_at: ..received_to) if received_to.present?
+        scope = scope.where(status: selected_status) if selected_status.in?(%w[pending rejected])
+
+        scope.map { |submission| SubmissionRow.new(hotel, submission) }
       end
 
       def business_month_scope
@@ -158,6 +181,10 @@ module HotelPortal
         balance_rows.count { |_currency, amount, allocated| allocated < amount }
       end
 
+      def pending_submissions_count
+        hotel.ar_payment_submissions.pending.count
+      end
+
       def metric(label, amounts, description, icon, class_name)
         Metric.new(label: label, amounts: formatted_amounts(amounts), description: description, icon: icon, class_name: class_name)
       end
@@ -174,19 +201,35 @@ module HotelPortal
         nil
       end
 
-      class Row
+      class PaymentRow
         attr_reader :payment
 
         def initialize(payment)
           @payment = payment
         end
 
+        def sort_time
+          payment.received_at.to_time
+        end
+
+        def kind
+          :payment
+        end
+
         def account_name
           payment.corporate_account.name
         end
 
+        def reference
+          payment.reference_number
+        end
+
         def received_on
           payment.received_at.strftime("%d %b %Y")
+        end
+
+        def method_label
+          payment.payment_method.humanize
         end
 
         def amount_label
@@ -220,6 +263,10 @@ module HotelPortal
           end
         end
 
+        def path(hotel)
+          Rails.application.routes.url_helpers.hotel_ar_payment_path(hotel, payment)
+        end
+
         private
 
         def allocated_amount
@@ -232,6 +279,78 @@ module HotelPortal
 
         def money(amount)
           "#{payment.currency} #{format('%.2f', amount.to_d)}"
+        end
+      end
+
+      class SubmissionRow
+        attr_reader :hotel, :submission
+
+        def initialize(hotel, submission)
+          @hotel = hotel
+          @submission = submission
+        end
+
+        def sort_time
+          submission.created_at
+        end
+
+        def kind
+          :submission
+        end
+
+        def account_name
+          submission.hotel_corporate_account.corporate_account.name
+        end
+
+        def reference
+          submission.reference_number
+        end
+
+        def received_on
+          submission.received_at.strftime("%d %b %Y")
+        end
+
+        def method_label
+          submission.payment_method.humanize
+        end
+
+        def amount_label
+          money(submission.amount)
+        end
+
+        def allocated_label
+          "—"
+        end
+
+        def unapplied_label
+          "—"
+        end
+
+        def status
+          submission.status
+        end
+
+        def status_label
+          submission.pending? ? "Pending Review" : status.humanize
+        end
+
+        def status_class
+          submission.pending? ? "border-violet-200 bg-violet-50 text-violet-700" : "border-slate-300 bg-slate-100 text-slate-700"
+        end
+
+        def path(hotel)
+          routes = Rails.application.routes.url_helpers
+          if submission.pending?
+            routes.new_hotel_ar_payment_path(hotel, ar_payment_submission_id: submission.id)
+          else
+            routes.hotel_ar_payment_submission_path(hotel, submission)
+          end
+        end
+
+        private
+
+        def money(amount)
+          "#{submission.currency} #{format('%.2f', amount.to_d)}"
         end
       end
     end
