@@ -43,6 +43,7 @@ module HotelPortal
       def summary_metrics
         [
           metric("Received This Month", received_this_month, "Payments received in the current business month", "landmark", "bg-blue-50 text-blue-700"),
+          metric("Bank Transfers This Month", bank_transfers_this_month, "Bank transfer payments received in the current business month", "arrow-left-right", "bg-sky-50 text-sky-700"),
           metric("Allocated This Month", allocated_this_month, "Active allocations from this month's receipts", "circle-check", "bg-emerald-50 text-emerald-700"),
           metric("Total Unapplied", total_unapplied, "Received funds not assigned to invoices", "wallet-cards", "bg-amber-50 text-amber-700"),
           Metric.new(label: "Needs Allocation", amounts: [ needs_allocation_count.to_s ], description: "Payments with an unapplied balance", icon: "triangle-alert", class_name: "bg-red-50 text-red-700"),
@@ -156,6 +157,10 @@ module HotelPortal
 
       def received_this_month
         business_month_scope.group(:currency).sum(:amount)
+      end
+
+      def bank_transfers_this_month
+        business_month_scope.where(payment_method: "bank_transfer").group(:currency).sum(:amount)
       end
 
       def allocated_this_month

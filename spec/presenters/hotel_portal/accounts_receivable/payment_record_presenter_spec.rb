@@ -26,6 +26,17 @@ RSpec.describe HotelPortal::AccountsReceivable::PaymentRecordPresenter do
     )
   end
 
+  it "totals bank transfer payments received in the current business month, excluding other methods" do
+    create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 300, currency: hotel.default_currency, payment_method: "bank_transfer", received_at: hotel.current_business_date)
+    create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 999, currency: hotel.default_currency, payment_method: "cash", received_at: hotel.current_business_date)
+    create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 999, currency: hotel.default_currency, payment_method: "bank_transfer", received_at: hotel.current_business_date - 2.months)
+
+    presenter = described_class.new(hotel: hotel, params: {})
+    metrics = presenter.summary_metrics.index_by(&:label)
+
+    expect(metrics.fetch("Bank Transfers This Month").amounts).to eq([ "#{hotel.default_currency} 300.00" ])
+  end
+
   it "filters by derived allocation status" do
     create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 100)
     fully_allocated = create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 100)
