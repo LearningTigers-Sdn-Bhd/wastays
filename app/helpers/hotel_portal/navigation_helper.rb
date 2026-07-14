@@ -49,6 +49,7 @@ module HotelPortal
         NavItem.new(label: "In-House Guests", path: hotel_in_house_guests_path(current_hotel), search_text: "In-House Guests Front Desk", active: controller_name == "in_house_guests", icon: "users", permission: "view_bookings"),
         NavItem.new(label: "Departures", path: hotel_checked_out_guests_path(current_hotel), search_text: "Departures Today's Check-Outs Checked Out Front Desk", active: controller_name == "checked_out_guests", icon: "log-out", permission: "view_bookings"),
         NavItem.new(label: "Room Status", path: hotel_room_status_board_path(current_hotel), search_text: "Room Status Housekeeping Front Desk", active: controller_name == "room_status_board", icon: "layout-grid", permission: [ "view_room_readiness", "manage_room_status" ], plan_feature: "room_status_board"),
+        NavItem.new(label: "Housekeeping Tasks", path: hotel_housekeeping_tasks_path(current_hotel), search_text: "Housekeeping Tasks Cleaning Room Status Front Desk", active: controller_name == "housekeeping_tasks", icon: "clipboard-check", permission: "manage_housekeeping_tasks", plan_feature: "task_assignment_minibar_log"),
         NavItem.new(label: "Requests", path: hotel_requests_path(current_hotel), search_text: "Requests Housekeeping Complaint Reservations", active: controller_name == "requests", icon: "clipboard-list", permission: "manage_requests", plan_feature: "task_assignment_minibar_log"),
         NavItem.new(label: "Night Audit", path: hotel_night_audits_path(current_hotel), search_text: "Night Audit Business Date Close Reports", active: controller_name == "night_audits", icon: "moon", permission: "manage_night_audit", plan_feature: "no_show_auto_handling")
       ]
@@ -128,6 +129,7 @@ module HotelPortal
 
     def hotel_breadcrumb_trail
       return @_hotel_breadcrumb_trail if defined?(@_hotel_breadcrumb_trail)
+
 
       hotel_sidebar_sections.each do |section|
         visible_items = hotel_visible_items(section.items)

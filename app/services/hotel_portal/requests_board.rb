@@ -18,10 +18,10 @@ module HotelPortal
         {
           housekeeping: cards.select { |card| card[:bucket] == :housekeeping },
           complaint: cards.select { |card| card[:bucket] == :complaint },
-          completed: cards.select { |card| card[:bucket] == :completed }
+          completed: (cards.select { |card| card[:bucket] == :completed } + checkout_completed_request_cards)
                           .sort_by { |card| card[:completed_at] || Time.zone.at(0) }
                           .reverse,
-          checkout: checkout_request_cards
+          checkout: checkout_request_cards + cards.select { |card| card[:bucket] == :checkout }
         }
       end
     end
@@ -35,11 +35,11 @@ module HotelPortal
     def checkout_request_cards
       hotel.bookings
            .joins(:check_out_requests)
-           .where(check_out_requests: { status: %w[pending acknowledged] })
+           .where(check_out_requests: { status: %w[new assigned in_progress pending acknowledged] })
            .includes(:check_out_requests)
            .order("check_out_requests.requested_at DESC")
            .flat_map do |booking|
-             booking.check_out_requests.select { |r| r.status.in?(%w[pending acknowledged]) }.map do |req|
+             booking.check_out_requests.select { |r| r.status.in?(%w[new assigned in_progress pending acknowledged]) }.map do |req|
                {
                  kind: "checkout",
                  bucket: :checkout,
@@ -47,14 +47,38 @@ module HotelPortal
                  booking_id: booking.id,
                  booking_token: booking.confirmation_token,
                  guest_name: booking.guest_name,
+                 room_number: req.metadata&.dig("room_number").presence || booking.booking_rooms.first&.room_number,
                  title: req.guest_notes.presence || "Checkout requested",
                  requested_at: req.requested_at,
-                 status: req.status,
+            status: req.metadata&.dig("workflow_status").presence || HotelPortal::HousekeepingTasksController.checkout_workflow_status_for(req.status),
                  complete_url: hotel_complete_checkout_request_path(hotel, req.id),
                  booking_url: hotel_booking_control_panel_path(hotel, booking, tab: "housekeeping_requests")
                }
              end
            end
+    end
+
+    def checkout_completed_request_cards
+      hotel.bookings.includes(:check_out_requests, :booking_rooms).flat_map do |booking|
+        booking.check_out_requests.select { |request| request.status == "completed" && request.metadata.to_h["archived_at"].blank? }.map do |request|
+          {
+            kind: "checkout",
+            bucket: :completed,
+            request_id: request.id,
+            booking_id: booking.id,
+            booking_token: booking.confirmation_token,
+            guest_name: booking.guest_name,
+            room_number: request.metadata&.dig("room_number").presence || booking.booking_rooms.first&.room_number,
+            title: request.guest_notes.presence || "Checkout requested",
+            requested_at: request.requested_at,
+            status: request.status,
+            completed_at: request.updated_at,
+            internal_notes: [],
+            archive_url: hotel_archive_request_path(hotel, kind: "checkout", request_id: request.id),
+            booking_url: hotel_booking_path(hotel, booking)
+          }
+        end
+      end
     end
 
     def request_cards
@@ -74,8 +98,15 @@ module HotelPortal
 
       hotel.bookings.includes(:housekeeping_requests, :complaint_requests).each do |booking|
         booking.housekeeping_requests.active.each do |request|
+          # Route checkout room cleaning requests to the checkout column instead
+          # of housekeeping. This covers both checkout_request_id-linked records
+          # (created by the housekeeping tasks backfill) and legacy records
+          # identified by request_details.
+          is_checkout_cleaning = request.metadata&.dig("checkout_request_id").present? ||
+                                  request.request_details&.strip == "Checkout Room Cleaning"
+
           card = build_card(
-            kind: "housekeeping",
+            kind: is_checkout_cleaning ? "checkout" : "housekeeping",
             request: request,
             booking: booking,
             title: request.request_details
@@ -105,6 +136,7 @@ module HotelPortal
         booking_id: booking.id,
         booking_token: booking.confirmation_token,
         guest_name: booking.guest_name,
+        room_number: request.respond_to?(:room_number) ? request.room_number : booking.booking_rooms.first&.room_number,
         title: title,
         requested_at: request.display_requested_at,
         requested_at_raw: request.display_requested_at,
@@ -168,14 +200,17 @@ module HotelPortal
     end
 
     def request_bucket(kind, request)
-      return nil if request.status.to_s == "cancelled"
+      return nil if request.status.to_s == "cancelled" || request.status.to_s == "no_task"
 
       case kind.to_s
       when "housekeeping"
         return :completed if completed_recently?(request.completed_at, request.status)
-        return :housekeeping unless request.completed?
-
-        nil
+        return nil if request.completed?
+        :housekeeping
+      when "checkout"
+        return :completed if completed_recently?(request.completed_at, request.status)
+        return nil if request.completed?
+        :checkout
       when "complaint"
         return :completed if completed_recently?(request.completed_at, request.status)
         return :complaint unless request.resolved?

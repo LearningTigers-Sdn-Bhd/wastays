@@ -1,0 +1,41 @@
+<%# locals: (room:, date:, hotel_today:, current_hotel:, booking_timeline_board:, rate_text_class:, currency_text_class:) %>
+<% slot_params = { check_in: date, room_type_id: room[:room_type].id, room_number: room[:room_number], source: "booking_timeline_board", return_to: request.fullpath } %>
+<div class="absolute inset-0 z-0" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="right">
+  <button type="button"
+          class="flex h-full w-full flex-col justify-between p-1 transition-colors hover:bg-slate-50/80 focus-visible:z-20 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-900"
+          aria-label="Open actions for room <%= room[:room_number] %> on <%= date.strftime('%B %-d, %Y') %>"
+          aria-haspopup="menu"
+          aria-expanded="false"
+          data-dropdown-target="button"
+          data-action="click->dropdown#toggle keydown->dropdown#handleKeydown">
+    <span class="flex h-4 items-center justify-center">
+      <% if (rate = booking_timeline_board_rate_for(booking_timeline_board, room[:room_type].id, date)) %>
+        <span class="flex items-center gap-0.5 <%= rate_text_class %> font-bold text-slate-400/60 tracking-tight">
+          <span class="<%= currency_text_class %> uppercase"><%= currency_symbol(rate[:currency]) %></span>
+          <span><%= number_with_precision(rate[:price], precision: 0) %></span>
+        </span>
+      <% end %>
+    </span>
+    <span class="flex flex-1 items-center justify-center pb-1 opacity-0 transition-opacity group-hover/cell:opacity-100 group-focus-within/cell:opacity-100">
+      <%= cached_icon "plus", stroke_width: 3, class: "size-3.5 text-slate-500", aria: { hidden: true } %>
+    </span>
+  </button>
+  <div class="hidden w-64 overflow-hidden rounded-xl border border-slate-200 bg-white p-2 shadow-2xl ring-1 ring-slate-900/5"
+       role="menu"
+       aria-label="Booking actions for room <%= room[:room_number] %> on <%= date.strftime('%B %-d, %Y') %>"
+       data-dropdown-target="menu"
+       data-action="keydown->dropdown#handleMenuKeydown">
+    <div class="mb-1 border-b border-slate-100 px-3 py-2">
+      <p class="text-xs font-bold text-slate-900">Room <%= room[:room_number] %></p>
+      <p class="mt-0.5 text-[11px] font-medium text-slate-500"><%= date.strftime("%a, %b %-d, %Y") %></p>
+    </div>
+    <% board_cell_action_items(date, hotel_today, current_hotel, slot_params).each do |action| %>
+      <%= link_to action[:path],
+        role: "menuitem", class: "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none",
+        data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>
+        <%= cached_icon action[:icon], class: "size-4 shrink-0 #{action[:icon_color]}", aria: { hidden: true } %>
+        <span><%= action[:label] %></span>
+      <% end %>
+    <% end %>
+  </div>
+</div>

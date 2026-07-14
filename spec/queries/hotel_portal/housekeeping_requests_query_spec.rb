@@ -28,6 +28,14 @@ RSpec.describe HotelPortal::HousekeepingRequestsQuery do
         create(:housekeeping_request, booking: booking, status: "in_progress", archived_at: nil)
       end
 
+      let!(:new_request) do
+        create(:housekeeping_request, booking: booking, status: "new", archived_at: nil)
+      end
+
+      let!(:assigned_request) do
+        create(:housekeeping_request, booking: booking, status: "assigned", archived_at: nil)
+      end
+
       let!(:completed_request) do
         create(:housekeeping_request, booking: booking, status: "completed", archived_at: nil)
       end
@@ -36,8 +44,8 @@ RSpec.describe HotelPortal::HousekeepingRequestsQuery do
         create(:housekeeping_request, booking: booking, status: "in_progress", archived_at: Time.current)
       end
 
-      it "returns only active (not archived) and in-progress requests for the room and hotel" do
-        expect(subject).to contain_exactly(in_progress_request)
+      it "returns only active (not archived) and new/assigned/in-progress requests for the room and hotel" do
+        expect(subject).to contain_exactly(in_progress_request, new_request, assigned_request)
       end
 
       context "when booking is for a different hotel" do
@@ -49,7 +57,7 @@ RSpec.describe HotelPortal::HousekeepingRequestsQuery do
         end
 
         it "does not include requests from other hotels" do
-          expect(subject).to contain_exactly(in_progress_request)
+          expect(subject).to contain_exactly(in_progress_request, new_request, assigned_request)
         end
       end
     end

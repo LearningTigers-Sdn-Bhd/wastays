@@ -87,7 +87,7 @@ module Rooms
 
     def housekeeping_requests_for(room_bookings)
       room_bookings.flat_map do |booking|
-        booking.housekeeping_requests.select { |r| r.archived_at.nil? && r.status == "in_progress" }.map do |req|
+        booking.housekeeping_requests.select { |r| r.archived_at.nil? && r.status.in?(%w[new assigned in_progress]) }.map do |req|
           {
             id: req.id,
             details: req.request_details,

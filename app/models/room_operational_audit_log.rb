@@ -11,6 +11,8 @@ class RoomOperationalAuditLog < ApplicationRecord
     no_show_released
     review_no_show_cancelled
     housekeeping_request_dispatched
+    checkout_room_cleaning_started
+    checkout_room_cleaning_completed
   ].freeze
 
   belongs_to :hotel

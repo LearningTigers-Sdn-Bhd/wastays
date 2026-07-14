@@ -127,6 +127,35 @@ module HotelPortal
       room_type.pets_allowed ? "text-emerald-500" : "text-slate-400"
     end
 
+    def board_cell_bg_class(date)
+      date == Date.current ? "bg-slate-50/50" : "bg-white"
+    end
+
+    def board_cell_drag_data_action(can_manage)
+      return unless can_manage
+
+      "dragover->booking-timeline#onDragOver dragleave->booking-timeline#onDragLeave drop->booking-timeline#onDrop"
+    end
+
+    def board_cell_action_items(date, hotel_today, current_hotel, slot_params)
+      if date < hotel_today
+        [ { path: hotel_booking_transaction_backdated_check_in_path(current_hotel, slot_params),
+           icon: "history", icon_color: "text-amber-600", label: "Backdated Check-in" } ]
+      elsif date == hotel_today
+        [ { path: hotel_booking_transaction_walk_in_check_in_path(current_hotel, slot_params),
+           icon: "log-in", icon_color: "text-emerald-600", label: "Walk-in Check-in" },
+         { path: hotel_booking_transaction_new_booking_path(current_hotel, slot_params),
+           icon: "calendar-plus", icon_color: "text-blue-600", label: "Add Booking" } ]
+      else
+        [ { path: hotel_booking_transaction_new_booking_path(current_hotel, slot_params),
+           icon: "calendar-plus", icon_color: "text-blue-600", label: "Add Booking" } ]
+      end
+    end
+
+    def board_visible_blocks_for_date(room, date, visible_start_date)
+      room[:blocks].select { |block| [ block[:check_in], visible_start_date ].max == date }
+    end
+
     def room_card_top_bar_class(room)
       bookings = room_card_bookings(room)
       status_blocks = room_card_status_blocks(room)
@@ -293,6 +322,21 @@ module HotelPortal
 
     def booking_block_dates_label(block)
       "#{block[:check_in].strftime('%b %-d')} → #{block[:check_out].strftime('%b %-d, %Y')}"
+    end
+
+    def room_card_action_items(date, hotel_today, current_hotel, slot_params)
+      if date < hotel_today
+        [ { path: hotel_booking_transaction_backdated_check_in_path(current_hotel, slot_params),
+           icon: "history", icon_color: "text-amber-600", label: "Backdated" } ]
+      elsif date == hotel_today
+        [ { path: hotel_booking_transaction_new_booking_path(current_hotel, slot_params),
+           icon: "plus", icon_color: "text-slate-500", label: "Book" },
+         { path: hotel_booking_transaction_walk_in_check_in_path(current_hotel, slot_params),
+           icon: "user-check", icon_color: "text-slate-500", label: "Walk-in" } ]
+      else
+        [ { path: hotel_booking_transaction_new_booking_path(current_hotel, slot_params),
+           icon: "plus", icon_color: "text-slate-500", label: "Book" } ]
+      end
     end
 
     def booking_block_payment_status_label(block)
