@@ -16,6 +16,7 @@ RSpec.describe "CorporatePortal::ArInvoices", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("AR Invoices")
+      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("AR Invoices")
       expect(response.body).to include("Open AR")
       expect(response.body).to include("Due Soon")
       expect(response.body).to include("MYR 350.00")
@@ -70,6 +71,10 @@ RSpec.describe "CorporatePortal::ArInvoices", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include(invoice.formatted_invoice_number)
       expect(response.body).to include(ERB::Util.html_escape(invoice.hotel.name))
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("header.panel-page-header h1").text).to eq(invoice.formatted_invoice_number)
+      expect(document.at_css("header.panel-page-header .panel-page-header__caption").text)
+        .to include(invoice.hotel.name, "CORP-SHOW")
       expect(response.body).to include("BANK-CORP-1")
       expect(response.body).to include("MYR 100.00")
     end

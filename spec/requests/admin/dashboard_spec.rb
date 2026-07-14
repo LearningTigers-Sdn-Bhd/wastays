@@ -15,7 +15,7 @@ RSpec.describe 'Admin::Dashboard', type: :request do
       get admin_dashboard_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Dashboard')
+      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("Dashboard")
       expect(response.body).to include('Platform overview and real-time operational status.')
       expect(response.body).to include('class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Recent Successful Bookings')
       expect(response.body).to include('Recent Successful Bookings')
@@ -108,7 +108,7 @@ RSpec.describe 'Admin::Dashboard', type: :request do
       get admin_analytics_path, params: { date_preset: "this_month" }
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Revenue &amp; Margin Analytics')
+      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("Revenue & Margin Analytics")
       expect(response.body).to include('Revenue &amp; Margin Analytics')
       expect(response.body).to include('Detailed superadmin analytics across all revenue-generating bookings.')
       expect(response.body).to include('class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Daily Breakdown')

@@ -3,14 +3,9 @@
 <% unassigned_salespersons = @salespersons.count { |salesperson| @hotels.none? { |hotel| hotel.salesperson_id == salesperson.id } } %>
 
 <div class="w-full space-y-8">
-  <div class="">
- <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Salespersons</h1>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">Create and edit salesperson assignments for one or more hotels.</p>
-      </div>
-    </div>
-  </div>
+  <%= render PanelsUI::PageHeader.new(
+        title: "Salespersons",
+        description: "Create and edit salesperson assignments for one or more hotels.") %>
 
   <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-3">
     <div class="p-6 md:border-r md:border-border md:p-8">

@@ -25,10 +25,11 @@ end %>
     </div>
   <% end %>
 
-  <div class="space-y-1">
-    <h1 class="text-2xl font-semibold text-foreground">Request Refund</h1>
-    <p class="text-sm text-muted-foreground font-mono tracking-wider"><%= @booking.confirmation_token.upcase %></p>
-  </div>
+  <%= render PanelsUI::PageHeader.new(title: "Request Refund") do |header| %>
+    <% header.with_caption do %>
+      <span class="font-mono tracking-wider"><%= @booking.confirmation_token.upcase %></span>
+    <% end %>
+  <% end %>
 
   <div class="bg-red-50 border border-red-200 rounded-2xl p-5 flex gap-x-4">
     <svg class="size-5 text-red-600 shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">

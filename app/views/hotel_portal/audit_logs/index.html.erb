@@ -1,26 +1,17 @@
 <div class="w-full space-y-8">
-  <div class="">
- <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Operation Audit Logs</h1>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">Trace every change made to your hotel's rates and inventory.</p>
-      </div>
-
-      <div class="inline-flex gap-x-2">
-        <details class="relative">
-          <summary class="list-none inline-flex cursor-pointer items-center rounded-xl bg-card border border-border px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted">
-            <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export
-          </summary>
-          <div class="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
-            <%= link_to "Export PDF", hotel_audit_logs_path(current_hotel, format: :pdf, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), class: "block px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted", data: { turbo: false } %>
-            <%= link_to "Export Excel", hotel_audit_logs_path(current_hotel, format: :xls, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), class: "block border-t border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted", data: { turbo: false } %>
-            <%= link_to "Export CSV", hotel_audit_logs_path(current_hotel, format: :csv, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), class: "block border-t border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted", data: { turbo: false } %>
-          </div>
-        </details>
-      </div>
-    </div>
-  </div>
+  <%= render PanelsUI::PageHeader.new(title: "Operation Audit Logs", description: "Trace every change made to your hotel's rates and inventory.") do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::DropdownMenu.new(id: "audit-logs-export-menu", placement: :bottom_end, class: "w-44") do |menu| %>
+        <% menu.with_trigger(variant: :neutral, size: :md, class: "w-full sm:w-auto") do %>
+          <%= cached_icon "download", class: "size-4" %>
+          Export
+        <% end %>
+        <% menu.with_item(href: hotel_audit_logs_path(current_hotel, format: :pdf, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), variant: :default, data: { turbo: false }) { "Export PDF" } %>
+        <% menu.with_item(href: hotel_audit_logs_path(current_hotel, format: :xls, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), variant: :default, data: { turbo: false }) { "Export Excel" } %>
+        <% menu.with_item(href: hotel_audit_logs_path(current_hotel, format: :csv, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), variant: :default, data: { turbo: false }) { "Export CSV" } %>
+      <% end %>
+    <% end %>
+  <% end %>
 
   <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
     <!-- Filters -->

@@ -1,18 +1,12 @@
 <div class="w-full space-y-8">
-  <div class="">
- <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Staff Management</h1>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">Manage access levels and roles for your hotel team.</p>
-      </div>
-      <div>
-        <%= link_to new_hotel_user_path(current_hotel), class: "inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" do %>
+  <%= render PanelsUI::PageHeader.new(title: "Staff Management", description: "Manage access levels and roles for your hotel team.") do |header| %>
+    <% header.with_actions do %>
+        <%= render PanelsUI::Button.new(as: :a, href: new_hotel_user_path(current_hotel), variant: :primary, size: :md, class: "w-full lg:w-auto") do %>
           <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
           Invite Staff
         <% end %>
-      </div>
-    </div>
-  </div>
+    <% end %>
+  <% end %>
 
   <div class="px-4 md:px-0">
     <%= render "hotel_portal/settings/group_tabs" %>

@@ -10,18 +10,19 @@
     </div>
   <% end %>
 
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Hotel Details</h1>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">Manage your property profile, media, and public information.</p>
-      </div>
-
-      <%= link_to "See Hotel",
-                  hotel_path(@hotel),
-                  target: "_blank",
-                  rel: "noopener",
-                  class: "inline-flex h-11 items-center justify-center rounded-xl border border-border bg-card px-5 text-sm font-semibold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" %>
-  </div>
+  <%= render PanelsUI::PageHeader.new(title: "Hotel Details", description: "Manage your property profile, media, and public information.") do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(
+            label: "See Hotel",
+            as: :a,
+            href: hotel_path(@hotel),
+            variant: :secondary,
+            size: :md,
+            target: "_blank",
+            rel: "noopener",
+            class: "w-full lg:w-auto") %>
+    <% end %>
+  <% end %>
 
   <%= render "hotel_portal/settings/group_tabs" %>
 

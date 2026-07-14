@@ -1,10 +1,5 @@
 <div class="w-full space-y-8">
-  <div class="">
- <div>
-      <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Transaction Codes</h1>
-      <p class="mt-1 text-sm font-medium text-muted-foreground">Configure transaction codes used when posting charges, refunds, payments, and adjustments to guest folios.</p>
-    </div>
-  </div>
+  <%= render PanelsUI::PageHeader.new(title: "Transaction Codes", description: "Configure transaction codes used when posting charges, refunds, payments, and adjustments to guest folios.") %>
 
   <div class="px-4 md:px-0">
     <%= render "hotel_portal/settings/group_tabs" %>

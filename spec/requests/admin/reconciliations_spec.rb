@@ -28,7 +28,7 @@ RSpec.describe "Admin::Reconciliations", type: :request do
       get admin_reconciliations_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Payment Issues')
+      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("Payment Issues")
       expect(response.body).to include("Payment Issues")
       expect(response.body).to include("Monitor payment callbacks that need a manual review or booking retry.")
       expect(response.body).to include('class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Event Queue')
@@ -61,7 +61,7 @@ RSpec.describe "Admin::Reconciliations", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Back to Payment Issues")
-      expect(response.body).to include('class="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Payment callback')
+      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to include("Payment callback")
       expect(response.body).to include('class="mb-4 text-lg font-bold tracking-tight text-foreground sm:text-xl">Issue Status')
       expect(response.body).to include("Issue Status")
     end

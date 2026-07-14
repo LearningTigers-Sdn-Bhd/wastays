@@ -1,8 +1,5 @@
 <div class="w-full">
-  <div class="mb-8">
-    <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Edit Mapping</h1>
-    <p class="mt-1 text-sm font-medium text-muted-foreground">Update General Ledger Code (GL Code) for <span class="font-bold text-foreground"><%= @gl_map.transaction_category.humanize %></span>.</p>
-  </div>
+  <%= render PanelsUI::PageHeader.new(title: "Edit Mapping", description: "Update General Ledger Code (GL Code) for #{@gl_map.transaction_category.humanize}.", class: "mb-8") %>
 
   <%= form_with model: @gl_map, url: hotel_general_ledger_map_path(current_hotel, @gl_map), class: "space-y-6" do |f| %>
     <% if @gl_map.errors.any? %>

@@ -1,9 +1,8 @@
 <div class="w-full space-y-8">
-  <div class="">
- <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Extra Charge Report</h1>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">
+  <div>
+    <%= render PanelsUI::PageHeader.new(title: "Extra Charge Report") do |header| %>
+      <% header.with_caption do %>
+        <p class="text-sm font-medium text-muted-foreground">
           <%= current_hotel.name %> ·
           <% if @report.start_date == @report.end_date %>
             <%= @report.start_date.strftime("%A, %d %b %Y") %>
@@ -11,39 +10,20 @@
             <%= @report.start_date.strftime("%d %b %Y") %> - <%= @report.end_date.strftime("%d %b %Y") %>
           <% end %>
         </p>
-      </div>
-
-      <%= form_with url: extra_charge_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", data: { controller: "date-preset" } do |f| %>
-        <%= hidden_field_tag :tab, @active_extra_charge_tab %>
-        <div>
-          <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Time Period</label>
-          <%= select_tag :date_preset, options_for_select(date_preset_options, @date_preset), class: "rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition focus:border-border-interactive focus:outline-none", data: { action: "change->date-preset#toggleCustom" } %>
-        </div>
-        <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'flex' : 'hidden' %> gap-3">
-          <div>
-            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Start Date</label>
-            <%= f.date_field :start_date, value: @report.start_date, class: "rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground" %>
-          </div>
-          <div>
-            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">End Date</label>
-            <%= f.date_field :end_date, value: @report.end_date, class: "rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground" %>
-          </div>
-        </div>
-        <% if feature_enabled_for_hotel?("excel_pdf_export") %>
-        <details class="relative min-w-[170px]">
-          <summary class="list-none inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted">
-            <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export
-          </summary>
-          <div class="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
-            <%= link_to "Export PDF", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :pdf), class: "block px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted" %>
-            <%= link_to "Export Excel", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :xls), class: "block border-t border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted" %>
-            <%= link_to "Export CSV", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :csv), class: "block border-t border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted" %>
-          </div>
-        </details>
-        <% end %>
       <% end %>
-    </div>
+      <% header.with_actions do %>
+        <%= render "preset_report_actions",
+          form_url: extra_charge_hotel_reports_path(current_hotel), date_preset: @date_preset,
+          start_date: @report.start_date, end_date: @report.end_date,
+          hidden_params: { tab: @active_extra_charge_tab },
+          show_export: feature_enabled_for_hotel?("excel_pdf_export"), export_menu_id: "extra-charge-export",
+          export_items: [
+            ["Export PDF", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :pdf)],
+            ["Export Excel", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :xls)],
+            ["Export CSV", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :csv)]
+          ] %>
+      <% end %>
+    <% end %>
   </div>
 
   <div class="grid grid-cols-1 gap-4 md:grid-cols-3">

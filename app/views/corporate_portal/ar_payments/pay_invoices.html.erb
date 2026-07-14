@@ -1,8 +1,7 @@
 <div class="w-full space-y-6">
-  <div class="flex flex-col gap-2 ">
-    <h1 class="text-3xl font-bold tracking-tight text-foreground">Pay Invoices</h1>
-    <p class="text-sm text-muted-foreground">Select unpaid invoices from one active hotel relationship and one currency to proceed with online payment.</p>
-  </div>
+  <%= render PanelsUI::PageHeader.new(
+        title: "Pay Invoices",
+        description: "Select unpaid invoices from one active hotel relationship and one currency to proceed with online payment.") %>
 
   <% if @presenter.relationships.empty? %>
     <section class="rounded-2xl border border-border bg-card p-12 text-center shadow-sm">

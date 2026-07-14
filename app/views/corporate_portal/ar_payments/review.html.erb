@@ -3,10 +3,9 @@
 <% end %>
 
 <div class="w-full space-y-6">
-  <div>
-    <h1 class="text-3xl font-bold tracking-tight text-foreground">Review Payment</h1>
-    <p class="mt-1 text-sm text-muted-foreground">Suggestions are sent to hotel finance as remittance instructions only.</p>
-  </div>
+  <%= render PanelsUI::PageHeader.new(
+        title: "Review Payment",
+        description: "Suggestions are sent to hotel finance as remittance instructions only.") %>
 
   <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
     <div class="grid gap-4 sm:grid-cols-3">

@@ -1,23 +1,25 @@
-<div class="w-full">
-  <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-    <div>
-      <h1 class="text-3xl font-bold text-foreground">Superadmin: Hotel Payouts</h1>
-      <p class="text-sm text-muted-foreground">Review and generate payment batches for hotels.</p>
-    </div>
-
+<div class="w-full space-y-8">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Superadmin: Hotel Payouts",
+        description: "Review and generate payment batches for hotels.") do |header| %>
+    <% header.with_actions do %>
     <div class="inline-flex gap-x-2">
-      <%= link_to export_payouts_csv_admin_payouts_path, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-brand-primary text-primary-foreground hover:bg-red-700", data: { turbo: false } do %>
+      <%= render PanelsUI::Button.new(as: :a, href: export_payouts_csv_admin_payouts_path, data: { turbo: false }) do %>
         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Export Payouts CSV
       <% end %>
 
-      <%= button_to mark_as_paid_admin_payouts_path, method: :post, class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-primary-foreground hover:bg-green-700", data: { confirm: "Are you sure you want to mark these as paid?" } do %>
-        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        Mark All as Paid
+      <%= form_with url: mark_as_paid_admin_payouts_path, method: :post, class: "contents" do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :success, data: { turbo_confirm: "Are you sure you want to mark these as paid?" }) do %>
+          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Mark All as Paid
+        <% end %>
       <% end %>
-    </div>  </div>
+    </div>
+    <% end %>
+  <% end %>
 
-  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
     <div class="flex flex-col bg-card border border-border rounded-xl shadow-sm">
       <div class="p-4 md:p-5">
         <p class="text-xs uppercase tracking-wide text-muted-foreground">Current Batch Payout</p>

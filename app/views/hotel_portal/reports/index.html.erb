@@ -1,19 +1,14 @@
 <div class="w-full space-y-8">
-  <div class="">
- <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Financial Summary</h1>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">Review your earnings and booking activity.</p>
-      </div>
-
+  <%= render PanelsUI::PageHeader.new(title: "Financial Summary", description: "Review your earnings and booking activity.") do |header| %>
+    <% header.with_actions do %>
       <div class="inline-flex gap-x-2">
-        <%= link_to breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, date_preset: @date_preset), class: "inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover", data: { turbo: false } do %>
+        <%= render PanelsUI::Button.new(href: breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, date_preset: @date_preset), data: { turbo: false }) do %>
           <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14v4"/><path d="M12 10v8"/><path d="M17 6v12"/></svg>
           View Breakdown
         <% end %>
       </div>
-    </div>
-  </div>
+    <% end %>
+  <% end %>
 
   <%= turbo_frame_tag "reports_content", class: "block space-y-8" do %>
     <!-- Integrated Stats Grid (Dashboard Style) -->
@@ -40,38 +35,33 @@
     <!-- Daily Performance Section -->
     <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <div class="border-b border-border bg-muted/50 px-8 py-6">
-        <%= form_with url: hotel_reports_path, method: :get, class: "flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between", data: { controller: "auto-submit", turbo_frame: "reports_content" } do |f| %>
+        <%= form_with url: hotel_reports_path, method: :get, class: "flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between", data: { controller: "auto-submit date-preset", turbo_frame: "reports_content" } do |f| %>
+          <%= hidden_field_tag :q, params[:q] if params[:q].present? %>
           <div class="flex flex-col gap-4 lg:flex-row lg:items-end flex-1">
-            <div class="w-full lg:w-64">
-              <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Time Period</label>
-              <%= f.select :date_preset, options_for_select(date_preset_options, @date_preset), {}, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm transition-all", data: { action: "change->auto-submit#submitNow" } %>
-            </div>
+            <%= render PanelsUI::FormField.new(form: f, attribute: :date_preset, label: "Time Period", class: "w-full lg:w-64") do |field| %>
+              <% field.with_select_menu(date_preset_options, selected: @date_preset, data: { action: "change->date-preset#toggleCustom" }) %>
+            <% end %>
 
-            <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'flex' : 'hidden' %> flex-1 gap-3 max-w-md animate-in fade-in slide-in-from-left-2 duration-300">
-              <div class="flex-1">
-                <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">From</label>
-                <%= f.date_field :start_date, value: @start_date, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
-              </div>
-              <div class="flex-1">
-                <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">To</label>
-                <%= f.date_field :end_date, value: @end_date, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
-              </div>
+            <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'flex' : 'hidden' %> w-full max-w-md items-end animate-in fade-in slide-in-from-left-2 duration-300">
+              <%= render PanelsUI::FormField.new(form: f, attribute: :date_range, label: "Date Range", label_hidden: true) do |field| %>
+                <% field.with_date_picker(
+                     range: true,
+                     months: 2,
+                     responsive_months: true,
+                     value: "#{@start_date.iso8601}/#{@end_date.iso8601}",
+                     placeholder: "Date range",
+                     data: { action: "change->date-preset#submitDate" }) %>
+              <% end %>
             </div>
           </div>
 
           <div class="hidden lg:flex lg:items-center">
             <% if feature_enabled_for_hotel?("excel_pdf_export") %>
-            <details class="relative min-w-[160px]">
-              <summary class="list-none inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted">
-                <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Export
-              </summary>
-              <div class="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
-                <%= link_to "Export PDF", hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :pdf), class: "block px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted" %>
-                <%= link_to "Export Excel", hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :xls), class: "block border-t border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted" %>
-                <%= link_to "Export CSV", hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :csv), class: "block border-t border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted" %>
-              </div>
-            </details>
+              <%= render "export_dropdown", menu_id: "financial-summary-export", items: [
+                ["Export PDF", hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :pdf)],
+                ["Export Excel", hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :xls)],
+                ["Export CSV", hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :csv)]
+              ] %>
             <% end %>
           </div>
         <% end %>

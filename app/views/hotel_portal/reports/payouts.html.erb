@@ -1,10 +1,5 @@
 <div class="w-full space-y-8">
-  <div class="">
- <div>
-      <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Weekly Settlements</h1>
-      <p class="mt-1 text-sm font-medium text-muted-foreground">Track your weekly payouts and payment history.</p>
-    </div>
-  </div>
+  <%= render PanelsUI::PageHeader.new(title: "Weekly Settlements", description: "Track your weekly payouts and payment history.") %>
 
   <%= turbo_frame_tag "payouts_content", class: "block space-y-8" do %>
     <div data-testid="payout-tabs">

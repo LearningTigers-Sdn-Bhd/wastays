@@ -11,19 +11,16 @@
 ] %>
 
 <div class="w-full space-y-8">
-  <div class="">
- <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">API Integration Guide</h1>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">Build against WAStays endpoints with authentication, discovery, booking, and webhook references.</p>
-      </div>
-
-      <%= link_to admin_api_keys_path, class: "inline-flex items-center justify-center gap-x-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" do %>
+  <%= render PanelsUI::PageHeader.new(
+        title: "API Integration Guide",
+        description: "Build against WAStays endpoints with authentication, discovery, booking, and webhook references.") do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(as: :a, href: admin_api_keys_path, variant: :secondary) do %>
         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         Back to API Access
       <% end %>
-    </div>
-  </div>
+    <% end %>
+  <% end %>
 
   <div class="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)] xl:items-start">
     <aside class="space-y-6 xl:sticky xl:top-24">

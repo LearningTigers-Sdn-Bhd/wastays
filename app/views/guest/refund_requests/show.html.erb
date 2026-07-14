@@ -17,10 +17,11 @@
 %>
 
 <div class="space-y-6">
-  <div class="space-y-1">
-    <h1 class="text-2xl font-semibold text-foreground">Refund Details</h1>
-    <p class="text-sm text-muted-foreground font-mono tracking-wider"><%= @booking.confirmation_token.upcase %></p>
-  </div>
+  <%= render PanelsUI::PageHeader.new(title: "Refund Details") do |header| %>
+    <% header.with_caption do %>
+      <span class="font-mono tracking-wider"><%= @booking.confirmation_token.upcase %></span>
+    <% end %>
+  <% end %>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-6">

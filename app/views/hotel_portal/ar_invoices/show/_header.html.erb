@@ -1,19 +1,21 @@
-<header class="mt-5">
-  <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-    <div class="min-w-0">
-      <p class="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Accounts Receivable</p>
-      <h1 class="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl"><%= presenter.invoice_label %></h1>
-      <p class="mt-1 text-sm font-medium text-muted-foreground"><%= presenter.company_name %></p>
-    </div>
-
-    <% if current_user.has_permission?("manage_ar_payments", hotel: current_hotel) %>
-    <div class="flex flex-wrap items-center gap-2">
-      <%= link_to(new_hotel_ar_payment_path(current_hotel, ar_invoice_id: ar_invoice.id, hotel_corporate_account_id: ar_invoice.hotel_corporate_account_id),
-                  class: "inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2") do %>
-        <%= cached_icon "circle-dollar-sign", class: "size-4", aria: { hidden: true } %>
-        Record Received Payment
-      <% end %>
-    </div>
+<div>
+  <p class="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Accounts Receivable</p>
+  <%= render PanelsUI::PageHeader.new(title: presenter.invoice_label) do |header| %>
+    <% header.with_caption do %>
+      <%= presenter.company_name %>
     <% end %>
-  </div>
-</header>
+    <% if current_user.has_permission?("manage_ar_payments", hotel: current_hotel) %>
+      <% header.with_actions do %>
+        <%= render PanelsUI::Button.new(
+              as: :a,
+              href: new_hotel_ar_payment_path(current_hotel, ar_invoice_id: ar_invoice.id, hotel_corporate_account_id: ar_invoice.hotel_corporate_account_id),
+              variant: :primary,
+              size: :md,
+              class: "w-full lg:w-auto") do %>
+          <%= cached_icon "circle-dollar-sign", class: "size-4", aria: { hidden: true } %>
+          Record Received Payment
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

@@ -7,10 +7,7 @@
 <% end %>
 
 <div class="w-full space-y-8">
-  <div>
-    <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Your Plan</h1>
-    <p class="mt-1 text-sm font-medium text-muted-foreground">See what's included in your subscription and what you can unlock by upgrading.</p>
-  </div>
+  <%= render PanelsUI::PageHeader.new(title: "Your Plan", description: "See what's included in your subscription and what you can unlock by upgrading.") %>
 
   <%= render "hotel_portal/settings/group_tabs" %>
 

@@ -1,39 +1,48 @@
 <div class="w-full space-y-8" data-controller="popup-modal matrix-mode matrix-search">
-  <div class="">
- <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Roles & Permissions</h1>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">Assign capabilities to staff roles using the matrix below.</p>
-      </div>
+  <%= render PanelsUI::PageHeader.new(title: "Roles & Permissions", description: "Assign capabilities to staff roles using the matrix below.") do |header| %>
+    <% header.with_actions do %>
       <div class="flex flex-wrap items-center gap-3">
-        <div class="relative w-full sm:w-120">
-          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
-          </div>
-          <input type="text"
-                 class="block w-full rounded-lg border border-border bg-card py-2 pl-10 pr-3 text-sm placeholder:text-muted-foreground focus:border-border-interactive focus:ring-1 focus:ring-ring/10 focus:outline-none transition-all shadow-sm"
-                 placeholder="Search permissions..."
-                 data-action="input->matrix-search#search"
-                 data-matrix-search-target="query">
-        </div>
+        <%= form_with url: hotel_roles_path(current_hotel), method: :get,
+              class: "w-full sm:w-120", data: { action: "submit->matrix-search#preventSubmit" } do |form| %>
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :permission_search,
+                label: "Search permissions",
+                label_hidden: true) do |field| %>
+            <% field.with_input(
+                 type: :search,
+                 placeholder: "Search permissions...",
+                 autocomplete: "off",
+                 data: { action: "input->matrix-search#search", matrix_search_target: "query" }) %>
+            <% field.with_addon(align: :inline_start, variant: :bare) do %>
+              <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+            <% end %>
+          <% end %>
+        <% end %>
 
-        <button type="button"
-                class="inline-flex items-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted"
-                data-matrix-mode-target="editButton"
-                data-action="click->matrix-mode#enableEdit">
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: "button",
+              variant: :secondary,
+              size: :md,
+              class: "w-full lg:w-auto",
+              data: { matrix_mode_target: "editButton", action: "click->matrix-mode#enableEdit" }) do %>
           <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
           Edit Permissions
-        </button>
-        <button type="button"
-                class="inline-flex items-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted"
-                data-action="click->popup-modal#open"
-                data-popup-modal-url-value="<%= new_hotel_role_path(current_hotel) %>">
+        <% end %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: "button",
+              variant: :secondary,
+              size: :md,
+              class: "w-full lg:w-auto",
+              data: { action: "click->popup-modal#open", popup_modal_url_value: new_hotel_role_path(current_hotel) }) do %>
           <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
           New Role
-        </button>
+        <% end %>
       </div>
-    </div>
-  </div>
+    <% end %>
+  <% end %>
 
   <%= render "hotel_portal/settings/group_tabs" %>
 

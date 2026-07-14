@@ -1,12 +1,9 @@
 <% content_for :title, "My Refunds | WAStays" %>
 
 <div class="w-full space-y-8">
-  <div class="">
- <div>
-      <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">My Refunds</h1>
-      <p class="mt-1 text-sm font-medium text-muted-foreground">Track the refund requests you have already submitted.</p>
-    </div>
-  </div>
+  <%= render PanelsUI::PageHeader.new(
+        title: "My Refunds",
+        description: "Track the refund requests you have already submitted.") %>
 
   <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
     <div class="flex items-center justify-between border-b border-border px-6 py-5 sm:px-8">

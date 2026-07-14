@@ -1,19 +1,16 @@
 <div class="w-full space-y-8">
-  <div class="">
- <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Superadmin: Settlement Batches</h1>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">Review and manage weekly payout batches for hotels.</p>
-      </div>
-
+  <%= render PanelsUI::PageHeader.new(
+        title: "Superadmin: Settlement Batches",
+        description: "Review and manage weekly payout batches for hotels.") do |header| %>
+    <% header.with_actions do %>
       <div class="inline-flex gap-x-2">
-        <%= link_to export_payouts_csv_admin_payout_batches_path(date_preset: @date_preset, start_date: @start_date, end_date: @end_date, tab: @active_tab), class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-brand-primary text-primary-foreground hover:bg-red-700 shadow-sm transition-all", data: { turbo: false } do %>
+        <%= render PanelsUI::Button.new(as: :a, href: export_payouts_csv_admin_payout_batches_path(date_preset: @date_preset, start_date: @start_date, end_date: @end_date, tab: @active_tab), data: { turbo: false }) do %>
           <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export Pending Batches (CSV)
         <% end %>
       </div>
-    </div>
-  </div>
+    <% end %>
+  <% end %>
 
   <%= turbo_frame_tag "payout_batches_results" do %>
     <!-- Filters & Search -->

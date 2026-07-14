@@ -4,14 +4,16 @@
 <% selected_currency = @presenter&.currency || @selected_currency %>
 
 <div class="w-full space-y-4">
- <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div>
     <div>
       <p class="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Accounts Receivable / Statement</p>
-      <h1 class="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl"><%= @hotel_corporate_account.corporate_account.name %></h1>
-      <p class="mt-1 text-sm font-medium text-muted-foreground"><%= @hotel_corporate_account.corporate_account.users.min_by(&:id)&.email || "No contact email" %></p>
+      <%= render PanelsUI::PageHeader.new(title: @hotel_corporate_account.corporate_account.name) do |header| %>
+        <% header.with_caption do %>
+          <%= @hotel_corporate_account.corporate_account.users.min_by(&:id)&.email || "No contact email" %>
+        <% end %>
+      <% end %>
     </div>
-
-  </header>
+  </div>
 
   <%= form_with url: hotel_ar_statement_path(current_hotel, @hotel_corporate_account),
                 method: :get,

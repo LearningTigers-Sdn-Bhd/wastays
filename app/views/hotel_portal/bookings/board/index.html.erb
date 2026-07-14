@@ -2,49 +2,42 @@
   <%= turbo_frame_tag "booking_timeline_board", data: { turbo_action: "advance" } do %>
     <div class="<%= @presenter.page_spacing %>">
  <div class="<%= @presenter.container_padding %>">
-      <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div class="space-y-3">
-          <div>
-            <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Booking Timeline Board</h1>
-            <p class="mt-1 text-sm font-medium text-muted-foreground"><%= current_hotel.name %> · Centralized reservation management and planning</p>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            <span class="rounded-full border border-border bg-card px-3 py-1.5 text-foreground shadow-sm">
-              <%= board_date_range_label(@board_view_type, @start_date, @board_days) %>
-            </span>
-          </div>
-        </div>
-
-        <div class="relative inline-block text-left" data-controller="dropdown">
-          <button data-action="click->dropdown#toggle click@window->dropdown#hide" type="button" class="inline-flex items-center gap-x-1.5 rounded-xl bg-primary px-3.5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover active:scale-95 md:px-4" id="view-menu-button" aria-expanded="false" aria-haspopup="true">
-            <%= cached_icon board_view_icon(@board_view_type), stroke_width: 2.2, class: "size-4 text-primary-foreground" %>
-            <span><%= board_view_label(@board_view_type) %></span>
-            <%= cached_icon "chevron-down", stroke_width: 2.2, class: "-mr-1 size-4 text-muted-foreground" %>
-          </button>
-
-          <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-2xl bg-foreground text-background border border-border-interactive p-1.5 shadow-xl shadow-foreground/20 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="view-menu-button" tabindex="-1">
-            <div class="py-0.5" role="none">
-              <div class="px-3 py-1.5 text-[9px] font-bold text-background/60 uppercase tracking-widest border-b border-background/20 mb-1">Switch Board View</div>
-
-              <%= link_to board_hotel_bookings_path(current_hotel, @board_query_params.merge(view_type: "stay", room_type_id: nil, room_status: nil)),
-                          class: "group flex items-center px-3 py-2 text-xs font-bold rounded-xl transition #{ @board_view_type == 'stay' ? 'text-primary-foreground bg-primary' : 'text-background/80 hover:text-background hover:bg-background/10' }",
-                          role: "menuitem",
-                          data: { turbo_frame: "booking_timeline_board" } do %>
-                <%= cached_icon "calendar-days", stroke_width: 2.2, class: "mr-3 size-4 text-background/60 group-hover:text-background transition-colors" %>
-                Stay View
-              <% end %>
-
-              <%= link_to board_hotel_bookings_path(current_hotel, @board_query_params.merge(view_type: "room", start_date: Time.current.in_time_zone(current_hotel.hotel_time_zone).to_date.to_s)),
-                          class: "group flex items-center px-3 py-2 text-xs font-bold rounded-xl transition #{ @board_view_type == 'room' ? 'text-primary-foreground bg-primary' : 'text-background/80 hover:text-background hover:bg-background/10' }",
-                          role: "menuitem",
-                          data: { turbo_frame: "booking_timeline_board" } do %>
-                <%= cached_icon "layout-grid", stroke_width: 2.2, class: "mr-3 size-4 text-background/60 group-hover:text-background transition-colors" %>
-                Room View
-              <% end %>
+      <div class="space-y-3">
+        <%= render PanelsUI::PageHeader.new(title: "Booking Timeline Board", description: "Centralized reservation management and planning") do |header| %>
+          <% header.with_caption do %>
+            <div class="flex flex-wrap items-center gap-2">
+              <span><%= current_hotel.name %></span>
+              <span class="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-foreground shadow-sm">
+                <%= board_date_range_label(@board_view_type, @start_date, @board_days) %>
+              </span>
             </div>
-          </div>
-        </div>
+          <% end %>
+          <% header.with_actions do %>
+            <%= render PanelsUI::DropdownMenu.new(id: "bookings-board-view-menu", placement: :bottom_end, class: "w-48") do |menu| %>
+              <% menu.with_trigger(variant: :primary, size: :md, class: "w-full sm:w-auto") do %>
+                <%= cached_icon board_view_icon(@board_view_type), stroke_width: 2.2, class: "size-4" %>
+                <span><%= board_view_label(@board_view_type) %></span>
+                <%= cached_icon "chevron-down", stroke_width: 2.2, class: "size-4" %>
+              <% end %>
+              <% menu.with_group(label: "Switch Board View") do |group| %>
+                <% group.with_item(
+                     href: board_hotel_bookings_path(current_hotel, @board_query_params.merge(view_type: "stay", room_type_id: nil, room_status: nil)),
+                     variant: @board_view_type == "stay" ? :primary : :default,
+                     data: { turbo_frame: "booking_timeline_board" }) do %>
+                  <%= cached_icon "calendar-days", stroke_width: 2.2, class: "size-4" %>
+                  Stay View
+                <% end %>
+                <% group.with_item(
+                     href: board_hotel_bookings_path(current_hotel, @board_query_params.merge(view_type: "room", start_date: Time.current.in_time_zone(current_hotel.hotel_time_zone).to_date.to_s)),
+                     variant: @board_view_type == "room" ? :primary : :default,
+                     data: { turbo_frame: "booking_timeline_board" }) do %>
+                  <%= cached_icon "layout-grid", stroke_width: 2.2, class: "size-4" %>
+                  Room View
+                <% end %>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
       </div>
 
       <div class="mt-4 space-y-2">

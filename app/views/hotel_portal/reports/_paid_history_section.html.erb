@@ -1,42 +1,40 @@
 <% if feature_enabled_for_hotel?("excel_pdf_export") %>
   <div class="flex justify-end ">
     <% if @payout_history.blank? %>
-      <button type="button" disabled class="inline-flex min-w-[160px] cursor-not-allowed items-center justify-center rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-bold text-muted-foreground shadow-sm" title="No data available to export">
-        <%= cached_icon "download", class: "me-2 size-4" %>
-        Export
-      </button>
+      <%= render PanelsUI::Button.new(variant: :secondary, disabled: true, title: "No data available to export") do %>
+        <%= cached_icon "download", class: "me-2 size-4" %> Export
+      <% end %>
     <% else %>
-      <details class="relative min-w-[160px]">
-        <summary class="inline-flex w-full cursor-pointer list-none items-center justify-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted">
-          <%= cached_icon "download", class: "me-2 size-4" %>
-          Export
-        </summary>
-        <div class="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
-          <%= link_to "Export PDF", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :pdf), class: "block px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted", data: { turbo: false } %>
-          <%= link_to "Export Excel", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :xls), class: "block border-t border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted", data: { turbo: false } %>
-          <%= link_to "Export CSV", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :csv), class: "block border-t border-border px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted", data: { turbo: false } %>
-        </div>
-      </details>
+      <%= render "export_dropdown", menu_id: "paid-payouts-export", items: [
+        ["Export PDF", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :pdf)],
+        ["Export Excel", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :xls)],
+        ["Export CSV", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :csv)]
+      ] %>
     <% end %>
   </div>
 <% end %>
 
 <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
   <div class="border-b border-border bg-muted/70 px-6 py-5 sm:px-8">
-    <%= form_with url: payouts_hotel_reports_path(current_hotel), method: :get, class: "flex flex-col gap-4 md:flex-row md:items-end md:justify-end", data: { turbo_frame: "payouts_content" } do |f| %>
+    <%= form_with url: payouts_hotel_reports_path(current_hotel), method: :get, class: "flex flex-col gap-4 md:flex-row md:items-center md:justify-end", data: { controller: "date-preset", turbo_frame: "payouts_content" } do |f| %>
       <%= hidden_field_tag :tab, "paid" %>
-      <div class="max-w-xs flex-1">
-        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">From Date</label>
-        <%= f.date_field :paid_start_date, value: @paid_start_date, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
-      </div>
-      <div class="max-w-xs flex-1">
-        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">To Date</label>
-        <%= f.date_field :paid_end_date, value: @paid_end_date, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
-      </div>
-      <div class="flex items-center gap-2">
-        <%= f.submit "Filter", class: "inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" %>
-        <%= link_to "Reset", payouts_hotel_reports_path(current_hotel, tab: "paid"), class: "inline-flex items-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted", data: { turbo_frame: "payouts_content" } %>
-      </div>
+      <% paid_range = "#{@paid_start_date.iso8601}/#{@paid_end_date.iso8601}" if @paid_start_date && @paid_end_date %>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :paid_date_range, label: "Date Range", label_hidden: true, class: "w-full md:w-64") do |field| %>
+        <% field.with_date_picker(
+             range: true,
+             months: 2,
+             responsive_months: true,
+             value: paid_range,
+             placeholder: "Date range",
+             data: { action: "change->date-preset#submitDate" }) %>
+      <% end %>
+      <%= render PanelsUI::Button.new(
+            as: :a,
+            href: payouts_hotel_reports_path(current_hotel, tab: "paid"),
+            variant: :secondary,
+            data: { turbo_frame: "payouts_content" }) do %>
+        Reset
+      <% end %>
     <% end %>
   </div>
 

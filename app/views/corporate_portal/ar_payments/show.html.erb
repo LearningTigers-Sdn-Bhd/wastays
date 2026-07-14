@@ -3,7 +3,8 @@
     # Setup unified display variables
     if @intent.present?
       title = "Payment Attempt"
-      subtitle = "#{@intent.hotel.name} · #{@intent.status.humanize}"
+      description = @intent.hotel.name
+      header_status = @intent.status.humanize
 
       reference = @intent.external_reference.presence || @intent.gateway_order_id.presence || "Attempt ##{@intent.id}"
       currency = @intent.currency
@@ -25,7 +26,8 @@
       status_label = @intent.ar_payment&.allocation_status&.humanize || @intent.status.humanize
     else
       title = "Payment Record"
-      subtitle = "#{@payment.hotel.name} · Legacy Payment"
+      description = @payment.hotel.name
+      header_status = "Legacy Payment"
 
       reference = @payment.reference_number
       currency = @payment.currency
@@ -50,10 +52,11 @@
     money = ->(val) { "#{currency} #{format('%.2f', val)}" }
   %>
 
-  <div>
-    <h1 class="text-3xl font-bold tracking-tight text-foreground"><%= title %></h1>
-    <p class="mt-1 text-sm text-muted-foreground"><%= subtitle %></p>
-  </div>
+  <%= render PanelsUI::PageHeader.new(title: title, description: description) do |header| %>
+    <% header.with_caption do %>
+      <span class="inline-flex items-center rounded-md border border-border bg-muted px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-foreground"><%= header_status %></span>
+    <% end %>
+  <% end %>
 
   <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm" data-testid="payment-record-card">
     <header class="border-b border-border bg-muted/60 px-4 py-3 sm:px-5">

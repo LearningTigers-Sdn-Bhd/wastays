@@ -1,13 +1,13 @@
 <div class="w-full space-y-6">
-  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-    <div>
-      <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Exchange Rates</h1>
-      <p class="mt-1 text-sm font-medium text-muted-foreground">Manage global exchange rates. Hotels will use these for display conversion and OTA sync.</p>
-    </div>
-    <div class="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm">
-      Enterprise Multi-Base Support Enabled
-    </div>
-  </div>
+  <%= render PanelsUI::PageHeader.new(
+        title: "Exchange Rates",
+        description: "Manage global exchange rates. Hotels will use these for display conversion and OTA sync.") do |header| %>
+    <% header.with_caption do %>
+      <div class="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm">
+        Enterprise Multi-Base Support Enabled
+      </div>
+    <% end %>
+  <% end %>
 
   <div class="grid gap-6 xl:grid-cols-[360px_1fr]">
     <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">

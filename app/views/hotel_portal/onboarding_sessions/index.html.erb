@@ -1,13 +1,12 @@
 <div class="w-full space-y-6">
-  <div class="flex items-center justify-between gap-4">
-    <div>
-      <p class="text-sm font-medium text-muted-foreground">Hotel Portal</p>
-      <h1 class="text-3xl font-bold tracking-tight text-foreground">Onboarding Sessions</h1>
-      <p class="mt-2 text-sm text-muted-foreground">Review the onboarding and training sessions scheduled for your hotel.</p>
-    </div>
-
-    <%= link_to hotel_dashboard_path(current_hotel), class: "inline-flex items-center justify-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted" do %>
-      Back to Dashboard
+  <div>
+    <p class="text-sm font-medium text-muted-foreground">Hotel Portal</p>
+    <%= render PanelsUI::PageHeader.new(title: "Onboarding Sessions", description: "Review the onboarding and training sessions scheduled for your hotel.") do |header| %>
+      <% header.with_actions do %>
+        <%= render PanelsUI::Button.new(as: :a, href: hotel_dashboard_path(current_hotel), variant: :secondary, size: :md, class: "w-full lg:w-auto") do %>
+          Back to Dashboard
+        <% end %>
+      <% end %>
     <% end %>
   </div>
 

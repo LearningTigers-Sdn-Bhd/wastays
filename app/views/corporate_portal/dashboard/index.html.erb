@@ -1,7 +1,6 @@
-<div>
-  <h1 class="text-3xl font-bold tracking-tight">Corporate dashboard</h1>
-  <p class="mt-2 text-muted-foreground">Hotels currently connected to <%= current_user.account.name %>.</p>
-</div>
+<%= render PanelsUI::PageHeader.new(
+      title: "Corporate dashboard",
+      description: "Hotels currently connected to #{current_user.account.name}.") %>
 
 <section class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
   <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">

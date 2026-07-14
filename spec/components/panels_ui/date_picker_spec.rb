@@ -58,6 +58,22 @@ RSpec.describe PanelsUI::DatePicker, type: :component do
     expect(page).to have_css("[role='listbox'][aria-label='Choose year'] [role='option']", count: 7, visible: :all)
   end
 
+  it "exposes responsive two-month range configuration" do
+    render_inline(described_class.new(
+      form: form_for,
+      attribute: :window,
+      range: true,
+      months: 2,
+      responsive_months: true,
+      value: "2026-07-01/2026-07-31"
+    ))
+
+    root = page.find(".panel-date-picker")
+    expect(root["data-panels-ui--date-picker-months-value"]).to eq("2")
+    expect(root["data-panels-ui--date-picker-responsive-months-value"]).to eq("true")
+    expect(page).to have_css("input[value='2026-07-01/2026-07-31']", visible: :all)
+  end
+
   it "exposes validation and label relationships on the visible trigger" do
     render_inline(described_class.new(
       form: form_for, attribute: :window, labelled_by: "booking_window-label",

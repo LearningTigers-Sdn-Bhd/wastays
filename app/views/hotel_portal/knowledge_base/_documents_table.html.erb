@@ -7,19 +7,14 @@
 <% end %>
 
 <div class="w-full space-y-8">
-  <div class="">
-    <div class="mt-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"><%= title %></h1>
-        <p class="mt-1 text-sm font-medium text-muted-foreground"><%= subtitle %></p>
-      </div>
-
-      <%= link_to kb_new_path, class: "inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" do %>
+  <%= render PanelsUI::PageHeader.new(title: title, description: subtitle) do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(as: :a, href: kb_new_path, variant: :primary, size: :md, class: "w-full lg:w-auto") do %>
         <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
         <%= add_button_text %>
       <% end %>
-    </div>
-  </div>
+    <% end %>
+  <% end %>
 
   <%= render "hotel_portal/settings/group_tabs" %>
 
@@ -128,9 +123,11 @@
                       Edit Details
                     <% end %>
                     <% if doc.hotel.ai_concierge_enabled? && %w[pending failed].include?(doc.embedding_status) %>
-                      <%= button_to kb_reindex_path(doc), method: :post, class: "flex w-full items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-foreground hover:bg-muted hover:text-foreground transition-colors" do %>
-                        <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-                        <%= doc.embedding_status == "failed" ? "Retry Embeddings" : "Generate Embeddings" %>
+                      <%= form_with url: kb_reindex_path(doc), method: :post do %>
+                        <%= render PanelsUI::Button.new(as: :button, type: "submit", variant: :ghost, size: :sm, class: "w-full justify-start") do %>
+                          <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                          <%= doc.embedding_status == "failed" ? "Retry Embeddings" : "Generate Embeddings" %>
+                        <% end %>
                       <% end %>
                     <% end %>
                     <%= link_to kb_show_path(doc), data: { turbo_method: :delete, turbo_confirm: "Delete this document and its chunks? This cannot be undone." }, class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors" do %>

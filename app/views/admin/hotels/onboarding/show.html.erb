@@ -12,13 +12,15 @@
       <!-- Hotel Header -->
       <section class="rounded-2xl border border-border bg-card shadow-sm">
         <div class="px-6 py-6 sm:px-8">
-          <div class="flex items-center gap-3">
-            <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"><%= @hotel.name %></h1>
-            <span class="inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200">
-              <%= @hotel.status.titleize %>
-            </span>
-          </div>
-          <p class="mt-2 text-sm font-medium text-muted-foreground"><%= @hotel.city %>, <%= @hotel.country %></p>
+          <%= render PanelsUI::PageHeader.new(
+                title: safe_join([
+                  @hotel.name,
+                  tag.span(@hotel.status.titleize, class: "inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200")
+                ], " ")) do |header| %>
+            <% header.with_caption do %>
+              <%= @hotel.city %>, <%= @hotel.country %>
+            <% end %>
+          <% end %>
         </div>
       </section>
 

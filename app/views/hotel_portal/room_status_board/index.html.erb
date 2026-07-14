@@ -3,20 +3,17 @@
 
 <div class="w-full <%= @presenter.page_spacing %>">
   <div class="<%= @presenter.container_padding %>">
-    <%# Header Section %>
-    <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-      <div class="space-y-3">
-        <div>
-          <h1 class="font-bold tracking-tight text-foreground <%= @presenter.title_class %>">Room Status</h1>
-          <p class="mt-1 font-medium text-muted-foreground <%= @presenter.subtitle_class %>"><%= current_hotel.name %> · Live room status and occupancy timeline</p>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-          <span class="rounded-full border border-border bg-card px-3 py-1.5 text-foreground shadow-sm">
-            <%= @presenter.formatted_date_range %>
-          </span>
-        </div>
-      </div>
+    <div class="space-y-3">
+      <%= render PanelsUI::PageHeader.new(title: "Room Status", description: "Live room status and occupancy timeline") do |header| %>
+        <% header.with_caption do %>
+          <div class="flex flex-wrap items-center gap-2">
+            <span><%= current_hotel.name %></span>
+            <span class="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-foreground shadow-sm">
+              <%= @presenter.formatted_date_range %>
+            </span>
+          </div>
+        <% end %>
+      <% end %>
     </div>
 
     <div class="mt-4 space-y-2">

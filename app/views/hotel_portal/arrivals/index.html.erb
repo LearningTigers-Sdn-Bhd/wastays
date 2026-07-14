@@ -1,33 +1,30 @@
 <div class="w-full space-y-8">
- <div>
-    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Arrival Board</h1>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">Track and manage guest arrivals for <%= arrivals_header_date(@date) %>.</p>
-      </div>
-
+  <%= render PanelsUI::PageHeader.new(title: "Arrival Board", description: "Track and manage guest arrivals.") do |header| %>
+    <% header.with_caption do %>
+      <%= arrivals_header_date(@date) %>
+    <% end %>
+    <% header.with_actions do %>
       <div class="flex flex-col w-full gap-2 sm:flex-row sm:items-center sm:w-auto">
         <div class="inline-flex w-full sm:w-auto bg-muted rounded-xl p-1 shadow-sm border border-border">
-          <%= link_to hotel_arrivals_path(current_hotel, date: Date.today, q: @query.presence),
-              class: "flex-1 sm:flex-none py-1.5 px-4 inline-flex items-center justify-center gap-x-2 text-sm font-semibold rounded-lg transition #{ @date == Date.today ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground' }" do %>
+          <%= render PanelsUI::Button.new(href: hotel_arrivals_path(current_hotel, date: Date.today, q: @query.presence), variant: @date == Date.today ? :neutral : :ghost, size: :sm, class: "flex-1 sm:flex-none") do %>
             Today
             <span class="inline-flex items-center py-0.5 px-1.5 rounded-full text-[10px] font-bold bg-muted text-foreground"><%= @today_count %></span>
           <% end %>
-          <%= link_to hotel_arrivals_path(current_hotel, date: Date.tomorrow, q: @query.presence),
-              class: "flex-1 sm:flex-none py-1.5 px-4 inline-flex items-center justify-center gap-x-2 text-sm font-semibold rounded-lg transition #{ @date == Date.tomorrow ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground' }" do %>
+          <%= render PanelsUI::Button.new(href: hotel_arrivals_path(current_hotel, date: Date.tomorrow, q: @query.presence), variant: @date == Date.tomorrow ? :neutral : :ghost, size: :sm, class: "flex-1 sm:flex-none") do %>
             Tomorrow
             <span class="inline-flex items-center py-0.5 px-1.5 rounded-full text-[10px] font-bold bg-muted text-foreground"><%= @tomorrow_count %></span>
           <% end %>
         </div>
 
-        <%= form_with url: hotel_arrivals_path(current_hotel), method: :get, class: "flex items-center w-full sm:w-auto" do |f| %>
+        <%= form_with url: hotel_arrivals_path(current_hotel), method: :get, class: "w-full sm:w-auto", data: { controller: "auto-submit", action: "input->auto-submit#submitNow" } do |f| %>
           <%= f.hidden_field :q, value: @query %>
-          <%= f.date_field :date, value: @date, onchange: "this.form.submit()",
-              class: "w-full sm:w-auto rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
+          <%= render PanelsUI::FormField.new(form: f, attribute: :date, label: "Arrival date", label_hidden: true, size: :md, class: "w-full sm:w-auto") do |field| %>
+            <% field.with_date_picker(value: @date.iso8601, class: "w-full sm:w-auto") %>
+          <% end %>
         <% end %>
       </div>
-    </div>
-  </div>
+    <% end %>
+  <% end %>
 
   <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
     <div class="flex items-center justify-between border-b border-border px-8 py-6">

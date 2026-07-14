@@ -2,10 +2,9 @@
 
 <div class="w-full space-y-8">
 
-  <%# ─── PAGE TITLE ─── %>
   <div>
-    <h1 class="text-3xl font-bold tracking-tight text-foreground">Hotel Dashboard</h1>
-    <p class="mt-1 text-sm font-medium text-muted-foreground">Welcome back <%= @current_hotel.name %> to your hotel management panel.</p>
+    <%= render PanelsUI::PageHeader.new(title: "Hotel Dashboard", description: "Welcome back to your hotel management panel.") %>
+    <p class="mt-1 text-sm font-medium text-muted-foreground"><%= @current_hotel.name %></p>
   </div>
 
   <%# ─── ONBOARDING WIZARD ─── %>

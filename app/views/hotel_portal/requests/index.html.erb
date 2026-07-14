@@ -1,13 +1,9 @@
 <% content_for :title, "Requests | WAStays" %>
 
 <div class="w-full space-y-5">
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <h1 class="text-2xl font-black tracking-tight text-foreground">Requests Board</h1>
-    </div>
-
-    <div class="flex items-center gap-4">
-      <div class="flex gap-2 text-[10px] font-black uppercase tracking-wider">
+  <%= render PanelsUI::PageHeader.new(title: "Requests Board") do |header| %>
+    <% header.with_caption do %>
+      <div class="flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-wider">
         <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
           Housekeeping <%= @presenter.board_counts[:housekeeping] %>
         </span>
@@ -21,13 +17,14 @@
           Checkouts <%= @presenter.board_counts[:checkout] %>
         </span>
       </div>
-
-      <%= link_to hotel_request_archive_path(current_hotel), class: "inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted" do %>
+    <% end %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(as: :a, href: hotel_request_archive_path(current_hotel), variant: :secondary, size: :md, class: "w-full lg:w-auto") do %>
         <%= cached_icon "cube", library: "phosphor", variant: "regular", class: "size-4" %>
         Archives
       <% end %>
-    </div>
-  </div>
+    <% end %>
+  <% end %>
 
   <div class="rounded-2xl border border-border bg-card p-4 shadow-sm">
     <%= form_with url: hotel_requests_path(current_hotel), method: :get, data: { controller: "auto-submit", turbo_frame: "requests_board_results" }, class: "grid gap-4 md:grid-cols-[1fr_200px_auto]" do |f| %>

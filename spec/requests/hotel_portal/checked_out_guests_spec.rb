@@ -108,7 +108,7 @@ RSpec.describe "HotelPortal::CheckedOutGuests", type: :request do
       get hotel_checked_out_guests_path(hotel)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Today's Check-Outs")
+      expect(response.parsed_body.at_css(".panel-page-header__title").text).to eq("Today's Check-Outs")
       expect(response.body).to include("Guests who completed check-out today at your hotel.")
       expect(response.body).to include(early_checkout_booking.guest_name)
       expect(response.body).to include(latest_checkout_booking.guest_name)

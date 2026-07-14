@@ -1,8 +1,5 @@
 <div class="w-full space-y-8" data-controller="concierge-qr">
- <div>
-    <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Concierge QR Code</h1>
-    <p class="mt-1 text-sm font-medium text-muted-foreground">Print and display this QR code at your front desk. Guests scan it to check in, check out, book, request, or contact you.</p>
-  </div>
+  <%= render PanelsUI::PageHeader.new(title: "Concierge QR Code", description: "Print and display this QR code at your front desk. Guests scan it to check in, check out, book, request, or contact you.") %>
 
   <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
     <!-- Printable area -->

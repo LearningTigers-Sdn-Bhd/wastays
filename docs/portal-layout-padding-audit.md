@@ -9,9 +9,16 @@ _Last audited: 2026-07-12 (branch `refactor/ui-dependency`)._
 > **Phase 1 — DONE (2026-07-12).** Stripped the `mt-5` top-pad wrapper from 62
 > page headers across admin / hotel / guest. Intentional `mt-5` uses (forms,
 > stats `<dl>` grids, section spacing, offcanvas) were left untouched. The **T**
-> flags below are now historical — they mark pages that _were_ fixed, not
-> outstanding work. Remaining phases: `PanelsUI::PageHeader` component (Phase 2),
-> `R`/`X` cleanup + edge-bleed policy (Phase 3).
+> flags below are historical.
+>
+> **Phase 2 — DONE (2026-07-14).** Conventional page headers across admin,
+> hotel, corporate, and guest now render `PanelsUI::PageHeader`. The component
+> uses a compact `text-base` semantic heading, exposes descriptions through an
+> accessible click/keyboard popover, provides a visible caption slot for page
+> context, and retains a responsive actions region. Back links, eyebrows, and
+> record statuses remain visible page composition; identifiers and dates use the
+> caption slot. Workspace, auth, drawer, modal, record-card, and print
+> headers remain intentionally specialized.
 
 ## How the layout system works
 
@@ -21,7 +28,7 @@ Every portal shares the same shell: sticky navbar → optional breadcrumb bar �
 The standard padding lives in one place — `app/assets/tailwind/panel/page.css`:
 
 ```css
-.panel-page            { @apply w-full p-5 pb-36 sm:p-6 lg:pb-20; }  /* the standard */
+.panel-page            { @apply w-full p-4; }                         /* the standard */
 .panel-page--workspace { @apply flex min-h-0 flex-1 flex-col p-0; }  /* full_height_page opt-out */
 ```
 
@@ -39,14 +46,11 @@ comes from page templates fighting that standard.**
 
 ### Header situation
 
-Two shared header partials exist but **no role page renders either**:
-
-- `app/views/shared/dashboard/_page_header.html.erb` — clean, no top margin.
-- `app/views/shared/components/_page_header.html.erb` — ships `mt-5` + `px-4`.
-
-Every page hand-rolls its header inline or via a local `_header` partial, so
-**"custom header" is effectively `true` everywhere a header exists**, and the
-`mt-5` habit got copy-pasted into ~65 pages.
+The original audit found two unused shared partials and hand-rolled headers on
+every role page. Phase 2 now routes conventional page headings through
+`PanelsUI::PageHeader`; the older shared partials remain legacy code and are not
+used by the migrated portal pages. The per-portal tables below are the pre-Phase
+2 inventory and retain their original custom-header classifications for history.
 
 ---
 
@@ -193,7 +197,7 @@ Corporate is the **most consistent** portal — AR pages already use extracted
 ## Root-cause summary
 
 1. **`mt-5` on the header block is the dominant offender** — ~65 pages carry it,
-   stacking "big padding top" on top of the shell's `p-5/p-6`. Pages without it
+   stacking "big padding top" on top of the shell's padding. Pages without it
    (e.g. `hotel_portal/dashboard/index` vs `admin/hotels/index`) sit at the
    correct height. Single biggest lever.
 2. **No page uses a shared header component** — every header is inline or a local
@@ -206,7 +210,7 @@ Corporate is the **most consistent** portal — AR pages already use extracted
    `bookings/index` has `-mx-0.5`+`px-0.5` on a filter-chip row (focus-ring
    clearance), and `inventory_audit_logs` uses the standard Preline table pattern
    `-m-1.5` wrapping an inner `p-1.5` (scrollbar breathing room). A grep for
-   negative margins large enough to escape `panel-page`'s `p-5/p-6` returns
+   negative margins large enough to escape `panel-page`'s `p-4` returns
    nothing. No full-bleed override exists — nothing to normalize.
 4. **`W` workspace (`full_height_page` → `p-0`) — one page, now padded to match.**
    Only `hotel_portal/booking_control_panels/show` opts in; its `work_area` is a
@@ -227,14 +231,16 @@ Corporate is the **most consistent** portal — AR pages already use extracted
 
 ## Final status
 
-The only real inconsistency in the entire audit was the `mt-5` header top-pad,
-fixed in Phase 1 (62 pages). Edge-bleed (`X`), workspace (`W`), and root-pad (`R`)
-all verified as non-issues or intentional. Padding is now normalized across all
-four portals. Remaining optional work is purely elective:
-`PanelsUI::PageHeader` component (deferred — not being built now).
+The original `mt-5` header top-pad was fixed in Phase 1. Phase 2 replaced
+conventional inline and local-partial headers with `PanelsUI::PageHeader` across
+all four portals, including newer AR, agent-account, and housekeeping headers
+that had reintroduced header-owned `mt-*`, `pt-*`, or `px-*` spacing. Edge-bleed
+(`X`), workspace (`W`), and root-pad (`R`) remain verified as non-issues or
+intentional exceptions.
 
 ### Suggested standard
 
-Header block should be a bare `<div class="space-y-1">` (or a shared
-`PanelsUI::PageHeader`) with **zero** top margin; `.panel-page` owns all edge
-padding; only `full_height_page` opts out.
+Conventional pages should render `PanelsUI::PageHeader` with **zero** top margin
+or horizontal page padding; `.panel-page` owns all edge padding. Concise visible
+record metadata belongs in the component's caption slot, and only
+`full_height_page` opts out.

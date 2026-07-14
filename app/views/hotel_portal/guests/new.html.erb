@@ -6,10 +6,10 @@
     <% end %>
   </div>
 
-  <div class="space-y-2 mb-8">
-    <h1 class="text-2xl font-bold text-foreground">Add New Guest Profile</h1>
-    <p class="text-sm text-muted-foreground">Create a permanent guest record to track their history across stays.</p>
-  </div>
+  <%= render PanelsUI::PageHeader.new(
+        title: "Add New Guest Profile",
+        description: "Create a permanent guest record to track their history across stays.",
+        class: "mb-8") %>
 
   <%= render "form", guest: @guest %>
 </div>

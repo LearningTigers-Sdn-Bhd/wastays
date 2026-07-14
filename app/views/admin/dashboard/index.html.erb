@@ -2,11 +2,9 @@
 
 <div class="w-full space-y-8">
 
-  <%# ─── PAGE TITLE ─── %>
-  <div class="">
-    <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Dashboard</h1>
-    <p class="mt-1 text-sm font-medium text-muted-foreground">Platform overview and real-time operational status.</p>
-  </div>
+  <%= render PanelsUI::PageHeader.new(
+        title: "Dashboard",
+        description: "Platform overview and real-time operational status.") %>
 
   <%# ─── TOP HEADER: FINANCIAL SUMMARY ─── %>
   <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-4">

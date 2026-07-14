@@ -1,5 +1,7 @@
 <div class="w-full space-y-8">
-  <%= render "shared/components/page_header", title: "Audit Logs", subtitle: "Review platform activity and operational changes across all hotels." %>
+  <%= render PanelsUI::PageHeader.new(
+        title: "Audit Logs",
+        description: "Review platform activity and operational changes across all hotels.") %>
 
   <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
     <div class="flex flex-col gap-4 border-b border-border bg-muted/70 px-6 py-4 sm:px-8 xl:flex-row xl:items-end">

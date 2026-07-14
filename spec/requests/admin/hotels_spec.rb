@@ -17,8 +17,8 @@ RSpec.describe 'Admin::Hotels', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('Create Hotel')
-      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Create Hotel')
-      expect(response.body).to include('class="mt-2 text-sm font-medium text-muted-foreground sm:text-base">Set up the hotel profile and partner account before the property starts receiving bookings.')
+      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("Create Hotel")
+      expect(Nokogiri::HTML(response.body).at_css(".panel-page-header__description").text).to eq("Set up the hotel profile and partner account before the property starts receiving bookings.")
       expect(response.body).to include('Set up the hotel profile and partner account before the property starts receiving bookings.')
       expect(response.body).to include('Property Profile')
       expect(response.body).to include('class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Property Profile')
@@ -132,8 +132,8 @@ RSpec.describe 'Admin::Hotels', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('Back to Hotels')
-      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">')
-      expect(response.body).to include('class="mt-2 text-sm font-medium text-muted-foreground sm:text-base">Review hotel details, account ownership, and current operating performance before taking action.')
+      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to include(hotel.name)
+      expect(Nokogiri::HTML(response.body).at_css(".panel-page-header__description").text).to eq("Review hotel details, account ownership, and current operating performance before taking action.")
       expect(response.body).to include('Review hotel details, account ownership, and current operating performance before taking action.')
       expect(response.body).to include('Suspend')
       expect(response.body).not_to include('Suspend Hotel')
@@ -174,8 +174,8 @@ RSpec.describe 'Admin::Hotels', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('Edit Hotel Details')
-      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Edit Hotel Details')
-      expect(response.body).to include(%(class="mt-2 text-sm font-medium text-muted-foreground sm:text-base">Manage profile information for #{hotel.name} and return to the hotel detail workspace when you are done.))
+      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("Edit Hotel Details")
+      expect(Nokogiri::HTML(response.body).at_css(".panel-page-header__description").text).to eq("Manage profile information for #{hotel.name} and return to the hotel detail workspace when you are done.")
       expect(response.body).to include("Manage profile information for #{hotel.name} and return to the hotel detail workspace when you are done.")
       expect(response.body).to include('Property Profile')
       expect(response.body).to include('class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Property Profile')

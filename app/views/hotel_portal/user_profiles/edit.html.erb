@@ -1,9 +1,8 @@
 <div class="w-full">
-  <div class="max-w-2xl mx-auto">
-    <div class="text-center mb-10">
-      <h1 class="text-3xl font-bold text-foreground">My Profile</h1>
-      <p class="mt-2 text-sm text-muted-foreground">Update your account information and password.</p>
-    </div>
+  <div class="mx-auto max-w-2xl space-y-10">
+    <%= render PanelsUI::PageHeader.new(
+          title: "My Profile",
+          description: "Update your account information and password.") %>
 
     <div class="bg-card border border-border rounded-xl shadow-sm overflow-hidden p-6">
       <%= form_with model: @user, url: hotel_user_profile_path, local: true, class: "space-y-6" do |f| %>

@@ -72,8 +72,10 @@ module HotelPortal
 
       @processing_batches = current_hotel.payout_batches.where(status: "processing")
 
-      @paid_start_date = parse_date_param(params[:paid_start_date])
-      @paid_end_date = parse_date_param(params[:paid_end_date])
+      paid_range_start, paid_range_end = parse_report_date_range_param(params[:paid_date_range])
+      @paid_start_date = paid_range_start || parse_date_param(params[:paid_start_date])
+      @paid_end_date = paid_range_end || parse_date_param(params[:paid_end_date])
+      @paid_end_date = @paid_start_date if @paid_start_date && @paid_end_date && @paid_end_date < @paid_start_date
 
       @payout_history = current_hotel.payout_batches_for_reports(
         start_date: @paid_start_date,
@@ -597,10 +599,21 @@ module HotelPortal
     def parse_report_date_range
       # Handle date_preset parameter (e.g., "2026-05", "this_month", "custom")
       date_preset = params[:date_preset].presence
-      date_preset ||= "custom" if params[:start_date].present? || params[:end_date].present?
+      date_preset ||= "custom" if params[:date_range].present? || params[:start_date].present? || params[:end_date].present?
       date_preset ||= "legacy_date" if params[:date].present?
       date_preset ||= default_report_date_preset
       @date_preset = date_preset
+
+      # Export links carry the resolved dates alongside the preset. Prefer those
+      # explicit dates so relative presets cannot shift across a date boundary.
+      explicit_start = parse_single_report_date(params[:start_date])
+      explicit_end = parse_single_report_date(params[:end_date])
+      if explicit_start || explicit_end
+        start_date = explicit_start || explicit_end
+        end_date = explicit_end || start_date
+        end_date = start_date if end_date < start_date
+        return [ start_date, end_date ]
+      end
 
       if date_preset.present?
         case date_preset
@@ -616,8 +629,9 @@ module HotelPortal
         when "this_month"
           return [ Date.current.beginning_of_month, Date.current.end_of_month ]
         when "custom"
-          start = parse_single_report_date(params[:start_date]) || Date.current.beginning_of_month
-          end_date = parse_single_report_date(params[:end_date]) || Date.current.end_of_month
+          range_start, range_end = parse_report_date_range_param(params[:date_range])
+          start = range_start || parse_single_report_date(params[:start_date]) || Date.current.beginning_of_month
+          end_date = range_end || parse_single_report_date(params[:end_date]) || Date.current.end_of_month
           end_date = start if end_date < start
           return [ start, end_date ]
         when "legacy_date"
@@ -638,14 +652,7 @@ module HotelPortal
         return [ parsed_date, parsed_date ]
       end
 
-      start_date = parse_single_report_date(params[:start_date])
-      end_date = parse_single_report_date(params[:end_date])
-
-      start_date ||= end_date || Date.current
-      end_date ||= start_date
-      end_date = start_date if end_date < start_date
-
-      [ start_date, end_date ]
+      [ Date.current, Date.current ]
     end
 
     def parse_single_report_date(value)
@@ -654,6 +661,16 @@ module HotelPortal
       Date.parse(value.to_s)
     rescue ArgumentError, TypeError
       nil
+    end
+
+    def parse_report_date_range_param(value)
+      endpoints = value.to_s.split("/", -1)
+      return [ nil, nil ] unless endpoints.length == 2
+
+      dates = endpoints.map { |endpoint| Date.iso8601(endpoint) }
+      dates.all? ? dates : [ nil, nil ]
+    rescue ArgumentError, TypeError
+      [ nil, nil ]
     end
 
     def parse_deposit_liability_date

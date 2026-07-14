@@ -37,7 +37,7 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
       get path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(%(class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">#{heading}))
+      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq(heading)
     end
   end
 
@@ -46,7 +46,7 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include('class="w-full space-y-8"')
-    expect(response.body).to include('text-2xl font-bold tracking-tight text-foreground sm:text-3xl">API Access Management')
+    expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("API Access Management")
     expect(response.body).to include('Manage programmatic access for chatbots and external integrations.')
   end
 
@@ -131,7 +131,7 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include('class="w-full space-y-8"')
-    expect(response.body).to include('text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Revenue &amp; Margin Analytics')
+    expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("Revenue & Margin Analytics")
   end
 
   it 'renders analytics filters inside the daily breakdown section' do

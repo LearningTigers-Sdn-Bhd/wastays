@@ -1,8 +1,7 @@
 <div class="w-full space-y-6">
-  <div>
-    <h1 class="text-3xl font-bold tracking-tight text-foreground">Corporate Profile</h1>
-    <p class="mt-1 text-sm text-muted-foreground">Your corporate account and linked hotel relationships.</p>
-  </div>
+  <%= render PanelsUI::PageHeader.new(
+        title: "Corporate Profile",
+        description: "Your corporate account and linked hotel relationships.") %>
 
   <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
     <h2 class="text-lg font-bold text-foreground"><%= @account.name %></h2>

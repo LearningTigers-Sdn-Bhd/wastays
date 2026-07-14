@@ -1,17 +1,14 @@
 <div class="w-full space-y-8">
-  <div class="">
- <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Payment Issues</h1>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">Monitor payment callbacks that need a manual review or booking retry.</p>
-      </div>
-
+  <%= render PanelsUI::PageHeader.new(
+        title: "Payment Issues",
+        description: "Monitor payment callbacks that need a manual review or booking retry.") do |header| %>
+    <% header.with_caption do %>
       <div class="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700">
         <span class="size-2.5 rounded-full bg-red-500"></span>
         <%= pluralize(@summary_failed_events, "issue") %> currently need attention
       </div>
-    </div>
-  </div>
+    <% end %>
+  <% end %>
 
   <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-4">
     <div class="p-6 md:border-r md:border-border md:p-8">
@@ -204,4 +201,3 @@
     </div>
     </div>
     </div>
-

@@ -5,12 +5,9 @@
 <% example_refund = refund_percentage_value.present? ? (200.0 * (refund_percentage_value / 100.0)).round(2) : nil %>
 
 <div class="w-full space-y-8">
-  <div class="">
- <div>
-      <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Refund Policy</h1>
-      <p class="mt-1 text-sm font-medium text-muted-foreground">Set the global rules for guest refund eligibility across the platform.</p>
-    </div>
-  </div>
+  <%= render PanelsUI::PageHeader.new(
+        title: "Refund Policy",
+        description: "Set the global rules for guest refund eligibility across the platform.") %>
 
   <% unless policy_configured %>
     <div class="rounded-2xl border border-amber-200 bg-amber-50 px-6 py-4">

@@ -1,17 +1,12 @@
 <div class="w-full space-y-8">
-  <div class="">
- <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Nearby Attractions</h1>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">Show guests what to explore around your property.</p>
-      </div>
-
-      <%= link_to new_hotel_nearby_attraction_path(current_hotel), class: "inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" do %>
+  <%= render PanelsUI::PageHeader.new(title: "Nearby Attractions", description: "Show guests what to explore around your property.") do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(as: :a, href: new_hotel_nearby_attraction_path(current_hotel), variant: :primary, size: :md, class: "w-full lg:w-auto") do %>
         <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
         Add Nearby Attraction
       <% end %>
-    </div>
-  </div>
+    <% end %>
+  <% end %>
 
   <%= render "hotel_portal/settings/group_tabs" %>
 

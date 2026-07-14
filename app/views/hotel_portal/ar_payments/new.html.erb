@@ -1,11 +1,11 @@
 <div class="w-full space-y-6" data-controller="ar-payment-form" data-ar-payment-form-invoices-url-value="<%= eligible_invoices_hotel_ar_payments_path(current_hotel) %>">
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-    <div>
-      <p class="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Accounts Receivable</p>
-      <h1 class="mt-1 text-3xl font-bold tracking-tight text-foreground">Record Corporate Payment</h1>
-      <p class="mt-1 text-sm text-muted-foreground">Record funds now and allocate all, some, or none to open invoices.</p>
-    </div>
-    <%= link_to "Back to AR Payments", hotel_ar_payments_path(current_hotel), class: "rounded-xl border border-border bg-card px-4 py-2 text-sm font-bold text-foreground shadow-sm" %>
+  <div>
+    <p class="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Accounts Receivable</p>
+    <%= render PanelsUI::PageHeader.new(title: "Record Corporate Payment", description: "Record funds now and allocate all, some, or none to open invoices.") do |header| %>
+      <% header.with_actions do %>
+        <%= render PanelsUI::Button.new(label: "Back to AR Payments", as: :a, href: hotel_ar_payments_path(current_hotel), variant: :secondary, size: :md, class: "w-full lg:w-auto") %>
+      <% end %>
+    <% end %>
   </div>
 
   <% if @ar_payment_error.present? %>
