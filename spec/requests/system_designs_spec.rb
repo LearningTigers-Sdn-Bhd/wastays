@@ -3,6 +3,47 @@
 require "rails_helper"
 
 RSpec.describe "System design showcase", type: :request do
+  PREVIEW_PARTIALS = %w[
+    alert_preview
+    avatar_preview
+    badge_preview
+    banner_preview
+    breadcrumb_preview
+    button_preview
+    button_group_preview
+    card_preview
+    checkbox_preview
+    collapsible_preview
+    combobox_preview
+    date_picker_preview
+    date_time_picker_preview
+    dialog_preview
+    dropdown_menu_preview
+    file_upload_preview
+    form_fields_preview
+    form_submission_preview
+    kbd_preview
+    loading_preview
+    metric_card_preview
+    multi_select_preview
+    native_select_preview
+    navbar_preview
+    page_header_preview
+    popover_preview
+    radio_preview
+    scroll_area_preview
+    select_menu_preview
+    separator_preview
+    sheet_preview
+    sidebar_preview
+    switch_preview
+    table_preview
+    tabs_preview
+    time_picker_preview
+    toast_preview
+    tooltip_preview
+  ].freeze
+
   it "uses its asset-enabled layout without application chrome" do
     get system_design_path
 
@@ -75,6 +116,29 @@ RSpec.describe "System design showcase", type: :request do
     expect(response.body).to include('data-controller="system-designs--form-submission-preview"')
     expect(response.body).to include('id="system-design-reservation-form"')
     expect(response.body).to include('data-turbo-submits-with="Saving…"')
+  end
+
+  it "lists and renders every preview in alphabetical order" do
+    get system_design_path
+
+    document = Nokogiri::HTML(response.body)
+    previews = document.css("[data-preview-partial]")
+    desktop_links = document.css('aside nav[aria-label="Component previews"] a')
+
+    expect(previews.map { |preview| preview["data-preview-partial"] }).to eq(PREVIEW_PARTIALS)
+    expect(desktop_links.map { |link| link.text.strip.downcase }).to eq(
+      desktop_links.map { |link| link.text.strip.downcase }.sort
+    )
+    expect(document.css('nav[aria-label="Component previews"]').size).to eq(2)
+
+    PREVIEW_PARTIALS.each do |partial|
+      anchor = partial.tr("_", "-")
+      preview = document.at_css("##{anchor}")
+
+      expect(preview).to be_present
+      expect(preview.text).to include("_#{partial}.html.erb")
+      expect(document.css("a[href='##{anchor}']").size).to eq(2)
+    end
   end
 
   describe "POST submit-form" do
