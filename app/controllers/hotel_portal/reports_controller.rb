@@ -7,7 +7,7 @@ module HotelPortal
     include FinancialFiltering
 
     PAYOUT_TABS = %w[upcoming paid].freeze
-    GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards].freeze
+    GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards bibo].freeze
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
 
     before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability guest_reports folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
@@ -310,17 +310,26 @@ module HotelPortal
     def guest_reports
       @active_guest_report_tab = GUEST_REPORT_TABS.include?(params[:tab]) ? params[:tab] : "arrivals"
       @report_start_date, @report_end_date = parse_report_date_range
+
       @report = HotelPortal::Reports::ArrivalsDeparturesReport.new(
         hotel: current_hotel,
         start_date: @report_start_date,
         end_date: @report_end_date
       ).call
-      load_guest_registration_cards(start_date: @report.start_date, end_date: @report.end_date)
+
+      if @active_guest_report_tab == "bibo"
+        @bibo_report = HotelPortal::Reports::BiboReport.new(
+          hotel: current_hotel,
+          start_date: @report_start_date,
+          end_date: @report_end_date
+        ).call
+      end
+      load_guest_registration_cards(start_date: @report_start_date, end_date: @report_end_date)
 
       respond_to do |format|
         format.html
         format.csv do
-          return head :not_acceptable if @active_guest_report_tab == "registration_cards"
+          return head :not_acceptable if %w[registration_cards bibo].include?(@active_guest_report_tab)
 
           csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: @report, tab: @active_guest_report_tab).generate
           send_data csv,
@@ -328,7 +337,7 @@ module HotelPortal
             type: "text/csv"
         end
         format.any(:xls) do
-          return head :not_acceptable if @active_guest_report_tab == "registration_cards"
+          return head :not_acceptable if %w[registration_cards bibo].include?(@active_guest_report_tab)
 
           workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(report: @report, tab: @active_guest_report_tab).generate
           send_data workbook,
@@ -337,7 +346,7 @@ module HotelPortal
             disposition: "attachment"
         end
         format.pdf do
-          return head :not_acceptable if @active_guest_report_tab == "registration_cards"
+          return head :not_acceptable if %w[registration_cards bibo].include?(@active_guest_report_tab)
 
           pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: @report, tab: @active_guest_report_tab).generate
           send_data pdf,
