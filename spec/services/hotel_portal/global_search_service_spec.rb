@@ -17,9 +17,27 @@ RSpec.describe HotelPortal::GlobalSearchService do
     expect(results).to include(hash_including(title: "Folios", group: "Pages"))
   end
 
+  it "returns renamed and settings-hub navigation destinations" do
+    expect(described_class.new(hotel, "departures").perform).to include(hash_including(title: "Departures", group: "Pages"))
+    expect(described_class.new(hotel, "timeline board").perform).to include(hash_including(title: "Timeline Board", group: "Pages"))
+    expect(described_class.new(hotel, "plan billing").perform).to include(hash_including(title: "Plan & Billing", group: "Pages"))
+    expect(described_class.new(hotel, "transaction codes").perform).to include(hash_including(title: "Transaction Codes", group: "Pages"))
+    expect(described_class.new(hotel, "general ledger").perform).to include(hash_including(title: "General Ledger Mappings", group: "Pages"))
+    expect(described_class.new(hotel, "staff management").perform).to include(hash_including(title: "Staff Management", group: "Pages"))
+  end
+
   it "returns booking result for matching query" do
     results = described_class.new(hotel, "sam").perform
     expect(results).to include(hash_including(title: a_string_including("WS-SAM01"), group: "Bookings"))
+  end
+
+  it "returns canonical resource URLs for hotel details and taxes" do
+    routes = Rails.application.routes.url_helpers
+
+    expect(described_class.new(hotel, "hotel details").perform)
+      .to include(hash_including(title: "Hotel Details", url: routes.edit_hotel_profile_path(hotel)))
+    expect(described_class.new(hotel, "taxes fees").perform)
+      .to include(hash_including(title: "Taxes & Fees", url: routes.hotel_taxes_fees_path(hotel)))
   end
 
   it "excludes AI concierge pages when excluded from plan" do
@@ -27,8 +45,8 @@ RSpec.describe HotelPortal::GlobalSearchService do
 
     results = described_class.new(hotel, "").perform
 
-    expect(results).not_to include(hash_including(title: "Policy Management"))
-    expect(results).not_to include(hash_including(title: "FAQs Management"))
-    expect(results).not_to include(hash_including(title: "General Info Management"))
+    expect(results).not_to include(hash_including(title: "Policies"))
+    expect(results).not_to include(hash_including(title: "FAQs"))
+    expect(results).not_to include(hash_including(title: "General Info"))
   end
 end

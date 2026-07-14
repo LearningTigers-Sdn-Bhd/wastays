@@ -25,7 +25,7 @@
 
           <div class="grid gap-4 lg:grid-cols-3">
             <%# 1. Check-In Confirmation %>
-            <%= render "notification_module",
+            <%= render "hotel_portal/settings/notification_module",
                        config: @presenter.check_in_notification_config,
                        notification_type: "check_in_confirmation",
                        title: "Check-In Confirmation",
@@ -37,7 +37,7 @@
 
             <%# 2. Post-Stay Review Request %>
             <% post_stay_config = @presenter.post_stay_review_notification_config %>
-            <%= render "notification_module",
+            <%= render "hotel_portal/settings/notification_module",
                        config: post_stay_config,
                        notification_type: "post_stay_review_request",
                        title: "Post-Stay Review",
@@ -60,7 +60,7 @@
 
             <%# 3. Pre-Arrival Notification %>
             <% pre_arrival_config = @presenter.pre_arrival_notification_config %>
-            <%= render "notification_module",
+            <%= render "hotel_portal/settings/notification_module",
                        config: pre_arrival_config,
                        notification_type: "pre_arrival_notification",
                        title: "Pre-Arrival Greeting",
@@ -85,7 +85,7 @@
             <% end %>
 
             <%# 4. Check-Out Receipt Message %>
-            <%= render "notification_module",
+            <%= render "hotel_portal/settings/notification_module",
                        config: @presenter.check_out_receipt_notification_config,
                        notification_type: "check_out_receipt_message",
                        title: "Check-Out Invoice / Receipt",
@@ -98,7 +98,7 @@
             <%# 5. In-Stay Guest Messaging %>
             <% in_stay_config = @presenter.in_stay_guest_notification_config %>
             <div class="lg:col-span-3">
-              <%= render "notification_module",
+              <%= render "hotel_portal/settings/notification_module",
                          config: in_stay_config,
                          notification_type: "in_stay_guest_messaging",
                          title: "In-Stay Guest Engagement",

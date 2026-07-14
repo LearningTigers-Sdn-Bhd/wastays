@@ -14,7 +14,7 @@ class GlobalSearchService
     { title: "Reports", subtitle: "Financial performance", route: :hotel_reports_path, keywords: "reports financial performance" },
     { title: "Weekly Settlements", subtitle: "Payout reports", route: :payouts_hotel_reports_path, keywords: "payouts settlements weekly" },
     { title: "Operation Audit Logs", subtitle: "Operational changes history", route: :hotel_audit_logs_path, keywords: "audit logs operations" },
-    { title: "Settings", subtitle: "Hotel and payment settings", route: :hotel_settings_path, keywords: "settings preferences payment" }
+    { title: "Settings", subtitle: "Hotel and payment settings", route: :hotel_general_settings_path, keywords: "settings preferences payment" }
   ].freeze
 
   def initialize(hotel, query)

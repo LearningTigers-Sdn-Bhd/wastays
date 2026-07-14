@@ -5,7 +5,7 @@
           </div>
 
           <div class="px-6 py-5 sm:px-8">
-            <%= form_with model: @account, url: hotel_settings_path(@hotel, tab: "banking"), method: :patch, local: true, class: "space-y-6" do |f| %>
+            <%= form_with model: @account, url: hotel_banking_details_settings_path(@hotel), method: :patch, local: true, class: "space-y-6" do |f| %>
               <% if @account.errors.any? %>
                 <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                   <p class="font-semibold"><%= pluralize(@account.errors.count, "error") %> prohibited these settings from being saved:</p>

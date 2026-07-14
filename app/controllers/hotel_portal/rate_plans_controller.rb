@@ -15,22 +15,22 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
         @rate_plan.room_type_rate_plans.create(room_type_id: rt_id)
       end
 
-      redirect_to hotel_settings_path(current_hotel, tab: "rates"), notice: "Rate plan '#{@rate_plan.name}' created successfully."
+      redirect_to hotel_rates_settings_path(current_hotel), notice: "Rate plan '#{@rate_plan.name}' created successfully."
     else
-      redirect_to hotel_settings_path(current_hotel, tab: "rates"), alert: "Failed to create rate plan: #{@rate_plan.errors.full_messages.to_sentence}"
+      redirect_to hotel_rates_settings_path(current_hotel), alert: "Failed to create rate plan: #{@rate_plan.errors.full_messages.to_sentence}"
     end
   end
 
   def destroy
     if @rate_plan.special_tier? || @rate_plan.name.to_s.strip.downcase == "standard rate"
-      redirect_to hotel_settings_path(current_hotel, tab: "rates"), alert: "System rate plans cannot be deleted."
+      redirect_to hotel_rates_settings_path(current_hotel), alert: "System rate plans cannot be deleted."
       return
     end
 
     if @rate_plan.destroy
-      redirect_to hotel_settings_path(current_hotel, tab: "rates"), notice: "Rate plan '#{@rate_plan.name}' deleted successfully."
+      redirect_to hotel_rates_settings_path(current_hotel), notice: "Rate plan '#{@rate_plan.name}' deleted successfully."
     else
-      redirect_to hotel_settings_path(current_hotel, tab: "rates"), alert: "Failed to delete rate plan."
+      redirect_to hotel_rates_settings_path(current_hotel), alert: "Failed to delete rate plan."
     end
   end
 

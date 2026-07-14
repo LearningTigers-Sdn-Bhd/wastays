@@ -6,6 +6,10 @@
     </div>
   </div>
 
+  <div class="px-4 md:px-0">
+    <%= render "hotel_portal/settings/group_tabs" %>
+  </div>
+
   <div class="grid grid-cols-1 gap-4 px-4 sm:grid-cols-2 xl:grid-cols-4 md:px-0">
     <% [
       ["Open", @summary_counts[:open]],

@@ -30,7 +30,7 @@
             <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#toggle" aria-label="Toggle navigation">
               <%= cached_icon "menu", class: "size-4" %>
             </button>
-            <button type="button" class="hidden lg:inline-flex shrink-0 justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#toggleDesktop" aria-label="Collapse sidebar">
+            <button type="button" class="hidden lg:inline-flex shrink-0 justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#toggleDesktop sidebar:refresh-desktop-state@window->sidebar-toggle#applyStoredDesktopState" aria-label="Collapse sidebar">
               <%= cached_icon "panel-left-close", class: "size-4" %>
             </button>
           <% end %>

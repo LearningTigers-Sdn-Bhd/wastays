@@ -61,8 +61,8 @@ RSpec.describe "HotelPortal::KnowledgeDiagnostics", type: :request do
       expect(response.body).to include("Knowledge Diagnostics")
       expect(response.body).to include("Do you have airport pickup?")
       expect(response.body).to include("Transport")
-      expect(response.body).to include("Policy Management")
-      expect(response.body).to include("FAQs Management")
+      expect(response.body).to include("Policies")
+      expect(response.body).to include("FAQs")
       expect(response.body).to include("General Info")
     end
 

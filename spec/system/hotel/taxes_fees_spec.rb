@@ -23,14 +23,22 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
     sign_in_through_ui(user)
   end
 
-  it "shows finance pages in the finance sidebar section" do
+  it "shows taxes and fees inside settings navigation mode" do
     visit hotel_taxes_fees_path(hotel)
 
-    finance_section = page.all(".sidebar-nav-group", text: "Finance", visible: :all).first
-    finance_links = finance_section.all("a", visible: :all).map(&:text)
-    expect(finance_links).to include("Taxes & Fees", "Transaction Codes", "Payouts")
-    expect(finance_links.index("Taxes & Fees")).to be < finance_links.index("Transaction Codes")
-    expect(finance_links.index("Transaction Codes")).to be < finance_links.index("Payouts")
+    expect(page).to have_css("h1", text: "Taxes & Fees")
+    within('[data-testid="settings-tabs"]') do
+      expect(page).to have_link('Taxes & Fees')
+    end
+
+    within("#hotel-sidebar") do
+      expect(page).to have_link("Back to previous page")
+      expect(page).to have_link("Finance", href: hotel_taxes_fees_path(hotel))
+      expect(page).to have_css("a.sidebar-nav-link-active", text: "Finance")
+      expect(page).to have_no_link("Payouts", href: payouts_hotel_reports_path(hotel))
+      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Rooms & Rates")
+    end
+
     expect(page).to have_css("[data-testid='taxes-fees-content']")
     expect(page).to have_css("[data-testid='primary-tax-settings']", text: "Tourism Tax")
     expect(page).to have_css("[data-testid='additional-taxes-fees']", text: "Heritage Fee")

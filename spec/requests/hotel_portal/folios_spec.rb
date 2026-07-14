@@ -181,7 +181,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Operations")
+      expect(response.body).to include("Bookings")
       expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
       expect(response.body).to include(%(href="#{booking_details_path(booking)}"))
       expect(response.body).to include('id="folio-operations-heading"')
@@ -192,7 +192,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
     it "uses folios navigation when opened from the folios index" do
       booking = create_booking_with_folio(guest_name: "Folio Origin", confirmation_token: "BK-FOLIO", folio_number: 602, charges: 100)
 
-      get folio_operations_path(booking)
+      get folio_operations_path(booking, origin: "folios")
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-testid="booking-control-panel"')

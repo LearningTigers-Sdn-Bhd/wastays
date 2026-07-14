@@ -23,25 +23,108 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
   describe 'GET /hotel/settings with legacy hotel_id param' do
     it 'redirects to the canonical hotel-scoped path' do
       get legacy_hotel_settings_path, params: { hotel_id: hotel.id }
+      follow_redirect!
 
-      expect(response).to redirect_to(hotel_settings_path(hotel))
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
     end
   end
 
   describe "GET /hotel/:hotel_id/settings" do
-    it "shows concierge QR entry when AI concierge page is enabled" do
+    it "uses the General group URL for notification settings" do
+      expect(hotel_notification_settings_path(hotel)).to eq("/hotel/#{hotel.to_param}/settings/general/notifications")
+    end
+
+    it "permanently redirects the old Guest Content notification URL" do
+      get "/hotel/#{hotel.to_param}/settings/guest-content/notifications"
+
+      expect(response).to redirect_to(hotel_notification_settings_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
+    end
+
+    it "permanently redirects the settings root to General" do
       get hotel_settings_path(hotel)
 
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
+    end
+
+    it "uses the active destination as the page heading" do
+      {
+        hotel_general_settings_path(hotel) => "General Settings",
+        hotel_ai_concierge_settings_path(hotel) => "AI Concierge",
+        hotel_notification_settings_path(hotel) => "Notifications",
+        hotel_banking_details_settings_path(hotel) => "Banking Details"
+      }.each do |path, expected_heading|
+        get path
+
+        expect(response).to have_http_status(:ok)
+        expect(response.parsed_body.css("h1").map { |heading| heading.text.squish }).to eq([ expected_heading ])
+      end
+    end
+
+    it "shows concierge QR entry when AI concierge page is enabled" do
+      get hotel_general_settings_path(hotel)
+
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("View QR Code")
+      expect(response.body).to include("View QR")
+    end
+
+    it "renders the guest registration card field selection" do
+      get hotel_general_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
       grc_settings = Nokogiri::HTML(response.body).at_css("#guest-registration-card")
       expect(grc_settings["class"]).to include("rounded-2xl", "border", "bg-white")
+    end
+
+    it "shows setup tabs in the settings tab bar" do
+      get hotel_general_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(%(data-testid="settings-tabs"))
+      expect(response.body).not_to include(%(data-testid="settings-setup-shortcuts"))
+    end
+
+    it "does not expose resource-owned pages as settings panels" do
+      get hotel_general_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include(%(data-tab-name="hotel_details"))
+      expect(response.body).not_to include(%(data-tab-name="taxes_fees"))
+      expect(response.body).not_to include(%(data-testid="settings-hotel-details-panel"))
+      expect(response.body).not_to include(%(data-testid="settings-taxes-fees-panel"))
+    end
+
+    it "redirects legacy tab URLs to canonical resource paths" do
+      get hotel_settings_path(hotel, tab: "general")
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
+
+      get hotel_settings_path(hotel, tab: "ai")
+      expect(response).to redirect_to(hotel_ai_concierge_settings_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
+
+      get hotel_settings_path(hotel, tab: "notifications")
+      expect(response).to redirect_to(hotel_notification_settings_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
+
+      get hotel_settings_path(hotel, tab: "banking")
+      expect(response).to redirect_to(hotel_banking_details_settings_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
+
+      get hotel_settings_path(hotel, tab: "hotel_details")
+      expect(response).to redirect_to(edit_hotel_profile_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
+
+      get hotel_settings_path(hotel, tab: "taxes_fees")
+      expect(response).to redirect_to(hotel_taxes_fees_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
     end
 
     it "hides concierge QR entry when AI concierge page is excluded from plan" do
       hotel.plan.plan_features.find_by!(feature: ai_concierge_page_feature).update!(enabled: false)
 
-      get hotel_settings_path(hotel)
+      get hotel_general_settings_path(hotel)
 
       expect(response).to have_http_status(:ok)
       expect(response.body).not_to include("View QR Code")
@@ -62,27 +145,27 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
   describe 'PATCH /hotel/settings' do
     it "updates guest registration card fields" do
-      patch hotel_settings_path(hotel), params: {
+      patch hotel_general_settings_path(hotel), params: {
         form_id: "hotel_settings",
         hotel: { guest_registration_card_fields: %w[phone room_type check_in] }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "general"))
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
       expect(hotel.reload.guest_registration_card_fields).to eq(%w[phone room_type check_in])
     end
 
     it "discards unknown guest registration card fields and allows none" do
-      patch hotel_settings_path(hotel), params: {
+      patch hotel_general_settings_path(hotel), params: {
         form_id: "hotel_settings",
         hotel: { guest_registration_card_fields: [ "", "unknown" ] }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "general"))
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
       expect(hotel.reload.guest_registration_card_fields).to eq([])
     end
 
     it 'updates check-in notification settings and channels' do
-      patch hotel_settings_path(hotel), params: {
+      patch hotel_general_settings_path(hotel), params: {
         form_id: 'notification_settings',
         notification_config: {
           enabled: '1',
@@ -90,7 +173,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "notifications"))
+      expect(response).to redirect_to(hotel_notification_settings_path(hotel))
       follow_redirect!
       expect(response.body).to include('Settings updated successfully.')
 
@@ -108,7 +191,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         settings: {}
       )
 
-      patch hotel_settings_path(hotel), params: {
+      patch hotel_notification_settings_path(hotel), params: {
         form_id: 'notification_settings',
         notification_config: {
           enabled: '0',
@@ -116,14 +199,14 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "notifications"))
+      expect(response).to redirect_to(hotel_notification_settings_path(hotel))
       config = NotificationConfig.find_by!(hotel: hotel, notification_type: 'check_in_confirmation')
       expect(config.enabled).to be(false)
       expect(config.channels).to eq([ 'email' ])
     end
 
     it 'updates post-stay review request settings' do
-      patch hotel_settings_path(hotel), params: {
+      patch hotel_notification_settings_path(hotel), params: {
         form_id: 'notification_settings',
         notification_config: {
           notification_type: 'post_stay_review_request',
@@ -136,7 +219,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "notifications"))
+      expect(response).to redirect_to(hotel_notification_settings_path(hotel))
       config = NotificationConfig.find_by!(hotel: hotel, notification_type: 'post_stay_review_request')
       expect(config.enabled).to be(true)
       expect(config.channels).to match_array(%w[whatsapp email])
@@ -145,7 +228,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
 
     it "updates pre-arrival notification settings with channels and stages" do
-      patch hotel_settings_path(hotel), params: {
+      patch hotel_notification_settings_path(hotel), params: {
         form_id: "notification_settings",
         notification_config: {
           notification_type: "pre_arrival_notification",
@@ -157,7 +240,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "notifications"))
+      expect(response).to redirect_to(hotel_notification_settings_path(hotel))
       config = NotificationConfig.find_by!(hotel: hotel, notification_type: "pre_arrival_notification")
       expect(config.enabled).to be(true)
       expect(config.channels).to match_array(%w[whatsapp email])
@@ -165,7 +248,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
 
     it "updates check-out receipt message settings with both channels" do
-      patch hotel_settings_path(hotel), params: {
+      patch hotel_notification_settings_path(hotel), params: {
         form_id: "notification_settings",
         notification_config: {
           notification_type: "check_out_receipt_message",
@@ -174,14 +257,14 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "notifications"))
+      expect(response).to redirect_to(hotel_notification_settings_path(hotel))
       config = NotificationConfig.find_by!(hotel: hotel, notification_type: "check_out_receipt_message")
       expect(config.enabled).to be(true)
       expect(config.channels).to match_array(%w[whatsapp email])
     end
 
     it "updates in-stay guest messaging settings with rules and quiet hours" do
-      patch hotel_settings_path(hotel), params: {
+      patch hotel_notification_settings_path(hotel), params: {
         form_id: "notification_settings",
         notification_config: {
           notification_type: "in_stay_guest_messaging",
@@ -202,7 +285,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "notifications"))
+      expect(response).to redirect_to(hotel_notification_settings_path(hotel))
       config = NotificationConfig.find_by!(hotel: hotel, notification_type: "in_stay_guest_messaging")
       expect(config.enabled).to be(true)
       expect(config.channels).to match_array(%w[whatsapp email])
@@ -213,7 +296,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
 
     it 'ignores tampered status params and updates allowed banking details' do
-      patch hotel_settings_path(hotel), params: {
+      patch hotel_banking_details_settings_path(hotel), params: {
         account: {
           status: 'suspended',
           banking_detail_attributes: {
@@ -224,7 +307,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "banking"))
+      expect(response).to redirect_to(hotel_banking_details_settings_path(hotel))
       follow_redirect!
       expect(response.body).to include('Settings updated successfully.')
       expect(hotel.reload.status).to eq('registered')
@@ -238,7 +321,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       hotel.update!(default_currency: 'MYR')
       create(:property_policy, hotel: hotel, check_in_time: '2:00 PM', check_out_time: '11:00 AM')
 
-      patch hotel_settings_path(hotel), params: {
+      patch hotel_general_settings_path(hotel), params: {
         hotel: {
           default_currency: 'USD',
           property_policy_attributes: {
@@ -249,6 +332,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       }
 
       expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("data-tabs-breadcrumb-label>General</span>")
 
       hotel.reload
       expect(hotel.default_currency).to eq('MYR')
@@ -259,7 +343,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
 
     it 'does not allow hotel users to update payment gateway configuration' do
-      patch hotel_settings_path(hotel), params: {
+      patch hotel_general_settings_path(hotel), params: {
         payment_setting: {
           gateway: 'razorpay',
           api_key: 'rzp_test_key',
@@ -269,14 +353,14 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "general"))
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
       follow_redirect!
       expect(response.body).to include('Payment gateway credentials are managed by superadmin.')
       expect(hotel.payment_settings.find_by(gateway: 'razorpay')).to be_nil
     end
 
     it 'updates ai concierge tone and provider configuration' do
-      patch hotel_settings_path(hotel), params: {
+      patch hotel_ai_concierge_settings_path(hotel), params: {
         form_id: 'ai_configuration',
         hotel: {
           ai_provider_enabled: '1',
@@ -286,7 +370,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_settings_path(hotel, tab: "ai"))
+      expect(response).to redirect_to(hotel_ai_concierge_settings_path(hotel))
       follow_redirect!
       expect(response.body).to include('Settings updated successfully.')
 

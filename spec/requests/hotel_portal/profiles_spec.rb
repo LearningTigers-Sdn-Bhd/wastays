@@ -15,6 +15,17 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
     sign_in_as(user)
   end
 
+  describe 'GET /hotel/:hotel_id/profile/edit' do
+    it 'renders the canonical hotel details page' do
+      get edit_hotel_profile_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.css("h1").map { |heading| heading.text.squish }).to eq([ "Hotel Details" ])
+      expect(response.body).to include(%(id="hotel-profile-section"))
+      expect(response.body).to include(%(data-testid="settings-tabs"))
+    end
+  end
+
   describe 'PATCH /hotel/profile' do
     it 'updates hotel profile including star rating and google map link' do
       patch hotel_profile_path(hotel), params: {
@@ -33,6 +44,20 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       expect(hotel.name).to eq('Updated Hotel Name')
       expect(hotel.star_rating).to eq(5)
       expect(hotel.google_map_link).to eq('https://www.google.com/maps/place/Updated+Hotel')
+    end
+
+    it "renders the canonical hotel details page when profile update is invalid" do
+      patch hotel_profile_path(hotel), params: {
+        hotel: {
+          name: "",
+          city: hotel.city,
+          country: hotel.country
+        }
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include(%(id="hotel-profile-section"))
+      expect(response.body).to include(%(data-testid="settings-tabs"))
     end
   end
 end

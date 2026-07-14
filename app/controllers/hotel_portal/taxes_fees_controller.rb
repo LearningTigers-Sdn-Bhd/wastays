@@ -6,18 +6,17 @@ module HotelPortal
     before_action :authorize!
 
     def show
-      @presenter = taxes_fees_presenter
-      render "hotel_portal/taxes_fees/show"
+      prepare_taxes_fees_page
     end
 
     def update
       form = HotelPortal::TaxSettingsForm.new(@hotel, params)
 
       if form.save
-        redirect_to hotel_taxes_fees_path(@hotel, tab: "tax_listing"), notice: "Tax settings updated successfully."
+        redirect_to hotel_taxes_fees_path(@hotel), notice: "Tax settings updated successfully."
       else
-        @presenter = taxes_fees_presenter
-        render "hotel_portal/taxes_fees/show", status: :unprocessable_entity
+        prepare_taxes_fees_page
+        render :show, status: :unprocessable_entity
       end
     end
 
@@ -31,8 +30,8 @@ module HotelPortal
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_hotel_profile", hotel: current_hotel)
     end
 
-    def taxes_fees_presenter
-      HotelPortal::TaxesFeesPresenter.new(
+    def prepare_taxes_fees_page
+      @presenter = HotelPortal::TaxesFeesPresenter.new(
         hotel: @hotel,
         current_user: current_user,
         primary_edit: params[:primary_edit]

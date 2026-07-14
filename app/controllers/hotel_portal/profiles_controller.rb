@@ -7,7 +7,7 @@ module HotelPortal
 
     def edit
       authorize @hotel
-      @presenter = HotelPortal::ProfilePresenter.new(@hotel, @photo_queue, self)
+      prepare_profile_page
     end
 
     def update
@@ -20,7 +20,7 @@ module HotelPortal
         flash[:alert] = upload_result.alert_message if upload_result.respond_to?(:trimmed?) && upload_result.trimmed?
         redirect_to edit_hotel_profile_path(@hotel), notice: "Hotel profile updated successfully."
       else
-        @presenter = HotelPortal::ProfilePresenter.new(@hotel, @photo_queue, self)
+        prepare_profile_page
         render :edit, status: :unprocessable_content
       end
     end
@@ -128,6 +128,10 @@ module HotelPortal
 
     def set_photo_queue
       @photo_queue = HotelPortal::PhotoQueue.new(@hotel, session)
+    end
+
+    def prepare_profile_page
+      @presenter = HotelPortal::ProfilePresenter.new(@hotel, @photo_queue, view_context)
     end
 
     def clear_featured_photo_if_needed(photo_ids)

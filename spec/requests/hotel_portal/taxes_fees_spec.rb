@@ -17,7 +17,17 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
   end
 
   describe "GET /hotel/:hotel_id/taxes-fees" do
-    it "renders the table-based tax and fees page without transaction code tabs" do
+    it "renders the canonical taxes and fees page" do
+      get hotel_taxes_fees_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.css("h1").map { |heading| heading.text.squish }).to eq([ "Taxes & Fees" ])
+      expect(response.body).to include("Primary Tax Settings")
+      expect(response.body).to include("Additional Taxes &amp; Fees")
+      expect(response.body).to include(%(data-testid="settings-tabs"))
+    end
+
+    it "renders the table-based tax and fees panel without transaction code tabs" do
       get hotel_taxes_fees_path(hotel)
 
       expect(response).to have_http_status(:ok)
@@ -45,7 +55,7 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_taxes_fees_path(hotel, tab: "tax_listing"))
+      expect(response).to redirect_to(hotel_taxes_fees_path(hotel))
       follow_redirect!
       expect(response.body).to include("Tax settings updated successfully.")
 
@@ -65,7 +75,7 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_taxes_fees_path(hotel, tab: "tax_listing"))
+      expect(response).to redirect_to(hotel_taxes_fees_path(hotel))
       hotel.reload
       expect(hotel.tourism_tax_amount).to eq(15.5)
       expect(hotel.tourism_tax_enabled?).to be(true)
@@ -80,7 +90,7 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_taxes_fees_path(hotel, tab: "tax_listing"))
+      expect(response).to redirect_to(hotel_taxes_fees_path(hotel))
       expect(hotel.reload.tourism_tax_enabled?).to be(true)
 
       patch hotel_taxes_fees_path(hotel), params: {
@@ -90,8 +100,23 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_taxes_fees_path(hotel, tab: "tax_listing"))
+      expect(response).to redirect_to(hotel_taxes_fees_path(hotel))
       expect(hotel.reload.sst_enabled?).to be(true)
+    end
+
+    it "renders the canonical taxes and fees page when tax update is invalid" do
+      allow_any_instance_of(HotelPortal::TaxSettingsForm).to receive(:save).and_return(false)
+
+      patch hotel_taxes_fees_path(hotel), params: {
+        form_id: "tax_settings",
+        hotel: {
+          tourism_tax_amount: "12"
+        }
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include(%(data-testid="settings-tabs"))
+      expect(response.body).to include(%(data-testid="taxes-fees-content"))
     end
   end
 
@@ -132,7 +157,7 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_taxes_fees_path(hotel, tab: "tax_listing"))
+      expect(response).to redirect_to(hotel_taxes_fees_path(hotel))
       tax = hotel.hotel_taxes.find_by!(name: "Heritage Fee")
       expect(tax.amount).to eq(5.0)
       expect(tax.charge_type).to eq("tax")
@@ -152,7 +177,7 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_taxes_fees_path(hotel, tab: "tax_listing"))
+      expect(response).to redirect_to(hotel_taxes_fees_path(hotel))
       tax = hotel.hotel_taxes.find_by!(name: "Service Charge")
       expect(tax.transaction_code.code).to eq("SC")
       expect(tax.transaction_code.kind).to eq("charge")

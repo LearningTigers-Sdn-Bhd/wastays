@@ -77,7 +77,7 @@ RSpec.describe "Platform Smoke Tests", type: :request do
       "reports",
       "reports/payouts",
       "inventory",
-      "settings",
+      "settings/general",
       "audit_logs"
     ].each do |subpath|
       it "renders hotel portal #{subpath} successfully" do

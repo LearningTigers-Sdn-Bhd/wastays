@@ -193,8 +193,8 @@ class Hotel < ApplicationRecord
   end
 
   def plan_feature_map
-    @plan_feature_map ||= if plan
-      plan.plan_features
+    @plan_feature_map ||= if plan_id
+      PlanFeature.where(plan_id: plan_id)
           .joins(:feature)
           .pluck("features.slug", :enabled, :level, :addon)
           .each_with_object({}) { |(slug, enabled, level, addon), h|

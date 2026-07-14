@@ -22,7 +22,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   end
 
   it 'allows the hotel admin to update the editable settings card fields' do
-    visit hotel_settings_path(hotel)
+    visit hotel_general_settings_path(hotel)
 
     within('section', text: 'Hotel Settings') do
       expect(page).to have_field('Hotel Status', type: 'text', disabled: true, with: 'Registered')
@@ -31,7 +31,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
       expect(page).to have_button('Save Settings')
     end
 
-    visit hotel_settings_path(hotel, tab: 'general')
+    visit hotel_general_settings_path(hotel)
 
     find('#hotel_property_policy_attributes_check_in_time', visible: false).set('15:00')
     find('#hotel_property_policy_attributes_check_out_time', visible: false).set('11:00')
@@ -46,7 +46,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   end
 
   it 'shows hotel status and onboarding stage as disabled text inputs' do
-    visit hotel_settings_path(hotel)
+    visit hotel_general_settings_path(hotel)
 
     within('section', text: 'Hotel Settings') do
       expect(page).to have_field('Hotel Status', type: 'text', disabled: true, with: 'Registered')
@@ -67,7 +67,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   end
 
   it 'shows validation errors when the settings card submission is invalid' do
-    visit hotel_settings_path(hotel)
+    visit hotel_general_settings_path(hotel)
 
     find('#hotel_property_policy_attributes_check_in_time', visible: false).set('15:00')
     find('#hotel_property_policy_attributes_check_out_time', visible: false).set('')
@@ -85,7 +85,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   end
 
   it 'shows the AI concierge fields and saves the selected tone' do
-    visit hotel_settings_path(hotel, tab: 'ai')
+    visit hotel_ai_concierge_settings_path(hotel)
 
     within('section', text: 'AI Concierge Configuration') do
       expect(page).to have_select('Tone', selected: 'Basic')
@@ -111,14 +111,14 @@ RSpec.describe 'Hotel Settings Card', type: :system do
     page.driver.submit :delete, logout_path, {}
     sign_in_through_ui(superadmin)
 
-    visit hotel_settings_path(hotel)
+    visit hotel_general_settings_path(hotel)
 
     find('#hotel_property_policy_attributes_check_in_time', visible: false).set('15:00')
     find('#hotel_property_policy_attributes_check_out_time', visible: false).set('11:00')
     select 'GBP - Pound Sterling', from: 'Default Currency'
     click_button 'Save Settings'
 
-    expect(page).to have_current_path(hotel_settings_path(hotel), ignore_query: true)
+    expect(page).to have_current_path(hotel_general_settings_path(hotel), ignore_query: true)
     expect(page).to have_content('Settings updated successfully.')
   end
 end
