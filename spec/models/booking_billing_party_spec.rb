@@ -37,6 +37,14 @@ RSpec.describe BookingBillingParty, type: :model do
     expect(party).to be_valid
   end
 
+  it "persists an airline account_type (regression: DB check constraint used to reject it)" do
+    account = create(:hotel_corporate_account, hotel: hotel, account_type: "airline")
+
+    party = described_class.new(hotel: hotel, booking: booking, party_kind: "company", hotel_corporate_account: account, account_type: "airline")
+
+    expect { party.save! }.not_to raise_error
+  end
+
   it "rejects a company party from another hotel" do
     account = create(:hotel_corporate_account)
 
