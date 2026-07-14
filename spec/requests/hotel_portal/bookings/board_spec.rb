@@ -53,6 +53,41 @@ RSpec.describe "HotelPortal::Bookings::Board", type: :request do
       expect(booking_block.at_css("span[title='0 Children']").text).to include("0")
     end
 
+    it "renders the boat arrival time when guest is not checked in and boat_in_at is set in Room View" do
+      user = sign_in_with_permissions("manage_bookings")
+      guest = create(:guest)
+      boat_in_time = Time.zone.parse("#{Date.current} 14:00:00")
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true, boat_in_at: boat_in_time)
+
+      get board_hotel_bookings_path(hotel, view_type: "room")
+
+      expect(response).to have_http_status(:success)
+      booking_block = response.parsed_body.at_css("[data-id='#{booking.id}']")
+      expect(booking_block).to be_present
+      expect(booking_block.text).to include("Boat Arrival:")
+      expected_time = boat_in_time.in_time_zone(user.time_zone).strftime("%H:%M")
+      expect(booking_block.text).to include(expected_time)
+      expect(booking_block.text).not_to include("Boat Departure:")
+    end
+
+    it "renders the boat departure time when guest is checked in and boat_out_at is set in Room View" do
+      user = sign_in_with_permissions("manage_bookings")
+      booking.update_columns(status: "checked_in")
+      guest = create(:guest)
+      boat_out_time = Time.zone.parse("#{Date.current + 2.days} 16:30:00")
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true, boat_out_at: boat_out_time)
+
+      get board_hotel_bookings_path(hotel, view_type: "room")
+
+      expect(response).to have_http_status(:success)
+      booking_block = response.parsed_body.at_css("[data-id='#{booking.id}']")
+      expect(booking_block).to be_present
+      expect(booking_block.text).to include("Boat Departure:")
+      expected_time = boat_out_time.in_time_zone(user.time_zone).strftime("%H:%M")
+      expect(booking_block.text).to include(expected_time)
+      expect(booking_block.text).not_to include("Boat Arrival:")
+    end
+
     it "renders accessible move and resize controls for booking managers" do
       sign_in_with_permissions("manage_bookings")
 

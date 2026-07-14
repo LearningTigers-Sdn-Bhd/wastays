@@ -34,21 +34,48 @@ module HotelPortal
       def build_rows_for_active_tab
         rows = []
         rows << spreadsheet_row(headers_for_active_tab)
-        rows_for_active_tab.each do |row|
-          rows << spreadsheet_row([
-            row[:guest_name],
-            row[:confirmation_token],
-            row[:room_details],
-            row[:room_numbers],
-            row[:stay_dates],
-            *status_columns_for_active_tab(row),
-            row[:latest_note]
-          ])
+        if @tab == "bibo"
+          @report.boat_ins.each do |row|
+            rows << spreadsheet_row([
+              "Boat Arrival",
+              row[:guest_name],
+              row[:confirmation_token],
+              row[:room_type],
+              row[:room_number],
+              row[:stay_dates],
+              row[:boat_time]
+            ])
+          end
+          @report.boat_outs.each do |row|
+            rows << spreadsheet_row([
+              "Boat Departure",
+              row[:guest_name],
+              row[:confirmation_token],
+              row[:room_type],
+              row[:room_number],
+              row[:stay_dates],
+              row[:boat_time]
+            ])
+          end
+        else
+          rows_for_active_tab.each do |row|
+            rows << spreadsheet_row([
+              row[:guest_name],
+              row[:confirmation_token],
+              row[:room_details],
+              row[:room_numbers],
+              row[:stay_dates],
+              *status_columns_for_active_tab(row),
+              row[:latest_note]
+            ])
+          end
         end
         rows.join("\n")
       end
 
       def worksheet_name
+        return "Boat Transfers" if @tab == "bibo"
+
         {
           "arrivals" => "Arrivals",
           "in_house" => "In-House",
@@ -67,6 +94,7 @@ module HotelPortal
       end
 
       def headers_for_active_tab
+        return [ "Type", "Guest Name", "Booking Ref", "Room Type", "Room Number", "Stay Dates", "Boat Time" ] if @tab == "bibo"
         return [ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Pre-checkin Status", "Guarantee Method", "Deposit Status", "Notes" ] if @tab == "arrivals"
 
         [ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ]

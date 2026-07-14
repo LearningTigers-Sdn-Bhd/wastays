@@ -317,38 +317,39 @@ module HotelPortal
         end_date: @report_end_date
       ).call
 
-      if @active_guest_report_tab == "bibo"
-        @bibo_report = HotelPortal::Reports::BiboReport.new(
-          hotel: current_hotel,
-          start_date: @report_start_date,
-          end_date: @report_end_date
-        ).call
-      end
+      @bibo_report = HotelPortal::Reports::BiboReport.new(
+        hotel: current_hotel,
+        start_date: @report_start_date,
+        end_date: @report_end_date
+      ).call
       load_guest_registration_cards(start_date: @report_start_date, end_date: @report_end_date)
 
       respond_to do |format|
         format.html
         format.csv do
-          return head :not_acceptable if %w[registration_cards bibo].include?(@active_guest_report_tab)
+          return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: @report, tab: @active_guest_report_tab).generate
+          report_to_export = @active_guest_report_tab == "bibo" ? @bibo_report : @report
+          csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
           send_data csv,
             filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.csv",
             type: "text/csv"
         end
         format.any(:xls) do
-          return head :not_acceptable if %w[registration_cards bibo].include?(@active_guest_report_tab)
+          return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(report: @report, tab: @active_guest_report_tab).generate
+          report_to_export = @active_guest_report_tab == "bibo" ? @bibo_report : @report
+          workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
           send_data workbook,
             filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.xls",
             type: "application/vnd.ms-excel",
             disposition: "attachment"
         end
         format.pdf do
-          return head :not_acceptable if %w[registration_cards bibo].include?(@active_guest_report_tab)
+          return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: @report, tab: @active_guest_report_tab).generate
+          report_to_export = @active_guest_report_tab == "bibo" ? @bibo_report : @report
+          pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: report_to_export, tab: @active_guest_report_tab).generate
           send_data pdf,
             filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.pdf",
             type: "application/pdf",

@@ -16,8 +16,12 @@ module HotelPortal
         pdf = Prawn::Document.new(page_size: "A4", margin: [ 32, 32, 32, 32 ])
 
         draw_header(pdf)
-        draw_summary(pdf)
-        draw_section(pdf, active_section_title, rows_for_active_tab, active_section_type, active_empty_message)
+        if @tab == "bibo"
+          draw_bibo_sections(pdf)
+        else
+          draw_summary(pdf)
+          draw_section(pdf, active_section_title, rows_for_active_tab, active_section_type, active_empty_message)
+        end
 
         pdf.render
       end
@@ -111,6 +115,38 @@ module HotelPortal
         pdf.move_down 14
       end
 
+      def draw_bibo_sections(pdf)
+        draw_bibo_section(pdf, "Boat Arrivals", @report.boat_ins, "No boat arrivals recorded or expected for this selected period.")
+        pdf.move_down 20
+        draw_bibo_section(pdf, "Boat Departures", @report.boat_outs, "No boat departures recorded or expected for this selected period.")
+      end
+
+      def draw_bibo_section(pdf, title, rows, empty_message)
+        pdf.text title, size: 12, style: :bold
+        pdf.move_down 6
+
+        if rows.empty?
+          pdf.text(empty_message, size: 10, style: :italic)
+          pdf.move_down 14
+          return
+        end
+
+        table_rows = rows.map do |row|
+          [
+            "#{row[:guest_name]}\n#{row[:confirmation_token]}",
+            row[:room_type],
+            row[:room_number],
+            row[:stay_dates],
+            row[:boat_time]
+          ]
+        end
+
+        pdf.table([ [ "Guest / Ref", "Room Type", "Room", "Stay Dates", "Boat Time" ] ] + table_rows, width: pdf.bounds.width, cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] }) do
+          row(0).font_style = :bold
+          row(0).background_color = "F1F5F9"
+        end
+      end
+
       def rows_for_active_tab
         case @tab
         when "in_house" then @report.in_house
@@ -134,7 +170,8 @@ module HotelPortal
           "arrivals" => "Arrivals",
           "in_house" => "In-House",
           "departures" => "Departures",
-          "checkout" => "Checkout"
+          "checkout" => "Checkout",
+          "bibo" => "Boat Transfers"
         }.fetch(@tab, "Arrivals")
       end
 

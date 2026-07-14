@@ -36,7 +36,6 @@ module HotelPortal
         @boat_ins ||= booking_guests_scope
           .where(bookings: { check_in: @start_date..@end_date })
           .or(booking_guests_scope.where(boat_in_at: @start_date.beginning_of_day..@end_date.end_of_day))
-          .distinct
           .order("bookings.check_in ASC, booking_guests.boat_in_at ASC NULLS FIRST")
           .map { |bg| row_for_boat_in(bg) }
       end
@@ -45,7 +44,6 @@ module HotelPortal
         @boat_outs ||= booking_guests_scope
           .where(bookings: { check_out: @start_date..@end_date })
           .or(booking_guests_scope.where(boat_out_at: @start_date.beginning_of_day..@end_date.end_of_day))
-          .distinct
           .order("bookings.check_out ASC, booking_guests.boat_out_at ASC NULLS FIRST")
           .map { |bg| row_for_boat_out(bg) }
       end
@@ -53,22 +51,21 @@ module HotelPortal
       def booking_guests_scope
         BookingGuest.joins(:booking)
                     .where(bookings: { hotel_id: @hotel.id })
-                    .includes(:booking, :guest)
+                    .includes(booking: { booking_rooms: :room_type }, guest: {})
       end
 
       def row_for_boat_in(bg)
         booking = bg.booking
         {
           guest_name: bg.name_snapshot || bg.guest.name,
-          role: bg.role.humanize,
-          room_number: booking.booking_rooms.map(&:room_number).compact.join(", ").presence || "TBA",
+          room_type: booking.booking_rooms.map { |br| br.room_type&.name }.compact.uniq.join(", ").presence || "—",
+          room_number: booking.booking_rooms.map(&:room_number).compact.join(", ").presence || "—",
           check_in: booking.check_in,
           check_out: booking.check_out,
           stay_dates: "#{booking.check_in.strftime('%d %b %Y')} - #{booking.check_out.strftime('%d %b %Y')}",
           confirmation_token: booking.confirmation_token,
-          boat_time: bg.boat_in_at&.strftime("%I:%M %p") || "Pending",
-          boat_at: bg.boat_in_at,
-          status: bg.boat_in_at.present? ? "Boarded" : "Expected"
+          boat_time: format_boat_time(bg.boat_in_at),
+          boat_at: bg.boat_in_at
         }
       end
 
@@ -76,16 +73,22 @@ module HotelPortal
         booking = bg.booking
         {
           guest_name: bg.name_snapshot || bg.guest.name,
-          role: bg.role.humanize,
-          room_number: booking.booking_rooms.map(&:room_number).compact.join(", ").presence || "TBA",
+          room_type: booking.booking_rooms.map { |br| br.room_type&.name }.compact.uniq.join(", ").presence || "—",
+          room_number: booking.booking_rooms.map(&:room_number).compact.join(", ").presence || "—",
           check_in: booking.check_in,
           check_out: booking.check_out,
           stay_dates: "#{booking.check_in.strftime('%d %b %Y')} - #{booking.check_out.strftime('%d %b %Y')}",
           confirmation_token: booking.confirmation_token,
-          boat_time: bg.boat_out_at&.strftime("%I:%M %p") || "Pending",
-          boat_at: bg.boat_out_at,
-          status: bg.boat_out_at.present? ? "Boarded" : "Expected"
+          boat_time: format_boat_time(bg.boat_out_at),
+          boat_at: bg.boat_out_at
         }
+      end
+
+      def format_boat_time(value)
+        return "—" if value.blank?
+
+        time_zone = @hotel.hotel_time_zone.presence || Time.zone.name
+        value.in_time_zone(time_zone).strftime("%I:%M %p")
       end
     end
   end

@@ -2,6 +2,9 @@
 <% guest = booking_guest&.guest %>
 <% guest_display = presenter.guest_display(booking_guest) %>
 <% can_manage = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+<% hotel_time_zone = current_hotel.hotel_time_zone.presence || Time.zone.name %>
+<% boat_in_value = booking_guest&.boat_in_at&.in_time_zone(hotel_time_zone)&.strftime("%Y-%m-%dT%H:%M") %>
+<% boat_out_value = booking_guest&.boat_out_at&.in_time_zone(hotel_time_zone)&.strftime("%Y-%m-%dT%H:%M") %>
 
 <section class="h-full min-h-0" aria-labelledby="guest-details-heading">
   <% if booking_guest && guest %>
@@ -79,6 +82,23 @@
                 <div>
                   <%= form.label :date_of_birth, "Date of Birth", class: "booking-form__label" %>
                   <%= form.date_field :date_of_birth, value: snapshot_date_of_birth, autocomplete: "bday", placeholder: "Select date", class: "booking-form__control", data: { guest_dob_target: "dateOfBirth" } %>
+                </div>
+              </div>
+            </section>
+
+            <section class="border-t border-slate-200 pt-6" aria-labelledby="guest-bibo-heading">
+              <div class="mb-4">
+                <h3 id="guest-bibo-heading" class="text-sm font-bold text-slate-950">Boat Arrival & Departure</h3>
+                <p class="mt-1 text-xs text-slate-500">Guest Boat Arrival / Boat Departure timestamps.</p>
+              </div>
+              <div class="grid gap-5 md:grid-cols-2">
+                <div>
+                  <%= label_tag "booking_guest_boat_in_at", "Boat Arrival Time", class: "booking-form__label" %>
+                  <%= datetime_local_field_tag "booking_guest[boat_in_at]", boat_in_value, class: "booking-form__control" %>
+                </div>
+                <div>
+                  <%= label_tag "booking_guest_boat_out_at", "Boat Departure Time", class: "booking-form__label" %>
+                  <%= datetime_local_field_tag "booking_guest[boat_out_at]", boat_out_value, class: "booking-form__control" %>
                 </div>
               </div>
             </section>

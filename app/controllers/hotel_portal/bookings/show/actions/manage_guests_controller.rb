@@ -68,7 +68,8 @@ module HotelPortal
               booking_guest: @booking_guest,
               attributes: guest_params,
               actor: current_user,
-              update_profile:
+              update_profile:,
+              bibo_attributes: booking_guest_bibo_params
             )
             return complete_guest_action(notice: update_profile ? "Guest details and guest record updated." : "Guest details saved.") if result.success?
 
@@ -82,6 +83,7 @@ module HotelPortal
             return render_guest_errors unless @guest.valid?
 
             result = nil
+            success = true
             ActiveRecord::Base.transaction do
               result = ::Bookings::UpdateStayService.new(
                 booking: @booking,
@@ -91,6 +93,9 @@ module HotelPortal
               raise ActiveRecord::Rollback unless result.success?
 
               @booking.reload.primary_guest&.update!(guest_params)
+              primary_booking_guest = @booking.booking_guests.find_by(is_primary: true)
+              success = apply_booking_guest_bibo!(primary_booking_guest)
+              raise ActiveRecord::Rollback unless success
             end
 
             return complete_guest_action(notice: "Primary guest updated.") if result&.success?
@@ -128,6 +133,12 @@ module HotelPortal
               guest_government_id: guest_params[:government_id],
               guest_date_of_birth: guest_params[:date_of_birth]
             }
+          end
+
+          def booking_guest_bibo_params
+            return ActionController::Parameters.new.permit(:boat_in_at, :boat_out_at) unless inline_request?
+
+            params.fetch(:booking_guest, ActionController::Parameters.new).permit(:boat_in_at, :boat_out_at)
           end
 
           def guest_params

@@ -1,5 +1,5 @@
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8 print:max-w-none print:pb-0 print:space-y-4">
-  <% guest_report_tabs = [["Arrivals", "arrivals"], ["In-House", "in_house"], ["Departures", "departures"], ["Checkout", "checkout"], ["Registration Cards", "registration_cards"], ["BIBO", "bibo"]] %>
+  <% guest_report_tabs = [["Arrivals", "arrivals"], ["In-House", "in_house"], ["Departures", "departures"], ["Checkout", "checkout"], ["Registration Cards", "registration_cards"], ["Boat Transfers", "bibo"]] %>
   <div class="px-4 md:px-0 print:px-0">
     <div class="mt-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between print:mt-0 print:block">
       <div>
@@ -100,9 +100,11 @@
           ),
           class: "inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition #{active ? 'border-blue-600 bg-blue-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'}" do %>
           <span><%= label %></span>
-          <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold <%= active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500' %>">
-            <%= count %>
-          </span>
+          <% if count.present? %>
+            <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold <%= active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500' %>">
+              <%= count %>
+            </span>
+          <% end %>
         <% end %>
       <% end %>
     </div>

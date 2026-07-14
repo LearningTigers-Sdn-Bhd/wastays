@@ -13,8 +13,17 @@ module HotelPortal
       def generate
         CSV.generate(headers: true) do |csv|
           csv << headers_for_active_tab
-          rows_for_active_tab.each do |row|
-            csv << values_for_active_tab(row)
+          if @tab == "bibo"
+            @report.boat_ins.each do |row|
+              csv << [ "Boat Arrival", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ]
+            end
+            @report.boat_outs.each do |row|
+              csv << [ "Boat Departure", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ]
+            end
+          else
+            rows_for_active_tab.each do |row|
+              csv << values_for_active_tab(row)
+            end
           end
         end
       end
@@ -22,6 +31,7 @@ module HotelPortal
       private
 
       def headers_for_active_tab
+        return [ "Type", "Guest Name", "Booking Ref", "Room Type", "Room Number", "Stay Dates", "Boat Time" ] if @tab == "bibo"
         return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Pre-checkin Status", "Guarantee Method", "Deposit Status", "Departure Status", "Notes" ] if @tab == "arrivals"
 
         [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ]
@@ -41,7 +51,8 @@ module HotelPortal
           "arrivals" => "Arrival",
           "in_house" => "In-House",
           "departures" => "Departure",
-          "checkout" => "Checkout"
+          "checkout" => "Checkout",
+          "bibo" => "Boat Transfers"
         }.fetch(@tab, "Arrival")
       end
 
