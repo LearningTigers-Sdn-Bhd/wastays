@@ -52,7 +52,8 @@ module HotelPortal
         rows << spreadsheet_row([ "Online Payment", money(@report.totals[:gateway_payment]) ])
         rows << spreadsheet_row([ "Cash Payment", money(@report.totals[:cash_payment]) ])
         rows << spreadsheet_row([ "Deposit", money(@report.totals[:booking_payment]) ])
-        rows << spreadsheet_row([ "Agent Transfer", money(@report.totals[:ar_bank_transfer]) ])
+        rows << spreadsheet_row([ "Agent Transfer", money(@report.totals[:agent_bank_transfer]) ])
+        rows << spreadsheet_row([ "Corporate Transfer", money(@report.totals[:corporate_bank_transfer]) ])
         rows << spreadsheet_row([ "Refund", money(@report.totals[:refund]) ])
         rows << spreadsheet_row([ "Net Amount", money(@report.totals[:net_amount]) ])
         rows.join("\n")
@@ -60,7 +61,7 @@ module HotelPortal
 
       def daily_rows
         rows = []
-        rows << spreadsheet_row([ "Date", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Discount", "Online", "Cash", "Deposit", "Agent Transfer", "Refund", "Net" ])
+        rows << spreadsheet_row([ "Date", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Discount", "Online", "Cash", "Deposit", "Agent Transfer", "Corporate Transfer", "Refund", "Net" ])
         @report.rows.each do |row|
           rows << spreadsheet_row([
             row[:date].strftime("%Y-%m-%d"),
@@ -73,7 +74,8 @@ module HotelPortal
             money(row[:gateway_payment]),
             money(row[:cash_payment]),
             money(row[:booking_payment]),
-            money(row[:ar_bank_transfer]),
+            money(row[:agent_bank_transfer]),
+            money(row[:corporate_bank_transfer]),
             money(row[:refund]),
             money(row[:net_amount])
           ])

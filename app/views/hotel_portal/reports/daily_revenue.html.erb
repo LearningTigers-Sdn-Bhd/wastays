@@ -70,6 +70,7 @@
             <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Cash</th>
             <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Deposit</th>
             <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Agent Transfer</th>
+            <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Corporate Transfer</th>
             <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Refund</th>
             <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Net</th>
           </tr>
@@ -88,13 +89,14 @@
                 <td class="px-4 py-3 text-sm text-foreground text-right">MYR <%= number_with_precision(row[:gateway_payment], precision: 2) %></td>
                 <td class="px-4 py-3 text-sm text-foreground text-right">MYR <%= number_with_precision(row[:cash_payment], precision: 2) %></td>
                 <td class="px-4 py-3 text-sm text-foreground text-right">MYR <%= number_with_precision(row[:booking_payment], precision: 2) %></td>
-                <td class="px-4 py-3 text-sm text-foreground text-right">MYR <%= number_with_precision(row[:ar_bank_transfer], precision: 2) %></td>
+                <td class="px-4 py-3 text-sm text-foreground text-right">MYR <%= number_with_precision(row[:agent_bank_transfer], precision: 2) %></td>
+                <td class="px-4 py-3 text-sm text-foreground text-right">MYR <%= number_with_precision(row[:corporate_bank_transfer], precision: 2) %></td>
                 <td class="px-4 py-3 text-sm text-red-500 text-right">- MYR <%= number_with_precision(row[:refund], precision: 2) %></td>
                 <td class="px-4 py-3 text-sm font-bold text-emerald-700 text-right">MYR <%= number_with_precision(row[:net_amount], precision: 2) %></td>
               </tr>
             <% end %>
           <% else %>
-            <tr><td colspan="13" class="px-6 py-20 text-center text-sm font-medium text-muted-foreground">No daily revenue data for this selected period.</td></tr>
+            <tr><td colspan="14" class="px-6 py-20 text-center text-sm font-medium text-muted-foreground">No daily revenue data for this selected period.</td></tr>
           <% end %>
         </tbody>
       </table>
