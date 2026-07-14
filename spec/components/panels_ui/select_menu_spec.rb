@@ -86,6 +86,27 @@ RSpec.describe PanelsUI::SelectMenu, type: :component do
     expect(page.find("button#profile_board-trigger")["aria-describedby"]).to eq("board-hint")
   end
 
+  it "composes caller Stimulus controllers and actions with its enhancement behavior" do
+    render_inline(
+      described_class.new(
+        form: form_for,
+        attribute: :board,
+        choices: choices,
+        data: {
+          controller: "analytics",
+          action: "focusin->analytics#track"
+        }
+      )
+    )
+
+    root = page.find(".panel-select-menu")
+    expect(root["data-controller"].split).to contain_exactly("analytics", "panels-ui--select-menu")
+    expect(root["data-action"].split).to contain_exactly(
+      "focusin->analytics#track",
+      "pointerdown@window->panels-ui--select-menu#onWindowPointerDown"
+    )
+  end
+
   it "raises without choices" do
     expect {
       described_class.new(form: form_for, attribute: :board, choices: [])

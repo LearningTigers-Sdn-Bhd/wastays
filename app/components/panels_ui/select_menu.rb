@@ -123,7 +123,7 @@ module PanelsUI
           size: @size,
           invalid: @invalid.to_s,
           disabled: @disabled.to_s,
-          action: "pointerdown@window->panels-ui--select-menu#onWindowPointerDown"
+          action: [ data.delete(:action), "pointerdown@window->panels-ui--select-menu#onWindowPointerDown" ].compact.join(" ")
         )
       )
     end

@@ -42,7 +42,13 @@ module PanelsUI
 
       chosen = config[:defaults].merge(selected.compact)
       parts  = [ config[:base] ]
-      chosen.each { |group, value| parts << config.dig(:variants, group, value) }
+      chosen.each do |group, value|
+        variants = config[:variants][group]
+        next unless variants
+
+        resolved = variants.key?(value) ? value : config[:defaults][group]
+        parts << variants[resolved]
+      end
       parts << class_override
       tw_merge(parts)
     end

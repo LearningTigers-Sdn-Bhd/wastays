@@ -16,7 +16,9 @@ export default class extends Controller {
   }
 
   connect() {
+    this.onFormReset = this.onFormReset.bind(this)
     this.cleanupPosition = null
+    this.resetFrame = null
     this.typeahead = ""
     this.typeaheadTimer = null
 
@@ -27,10 +29,16 @@ export default class extends Controller {
     this.nativeTarget.setAttribute("aria-hidden", "true")
     this.element.dataset.enhanced = "true"
 
+    this.form = this.nativeTarget.form
+    this.form?.addEventListener("reset", this.onFormReset)
     this.syncFromNative()
   }
 
   disconnect() {
+    this.form?.removeEventListener("reset", this.onFormReset)
+    this.form = null
+    if (this.resetFrame) cancelAnimationFrame(this.resetFrame)
+    this.resetFrame = null
     this.cancelTypeahead()
     this.stopPositioning()
     if (this.isOpen) this.listboxTarget.hidePopover()
@@ -174,6 +182,15 @@ export default class extends Controller {
 
   onNativeChange() {
     this.syncFromNative()
+  }
+
+  onFormReset() {
+    // The reset event fires before the browser restores the select's defaults.
+    if (this.resetFrame) cancelAnimationFrame(this.resetFrame)
+    this.resetFrame = requestAnimationFrame(() => {
+      this.resetFrame = null
+      this.syncFromNative()
+    })
   }
 
   // Mirror the native value into the styled UI. Called on connect, on selection,

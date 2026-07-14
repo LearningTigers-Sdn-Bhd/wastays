@@ -7,6 +7,9 @@ RSpec.describe "PanelsUI::SelectMenu", type: :system do
   TRIGGER = "select_menu_panel_light_board-trigger"
   LISTBOX = "select_menu_panel_light_board-listbox"
   NATIVE = "select_menu_panel_light_board"
+  ROOM_TRIGGER = "select_menu_panel_light_room_type-trigger"
+  ROOM_LISTBOX = "select_menu_panel_light_room_type-listbox"
+  ROOM_NATIVE = "select_menu_panel_light_room_type"
 
   before { visit "/system-design" }
 
@@ -69,6 +72,26 @@ RSpec.describe "PanelsUI::SelectMenu", type: :system do
     expect(find("##{TRIGGER} .panel-select-menu__value")["data-placeholder"]).to eq("false")
     expect(page.evaluate_script("document.activeElement.id")).to eq(TRIGGER)
     expect(find("##{LISTBOX} [role='option'][data-value='full']", visible: :all)["aria-selected"]).to eq("true")
+  end
+
+  it "restores the enhanced UI when its form resets" do
+    open_menu
+    find("[role='option']", text: "Full board").click
+    find_by_id(ROOM_TRIGGER).click
+    expect(page).to have_css("##{ROOM_LISTBOX}:popover-open")
+    find("##{ROOM_LISTBOX} [role='option']", text: "Suite").click
+
+    find(:xpath, "//select[@id='#{NATIVE}']/ancestor::form", visible: :all).click_button("Reset selects")
+
+    expect(native_value).to eq("")
+    label = find("##{TRIGGER} .panel-select-menu__value")
+    expect(label).to have_text("Select a board basis")
+    expect(label["data-placeholder"]).to eq("true")
+    expect(find("##{LISTBOX} [role='option'][data-value='full']", visible: :all)["aria-selected"]).to eq("false")
+
+    expect(page.evaluate_script("document.getElementById('#{ROOM_NATIVE}').value")).to eq("dlx_twin")
+    expect(find("##{ROOM_TRIGGER} .panel-select-menu__value")).to have_text("Deluxe Twin")
+    expect(find("##{ROOM_LISTBOX} [role='option'][data-value='dlx_twin']", visible: :all)["aria-selected"]).to eq("true")
   end
 
   it "skips disabled options and closes on Escape and outside pointer input" do
