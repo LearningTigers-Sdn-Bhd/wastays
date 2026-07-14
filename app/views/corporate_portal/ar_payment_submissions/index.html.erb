@@ -15,6 +15,7 @@
           <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
             <tr>
               <th class="px-6 py-3">Hotel</th>
+              <th class="px-6 py-3">Invoice</th>
               <th class="px-6 py-3">Reference</th>
               <th class="px-6 py-3">Amount</th>
               <th class="px-6 py-3">Submitted</th>
@@ -26,6 +27,7 @@
             <% @submissions.each do |submission| %>
               <tr>
                 <td class="px-6 py-4 font-bold text-slate-950"><%= submission.hotel.name %></td>
+                <td class="px-6 py-4 text-slate-600"><%= submission.ar_invoice&.formatted_invoice_number || "—" %></td>
                 <td class="px-6 py-4 text-slate-600"><%= submission.reference_number %></td>
                 <td class="px-6 py-4 font-semibold tabular-nums text-slate-900"><%= submission.currency %> <%= number_with_precision(submission.amount, precision: 2) %></td>
                 <td class="px-6 py-4 text-slate-600"><%= l(submission.created_at, format: :short) %></td>

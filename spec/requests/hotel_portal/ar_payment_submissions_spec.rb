@@ -39,6 +39,18 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     expect(response.body).to include("submitted payment slip")
   end
 
+  it "prefills the allocation for the submission's target invoice without needing ar_invoice_id in the URL" do
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-TARGETED", amount: 275)
+
+    get new_hotel_ar_payment_path(hotel, hotel_corporate_account_id: relationship.id, ar_payment_submission_id: submission.id)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include(submission.ar_invoice.formatted_invoice_number)
+    expect(response.body).to include("targeting invoice #{submission.ar_invoice.formatted_invoice_number}")
+    expect(response.body).to include("name=\"allocations[#{submission.ar_invoice.id}]\"")
+    expect(response.body).to include('value="275.0"')
+  end
+
   it "renders agent-submitted fields as read-only, not editable inputs" do
     submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-READONLY", amount: 275, payment_method: "bank_transfer")
 

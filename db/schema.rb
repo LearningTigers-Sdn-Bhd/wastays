@@ -160,13 +160,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
     t.datetime "reviewed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "ar_invoice_id"
+    t.index ["ar_invoice_id"], name: "index_ar_payment_submissions_on_ar_invoice_id"
     t.index ["ar_payment_id"], name: "index_ar_payment_submissions_on_ar_payment_id"
     t.index ["hotel_corporate_account_id"], name: "index_ar_payment_submissions_on_hotel_corporate_account_id"
     t.index ["hotel_id"], name: "index_ar_payment_submissions_on_hotel_id"
     t.index ["reviewed_by_id"], name: "index_ar_payment_submissions_on_reviewed_by_id"
     t.index ["submitted_by_id"], name: "index_ar_payment_submissions_on_submitted_by_id"
     t.check_constraint "amount > 0::numeric", name: "ar_payment_submissions_amount_positive"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying]::text[])", name: "ar_payment_submissions_status_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'approved'::character varying::text, 'rejected'::character varying::text])", name: "ar_payment_submissions_status_allowed"
   end
 
   create_table "ar_payments", force: :cascade do |t|
@@ -260,7 +262,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
     t.index ["hotel_id", "archived_at"], name: "index_booking_billing_parties_on_hotel_id_and_archived_at"
     t.index ["hotel_id"], name: "index_booking_billing_parties_on_hotel_id"
     t.check_constraint "((booking_guest_id IS NOT NULL)::integer + (hotel_corporate_account_id IS NOT NULL)::integer) = 1", name: "booking_billing_parties_one_identity"
-    t.check_constraint "account_type IS NULL OR (account_type::text = ANY (ARRAY['company'::character varying::text, 'government'::character varying::text, 'travel_agent'::character varying::text]))", name: "booking_billing_parties_account_type_allowed"
+    t.check_constraint "account_type IS NULL OR (account_type::text = ANY (ARRAY['company'::text, 'government'::text, 'travel_agent'::text, 'airline'::text]))", name: "booking_billing_parties_account_type_allowed"
     t.check_constraint "party_kind::text = ANY (ARRAY['guest'::character varying::text, 'company'::character varying::text])", name: "booking_billing_parties_kind_allowed"
   end
 
@@ -1072,7 +1074,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
     t.index ["hotel_id", "corporate_account_id"], name: "idx_hotel_corporate_accounts_unique_relationship", unique: true
     t.index ["hotel_id", "status"], name: "idx_hotel_corporate_accounts_on_hotel_and_status"
     t.index ["hotel_id"], name: "index_hotel_corporate_accounts_on_hotel_id"
-    t.check_constraint "account_type::text = ANY (ARRAY['company'::character varying, 'government'::character varying, 'travel_agent'::character varying, 'airline'::character varying]::text[])", name: "hotel_corporate_accounts_account_type_allowed"
+    t.check_constraint "account_type::text = ANY (ARRAY['company'::character varying::text, 'government'::character varying::text, 'travel_agent'::character varying::text, 'airline'::character varying::text])", name: "hotel_corporate_accounts_account_type_allowed"
     t.check_constraint "credit_limit IS NULL OR credit_limit >= 0::numeric", name: "hotel_corporate_accounts_credit_limit_nonnegative"
     t.check_constraint "payment_terms_days IS NULL OR payment_terms_days >= 0", name: "hotel_corporate_accounts_payment_terms_nonnegative"
     t.check_constraint "relationship_type::text = ANY (ARRAY['standard'::character varying::text, 'direct_bill'::character varying::text])", name: "hotel_corporate_accounts_relationship_type_allowed"
@@ -2019,6 +2021,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
   add_foreign_key "ar_payment_allocation_reversals", "users", column: "reversed_by_id"
   add_foreign_key "ar_payment_allocations", "ar_invoices"
   add_foreign_key "ar_payment_allocations", "ar_payments"
+  add_foreign_key "ar_payment_submissions", "ar_invoices"
   add_foreign_key "ar_payment_submissions", "ar_payments"
   add_foreign_key "ar_payment_submissions", "hotel_corporate_accounts"
   add_foreign_key "ar_payment_submissions", "hotels"

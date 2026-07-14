@@ -24,10 +24,11 @@ module HotelPortal
     end
 
     def new
-      @ar_payment_submission = current_hotel.ar_payment_submissions.pending.find_by(id: params[:ar_payment_submission_id])
+      @ar_payment_submission = current_hotel.ar_payment_submissions.pending.includes(:ar_invoice).find_by(id: params[:ar_payment_submission_id])
       set_context
       if @ar_payment_submission.present?
         @hotel_corporate_account = @ar_payment_submission.hotel_corporate_account
+        @source_invoice ||= @ar_payment_submission.ar_invoice
         @open_invoices = open_invoices
       end
     end

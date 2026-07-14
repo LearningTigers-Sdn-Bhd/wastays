@@ -2,7 +2,7 @@
   <div>
     <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Payment Submissions</p>
     <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-950">Submit a Payment</h1>
-    <p class="mt-1 text-sm text-slate-600">Upload your transaction slip and enter the amount. The hotel will verify it and apply it to your account.</p>
+    <p class="mt-1 text-sm text-slate-600">Select the outstanding invoice you paid by bank transfer, upload your transaction slip, and the hotel will verify it.</p>
   </div>
 
   <% if @ar_payment_submission.errors.any? %>
@@ -11,51 +11,63 @@
     </div>
   <% end %>
 
-  <%= form_with model: @ar_payment_submission, url: corporate_ar_payment_submissions_path, local: true, multipart: true, class: "space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" do |f| %>
-    <div>
-      <%= f.label :hotel_corporate_account_id, "Hotel", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-      <%= f.select :hotel_corporate_account_id,
-        options_from_collection_for_select(corporate_hotel_corporate_accounts, :id, ->(relationship) { relationship.hotel.name }),
-        {},
-        required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+  <% if corporate_open_invoices.none? %>
+    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+      You have no outstanding invoices right now, so there's nothing to submit a payment against.
     </div>
-    <div>
-      <%= f.label :reference_number, "Reference / transaction number", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-      <%= f.text_field :reference_number, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
-    </div>
-    <div class="grid grid-cols-2 gap-4">
+  <% else %>
+    <%= form_with model: @ar_payment_submission, url: corporate_ar_payment_submissions_path, local: true, multipart: true, class: "space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm", data: { controller: "corporate-payment-submission-form" } do |f| %>
       <div>
-        <%= f.label :amount, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-        <%= f.number_field :amount, step: "0.01", min: "0.01", required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+        <%= f.label :ar_invoice_id, "Invoice", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.select :ar_invoice_id,
+          options_for_select(
+            corporate_open_invoices.map { |invoice| [ "#{invoice.hotel.name} · #{invoice.formatted_invoice_number} · #{invoice.currency} #{number_with_precision(invoice.outstanding_amount, precision: 2)} due #{invoice.due_on.strftime('%d %b %Y')}", invoice.id, { data: { outstanding: invoice.outstanding_amount, currency: invoice.currency } } ] },
+            @ar_payment_submission.ar_invoice_id
+          ),
+          { include_blank: "Select an outstanding invoice" },
+          required: true,
+          data: { corporate_payment_submission_form_target: "invoice", action: "change->corporate-payment-submission-form#sync" },
+          class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
       </div>
       <div>
-        <%= f.label :currency, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-        <%= f.text_field :currency, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold uppercase text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+        <%= f.label :reference_number, "Reference / transaction number", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.text_field :reference_number, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
       </div>
-    </div>
-    <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <%= f.label :amount, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+          <%= f.number_field :amount, step: "0.01", min: "0.01", required: true, data: { corporate_payment_submission_form_target: "amount" }, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+          <p class="mt-1 text-xs text-slate-500">Defaults to the invoice's outstanding balance — reduce it if you're only paying part of it.</p>
+        </div>
+        <div>
+          <%= f.label :currency, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+          <%= f.text_field :currency, required: true, readonly: true, data: { corporate_payment_submission_form_target: "currency" }, class: "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold uppercase text-slate-700 focus:outline-none focus:ring-0" %>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <%= f.label :received_at, "Date paid", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+          <%= f.date_field :received_at, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+        </div>
+        <div>
+          <%= f.label :payment_method, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+          <%= f.select :payment_method, options_for_select(ArPayment::PAYMENT_METHODS.map { |method| [ method.humanize, method ] }, @ar_payment_submission.payment_method),
+            {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+        </div>
+      </div>
       <div>
-        <%= f.label :received_at, "Date paid", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-        <%= f.date_field :received_at, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+        <%= f.label :slip, "Transaction slip (image or PDF)", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.file_field :slip, required: true, accept: "image/*,application/pdf", class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700" %>
       </div>
       <div>
-        <%= f.label :payment_method, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-        <%= f.select :payment_method, options_for_select(ArPayment::PAYMENT_METHODS.map { |method| [ method.humanize, method ] }, @ar_payment_submission.payment_method),
-          {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+        <%= f.label :notes, "Notes (optional)", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.text_area :notes, rows: 3, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
       </div>
-    </div>
-    <div>
-      <%= f.label :slip, "Transaction slip (image or PDF)", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-      <%= f.file_field :slip, required: true, accept: "image/*,application/pdf", class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700" %>
-    </div>
-    <div>
-      <%= f.label :notes, "Notes (optional)", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-      <%= f.text_area :notes, rows: 3, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
-    </div>
 
-    <div class="flex justify-end gap-2">
-      <%= link_to "Cancel", corporate_ar_payment_submissions_path, class: "rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100" %>
-      <%= f.submit "Submit Payment", class: "rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-700" %>
-    </div>
+      <div class="flex justify-end gap-2">
+        <%= link_to "Cancel", corporate_ar_payment_submissions_path, class: "rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100" %>
+        <%= f.submit "Submit Payment", class: "rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-700" %>
+      </div>
+    <% end %>
   <% end %>
 </div>

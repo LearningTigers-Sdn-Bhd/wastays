@@ -11,6 +11,9 @@
   <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="border-b border-slate-200 px-6 py-5"><h2 class="text-lg font-bold text-slate-950">Details</h2></div>
     <dl class="grid grid-cols-2 gap-4 p-6 text-sm">
+      <% if @submission.ar_invoice.present? %>
+        <div class="col-span-2"><dt class="text-slate-500">Invoice</dt><dd class="font-bold text-slate-950"><%= link_to @submission.ar_invoice.formatted_invoice_number, corporate_ar_invoice_path(@submission.ar_invoice), class: "underline" %></dd></div>
+      <% end %>
       <div><dt class="text-slate-500">Reference</dt><dd class="font-bold text-slate-950"><%= @submission.reference_number %></dd></div>
       <div><dt class="text-slate-500">Amount</dt><dd class="font-bold text-slate-950"><%= @submission.currency %> <%= number_with_precision(@submission.amount, precision: 2) %></dd></div>
       <div><dt class="text-slate-500">Date paid</dt><dd class="font-bold text-slate-950"><%= l(@submission.received_at, format: :short) %></dd></div>

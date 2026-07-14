@@ -12,6 +12,24 @@ FactoryBot.define do
     payment_method { "bank_transfer" }
     status { "pending" }
 
+    # Skipped (nil) when hotel/hotel_corporate_account have been overridden into a mismatched
+    # pair on purpose (e.g. to test that cross-hotel validation) — building a matching invoice
+    # in that case would itself blow up on ArInvoice's own hotel-consistency validations.
+    ar_invoice do
+      next nil if hotel.blank? || hotel_corporate_account.blank? || hotel_corporate_account.hotel_id != hotel.id
+
+      association(:ar_invoice,
+        hotel: hotel,
+        hotel_corporate_account: hotel_corporate_account,
+        booking_folio: association(:booking_folio, :secondary,
+          booking: association(:booking, hotel: hotel),
+          hotel: hotel,
+          hotel_corporate_account: hotel_corporate_account),
+        amount: amount,
+        outstanding_amount: amount,
+        currency: currency)
+    end
+
     after(:build) do |submission|
       submission.slip.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")),
