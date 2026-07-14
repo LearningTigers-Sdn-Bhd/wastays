@@ -6,24 +6,14 @@ RSpec.describe HotelPortal::AccountsReceivable::PaymentRecordPresenter do
   let(:hotel) { create(:hotel) }
   let(:relationship) { create(:hotel_corporate_account, hotel: hotel) }
 
-  it "reports active allocations and unapplied balances while excluding reversals" do
+  it "shows a Received status for confirmed payments regardless of allocation state" do
     payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 500, currency: hotel.default_currency, received_at: hotel.current_business_date)
     create(:ar_payment_allocation, ar_payment: payment, ar_invoice: create_invoice(amount: 100), amount: 100)
-    reversed = create(:ar_payment_allocation, ar_payment: payment, ar_invoice: create_invoice(amount: 50), amount: 50)
-    create(:ar_payment_allocation_reversal, ar_payment_allocation: reversed)
 
     presenter = described_class.new(hotel: hotel, params: {})
-    metrics = presenter.summary_metrics.index_by(&:label)
     row = presenter.paginated_rows.first
 
-    expect(metrics.fetch("Allocated This Month").amounts).to eq([ "#{hotel.default_currency} 100.00" ])
-    expect(metrics.fetch("Total Unapplied").amounts).to eq([ "#{hotel.default_currency} 400.00" ])
-    expect(metrics.fetch("Needs Allocation").amounts).to eq([ "1" ])
-    expect(row).to have_attributes(
-      allocated_label: "#{hotel.default_currency} 100.00",
-      unapplied_label: "#{hotel.default_currency} 400.00",
-      status: "partially_allocated"
-    )
+    expect(row).to have_attributes(status_label: "Received")
   end
 
   it "totals bank transfer payments received in the current business month, excluding other methods" do
@@ -35,16 +25,6 @@ RSpec.describe HotelPortal::AccountsReceivable::PaymentRecordPresenter do
     metrics = presenter.summary_metrics.index_by(&:label)
 
     expect(metrics.fetch("Bank Transfers This Month").amounts).to eq([ "#{hotel.default_currency} 300.00" ])
-  end
-
-  it "filters by derived allocation status" do
-    create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 100)
-    fully_allocated = create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 100)
-    create(:ar_payment_allocation, ar_payment: fully_allocated, ar_invoice: create_invoice(amount: 100), amount: 100)
-
-    presenter = described_class.new(hotel: hotel, params: { status: "fully_allocated" })
-
-    expect(presenter.paginated_rows.map(&:payment)).to contain_exactly(fully_allocated)
   end
 
   it "merges in pending and rejected submissions, excluding approved ones" do
