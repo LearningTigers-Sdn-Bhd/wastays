@@ -4,12 +4,14 @@ module PanelsUI
   class Button < PanelsUI::BaseComponent
     VARIANTS = %i[primary secondary accent neutral ghost destructive success warning info].freeze
     SIZES = %i[xs sm md lg icon_xs icon_sm icon icon_lg].freeze
+    ELEMENTS = %i[button a].freeze
 
-    def initialize(label: nil, variant: :primary, size: :md, href: nil, disabled: false, icon_only: false,
+    def initialize(label: nil, variant: :primary, size: :md, as: nil, href: nil, disabled: false, icon_only: false,
                    aria_label: nil, class: nil, **attributes)
       @label = label
       @variant = VARIANTS.include?(variant) ? variant : :primary
       @size = SIZES.include?(size) ? size : :md
+      @element = normalize_element(as)
       @href = href
       @disabled = disabled
       @icon_only = icon_only || %i[icon_xs icon_sm icon icon_lg].include?(@size)
@@ -24,7 +26,14 @@ module PanelsUI
 
     private
 
-    def tag_name = @href.present? ? :a : :button
+    def tag_name = @element || (@href.present? ? :a : :button)
+
+    def normalize_element(element)
+      element = element.to_sym if element.respond_to?(:to_sym)
+      ELEMENTS.include?(element) ? element : nil
+    end
+
+    def link? = tag_name == :a
 
     def button_attributes
       attributes = @attributes.deep_dup
@@ -37,9 +46,9 @@ module PanelsUI
       end
 
       attributes.merge(
-        href: (@disabled ? nil : @href),
-        type: (@href.present? ? nil : attributes.delete(:type) || "button"),
-        disabled: (@href.present? ? nil : @disabled),
+        href: (link? && !@disabled ? @href : nil),
+        type: (link? ? nil : attributes.delete(:type) || "button"),
+        disabled: (link? ? nil : @disabled),
         tabindex: disabled_link? ? "-1" : attributes.delete(:tabindex),
         class: tw_merge("panel-button", @class),
         data: data.merge(
@@ -54,7 +63,7 @@ module PanelsUI
     end
 
     def disabled_link?
-      @href.present? && @disabled
+      link? && @disabled
     end
   end
 end

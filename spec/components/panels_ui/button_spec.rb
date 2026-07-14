@@ -27,6 +27,23 @@ RSpec.describe PanelsUI::Button, type: :component do
     expect(page).to have_no_css("button")
   end
 
+  it "allows the element semantics to be selected explicitly" do
+    render_button(as: :a, href: "/reports") { "Reports" }
+    expect(page).to have_link("Reports", href: "/reports")
+
+    render_button(as: :button, href: "/ignored", type: "submit") { "Run report" }
+    button = page.find("button", text: "Run report")
+    expect(button[:type]).to eq("submit")
+    expect(button[:href]).to be_nil
+  end
+
+  it "falls back to href inference when an unsupported element is supplied" do
+    render_button(as: :div, href: "/bookings") { "Bookings" }
+
+    expect(page).to have_link("Bookings", href: "/bookings")
+    expect(page).to have_no_css("div.panel-button")
+  end
+
   it "passes through arbitrary html, data, aria, and command attributes" do
     render_button(
       id: "open-invite",
