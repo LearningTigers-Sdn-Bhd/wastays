@@ -6,7 +6,6 @@
 <div class="w-full space-y-4">
   <div>
     <div>
-      <p class="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Accounts Receivable / Statement</p>
       <%= render PanelsUI::PageHeader.new(title: @hotel_corporate_account.corporate_account.name) do |header| %>
         <% header.with_caption do %>
           <%= @hotel_corporate_account.corporate_account.users.min_by(&:id)&.email || "No contact email" %>

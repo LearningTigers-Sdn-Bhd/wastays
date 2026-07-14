@@ -1,6 +1,5 @@
 <div class="w-full space-y-6">
   <div>
-    <p class="text-sm font-medium text-muted-foreground">Hotel Portal</p>
     <%= render PanelsUI::PageHeader.new(title: "Onboarding Sessions", description: "Review the onboarding and training sessions scheduled for your hotel.") do |header| %>
       <% header.with_actions do %>
         <%= render PanelsUI::Button.new(as: :a, href: hotel_dashboard_path(current_hotel), variant: :secondary, size: :md, class: "w-full lg:w-auto") do %>
