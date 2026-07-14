@@ -125,12 +125,12 @@ GEM
     childprocess (5.1.0)
       logger (~> 1.5)
     chunky_png (1.4.0)
-    commonmarker (2.8.2-aarch64-linux)
-    commonmarker (2.8.2-aarch64-linux-musl)
-    commonmarker (2.8.2-arm-linux)
-    commonmarker (2.8.2-arm64-darwin)
-    commonmarker (2.8.2-x86_64-linux)
-    commonmarker (2.8.2-x86_64-linux-musl)
+    commonmarker (2.9.0-aarch64-linux)
+    commonmarker (2.9.0-aarch64-linux-musl)
+    commonmarker (2.9.0-arm-linux)
+    commonmarker (2.9.0-arm64-darwin)
+    commonmarker (2.9.0-x86_64-linux)
+    commonmarker (2.9.0-x86_64-linux-musl)
     concurrent-ruby (1.3.7)
     connection_pool (3.0.2)
     countries (8.1.0)
@@ -640,7 +640,7 @@ DEPENDENCIES
   bullet
   bundler-audit
   capybara
-  commonmarker (~> 2.8)
+  commonmarker (~> 2.9)
   countries
   csv
   cuprite
