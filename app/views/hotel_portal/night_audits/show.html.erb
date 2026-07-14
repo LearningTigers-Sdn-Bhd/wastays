@@ -12,7 +12,7 @@
   <%= render "hotel_portal/night_audits/show/summary", presenter: presenter %>
 
   <div data-testid="night-audit-show-tabs">
-  <%= render PanelsUI::Tabs.new(id: "night-audit-show-tabs", default: "results", breadcrumb_id: "hotel-breadcrumb", class: "space-y-4", aria_label: "Night Audit record sections") do |tabs| %>
+  <%= render PanelsUI::Tabs.new(id: "night-audit-show-tabs", active: @active_tab, variant: :pill, url: { param: "tab" }, class: "space-y-4", aria_label: "Night Audit record sections") do |tabs| %>
     <% tabs.with_tab(name: "results", label: "Results", icon: "list-checks", count: presenter.run_result_counters.sum { |counter| counter.value.to_i }, panel_id: "results-panel") %>
     <% tabs.with_tab(name: "financial-summary", label: "Financial Summary", icon: "chart-no-axes-combined", panel_id: "financial-summary-panel") %>
     <% tabs.with_tab(name: "advanced-actions", label: "Advanced Actions", icon: "settings-2", count: presenter.manual_adjustment_rows.count, panel_id: "advanced-actions-panel") %>

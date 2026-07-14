@@ -1,42 +1,23 @@
 # frozen_string_literal: true
 
 module PanelsUI
-  # Accessible tabs (WAI-ARIA APG "tabs" pattern) — a self-contained widget: the
-  # controller root wraps the tablist and the panels, so it is a drop-in for the old
-  # hand-rolled `tabs`/`subtabs` markup.
-  #
-  #   <%= render PanelsUI::Tabs.new(id: "audit", default: "history") do |t| %>
-  #     <% t.with_tab(name: "history", label: "Audit History", icon: "history", count: 12) %>
-  #     <% t.with_tab(name: "advanced", label: "Advanced Actions") %>
-  #     <% t.with_panel(name: "history") do %> … <% end %>
-  #     <% t.with_panel(name: "advanced") do %> … <% end %>
-  #   <% end %>
-  #
-  # Keyboard: roving tabindex with ←/→/↑/↓/Home/End (automatic activation). The active
-  # tab is synced to the `?tab=` query param (name configurable via `param:`).
-  #
-  # ── Breadcrumb integration ──────────────────────────────────────────────────────
-  # When a PanelsUI::Breadcrumb is on the page, the `panels-ui--tabs` controller reaches
-  # it through a Stimulus **outlet** (not a global DOM query) and calls its outlet API on
-  # tab change: a `:primary` Tabs sets the tab label + toggles the subtab segment; a
-  # `:secondary` (subtab) Tabs sets the subtab label. Absent breadcrumb → no-op.
+  # One compound tab primitive with semantics inferred from its slots:
+  # - tabs with hrefs and no panels render link navigation
+  # - tabs without hrefs and matching panels render the WAI-ARIA tabs pattern
   class Tabs < PanelsUI::BaseComponent
-    LEVELS = %i[primary secondary].freeze
-    VARIANTS = %i[pill underline].freeze
+    VARIANTS = %i[line pill].freeze
 
-    # One tab button (role="tab"). `show_subtab_breadcrumb` (primary level only) reveals
-    # the breadcrumb's subtab segment when this tab is active.
     class Tab < PanelsUI::BaseComponent
+      attr_reader :name, :id, :panel_id, :href
+
       def initialize(tabs_id:, name:, label:, icon: nil, count: nil,
-                     show_subtab_breadcrumb: false, id: nil, panel_id: nil,
-                     href: nil, data: {}, aria: {}, active: false, variant: :pill,
-                     navigation: false, class: nil)
+                     id: nil, panel_id: nil, href: nil, data: {}, aria: {},
+                     active: false, variant: :line, class: nil)
         @tabs_id = tabs_id
-        @name = name
+        @name = name.to_s
         @label = label
         @icon = icon
         @count = count
-        @show_subtab_breadcrumb = show_subtab_breadcrumb
         @id = id || "#{@tabs_id}-tab-#{@name}"
         @panel_id = panel_id || "#{@tabs_id}-panel-#{@name}"
         @href = href
@@ -44,32 +25,39 @@ module PanelsUI
         @aria = aria
         @active = active
         @variant = variant
-        @navigation = navigation
         @class = binding.local_variable_get(:class)
       end
 
-      def call
-        return navigation_link if @navigation
+      def active=(value)
+        @active = value
+      end
 
+      def label = @label
+
+      def call
+        href.present? ? navigation_link : panel_trigger
+      end
+
+      private
+
+      def panel_trigger
         tag.button(
-          safe_join([ icon_tag, tag.span(@label), count_tag ].compact),
+          content,
           type: "button",
           role: "tab",
           id: @id,
           tabindex: (@active ? "0" : "-1"),
           class: tab_classes,
-          aria: { selected: (@active ? "true" : "false"), controls: @panel_id }.merge(@aria),
+          aria: { selected: @active.to_s, controls: @panel_id }.merge(@aria),
           data: {
+            slot: "tabs-trigger",
             panels_ui__tabs_target: "tab",
             tab_name: @name,
             tab_label: @label,
-            show_subtab_breadcrumb: (@show_subtab_breadcrumb ? "true" : nil),
             action: "click->panels-ui--tabs#select"
-          }.compact.merge(@data)
+          }.merge(@data)
         )
       end
-
-      private
 
       def navigation_link
         helpers.link_to(
@@ -77,16 +65,12 @@ module PanelsUI
           id: @id,
           class: tab_classes,
           aria: { current: (@active ? "page" : nil) }.merge(@aria).compact,
-          data: {
-            panels_ui__tabs_target: "tab",
-            tab_name: @name,
-            tab_label: @label,
-            show_subtab_breadcrumb: (@show_subtab_breadcrumb ? "true" : nil),
-            action: "click->panels-ui--tabs#selectNavigation"
-          }.compact.merge(@data)
-        ) do
-          safe_join([ icon_tag, tag.span(@label), count_tag ].compact)
-        end
+          data: { slot: "tabs-trigger", tab_name: @name, tab_label: @label }.merge(@data)
+        ) { content }
+      end
+
+      def content
+        safe_join([ icon_tag, tag.span(@label), count_tag ].compact)
       end
 
       def tab_classes
@@ -106,11 +90,12 @@ module PanelsUI
       end
     end
 
-    # One tab panel (role="tabpanel"). Starts hidden; the controller reveals the active one.
     class Panel < PanelsUI::BaseComponent
+      attr_reader :name, :id, :tab_id
+
       def initialize(tabs_id:, name:, id: nil, tab_id: nil, data: {}, aria: {}, active: false, class: nil)
         @tabs_id = tabs_id
-        @name = name
+        @name = name.to_s
         @id = id || "#{@tabs_id}-panel-#{@name}"
         @tab_id = tab_id || "#{@tabs_id}-tab-#{@name}"
         @data = data
@@ -119,59 +104,129 @@ module PanelsUI
         @class = binding.local_variable_get(:class)
       end
 
+      def active=(value)
+        @active = value
+      end
+
       def call
         tag.div(
           content,
           role: "tabpanel",
           id: @id,
           tabindex: "0",
-          class: tw_merge("tabs-panel", ("hidden" unless @active), @class),
+          hidden: !@active,
+          class: tw_merge("tabs-panel", @class),
           aria: { labelledby: @tab_id }.merge(@aria),
-          data: { panels_ui__tabs_target: "panel", tab_panel: @name }.merge(@data)
+          data: { slot: "tabs-panel", panels_ui__tabs_target: "panel", tab_panel: @name }.merge(@data)
         )
       end
     end
 
     renders_many :tabs, ->(**args) {
-      Tab.new(
-        tabs_id: @id,
-        active: args[:name].to_s == @default.to_s,
-        variant: @variant,
-        navigation: @navigation,
-        **args
-      )
+      Tab.new(tabs_id: @id, variant: @variant, **args)
     }
     renders_many :panels, ->(**args) {
-      Panel.new(tabs_id: @id, active: args[:name].to_s == @default.to_s, **args)
+      Panel.new(tabs_id: @id, **args)
     }
 
-    def initialize(id: nil, default: nil, param: "tab", level: :primary,
-                   sync_url: true, aria_label: nil, breadcrumb_id: nil,
-                   variant: :pill, navigation: false, list_class: nil,
-                   panels_class: nil, class: nil)
+    def initialize(id: nil, active: nil, variant: :line, aria_label: nil, url: nil,
+                   list_class: nil, panels_class: nil, class: nil)
       @id = id || "tabs-#{object_id}"
-      @default = default
-      @param = param
-      @level = LEVELS.include?(level.to_sym) ? level.to_sym : :primary
-      @sync_url = ActiveModel::Type::Boolean.new.cast(sync_url) || false
+      @active = active&.to_s
+      @variant = variant.to_sym
       @aria_label = aria_label
-      @breadcrumb_id = breadcrumb_id
-      @variant = VARIANTS.include?(variant.to_sym) ? variant.to_sym : :pill
-      @navigation = ActiveModel::Type::Boolean.new.cast(navigation) || false
+      @url = url
       @list_class = list_class
       @panels_class = panels_class
       @class = binding.local_variable_get(:class)
     end
 
-    attr_reader :param, :level, :aria_label
+    def before_render
+      validate_and_configure!
+    end
 
-    def default_value = @default
-    def sync_url? = @sync_url
+    attr_reader :aria_label
+
     def navigation? = @navigation
+    def active_name = @active_name
     def variant = @variant
+    def url_param = @url_param
 
-    def breadcrumb_outlet_selector
-      "##{@breadcrumb_id}" if @breadcrumb_id.present?
+    private
+
+    def validate_and_configure!
+      validate_basics!
+
+      href_states = tabs.map { |tab| tab.href.present? }.uniq
+      raise ArgumentError, "PanelsUI::Tabs cannot mix tabs with and without href" if href_states.size > 1
+
+      @navigation = href_states.first
+      @navigation ? validate_navigation! : validate_panels!
+      configure_active_state!
+    end
+
+    def validate_basics!
+      raise ArgumentError, "PanelsUI::Tabs requires at least one tab" if tabs.empty?
+      raise ArgumentError, "PanelsUI::Tabs requires aria_label" if @aria_label.blank?
+      raise ArgumentError, "PanelsUI::Tabs variant must be one of: #{VARIANTS.join(', ')}" unless VARIANTS.include?(@variant)
+
+      validate_unique!(tabs.map(&:name), "tab names")
+      validate_unique!(tabs.map(&:id), "tab ids")
+      validate_unique!(panels.map(&:name), "panel names")
+      validate_unique!(panels.map(&:id), "panel ids")
+      configure_url!
+    end
+
+    def validate_navigation!
+      raise ArgumentError, "PanelsUI::Tabs link navigation cannot contain panels" if panels.any?
+      raise ArgumentError, "PanelsUI::Tabs link navigation cannot configure URL state" if @url_param.present?
+      return if @active.blank? || tabs.any? { |tab| tab.name == @active }
+
+      raise ArgumentError, "PanelsUI::Tabs active navigation tab #{@active.inspect} does not exist"
+    end
+
+    def validate_panels!
+      tab_names = tabs.map(&:name)
+      panel_names = panels.map(&:name)
+      unless tab_names.sort == panel_names.sort
+        raise ArgumentError, "PanelsUI::Tabs panel tabs require exactly one matching panel per tab"
+      end
+
+      tabs.each do |tab|
+        panel = panels.find { |candidate| candidate.name == tab.name }
+        next if tab.panel_id == panel.id && panel.tab_id == tab.id
+
+        raise ArgumentError, "PanelsUI::Tabs tab and panel ids must reference each other for #{tab.name.inspect}"
+      end
+    end
+
+    def configure_active_state!
+      @active_name = if navigation?
+        @active
+      elsif tabs.any? { |tab| tab.name == @active }
+        @active
+      else
+        tabs.first.name
+      end
+
+      tabs.each { |tab| tab.active = tab.name == @active_name }
+      panels.each { |panel| panel.active = panel.name == @active_name }
+    end
+
+    def configure_url!
+      @url_param = nil
+      return if @url.nil?
+      unless @url.is_a?(Hash) && @url.keys.map(&:to_sym) == [ :param ] && @url[:param].present?
+        raise ArgumentError, "PanelsUI::Tabs url must be nil or { param: \"name\" }"
+      end
+
+      @url_param = @url[:param].to_s
+    end
+
+    def validate_unique!(values, label)
+      return if values.compact.uniq.size == values.compact.size
+
+      raise ArgumentError, "PanelsUI::Tabs requires unique #{label}"
     end
   end
 end

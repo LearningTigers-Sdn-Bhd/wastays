@@ -151,7 +151,7 @@
             <%= link_to "View full list", hotel_arrivals_path(@current_hotel), class: "text-sm font-semibold text-brand-primary hover:underline" %>
           </div>
 
-          <%= render PanelsUI::Tabs.new(id: "tabs-arrivals", default: "today", class: "p-6 sm:p-8", list_class: "mb-6", aria_label: "Arrivals") do |tabs| %>
+          <%= render PanelsUI::Tabs.new(id: "tabs-arrivals", active: "today", variant: :pill, class: "p-6 sm:p-8", list_class: "mb-6", aria_label: "Arrivals") do |tabs| %>
             <% tabs.with_tab(name: "today", label: "Today", count: @dashboard_presenter.today_arrivals_count, id: "tabs-arrivals-1", panel_id: "tabs-arrivals-panel-1") %>
             <% tabs.with_tab(name: "tomorrow", label: "Tomorrow", count: @tomorrow_arrivals.count, id: "tabs-arrivals-2", panel_id: "tabs-arrivals-panel-2") %>
             <% tabs.with_panel(name: "today", id: "tabs-arrivals-panel-1", tab_id: "tabs-arrivals-1") do %>

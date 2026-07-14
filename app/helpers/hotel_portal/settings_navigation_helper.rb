@@ -101,36 +101,36 @@ module HotelPortal
       case group
       when :general
         [
-          hotel_permission_granted?("manage_hotel_profile") ? { label: "General Settings", path: hotel_general_settings_path(current_hotel), icon: "settings", active: controller_name == "settings" && settings_active_page == "general" } : nil,
-          hotel_permission_granted?("manage_hotel_profile") ? { label: "Rate Settings", path: hotel_rates_settings_path(current_hotel), icon: "badge-dollar-sign", active: controller_name == "settings" && settings_active_page == "rates" } : nil,
-          hotel_permission_granted?("manage_hotel_profile") ? { label: "Notifications", path: hotel_notification_settings_path(current_hotel), icon: "bell", active: controller_name == "settings" && settings_active_page == "notifications" } : nil,
-          { label: "Plan & Billing", path: hotel_plan_path(current_hotel), icon: "layers", active: controller_name == "plans" }
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "general", label: "General Settings", path: hotel_general_settings_path(current_hotel), icon: "settings", active: controller_name == "settings" && settings_active_page == "general" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "rates", label: "Rate Settings", path: hotel_rates_settings_path(current_hotel), icon: "badge-dollar-sign", active: controller_name == "settings" && settings_active_page == "rates" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "notifications", label: "Notifications", path: hotel_notification_settings_path(current_hotel), icon: "bell", active: controller_name == "settings" && settings_active_page == "notifications" } : nil,
+          { key: "plan", label: "Plan & Billing", path: hotel_plan_path(current_hotel), icon: "layers", active: controller_name == "plans" }
         ].compact
       when :property
         [
-          { label: "Hotel Details", path: edit_hotel_profile_path(current_hotel), icon: "building-2", active: controller_name == "profiles" },
-          { label: "Room Categories", path: hotel_room_types_path(current_hotel), icon: "layers", active: controller_name == "room_types" },
-          { label: "Nearby Attractions", path: hotel_nearby_attractions_path(current_hotel), icon: "map-pin", active: controller_name == "nearby_attractions" }
+          { key: "hotel-details", label: "Hotel Details", path: edit_hotel_profile_path(current_hotel), icon: "building-2", active: controller_name == "profiles" },
+          { key: "room-categories", label: "Room Categories", path: hotel_room_types_path(current_hotel), icon: "layers", active: controller_name == "room_types" },
+          { key: "nearby-attractions", label: "Nearby Attractions", path: hotel_nearby_attractions_path(current_hotel), icon: "map-pin", active: controller_name == "nearby_attractions" }
         ]
       when :finance
         [
-          hotel_permission_granted?("manage_account") ? { label: "Banking Details", path: hotel_banking_details_settings_path(current_hotel), icon: "landmark", active: controller_name == "settings" && settings_active_page == "banking" } : nil,
-          hotel_permission_granted?("manage_hotel_profile") ? { label: "Taxes & Fees", path: hotel_taxes_fees_path(current_hotel), icon: "receipt", active: controller_name.in?(%w[taxes_fees hotel_taxes]) } : nil,
-          hotel_permission_granted?("manage_hotel_profile") ? { label: "Transaction Codes", path: hotel_transaction_codes_path(current_hotel), icon: "badge-percent", active: controller_name == "transaction_codes" } : nil,
-          hotel_permission_granted?("manage_general_ledger_maps") ? { label: "General Ledger Mappings", path: hotel_general_ledger_maps_path(current_hotel), icon: "git-merge", active: controller_name == "general_ledger_maps" } : nil
+          hotel_permission_granted?("manage_account") ? { key: "banking", label: "Banking Details", path: hotel_banking_details_settings_path(current_hotel), icon: "landmark", active: controller_name == "settings" && settings_active_page == "banking" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "taxes-fees", label: "Taxes & Fees", path: hotel_taxes_fees_path(current_hotel), icon: "receipt", active: controller_name.in?(%w[taxes_fees hotel_taxes]) } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "transaction-codes", label: "Transaction Codes", path: hotel_transaction_codes_path(current_hotel), icon: "badge-percent", active: controller_name == "transaction_codes" } : nil,
+          hotel_permission_granted?("manage_general_ledger_maps") ? { key: "general-ledger-mappings", label: "General Ledger Mappings", path: hotel_general_ledger_maps_path(current_hotel), icon: "git-merge", active: controller_name == "general_ledger_maps" } : nil
         ].compact
       when :guest_content
         [
-          { label: "AI Concierge", path: hotel_ai_concierge_settings_path(current_hotel), icon: "sparkles", active: controller_name == "settings" && settings_active_page == "ai" },
-          { label: "Policies", path: hotel_knowledge_policies_path(current_hotel), icon: "file-text", active: controller_name == "knowledge_policies" },
-          { label: "FAQs", path: hotel_knowledge_faqs_path(current_hotel), icon: "circle-question-mark", active: controller_name == "knowledge_faqs" },
-          { label: "General Info", path: hotel_knowledge_general_infos_path(current_hotel), icon: "info", active: controller_name == "knowledge_general_infos" },
-          { label: "Knowledge Diagnostics", path: hotel_knowledge_diagnostics_path(current_hotel), icon: "activity", active: controller_name == "knowledge_diagnostics" }
+          { key: "ai-concierge", label: "AI Concierge", path: hotel_ai_concierge_settings_path(current_hotel), icon: "sparkles", active: controller_name == "settings" && settings_active_page == "ai" },
+          { key: "policies", label: "Policies", path: hotel_knowledge_policies_path(current_hotel), icon: "file-text", active: controller_name == "knowledge_policies" },
+          { key: "faqs", label: "FAQs", path: hotel_knowledge_faqs_path(current_hotel), icon: "circle-question-mark", active: controller_name == "knowledge_faqs" },
+          { key: "general-info", label: "General Info", path: hotel_knowledge_general_infos_path(current_hotel), icon: "info", active: controller_name == "knowledge_general_infos" },
+          { key: "knowledge-diagnostics", label: "Knowledge Diagnostics", path: hotel_knowledge_diagnostics_path(current_hotel), icon: "activity", active: controller_name == "knowledge_diagnostics" }
         ]
       when :team
         [
-          { label: "Staff Management", path: hotel_users_path(current_hotel), icon: "users", active: controller_name.in?(%w[users staff_invitations]) },
-          { label: "Roles & Permissions", path: hotel_roles_path(current_hotel), icon: "shield-check", active: controller_name == "roles" }
+          { key: "staff-management", label: "Staff Management", path: hotel_users_path(current_hotel), icon: "users", active: controller_name.in?(%w[users staff_invitations]) },
+          { key: "roles-permissions", label: "Roles & Permissions", path: hotel_roles_path(current_hotel), icon: "shield-check", active: controller_name == "roles" }
         ]
       else
         []

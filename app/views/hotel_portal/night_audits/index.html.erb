@@ -10,7 +10,7 @@
   <%= render "hotel_portal/night_audits/index/audit_action", presenter: presenter, primary_action: primary_action, resolve_action: resolve_action %>
 
   <div data-testid="night-audit-index-tabs">
-  <%= render PanelsUI::Tabs.new(id: "night-audit-index-tabs", default: "audit-history", breadcrumb_id: "hotel-breadcrumb", class: "space-y-4", aria_label: "Night Audit sections") do |tabs| %>
+  <%= render PanelsUI::Tabs.new(id: "night-audit-index-tabs", active: @active_tab, variant: :pill, url: { param: "tab" }, class: "space-y-4", aria_label: "Night Audit sections") do |tabs| %>
     <% tabs.with_tab(name: "audit-history", label: "Audit History", icon: "history", count: presenter.history_rows.count, panel_id: "audit-history-panel") %>
     <% tabs.with_tab(name: "advanced-actions", label: "Advanced Actions", icon: "settings-2", panel_id: "advanced-actions-panel") %>
     <% tabs.with_panel(name: "audit-history", id: "audit-history-panel", data: { testid: "audit-history-panel" }) do %>

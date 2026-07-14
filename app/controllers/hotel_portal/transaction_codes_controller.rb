@@ -341,7 +341,7 @@ module HotelPortal
     end
 
     def append_transaction_codes_tab_breadcrumb
-      append_breadcrumb({ label: tab_label(@presenter.active_tab), tab_label: true })
+      append_breadcrumb({ label: tab_label(@presenter.active_tab), tab_label: true, tabs_id: "transaction-codes-tabs" })
     end
 
     def tab_label(tab)

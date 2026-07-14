@@ -1,5 +1,5 @@
 <% active_channel_subtab = @active_subtab.in?(%w[derived_settings availability_rules]) ? @active_subtab : "derived_settings" %>
-<%= render PanelsUI::Tabs.new(id: "channel-subtabs", default: active_channel_subtab, param: "subtab", level: :secondary, breadcrumb_id: "hotel-breadcrumb", list_class: "mb-6", aria_label: "Channels and OTAs sections") do |tabs| %>
+<%= render PanelsUI::Tabs.new(id: "channel-subtabs", active: active_channel_subtab, variant: :pill, url: { param: "subtab" }, list_class: "mb-6", aria_label: "Channels and OTAs sections") do |tabs| %>
   <% tabs.with_tab(name: "derived_settings", label: "Derived Pricing & Allocations", icon: "percent", panel_id: "channels-derived-panel") %>
   <% tabs.with_tab(name: "availability_rules", label: "Availability Rules", icon: "calendar-cog", panel_id: "channels-rules-panel") %>
 

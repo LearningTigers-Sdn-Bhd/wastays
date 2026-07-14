@@ -11,7 +11,7 @@
   </div>
 
   <div data-testid="transaction-codes-tabs">
-  <%= render PanelsUI::Tabs.new(id: "transaction-codes-tabs", default: @presenter.active_tab, breadcrumb_id: "hotel-breadcrumb", class: "space-y-6 ", aria_label: "Transaction code sections") do |tabs| %>
+  <%= render PanelsUI::Tabs.new(id: "transaction-codes-tabs", active: @presenter.active_tab, variant: :pill, url: { param: "tab" }, class: "space-y-6", aria_label: "Transaction code sections") do |tabs| %>
     <% @presenter.tabs.each do |tab| %>
       <% tabs.with_tab(name: tab[:name], label: tab[:label], icon: tab[:icon], panel_id: "#{tab[:name]}-panel") %>
     <% end %>

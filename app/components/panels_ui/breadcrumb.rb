@@ -7,17 +7,16 @@ module PanelsUI
   # changes required.
   #
   # Each part is a Hash: `{ type:, label:, path:, siblings:, tab_label:,
-  # subtab_label:, hidden: }`. `type` is one of :section, :menu_group, :menu,
+  # subtab_label:, tabs_id:, tabs_ids:, hidden: }`. `type` is one of
+  # :section, :menu_group, :menu,
   # :breakdown (or nil for appended parts). A part with `siblings:` renders a
-  # sibling-menu dropdown; `tab_label:`/`subtab_label:` mark the live labels that
-  # PanelsUI::Tabs patches at runtime (see below).
+  # sibling-menu dropdown; `tab_label:`/`subtab_label:` mark live labels. Optional
+  # `tabs_id:`/`tabs_ids:` scope generic PanelsUI::Tabs change events to this
+  # breadcrumb instance.
   #
   # ── Tab integration contract ──────────────────────────────────────────────────
-  # The root wires the `panels-ui--breadcrumb` controller, which exposes an outlet
-  # API (`setTabLabel`, `setSubtabLabel`, `setSubtabSegmentVisible`) for PanelsUI::Tabs
-  # to call when the active tab changes. The legacy `data-tabs-breadcrumb-label` /
-  # `data-subtabs-breadcrumb-*` attributes are kept alongside the Stimulus targets so
-  # the old `tabs`/`subtabs` controllers keep working until they are migrated.
+  # PanelsUI::Tabs emits a generic window event. The breadcrumb listens only when a
+  # live-label part names the relevant tab group, keeping both components independent.
   class Breadcrumb < PanelsUI::BaseComponent
     def initialize(parts:, id: nil, class: nil)
       @parts = Array(parts)
@@ -27,6 +26,17 @@ module PanelsUI
 
     def parts? = @parts.any?
     def render? = parts?
+
+    def tab_source_id
+      parts.find { |part| part[:tab_label] }&.dig(:tabs_id)
+    end
+
+    def subtab_source_ids
+      part = parts.find { |candidate| candidate[:subtab_label] }
+      Array(part&.fetch(:tabs_ids, nil) || part&.fetch(:tabs_id, nil)).map(&:to_s)
+    end
+
+    def listens_for_tabs? = tab_source_id.present? || subtab_source_ids.any?
 
     private
 

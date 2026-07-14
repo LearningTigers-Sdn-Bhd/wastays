@@ -29,13 +29,15 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     expect(page).to have_current_path(hotel_notification_settings_path(hotel))
     expect(page).to have_css("h2", text: "Communication & Notifications")
     expect(page).to have_no_css("h2", text: "AI Concierge Configuration")
-    expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Notifications")
+    expect(page).to have_css("#hotel-breadcrumb", text: "Notifications")
 
     within(".breadcrumb-dropdown[data-controller~='panels-ui--dropdown-menu']") do
-      expect(page).to have_text("General")
+      expect(page).to have_link("General Settings", visible: :all)
     end
     within("[data-testid='settings-tabs']") do
       expect(page).to have_link("Notifications", href: hotel_notification_settings_path(hotel))
+      expect(page).to have_css("a[aria-current='page']", text: "Notifications")
+      expect(page).to have_no_css("[data-controller='panels-ui--tabs']")
       expect(all("a").map { |link| link.text.squish }).to eq([ "General Settings", "Rate Settings", "Notifications", "Plan & Billing" ])
     end
 
@@ -44,8 +46,8 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     expect(page).to have_current_path(hotel_ai_concierge_settings_path(hotel))
     expect(page).to have_css("h2", text: "AI Concierge Configuration")
     expect(page).to have_no_css("h2", text: "Communication & Notifications")
-    expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "AI Concierge")
-    expect(page).to have_css(".breadcrumb-dropdown[data-controller~='panels-ui--dropdown-menu']", text: "Guest Content")
+    expect(page).to have_css("#hotel-breadcrumb", text: "AI Concierge")
+    expect(page).to have_css("#hotel-breadcrumb", text: "Guest Content")
     within("[data-testid='settings-tabs']") { expect(page).to have_no_link("Notifications") }
   end
 
@@ -55,7 +57,7 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     expect(page).to have_current_path(hotel_general_settings_path(hotel))
     expect(page).to have_css("h2", text: "Hotel Settings", visible: :all)
     expect(page).to have_no_css("h2", text: "Banking Details")
-    expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "General")
+    expect(page).to have_css("#hotel-breadcrumb", text: "General")
   end
 
   it "does not expose Banking without manage account permission" do
@@ -67,7 +69,7 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     expect(page).to have_no_link("Banking Details", href: hotel_banking_details_settings_path(hotel))
     expect(page).to have_no_css("h2", text: "Banking Details")
     expect(page).to have_css("h2", text: "Hotel Settings", visible: :all)
-    expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "General")
+    expect(page).to have_css("#hotel-breadcrumb", text: "General")
   end
 
   it "shows only Banking to an account-only user" do
@@ -80,6 +82,6 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     expect(page).to have_no_link("General Settings", href: hotel_general_settings_path(hotel))
     expect(page).to have_no_css("h2", text: "Hotel Settings", visible: :all)
     expect(page).to have_css("h2", text: "Banking Details")
-    expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Banking")
+    expect(page).to have_css("#hotel-breadcrumb", text: "Banking Details")
   end
 end

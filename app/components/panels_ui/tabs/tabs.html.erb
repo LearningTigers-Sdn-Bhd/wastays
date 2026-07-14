@@ -1,22 +1,27 @@
-<div class="<%= tw_merge("tabs-root", "tabs-root--#{variant}", @class) %>"
-     data-controller="panels-ui--tabs"
-     <% if navigation? %>data-action="popstate@window->panels-ui--tabs#syncNavigationFromUrl"<% end %>
-     data-panels-ui--tabs-navigation-value="<%= navigation? %>"
-     data-panels-ui--tabs-param-value="<%= param %>"
-     data-panels-ui--tabs-level-value="<%= level %>"
-     data-panels-ui--tabs-sync-url-value="<%= sync_url? %>"
-     <% if default_value %>data-panels-ui--tabs-active-value="<%= default_value %>"<% end %>
-     <% if breadcrumb_outlet_selector %>data-panels-ui--tabs-panels-ui--breadcrumb-outlet="<%= breadcrumb_outlet_selector %>"<% end %>>
-  <% list_tag = navigation? ? :nav : :div %>
-  <%= content_tag list_tag, class: tw_merge("tabs-list", "tabs-list--#{variant}", @list_class),
-       role: ("tablist" unless navigation?),
-       aria: { label: aria_label },
-       data: ({ action: "keydown->panels-ui--tabs#onKeydown" } unless navigation?) do %>
-    <%= safe_join(tabs) %>
-  <% end %>
+<div id="<%= @id %>"
+     class="<%= tw_merge("tabs-root", "tabs-root--#{variant}", @class) %>"
+     data-slot="tabs-root"
+     <% unless navigation? %>
+       data-controller="panels-ui--tabs"
+       data-panels-ui--tabs-active-value="<%= active_name %>"
+       <% if url_param %>data-panels-ui--tabs-param-value="<%= url_param %>"<% end %>
+     <% end %>>
+  <% if navigation? %>
+    <nav class="<%= tw_merge("tabs-list", "tabs-list--#{variant}", @list_class) %>"
+         aria-label="<%= aria_label %>"
+         data-slot="tabs-list">
+      <%= safe_join(tabs) %>
+    </nav>
+  <% else %>
+    <div class="<%= tw_merge("tabs-list", "tabs-list--#{variant}", @list_class) %>"
+         role="tablist"
+         aria-label="<%= aria_label %>"
+         data-slot="tabs-list"
+         data-action="keydown->panels-ui--tabs#onKeydown">
+      <%= safe_join(tabs) %>
+    </div>
 
-  <% if panels? %>
-    <div class="<%= tw_merge("tabs-panels", @panels_class) %>">
+    <div class="<%= tw_merge("tabs-panels", @panels_class) %>" data-slot="tabs-panels">
       <%= safe_join(panels) %>
     </div>
   <% end %>

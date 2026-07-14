@@ -1,23 +1,18 @@
 @layer components {
-  /* PanelsUI::Tabs — APG tabs. Theme-token colors hold contrast in light and dark. */
   .tabs-root {
-    @apply flex flex-col;
+    @apply flex min-w-0 flex-col;
   }
 
   .tabs-list {
-    @apply inline-flex items-center gap-0.5 overflow-x-auto rounded-lg border border-border bg-card p-1 shadow-sm;
+    @apply flex max-w-full items-center overflow-x-auto;
   }
 
   .tabs-tab {
-    @apply inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors;
+    @apply inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap px-3 text-sm font-medium text-muted-foreground transition-colors;
   }
 
   .tabs-tab:hover {
-    @apply bg-muted text-foreground;
-  }
-
-  .tabs-tab[aria-selected="true"] {
-    @apply bg-primary font-semibold text-primary-foreground;
+    @apply text-foreground;
   }
 
   .tabs-tab:focus-visible {
@@ -29,7 +24,43 @@
     @apply rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground;
   }
 
-  .tabs-tab[aria-selected="true"] .tabs-tab__count {
+  .tabs-list--line {
+    @apply w-full gap-0 border-b border-border;
+  }
+
+  .tabs-tab--line {
+    @apply rounded-none border-b-2 border-transparent font-semibold;
+    margin-bottom: -1px;
+  }
+
+  .tabs-tab--line:hover {
+    @apply border-border-interactive;
+  }
+
+  .tabs-tab--line[aria-selected="true"],
+  .tabs-tab--line[aria-current="page"] {
+    @apply border-border-interactive font-bold text-foreground;
+  }
+
+  .tabs-list--pill {
+    @apply inline-flex w-fit gap-0.5 rounded-lg border border-border bg-card p-1 shadow-sm;
+  }
+
+  .tabs-tab--pill {
+    @apply h-8 min-h-8 rounded-md;
+  }
+
+  .tabs-tab--pill:hover {
+    @apply bg-muted;
+  }
+
+  .tabs-tab--pill[aria-selected="true"],
+  .tabs-tab--pill[aria-current="page"] {
+    @apply bg-primary font-semibold text-primary-foreground;
+  }
+
+  .tabs-tab--pill[aria-selected="true"] .tabs-tab__count,
+  .tabs-tab--pill[aria-current="page"] .tabs-tab__count {
     background: color-mix(in oklab, var(--primary-foreground) 24%, transparent);
     @apply text-primary-foreground;
   }
@@ -38,28 +69,11 @@
     @apply mt-3;
   }
 
-  .tabs-panel.hidden {
-    display: none;
-  }
-
-  .tabs-list--underline {
-    @apply flex w-full items-center gap-0 overflow-x-auto rounded-none border-0 bg-transparent p-0 shadow-none;
-  }
-
-  .tabs-tab--underline {
-    @apply h-10 shrink-0 rounded-none border-b-2 border-transparent px-3 font-semibold;
-  }
-
-  .tabs-tab--underline:hover {
-    @apply border-border-interactive bg-transparent text-foreground;
-  }
-
-  .tabs-tab--underline[aria-selected="true"],
-  .tabs-tab--underline[aria-current="page"] {
-    @apply border-border-interactive bg-transparent font-bold text-foreground;
-  }
-
   @media (pointer: coarse) {
     .tabs-tab { min-height: 2.5rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tabs-tab { transition-duration: 0.01ms; }
   }
 }

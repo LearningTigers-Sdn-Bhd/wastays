@@ -84,4 +84,16 @@ RSpec.describe PanelsUI::Breadcrumb, type: :component do
       visible: :all
     )
   end
+
+  it "listens only to the tab group ids declared by live-label parts" do
+    render_breadcrumb([
+      { label: "Calendar", tab_label: true, tabs_id: "inventory-tabs" },
+      { label: "Pricing", subtab_label: true, tabs_ids: [ "pricing-tabs", "channel-tabs" ] }
+    ])
+
+    root = page.find("#bc")
+    expect(root["data-action"]).to eq("panels-ui--tabs:change@window->panels-ui--breadcrumb#tabsChanged")
+    expect(root["data-panels-ui--breadcrumb-tab-id-value"]).to eq("inventory-tabs")
+    expect(JSON.parse(root["data-panels-ui--breadcrumb-subtab-ids-value"])).to eq([ "pricing-tabs", "channel-tabs" ])
+  end
 end

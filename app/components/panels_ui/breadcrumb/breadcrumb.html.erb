@@ -1,7 +1,12 @@
 <nav id="<%= @id %>"
      aria-label="Breadcrumb"
      class="<%= tw_merge("breadcrumb-root", @class) %>"
-     data-controller="panels-ui--breadcrumb">
+     data-controller="panels-ui--breadcrumb"
+     <% if listens_for_tabs? %>
+       data-action="panels-ui--tabs:change@window->panels-ui--breadcrumb#tabsChanged"
+       <% if tab_source_id %>data-panels-ui--breadcrumb-tab-id-value="<%= tab_source_id %>"<% end %>
+       <% if subtab_source_ids.any? %>data-panels-ui--breadcrumb-subtab-ids-value="<%= subtab_source_ids.to_json %>"<% end %>
+     <% end %>>
   <ol class="breadcrumb-list">
     <% parts.each_with_index do |part, index| %>
       <li class="breadcrumb-item<%= " hidden" if part[:subtab_label] && part[:hidden] %>"

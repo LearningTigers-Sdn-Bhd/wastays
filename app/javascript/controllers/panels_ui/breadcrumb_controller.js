@@ -1,17 +1,44 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Identifier: panels-ui--breadcrumb
-//
-// Tab integration outlet API only. Sibling-menu dropdowns are delegated to the
-// canonical panels-ui--dropdown-menu controller (see PanelsUI::Breadcrumb template),
-// so this controller carries no positioning/dismissal code of its own.
-//
-// `setTabLabel` / `setSubtabLabel` / `setSubtabSegmentVisible` are called by
-// panels-ui--tabs via a Stimulus outlet when the active tab changes — replacing the
-// old global `document.querySelector(...)` reach. Each no-ops when its target is
-// absent, so tabs and breadcrumb stay decoupled.
 export default class extends Controller {
   static targets = ["tabLabel", "subtabLabel", "subtabSegment"]
+  static values = {
+    tabId: { type: String, default: "" },
+    subtabIds: { type: Array, default: [] }
+  }
+
+  tabsChanged(event) {
+    const { id, label, trigger, panel } = event.detail
+
+    if (id === this.tabIdValue) {
+      this.setTabLabel(label)
+      this.syncNestedTab(panel)
+      return
+    }
+
+    if (!this.subtabIdsValue.includes(id)) return
+
+    const parentPanel = trigger?.closest('[data-slot="tabs-panel"]')
+    if (parentPanel?.hidden) return
+
+    this.setSubtabLabel(label)
+    this.setSubtabSegmentVisible(true)
+  }
+
+  syncNestedTab(panel) {
+    const activeTrigger = panel?.querySelector(
+      '[data-slot="tabs-root"] [data-slot="tabs-trigger"][aria-selected="true"]'
+    )
+    const nestedId = activeTrigger?.closest('[data-slot="tabs-root"]')?.id
+
+    if (!nestedId || !this.subtabIdsValue.includes(nestedId)) {
+      this.setSubtabSegmentVisible(false)
+      return
+    }
+
+    this.setSubtabLabel(activeTrigger.dataset.tabLabel)
+    this.setSubtabSegmentVisible(true)
+  }
 
   setTabLabel(label) {
     if (this.hasTabLabelTarget && label) this.tabLabelTarget.textContent = label

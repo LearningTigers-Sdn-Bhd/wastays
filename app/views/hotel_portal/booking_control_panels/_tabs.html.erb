@@ -1,10 +1,7 @@
 <div class="shrink-0 border-b border-border bg-card px-2">
   <%= render PanelsUI::Tabs.new(
         id: "booking-control-tabs",
-        default: presenter.active_tab,
-        variant: :underline,
-        navigation: true,
-        breadcrumb_id: "hotel-breadcrumb",
+        active: presenter.active_tab,
         aria_label: "Booking control panel tabs"
       ) do |tabs| %>
     <% presenter.tabs.each do |tab| %>

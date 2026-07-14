@@ -1,4 +1,6 @@
 <%= turbo_frame_tag "booking_control_panel_workspace", class: "flex min-h-0 flex-1 flex-col", data: { turbo_action: "advance", controller: "context-rail" } do %>
+  <%= render "hotel_portal/booking_control_panels/tabs", booking: booking, presenter: presenter, audit_logs: audit_logs %>
+
   <% grid_class = case presenter.layout_mode
      when "left_center_right" then "xl:grid-cols-[18rem_minmax(0,1fr)_22rem]"
      else "xl:grid-cols-[18rem_minmax(0,1fr)]"

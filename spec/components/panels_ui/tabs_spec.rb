@@ -3,109 +3,87 @@
 require "rails_helper"
 
 RSpec.describe PanelsUI::Tabs, type: :component do
-  def render_tabs(**opts)
-    render_inline(described_class.new(**{ id: "t", default: "one" }.merge(opts))) do |t|
-      t.with_tab(name: "one", label: "One", icon: "history", count: 5)
-      t.with_tab(name: "two", label: "Two", show_subtab_breadcrumb: true)
-      t.with_panel(name: "one") { "Panel one" }
-      t.with_panel(name: "two") { "Panel two" }
+  def render_panel_tabs(**options)
+    render_inline(described_class.new(**{ id: "t", active: "one", aria_label: "Example sections" }.merge(options))) do |tabs|
+      tabs.with_tab(name: "one", label: "One", icon: "history", count: 5)
+      tabs.with_tab(name: "two", label: "Two")
+      tabs.with_panel(name: "one") { "Panel one" }
+      tabs.with_panel(name: "two") { "Panel two" }
     end
   end
 
-  it "wires the controller root, values, and the breadcrumb outlet selector" do
-    render_tabs(param: "section", level: :secondary, sync_url: false, breadcrumb_id: "page-breadcrumb")
+  it "renders line-style panel tabs with accessible relationships by default" do
+    render_panel_tabs
 
-    root = page.find("div.tabs-root[data-controller='panels-ui--tabs']")
-    expect(root["data-panels-ui--tabs-param-value"]).to eq("section")
-    expect(root["data-panels-ui--tabs-level-value"]).to eq("secondary")
-    expect(root["data-panels-ui--tabs-sync-url-value"]).to eq("false")
-    expect(root["data-panels-ui--tabs-active-value"]).to eq("one")
-    expect(root["data-panels-ui--tabs-panels-ui--breadcrumb-outlet"]).to eq("#page-breadcrumb")
-  end
-
-  it "renders an accessible tablist of role=tab buttons" do
-    render_tabs
-
-    expect(page).to have_css("div.tabs-list[role='tablist']")
+    expect(page).to have_css("#t.tabs-root--line[data-slot='tabs-root'][data-controller='panels-ui--tabs']")
+    expect(page).to have_css(".tabs-list--line[role='tablist'][aria-label='Example sections'][data-slot='tabs-list']")
     expect(page).to have_css(
-      "button#t-tab-one.tabs-tab[role='tab'][aria-controls='t-panel-one'][data-tab-name='one'][data-tab-label='One']" \
-      "[data-panels-ui--tabs-target='tab']",
+      "button#t-tab-one.tabs-tab--line[role='tab'][aria-controls='t-panel-one']" \
+      "[aria-selected='true'][tabindex='0'][data-slot='tabs-trigger']",
       text: "One"
     )
-    expect(page).to have_css("button#t-tab-one .tabs-tab__count", text: "5")
-    expect(page).to have_css("button#t-tab-two[data-show-subtab-breadcrumb='true']")
-  end
-
-  it "renders the configured default tab and panel active on the server" do
-    render_tabs
-
+    expect(page).to have_css("#t-tab-one .tabs-tab__count", text: "5")
     expect(page).to have_css(
-      "button#t-tab-one[aria-selected='true'][tabindex='0']"
-    )
-    expect(page).to have_css(
-      "div#t-panel-one.tabs-panel[role='tabpanel'][aria-labelledby='t-tab-one'][data-tab-panel='one']",
+      "#t-panel-one[role='tabpanel'][aria-labelledby='t-tab-one'][data-slot='tabs-panel']",
       text: "Panel one"
     )
-    expect(page).to have_no_css("div#t-panel-one.hidden", visible: :all)
-    expect(page).to have_css("button#t-tab-two[aria-selected='false'][tabindex='-1']")
-    expect(page).to have_css(
-      "div#t-panel-two.hidden[role='tabpanel'][data-panels-ui--tabs-target='panel']",
-      visible: :all
-    )
+    expect(page).to have_no_css("#t-panel-one[hidden]", visible: :all)
+    expect(page).to have_css("#t-panel-two[hidden]", visible: :all)
   end
 
-  it "works without panels (navigation-only tabs)" do
-    render_inline(described_class.new(id: "nav", default: "a")) do |t|
-      t.with_tab(name: "a", label: "A")
-      t.with_tab(name: "b", label: "B")
-    end
+  it "renders pill styling only when explicitly requested" do
+    render_panel_tabs(variant: :pill)
 
-    expect(page).to have_css("div.tabs-list[role='tablist']")
-    expect(page).to have_no_css(".tabs-panels")
+    expect(page).to have_css("#t.tabs-root--pill .tabs-list--pill .tabs-tab--pill")
   end
 
-  it "renders underline navigation tabs as links without client-side tab behavior" do
-    render_inline(described_class.new(
-      id: "booking",
-      default: "details",
-      variant: :underline,
-      navigation: true,
-      aria_label: "Booking sections"
-    )) do |tabs|
-      tabs.with_tab(
-        name: "details",
-        label: "Details",
-        href: "/bookings/1?tab=details",
-        data: { turbo_frame: "workspace" }
-      )
+  it "falls back to the first panel when active does not match" do
+    render_panel_tabs(active: "missing")
+
+    expect(page).to have_css("#t-tab-one[aria-selected='true']")
+    expect(page).to have_no_css("#t-panel-one[hidden]", visible: :all)
+  end
+
+  it "opts into URL state with a single param value" do
+    render_panel_tabs(url: { param: "section" })
+
+    expect(page.find("#t")["data-panels-ui--tabs-param-value"]).to eq("section")
+  end
+
+  it "does not configure URL state by default" do
+    render_panel_tabs
+
+    expect(page.find("#t")["data-panels-ui--tabs-param-value"]).to be_nil
+  end
+
+  it "infers ordinary link navigation without tab roles or JavaScript" do
+    render_inline(described_class.new(id: "nav", active: "details", aria_label: "Booking sections")) do |tabs|
+      tabs.with_tab(name: "details", label: "Details", href: "/bookings/1?tab=details", data: { turbo_frame: "workspace" })
       tabs.with_tab(name: "folio", label: "Folio", href: "/bookings/1?tab=folio")
     end
 
+    expect(page).to have_css("#nav[data-slot='tabs-root'] nav.tabs-list--line[aria-label='Booking sections']")
     expect(page).to have_css(
-      ".tabs-root--underline[data-controller='panels-ui--tabs']" \
-      "[data-panels-ui--tabs-navigation-value='true']" \
-      "[data-action='popstate@window->panels-ui--tabs#syncNavigationFromUrl']"
-    )
-    expect(page).to have_css("nav.tabs-list--underline[aria-label='Booking sections']")
-    expect(page).to have_css(
-      "a#booking-tab-details.tabs-tab--underline[aria-current='page'][data-turbo-frame='workspace']" \
-      "[data-panels-ui--tabs-target='tab'][data-action='click->panels-ui--tabs#selectNavigation']",
+      "a#nav-tab-details[aria-current='page'][data-slot='tabs-trigger'][data-turbo-frame='workspace']",
       text: "Details"
     )
-    expect(page).to have_css("a#booking-tab-folio[href='/bookings/1?tab=folio']", text: "Folio")
-    expect(page).to have_no_css("[role='tablist']")
-    expect(page).to have_no_css("[role='tab']")
+    expect(page).to have_no_css("#nav[data-controller]")
+    expect(page).to have_no_css("#nav [role='tablist'], #nav [role='tab']")
   end
 
-  it "omits breadcrumb outlet wiring when no breadcrumb id is supplied" do
-    render_tabs
+  it "renders no current navigation link when active is absent" do
+    render_inline(described_class.new(id: "nav", aria_label: "Sections")) do |tabs|
+      tabs.with_tab(name: "one", label: "One", href: "/one")
+    end
 
-    expect(page.find("div.tabs-root")["data-panels-ui--tabs-panels-ui--breadcrumb-outlet"]).to be_nil
+    expect(page).to have_no_css("#nav [aria-current]")
   end
 
-  it "forwards container, id, data, and aria overrides while retaining defaults" do
+  it "forwards layout and slot overrides while retaining required attributes" do
     render_inline(described_class.new(
       id: "custom",
+      active: "one",
+      aria_label: "Custom sections",
       list_class: "border-0",
       panels_class: "mt-8"
     )) do |tabs|
@@ -115,7 +93,8 @@ RSpec.describe PanelsUI::Tabs, type: :component do
         id: "legacy-tab",
         panel_id: "legacy-panel",
         data: { testid: "legacy-tab" },
-        aria: { label: "First tab" }
+        aria: { label: "First tab" },
+        class: "px-6"
       )
       tabs.with_panel(
         name: "one",
@@ -128,12 +107,83 @@ RSpec.describe PanelsUI::Tabs, type: :component do
 
     expect(page).to have_css(".tabs-list.border-0")
     expect(page).to have_css(".tabs-panels.mt-8")
-    expect(page).to have_css(
-      "#legacy-tab[aria-controls='legacy-panel'][aria-label='First tab'][data-testid='legacy-tab']"
-    )
-    expect(page).to have_css(
-      "#legacy-panel[aria-labelledby='legacy-tab'][aria-label='First panel'][data-testid='legacy-panel']",
-      visible: :all
-    )
+    expect(page).to have_css("#legacy-tab.px-6[aria-controls='legacy-panel'][data-testid='legacy-tab']")
+    expect(page).to have_css("#legacy-panel[aria-labelledby='legacy-tab'][data-testid='legacy-panel']")
+  end
+
+  validation_cases = {
+    "empty tabs" => proc { |tabs| },
+    "a missing accessible label" => proc { |tabs| tabs.with_tab(name: "one", label: "One", href: "/one") },
+    "mixed links and buttons" => proc { |tabs|
+      tabs.with_tab(name: "one", label: "One", href: "/one")
+      tabs.with_tab(name: "two", label: "Two")
+    },
+    "panels on link navigation" => proc { |tabs|
+      tabs.with_tab(name: "one", label: "One", href: "/one")
+      tabs.with_panel(name: "one") { "Panel" }
+    },
+    "a missing matching panel" => proc { |tabs|
+      tabs.with_tab(name: "one", label: "One")
+    },
+    "duplicate tab names" => proc { |tabs|
+      tabs.with_tab(name: "one", label: "One", href: "/one")
+      tabs.with_tab(name: "one", label: "Duplicate", href: "/duplicate")
+    },
+    "duplicate tab ids" => proc { |tabs|
+      tabs.with_tab(name: "one", label: "One", href: "/one", id: "same")
+      tabs.with_tab(name: "two", label: "Two", href: "/two", id: "same")
+    }
+  }
+
+  validation_cases.each do |description, slots|
+    it "rejects #{description}" do
+      options = { id: "invalid", aria_label: "Sections" }
+      options.delete(:aria_label) if description == "a missing accessible label"
+
+      expect {
+        render_inline(described_class.new(**options)) { |tabs| slots.call(tabs) }
+      }.to raise_error(ArgumentError)
+    end
+  end
+
+  it "rejects panel ids that do not reference each other" do
+    expect {
+      render_inline(described_class.new(id: "invalid", aria_label: "Sections")) do |tabs|
+        tabs.with_tab(name: "one", label: "One", panel_id: "other-panel")
+        tabs.with_panel(name: "one") { "Panel" }
+      end
+    }.to raise_error(ArgumentError, /reference each other/)
+  end
+
+  it "rejects an unsupported variant" do
+    expect {
+      render_inline(described_class.new(id: "invalid", variant: :underline, aria_label: "Sections")) do |tabs|
+        tabs.with_tab(name: "one", label: "One", href: "/one")
+      end
+    }.to raise_error(ArgumentError, /variant/)
+  end
+
+  it "rejects an unknown active navigation key" do
+    expect {
+      render_inline(described_class.new(id: "invalid", active: "missing", aria_label: "Sections")) do |tabs|
+        tabs.with_tab(name: "one", label: "One", href: "/one")
+      end
+    }.to raise_error(ArgumentError, /active navigation tab/)
+  end
+
+  it "rejects malformed URL configuration" do
+    expect {
+      render_inline(described_class.new(id: "invalid", url: { parameter: "tab" }, aria_label: "Sections")) do |tabs|
+        tabs.with_tab(name: "one", label: "One", href: "/one")
+      end
+    }.to raise_error(ArgumentError, /url must be/)
+  end
+
+  it "rejects URL state on link navigation" do
+    expect {
+      render_inline(described_class.new(id: "invalid", url: { param: "tab" }, aria_label: "Sections")) do |tabs|
+        tabs.with_tab(name: "one", label: "One", href: "/one")
+      end
+    }.to raise_error(ArgumentError, /link navigation cannot configure URL state/)
   end
 end

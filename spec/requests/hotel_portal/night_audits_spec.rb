@@ -343,17 +343,17 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     expect(response.body).to include("Run Results", "Status Changes", "Charges Posted", "Skipped Items", "Failed Items")
   end
 
-  it "appends the default index and show tabs to the breadcrumbs" do
+  it "appends the requested index and show tabs to the breadcrumbs" do
     night_audit = create(:night_audit, hotel: hotel)
     sign_in(user)
 
     get hotel_night_audits_path(hotel, tab: "advanced-actions")
-    expect(Capybara.string(response.body)).to have_css("[data-tabs-breadcrumb-label]", text: "Audit History")
+    expect(Capybara.string(response.body)).to have_css("[data-tabs-breadcrumb-label]", text: "Advanced Actions")
     expect(response.body).to include(%(href="#{hotel_night_audits_path(hotel)}">Night Audit</a>))
     expect(response.body).to include("aria-label=\"Open Night Audit navigation\"")
 
     get hotel_night_audit_path(hotel, night_audit, tab: "financial-summary")
-    expect(Capybara.string(response.body)).to have_css("[data-tabs-breadcrumb-label]", text: "Results")
+    expect(Capybara.string(response.body)).to have_css("[data-tabs-breadcrumb-label]", text: "Financial Summary")
   end
 
   it "separates hard blockers from warnings and makes close readiness obvious" do

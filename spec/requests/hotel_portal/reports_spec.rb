@@ -770,7 +770,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       page = Capybara.string(response.body)
       expect(page).to have_css('[data-panels-ui--tabs-active-value="paid"]')
-      expect(page).to have_css('[data-testid="payouts-upcoming-panel"]')
+      expect(page).to have_css('[data-testid="payouts-upcoming-panel"]', visible: :all)
       expect(page).to have_css('[data-testid="payouts-paid-panel"]')
       expect(page).to have_css('[data-panels-ui--breadcrumb-target="tabLabel"]', text: "Paid History")
     end

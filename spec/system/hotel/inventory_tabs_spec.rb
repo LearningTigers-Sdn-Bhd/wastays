@@ -93,4 +93,23 @@ RSpec.describe "Hotel inventory tabs", type: :system, js: true do
     expect(page).to have_css("[data-testid='inventory-calendar-panel']")
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Rates & Availability")
   end
+
+  it "toggles the derived-pricing value with the dedicated pricing mode controller" do
+    hotel.update!(preferred_channel_manager: "channex")
+    adapter = instance_double(
+      ChannelManagers::ChannexAdapter,
+      connected_channels: [ { "id" => "channel-1", "attributes" => { "title" => "Booking.com" } } ]
+    )
+    allow(ChannelManagers::SyncOrchestrator).to receive(:adapter_for).with(hotel).and_return(adapter)
+
+    visit hotel_inventory_index_path(hotel, tab: "channels", subtab: "derived_settings")
+
+    within("form[data-controller='pricing-mode']") do
+      expect(page).to have_css("[data-pricing-mode-target='value'].hidden", visible: :all)
+      find("label", text: "Multiplier (%)").click
+      expect(page).to have_css("[data-pricing-mode-target='value']:not(.hidden)")
+      find("label", text: "Same Price").click
+      expect(page).to have_css("[data-pricing-mode-target='value'].hidden", visible: :all)
+    end
+  end
 end

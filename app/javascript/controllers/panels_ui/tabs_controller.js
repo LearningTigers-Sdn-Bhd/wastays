@@ -1,98 +1,44 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Identifier: panels-ui--tabs
-//
-// WAI-ARIA APG "tabs" pattern with automatic activation: roving tabindex, arrow/Home/End
-// keys, and the active tab mirrored to a URL query param. Replaces the old `tabs` and
-// `subtabs` controllers (one component, `level:` distinguishes primary vs subtab).
-//
-// Breadcrumb sync is done through a Stimulus **outlet** — `this.panelsUiBreadcrumbOutlets`
-// are PanelsUI::Breadcrumb controllers found via the outlet selector — instead of the old
-// `document.querySelector("[data-tabs-breadcrumb-label]")` global reach. No outlet on the
-// page ⇒ the sync is simply skipped, keeping tabs and breadcrumb decoupled.
+// WAI-ARIA panel tabs. Link navigation is rendered without this controller.
 export default class extends Controller {
   static targets = ["tab", "panel"]
-  static outlets = ["panels-ui--breadcrumb"]
   static values = {
     active: String,
-    param: { type: String, default: "tab" },
-    level: { type: String, default: "primary" },
-    navigation: { type: Boolean, default: false },
-    syncUrl: { type: Boolean, default: true }
+    param: { type: String, default: "" }
   }
 
   connect() {
-    if (this.navigationValue) return this.syncNavigationFromUrl()
-
     const requested = this.paramValue && new URLSearchParams(window.location.search).get(this.paramValue)
-    this.show(this.validTab(requested) ? requested : this.defaultTab, { updateUrl: false })
+    const initial = this.validTab(requested) ? requested : this.defaultTab
+    this.show(initial, { updateUrl: false, dispatch: false })
   }
 
-  panelsUiBreadcrumbOutletConnected(breadcrumb) {
-    if (!this.ownsBreadcrumb()) return
-
-    const activeTab = this.tabTargets.find((tab) => tab.dataset.tabName === this.activeName)
-    if (!activeTab) return
-
-    this.syncBreadcrumbOutlet(breadcrumb, activeTab)
-  }
-
-  // Pointer activation.
   select(event) {
     event.preventDefault()
     this.show(event.currentTarget.dataset.tabName)
   }
 
-  // Server-navigation tabs remain ordinary links. Update the persistent tab bar and
-  // breadcrumb immediately, then allow Turbo to follow the link and replace its frame.
-  selectNavigation(event) {
-    this.showNavigation(event.currentTarget.dataset.tabName)
-  }
-
-  syncNavigationFromUrl() {
-    const requested = this.paramValue && new URLSearchParams(window.location.search).get(this.paramValue)
-    this.showNavigation(this.validTab(requested) ? requested : this.defaultTab)
-  }
-
-  showNavigation(name) {
-    const activeName = this.validTab(name) ? name : this.defaultTab
-    this.activeName = activeName
-    let activeTab = null
-
-    this.tabTargets.forEach((tab) => {
-      const active = tab.dataset.tabName === activeName
-      if (active) {
-        tab.setAttribute("aria-current", "page")
-        activeTab = tab
-      } else {
-        tab.removeAttribute("aria-current")
-      }
-    })
-
-    this.syncBreadcrumb(activeTab)
-  }
-
-  // Keyboard activation (automatic — focus follows selection).
   onKeydown(event) {
-    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key]
-
     if (event.key === "Home") return this.activateByIndex(0, event)
     if (event.key === "End") return this.activateByIndex(this.tabTargets.length - 1, event)
+
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key]
     if (!step) return
 
-    const names = this.tabTargets.map((tab) => tab.dataset.tabName)
-    const current = names.indexOf(this.activeName)
-    this.activateByIndex((current + step + names.length) % names.length, event)
+    const current = this.tabTargets.findIndex((tab) => tab.dataset.tabName === this.activeName)
+    this.activateByIndex((current + step + this.tabTargets.length) % this.tabTargets.length, event)
   }
 
   activateByIndex(index, event) {
     const tab = this.tabTargets[index]
     if (!tab) return
+
     event.preventDefault()
     this.show(tab.dataset.tabName, { focus: true })
   }
 
-  show(name, { updateUrl = this.syncUrlValue, focus = false } = {}) {
+  show(name, { updateUrl = Boolean(this.paramValue), focus = false, dispatch = true } = {}) {
     const activeName = this.validTab(name) ? name : this.defaultTab
     this.activeName = activeName
     let activeTab = null
@@ -106,53 +52,32 @@ export default class extends Controller {
     })
 
     this.panelTargets.forEach((panel) => {
-      panel.classList.toggle("hidden", panel.dataset.tabPanel !== activeName)
-      if (panel.dataset.tabPanel === activeName) activePanel = panel
+      const active = panel.dataset.tabPanel === activeName
+      panel.hidden = !active
+      if (active) activePanel = panel
     })
 
     if (focus) activeTab?.focus()
     if (updateUrl) this.updateUrl(activeName)
-    this.syncBreadcrumb(activeTab)
-    if (this.levelValue === "primary") this.syncNestedBreadcrumb(activePanel)
+    if (dispatch) this.dispatchChange(activeName, activeTab, activePanel)
   }
 
-  syncBreadcrumb(tab) {
-    if (!this.hasPanelsUiBreadcrumbOutlet || !tab || !this.ownsBreadcrumb()) return
-
-    this.panelsUiBreadcrumbOutlets.forEach((breadcrumb) => {
-      this.syncBreadcrumbOutlet(breadcrumb, tab)
-    })
-  }
-
-  syncBreadcrumbOutlet(breadcrumb, tab) {
-    const label = tab.dataset.tabLabel
-    if (this.levelValue === "secondary") return breadcrumb.setSubtabLabel(label)
-
-    breadcrumb.setTabLabel(label)
-    breadcrumb.setSubtabSegmentVisible(tab.dataset.showSubtabBreadcrumb === "true")
-  }
-
-  syncNestedBreadcrumb(panel) {
-    if (!this.hasPanelsUiBreadcrumbOutlet) return
-
-    const activeTab = panel?.querySelector('[data-controller~="panels-ui--tabs"] [data-panels-ui--tabs-target~="tab"][aria-selected="true"]')
-    const label = activeTab?.dataset.tabLabel
-    if (!label) return
-
-    this.panelsUiBreadcrumbOutlets.forEach((breadcrumb) => breadcrumb.setSubtabLabel(label))
-  }
-
-  ownsBreadcrumb() {
-    const parentPanel = this.element.parentElement?.closest('[data-panels-ui--tabs-target~="panel"]')
-    return !parentPanel?.classList.contains("hidden")
+  dispatchChange(name, trigger, panel) {
+    window.dispatchEvent(new CustomEvent("panels-ui--tabs:change", {
+      detail: {
+        id: this.element.id,
+        name,
+        label: trigger?.dataset.tabLabel,
+        trigger,
+        panel
+      }
+    }))
   }
 
   updateUrl(name) {
-    if (!this.paramValue) return
-
     const url = new URL(window.location)
     url.searchParams.set(this.paramValue, name)
-    window.history.replaceState({}, "", url)
+    window.history.replaceState(window.history.state, "", url)
   }
 
   validTab(name) {
@@ -160,6 +85,6 @@ export default class extends Controller {
   }
 
   get defaultTab() {
-    return this.activeValue || this.tabTargets[0]?.dataset.tabName
+    return this.validTab(this.activeValue) ? this.activeValue : this.tabTargets[0]?.dataset.tabName
   }
 }

@@ -15,10 +15,10 @@
   }.compact
 %>
 
-<%= render PanelsUI::Tabs.new(id: "inventory-tabs", default: active_tab, param: "tab", breadcrumb_id: "hotel-breadcrumb", panels_class: "mt-6", aria_label: "Rates and inventory sections") do |tabs| %>
+<%= render PanelsUI::Tabs.new(id: "inventory-tabs", active: active_tab, variant: :pill, url: { param: "tab" }, panels_class: "mt-6", aria_label: "Rates and inventory sections") do |tabs| %>
   <% tabs.with_tab(name: "calendar", label: "Rates & Availability", icon: "calendar-range", panel_id: "inventory-calendar-panel", data: { testid: "inventory-calendar-tab" }) %>
-  <% tabs.with_tab(name: "advanced", label: "Advanced Pricing", icon: "settings-2", panel_id: "inventory-advanced-panel", show_subtab_breadcrumb: true) %>
-  <% tabs.with_tab(name: "channels", label: "Channels & OTAs", icon: "radio", panel_id: "inventory-channels-panel", show_subtab_breadcrumb: true) %>
+  <% tabs.with_tab(name: "advanced", label: "Advanced Pricing", icon: "settings-2", panel_id: "inventory-advanced-panel") %>
+  <% tabs.with_tab(name: "channels", label: "Channels & OTAs", icon: "radio", panel_id: "inventory-channels-panel") %>
   <!-- Panel: Rates & Availability -->
   <% tabs.with_panel(name: "calendar", id: "inventory-calendar-panel", class: "space-y-6", data: { testid: "inventory-calendar-panel" }) do %>
     <% if @missing_rates.any? %>
@@ -653,7 +653,7 @@
 
   <!-- Panel: Advanced Pricing -->
   <% tabs.with_panel(name: "advanced", id: "inventory-advanced-panel", data: { testid: "inventory-advanced-panel" }) do %>
-    <%= render PanelsUI::Tabs.new(id: "inventory-subtabs", default: active_subtab, param: "subtab", level: :secondary, breadcrumb_id: "hotel-breadcrumb", list_class: "mb-6", aria_label: "Advanced pricing sections") do |subtabs| %>
+    <%= render PanelsUI::Tabs.new(id: "inventory-subtabs", active: active_subtab, variant: :pill, url: { param: "subtab" }, list_class: "mb-6", aria_label: "Advanced pricing sections") do |subtabs| %>
       <% subtabs.with_tab(name: "pricing", label: "Pricing Rules", icon: "tags", panel_id: "inventory-pricing-panel") %>
       <% subtabs.with_tab(name: "overrides", label: "Availability Overrides", icon: "calendar-cog", panel_id: "inventory-overrides-panel") %>
       <% subtabs.with_panel(name: "pricing", id: "inventory-pricing-panel", data: { testid: "inventory-pricing-panel" }) do %>
