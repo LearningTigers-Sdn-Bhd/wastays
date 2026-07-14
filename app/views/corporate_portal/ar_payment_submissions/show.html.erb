@@ -37,8 +37,9 @@
       Approved — recorded as payment <%= @submission.ar_payment&.reference_number %>.
     </div>
   <% when "rejected" %>
-    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
-      Rejected: <%= @submission.rejection_reason %>
+    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+      <p class="text-xs font-bold uppercase tracking-wider text-red-700">Rejected &middot; <%= l(@submission.reviewed_at, format: :short) %></p>
+      <p class="mt-1.5 text-sm font-semibold text-red-800"><%= @submission.rejection_reason %></p>
     </div>
   <% end %>
 </div>

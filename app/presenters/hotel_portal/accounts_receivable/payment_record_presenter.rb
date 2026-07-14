@@ -263,6 +263,10 @@ module HotelPortal
           end
         end
 
+        def status_title
+          nil
+        end
+
         def path(hotel)
           Rails.application.routes.url_helpers.hotel_ar_payment_path(hotel, payment)
         end
@@ -336,6 +340,12 @@ module HotelPortal
 
         def status_class
           submission.pending? ? "border-violet-200 bg-violet-50 text-violet-700" : "border-slate-300 bg-slate-100 text-slate-700"
+        end
+
+        def status_title
+          return nil unless submission.rejected? && submission.reviewed_at.present?
+
+          "Rejected on #{submission.reviewed_at.strftime('%d %b %Y, %H:%M')}"
         end
 
         def path(hotel)
