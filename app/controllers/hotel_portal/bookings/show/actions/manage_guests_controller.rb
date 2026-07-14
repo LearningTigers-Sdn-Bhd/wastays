@@ -141,6 +141,12 @@ module HotelPortal
             params.fetch(:booking_guest, ActionController::Parameters.new).permit(:boat_in_at, :boat_out_at)
           end
 
+          def apply_booking_guest_bibo!(booking_guest)
+            return true if booking_guest.blank?
+
+            booking_guest.update(booking_guest_bibo_params)
+          end
+
           def guest_params
             params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth)
           end

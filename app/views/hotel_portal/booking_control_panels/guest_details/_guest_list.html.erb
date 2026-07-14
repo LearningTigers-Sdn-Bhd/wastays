@@ -26,7 +26,7 @@
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100 bg-white">
-        <% primary_booking_guest = booking.booking_guests.find(&:primary?) %>
+        <% primary_booking_guest = presenter.primary_booking_guest %>
         <tr>
           <td class="px-4 py-3 align-top">
             <p class="font-semibold text-slate-950"><%= presenter.primary_guest_name %></p>
@@ -46,9 +46,9 @@
           <td class="px-4 py-3 align-top text-slate-700"><%= presenter.primary_guest_country %></td>
           <td class="px-4 py-3 align-top text-slate-700">
             <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Boat Arrival</p>
-            <p class="mt-0.5 text-xs font-semibold text-slate-900"><%= primary_booking_guest&.boat_in_at&.in_time_zone(current_user.time_zone)&.strftime("%d %b %Y, %I:%M %p") || "—" %></p>
+            <p class="mt-0.5 text-xs font-semibold text-slate-900"><%= format_booking_guest_boat_time(primary_booking_guest&.boat_in_at, current_user.time_zone) %></p>
             <p class="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Boat Departure</p>
-            <p class="mt-0.5 text-xs font-semibold text-slate-900"><%= primary_booking_guest&.boat_out_at&.in_time_zone(current_user.time_zone)&.strftime("%d %b %Y, %I:%M %p") || "—" %></p>
+            <p class="mt-0.5 text-xs font-semibold text-slate-900"><%= format_booking_guest_boat_time(primary_booking_guest&.boat_out_at, current_user.time_zone) %></p>
           </td>
           <td class="sticky right-0 z-10 border-l border-slate-200 bg-white px-4 py-3 text-right align-top shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">
             <% if presenter.can_manage_bookings?(current_user) %>
@@ -82,9 +82,9 @@
             <td class="px-4 py-3 align-top text-slate-700"><%= guest.country.presence || "—" %></td>
             <td class="px-4 py-3 align-top text-slate-700">
               <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Boat Arrival</p>
-              <p class="mt-0.5 text-xs font-semibold text-slate-900"><%= booking_guest.boat_in_at&.in_time_zone(current_user.time_zone)&.strftime("%d %b %Y, %I:%M %p") || "—" %></p>
+              <p class="mt-0.5 text-xs font-semibold text-slate-900"><%= format_booking_guest_boat_time(booking_guest.boat_in_at, current_user.time_zone) %></p>
               <p class="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Boat Departure</p>
-              <p class="mt-0.5 text-xs font-semibold text-slate-900"><%= booking_guest.boat_out_at&.in_time_zone(current_user.time_zone)&.strftime("%d %b %Y, %I:%M %p") || "—" %></p>
+              <p class="mt-0.5 text-xs font-semibold text-slate-900"><%= format_booking_guest_boat_time(booking_guest.boat_out_at, current_user.time_zone) %></p>
             </td>
             <td class="sticky right-0 z-10 border-l border-slate-200 bg-white px-4 py-3 text-right align-top shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">
               <% if presenter.can_manage_bookings?(current_user) %>

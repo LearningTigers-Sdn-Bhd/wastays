@@ -341,6 +341,48 @@ module HotelPortal
         booking.booking_guests.find(&:primary?) || booking.booking_guests.first
     end
 
+    def selected_guest
+      selected_booking_guest&.guest
+    end
+
+    def guest_details_mode
+      selected_booking_guest&.primary? ? "edit_primary" : "edit_additional"
+    end
+
+    def guest_details_return_to
+      return nil unless selected_booking_guest
+
+      path_for(booking, tab: "guest_details", booking_guest_id: selected_booking_guest.id)
+    end
+
+    def guest_details_snapshots
+      bg = selected_booking_guest
+      g = selected_guest
+      return {} unless bg && g
+
+      {
+        name: bg.name_snapshot.presence || g.name,
+        email: bg.email_snapshot.presence || g.email,
+        phone: bg.phone_snapshot.presence || g.phone,
+        country: bg.country_snapshot.presence || g.country.presence || hotel.country,
+        gender: bg.gender_snapshot.presence || g.gender,
+        document_type: bg.document_type_snapshot.presence || g.document_type.presence || "ic",
+        government_id: bg.government_id_snapshot.presence || g.government_id,
+        date_of_birth: bg.date_of_birth_snapshot.presence || g.date_of_birth
+      }
+    end
+
+    def guest_details_boat_times
+      bg = selected_booking_guest
+      return { boat_in: nil, boat_out: nil } unless bg
+
+      tz = hotel.hotel_time_zone.presence || Time.zone.name
+      {
+        boat_in: bg.boat_in_at&.in_time_zone(tz)&.strftime("%Y-%m-%dT%H:%M"),
+        boat_out: bg.boat_out_at&.in_time_zone(tz)&.strftime("%Y-%m-%dT%H:%M")
+      }
+    end
+
     def guest_display(booking_guest = selected_booking_guest)
       record = booking_guest
       {

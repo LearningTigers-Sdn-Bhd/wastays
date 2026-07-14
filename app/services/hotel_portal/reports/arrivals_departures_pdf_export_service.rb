@@ -98,16 +98,51 @@ module HotelPortal
 
         table_rows = rows.map do |row|
           status = type == :arrival ? "#{row[:pre_checkin_status]} / #{row[:guarantee_status]}" : row[:departure_status]
-          [
-            "#{row[:guest_name]}\n#{row[:confirmation_token]}",
-            "#{row[:room_details]}\nRoom: #{row[:room_numbers]}",
-            row[:stay_dates],
-            status,
-            row[:latest_note].presence || "-"
+          if @tab == "in_house"
+            boat_dep_str = if row[:boat_departure].present?
+              boat_time = row[:boat_departure].in_time_zone(@hotel.hotel_time_zone)
+              "#{boat_time.strftime('%d %b %Y')}\n#{boat_time.strftime('%I:%M %p')}"
+            else
+              "—"
+            end
+            [
+              "#{row[:guest_name]}\n#{row[:confirmation_token]}",
+              "#{row[:room_details]}\nRoom: #{row[:room_numbers]}",
+              row[:stay_dates],
+              status,
+              boat_dep_str,
+              row[:latest_note].presence || "-"
+            ]
+          else
+            [
+              "#{row[:guest_name]}\n#{row[:confirmation_token]}",
+              "#{row[:room_details]}\nRoom: #{row[:room_numbers]}",
+              row[:stay_dates],
+              status,
+              row[:latest_note].presence || "-"
+            ]
+          end
+        end
+
+        headers = if @tab == "in_house"
+          [ "Guest / Ref", "Rooms", "Stay", "Departure", "Boat Departure", "Notes" ]
+        else
+          [ "Guest / Ref", "Rooms", "Stay", type == :arrival ? "Readiness" : "Departure", "Notes" ]
+        end
+
+        opts = { width: pdf.bounds.width, cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] } }
+        if @tab == "in_house"
+          opts[:column_widths] = [
+            pdf.bounds.width * 0.20,
+            pdf.bounds.width * 0.18,
+            pdf.bounds.width * 0.22,
+            pdf.bounds.width * 0.11,
+            pdf.bounds.width * 0.14,
+            pdf.bounds.width * 0.15
           ]
         end
 
-        pdf.table([ [ "Guest / Ref", "Rooms", "Stay", type == :arrival ? "Readiness" : "Departure", "Notes" ] ] + table_rows, width: pdf.bounds.width, cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] }) do
+        pdf.table([ headers ] + table_rows, opts) do
           row(0).font_style = :bold
           row(0).background_color = "F1F5F9"
         end

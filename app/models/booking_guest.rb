@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class BookingGuest < ApplicationRecord
   ROLES = %w[primary additional].freeze
 
