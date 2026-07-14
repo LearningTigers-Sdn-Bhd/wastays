@@ -5,14 +5,21 @@
       <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-950"><%= @submission.hotel.name %></h1>
       <p class="mt-1 text-sm text-slate-600">Submitted on <%= l(@submission.created_at, format: :short) %></p>
     </div>
-    <%= link_to "Back to Payment Submissions", corporate_ar_payment_submissions_path, class: "rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm" %>
+    <%= link_to "Back to Payment History", corporate_ar_payments_path, class: "rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm" %>
   </div>
 
   <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="border-b border-slate-200 px-6 py-5"><h2 class="text-lg font-bold text-slate-950">Details</h2></div>
     <dl class="grid grid-cols-2 gap-4 p-6 text-sm">
-      <% if @submission.ar_invoice.present? %>
-        <div class="col-span-2"><dt class="text-slate-500">Invoice</dt><dd class="font-bold text-slate-950"><%= link_to @submission.ar_invoice.formatted_invoice_number, corporate_ar_invoice_path(@submission.ar_invoice), class: "underline" %></dd></div>
+      <% if @submission.ar_payment_submission_allocations.any? %>
+        <div class="col-span-2">
+          <dt class="text-slate-500">Invoice(s)</dt>
+          <dd class="mt-1 flex flex-wrap gap-2">
+            <% @submission.ar_payment_submission_allocations.each do |allocation| %>
+              <%= link_to allocation.ar_invoice.formatted_invoice_number, corporate_ar_invoice_path(allocation.ar_invoice), class: "rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-800 underline" %>
+            <% end %>
+          </dd>
+        </div>
       <% end %>
       <div><dt class="text-slate-500">Reference</dt><dd class="font-bold text-slate-950"><%= @submission.reference_number %></dd></div>
       <div><dt class="text-slate-500">Amount</dt><dd class="font-bold text-slate-950"><%= @submission.currency %> <%= number_with_precision(@submission.amount, precision: 2) %></dd></div>

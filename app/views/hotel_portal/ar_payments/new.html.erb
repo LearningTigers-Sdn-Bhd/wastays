@@ -15,7 +15,7 @@
     <div class="flex items-start justify-between gap-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
       <div class="text-sm font-semibold text-blue-900">
         Recording this against the agent's submitted payment slip from <%= l(@ar_payment_submission.created_at, format: :short) %>,
-        targeting invoice <%= @ar_payment_submission.ar_invoice&.formatted_invoice_number || "—" %>.
+        targeting invoice<%= "s" if @ar_payment_submission.ar_invoices.size > 1 %> <%= @ar_payment_submission.ar_invoices.map(&:formatted_invoice_number).to_sentence.presence || "—" %>.
         <%= link_to "View slip", rails_blob_path(@ar_payment_submission.slip, disposition: "inline"), target: "_blank", rel: "noopener", class: "underline" %>
       </div>
     </div>
@@ -26,7 +26,7 @@
     <%= hidden_field_tag "ar_payment_submission_id", @ar_payment_submission&.id if @ar_payment_submission.present? %>
     <%= render "payment_fields" %>
     <%= render "allocation_summary", currency: params.dig(:ar_payment, :currency).presence || current_hotel.default_currency %>
-    <%= render "invoice_allocations", open_invoices: @open_invoices, source_invoice: @source_invoice %>
+    <%= render "invoice_allocations", open_invoices: @open_invoices, source_allocations: @source_allocations || {} %>
 
     <div class="flex justify-end gap-2 pt-2.5">
       <%= link_to "Cancel", hotel_ar_payments_path(current_hotel), class: "rounded-xl px-5 py-2.5 text-sm font-bold text-muted-foreground hover:bg-muted" %>

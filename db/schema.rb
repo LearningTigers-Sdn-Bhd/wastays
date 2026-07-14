@@ -143,6 +143,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
     t.check_constraint "amount > 0::numeric", name: "ar_payment_allocations_amount_positive"
   end
 
+  create_table "ar_payment_submission_allocations", force: :cascade do |t|
+    t.bigint "ar_payment_submission_id", null: false
+    t.bigint "ar_invoice_id", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ar_invoice_id"], name: "index_ar_payment_submission_allocations_on_ar_invoice_id"
+    t.index ["ar_payment_submission_id", "ar_invoice_id"], name: "index_submission_allocations_on_submission_and_invoice", unique: true
+    t.index ["ar_payment_submission_id"], name: "idx_on_ar_payment_submission_id_60deb1a492"
+    t.check_constraint "amount > 0::numeric", name: "ar_payment_submission_allocations_amount_positive"
+  end
+
   create_table "ar_payment_submissions", force: :cascade do |t|
     t.bigint "hotel_id", null: false
     t.bigint "hotel_corporate_account_id", null: false
@@ -160,8 +172,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
     t.datetime "reviewed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "ar_invoice_id"
-    t.index ["ar_invoice_id"], name: "index_ar_payment_submissions_on_ar_invoice_id"
     t.index ["ar_payment_id"], name: "index_ar_payment_submissions_on_ar_payment_id"
     t.index ["hotel_corporate_account_id"], name: "index_ar_payment_submissions_on_hotel_corporate_account_id"
     t.index ["hotel_id"], name: "index_ar_payment_submissions_on_hotel_id"
@@ -2021,7 +2031,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
   add_foreign_key "ar_payment_allocation_reversals", "users", column: "reversed_by_id"
   add_foreign_key "ar_payment_allocations", "ar_invoices"
   add_foreign_key "ar_payment_allocations", "ar_payments"
-  add_foreign_key "ar_payment_submissions", "ar_invoices"
+  add_foreign_key "ar_payment_submission_allocations", "ar_invoices"
+  add_foreign_key "ar_payment_submission_allocations", "ar_payment_submissions"
   add_foreign_key "ar_payment_submissions", "ar_payments"
   add_foreign_key "ar_payment_submissions", "hotel_corporate_accounts"
   add_foreign_key "ar_payment_submissions", "hotels"

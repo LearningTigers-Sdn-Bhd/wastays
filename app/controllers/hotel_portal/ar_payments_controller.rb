@@ -24,11 +24,11 @@ module HotelPortal
     end
 
     def new
-      @ar_payment_submission = current_hotel.ar_payment_submissions.pending.includes(:ar_invoice).find_by(id: params[:ar_payment_submission_id])
+      @ar_payment_submission = current_hotel.ar_payment_submissions.pending.includes(ar_payment_submission_allocations: :ar_invoice).find_by(id: params[:ar_payment_submission_id])
       set_context
       if @ar_payment_submission.present?
         @hotel_corporate_account = @ar_payment_submission.hotel_corporate_account
-        @source_invoice ||= @ar_payment_submission.ar_invoice
+        @source_allocations = @ar_payment_submission.ar_payment_submission_allocations.index_by(&:ar_invoice_id).transform_values(&:amount)
         @open_invoices = open_invoices
       end
     end
@@ -65,7 +65,7 @@ module HotelPortal
     def eligible_invoices
       @hotel_corporate_account = current_hotel.hotel_corporate_accounts.find_by(id: params[:hotel_corporate_account_id])
       @open_invoices = open_invoices
-      render partial: "invoice_allocations", locals: { open_invoices: @open_invoices, source_invoice: nil }
+      render partial: "invoice_allocations", locals: { open_invoices: @open_invoices, source_allocations: {} }
     end
 
     private
@@ -74,6 +74,7 @@ module HotelPortal
       @source_invoice = current_hotel.ar_invoices.includes(hotel_corporate_account: :corporate_account).find_by(id: params[:ar_invoice_id].presence || ar_payment_params[:ar_invoice_id].presence)
       @hotel_corporate_account = @source_invoice&.hotel_corporate_account || current_hotel.hotel_corporate_accounts.includes(:corporate_account).find_by(id: ar_payment_params[:hotel_corporate_account_id].presence || params[:hotel_corporate_account_id].presence)
       @hotel_corporate_account ||= current_hotel.hotel_corporate_accounts.active.includes(:corporate_account).order(created_at: :desc).first
+      @source_allocations = @source_invoice.present? ? { @source_invoice.id => @source_invoice.outstanding_amount } : {}
       @open_invoices = open_invoices
     end
 

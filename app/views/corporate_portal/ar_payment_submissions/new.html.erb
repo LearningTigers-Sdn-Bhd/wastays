@@ -1,8 +1,8 @@
 <div class="mx-auto max-w-2xl space-y-6 pb-20">
   <div>
-    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Payment Submissions</p>
-    <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-950">Submit a Payment</h1>
-    <p class="mt-1 text-sm text-slate-600">Select the outstanding invoice you paid by bank transfer, upload your transaction slip, and the hotel will verify it.</p>
+    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Payments</p>
+    <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-950">Submit Bank Transfer</h1>
+    <p class="mt-1 text-sm text-slate-600">Upload your transaction slip for the invoice(s) below. The hotel will verify it.</p>
   </div>
 
   <% if @ar_payment_submission.errors.any? %>
@@ -11,49 +11,44 @@
     </div>
   <% end %>
 
-  <% if corporate_open_invoices.none? %>
+  <% if @invoices.none? %>
     <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-      You have no outstanding invoices right now, so there's nothing to submit a payment against.
+      Select an outstanding invoice from Pay Invoices to submit a bank transfer.
+      <%= link_to "Go to Pay Invoices", pay_invoices_corporate_ar_payments_path, class: "font-bold underline" %>
     </div>
   <% else %>
-    <%= form_with model: @ar_payment_submission, url: corporate_ar_payment_submissions_path, local: true, multipart: true, class: "space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm", data: { controller: "corporate-payment-submission-form" } do |f| %>
-      <div>
-        <%= f.label :ar_invoice_id, "Invoice", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-        <%= f.select :ar_invoice_id,
-          options_for_select(
-            corporate_open_invoices.map { |invoice| [ "#{invoice.hotel.name} · #{invoice.formatted_invoice_number} · #{invoice.currency} #{number_with_precision(invoice.outstanding_amount, precision: 2)} due #{invoice.due_on.strftime('%d %b %Y')}", invoice.id, { data: { outstanding: invoice.outstanding_amount, currency: invoice.currency } } ] },
-            @ar_payment_submission.ar_invoice_id
-          ),
-          { include_blank: "Select an outstanding invoice" },
-          required: true,
-          data: { corporate_payment_submission_form_target: "invoice", action: "change->corporate-payment-submission-form#sync" },
-          class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-200 px-6 py-4"><h2 class="text-sm font-bold text-slate-950">Paying</h2></div>
+      <dl class="divide-y divide-slate-100">
+        <% @invoices.each do |invoice| %>
+          <div class="flex items-center justify-between px-6 py-3 text-sm">
+            <dt class="font-semibold text-slate-700"><%= invoice.formatted_invoice_number %> · <%= invoice.hotel.name %></dt>
+            <dd class="font-bold tabular-nums text-slate-950"><%= invoice.currency %> <%= number_with_precision(invoice.outstanding_amount, precision: 2) %></dd>
+          </div>
+        <% end %>
+      </dl>
+      <div class="flex items-center justify-between border-t border-slate-200 bg-slate-50/60 px-6 py-3">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total</p>
+        <p class="text-lg font-black tabular-nums text-slate-950"><%= @invoices.first.currency %> <%= number_with_precision(@invoices.sum(&:outstanding_amount), precision: 2) %></p>
       </div>
+    </section>
+
+    <%= form_with model: @ar_payment_submission, url: corporate_ar_payment_submissions_path, local: true, multipart: true, class: "space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" do |f| %>
+      <% @invoices.each do |invoice| %>
+        <%= hidden_field_tag "ar_payment_submission[ar_invoice_ids][]", invoice.id %>
+      <% end %>
       <div>
         <%= f.label :reference_number, "Reference / transaction number", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
         <%= f.text_field :reference_number, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
       </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <%= f.label :amount, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-          <%= f.number_field :amount, step: "0.01", min: "0.01", required: true, data: { corporate_payment_submission_form_target: "amount" }, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
-          <p class="mt-1 text-xs text-slate-500">Defaults to the invoice's outstanding balance — reduce it if you're only paying part of it.</p>
-        </div>
-        <div>
-          <%= f.label :currency, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-          <%= f.text_field :currency, required: true, readonly: true, data: { corporate_payment_submission_form_target: "currency" }, class: "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold uppercase text-slate-700 focus:outline-none focus:ring-0" %>
-        </div>
+      <div>
+        <%= f.label :received_at, "Date paid", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.date_field :received_at, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
       </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <%= f.label :received_at, "Date paid", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-          <%= f.date_field :received_at, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
-        </div>
-        <div>
-          <%= f.label :payment_method, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-          <%= f.select :payment_method, options_for_select(ArPayment::PAYMENT_METHODS.map { |method| [ method.humanize, method ] }, @ar_payment_submission.payment_method),
-            {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
-        </div>
+      <div>
+        <%= f.label :payment_method, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.select :payment_method, options_for_select(ArPayment::PAYMENT_METHODS.map { |method| [ method.humanize, method ] }, @ar_payment_submission.payment_method),
+          {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
       </div>
       <div>
         <%= f.label :slip, "Transaction slip (image or PDF)", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
@@ -65,8 +60,8 @@
       </div>
 
       <div class="flex justify-end gap-2">
-        <%= link_to "Cancel", corporate_ar_payment_submissions_path, class: "rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100" %>
-        <%= f.submit "Submit Payment", class: "rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-700" %>
+        <%= link_to "Cancel", pay_invoices_corporate_ar_payments_path, class: "rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100" %>
+        <%= f.submit "Submit Bank Transfer", class: "rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-700" %>
       </div>
     <% end %>
   <% end %>

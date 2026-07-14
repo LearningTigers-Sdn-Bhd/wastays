@@ -27,6 +27,16 @@ module CorporatePortal
       @presenter = CorporatePortal::AccountsReceivable::PayInvoicesPresenter.new(account: current_user.account, params: params)
     end
 
+    def choose_method
+      @presenter = CorporatePortal::AccountsReceivable::ChooseMethodPresenter.new(
+        account: current_user.account,
+        hotel_corporate_account_id: params[:hotel_corporate_account_id],
+        invoice_ids: params[:invoice_ids]
+      )
+
+      redirect_to pay_invoices_corporate_ar_payments_path, alert: "Select at least one invoice to continue." if @presenter.invoices.empty?
+    end
+
     def review
       result = CorporateArPayments::CreateIntent.call(
         user: current_user,

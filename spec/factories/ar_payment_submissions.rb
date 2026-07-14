@@ -12,30 +12,37 @@ FactoryBot.define do
     payment_method { "bank_transfer" }
     status { "pending" }
 
-    # Skipped (nil) when hotel/hotel_corporate_account have been overridden into a mismatched
-    # pair on purpose (e.g. to test that cross-hotel validation) — building a matching invoice
-    # in that case would itself blow up on ArInvoice's own hotel-consistency validations.
-    ar_invoice do
-      next nil if hotel.blank? || hotel_corporate_account.blank? || hotel_corporate_account.hotel_id != hotel.id
+    transient do
+      # Skipped (nil) when hotel/hotel_corporate_account have been overridden into a mismatched
+      # pair on purpose (e.g. to test that cross-hotel validation) — building a matching invoice
+      # in that case would itself blow up on ArInvoice's own hotel-consistency validations.
+      auto_invoice do
+        next nil if hotel.blank? || hotel_corporate_account.blank? || hotel_corporate_account.hotel_id != hotel.id
 
-      association(:ar_invoice,
-        hotel: hotel,
-        hotel_corporate_account: hotel_corporate_account,
-        booking_folio: association(:booking_folio, :secondary,
-          booking: association(:booking, hotel: hotel),
+        association(:ar_invoice,
           hotel: hotel,
-          hotel_corporate_account: hotel_corporate_account),
-        amount: amount,
-        outstanding_amount: amount,
-        currency: currency)
+          hotel_corporate_account: hotel_corporate_account,
+          booking_folio: association(:booking_folio, :secondary,
+            booking: association(:booking, hotel: hotel),
+            hotel: hotel,
+            hotel_corporate_account: hotel_corporate_account),
+          amount: amount,
+          outstanding_amount: amount,
+          currency: currency)
+      end
     end
 
-    after(:build) do |submission|
+    after(:build) do |submission, evaluator|
       submission.slip.attach(
         io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")),
         filename: "slip.jpg",
         content_type: "image/jpeg"
       )
+
+      next if submission.ar_payment_submission_allocations.any?
+      next if evaluator.auto_invoice.blank?
+
+      submission.ar_payment_submission_allocations.build(ar_invoice: evaluator.auto_invoice, amount: submission.amount)
     end
   end
 end

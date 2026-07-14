@@ -41,14 +41,39 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
 
   it "prefills the allocation for the submission's target invoice without needing ar_invoice_id in the URL" do
     submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-TARGETED", amount: 275)
+    invoice = submission.ar_invoices.first
 
     get new_hotel_ar_payment_path(hotel, hotel_corporate_account_id: relationship.id, ar_payment_submission_id: submission.id)
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include(submission.ar_invoice.formatted_invoice_number)
-    expect(response.body).to include("targeting invoice #{submission.ar_invoice.formatted_invoice_number}")
-    expect(response.body).to include("name=\"allocations[#{submission.ar_invoice.id}]\"")
+    expect(response.body).to include(invoice.formatted_invoice_number)
+    expect(response.body).to include("targeting invoice #{invoice.formatted_invoice_number}")
+    expect(response.body).to include("name=\"allocations[#{invoice.id}]\"")
     expect(response.body).to include('value="275.0"')
+  end
+
+  it "prefills allocations for every invoice a multi-invoice submission targets" do
+    booking1 = create(:booking, hotel: hotel)
+    folio1 = create(:booking_folio, :secondary, booking: booking1, hotel: hotel, hotel_corporate_account: relationship)
+    invoice1 = create(:ar_invoice, hotel: hotel, booking_folio: folio1, hotel_corporate_account: relationship, amount: 100, paid_amount: 0, outstanding_amount: 100, currency: "MYR")
+    booking2 = create(:booking, hotel: hotel)
+    folio2 = create(:booking_folio, :secondary, booking: booking2, hotel: hotel, hotel_corporate_account: relationship)
+    invoice2 = create(:ar_invoice, hotel: hotel, booking_folio: folio2, hotel_corporate_account: relationship, amount: 150, paid_amount: 0, outstanding_amount: 150, currency: "MYR")
+
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, amount: 100, reference_number: "SLIP-MULTI")
+    submission.ar_payment_submission_allocations.destroy_all
+    submission.ar_payment_submission_allocations.create!(ar_invoice: invoice1, amount: 100)
+    submission.ar_payment_submission_allocations.create!(ar_invoice: invoice2, amount: 150)
+    submission.update!(amount: 250)
+
+    get new_hotel_ar_payment_path(hotel, hotel_corporate_account_id: relationship.id, ar_payment_submission_id: submission.id)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("targeting invoices #{invoice1.formatted_invoice_number} and #{invoice2.formatted_invoice_number}")
+    expect(response.body).to include("name=\"allocations[#{invoice1.id}]\"")
+    expect(response.body).to include("name=\"allocations[#{invoice2.id}]\"")
+    expect(response.body).to include('value="100.0"')
+    expect(response.body).to include('value="150.0"')
   end
 
   it "renders agent-submitted fields as read-only, not editable inputs" do

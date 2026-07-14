@@ -10,7 +10,9 @@ module CorporatePortal
         { key: "partially_allocated", label: "Partially Allocated", icon: "circle-dollar-sign", class: "peer-checked:border-amber-400 peer-checked:bg-amber-50 peer-checked:text-amber-700" },
         { key: "fully_allocated", label: "Fully Allocated", icon: "circle-check", class: "peer-checked:border-emerald-400 peer-checked:bg-emerald-50 peer-checked:text-emerald-700" },
         { key: "pending", label: "Pending Attempts", icon: "circle-dot", class: "peer-checked:border-blue-400 peer-checked:bg-blue-50 peer-checked:text-blue-700" },
-        { key: "failed", label: "Failed Attempts", icon: "circle-slash", class: "peer-checked:border-slate-500 peer-checked:bg-slate-100 peer-checked:text-slate-700" }
+        { key: "failed", label: "Failed Attempts", icon: "circle-slash", class: "peer-checked:border-slate-500 peer-checked:bg-slate-100 peer-checked:text-slate-700" },
+        { key: "pending_review", label: "Pending Bank Transfer Review", icon: "upload", class: "peer-checked:border-violet-400 peer-checked:bg-violet-50 peer-checked:text-violet-700" },
+        { key: "rejected", label: "Rejected Bank Transfer", icon: "circle-x", class: "peer-checked:border-red-400 peer-checked:bg-red-50 peer-checked:text-red-700" }
       ].freeze
 
       Metric = Struct.new(:label, :amounts, :description, :icon, :class_name, keyword_init: true)
@@ -70,16 +72,6 @@ module CorporatePortal
         query.present? || selected_status.present? || selected_hotel_id.present? || received_from.present? || received_to.present?
       end
 
-      def pagination_params
-        {
-          query: query.presence,
-          status: selected_status,
-          hotel_id: selected_hotel_id,
-          received_from: received_from&.iso8601,
-          received_to: received_to&.iso8601
-        }.compact
-      end
-
       def summary_metrics
         [
           Metric.new(
@@ -109,6 +101,13 @@ module CorporatePortal
             description: "Payments with an unapplied balance",
             icon: "triangle-alert",
             class_name: "bg-red-50 text-red-700"
+          ),
+          Metric.new(
+            label: "Pending Bank Transfers",
+            amounts: [ pending_submissions_count.to_s ],
+            description: "Awaiting hotel review",
+            icon: "upload",
+            class_name: "bg-violet-50 text-violet-700"
           )
         ]
       end
@@ -116,7 +115,7 @@ module CorporatePortal
       private
 
       def all_rows
-        intent_rows + legacy_payment_rows
+        intent_rows + legacy_payment_rows + submission_rows
       end
 
       def intent_rows
@@ -168,9 +167,7 @@ module CorporatePortal
       end
 
       def legacy_payment_rows
-        if selected_status.present? && %w[pending failed].include?(selected_status)
-          return []
-        end
+        return [] if %w[pending_review rejected].include?(selected_status)
 
         scope = ArPayment.joins(:hotel_corporate_account)
           .where(hotel_corporate_accounts: { corporate_account_id: account.id })
@@ -211,6 +208,38 @@ module CorporatePortal
         end
 
         rows
+      end
+
+      def submission_rows
+        return [] if %w[unapplied partially_allocated fully_allocated pending failed].include?(selected_status)
+
+        # Approved submissions already have a matching ArPayment/CorporateArPaymentIntent row above.
+        scope = ArPaymentSubmission.joins(:hotel_corporate_account)
+          .where(hotel_corporate_accounts: { corporate_account_id: account.id })
+          .where.not(status: "approved")
+          .includes(:hotel, ar_payment_submission_allocations: :ar_invoice)
+
+        scope = scope.where(hotel_id: selected_hotel_id) if selected_hotel_id.present?
+
+        if query.present?
+          pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
+          scope = scope.joins(:hotel).where(
+            "ar_payment_submissions.reference_number ILIKE :query OR hotels.name ILIKE :query",
+            query: pattern
+          )
+        end
+
+        scope = scope.where(received_at: received_from..) if received_from.present?
+        scope = scope.where(received_at: ..received_to) if received_to.present?
+
+        case selected_status
+        when "pending_review"
+          scope = scope.where(status: "pending")
+        when "rejected"
+          scope = scope.where(status: "rejected")
+        end
+
+        scope.map { |submission| SubmissionRow.new(submission) }
       end
 
       # Metrics Calculators
@@ -288,6 +317,13 @@ module CorporatePortal
         count
       end
 
+      def pending_submissions_count
+        ArPaymentSubmission.joins(:hotel_corporate_account)
+          .where(hotel_corporate_accounts: { corporate_account_id: account.id })
+          .where(status: "pending")
+          .count
+      end
+
       def formatted_amounts(amounts)
         normalized = amounts.transform_keys { |k| k.to_s.upcase }
         if normalized.empty?
@@ -353,6 +389,31 @@ module CorporatePortal
 
         def money(amount)
           "#{payment.currency} #{format('%.2f', amount.to_d)}"
+        end
+      end
+
+      class SubmissionRow
+        attr_reader :submission
+
+        def initialize(submission)
+          @submission = submission
+        end
+
+        def sort_time = submission.created_at
+        def reference = submission.reference_number
+        def hotel_name = submission.hotel.name
+        def received_on = submission.received_at.strftime("%d %b %Y")
+        def method = submission.payment_method.humanize
+        def amount_label = money(submission.amount)
+        def allocated_label = "—"
+        def unapplied_label = "—"
+        def status_label = submission.pending? ? "Pending Review" : submission.status.humanize
+        def path = Rails.application.routes.url_helpers.corporate_ar_payment_submission_path(submission)
+
+        private
+
+        def money(amount)
+          "#{submission.currency} #{format('%.2f', amount.to_d)}"
         end
       end
     end

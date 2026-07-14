@@ -30,6 +30,24 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
     expect(response.body).not_to include(hidden_hotel.name)
   end
 
+  it "merges pending and rejected bank-transfer submissions into payment history, excluding approved ones" do
+    relationship = create(:hotel_corporate_account, corporate_account: user.account)
+    pending_submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SUB-PENDING")
+    rejected_submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SUB-REJECTED", status: "rejected", rejection_reason: "mismatch", reviewed_by: create(:user), reviewed_at: Time.current)
+    approved_payment = create(:ar_payment, hotel_corporate_account: relationship, hotel: relationship.hotel, reference_number: "PAY-FROM-APPROVAL")
+    approved_submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SUB-NOW-APPROVED", status: "approved", ar_payment: approved_payment, reviewed_by: create(:user), reviewed_at: Time.current)
+
+    get corporate_ar_payments_path
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("SUB-PENDING")
+    expect(response.body).to include("SUB-REJECTED")
+    expect(response.body).to include("PAY-FROM-APPROVAL")
+    expect(response.body).not_to include(approved_submission.reference_number)
+    expect(response.body).to include(corporate_ar_payment_submission_path(pending_submission))
+    expect(response.body).to include(corporate_ar_payment_submission_path(rejected_submission))
+  end
+
   it "filters payments by keyword" do
     rel = create(:hotel_corporate_account, corporate_account: user.account)
     h1 = rel.hotel
@@ -157,16 +175,41 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
     expect(response.body).not_to include("Suspended Billing Corporate Hotel")
   end
 
-  it "offers a per-invoice bank transfer link alongside the online payment option" do
+  it "lets the corporate select invoices without a manual amount field or gateway tile" do
     relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
     invoice = create_invoice(relationship)
 
-    get pay_invoices_corporate_ar_payments_path(hotel_corporate_account_id: relationship.id, currency: invoice.currency)
+    get pay_invoices_corporate_ar_payments_path(hotel_corporate_account_id: relationship.id)
 
     expect(response).to have_http_status(:success)
+    expect(response.body).to include(invoice.formatted_invoice_number)
+    expect(response.body).to include("Choose Hotel")
+    expect(response.body).to include("Continue")
+    expect(response.body).not_to include("Payment Amount")
+    expect(response.body).not_to include("Configured payment channel")
+    expect(response.body).to include(choose_method_corporate_ar_payments_path)
+  end
+
+  it "shows the invoice selection and both payment method options on choose method" do
+    relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
+    invoice = create_invoice(relationship)
+
+    get choose_method_corporate_ar_payments_path(hotel_corporate_account_id: relationship.id, invoice_ids: [ invoice.id ])
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include(invoice.formatted_invoice_number)
+    expect(response.body).to include("Pay Online")
     expect(response.body).to include("Bank Transfer")
-    expect(response.body).to include(new_corporate_ar_payment_submission_path(ar_invoice_id: invoice.id))
-    expect(response.body).to include("Review Payment")
+    expect(response.body).to include(review_corporate_ar_payments_path)
+    expect(response.body).to include(new_corporate_ar_payment_submission_path)
+  end
+
+  it "redirects back to pay invoices when choose method has no invoices selected" do
+    relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
+
+    get choose_method_corporate_ar_payments_path(hotel_corporate_account_id: relationship.id, invoice_ids: [])
+
+    expect(response).to redirect_to(pay_invoices_corporate_ar_payments_path)
   end
 
   it "rejects review for a suspended relationship" do

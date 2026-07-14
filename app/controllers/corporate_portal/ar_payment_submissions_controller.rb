@@ -2,43 +2,49 @@
 
 module CorporatePortal
   class ArPaymentSubmissionsController < CorporatePortal::BaseController
-    def index
-      @submissions = corporate_ar_payment_submissions
-        .includes(:hotel, :ar_payment, :ar_invoice, hotel_corporate_account: :corporate_account)
-        .order(created_at: :desc)
-    end
-
     def show
       @submission = corporate_ar_payment_submissions
-        .includes(:hotel, :ar_payment, :ar_invoice, hotel_corporate_account: :corporate_account)
+        .includes(:hotel, :ar_payment, ar_payment_submission_allocations: :ar_invoice, hotel_corporate_account: :corporate_account)
         .find(params[:id])
     end
 
     def new
-      preselected = corporate_open_invoices.find_by(id: params[:ar_invoice_id])
+      @invoices = corporate_open_invoices.where(id: requested_invoice_ids)
       @ar_payment_submission = ArPaymentSubmission.new(
-        ar_invoice_id: preselected&.id,
-        amount: preselected&.outstanding_amount,
-        currency: preselected&.currency || corporate_hotel_corporate_accounts.first&.credit_currency,
+        currency: @invoices.first&.currency || corporate_hotel_corporate_accounts.first&.credit_currency,
         payment_method: "bank_transfer",
         received_at: Date.current
       )
     end
 
     def create
-      invoice = corporate_open_invoices.find_by(id: submission_params[:ar_invoice_id])
+      invoices = corporate_open_invoices.where(id: requested_invoice_ids)
 
-      unless invoice
-        return redirect_to new_corporate_ar_payment_submission_path, alert: "Select an outstanding invoice to submit this payment for."
+      if invoices.empty?
+        return redirect_to pay_invoices_corporate_ar_payments_path, alert: "Select at least one outstanding invoice to submit this payment for."
       end
 
-      @ar_payment_submission = invoice.hotel_corporate_account.ar_payment_submissions.build(
-        submission_params.except(:ar_invoice_id).merge(ar_invoice: invoice, hotel: invoice.hotel, submitted_by: current_user)
+      hotel_corporate_account = invoices.first.hotel_corporate_account
+      unless invoices.all? { |invoice| invoice.hotel_corporate_account_id == hotel_corporate_account.id }
+        return redirect_to pay_invoices_corporate_ar_payments_path, alert: "Selected invoices must belong to the same corporate account."
+      end
+
+      @ar_payment_submission = hotel_corporate_account.ar_payment_submissions.build(
+        submission_params.except(:ar_invoice_ids).merge(
+          hotel: hotel_corporate_account.hotel,
+          submitted_by: current_user,
+          amount: invoices.sum(&:outstanding_amount),
+          currency: invoices.first.currency
+        )
       )
+      invoices.each do |invoice|
+        @ar_payment_submission.ar_payment_submission_allocations.build(ar_invoice: invoice, amount: invoice.outstanding_amount)
+      end
 
       if @ar_payment_submission.save
-        redirect_to corporate_ar_payment_submissions_path, notice: "Payment submitted for hotel review."
+        redirect_to corporate_ar_payments_path, notice: "Payment submitted for hotel review."
       else
+        @invoices = invoices
         flash.now[:alert] = @ar_payment_submission.errors.full_messages.to_sentence
         render :new, status: :unprocessable_content
       end
@@ -65,8 +71,12 @@ module CorporatePortal
     end
     helper_method :corporate_open_invoices
 
+    def requested_invoice_ids
+      Array(params[:ar_invoice_ids].presence || submission_params[:ar_invoice_ids].presence || params[:ar_invoice_id]).reject(&:blank?)
+    end
+
     def submission_params
-      params.require(:ar_payment_submission).permit(:ar_invoice_id, :amount, :currency, :reference_number, :received_at, :payment_method, :notes, :slip)
+      params.fetch(:ar_payment_submission, {}).permit(:reference_number, :currency, :received_at, :payment_method, :notes, :slip, ar_invoice_ids: [])
     end
   end
 end

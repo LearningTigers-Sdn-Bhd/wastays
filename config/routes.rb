@@ -150,13 +150,14 @@ Rails.application.routes.draw do
     resources :ar_payments, only: [ :index, :show ], path: "payments" do
       collection do
         get :pay_invoices, path: "pay-invoices"
+        get :choose_method, path: "choose-method"
         post :review
         post :checkout_session
         get :verify
         post :verify
       end
     end
-    resources :ar_payment_submissions, only: [ :index, :show, :new, :create ], path: "payment-submissions"
+    resources :ar_payment_submissions, only: [ :show, :new, :create ], path: "payment-submissions"
   end
 
   # Superadmin dashboard

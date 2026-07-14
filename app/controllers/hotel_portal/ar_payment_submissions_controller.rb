@@ -19,7 +19,7 @@ module HotelPortal
 
     def set_submission
       @submission = current_hotel.ar_payment_submissions
-        .includes(:ar_payment, :ar_invoice, hotel_corporate_account: :corporate_account)
+        .includes(:ar_payment, ar_payment_submission_allocations: :ar_invoice, hotel_corporate_account: :corporate_account)
         .find(params[:id])
     end
 
