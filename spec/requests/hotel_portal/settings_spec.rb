@@ -332,7 +332,8 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       }
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("data-tabs-breadcrumb-label>General</span>")
+      breadcrumb = response.parsed_body.at_css("#hotel-breadcrumb")
+      expect(breadcrumb.at_css("a[href='#{hotel_general_settings_path(hotel)}']")&.text&.squish).to eq("General")
 
       hotel.reload
       expect(hotel.default_currency).to eq('MYR')

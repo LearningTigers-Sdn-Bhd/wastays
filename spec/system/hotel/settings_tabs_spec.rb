@@ -31,9 +31,8 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     expect(page).to have_no_css("h2", text: "AI Concierge Configuration")
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Notifications")
 
-    within("[data-controller='breadcrumb-dropdown']") do
+    within(".breadcrumb-dropdown[data-controller~='panels-ui--dropdown-menu']") do
       expect(page).to have_text("General")
-      expect(page).to have_text("Notifications")
     end
     within("[data-testid='settings-tabs']") do
       expect(page).to have_link("Notifications", href: hotel_notification_settings_path(hotel))
@@ -46,7 +45,7 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     expect(page).to have_css("h2", text: "AI Concierge Configuration")
     expect(page).to have_no_css("h2", text: "Communication & Notifications")
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "AI Concierge")
-    expect(page).to have_css("[data-controller='breadcrumb-dropdown']", text: "Guest Content")
+    expect(page).to have_css(".breadcrumb-dropdown[data-controller~='panels-ui--dropdown-menu']", text: "Guest Content")
     within("[data-testid='settings-tabs']") { expect(page).to have_no_link("Notifications") }
   end
 

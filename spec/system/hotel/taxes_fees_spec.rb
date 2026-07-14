@@ -34,7 +34,7 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
     within("#hotel-sidebar") do
       expect(page).to have_link("Back to previous page")
       expect(page).to have_link("Finance", href: hotel_taxes_fees_path(hotel))
-      expect(page).to have_css("a.sidebar-nav-link-active", text: "Finance")
+      expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: "Finance")
       expect(page).to have_no_link("Payouts", href: payouts_hotel_reports_path(hotel))
       expect(page).to have_no_css("summary.sidebar-group-parent", text: "Rooms & Rates")
     end

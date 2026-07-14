@@ -25,7 +25,7 @@ RSpec.describe "Hotel sidebar active aliases", type: :system do
     within("#hotel-sidebar") do
       expect(page).to have_link("Back to previous page")
       expect(page).to have_link("Property", href: edit_hotel_profile_path(hotel))
-      expect(page).to have_css("a.sidebar-nav-link-active", text: "Property")
+      expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: "Property")
     end
 
     visit hotel_taxes_fees_path(hotel)
@@ -33,7 +33,7 @@ RSpec.describe "Hotel sidebar active aliases", type: :system do
     within("#hotel-sidebar") do
       expect(page).to have_link("Back to previous page")
       expect(page).to have_link("Finance", href: hotel_taxes_fees_path(hotel))
-      expect(page).to have_css("a.sidebar-nav-link-active", text: "Finance")
+      expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: "Finance")
     end
   end
 end

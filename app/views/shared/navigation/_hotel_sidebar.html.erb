@@ -3,6 +3,7 @@
       home_path: hotel_dashboard_path(current_hotel),
       sections: hotel_visible_sidebar_sections,
       footer_items: hotel_sidebar_footer_items,
+      mode: hotel_sidebar_mode,
       collapsible: true,
       searchable: false,
       permanent: true
@@ -16,16 +17,20 @@
         </a>
       <% end %>
       <% if current_user.superadmin? %>
-        <a href="<%= admin_dashboard_path %>" target="_blank" rel="noopener noreferrer" class="panel-sidebar__link" aria-label="Go to Admin Panel">
-          <%= cached_icon "external-link", class: "panel-sidebar__icon" %>
-          <span class="panel-sidebar__label">Go to Admin Panel</span>
-        </a>
+        <%= render PanelsUI::Tooltip.new(text: "Go to Admin Panel", placement: :right, root_class: "w-full") do %>
+          <a href="<%= admin_dashboard_path %>" target="_blank" rel="noopener noreferrer" class="panel-sidebar__link" aria-label="Go to Admin Panel">
+            <%= cached_icon "external-link", class: "panel-sidebar__icon" %>
+            <span class="panel-sidebar__label">Go to Admin Panel</span>
+          </a>
+        <% end %>
       <% end %>
       <% if settings_sidebar_mode? %>
-        <a href="<%= hotel_settings_back_path %>" class="panel-sidebar__link" aria-label="Back to previous page">
-          <%= cached_icon "arrow-left", class: "panel-sidebar__icon" %>
-          <span class="panel-sidebar__label">Back to previous page</span>
-        </a>
+        <%= render PanelsUI::Tooltip.new(text: "Back to previous page", placement: :right, root_class: "w-full") do %>
+          <a href="<%= hotel_settings_back_path %>" class="panel-sidebar__link" aria-label="Back to previous page">
+            <%= cached_icon "arrow-left", class: "panel-sidebar__icon" %>
+            <span class="panel-sidebar__label">Back to previous page</span>
+          </a>
+        <% end %>
       <% end %>
     </div>
   <% end %>
