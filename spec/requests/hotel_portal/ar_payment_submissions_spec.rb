@@ -76,6 +76,24 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     expect(response.body).to include('value="150.0"')
   end
 
+  it "shows a read-only invoice summary without an Allocate column, Outstanding header, or summary cards" do
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-SIMPLE", amount: 275)
+    invoice = submission.ar_invoices.first
+
+    get new_hotel_ar_payment_path(hotel, hotel_corporate_account_id: relationship.id, ar_payment_submission_id: submission.id)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include(">Amount<")
+    expect(response.body).not_to include(">Outstanding<")
+    expect(response.body).not_to include(">Allocate<")
+    expect(response.body).not_to include(">Payment Amount<")
+    expect(response.body).not_to include(">Allocated<")
+    expect(response.body).not_to include(">Unapplied<")
+    expect(response.body).not_to include("data-ar-payment-form-target=\"allocation\"")
+    expect(response.body).to include("These are the invoices the agent selected")
+    expect(response.body).to include(invoice.formatted_invoice_number)
+  end
+
   it "renders agent-submitted fields as read-only, not editable inputs" do
     submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-READONLY", amount: 275, payment_method: "bank_transfer")
 

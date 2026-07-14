@@ -25,8 +25,10 @@
     <%= hidden_field_tag "ar_payment[ar_invoice_id]", @source_invoice&.id if @source_invoice.present? %>
     <%= hidden_field_tag "ar_payment_submission_id", @ar_payment_submission&.id if @ar_payment_submission.present? %>
     <%= render "payment_fields" %>
-    <%= render "allocation_summary", currency: params.dig(:ar_payment, :currency).presence || current_hotel.default_currency %>
-    <%= render "invoice_allocations", open_invoices: @open_invoices, source_allocations: @source_allocations || {} %>
+    <% unless @ar_payment_submission.present? %>
+      <%= render "allocation_summary", currency: params.dig(:ar_payment, :currency).presence || current_hotel.default_currency %>
+    <% end %>
+    <%= render "invoice_allocations", open_invoices: @open_invoices, source_allocations: @source_allocations || {}, readonly: @ar_payment_submission.present? %>
 
     <div class="flex justify-end gap-2 pt-2.5">
       <%= link_to "Cancel", hotel_ar_payments_path(current_hotel), class: "rounded-xl px-5 py-2.5 text-sm font-bold text-muted-foreground hover:bg-muted" %>
