@@ -157,6 +157,18 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
     expect(response.body).not_to include("Suspended Billing Corporate Hotel")
   end
 
+  it "offers a per-invoice bank transfer link alongside the online payment option" do
+    relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
+    invoice = create_invoice(relationship)
+
+    get pay_invoices_corporate_ar_payments_path(hotel_corporate_account_id: relationship.id, currency: invoice.currency)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Bank Transfer")
+    expect(response.body).to include(new_corporate_ar_payment_submission_path(ar_invoice_id: invoice.id))
+    expect(response.body).to include("Review Payment")
+  end
+
   it "rejects review for a suspended relationship" do
     relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
     invoice = create_invoice(relationship)
