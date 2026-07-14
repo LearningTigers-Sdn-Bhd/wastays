@@ -399,6 +399,14 @@ module HotelPortal
       }
     end
 
+    def can_manage_bookings?(user)
+      booking_presenter.can_manage_bookings?(user)
+    end
+
+    def can_add_guests?(user)
+      booking_presenter.can_add_guests?(user)
+    end
+
     def selected_routing_rule
       booking.folio_routing_rules.find { |rule| rule.id.to_s == @params[:folio_routing_rule_id].to_s }
     end

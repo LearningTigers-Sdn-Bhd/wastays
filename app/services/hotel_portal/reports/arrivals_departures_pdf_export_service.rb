@@ -96,9 +96,11 @@ module HotelPortal
           return
         end
 
+        show_boat = (@tab == "in_house" && @hotel.allow_boat_information?)
+
         table_rows = rows.map do |row|
           status = type == :arrival ? "#{row[:pre_checkin_status]} / #{row[:guarantee_status]}" : row[:departure_status]
-          if @tab == "in_house"
+          if show_boat
             boat_dep_str = if row[:boat_departure].present?
               boat_time = row[:boat_departure].in_time_zone(@hotel.hotel_time_zone)
               "#{boat_time.strftime('%d %b %Y')}\n#{boat_time.strftime('%I:%M %p')}"
@@ -124,14 +126,14 @@ module HotelPortal
           end
         end
 
-        headers = if @tab == "in_house"
+        headers = if show_boat
           [ "Guest / Ref", "Rooms", "Stay", "Departure", "Boat Departure", "Notes" ]
         else
           [ "Guest / Ref", "Rooms", "Stay", type == :arrival ? "Readiness" : "Departure", "Notes" ]
         end
 
         opts = { width: pdf.bounds.width, cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] } }
-        if @tab == "in_house"
+        if show_boat
           opts[:column_widths] = [
             pdf.bounds.width * 0.20,
             pdf.bounds.width * 0.18,

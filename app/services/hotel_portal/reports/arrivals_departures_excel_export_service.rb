@@ -96,7 +96,13 @@ module HotelPortal
       def headers_for_active_tab
         return [ "Type", "Guest Name", "Booking Ref", "Room Type", "Room Number", "Stay Dates", "Boat Time" ] if @tab == "bibo"
         return [ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Pre-checkin Status", "Guarantee Method", "Deposit Status", "Notes" ] if @tab == "arrivals"
-        return [ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Boat Departure", "Notes" ] if @tab == "in_house"
+        if @tab == "in_house"
+          if @report.respond_to?(:allow_boat_information) && !@report.allow_boat_information
+            return [ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ]
+          else
+            return [ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Boat Departure", "Notes" ]
+          end
+        end
 
         [ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ]
       end
@@ -109,6 +115,10 @@ module HotelPortal
         ] if @tab == "arrivals"
 
         if @tab == "in_house"
+          if @report.respond_to?(:allow_boat_information) && !@report.allow_boat_information
+            return [ row[:departure_status] ]
+          end
+
           boat_dep_str = if row[:boat_departure].present?
             tz = @report.respond_to?(:hotel_time_zone) ? @report.hotel_time_zone : Time.zone.name
             boat_time = row[:boat_departure].in_time_zone(tz)

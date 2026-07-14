@@ -310,6 +310,9 @@ module HotelPortal
 
     def guest_reports
       @active_guest_report_tab = GUEST_REPORT_TABS.include?(params[:tab]) ? params[:tab] : "arrivals"
+      if @active_guest_report_tab == "bibo" && !current_hotel.allow_boat_information?
+        @active_guest_report_tab = "arrivals"
+      end
       @report_start_date, @report_end_date = parse_report_date_range
 
       @report = HotelPortal::Reports::ArrivalsDeparturesReport.new(

@@ -15,6 +15,7 @@ module HotelPortal
         :departure_count,
         :checkout_count,
         :hotel_time_zone,
+        :allow_boat_information,
         keyword_init: true
       )
 
@@ -46,7 +47,8 @@ module HotelPortal
           in_house_count: in_house.size,
           departure_count: departures.size,
           checkout_count: checkout.size,
-          hotel_time_zone: @hotel.hotel_time_zone
+          hotel_time_zone: @hotel.hotel_time_zone,
+          allow_boat_information: @hotel.allow_boat_information
         )
       end
 

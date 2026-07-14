@@ -8,14 +8,19 @@ module HotelPortal::ReportsHelper
   end
 
   def guest_report_tabs_data(report, bibo_report, active_tab, grc_total_count, current_hotel, date_preset)
-    [
+    tabs = [
       { label: "Arrivals", value: "arrivals", count: report.arrival_count },
       { label: "In-House", value: "in_house", count: report.in_house_count },
       { label: "Departures", value: "departures", count: report.departure_count },
       { label: "Checkout", value: "checkout", count: report.checkout_count },
-      { label: "Registration Cards", value: "registration_cards", count: grc_total_count },
-      { label: "Boat Transfers", value: "bibo", count: bibo_report ? (bibo_report.boat_in_count + bibo_report.boat_out_count) : 0 }
-    ].map do |tab|
+      { label: "Registration Cards", value: "registration_cards", count: grc_total_count }
+    ]
+
+    if current_hotel.allow_boat_information?
+      tabs << { label: "Boat Transfers", value: "bibo", count: bibo_report ? (bibo_report.boat_in_count + bibo_report.boat_out_count) : 0 }
+    end
+
+    tabs.map do |tab|
       active = (tab[:value] == active_tab)
       path = guest_reports_hotel_reports_path(
         current_hotel,

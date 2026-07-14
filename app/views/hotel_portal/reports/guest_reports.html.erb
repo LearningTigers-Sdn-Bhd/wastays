@@ -123,7 +123,7 @@
       empty_message: "No in-house guests for this selected period.",
       rows: @report.in_house,
       type: :departure,
-      show_boat_departure: true
+      show_boat_departure: current_hotel.allow_boat_information?
     } %>
   <% elsif @active_guest_report_tab == "departures" %>
     <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {

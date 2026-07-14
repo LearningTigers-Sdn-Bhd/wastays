@@ -3,6 +3,7 @@
 class Admin::HotelsController < Admin::BaseController
   before_action :set_hotel, only: [ :show, :edit, :update ]
   before_action :load_salespersons, only: [ :new, :create, :edit, :update ]
+  before_action :set_plans, only: [ :new, :create, :edit, :update ]
   before_action :set_breadcrumbs, only: [ :show, :new, :edit, :create, :update ]
 
   def index
@@ -63,6 +64,10 @@ class Admin::HotelsController < Admin::BaseController
     @salespersons = current_user.account.users.where(role: "salesperson").order(:name)
   end
 
+  def set_plans
+    @plans = Plan.active.ordered
+  end
+
   def set_breadcrumbs
     if @hotel&.persisted?
       append_breadcrumb @hotel.name, admin_hotel_path(@hotel)
@@ -85,12 +90,13 @@ class Admin::HotelsController < Admin::BaseController
       salesperson_id: params.dig(:hotel, :salesperson_id),
       preferred_channel_manager: params.dig(:hotel, :preferred_channel_manager),
       amenities: params.dig(:hotel, :amenities),
-      allow_pax_pricing: params.dig(:hotel, :allow_pax_pricing)
+      allow_pax_pricing: params.dig(:hotel, :allow_pax_pricing),
+      allow_boat_information: params.dig(:hotel, :allow_boat_information)
     }
   end
 
   def update_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :hotel_prefix, :salesperson_id, :preferred_channel_manager, :plan_id, :pax_pricing_only, :allow_pax_pricing, amenities: [])
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :hotel_prefix, :salesperson_id, :preferred_channel_manager, :plan_id, :pax_pricing_only, :allow_pax_pricing, :allow_boat_information, amenities: [])
   end
 
   def salesperson_name_param

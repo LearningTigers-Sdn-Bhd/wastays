@@ -27,7 +27,7 @@
     </div>
   </div>
 
-  <% if booking %>
+  <% if booking && booking.hotel.allow_boat_information? %>
     <% boat_details = room_card_boat_time_details(booking, defined?(current_user) ? current_user : nil) %>
     <% if boat_details %>
       <div class="flex items-center gap-1 text-[8px] <%= boat_details[:class] %> font-bold mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis w-full" title="<%= boat_details[:title] %>">
