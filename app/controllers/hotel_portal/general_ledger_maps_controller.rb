@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class HotelPortal::GeneralLedgerMapsController < HotelPortal::BaseController
+class HotelPortal::GeneralLedgerMapsController < HotelPortal::SettingsBaseController
   before_action :authorize_manage_gl_maps!
   before_action :set_gl_map, only: %i[edit update]
 

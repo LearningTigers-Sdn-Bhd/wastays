@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class TransactionCodesController < HotelPortal::BaseController
+  class TransactionCodesController < HotelPortal::SettingsBaseController
     include OffcanvasTransactionCompletion
 
     TABS = %w[default_codes additional_service_codes configuration].freeze

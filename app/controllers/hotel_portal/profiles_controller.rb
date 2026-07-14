@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class ProfilesController < HotelPortal::BaseController
+  class ProfilesController < HotelPortal::SettingsBaseController
     before_action :set_hotel
     before_action :set_photo_queue
 

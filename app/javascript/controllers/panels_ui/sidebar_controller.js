@@ -19,11 +19,9 @@ export default class extends Controller {
   connect() {
     this.onTurboLoad = () => { this.syncActiveLinks(); this.restoreScroll() }
     this.onBeforeVisit = (event) => this.beforeVisit(event)
-    this.onBeforeRender = (event) => this.refreshForModeChange(event)
     this.onCollapsibleChange = (event) => this.persistGroupState(event)
     document.addEventListener("turbo:load", this.onTurboLoad)
     document.addEventListener("turbo:before-visit", this.onBeforeVisit)
-    document.addEventListener("turbo:before-render", this.onBeforeRender)
     this.element.addEventListener("panels-ui--collapsible:change", this.onCollapsibleChange)
 
     this.sheet = this.element.closest("dialog[data-controller~='panels-ui--sheet']")
@@ -38,20 +36,8 @@ export default class extends Controller {
   disconnect() {
     document.removeEventListener("turbo:load", this.onTurboLoad)
     document.removeEventListener("turbo:before-visit", this.onBeforeVisit)
-    document.removeEventListener("turbo:before-render", this.onBeforeRender)
     this.element.removeEventListener("panels-ui--collapsible:change", this.onCollapsibleChange)
     this.sheet?.removeEventListener("panels-ui:sheet-open", this.onSheetOpen)
-  }
-
-  refreshForModeChange(event) {
-    if (this.surfaceValue !== "desktop" || !this.element.id) return
-
-    const nextSidebar = event.detail.newBody?.querySelector(`#${this.element.id}`)
-    if (!nextSidebar || nextSidebar.dataset.sidebarMode === this.element.dataset.sidebarMode) return
-
-    this.element.dataset.sidebarMode = nextSidebar.dataset.sidebarMode
-    this.element.innerHTML = nextSidebar.innerHTML
-    queueMicrotask(() => this.syncActiveLinks())
   }
 
   get scrollable() {

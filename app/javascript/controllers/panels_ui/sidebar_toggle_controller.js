@@ -5,7 +5,7 @@ import { Controller } from "@hotwired/stimulus"
 // Lives on the desktop collapse trigger. Mobile navigation is a PanelsUI::Sheet and
 // uses the native command/commandfor contract instead of sidebar-owned overlay state.
 export default class extends Controller {
-  static values = { key: String }
+  static values = { key: String, stateKey: String }
 
   connect() {
     this.applyStoredCollapse()
@@ -16,7 +16,7 @@ export default class extends Controller {
   }
 
   get storageKey() {
-    return `wastays:${this.keyValue}-sidebar-collapsed`
+    return `wastays:${this.stateKeyValue}-sidebar-collapsed`
   }
 
   // ── Desktop collapse ──

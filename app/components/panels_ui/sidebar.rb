@@ -23,7 +23,7 @@ module PanelsUI
   class Sidebar < PanelsUI::BaseComponent
     renders_one :header
 
-    def initialize(key:, home_path:, sections: [], footer_items: [], mode: key,
+    def initialize(key:, home_path:, sections: [], footer_items: [],
                    collapsible: true, searchable: false, permanent: false,
                    search_placeholder: "Search navigation",
                    empty_message: "No navigation matches that search.",
@@ -32,7 +32,6 @@ module PanelsUI
       @home_path = home_path
       @sections = Array(sections)
       @footer_items = Array(footer_items)
-      @mode = mode
       @collapsible = collapsible
       @searchable = searchable
       @permanent = permanent
@@ -43,7 +42,7 @@ module PanelsUI
       @class = binding.local_variable_get(:class)
     end
 
-    attr_reader :key, :home_path, :sections, :footer_items, :mode,
+    attr_reader :key, :home_path, :sections, :footer_items,
                 :search_placeholder, :empty_message, :brand_name, :brand_initial
 
     def searchable? = @searchable

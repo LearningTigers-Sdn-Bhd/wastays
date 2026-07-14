@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class KnowledgeGeneralInfosController < HotelPortal::BaseController
+  class KnowledgeGeneralInfosController < HotelPortal::SettingsBaseController
     before_action -> { require_feature!("ai_concierge_page") }
     before_action :set_hotel
     before_action :authorize_hotel

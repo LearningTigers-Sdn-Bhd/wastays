@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class StaffInvitationsController < HotelPortal::BaseController
+  class StaffInvitationsController < HotelPortal::SettingsBaseController
     include StaffAssignableRoles
     before_action :authorize_manage_users!
     before_action :set_invitation, only: %i[update destroy resend]

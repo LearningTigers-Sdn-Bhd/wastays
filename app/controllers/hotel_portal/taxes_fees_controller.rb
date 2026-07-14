@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class TaxesFeesController < HotelPortal::BaseController
+  class TaxesFeesController < HotelPortal::SettingsBaseController
     before_action :set_hotel
     before_action :authorize!
 

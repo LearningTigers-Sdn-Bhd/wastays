@@ -16,7 +16,8 @@
   }
 
   .panel-sidebar__header {
-    @apply shrink-0 flex items-center min-h-12 border-b;
+    @apply shrink-0 flex items-center border-b;
+    height: 53px;
     border-color: var(--sidebar-border);
   }
 

@@ -186,13 +186,13 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
   end
 
 
-  it "shows settings navigation mode inside hotel settings" do
+  it "uses the separate settings sidebar inside hotel settings" do
     visit hotel_dashboard_path(hotel)
     find("#hotel-profile-trigger").click
-    click_link "Settings", href: hotel_general_settings_path(hotel)
+    within("#hotel-profile-menu") { click_link "Settings", href: hotel_general_settings_path(hotel) }
 
-    within("#hotel-sidebar") do
-      expect(page).to have_link("Back to previous page", href: hotel_dashboard_path(hotel))
+    within("#hotel-settings-sidebar") do
+      expect(page).to have_no_link("Back to previous page")
       expect(page).to have_link("General", href: hotel_general_settings_path(hotel))
       expect(page).to have_link("Property", href: edit_hotel_profile_path(hotel))
       expect(page).to have_link("Finance", href: hotel_banking_details_settings_path(hotel))
@@ -204,17 +204,17 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
     end
   end
 
-  it "keeps settings mode active for pages moved into Settings" do
+  it "uses the settings sidebar for pages moved into Settings" do
     visit edit_hotel_profile_path(hotel)
 
-    within("#hotel-sidebar") do
+    within("#hotel-settings-sidebar") do
       expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: "Property")
       expect(page).to have_link("Property", href: edit_hotel_profile_path(hotel))
     end
 
     visit hotel_taxes_fees_path(hotel)
 
-    within("#hotel-sidebar") do
+    within("#hotel-settings-sidebar") do
       expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: "Finance")
       expect(page).to have_link("Finance", href: hotel_banking_details_settings_path(hotel))
     end

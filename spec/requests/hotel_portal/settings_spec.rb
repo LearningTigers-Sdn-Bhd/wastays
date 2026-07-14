@@ -85,6 +85,60 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response.body).not_to include(%(data-testid="settings-setup-shortcuts"))
     end
 
+    it "uses the dedicated flat settings navigation and portal breadcrumbs" do
+      hotel.update!(status: "approved")
+      manage_users = Permission.find_or_create_by!(slug: "manage_users") { |permission| permission.name = "Manage Users" }
+      RolePermission.find_or_create_by!(role: role, permission: manage_users)
+      get hotel_general_settings_path(hotel)
+
+      document = response.parsed_body
+      sidebar = document.at_css("#hotel-settings-sidebar")
+      expect(sidebar).to be_present
+      expect(document.at_css("#hotel-sidebar")).to be_nil
+      expect(sidebar["data-sidebar-mode"]).to be_nil
+      items = sidebar.css(".panel-sidebar__section-items > .panel-sidebar__item")
+      expect(items.map { |item| item.at_css("[data-sidebar-presentation='expanded'] .panel-sidebar__label").text.squish }).to eq(
+        [ "General", "Property", "Finance", "Guest Content", "Team" ]
+      )
+      expect(sidebar.text).not_to include("Back to previous page")
+
+      breadcrumb_items = document.css("#hotel-breadcrumb .breadcrumb-item")
+      expect(breadcrumb_items[0].at_css("a")&.text&.squish).to eq("Hotel Portal")
+      expect(breadcrumb_items[0].at_css("button[aria-label='Open Hotel Portal navigation']")).to be_nil
+      expect(breadcrumb_items[1].at_css("a")&.text&.squish).to eq("Settings")
+      expect(breadcrumb_items[2].text.squish).to eq("General")
+      expect(breadcrumb_items[2].at_css("a, button")).to be_nil
+      expect(breadcrumb_items[3].at_css("a")&.text&.squish).to eq("General Settings")
+      expect(breadcrumb_items[3].at_css("button[aria-label='Open General Settings navigation']")).to be_present
+      expect(breadcrumb_items[3].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
+        [ "General Settings", "Rate Settings", "Notifications", "Plan & Billing" ]
+      )
+    end
+
+    it "uses permission-filtered tabs in the active settings breadcrumb menu" do
+      get hotel_banking_details_settings_path(hotel)
+
+      breadcrumb_items = response.parsed_body.css("#hotel-breadcrumb .breadcrumb-item")
+      expect(breadcrumb_items[2].text.squish).to eq("Finance")
+      expect(breadcrumb_items[2].at_css("a, button")).to be_nil
+      expect(breadcrumb_items[3].at_css("button[aria-label='Open Banking Details navigation']")).to be_present
+      expect(breadcrumb_items[3].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
+        [ "Banking Details", "Taxes & Fees", "Transaction Codes" ]
+      )
+    end
+
+    it "places the admin portal destination in the footer for superadmins" do
+      hotel.update!(status: "approved")
+      sign_in_as(create(:user, :superadmin, account: account))
+
+      get hotel_general_settings_path(hotel)
+
+      footer_link = response.parsed_body.at_css("#hotel-settings-sidebar .panel-sidebar__footer a[href='#{admin_dashboard_path}']")
+      expect(footer_link.text.squish).to eq("Go to Admin Portal")
+      expect(footer_link["target"]).to eq("_blank")
+      expect(footer_link["rel"]).to eq("noopener noreferrer")
+    end
+
     it "does not expose resource-owned pages as settings panels" do
       get hotel_general_settings_path(hotel)
 
@@ -333,7 +387,12 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
       expect(response).to have_http_status(:unprocessable_content)
       breadcrumb = response.parsed_body.at_css("#hotel-breadcrumb")
-      expect(breadcrumb.at_css("a[href='#{hotel_general_settings_path(hotel)}']")&.text&.squish).to eq("General")
+      items = breadcrumb.css(".breadcrumb-item")
+      expect(items[0].at_css("a")&.text&.squish).to eq("Hotel Portal")
+      expect(items[1].at_css("a")&.text&.squish).to eq("Settings")
+      expect(items[2].text.squish).to eq("General")
+      expect(items[2].at_css("a, button")).to be_nil
+      expect(items[3].at_css("button[aria-label='Open General Settings navigation']")).to be_present
 
       hotel.reload
       expect(hotel.default_currency).to eq('MYR')

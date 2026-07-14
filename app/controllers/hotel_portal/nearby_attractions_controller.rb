@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class NearbyAttractionsController < HotelPortal::BaseController
+  class NearbyAttractionsController < HotelPortal::SettingsBaseController
     before_action :set_hotel
     before_action :authorize_hotel
     before_action :set_nearby_attraction, only: %i[edit update destroy]

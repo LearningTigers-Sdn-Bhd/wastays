@@ -13,6 +13,7 @@
               class="panel-navbar__navigation-trigger hidden lg:inline-flex"
               data-controller="panels-ui--sidebar-toggle"
               data-panels-ui--sidebar-toggle-key-value="<%= key %>"
+              data-panels-ui--sidebar-toggle-state-key-value="<%= sidebar_state_key %>"
               data-action="click->panels-ui--sidebar-toggle#toggleDesktop"
               aria-label="Collapse navigation">
         <%= helpers.app_icon "panel-left-close", class: "panel-navbar__icon", aria: { hidden: "true" } %>

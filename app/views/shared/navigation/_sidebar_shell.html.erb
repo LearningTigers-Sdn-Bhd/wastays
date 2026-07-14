@@ -4,7 +4,6 @@
   header_html = local_assigns[:header_html]
   nav_html = local_assigns.fetch(:nav_html)
   footer_html = local_assigns.fetch(:footer_html)
-  sidebar_mode = local_assigns.fetch(:sidebar_mode, sidebar_key)
   search_enabled = local_assigns.fetch(:search_enabled, false)
   search_placeholder = local_assigns.fetch(:search_placeholder, "Search navigation")
   empty_message = local_assigns.fetch(:empty_message, "No navigation matches that search.")
@@ -20,7 +19,7 @@
   mobile_search_id = "#{sidebar_key}-sidebar-search-mobile"
 %>
 
-<aside id="<%= desktop_id %>" <%= "data-turbo-permanent" if permanent_sidebar %> data-sidebar-mode="<%= sidebar_mode %>" <% if desktop_controllers.present? %>data-controller="<%= desktop_controllers %>"<% end %> <% if state_enabled %>data-sidebar-state-key-value="<%= sidebar_key %>"<% end %> class="hidden lg:flex lg:flex-col w-[260px] border-e border-border bg-card shrink-0 h-full">
+<aside id="<%= desktop_id %>" <%= "data-turbo-permanent" if permanent_sidebar %> <% if desktop_controllers.present? %>data-controller="<%= desktop_controllers %>"<% end %> <% if state_enabled %>data-sidebar-state-key-value="<%= sidebar_key %>"<% end %> class="hidden lg:flex lg:flex-col w-[260px] border-e border-border bg-card shrink-0 h-full">
   <% if header_html %>
     <div class="shrink-0 border-b border-border bg-card">
       <%= header_html %>

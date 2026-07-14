@@ -34,12 +34,13 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
     JS
 
     find("#hotel-profile-trigger").click
-    click_link "Settings", href: hotel_general_settings_path(hotel)
+    within("#hotel-profile-menu") { click_link "Settings", href: hotel_general_settings_path(hotel) }
 
     expect(page).to have_current_path(hotel_general_settings_path(hotel))
-    within("#hotel-sidebar") do
+    expect(page).to have_no_css("#hotel-sidebar", visible: :all)
+    within("#hotel-settings-sidebar") do
       within(".panel-sidebar__header") do
-        expect(page).to have_link("Back to previous page", href: hotel_dashboard_path(hotel))
+        expect(page).to have_css("a[aria-label='Hotel: #{hotel.name}'][href='#{hotel_dashboard_path(hotel)}']")
       end
       within(".panel-sidebar__footer") do
         expect(page).to have_no_link("Back to previous page")
@@ -51,9 +52,12 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
       expect(page).to have_no_link("Homepage")
     end
 
-    within("#hotel-sidebar") { click_link "Back to previous page" }
+    within("#hotel-settings-sidebar .panel-sidebar__header") do
+      find("a[aria-label='Hotel: #{hotel.name}'][href='#{hotel_dashboard_path(hotel)}']").click
+    end
 
     expect(page).to have_current_path(hotel_dashboard_path(hotel))
+    expect(page).to have_no_css("#hotel-settings-sidebar", visible: :all)
     within("#hotel-sidebar") do
       expect(page).to have_link("Dashboard", href: hotel_dashboard_path(hotel))
       expect(page).to have_no_link("Back to previous page")
@@ -80,8 +84,8 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
   it "shows grouped settings hub navigation" do
     visit hotel_general_settings_path(hotel)
 
-    within("#hotel-sidebar") do
-      expect(page).to have_link("Back to previous page")
+    within("#hotel-settings-sidebar") do
+      expect(page).to have_no_link("Back to previous page")
       expect(page).to have_link("General", href: hotel_general_settings_path(hotel))
       expect(page).to have_link("Property", href: edit_hotel_profile_path(hotel))
       expect(page).to have_link("Finance", href: hotel_banking_details_settings_path(hotel))
@@ -101,11 +105,35 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
     end
   end
 
+  it "aligns the settings header with the breadcrumb and fills the header menu width" do
+    visit hotel_general_settings_path(hotel)
+
+    measurements = page.evaluate_script(<<~JS)
+      (() => {
+        const sidebar = document.querySelector("#hotel-settings-sidebar")
+        const header = sidebar.querySelector(".panel-sidebar__header")
+        const headerLink = header.querySelector(".panel-sidebar__link")
+        const activeLink = sidebar.querySelector(".panel-sidebar__link[aria-current='page']")
+        const breadcrumb = document.querySelector(".portal-breadcrumb-bar")
+
+        return {
+          headerLinkWidth: headerLink.getBoundingClientRect().width,
+          activeLinkWidth: activeLink.getBoundingClientRect().width,
+          headerHeight: header.getBoundingClientRect().height,
+          breadcrumbHeight: breadcrumb.getBoundingClientRect().height
+        }
+      })()
+    JS
+
+    expect((measurements["headerHeight"] - measurements["breadcrumbHeight"]).abs).to be <= 1
+    expect((measurements["headerLinkWidth"] - measurements["activeLinkWidth"]).abs).to be <= 1
+  end
+
   it "keeps settings sidebar when visiting a hub destination" do
     visit hotel_room_types_path(hotel)
 
-    within("#hotel-sidebar") do
-      expect(page).to have_link("Back to previous page")
+    within("#hotel-settings-sidebar") do
+      expect(page).to have_no_link("Back to previous page")
       expect(page).to have_no_link("Homepage")
       expect(page).to have_link("Help & support")
     end
@@ -121,34 +149,47 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
     ].each do |first_tab_path, secondary_tab_label, secondary_tab_path, sidebar_label|
       visit first_tab_path
 
-      within("#hotel-sidebar") do
+      within("#hotel-settings-sidebar") do
         expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: sidebar_label)
       end
 
       within("[data-testid='settings-tabs']") { click_link secondary_tab_label }
 
       expect(page).to have_current_path(secondary_tab_path)
-      within("#hotel-sidebar") do
+      within("#hotel-settings-sidebar") do
         expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: sidebar_label)
       end
     end
   end
 
-  it "keeps the settings header compact after a collapsed Turbo mode switch" do
+  it "carries the hotel collapse state across layout boundaries" do
     visit hotel_dashboard_path(hotel)
     find('button[aria-label="Collapse navigation"]').click
 
     find("#hotel-profile-trigger").click
-    click_link "Settings", href: hotel_general_settings_path(hotel)
+    within("#hotel-profile-menu") { click_link "Settings", href: hotel_general_settings_path(hotel) }
 
-    within("#hotel-sidebar[data-collapsed='true'] .panel-sidebar__header") do
-      back_link = find("a[aria-label='Back to previous page']", visible: :all)
-      expect(back_link).to have_css(".panel-sidebar__label", visible: :hidden)
+    expect(page).to have_no_css("#hotel-sidebar", visible: :all)
+    expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='true']")
+    expect(page).to have_no_link("Back to previous page")
+  end
 
-      back_link.hover
+  it "persists settings changes to the shared hotel collapse state" do
+    visit hotel_general_settings_path(hotel)
+    page.execute_script("window.localStorage.removeItem('wastays:hotel-sidebar-collapsed')")
+
+    find('button[aria-label="Collapse navigation"]').click
+    expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='true']")
+
+    visit hotel_notification_settings_path(hotel)
+    expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='true']")
+
+    within("#hotel-settings-sidebar .panel-sidebar__header") do
+      find("a[aria-label='Hotel: #{hotel.name}'][href='#{hotel_dashboard_path(hotel)}']", visible: :all).click
     end
-    within("#hotel-sidebar") do
-      expect(page).to have_css("[role='tooltip'][data-state='open']", text: "Back to previous page", visible: :visible)
-    end
+    expect(page).to have_css("#hotel-sidebar[data-collapsed='true']")
+
+    find('button[aria-label="Collapse navigation"]').click
+    expect(page).to have_css("#hotel-sidebar[data-collapsed='false']")
   end
 end
