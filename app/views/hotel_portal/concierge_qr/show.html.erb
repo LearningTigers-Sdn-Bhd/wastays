@@ -1,47 +1,84 @@
-<div class="w-full space-y-8" data-controller="concierge-qr">
-  <%= render PanelsUI::PageHeader.new(title: "Concierge QR Code", description: "Print and display this QR code at your front desk. Guests scan it to check in, check out, book, request, or contact you.") %>
+<%= turbo_frame_tag "concierge_qr_dialog" do %>
+  <div data-controller="concierge-qr">
+    <%= render PanelsUI::Dialog.new(
+          id: "concierge-qr-code-dialog",
+          size: :almost_full,
+          title: "Concierge QR Code",
+          description: "Print and display this QR code at your front desk. Guests scan it to check in, check out, book, request, or contact you.") do |dialog| %>
+      <% dialog.with_body do %>
+        <div id="concierge-qr-print-area" class="mx-auto flex min-h-full max-w-2xl flex-col items-center justify-center space-y-6 px-4 py-8 text-center sm:px-8">
+          <div class="space-y-2">
+            <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Front desk concierge</p>
+            <h2 class="text-2xl font-bold text-foreground"><%= current_hotel.name %></h2>
+            <p class="text-sm text-muted-foreground">Scan to check in, check out, book, or request assistance.</p>
+          </div>
 
-  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-    <!-- Printable area -->
-    <div id="print-area" class="p-10 text-center space-y-6">
-      <h2 class="text-2xl font-black text-foreground"><%= current_hotel.name %></h2>
-      <p class="text-sm font-medium text-muted-foreground">Scan to check in, check out, book, or request assistance</p>
+          <div class="size-56 rounded-lg border border-border bg-card p-3 sm:size-64" aria-label="Concierge QR code">
+            <%= @qr_svg %>
+          </div>
 
-      <div class="mx-auto w-56 h-56 p-3 border-2 border-border rounded-2xl bg-card">
-        <%= @qr_svg %>
-      </div>
-
-      <div class="rounded-xl bg-muted border border-border px-4 py-3 inline-block">
-        <p class="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Concierge URL</p>
-        <p class="text-sm font-mono font-semibold text-foreground break-all" data-concierge-qr-target="url"><%= @concierge_url %></p>
-      </div>
-    </div>
-
-    <div class="border-t border-border px-8 py-5 bg-muted/50 flex flex-wrap items-center gap-3 print:hidden">
-      <button type="button" data-action="concierge-qr#print" class="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary-hover transition">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-        Print
-      </button>
-      <%= link_to hotel_concierge_qr_path(current_hotel, format: :svg), class: "inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground shadow-sm hover:bg-muted transition" do %>
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-        Download SVG
+          <div class="w-full max-w-xl rounded-lg border border-border bg-muted px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Concierge URL</p>
+            <p class="mt-1 break-all font-mono text-sm font-medium text-foreground" data-concierge-qr-target="url"><%= @concierge_url %></p>
+          </div>
+        </div>
       <% end %>
-      <%= link_to hotel_concierge_qr_path(current_hotel, format: :png), class: "inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground shadow-sm hover:bg-muted transition" do %>
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-        Download PNG
+
+      <% dialog.with_footer do %>
+        <div class="flex w-full flex-wrap items-center gap-2 sm:justify-end">
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :button,
+                variant: :primary,
+                size: :sm,
+                data: { action: "concierge-qr#print" }) do %>
+            <%= app_icon "printer", class: "size-4", aria: { hidden: "true" } %>
+            <span>Print</span>
+          <% end %>
+
+          <%= render PanelsUI::Button.new(
+                href: hotel_concierge_qr_path(current_hotel, format: :svg),
+                variant: :secondary,
+                size: :sm,
+                download: true,
+                data: { turbo: false }) do %>
+            <%= app_icon "download", class: "size-4", aria: { hidden: "true" } %>
+            <span>Download SVG</span>
+          <% end %>
+
+          <%= render PanelsUI::Button.new(
+                href: hotel_concierge_qr_path(current_hotel, format: :png),
+                variant: :secondary,
+                size: :sm,
+                download: true,
+                data: { turbo: false }) do %>
+            <%= app_icon "download", class: "size-4", aria: { hidden: "true" } %>
+            <span>Download PNG</span>
+          <% end %>
+
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :button,
+                variant: :secondary,
+                size: :sm,
+                data: {
+                  action: "concierge-qr#copy",
+                  concierge_qr_target: "copyButton"
+                }) do %>
+            <%= app_icon "copy", class: "size-4", aria: { hidden: "true" } %>
+            <span>Copy URL</span>
+          <% end %>
+        </div>
       <% end %>
-      <button type="button" data-action="concierge-qr#copy" data-concierge-qr-target="copyButton" class="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground shadow-sm hover:bg-muted transition">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-        Copy URL
-      </button>
-    </div>
+    <% end %>
   </div>
-</div>
+<% end %>
 
 <style>
   @media print {
     body * { visibility: hidden; }
-    #print-area, #print-area * { visibility: visible; }
-    #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+    #concierge-qr-print-area, #concierge-qr-print-area * { visibility: visible; }
+    #concierge-qr-print-area { position: absolute; inset: 0; width: 100%; max-width: none; }
+    @page { margin: 8mm; }
   }
 </style>

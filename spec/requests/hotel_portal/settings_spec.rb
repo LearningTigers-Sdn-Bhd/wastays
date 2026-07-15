@@ -67,7 +67,10 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       get hotel_general_settings_path(hotel)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("View QR")
+      document = response.parsed_body
+      trigger = document.at_css("a[href='#{hotel_concierge_qr_path(hotel)}'][data-turbo-frame='concierge_qr_dialog']")
+      expect(trigger.text.squish).to eq("View QR")
+      expect(document.at_css("turbo-frame#concierge_qr_dialog")).to be_present
     end
 
     it "renders the guest registration card field selection" do
@@ -230,19 +233,57 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       get hotel_general_settings_path(hotel)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).not_to include("View QR Code")
-      expect(response.body).not_to include("Concierge Pages")
+      expect(response.parsed_body.at_css("a[data-turbo-frame='concierge_qr_dialog']")).to be_nil
+      expect(response.parsed_body.at_css("turbo-frame#concierge_qr_dialog")).to be_nil
     end
   end
 
   describe "GET /hotel/:hotel_id/concierge_qr" do
+    it "renders an almost-full Panels UI dialog as a Turbo Frame payload" do
+      get hotel_concierge_qr_path(hotel), headers: { "Turbo-Frame" => "concierge_qr_dialog" }
+
+      expect(response).to have_http_status(:ok)
+      document = response.parsed_body
+      frame = document.at_css("turbo-frame#concierge_qr_dialog")
+      dialog = frame.at_css("dialog#concierge-qr-code-dialog")
+
+      expect(response.body).not_to include("<!DOCTYPE html>")
+      expect(frame.at_css("[data-controller='concierge-qr']")).to be_present
+      expect(dialog["class"]).to include("w-[calc(100vw-3rem)]", "h-[calc(100vh-3rem)]")
+      expect(dialog.text.squish).to include("Concierge QR Code", hotel.name, "Concierge URL")
+      expect(frame.at_css("#concierge-qr-print-area svg")).to be_present
+      expect(frame.css("button, a").map { |element| element.text.squish }).to include(
+        "Print", "Download SVG", "Download PNG", "Copy URL"
+      )
+      expect(frame.at_css("a[href='#{hotel_concierge_qr_path(hotel, format: :svg)}'][data-turbo='false']")).to be_present
+      expect(frame.at_css("a[href='#{hotel_concierge_qr_path(hotel, format: :png)}'][data-turbo='false']")).to be_present
+    end
+
+    it "keeps SVG and PNG downloads as attachments" do
+      {
+        svg: "image/svg+xml",
+        png: "image/png"
+      }.each do |format, media_type|
+        get hotel_concierge_qr_path(hotel, format: format)
+
+        expect(response).to have_http_status(:ok)
+        expect(response.media_type).to eq(media_type)
+        expect(response.headers["Content-Disposition"]).to include(
+          "attachment",
+          "concierge-qr-#{hotel.slug}.#{format}"
+        )
+      end
+    end
+
     it "redirects when AI concierge page is excluded from plan" do
       hotel.plan.plan_features.find_by!(feature: ai_concierge_page_feature).update!(enabled: false)
 
-      get hotel_concierge_qr_path(hotel)
+      [ nil, :svg, :png ].each do |format|
+        get hotel_concierge_qr_path(hotel, format: format)
 
-      expect(response).to redirect_to(root_path)
-      expect(flash[:alert]).to eq("This feature isn't included in your plan. Upgrade to access it.")
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to eq("This feature isn't included in your plan. Upgrade to access it.")
+      end
     end
   end
 

@@ -63,7 +63,8 @@
               <%= render PanelsUI::Button.new(
                     href: hotel_concierge_qr_path(current_hotel),
                     variant: :secondary,
-                    size: :sm) do %>
+                    size: :sm,
+                    data: { turbo_frame: "concierge_qr_dialog" }) do %>
                 <%= app_icon "qr-code", class: "size-4", aria: { hidden: "true" } %>
                 <span>View QR</span>
               <% end %>
@@ -71,6 +72,10 @@
           <% end %>
         <% end %>
       </div>
+
+      <% content_for :body_end do %>
+        <%= turbo_frame_tag "concierge_qr_dialog" %>
+      <% end %>
     <% end %>
   </section>
 
