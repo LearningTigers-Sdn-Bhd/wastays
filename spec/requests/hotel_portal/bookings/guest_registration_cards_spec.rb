@@ -121,6 +121,19 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       end
       expect(card.reload.display_fields_snapshot).to eq(%w[email room_type])
     end
+
+    it "renders the booking's special requests as Remark and internal notes as Notes under check-in time" do
+      create(:property_policy, hotel: hotel, check_in_time: "3:00 PM", check_out_time: "11:00 AM")
+      booking.update!(special_requests: "Please provide a quiet room.", internal_notes: "VIP guest, prioritize service.")
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Remark")
+      expect(response.body).to include("Please provide a quiet room.")
+      expect(response.body).to include("Notes")
+      expect(response.body).to include("VIP guest, prioritize service.")
+    end
   end
 
   describe "PATCH /hotel/:hotel_id/bookings/:booking_id/guest_registration_card" do
