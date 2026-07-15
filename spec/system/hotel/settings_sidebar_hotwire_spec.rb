@@ -203,13 +203,17 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
 
   def open_settings_from_profile
     wait_for_stimulus_controller("#hotel-profile", "panels-ui--dropdown-menu")
-    find("#hotel-profile-trigger").click
-    within("#hotel-profile-menu") { click_link "Settings", href: hotel_general_settings_path(hotel) }
+    perform_turbo_navigation do
+      find("#hotel-profile-trigger").click
+      within("#hotel-profile-menu") { click_link "Settings", href: hotel_general_settings_path(hotel) }
+    end
   end
 
   def return_to_dashboard
-    within("#hotel-settings-sidebar .panel-sidebar__header") do
-      find("a[aria-label='Hotel: #{hotel.name}'][href='#{hotel_dashboard_path(hotel)}']").click
+    perform_turbo_navigation do
+      within("#hotel-settings-sidebar .panel-sidebar__header") do
+        find("a[aria-label='Hotel: #{hotel.name}'][href='#{hotel_dashboard_path(hotel)}']").click
+      end
     end
   end
 end

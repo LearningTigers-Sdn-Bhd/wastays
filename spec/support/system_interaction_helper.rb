@@ -60,6 +60,25 @@ module SystemInteractionHelper
     end
   end
 
+  def perform_turbo_navigation
+    load_count = page.evaluate_script(<<~JS)
+      (() => {
+        window.__systemTestTurboLoadCount ||= 0
+        if (!window.__systemTestTurboLoadTrackingInstalled) {
+          document.addEventListener("turbo:load", () => { window.__systemTestTurboLoadCount += 1 })
+          window.__systemTestTurboLoadTrackingInstalled = true
+        }
+        return window.__systemTestTurboLoadCount
+      })()
+    JS
+
+    yield
+
+    synchronize_browser_state("expected Turbo navigation to finish") do
+      page.evaluate_script("window.__systemTestTurboLoadCount") > load_count
+    end
+  end
+
   def dispatch_key(key, selector: nil)
     target = selector ? "document.querySelector(#{selector.to_json})" : "document.activeElement"
     page.execute_script(<<~JS)
