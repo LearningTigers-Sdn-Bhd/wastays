@@ -5,7 +5,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
   let(:user) { create(:user, account: account, role: 'admin', email: 'owner@example.com') }
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
-  let(:hotel) { create(:hotel, account: account, plan: plan, status: 'approved') }
+  let(:hotel) { create(:hotel, account: account, plan: plan, name: "O'Conner Hotel", status: 'approved') }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 
   before do
@@ -34,9 +34,10 @@ RSpec.describe 'Hotel layout shell', type: :system do
     visit hotel_dashboard_path(hotel)
 
     expect(page).to have_link('Dashboard', href: hotel_dashboard_path(hotel))
-    expect(page).to have_css(
-      "#hotel-sidebar .panel-sidebar__header a[aria-label='Hotel: #{hotel.name}']"
-    )
+    within("#hotel-sidebar .panel-sidebar__header") do
+      hotel_home_link = find_link(hotel.name, href: hotel_dashboard_path(hotel))
+      expect(hotel_home_link["aria-label"]).to eq("Hotel: #{hotel.name}")
+    end
     expect(page).to have_link('Arrivals', href: hotel_arrivals_path(hotel), visible: :all)
     expect(page).to have_link('Bookings', href: hotel_bookings_path(hotel), visible: :all)
     expect(page).to have_link('In-House Guests', href: hotel_in_house_guests_path(hotel), visible: :all)

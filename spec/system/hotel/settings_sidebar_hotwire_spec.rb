@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: true do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, name: "O'Conner Hotel", status: "approved") }
   let(:user) { create(:user, account: account, role: "admin") }
   let(:role) { create(:role, account: account) }
 
@@ -39,7 +39,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
     expect(page).to have_no_css("#hotel-sidebar", visible: :all)
     within("#hotel-settings-sidebar") do
       within(".panel-sidebar__header") do
-        expect(page).to have_css("a[aria-label='Hotel: #{hotel.name}'][href='#{hotel_dashboard_path(hotel)}']")
+        expect(find_hotel_home_link["aria-label"]).to eq("Hotel: #{hotel.name}")
       end
       within(".panel-sidebar__footer") do
         expect(page).to have_no_link("Back to previous page")
@@ -192,8 +192,10 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
     visit hotel_notification_settings_path(hotel)
     expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='true']")
 
-    within("#hotel-settings-sidebar .panel-sidebar__header") do
-      find("a[aria-label='Hotel: #{hotel.name}'][href='#{hotel_dashboard_path(hotel)}']", visible: :all).click
+    perform_turbo_navigation do
+      within("#hotel-settings-sidebar .panel-sidebar__header") do
+        find_hotel_home_link(visible: :all).click
+      end
     end
     expect(page).to have_css("#hotel-sidebar[data-collapsed='true']")
 
@@ -212,8 +214,12 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
   def return_to_dashboard
     perform_turbo_navigation do
       within("#hotel-settings-sidebar .panel-sidebar__header") do
-        find("a[aria-label='Hotel: #{hotel.name}'][href='#{hotel_dashboard_path(hotel)}']").click
+        find_hotel_home_link.click
       end
     end
+  end
+
+  def find_hotel_home_link(visible: :visible)
+    find_link(hotel.name, href: hotel_dashboard_path(hotel), visible: visible)
   end
 end
