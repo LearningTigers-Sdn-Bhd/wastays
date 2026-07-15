@@ -49,10 +49,9 @@ class HotelPortal::RoomGroupsController < HotelPortal::BaseController
       respond_to do |format|
         format.html { redirect_to destination_path, alert: "Cannot delete room group." }
         format.turbo_stream do
-          render turbo_stream: turbo_stream.append(
-            "toast-viewport",
-            partial: "shared/feedback/toast_trigger",
-            locals: { message: "Cannot delete room group: #{@room_group.errors.full_messages.to_sentence}", type: "error", description: nil }
+          render turbo_stream: toast_stream(
+            "Cannot delete room group: #{@room_group.errors.full_messages.to_sentence}",
+            type: :error
           ), status: :unprocessable_content
         end
       end

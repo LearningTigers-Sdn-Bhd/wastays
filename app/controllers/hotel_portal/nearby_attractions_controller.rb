@@ -60,9 +60,7 @@ module HotelPortal
       render turbo_stream: [
         turbo_stream.replace("nearby_attractions_list", partial: "hotel_portal/nearby_attractions/list"),
         turbo_stream.update("nearby_attraction_form", ""),
-        turbo_stream.append("toast-viewport",
-                            partial: "shared/feedback/toast_trigger",
-                            locals: { message: message, type: "success", description: nil })
+        toast_stream(message, type: :success)
       ]
     end
 

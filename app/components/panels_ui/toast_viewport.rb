@@ -5,9 +5,13 @@ module PanelsUI
   # the end of <body>; it is both the Stimulus controller root and the stable
   # Turbo Stream target used by server-triggered notifications.
   class ToastViewport < PanelsUI::BaseComponent
+    # Stable DOM id + Turbo Stream target. Referenced by Toastable#toast_stream
+    # and toast_trigger_controller.js; keep them in sync via this constant.
+    DEFAULT_ID = "toast-viewport"
+
     PLACEMENTS = %i[top_left top_center top_right bottom_left bottom_center bottom_right].freeze
 
-    def initialize(id: "toast-viewport", placement: :top_right, layout: :default, auto_dismiss_duration: 4000, limit: 3, gap: 14, class: nil)
+    def initialize(id: DEFAULT_ID, placement: :top_right, layout: :default, auto_dismiss_duration: 4000, limit: 3, gap: 14, class: nil)
       @id = id
       @placement = PLACEMENTS.include?(placement) ? placement : :top_right
       @layout = %i[default expanded].include?(layout) ? layout : :default

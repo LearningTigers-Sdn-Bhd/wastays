@@ -16,8 +16,7 @@ module ApplicationHelper
     flash.each do |key, value|
       next if key.to_sym == :toast || value.blank?
 
-      type = key.to_sym == :notice ? "success" : key.to_sym == :alert ? "error" : "default"
-      messages << { message: value.to_s, options: { type: type } }
+      messages << { message: value.to_s, options: { type: Toast.type_for_flash(key) } }
     end
 
     messages
