@@ -6,6 +6,7 @@ RSpec.describe "System design showcase", type: :request do
   PREVIEW_PARTIALS = %w[
     accordion_preview
     alert_preview
+    alert_dialog_preview
     avatar_preview
     badge_preview
     banner_preview
@@ -73,6 +74,11 @@ RSpec.describe "System design showcase", type: :request do
     expect(response.body).to include("alert-preview-heading")
     expect(response.body).to include("panel-alert")
     expect(response.body).to include("Review")
+    expect(response.body).to include("alert-dialog-preview-heading")
+    expect(response.body).to include("panel-alert-dialog")
+    expect(response.body).to include('role="alertdialog"')
+    expect(response.body).to include('id="sd-alert-dialog-warning-default"')
+    expect(response.body).to include('id="sd-alert-dialog-warning-sm"')
     expect(response.body).to include("banner-preview-heading")
     expect(response.body).to include("panel-banner")
     expect(response.body).to include("Claim offer")
@@ -163,6 +169,14 @@ RSpec.describe "System design showcase", type: :request do
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include('id="system-design-reservation-form"')
       expect(response.body).to include("panel-form-field__error")
+    end
+  end
+
+  describe "POST confirm-alert-dialog" do
+    it "redirects the harmless Turbo confirmation probe back to the showcase" do
+      post system_design_confirm_alert_dialog_path
+
+      expect(response).to redirect_to(system_design_path(turbo_confirmed: "1", anchor: "turbo-confirmed"))
     end
   end
 end

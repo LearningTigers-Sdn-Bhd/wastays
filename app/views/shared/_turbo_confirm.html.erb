@@ -1,25 +1,36 @@
-<div id="turbo-confirm-modal" class="hidden fixed inset-0 z-[120] bg-foreground/55 backdrop-blur-sm items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="turbo-confirm-title">
-  <div class="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-2xl shadow-foreground/20">
-    <div class="border-b border-border bg-muted/80 px-6 py-4">
-      <h3 id="turbo-confirm-title" class="text-base font-bold text-foreground">Confirm Action</h3>
-    </div>
+<%= render PanelsUI::AlertDialog.new(
+      id: "turbo-confirm-dialog",
+      size: :sm,
+      tone: :default,
+      title: "Confirm action",
+      description: "Are you sure you want to continue?",
+      data: {
+        controller: "panels-ui--turbo-confirm",
+        action: "close->panels-ui--turbo-confirm#closed"
+      }
+    ) do |dialog| %>
+  <% dialog.with_icon do %>
+    <% {
+         default: "circle-question-mark",
+         info: "info",
+         warning: "triangle-alert",
+         success: "circle-check",
+         destructive: "circle-alert"
+       }.each do |tone, icon| %>
+      <span class="panel-turbo-confirm__icon" data-tone="<%= tone %>">
+        <%= app_icon icon, aria: { hidden: "true" } %>
+      </span>
+    <% end %>
+  <% end %>
 
-    <div class="px-6 py-5">
-      <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3.5">
-        <svg class="mt-0.5 h-5 w-5 flex-none text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.007v.008H12v-.008ZM3.94 19.5h16.12c1.42 0 2.31-1.53 1.6-2.76L13.6 3.26c-.71-1.23-2.49-1.23-3.2 0L2.34 16.74c-.71 1.23.18 2.76 1.6 2.76Z" />
-        </svg>
-        <p id="turbo-confirm-message" class="text-sm leading-relaxed text-foreground">Are you sure you want to perform this action?</p>
-      </div>
-    </div>
-
-    <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
-      <button id="turbo-cancel-button" type="button" class="inline-flex items-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted">
-        Cancel
-      </button>
-      <button id="turbo-confirm-button" type="button" class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:bg-blue-700">
-        Confirm
-      </button>
-    </div>
-  </div>
-</div>
+  <% dialog.with_cancel(
+       label: "Cancel",
+       id: "turbo-cancel-button",
+       data: { action: "panels-ui--turbo-confirm#cancel" }
+     ) %>
+  <% dialog.with_action(
+       label: "Confirm",
+       id: "turbo-confirm-button",
+       data: { action: "panels-ui--turbo-confirm#confirm" }
+     ) %>
+<% end %>

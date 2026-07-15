@@ -26,6 +26,12 @@ class SystemDesignsController < ApplicationController
     end
   end
 
+  # Harmless endpoint used by the showcase to exercise Turbo's real asynchronous
+  # form-confirm contract without mutating application data.
+  def confirm_alert_dialog
+    redirect_to system_design_path(turbo_confirmed: "1", anchor: "turbo-confirmed")
+  end
+
   private
 
   def reservation_params

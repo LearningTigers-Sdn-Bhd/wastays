@@ -29,6 +29,7 @@
 @import "./panel/kbd.css";
 @import "./panel/separator.css";
 @import "./panel/alert.css";
+@import "./panel/alert-dialog.css";
 @import "./panel/banner.css";
 @import "./panel/card.css";
 @import "./panel/metric-card.css";

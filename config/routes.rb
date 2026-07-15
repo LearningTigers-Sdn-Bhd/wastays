@@ -20,6 +20,7 @@ Rails.application.routes.draw do
   unless Rails.env.production?
     get "system-design", to: "system_designs#index", as: :system_design
     post "system-design/submit-form", to: "system_designs#submit_form", as: :system_design_submit_form
+    post "system-design/confirm-alert-dialog", to: "system_designs#confirm_alert_dialog", as: :system_design_confirm_alert_dialog
   end
 
   # Defines the root path route ("/")
