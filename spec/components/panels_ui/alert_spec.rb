@@ -9,7 +9,7 @@ RSpec.describe PanelsUI::Alert, type: :component do
       alert.with_actions { '<a href="/bookings">View</a>'.html_safe }
     end
 
-    expect(page).to have_css(".panel-alert[role='status'][data-tone='success'][data-has-title='true']")
+    expect(page).to have_css(".panel-alert[role='status'][data-tone='success'][data-has-title='true'][data-has-icon='true']")
     expect(page).to have_css(".panel-alert__title", text: "Saved")
     expect(page).to have_css(".panel-alert__description", text: "The booking was updated.")
     expect(page).to have_link("View", href: "/bookings")
@@ -34,7 +34,7 @@ RSpec.describe PanelsUI::Alert, type: :component do
 
     expect(page).to have_no_css(".panel-alert__icon")
     expect(page).to have_no_css(".panel-alert__title")
-    expect(page).to have_css(".panel-alert[data-has-title='false']")
+    expect(page).to have_css(".panel-alert[data-has-title='false'][data-has-icon='false']")
     expect(page).to have_css(".panel-alert__description", text: "Description only")
   end
 
@@ -46,10 +46,22 @@ RSpec.describe PanelsUI::Alert, type: :component do
     expect(page).to have_css("button[data-action='panels-ui--dismissible#dismiss']")
   end
 
+  it "supports stacked actions without changing the default layout" do
+    render_inline(described_class.new(title: "Upgrade", actions_layout: :stacked)) do |alert|
+      alert.with_actions { '<a href="/upgrade">Upgrade</a>'.html_safe }
+    end
+
+    expect(page).to have_css(".panel-alert[data-actions-layout='stacked'] .panel-alert__actions")
+
+    render_inline(described_class.new(title: "Default"))
+
+    expect(page).to have_css(".panel-alert[data-actions-layout='inline']")
+  end
+
   it "falls back to the default tone" do
     render_inline(described_class.new(tone: :unknown, title: "Fallback"))
 
-    expect(page).to have_css(".panel-alert[data-tone='default']")
+    expect(page).to have_css(".panel-alert[data-tone='default'][data-actions-layout='inline']")
     expect(page).to have_no_css("button[aria-label='Dismiss alert']")
   end
 end

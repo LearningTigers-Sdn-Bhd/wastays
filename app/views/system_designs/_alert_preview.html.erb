@@ -41,5 +41,13 @@
     <%= render PanelsUI::Alert.new(tone: :warning, title: "Icon intentionally hidden", show_icon: false) do |alert| %>
       <% alert.with_description { "Use this treatment when an adjacent interface already supplies enough context." } %>
     <% end %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "Plan upgrade", actions_layout: :stacked) do |alert| %>
+      <% alert.with_description { "Stack actions below the message when an inline action would compress the copy." } %>
+      <% alert.with_actions do %>
+        <%= render PanelsUI::Button.new(size: :sm, variant: :warning, class: "w-full") do %>
+          Review upgrade options
+        <% end %>
+      <% end %>
+    <% end %>
   </div>
 </section>

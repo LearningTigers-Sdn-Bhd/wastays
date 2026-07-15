@@ -9,6 +9,7 @@ module PanelsUI
     alias_method :with_icon, :with_custom_icon
 
     TONES = %i[default info success warning destructive].freeze
+    ACTIONS_LAYOUTS = %i[inline stacked].freeze
     DEFAULT_ICONS = {
       default: "info",
       info: "info",
@@ -18,11 +19,12 @@ module PanelsUI
     }.freeze
 
     def initialize(tone: :default, title: nil, dismissible: false, show_icon: true,
-                   role: :status, class: nil, **attributes)
+                   actions_layout: :inline, role: :status, class: nil, **attributes)
       @tone = TONES.include?(tone) ? tone : :default
       @title = title
       @dismissible = dismissible
       @show_icon = show_icon
+      @actions_layout = ACTIONS_LAYOUTS.include?(actions_layout) ? actions_layout : :inline
       @role = role
       @class = binding.local_variable_get(:class)
       @attributes = attributes
@@ -40,6 +42,8 @@ module PanelsUI
         data: data.merge(
           tone: @tone,
           has_title: @title.present? ? "true" : "false",
+          has_icon: @show_icon ? "true" : "false",
+          actions_layout: @actions_layout,
           controller: (@dismissible ? "panels-ui--dismissible" : nil)
         ).compact
       ).compact
