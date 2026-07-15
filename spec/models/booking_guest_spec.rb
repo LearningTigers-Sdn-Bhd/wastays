@@ -31,4 +31,57 @@ RSpec.describe BookingGuest, type: :model do
       expect(booking.reload.vip).to be(false)
     end
   end
+
+  describe 'boat transfer fields and validations' do
+    subject(:booking_guest) { build(:booking_guest) }
+
+    describe '#boat_in?' do
+      it 'returns true if boat_in_at is set' do
+        booking_guest.boat_in_at = Time.current
+        expect(booking_guest.boat_in?).to be(true)
+      end
+
+      it 'returns false if boat_in_at is nil' do
+        booking_guest.boat_in_at = nil
+        expect(booking_guest.boat_in?).to be(false)
+      end
+    end
+
+    describe '#boat_out?' do
+      it 'returns true if boat_out_at is set' do
+        booking_guest.boat_out_at = Time.current
+        expect(booking_guest.boat_out?).to be(true)
+      end
+
+      it 'returns false if boat_out_at is nil' do
+        booking_guest.boat_out_at = nil
+        expect(booking_guest.boat_out?).to be(false)
+      end
+    end
+
+    describe 'boat_out_after_boat_in validation' do
+      it 'is valid if boat_out_at is after boat_in_at' do
+        booking_guest.boat_in_at = 2.hours.ago
+        booking_guest.boat_out_at = 1.hour.ago
+        expect(booking_guest).to be_valid
+      end
+
+      it 'is invalid if boat_out_at is before boat_in_at' do
+        booking_guest.boat_in_at = 1.hour.ago
+        booking_guest.boat_out_at = 2.hours.ago
+        expect(booking_guest).not_to be_valid
+        expect(booking_guest.errors[:boat_out_at]).to include('must be after boat in time')
+      end
+
+      it 'is valid if only one of them is set' do
+        booking_guest.boat_in_at = Time.current
+        booking_guest.boat_out_at = nil
+        expect(booking_guest).to be_valid
+
+        booking_guest.boat_in_at = nil
+        booking_guest.boat_out_at = Time.current
+        expect(booking_guest).to be_valid
+      end
+    end
+  end
 end

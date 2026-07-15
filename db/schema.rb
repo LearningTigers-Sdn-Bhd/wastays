@@ -321,6 +321,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_15_090000) do
     t.string "country_snapshot"
     t.string "document_type_snapshot"
     t.date "date_of_birth_snapshot"
+    t.datetime "boat_in_at"
+    t.datetime "boat_out_at"
+    t.index ["boat_in_at"], name: "index_booking_guests_on_boat_in_at"
+    t.index ["boat_out_at"], name: "index_booking_guests_on_boat_out_at"
     t.index ["booking_id", "guest_id"], name: "index_booking_guests_on_booking_id_and_guest_id", unique: true
     t.index ["booking_id"], name: "idx_booking_guests_one_primary_per_booking", unique: true, where: "((role)::text = 'primary'::text)"
     t.index ["booking_id"], name: "index_booking_guests_on_booking_id"
@@ -478,6 +482,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_15_090000) do
     t.boolean "vip", default: false, null: false
     t.bigint "agent_account_id"
     t.integer "infants", default: 0, null: false
+    t.integer "tourism_tax_voucher_number"
     t.index ["agent_account_id"], name: "index_bookings_on_agent_account_id"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
@@ -491,6 +496,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_15_090000) do
     t.index ["hotel_id", "receipt_number"], name: "idx_bookings_on_hotel_receipt_number", unique: true, where: "(receipt_number IS NOT NULL)"
     t.index ["hotel_id", "reservation_number"], name: "idx_bookings_on_hotel_reservation_number", unique: true, where: "(reservation_number IS NOT NULL)"
     t.index ["hotel_id", "status", "no_show_review_business_date"], name: "index_bookings_on_hotel_status_no_show_review_date"
+    t.index ["hotel_id", "tourism_tax_voucher_number"], name: "idx_bookings_on_hotel_tourism_tax_voucher_number", unique: true, where: "(tourism_tax_voucher_number IS NOT NULL)"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
     t.index ["payout_batch_id"], name: "index_bookings_on_payout_batch_id"
@@ -1223,6 +1229,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_15_090000) do
     t.boolean "allow_pax_pricing", default: false, null: false
     t.jsonb "guest_registration_card_fields"
     t.text "description"
+    t.boolean "allow_boat_information", default: true, null: false
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true

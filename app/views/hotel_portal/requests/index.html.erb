@@ -81,9 +81,6 @@
         <div class="flex-1 min-h-0 space-y-3 overflow-y-auto p-3 custom-scrollbar">
           <% if @presenter.board_columns[bucket_key].any? %>
             <% @presenter.board_columns[bucket_key].each do |card| %>
-              <% action = @presenter.card_action(card, bucket_key) %>
-              <% badge_class = @presenter.kind_badge_class(card) %>
-
               <% if @presenter.card_actionable?(card) %>
                 <article
                   data-controller="request-dialog"
@@ -98,7 +95,7 @@
                 >
                   <div class="mb-3 flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                      <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= badge_class %>">
+                      <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= @presenter.kind_badge_class(card) %>">
                         <%= card[:kind] %>
                       </span>
                       <span class="font-mono text-[10px] font-bold tracking-tight text-muted-foreground"><%= @presenter.card_token_label(card) %></span>
@@ -117,7 +114,7 @@
                       <span class="max-w-[140px] truncate text-xs font-bold text-foreground"><%= card[:guest_name] %></span>
                       <span class="text-[10px] font-medium uppercase tracking-tight text-muted-foreground"><%= @presenter.formatted_requested_at(card) %></span>
                     </div>
-                    <% if action %>
+                    <% if (action = @presenter.card_action(card, bucket_key)) %>
                       <div class="flex items-center gap-2">
                         <%= button_to action[:url], params: action[:params], method: :patch, class: action[:css], title: action[:title] do %>
                           <%= cached_icon action[:icon], **(action[:icon_opts] || {}), class: "size-3.5" %>
@@ -133,7 +130,7 @@
                   <div class="flex flex-col overflow-hidden bg-card">
                     <div class="flex items-center justify-between border-b border-border px-8 py-6">
                       <div class="flex items-center gap-4">
-                        <span class="rounded-lg border px-3 py-1 text-[11px] font-black uppercase tracking-widest <%= badge_class %>"><%= card[:kind] %></span>
+                        <span class="rounded-lg border px-3 py-1 text-[11px] font-black uppercase tracking-widest <%= @presenter.kind_badge_class(card) %>"><%= card[:kind] %></span>
                         <h3 class="text-xl font-black text-foreground"><%= card[:booking_token] %></h3>
                       </div>
                       <button type="button" class="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground transition hover:bg-muted hover:text-foreground" data-action="request-dialog#close">
@@ -204,7 +201,7 @@
                 <article class="rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-amber-300 hover:shadow-md">
                   <div class="mb-3 flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                      <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= badge_class %>">
+                      <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= @presenter.kind_badge_class(card) %>">
                         <%= card[:kind] %>
                       </span>
                       <span class="font-mono text-[10px] font-bold tracking-tight text-muted-foreground"><%= @presenter.card_token_label(card) %></span>

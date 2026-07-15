@@ -91,7 +91,8 @@
       title: "In-House Guests",
       empty_message: "No in-house guests for this selected period.",
       rows: @report.in_house,
-      type: :departure
+      type: :departure,
+      show_boat_departure: current_hotel.allow_boat_information?
     } %>
   <% elsif @active_guest_report_tab == "departures" %>
     <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
@@ -106,6 +107,10 @@
       empty_message: "No checked-out guests for this selected period.",
       rows: @report.checkout,
       type: :departure
+    } %>
+  <% elsif @active_guest_report_tab == "bibo" %>
+    <%= render partial: "hotel_portal/reports/bibo_section", locals: {
+      report: @bibo_report
     } %>
   <% else %>
     <%= render "hotel_portal/reports/guest_registration_cards_section",

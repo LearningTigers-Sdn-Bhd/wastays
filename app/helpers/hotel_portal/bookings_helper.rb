@@ -29,4 +29,44 @@ module HotelPortal::BookingsHelper
 
     balance_effect.negative? ? "text-emerald-600" : "text-foreground"
   end
+
+  def format_room_card_stay_dates(check_in, check_out)
+    "#{check_in.strftime('%b %-d')} → #{check_out.strftime('%b %-d')}"
+  end
+
+  def room_card_boat_time_details(booking, user = nil)
+    primary_bg = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
+    return nil if primary_bg.nil?
+
+    timezone = user&.time_zone || booking.hotel.hotel_time_zone
+    checked_in_states = %w[checked_in review_due_out checkout_required completed]
+
+    if checked_in_states.include?(booking.status)
+      if primary_bg.boat_out_at.present?
+        {
+          type: :departure,
+          label: "Boat Departure",
+          time_str: primary_bg.boat_out_at.in_time_zone(timezone).strftime("%H:%M"),
+          class: "text-purple-600",
+          title: "Boat Departure Time"
+        }
+      end
+    else
+      if primary_bg.boat_in_at.present?
+        {
+          type: :arrival,
+          label: "Boat Arrival",
+          time_str: primary_bg.boat_in_at.in_time_zone(timezone).strftime("%H:%M"),
+          class: "text-blue-600",
+          title: "Boat Arrival Time"
+        }
+      end
+    end
+  end
+
+  def format_booking_guest_boat_time(time, timezone)
+    return "—" if time.blank?
+
+    time.in_time_zone(timezone).strftime("%d %b %Y, %I:%M %p")
+  end
 end

@@ -137,7 +137,15 @@ module HotelPortal
       "dragover->booking-timeline#onDragOver dragleave->booking-timeline#onDragLeave drop->booking-timeline#onDrop"
     end
 
-    def board_cell_action_items(date, hotel_today, current_hotel, slot_params)
+    def board_cell_action_items(date, hotel_today, current_hotel, room, request_fullpath)
+      slot_params = {
+        check_in: date,
+        room_type_id: room[:room_type].id,
+        room_number: room[:room_number],
+        source: "booking_timeline_board",
+        return_to: request_fullpath
+      }
+
       if date < hotel_today
         [ { path: hotel_booking_transaction_backdated_check_in_path(current_hotel, slot_params),
            icon: "history", icon_color: "text-amber-600", label: "Backdated Check-in" } ]
@@ -324,11 +332,18 @@ module HotelPortal
       "#{block[:check_in].strftime('%b %-d')} → #{block[:check_out].strftime('%b %-d, %Y')}"
     end
 
-    def room_card_action_items(date, hotel_today, current_hotel, slot_params)
-      if date < hotel_today
+    def room_card_action_items(visible_start_date, hotel_today, current_hotel, room_type, room)
+      slot_params = {
+        room_type_id: room_type.id,
+        room_number: room[:room_number],
+        check_in: visible_start_date,
+        check_out: visible_start_date + 1.day
+      }
+
+      if visible_start_date < hotel_today
         [ { path: hotel_booking_transaction_backdated_check_in_path(current_hotel, slot_params),
            icon: "history", icon_color: "text-amber-600", label: "Backdated" } ]
-      elsif date == hotel_today
+      elsif visible_start_date == hotel_today
         [ { path: hotel_booking_transaction_new_booking_path(current_hotel, slot_params),
            icon: "plus", icon_color: "text-slate-500", label: "Book" },
          { path: hotel_booking_transaction_walk_in_check_in_path(current_hotel, slot_params),

@@ -16,7 +16,7 @@
       </div>
     <% elsif folio_show.action_section_state == :closed %>
       <span class="text-sm font-medium text-muted-foreground"><%= folio_show.closed_folio_action_message %></span>
-    <% elsif folio_show.normal_folio_actions_available? %>
+    <% elsif folio_show.normal_folio_actions_available? || (booking.tourism_tax? && current_user.has_permission?("manage_bookings", hotel: hotel)) %>
     <% if folio_show.can_post_payment? %>
       <%= link_to new_hotel_folio_transaction_path(hotel, booking,
           transaction_type: "payment",
@@ -72,6 +72,19 @@
               class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none" do %>
             <%= cached_icon "rotate-ccw", class: "size-4 text-amber-600" %>
             Issue Refund
+          <% end %>
+        <% end %>
+        <% if booking.tourism_tax? && current_user.has_permission?("manage_bookings", hotel: hotel) %>
+          <% if booking.tourism_tax_voucher_number? %>
+            <%= link_to hotel_booking_tourism_tax_voucher_path(hotel, booking), target: "_blank", data: { turbo: false }, role: "menuitem", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none" do %>
+              <%= cached_icon "receipt", class: "size-4 text-emerald-600" %>
+              Tourism Tax Voucher
+            <% end %>
+          <% else %>
+            <%= button_to issue_hotel_booking_tourism_tax_voucher_path(hotel, booking), form: { target: "_blank", data: { turbo: false } }, role: "menuitem", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none" do %>
+              <%= cached_icon "receipt", class: "size-4 text-emerald-600" %>
+              Issue Tourism Tax Voucher
+            <% end %>
           <% end %>
         <% end %>
         <% [ [ "Transfer Charge", "arrow-right" ], [ "Print Folio", "file-text" ], [ "Void / Reverse", "rotate-ccw" ] ].each do |label, icon| %>

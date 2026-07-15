@@ -1,5 +1,5 @@
 <%= form_with model: [:admin, hotel], local: true, class: "space-y-0" do |f| %>
-  <% cancel_path = hotel.persisted? ? admin_hotel_path(hotel) : admin_hotels_path %>
+  <% cancel_path = admin_hotel_form_cancel_path(hotel) %>
   <% input_classes = "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
 
   <div class="px-6 py-6 sm:px-8">
@@ -29,7 +29,7 @@
 
           <div>
             <label for="star_rating" class="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
-              <svg class="size-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321 1.012l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.386a.562.562 0 0 1-.84.61L12.5 17.77a.563.563 0 0 0-.5 0l-4.517 2.794a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557L3.542 10.41a.562.562 0 0 1 .321-1.012l5.518-.442a.563.563 0 0 0 .475-.345z"/></svg>
+              <%= cached_icon "star", class: "size-4 text-amber-500", fill: "currentColor", stroke: "none" %>
               Star Rating
             </label>
             <%= f.select :star_rating, (1..5).map { |rating| ["#{rating} #{'★' * rating}", rating] }, { include_blank: "Select Rating" }, class: input_classes %>
@@ -45,7 +45,7 @@
             <div>
               <label for="hotel_plan_id" class="mb-2 block text-sm font-medium text-foreground">Subscription Plan</label>
               <%= select_tag "hotel[plan_id]",
-                    options_from_collection_for_select(Plan.active.ordered, :id, :name, hotel.plan_id),
+                    options_from_collection_for_select(@plans, :id, :name, hotel.plan_id),
                     include_blank: "— No plan —",
                     id: "hotel_plan_id",
                     class: input_classes %>
@@ -89,20 +89,20 @@
                          data-action="input->multi-select-dropdown#filterOptions focus->multi-select-dropdown#openDropdown click->multi-select-dropdown#stopProp keydown->multi-select-dropdown#navigate">
 
                   <div class="ml-auto pr-2">
-                    <svg class="w-4 h-4 text-muted-foreground transition-transform duration-200" data-multi-select-dropdown-target="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    <%= cached_icon "chevron-down", class: "w-4 h-4 text-muted-foreground transition-transform duration-200", data: { multi_select_dropdown_target: "chevron" } %>
                   </div>
                 </div>
 
                 <!-- Dropdown Options with Categories -->
                 <div class="absolute z-50 mt-2 w-full max-h-80 overflow-y-auto rounded-xl border border-border bg-card shadow-xl hidden custom-scrollbar"
                      data-multi-select-dropdown-target="dropdown">
-                  <% Hotel::CATEGORIZED_HOTEL_AMENITIES.each do |cat| %>
+                  <% categorized_hotel_amenities.each do |cat| %>
                     <div data-category-container data-category-name="<%= cat[:category] %>" class="border-b border-border last:border-0">
                       <button type="button"
                               class="w-full flex items-center justify-between px-4 py-3 text-xs font-black uppercase tracking-widest text-muted-foreground bg-muted/50 hover:bg-muted transition-colors"
                               data-action="click->multi-select-dropdown#toggleCategory">
                         <span><%= cat[:category] %></span>
-                        <svg class="size-3.5 text-muted-foreground transition-transform duration-200" data-category-chevron xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        <%= cached_icon "chevron-down", stroke_width: 2.5, class: "size-3.5 text-muted-foreground transition-transform duration-200", "data-category-chevron" => true %>
                       </button>
 
                       <div class="hidden bg-card" data-category-content>
@@ -136,7 +136,7 @@
                           class="hover:text-muted-foreground transition-colors"
                           data-remove-id
                           data-action="click->multi-select-dropdown#remove">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    <%= cached_icon "x", class: "size-3.5" %>
                   </button>
                   <input type="hidden" name="hotel[amenities][]" value="">
                 </div>
@@ -165,6 +165,18 @@
               </span>
             </label>
             <p class="mt-1 text-xs text-slate-400">If enabled, the hotel portal can choose to restrict bookings to per-person rates.</p>
+          </div>
+
+          <div>
+            <span class="mb-2 block text-sm font-medium text-slate-700">Boat Information Feature</span>
+            <label class="flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 cursor-pointer">
+              <span class="text-xs text-slate-600">Allow Boat Information Record</span>
+              <span class="relative inline-flex items-center">
+                <%= f.check_box :allow_boat_information, class: "sr-only peer" %>
+                <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full"></span>
+              </span>
+            </label>
+            <p class="mt-1 text-xs text-slate-400">If enabled, the hotel can record boat arrivals and departures for stayed guests.</p>
           </div>
 
           <% if hotel.persisted? %>
