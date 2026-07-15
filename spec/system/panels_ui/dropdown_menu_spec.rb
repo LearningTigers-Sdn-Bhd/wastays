@@ -14,12 +14,6 @@ RSpec.describe "PanelsUI::DropdownMenu", type: :system do
     page.evaluate_script("document.activeElement.textContent.trim()")
   end
 
-  def send_key(key)
-    page.execute_script(<<~JS)
-      document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: #{key.to_json}, bubbles: true }))
-    JS
-  end
-
   it "opens, positions with Floating UI, and focuses the first item" do
     open_main_menu
 
@@ -31,18 +25,18 @@ RSpec.describe "PanelsUI::DropdownMenu", type: :system do
   it "supports arrow, Home, End, typeahead, and Escape keyboard behavior" do
     open_main_menu
 
-    send_key("ArrowDown")
+    dispatch_key("ArrowDown")
     expect(focused_text).to eq("View details")
-    send_key("End")
+    dispatch_key("End")
     expect(focused_text).to eq("Export›")
-    send_key("Home")
+    dispatch_key("Home")
     expect(focused_text).to eq("Edit booking")
-    send_key("f")
+    dispatch_key("f")
     expect(focused_text).to eq("Flag for review")
-    send_key("Escape")
+    dispatch_key("Escape")
 
     expect(page).to have_no_css("#sd-dropdown-menu:popover-open")
-    expect(page.evaluate_script("document.activeElement.id")).to eq("sd-dropdown-trigger")
+    expect(page).to have_css("#sd-dropdown-trigger:focus")
   end
 
   it "keeps selection menus open and synchronizes native checkbox and radio inputs" do
@@ -73,11 +67,11 @@ RSpec.describe "PanelsUI::DropdownMenu", type: :system do
     open_main_menu
     export = find("[role='menuitem'][aria-haspopup='menu']", text: "Export")
     page.execute_script("arguments[0].focus()", export)
-    send_key("ArrowRight")
+    dispatch_key("ArrowRight")
 
     expect(page).to have_css("[role='menu'][aria-label='Export']:popover-open")
     expect(page).to have_css("[role='menu'][aria-label='Export'] [role='menuitem']:focus", text: "PDF")
-    send_key("ArrowLeft")
+    dispatch_key("ArrowLeft")
     expect(page).to have_no_css("[role='menu'][aria-label='Export']:popover-open")
     expect(page).to have_css("[role='menuitem'][aria-haspopup='menu']:focus", text: "Export")
   end

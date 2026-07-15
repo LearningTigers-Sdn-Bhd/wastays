@@ -72,12 +72,14 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
 
     return_to_dashboard
     expect(page).to have_current_path(hotel_dashboard_path(hotel))
+    expect(page).to have_css("#hotel-sidebar")
+    expect(page).to have_no_css("#hotel-settings-sidebar", visible: :all)
     wait_for_stimulus_controller("#hotel-profile", "panels-ui--dropdown-menu")
 
-    profile_toggle = find("#hotel-profile-trigger[aria-label='Open account menu'][aria-haspopup='menu'][aria-expanded='false']")
-    profile_toggle.send_keys(:down)
+    find("#hotel-profile-trigger[aria-label='Open account menu'][aria-haspopup='menu'][aria-expanded='false']").click
     expect(page).to have_css("#hotel-profile-trigger[aria-expanded='true']")
-    expect(page).to have_css("#hotel-profile-menu[role='menu']")
+    expect(page).to have_css("#hotel-profile-menu[role='menu']:popover-open")
+    expect(page).to have_css("#hotel-profile-menu a:focus")
     dispatch_key("Home")
     expect(page).to have_css("#hotel-profile-menu a:focus", text: "My account")
     dispatch_key("ArrowDown")

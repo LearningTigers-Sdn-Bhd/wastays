@@ -38,6 +38,26 @@ module SystemInteractionHelper
         if (!dialog.open) dialog.showModal()
       })()
     JS
+
+    synchronize_browser_state("expected dialog ##{id} to finish opening") do
+      page.evaluate_script(<<~JS)
+        (() => {
+          const dialog = document.getElementById(#{id.to_json})
+          return Boolean(dialog?.open && dialog.hasAttribute("data-panels-open"))
+        })()
+      JS
+    end
+  end
+
+  def wait_for_dialog_closed(id)
+    synchronize_browser_state("expected dialog ##{id} to finish closing") do
+      page.evaluate_script(<<~JS)
+        (() => {
+          const dialog = document.getElementById(#{id.to_json})
+          return Boolean(dialog && !dialog.open && !dialog.hasAttribute("data-panels-open"))
+        })()
+      JS
+    end
   end
 
   def dispatch_key(key, selector: nil)
@@ -46,7 +66,12 @@ module SystemInteractionHelper
       (() => {
         const target = #{target}
         if (!target) throw new Error("keyboard event target not found")
-        target.dispatchEvent(new KeyboardEvent("keydown", { key: #{key.to_json}, bubbles: true }))
+        target.dispatchEvent(new KeyboardEvent("keydown", {
+          key: #{key.to_json},
+          bubbles: true,
+          cancelable: true,
+          composed: true
+        }))
       })()
     JS
   end

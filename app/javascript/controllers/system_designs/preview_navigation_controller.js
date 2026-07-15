@@ -6,6 +6,7 @@ export default class extends Controller {
   connect() {
     this.activeAnchor = null
     this.pendingAnchor = null
+    this.pageEndAnchor = null
     this.syncFrame = null
     this.revealFrame = null
     this.navigationTimer = null
@@ -77,6 +78,7 @@ export default class extends Controller {
 
   startNavigation(anchor) {
     this.pendingAnchor = anchor
+    this.pageEndAnchor = null
     this.navigationDeadline = performance.now() + 1200
     if (this.navigationTimer) window.clearTimeout(this.navigationTimer)
     this.navigationTimer = window.setTimeout(this.finishNavigation, 1200)
@@ -107,7 +109,14 @@ export default class extends Controller {
     })
 
     const atPageEnd = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2
-    if (atPageEnd) active = positions[positions.length - 1].anchor
+    if (atPageEnd) {
+      const pageEndTarget = this.pageEndAnchor ? document.getElementById(this.pageEndAnchor) : null
+      const pageEndRect = pageEndTarget?.getBoundingClientRect()
+      const pageEndTargetIsVisible = pageEndRect && pageEndRect.bottom > 0 && pageEndRect.top < window.innerHeight
+      active = pageEndTargetIsVisible ? this.pageEndAnchor : positions[positions.length - 1].anchor
+    } else {
+      this.pageEndAnchor = null
+    }
 
     this.setActive(active, true)
   }
@@ -132,6 +141,7 @@ export default class extends Controller {
     if (this.syncFrame) cancelAnimationFrame(this.syncFrame)
     this.syncFrame = null
     this.pendingAnchor = null
+    this.pageEndAnchor = atPageEnd && targetIsVisible ? completedAnchor : null
     if (this.navigationTimer) window.clearTimeout(this.navigationTimer)
     this.navigationTimer = null
     if (!targetReachedPosition && !(atPageEnd && targetIsVisible)) this.setActive(completedAnchor, false)

@@ -17,6 +17,8 @@ export default class extends Controller {
     this.typeahead = ""
     this.typeaheadTimer = null
     this.submenuCloseTimer = null
+    this.restoreFocusAfterClose = false
+    this.focusFrame = null
     this.onOtherMenuOpen = this.handleOtherMenuOpen.bind(this)
     // Shared singleton channel across floating layers (dropdown, popover): opening one
     // closes any other that's open.
@@ -29,6 +31,7 @@ export default class extends Controller {
     this.cancelSubmenuClose()
     this.stopPositioning()
     this.closeAllSubmenus()
+    if (this.focusFrame) cancelAnimationFrame(this.focusFrame)
     if (this.isOpen(this.menuTarget)) this.menuTarget.hidePopover()
   }
 
@@ -67,9 +70,11 @@ export default class extends Controller {
     this.closeAllSubmenus()
     this.stopPositioning()
 
-    if (this.isOpen(this.menuTarget)) this.menuTarget.hidePopover()
+    const wasOpen = this.isOpen(this.menuTarget)
+    this.restoreFocusAfterClose ||= restoreFocus
+    if (wasOpen) this.menuTarget.hidePopover()
     this.triggerTarget.setAttribute("aria-expanded", "false")
-    if (restoreFocus) this.triggerTarget.focus()
+    if (!wasOpen && this.restoreFocusAfterClose) this.restoreTriggerFocus()
   }
 
   onPopoverToggle(event) {
@@ -78,6 +83,16 @@ export default class extends Controller {
     this.triggerTarget.setAttribute("aria-expanded", "false")
     this.stopPositioning()
     this.closeAllSubmenus()
+    if (this.restoreFocusAfterClose) this.restoreTriggerFocus()
+  }
+
+  restoreTriggerFocus() {
+    this.restoreFocusAfterClose = false
+    if (this.focusFrame) cancelAnimationFrame(this.focusFrame)
+    this.focusFrame = requestAnimationFrame(() => {
+      this.focusFrame = null
+      if (!this.isOpen(this.menuTarget)) this.triggerTarget.focus()
+    })
   }
 
   onWindowPointerDown(event) {

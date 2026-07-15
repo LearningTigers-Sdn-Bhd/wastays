@@ -8,7 +8,16 @@ RSpec.describe "System design navigation", type: :system do
     visit "/system-design#toast-preview"
 
     expect(page).to have_css("a[href='#toast-preview'][aria-current='location']", count: 2, visible: :all)
-    page.execute_script("window.dispatchEvent(new Event('scrollend'))")
+    page.execute_script(<<~JS)
+      const root = document.querySelector("[data-controller~='system-designs--preview-navigation']")
+      const controller = window.Stimulus.getControllerForElementAndIdentifier(
+        root,
+        "system-designs--preview-navigation"
+      )
+      controller.navigationDeadline = 0
+      window.dispatchEvent(new Event("scrollend"))
+      window.dispatchEvent(new Event("scroll"))
+    JS
 
     expect(page).to have_current_path(%r{/system-design#toast-preview$}, url: true)
     expect(page).to have_css("a[href='#toast-preview'][aria-current='location']", count: 2, visible: :all)

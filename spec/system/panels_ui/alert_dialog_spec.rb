@@ -51,12 +51,12 @@ RSpec.describe "PanelsUI::AlertDialog", type: :system do
     expect(page).to have_css("dialog#sd-dialog[open]")
 
     click_via_javascript("#sd-alert-dialog-basic [data-slot='alert-dialog-cancel']")
-    expect(page).to have_no_css("dialog#sd-alert-dialog-basic[open]")
+    wait_for_dialog_closed("sd-alert-dialog-basic")
     expect(page).to have_css("dialog#sd-dialog[open]")
     wait_for_body_overflow("hidden")
 
     click_via_javascript("#sd-dialog [data-action='panels-ui--dialog#close']")
-    expect(page).to have_no_css("dialog#sd-dialog[open]")
+    wait_for_dialog_closed("sd-dialog")
     wait_for_body_overflow(original_overflow)
   end
 
