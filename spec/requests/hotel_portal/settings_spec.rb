@@ -48,11 +48,12 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response).to have_http_status(:moved_permanently)
     end
 
-    it "uses the active destination as the page heading" do
+    it "uses the shared heading for General settings pages" do
       {
-        hotel_general_settings_path(hotel) => "General Settings",
+        hotel_general_settings_path(hotel) => "General Hotel Settings",
+        hotel_rates_settings_path(hotel) => "General Hotel Settings",
         hotel_ai_concierge_settings_path(hotel) => "AI Concierge",
-        hotel_notification_settings_path(hotel) => "Notifications",
+        hotel_notification_settings_path(hotel) => "General Hotel Settings",
         hotel_banking_details_settings_path(hotel) => "Banking Details"
       }.each do |path, expected_heading|
         get path
@@ -74,7 +75,37 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
       expect(response).to have_http_status(:ok)
       grc_settings = Nokogiri::HTML(response.body).at_css("#guest-registration-card")
-      expect(grc_settings["class"]).to include("rounded-2xl", "border", "bg-card")
+      expect(grc_settings["class"]).to include("scroll-mt-6")
+      expect(grc_settings["class"]).not_to include("border-t", "bg-card", "shadow-sm")
+    end
+
+    it "renders General as a two-column section workspace with Panels UI controls" do
+      get hotel_general_settings_path(hotel)
+
+      document = response.parsed_body
+      form = document.at_css("form[action='#{hotel_general_settings_path(hotel)}']")
+      expect(form["class"]).to include("gap-y-10", "lg:grid-cols-2")
+      expect(form.css("section h2").map { |heading| heading.text.squish }).to eq(
+        [ "General Setup", "Operation Times", "Guest Registration Card", "Localization & Security" ]
+      )
+      expect(form.css(".panel-metric-card").size).to eq(2)
+      expect(form.at_css("[data-testid='guest-portal-card'].panel-card")).to be_present
+      expect(form.css(".panel-time-picker").size).to eq(4)
+      expect(form.at_css("[data-testid='localization-fields-grid']")["class"]).to include("items-start")
+      expect(form.at_css(".panel-combobox select[name='hotel[time_zone]']")).to be_present
+      expect(form.at_css(".panel-combobox select[name='hotel[default_currency]']")).to be_present
+      expect(form.text).to include("Used for local check-in times, reports, and automated guest messages.")
+      expect(form.css(".panel-switch input[role='switch']").size).to be >= 1
+    end
+
+    it "normalizes legacy 12-hour operation times for the Panels UI time pickers" do
+      create(:property_policy, hotel: hotel, check_in_time: "2:00 PM", check_out_time: "11:00 AM")
+
+      get hotel_general_settings_path(hotel)
+
+      document = response.parsed_body
+      expect(document.at_css("#hotel_property_policy_attributes_check_in_time")["value"]).to eq("14:00")
+      expect(document.at_css("#hotel_property_policy_attributes_check_out_time")["value"]).to eq("11:00")
     end
 
     it "shows setup tabs in the settings tab bar" do
@@ -108,10 +139,10 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(breadcrumb_items[1].at_css("a")&.text&.squish).to eq("Settings")
       expect(breadcrumb_items[2].text.squish).to eq("General")
       expect(breadcrumb_items[2].at_css("a, button")).to be_nil
-      expect(breadcrumb_items[3].at_css("a")&.text&.squish).to eq("General Settings")
-      expect(breadcrumb_items[3].at_css("button[aria-label='Open General Settings navigation']")).to be_present
+      expect(breadcrumb_items[3].at_css("a")&.text&.squish).to eq("General")
+      expect(breadcrumb_items[3].at_css("button[aria-label='Open General navigation']")).to be_present
       expect(breadcrumb_items[3].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
-        [ "General Settings", "Rate Settings", "Notifications", "Plan & Billing" ]
+        [ "General", "Rate Settings", "Notifications", "Plan & Billing" ]
       )
     end
 
@@ -392,7 +423,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(items[1].at_css("a")&.text&.squish).to eq("Settings")
       expect(items[2].text.squish).to eq("General")
       expect(items[2].at_css("a, button")).to be_nil
-      expect(items[3].at_css("button[aria-label='Open General Settings navigation']")).to be_present
+      expect(items[3].at_css("button[aria-label='Open General navigation']")).to be_present
 
       hotel.reload
       expect(hotel.default_currency).to eq('MYR')
