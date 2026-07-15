@@ -1,3 +1,8 @@
+---
+version: "1.0"
+last_updated: 2026-07-15
+---
+
 # WAStays Portal UI Contract
 
 This contract governs Admin, Hotel, Corporate, and Guest portal UI. Public and
@@ -40,6 +45,9 @@ Avoid decorative uppercase text, excessive tracking, `font-bold`, `font-black`,
 and page-local type scales. Keep heading order semantic: `h1`, then `h2`, then
 `h3`.
 
+These roles mirror the type tokens defined in `app/assets/tailwind/panel/*`.
+When a case is ambiguous, resolve it against those tokens, not a nearby page.
+
 ## 4. Spacing
 
 Use the established Tailwind spacing scale by role:
@@ -52,6 +60,22 @@ Use the established Tailwind spacing scale by role:
 Prefer `gap-*` and `space-y-*` for relationships and component density options
 for internal padding. Do not use arbitrary spacing values or copy spacing from a
 nearby page without confirming that the content relationship is the same.
+
+This scale mirrors `app/assets/tailwind/panel/*`; resolve borderline choices
+against those tokens.
+
+Correct:
+
+```erb
+<%# section-level rhythm, then component-level gaps inside %>
+<section class="space-y-6">
+  <div class="flex items-center gap-2">
+    <%= app_icon "calendar" %>
+    <h2 class="text-base font-semibold">Bookings</h2>
+  </div>
+  <div class="grid gap-4 lg:grid-cols-2"><%# ... %></div>
+</section>
+```
 
 ## 5. Components first
 
@@ -76,6 +100,11 @@ A new primitive must include:
 - component specs
 - at least one real usage
 
+Model new primitives on the shadcn Nova theme: a compact, small-scale UI with
+tight density, restrained radii and shadows, and modest control sizing. Match
+that character rather than introducing a larger or heavier look, and express it
+through the `PanelsUI` tokens rather than hard-coded values.
+
 ## 6. Selection controls
 
 Do not use native `<select>`, Rails `f.select`, `select_tag`, or
@@ -90,6 +119,24 @@ Do not use native `<select>`, Rails `f.select`, `select_tag`, or
 A native select is allowed only when explicitly required as a documented
 accessibility or platform fallback.
 
+Correct:
+
+```erb
+<%= render PanelsUI::FormField.new(
+      form: form,
+      attribute: :board,
+      label: "Board basis",
+      hint: "Keyboard: type to jump, arrows to move, Enter to pick.") do |field| %>
+  <% field.with_select_menu(
+       [
+         { label: "Room only", value: "room_only" },
+         { label: "Breakfast included", value: "bnb" },
+         { label: "Full board", value: "full" }
+       ],
+       prompt: "Select a board basis") %>
+<% end %>
+```
+
 ## 7. Page composition
 
 Components standardize controls and interaction behavior. They do not prescribe
@@ -101,22 +148,24 @@ scroll cost.
 
 - Prefer progressive disclosure, tabs, sheets, dialogs, collapsibles, or
   dedicated pages when they reduce scanning and scrolling.
+- When adding tabs to a new or redesigned page, use `PanelsUI::Tabs` with the
+  `line` variant. Use the `pill` variant only when it is explicitly requested.
 - Do not reduce scroll by shrinking typography, controls, or spacing.
 - Avoid unnecessary card nesting, repeated explanations, duplicated headings,
   unrelated workflows in one continuous form, and actions far from the content
   they affect.
 
-### Planning and research preview
+A card is not the default container. Structure pages with labelled `<section>`
+regions and heading hierarchy. Reach for `PanelsUI::Card` (or `MetricCard`) only
+when the content genuinely needs a bounded, elevated surface — not to wrap every
+section.
 
-When planning or researching a UI creation or redesign, show the user a compact
-ASCII layout preview before implementation if the user has not supplied a
-design.
-
-- Show the proposed information hierarchy and primary actions.
-- Include desktop and mobile differences when they materially differ.
-- Use the preview to expose layout and scroll decisions, not visual decoration.
-- Do not require an ASCII preview for a user-supplied design, a small component
-  change, or a narrowly scoped visual or behavioral fix.
+Plain labelled sections are the default and the priority. Cards are a
+deliberate exception, justified only by the content, not by preference. A set of
+distinct, self-contained offers meant to be compared — such as a
+plan-comparison view — can warrant bounded surfaces, because the content is
+inherently discrete. That justification comes from the content itself, not from
+a nearby page that happens to use cards. When in doubt, default to a section.
 
 ## 8. Form separation
 
@@ -133,32 +182,7 @@ A page has one clear responsibility.
   dialogs, or sheets.
 - Keep submission actions attached to the form they submit.
 
-## 9. Settings UI
-
-Preserve the centralized settings groups, permissions, routes, tabs, active
-states, and breadcrumbs. A visual redesign must not silently change information
-architecture.
-
-General Settings and Property Settings demonstrate valid component usage only.
-They are not mandatory page-layout templates.
-
-Within the General settings group:
-
-- General is a valid component-usage reference.
-- Notifications may be referenced after validating its components.
-- Plan & Billing must be evaluated independently.
-- Rate Settings is legacy and must not be used as a design, layout, spacing,
-  typography, or component reference.
-
-Rate Settings has not completed its `PanelsUI` migration. Treat its existing
-markup as migration input, not accepted design-system precedent.
-
-Before using any nearby page as precedent, confirm that it uses semantic panel
-tokens, current validated `PanelsUI` components, styled selection components,
-and this typography and spacing contract. Proximity does not make a page
-authoritative.
-
-## 10. Interaction ownership
+## 9. Interaction ownership
 
 - Use `PanelsUI` for shared UI behavior and presentation.
 - Use Stimulus for application-specific behavior.
@@ -166,7 +190,7 @@ authoritative.
 - Do not introduce a second implementation of an existing interaction.
 - Do not mix business behavior into a visual primitive.
 
-## 11. Accessibility
+## 10. Accessibility
 
 All portal UI must meet WCAG 2.2 AA.
 
@@ -186,7 +210,7 @@ All portal UI must meet WCAG 2.2 AA.
 - Hide decorative icons from assistive technology.
 - Validate keyboard use and accessible names on the rendered UI.
 
-## 12. Validation
+## 11. Validation
 
 Before completing UI work, verify:
 
@@ -210,7 +234,9 @@ alone.
 - `app/components/panels_ui/**`
 - `app/assets/tailwind/panel/**`
 - portal shell layouts
-- `app/helpers/hotel_portal/settings_navigation_helper.rb`
 
 Historical design plans are not authoritative when they conflict with this file
 or the current `PanelsUI` implementation.
+
+When this contract and the `PanelsUI` implementation disagree, fix whichever is
+wrong in the same PR. Do not leave the two in conflict.

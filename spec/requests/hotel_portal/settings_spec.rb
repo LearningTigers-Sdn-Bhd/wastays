@@ -172,7 +172,9 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       get hotel_general_settings_path(hotel)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(%(data-testid="settings-tabs"))
+      tabs = response.parsed_body.at_css(%([data-testid="settings-tabs"] .tabs-root))
+      expect(tabs).to be_present
+      expect(tabs["class"]).not_to include("max-w-")
       expect(response.body).not_to include(%(data-testid="settings-setup-shortcuts"))
     end
 

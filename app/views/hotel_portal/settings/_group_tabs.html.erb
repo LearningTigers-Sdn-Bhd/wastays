@@ -15,8 +15,7 @@
     <%= render PanelsUI::Tabs.new(
           id: "settings-#{active_group}-tabs",
           active: active_tab&.fetch(:key),
-          aria_label: "Settings sections",
-          class: "mx-auto max-w-[1600px]"
+          aria_label: "Settings sections"
         ) do |tabs| %>
       <% settings_tabs.each do |tab| %>
         <% tabs.with_tab(

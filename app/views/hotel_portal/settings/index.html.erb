@@ -1,27 +1,25 @@
-<div class="w-full space-y-3.5">
+<div class="space-y-5">
   <%= render PanelsUI::PageHeader.new(title: @presenter.page_title, description: @presenter.page_description) %>
 
   <% if @presenter %>
     <%= render "hotel_portal/settings/group_tabs" %>
 
-    <div class="space-y-6">
-      <% case @presenter.active_page %>
-      <% when "general" %>
-        <%= render "hotel_portal/settings/general_section" %>
-      <% when "rates" %>
-        <%= render "hotel_portal/settings/rates_section" %>
-      <% when "ai" %>
-        <%= render "hotel_portal/settings/ai_concierge_section" %>
-      <% when "notifications" %>
-        <%= render "hotel_portal/settings/notifications_section" %>
-      <% when "banking" %>
-        <%= render "hotel_portal/settings/banking_section" %>
-      <% end %>
-    </div>
+    <% case @presenter.active_page %>
+    <% when "general" %>
+      <%= render "hotel_portal/settings/general_section" %>
+    <% when "rates" %>
+      <%= render "hotel_portal/settings/rates_section" %>
+    <% when "ai" %>
+      <%= render "hotel_portal/settings/ai_concierge_section" %>
+    <% when "notifications" %>
+      <%= render "hotel_portal/settings/notifications_section" %>
+    <% when "banking" %>
+      <%= render "hotel_portal/settings/banking_section" %>
+    <% end %>
   <% else %>
-    <div class="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
-      <h2 class="text-lg font-bold text-foreground">No settings yet</h2>
-      <p class="mt-2 text-sm text-muted-foreground">Settings will appear once a hotel is selected.</p>
-    </div>
+    <section class="space-y-2 py-10 text-center" aria-labelledby="empty-settings-title">
+      <h2 id="empty-settings-title" class="text-base font-semibold text-foreground">No settings yet</h2>
+      <p class="text-sm text-muted-foreground">Settings will appear once a hotel is selected.</p>
+    </section>
   <% end %>
 </div>
