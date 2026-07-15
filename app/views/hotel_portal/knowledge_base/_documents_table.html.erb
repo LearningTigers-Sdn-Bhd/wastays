@@ -6,7 +6,7 @@
   <%= turbo_stream_from document %>
 <% end %>
 
-<div class="w-full space-y-8">
+<div class="w-full space-y-3.5">
   <%= render PanelsUI::PageHeader.new(title: title, description: subtitle) do |header| %>
     <% header.with_actions do %>
       <%= render PanelsUI::Button.new(as: :a, href: kb_new_path, variant: :primary, size: :md, class: "w-full lg:w-auto") do %>

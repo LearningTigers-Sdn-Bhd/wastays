@@ -1,4 +1,4 @@
-<div class="w-full space-y-8">
+<div class="w-full space-y-3.5">
   <%= render PanelsUI::PageHeader.new(title: "Staff Management", description: "Manage access levels and roles for your hotel team.") do |header| %>
     <% header.with_actions do %>
         <%= render PanelsUI::Button.new(as: :a, href: new_hotel_user_path(current_hotel), variant: :primary, size: :md, class: "w-full lg:w-auto") do %>
@@ -8,9 +8,7 @@
     <% end %>
   <% end %>
 
-  <div class="px-4 md:px-0">
-    <%= render "hotel_portal/settings/group_tabs" %>
-  </div>
+  <%= render "hotel_portal/settings/group_tabs" %>
 
   <% if @pending_invitations.any? %>
     <div class="">

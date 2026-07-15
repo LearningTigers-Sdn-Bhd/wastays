@@ -16,7 +16,7 @@
   }
 %>
 
-<div class="space-y-6">
+<div class="space-y-3.5">
   <%= render PanelsUI::PageHeader.new(title: "Refund Details") do |header| %>
     <% header.with_caption do %>
       <span class="font-mono tracking-wider"><%= @booking.confirmation_token.upcase %></span>

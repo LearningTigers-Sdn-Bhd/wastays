@@ -2,7 +2,7 @@
       title: "Corporate dashboard",
       description: "Hotels currently connected to #{current_user.account.name}.") %>
 
-<section class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+<section class="mt-3.5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
   <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
     <p class="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Linked hotels</p>
     <p class="mt-3 text-3xl font-black text-foreground"><%= @relationships.size %></p>

@@ -4,7 +4,7 @@
 
 <%= turbo_stream_from @document %>
 
-<div class="w-full space-y-8">
+<div class="w-full space-y-3.5">
   <div>
     <%= render PanelsUI::PageHeader.new(title: @document.title) do |header| %>
       <% header.with_caption do %>

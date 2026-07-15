@@ -1,9 +1,7 @@
-<div class="w-full space-y-8">
+<div class="w-full space-y-3.5">
   <%= render PanelsUI::PageHeader.new(title: "Transaction Codes", description: "Configure transaction codes used when posting charges, refunds, payments, and adjustments to guest folios.") %>
 
-  <div class="px-4 md:px-0">
-    <%= render "hotel_portal/settings/group_tabs" %>
-  </div>
+  <%= render "hotel_portal/settings/group_tabs" %>
 
   <div data-testid="transaction-codes-tabs">
   <%= render PanelsUI::Tabs.new(id: "transaction-codes-tabs", active: @presenter.active_tab, variant: :pill, url: { param: "tab" }, class: "space-y-6", aria_label: "Transaction code sections") do |tabs| %>

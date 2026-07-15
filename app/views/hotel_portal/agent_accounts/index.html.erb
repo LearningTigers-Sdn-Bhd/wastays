@@ -1,4 +1,4 @@
-<div class="max-w-[1600px] mx-auto pb-10 space-y-4">
+<div class="max-w-[1600px] mx-auto pb-10 space-y-3.5">
   <%= render PanelsUI::PageHeader.new(title: "Agent Accounts", description: "Manage corporate and travel agent accounts and their booking codes.") do |header| %>
     <% header.with_actions do %>
       <%= render PanelsUI::Button.new(label: "Add Agent Account", as: :a, href: new_hotel_portal_agent_account_path, variant: :primary, size: :md, class: "w-full lg:w-auto") %>

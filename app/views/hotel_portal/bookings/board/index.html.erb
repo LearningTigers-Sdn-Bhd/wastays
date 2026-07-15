@@ -2,7 +2,7 @@
   <%= turbo_frame_tag "booking_timeline_board", data: { turbo_action: "advance" } do %>
     <div class="<%= @presenter.page_spacing %>">
  <div class="<%= @presenter.container_padding %>">
-      <div class="space-y-3">
+      <div class="space-y-3.5">
         <%= render PanelsUI::PageHeader.new(title: "Booking Timeline Board", description: "Centralized reservation management and planning") do |header| %>
           <% header.with_caption do %>
             <div class="flex flex-wrap items-center gap-2">

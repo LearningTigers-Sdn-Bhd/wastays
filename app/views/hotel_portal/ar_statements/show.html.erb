@@ -3,7 +3,7 @@
 <% currencies = @presenter&.available_currencies || @available_currencies %>
 <% selected_currency = @presenter&.currency || @selected_currency %>
 
-<div class="w-full space-y-4">
+<div class="w-full space-y-3.5">
   <div>
     <div>
       <%= render PanelsUI::PageHeader.new(title: @hotel_corporate_account.corporate_account.name) do |header| %>

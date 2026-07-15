@@ -1,4 +1,4 @@
-<div class="w-full space-y-8">
+<div class="w-full space-y-3.5">
   <%= render PanelsUI::PageHeader.new(title: "Journal Batches", description: "Summarized daily transaction batches by General Ledger Code (GL Code).") do |header| %>
     <% header.with_actions do %>
       <%= form_with url: journal_batches_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-center", data: { controller: "date-preset" } do |f| %>

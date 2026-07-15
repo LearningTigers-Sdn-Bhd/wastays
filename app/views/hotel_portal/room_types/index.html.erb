@@ -1,6 +1,6 @@
-<div class="w-full space-y-8">
+<div class="w-full space-y-3.5">
   <% if onboarding_incomplete?(current_hotel) %>
-    <div class=" mb-6">
+    <div>
       <%= link_to hotel_dashboard_path(current_hotel), class: "inline-flex items-center gap-x-1.5 py-1.5 px-3 text-xs font-bold text-brand-primary border border-brand-primary/20 bg-brand-primary/5 rounded-lg hover:bg-brand-primary/10 transition-colors" do %>
         <%= cached_icon "chevron-left", class: "size-3.5" %>
         Back to Onboarding
@@ -30,9 +30,7 @@
     <% end %>
   <% end %>
 
-  <div class="px-4 md:px-0">
-    <%= render "hotel_portal/settings/group_tabs" %>
-  </div>
+  <%= render "hotel_portal/settings/group_tabs" %>
 
   <turbo-frame id="room_types_results">
     <!-- Tabs Filter -->

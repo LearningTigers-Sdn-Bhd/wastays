@@ -1,4 +1,4 @@
-<div class="w-full space-y-8">
+<div class="w-full space-y-3.5">
   <%= render PanelsUI::PageHeader.new(title: "Operation Audit Logs", description: "Trace every change made to your hotel's rates and inventory.") do |header| %>
     <% header.with_actions do %>
       <%= render PanelsUI::DropdownMenu.new(id: "audit-logs-export-menu", placement: :bottom_end, class: "w-44") do |menu| %>

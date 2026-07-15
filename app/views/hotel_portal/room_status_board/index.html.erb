@@ -3,7 +3,7 @@
 
 <div class="w-full <%= @presenter.page_spacing %>">
   <div class="<%= @presenter.container_padding %>">
-    <div class="space-y-3">
+    <div class="space-y-3.5">
       <%= render PanelsUI::PageHeader.new(title: "Room Status", description: "Live room status and occupancy timeline") do |header| %>
         <% header.with_caption do %>
           <div class="flex flex-wrap items-center gap-2">
