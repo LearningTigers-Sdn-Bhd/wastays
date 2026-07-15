@@ -100,7 +100,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
 
     # Group tabs should be visible on the page
     within("[data-testid='settings-tabs']") do
-      expect(page).to have_link("General Settings", href: hotel_general_settings_path(hotel))
+      expect(page).to have_link("General", href: hotel_general_settings_path(hotel))
       expect(page).to have_link("Plan & Billing", href: hotel_plan_path(hotel))
     end
   end

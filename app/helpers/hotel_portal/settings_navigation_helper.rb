@@ -101,7 +101,7 @@ module HotelPortal
       case group
       when :general
         [
-          hotel_permission_granted?("manage_hotel_profile") ? { key: "general", label: "General Settings", path: hotel_general_settings_path(current_hotel), icon: "settings", active: controller_name == "settings" && settings_active_page == "general" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "general", label: "General", path: hotel_general_settings_path(current_hotel), icon: "settings", active: controller_name == "settings" && settings_active_page == "general" } : nil,
           hotel_permission_granted?("manage_hotel_profile") ? { key: "rates", label: "Rate Settings", path: hotel_rates_settings_path(current_hotel), icon: "badge-dollar-sign", active: controller_name == "settings" && settings_active_page == "rates" } : nil,
           hotel_permission_granted?("manage_hotel_profile") ? { key: "notifications", label: "Notifications", path: hotel_notification_settings_path(current_hotel), icon: "bell", active: controller_name == "settings" && settings_active_page == "notifications" } : nil,
           { key: "plan", label: "Plan & Billing", path: hotel_plan_path(current_hotel), icon: "layers", active: controller_name == "plans" }
