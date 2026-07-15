@@ -21,7 +21,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
 
       expect(response).to have_http_status(:success)
       expect(booking.reload.guest_registration_card).to be_present
-      expect(response.body).to include("GRC / Guest Registration No")
+      expect(response.body).to include("Guest Registration No.")
       expect(response.body).to include(booking.formatted_guest_registration_number)
       expect(response.body).to include("Please read the terms and conditions carefully before signing")
       expect(response.body.scan("Print official form").size).to eq(1)
@@ -134,6 +134,29 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response.body).to include("Please provide a quiet room.")
       expect(response.body).to include("Notes")
       expect(response.body).to include("VIP guest, prioritize service.")
+      expect(response.body).to include("Check-in time")
+      expect(response.body).to include("3:00 PM")
+      expect(response.body).to include("Check-out time")
+      expect(response.body).to include("11:00 AM")
+
+      document = Nokogiri::HTML(response.body)
+      # Check interactive textareas
+      remark_textarea = document.at_css("textarea[data-registration-card-target='remarkInput']")
+      expect(remark_textarea).to be_present
+      expect(remark_textarea.text.strip).to eq("Please provide a quiet room.")
+
+      notes_textarea = document.at_css("textarea[data-registration-card-target='notesInput']")
+      expect(notes_textarea).to be_present
+      expect(notes_textarea.text.strip).to eq("VIP guest, prioritize service.")
+
+      # Check print targets
+      remark_print = document.at_css("div[data-registration-card-target='remarkPrint']")
+      expect(remark_print).to be_present
+      expect(remark_print.text.strip).to eq("Please provide a quiet room.")
+
+      notes_print = document.at_css("div[data-registration-card-target='notesPrint']")
+      expect(notes_print).to be_present
+      expect(notes_print.text.strip).to eq("VIP guest, prioritize service.")
     end
   end
 
@@ -144,7 +167,9 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       patch hotel_booking_guest_registration_card_path(hotel, booking), params: {
         guest_registration_card: {
           signer_name: "Jane Guest",
-          signature_data_url: "data:image/png;base64,abc123"
+          signature_data_url: "data:image/png;base64,abc123",
+          special_requests: "Please provide double pillows.",
+          internal_notes: "VIP guest, likes quiet."
         }
       }
 
@@ -155,6 +180,45 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(card.signature_data_url).to eq("data:image/png;base64,abc123")
       expect(card.signed_at).to be_present
       expect(card.terms_snapshot).to include("check_in_time" => "3:00 PM", "check_out_time" => "11:00 AM", "cancellation_policy" => "No refund after check-in")
+
+      expect(booking.special_requests).to eq("Please provide double pillows.")
+      expect(booking.internal_notes).to eq("VIP guest, likes quiet.")
+    end
+
+    it "saves remarks and notes separately via JSON format (auto-save)" do
+      patch hotel_booking_guest_registration_card_path(hotel, booking, format: :json), params: {
+        guest_registration_card: {
+          special_requests: "Need extra towels.",
+          internal_notes: "Regular guest."
+        }
+      }
+
+      expect(response).to have_http_status(:success)
+      json = JSON.parse(response.body)
+      expect(json["status"]).to eq("success")
+      expect(json["message"]).to eq("Remarks and notes updated.")
+      expect(booking.reload.special_requests).to eq("Need extra towels.")
+      expect(booking.internal_notes).to eq("Regular guest.")
+      expect(booking.guest_registration_card).not_to be_signed
+    end
+
+    it "allows auto-saving remarks and notes via JSON format even if the card is signed" do
+      card = create(:guest_registration_card, :signed, booking: booking, hotel: hotel)
+      
+      patch hotel_booking_guest_registration_card_path(hotel, booking, format: :json), params: {
+        guest_registration_card: {
+          special_requests: "Changed pillow preference.",
+          internal_notes: "Updated priority."
+        }
+      }
+
+      expect(response).to have_http_status(:success)
+      json = JSON.parse(response.body)
+      expect(json["status"]).to eq("success")
+      expect(json["message"]).to eq("Remarks and notes updated.")
+      expect(booking.reload.special_requests).to eq("Changed pillow preference.")
+      expect(booking.internal_notes).to eq("Updated priority.")
+      expect(card.reload).to be_signed
     end
 
     it "rejects blank signature" do

@@ -7,32 +7,37 @@ class HotelPortal::Bookings::GuestRegistrationCardsController < HotelPortal::Bas
   before_action :set_card
 
   def show
+    @presenter = HotelPortal::GuestRegistrationCardPresenter.new(@card, @booking)
   end
 
   def update
-    result = @card.with_lock do
-      break :already_signed if @card.signed?
+    result = Bookings::UpdateGuestRegistrationCard.call(
+      card: @card,
+      booking: @booking,
+      params: guest_registration_card_params
+    )
 
-      @card.assign_attributes(card_params.merge(
-        status: "signed",
-        signed_at: Time.current,
-        terms_snapshot: @card.capture_terms_snapshot_preview,
-        display_fields_snapshot: @card.capture_display_fields_snapshot
-      ))
-      @card.save ? :saved : :invalid
-    end
-
-    if result == :already_signed
-      redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking), alert: "Delete the existing signature before signing again."
-    elsif result == :saved
-      redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking), notice: "Guest registration card signed."
+    if result.success?
+      if params[:guest_registration_card][:signature_data_url].blank? && params[:guest_registration_card][:signer_name].blank?
+        respond_to do |format|
+          format.html { redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking), notice: "Remarks and notes updated." }
+          format.json { render json: { status: "success", message: "Remarks and notes updated." } }
+        end
+      else
+        redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking), notice: "Guest registration card signed."
+      end
     else
-      render :show, status: :unprocessable_content
+      if result.error == :already_signed
+        redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking), alert: result.message
+      else
+        @presenter = HotelPortal::GuestRegistrationCardPresenter.new(@card, @booking)
+        render :show, status: :unprocessable_content
+      end
     end
   end
 
   def destroy
-    @card.update!(status: "draft", signer_name: nil, signature_data_url: nil, signed_at: nil, display_fields_snapshot: nil)
+    Bookings::RemoveRegistrationCardSignature.call(card: @card)
     redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking), notice: "Guest registration card signature removed."
   end
 
@@ -46,8 +51,13 @@ class HotelPortal::Bookings::GuestRegistrationCardsController < HotelPortal::Bas
     @card = @booking.guest_registration_card || @booking.create_guest_registration_card!(hotel: current_hotel)
   end
 
-  def card_params
-    params.require(:guest_registration_card).permit(:signer_name, :signature_data_url)
+  def guest_registration_card_params
+    params.require(:guest_registration_card).permit(
+      :signer_name,
+      :signature_data_url,
+      :special_requests,
+      :internal_notes
+    )
   end
 
   def authorize_manage_bookings!
