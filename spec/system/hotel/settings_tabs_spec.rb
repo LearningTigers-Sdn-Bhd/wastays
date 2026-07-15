@@ -55,7 +55,7 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     visit hotel_settings_path(hotel, tab: "unknown")
 
     expect(page).to have_current_path(hotel_general_settings_path(hotel))
-    expect(page).to have_css("h1", text: "General Hotel Settings")
+    expect(page).to have_css("h1", text: "General Settings")
     expect(page).to have_css("h2", text: "General Setup")
     expect(page).to have_no_css("h2", text: "Banking Details")
     expect(page).to have_css("#hotel-breadcrumb", text: "General")
@@ -69,7 +69,7 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     expect(page).to have_current_path(hotel_general_settings_path(hotel))
     expect(page).to have_no_link("Banking Details", href: hotel_banking_details_settings_path(hotel))
     expect(page).to have_no_css("h2", text: "Banking Details")
-    expect(page).to have_css("h1", text: "General Hotel Settings")
+    expect(page).to have_css("h1", text: "General Settings")
     expect(page).to have_css("h2", text: "General Setup")
     expect(page).to have_css("#hotel-breadcrumb", text: "General")
   end

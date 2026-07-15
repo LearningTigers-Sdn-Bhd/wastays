@@ -3,10 +3,10 @@
 module HotelPortal
   class SettingsPresenter
     PAGE_HEADINGS = {
-      "general" => [ "General Hotel Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
-      "rates" => [ "General Hotel Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
+      "general" => [ "General Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
+      "rates" => [ "General Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
       "ai" => [ "AI Concierge", "Configure AI concierge behavior and provider settings." ],
-      "notifications" => [ "General Hotel Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
+      "notifications" => [ "General Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
       "banking" => [ "Banking Details", "Manage the bank account used for hotel payouts." ]
     }.freeze
 

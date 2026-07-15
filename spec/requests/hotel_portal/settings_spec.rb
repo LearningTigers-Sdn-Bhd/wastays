@@ -50,10 +50,10 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
     it "uses the shared heading for General settings pages" do
       {
-        hotel_general_settings_path(hotel) => "General Hotel Settings",
-        hotel_rates_settings_path(hotel) => "General Hotel Settings",
+        hotel_general_settings_path(hotel) => "General Settings",
+        hotel_rates_settings_path(hotel) => "General Settings",
         hotel_ai_concierge_settings_path(hotel) => "AI Concierge",
-        hotel_notification_settings_path(hotel) => "General Hotel Settings",
+        hotel_notification_settings_path(hotel) => "General Settings",
         hotel_banking_details_settings_path(hotel) => "Banking Details"
       }.each do |path, expected_heading|
         get path
@@ -99,6 +99,45 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(form.at_css(".panel-combobox select[name='hotel[default_currency]']")).to be_present
       expect(form.text).to include("Used for local check-in times, reports, and automated guest messages.")
       expect(form.css(".panel-switch input[role='switch']").size).to be >= 1
+    end
+
+    it "renders Banking Details as a cardless two-column workspace with Panels UI controls" do
+      get hotel_banking_details_settings_path(hotel)
+
+      document = response.parsed_body
+      form = document.at_css("form[action='#{hotel_banking_details_settings_path(hotel)}']")
+      expect(form["class"]).to include("gap-y-10", "lg:grid-cols-2")
+      expect(form.css("section h2").map { |heading| heading.text.squish }).to eq([ "Banking Details" ])
+      expect(form.at_css("section")["class"].to_s).not_to include("lg:col-span-2")
+      expect(form.at_css("section .space-y-4")).to be_present
+      expect(form.css("section.rounded-2xl, section.bg-card, section.shadow-sm")).to be_empty
+      expect(form.css(".panel-form-field").size).to eq(3)
+      expect(form.at_css(".panel-input[name='account[banking_detail_attributes][account_holder_name]']")).to be_present
+      expect(form.at_css(".panel-input[name='account[banking_detail_attributes][account_number]']")).to be_present
+      expect(form.at_css(".panel-combobox select[name='account[banking_detail_attributes][bank_name]']")).to be_present
+      expect(form.css("select[name='account[banking_detail_attributes][bank_name]'] option").map(&:text)).to include("Maybank", "CIMB")
+      expect(form.at_css("section button[type='submit']").text.squish).to eq("Save Banking Details")
+    end
+
+    it "renders AI Concierge as a left-column field stack with Panels UI controls" do
+      get hotel_ai_concierge_settings_path(hotel)
+
+      document = response.parsed_body
+      form = document.at_css("form[action='#{hotel_ai_concierge_settings_path(hotel)}']")
+      section = form.at_css("section")
+
+      expect(form["class"]).to include("gap-y-10", "lg:grid-cols-2")
+      expect(form.css("section h2").map { |heading| heading.text.squish }).to eq([ "AI Concierge Configuration" ])
+      expect(section["class"].to_s).not_to include("lg:col-span-2")
+      expect(section.at_css(".space-y-4")).to be_present
+      expect(form.css("section.rounded-2xl, section.bg-card, section.shadow-sm")).to be_empty
+      switch = section.at_css(".panel-switch")
+      expect(switch["data-variant"]).to eq("card")
+      expect(switch.at_css("input[name='hotel[ai_provider_enabled]']")).to be_present
+      expect(section.css(".panel-form-field").size).to eq(3)
+      expect(section.css(".panel-select-menu").size).to eq(2)
+      expect(section.at_css(".panel-input[name='hotel[ai_provider_key]']")).to be_present
+      expect(section.at_css("button[type='submit']").text.squish).to eq("Save AI Concierge Configuration")
     end
 
     it "normalizes legacy 12-hour operation times for the Panels UI time pickers" do

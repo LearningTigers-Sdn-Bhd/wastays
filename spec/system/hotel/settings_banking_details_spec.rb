@@ -23,7 +23,7 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
     visit hotel_banking_details_settings_path(hotel)
 
     fill_in 'account_banking_detail_attributes_account_holder_name', with: 'Syarikat Maju Jaya Sdn Bhd'
-    fill_in 'account_banking_detail_attributes_bank_name', with: 'Maybank'
+    select 'Maybank', from: 'account_banking_detail_attributes_bank_name'
     fill_in 'account_banking_detail_attributes_account_number', with: '5142 1234 5678'
 
     click_button 'Save Banking Details'
@@ -41,7 +41,7 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
     visit hotel_banking_details_settings_path(hotel)
 
     fill_in 'account_banking_detail_attributes_account_holder_name', with: 'Kejayaan Hotel Sdn Bhd'
-    fill_in 'account_banking_detail_attributes_bank_name', with: 'CIMB'
+    select 'CIMB', from: 'account_banking_detail_attributes_bank_name'
     fill_in 'account_banking_detail_attributes_account_number', with: '1234 5678 9012'
 
     click_button 'Save Banking Details'
@@ -55,12 +55,12 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
     visit hotel_banking_details_settings_path(hotel)
 
     fill_in 'account_banking_detail_attributes_account_holder_name', with: ''
-    fill_in 'account_banking_detail_attributes_bank_name', with: ''
+    select 'Search and select a bank', from: 'account_banking_detail_attributes_bank_name'
     fill_in 'account_banking_detail_attributes_account_number', with: '1234/5678'
 
     click_button 'Save Banking Details'
 
-    expect(page).to have_content('prohibited these settings from being saved')
+    expect(page).to have_content('3 errors prevented these settings from being saved')
     expect(page).to have_content("Banking detail account holder name can't be blank")
     expect(page).to have_content("Banking detail bank name can't be blank")
     expect(page).to have_content('Banking detail account number is invalid')

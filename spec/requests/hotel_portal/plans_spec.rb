@@ -26,7 +26,7 @@ RSpec.describe "HotelPortal::Plans", type: :request do
 
     expect(response).to have_http_status(:ok)
     document = response.parsed_body
-    expect(document.css("h1").map { |heading| heading.text.squish }).to eq([ "General Hotel Settings" ])
+    expect(document.css("h1").map { |heading| heading.text.squish }).to eq([ "General Settings" ])
     expect(document.at_css("[data-testid='plan-billing-layout']")).to be_present
     expect(document.at_css("[data-testid='plan-feature-card'].panel-card")).to be_present
     expect(document.at_css("[data-testid='plan-feature-scroll-area'].panel-scroll-area")).to be_present
