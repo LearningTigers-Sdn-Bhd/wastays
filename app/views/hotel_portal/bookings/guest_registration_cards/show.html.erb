@@ -5,6 +5,13 @@
 <% guest_email = primary_booking_guest&.email_snapshot.presence || @booking.guest_email %>
 <% guest_country = primary_booking_guest&.country_snapshot.presence || @booking.guest_country %>
 <% room_type_summary = @booking.room_type_summary.presence || "To be assigned" %>
+<% format_money = ->(amount) { format("%<currency>s %<amount>.2f", currency: @booking.currency.presence || current_hotel.default_currency.presence || "MYR", amount: amount.to_d) } %>
+<%
+  folios_charges = @booking.booking_folios.sum { |f| f.total_charges.to_d + f.projected_forecasts.sum(:amount).to_d }
+  total_charges = folios_charges > 0 ? folios_charges : @booking.total_amount
+  amount_paid = @booking.booking_folios.sum { |f| f.total_payments.to_d }
+  due_amount = total_charges - amount_paid
+%>
 <% content_for :title, "Guest Registration Card #{ @booking.guest_registration_card_number_display }" %>
 
 <style>
@@ -68,10 +75,17 @@
             <h2 class="mb-4 text-sm font-bold uppercase text-slate-500">Stay</h2>
             <dl class="space-y-3">
               <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Hotel</dt><dd class="font-semibold text-slate-950 sm:text-right"><%= current_hotel.name %></dd></div>
+              <% if @card.field_visible?(:room_number) %><div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Room(s)</dt><dd class="font-semibold text-slate-950 sm:text-right"><%= @booking.room_numbers.presence || "To be assigned" %></dd></div><% end %>
               <% if @card.field_visible?(:room_type) %><div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Room type</dt><dd class="text-slate-800 sm:text-right"><%= room_type_summary %></dd></div><% end %>
               <% if @card.field_visible?(:check_in) %><div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Check-in</dt><dd class="text-slate-800 sm:text-right"><%= l(@booking.check_in.to_date) %></dd></div><% end %>
               <% if @card.field_visible?(:check_out) %><div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Check-out</dt><dd class="text-slate-800 sm:text-right"><%= l(@booking.check_out.to_date) %></dd></div><% end %>
-              <% if @card.field_visible?(:room_number) %><div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Room(s)</dt><dd class="text-slate-800 sm:text-right"><%= @booking.room_numbers.presence || "To be assigned" %></dd></div><% end %>
+              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Night(s)</dt><dd class="text-slate-800 sm:text-right"><%= @booking.duration_in_nights %></dd></div>
+              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Room price</dt><dd class="text-slate-800 sm:text-right"><%= format_money.call(@booking.booking_rooms.sum(:subtotal)) %></dd></div>
+              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Tax</dt><dd class="text-slate-800 sm:text-right"><%= format_money.call(@booking.tax_total) %></dd></div>
+              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Rate type</dt><dd class="text-slate-800 sm:text-right"><%= @booking.booking_rooms.first&.rate_plan&.name || "Standard" %></dd></div>
+              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Total charges</dt><dd class="font-semibold text-slate-950 sm:text-right"><%= format_money.call(total_charges) %></dd></div>
+              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Amount paid</dt><dd class="text-slate-800 sm:text-right"><%= format_money.call(amount_paid) %></dd></div>
+              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Due amount</dt><dd class="font-semibold text-rose-600 sm:text-right"><%= format_money.call(due_amount) %></dd></div>
             </dl>
           </div>
         </div>
@@ -197,10 +211,17 @@
         <p class="mb-3 text-xs font-bold uppercase text-slate-500">Stay details</p>
         <dl class="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2">
           <% if @card.field_visible?(:booking_number) %><dt class="font-semibold text-slate-500">Booking</dt><dd class="font-semibold"><%= @booking.confirmation_token %></dd><% end %>
+          <% if @card.field_visible?(:room_number) %><dt class="font-semibold text-slate-500">Room(s)</dt><dd class="font-semibold"><%= @booking.room_numbers.presence || "To be assigned" %></dd><% end %>
           <% if @card.field_visible?(:room_type) %><dt class="font-semibold text-slate-500">Room type</dt><dd><%= room_type_summary %></dd><% end %>
           <% if @card.field_visible?(:check_in) %><dt class="font-semibold text-slate-500">Check-in</dt><dd><%= l(@booking.check_in.to_date) %></dd><% end %>
           <% if @card.field_visible?(:check_out) %><dt class="font-semibold text-slate-500">Check-out</dt><dd><%= l(@booking.check_out.to_date) %></dd><% end %>
-          <% if @card.field_visible?(:room_number) %><dt class="font-semibold text-slate-500">Room(s)</dt><dd><%= @booking.room_numbers.presence || "To be assigned" %></dd><% end %>
+          <dt class="font-semibold text-slate-500">Night(s)</dt><dd><%= @booking.duration_in_nights %></dd>
+          <dt class="font-semibold text-slate-500">Room price</dt><dd><%= format_money.call(@booking.booking_rooms.sum(:subtotal)) %></dd>
+          <dt class="font-semibold text-slate-500">Tax</dt><dd><%= format_money.call(@booking.tax_total) %></dd>
+          <dt class="font-semibold text-slate-500">Rate type</dt><dd><%= @booking.booking_rooms.first&.rate_plan&.name || "Standard" %></dd>
+          <dt class="font-semibold text-slate-500">Total charges</dt><dd class="font-semibold"><%= format_money.call(total_charges) %></dd>
+          <dt class="font-semibold text-slate-500">Amount paid</dt><dd><%= format_money.call(amount_paid) %></dd>
+          <dt class="font-semibold text-slate-500">Due amount</dt><dd class="font-semibold text-rose-600"><%= format_money.call(due_amount) %></dd>
         </dl>
       </div>
     </section>
