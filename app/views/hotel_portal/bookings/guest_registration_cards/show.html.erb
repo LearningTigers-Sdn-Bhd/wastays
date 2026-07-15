@@ -3,6 +3,7 @@
 <% guest_name = primary_booking_guest&.name_snapshot.presence || @booking.guest_name %>
 <% guest_phone = primary_booking_guest&.phone_snapshot.presence || @booking.guest_phone %>
 <% guest_email = primary_booking_guest&.email_snapshot.presence || @booking.guest_email %>
+<% guest_country = primary_booking_guest&.country_snapshot.presence || @booking.guest_country %>
 <% room_type_summary = @booking.room_type_summary.presence || "To be assigned" %>
 <% content_for :title, "Guest Registration Card #{ @booking.guest_registration_card_number_display }" %>
 
@@ -58,6 +59,7 @@
               <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Name</dt><dd class="font-semibold text-slate-950 sm:text-right"><%= guest_name %></dd></div>
               <% if @card.field_visible?(:phone) %><div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Phone</dt><dd class="text-slate-800 sm:text-right"><%= guest_phone %></dd></div><% end %>
               <% if @card.field_visible?(:email) %><div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Email</dt><dd class="break-all text-slate-800 sm:text-right"><%= guest_email %></dd></div><% end %>
+              <div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Country</dt><dd class="text-slate-800 sm:text-right"><%= guest_country.presence || "-" %></dd></div>
               <% if @card.field_visible?(:guest_count) %><div class="grid gap-1 sm:grid-cols-[7rem_1fr]"><dt class="text-slate-500">Guests</dt><dd class="text-slate-800 sm:text-right"><%= @booking.adults.to_i %> adult(s), <%= @booking.children.to_i %> child(ren)</dd></div><% end %>
             </dl>
           </div>
@@ -186,6 +188,7 @@
           <dt class="font-semibold text-slate-500">Name</dt><dd class="font-semibold"><%= guest_name %></dd>
           <% if @card.field_visible?(:phone) %><dt class="font-semibold text-slate-500">Phone</dt><dd><%= guest_phone %></dd><% end %>
           <% if @card.field_visible?(:email) %><dt class="font-semibold text-slate-500">Email</dt><dd><%= guest_email %></dd><% end %>
+          <dt class="font-semibold text-slate-500">Country</dt><dd><%= guest_country.presence || "-" %></dd>
           <% if @card.field_visible?(:guest_count) %><dt class="font-semibold text-slate-500">Guests</dt><dd><%= @booking.adults.to_i %> adult(s), <%= @booking.children.to_i %> child(ren)</dd><% end %>
         </dl>
       </div>

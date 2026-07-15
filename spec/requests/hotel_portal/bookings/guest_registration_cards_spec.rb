@@ -65,7 +65,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
     end
 
     it "renders primary stay snapshot details instead of later profile changes" do
-      guest = create(:guest, name: "Profile Name", email: "profile@example.com", phone: "111")
+      guest = create(:guest, name: "Profile Name", email: "profile@example.com", phone: "111", country: "Singapore")
       create(
         :booking_guest,
         booking: booking,
@@ -73,13 +73,14 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
         is_primary: true,
         name_snapshot: "Stay Name",
         email_snapshot: "stay@example.com",
-        phone_snapshot: "222"
+        phone_snapshot: "222",
+        country_snapshot: "Malaysia"
       )
 
       get hotel_booking_guest_registration_card_path(hotel, booking)
 
-      expect(response.body).to include("Stay Name", "stay@example.com", "222")
-      expect(response.body).not_to include("Profile Name", "profile@example.com")
+      expect(response.body).to include("Stay Name", "stay@example.com", "222", "Malaysia")
+      expect(response.body).not_to include("Profile Name", "profile@example.com", "Singapore")
     end
 
     it "shows room type by default on screen and print card" do
