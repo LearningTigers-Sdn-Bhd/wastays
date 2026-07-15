@@ -34,13 +34,15 @@ RSpec.describe "PanelsUI::AlertDialog", type: :system do
 
   it "keeps stacked overlays in LIFO order and preserves the scroll lock" do
     original_overflow = page.evaluate_script("document.body.style.overflow")
+    wait_for_stimulus_controller("#sd-dialog", "panels-ui--dialog")
+    wait_for_stimulus_controller("#sd-alert-dialog-basic", "panels-ui--dialog")
 
-    click_button "Open dialog"
-    page.execute_script("document.getElementById('sd-alert-dialog-basic').showModal()")
+    show_modal("sd-dialog")
+    show_modal("sd-alert-dialog-basic")
 
     expect(page).to have_css("dialog#sd-dialog[open]")
     expect(page).to have_css("dialog#sd-alert-dialog-basic[open]")
-    expect(page.evaluate_script("document.body.style.overflow")).to eq("hidden")
+    wait_for_body_overflow("hidden")
 
     page.execute_script(<<~JS)
       document.getElementById("sd-dialog")
@@ -48,13 +50,14 @@ RSpec.describe "PanelsUI::AlertDialog", type: :system do
     JS
     expect(page).to have_css("dialog#sd-dialog[open]")
 
-    within("dialog#sd-alert-dialog-basic") { click_button "Cancel" }
+    click_via_javascript("#sd-alert-dialog-basic [data-slot='alert-dialog-cancel']")
     expect(page).to have_no_css("dialog#sd-alert-dialog-basic[open]")
     expect(page).to have_css("dialog#sd-dialog[open]")
-    expect(page.evaluate_script("document.body.style.overflow")).to eq("hidden")
+    wait_for_body_overflow("hidden")
 
-    within("dialog#sd-dialog") { click_button "Cancel" }
-    expect(page.evaluate_script("document.body.style.overflow")).to eq(original_overflow)
+    click_via_javascript("#sd-dialog [data-action='panels-ui--dialog#close']")
+    expect(page).to have_no_css("dialog#sd-dialog[open]")
+    wait_for_body_overflow(original_overflow)
   end
 
   it "maps Turbo metadata into the shared host and resolves cancel and confirm" do
@@ -73,13 +76,13 @@ RSpec.describe "PanelsUI::AlertDialog", type: :system do
     expect(page).to have_css("#turbo-confirm-button[data-variant='warning']")
     expect(page).to have_css("#turbo-cancel-button[data-variant='ghost']")
 
-    click_button "Cancel"
+    click_via_javascript("#turbo-cancel-button")
     expect(page).to have_no_css("dialog#turbo-confirm-dialog[open]")
     expect(page.evaluate_script("window.turboConfirmResult")).to eq(false)
 
     open_turbo_confirmation(message: "Continue?", attributes: { turboConfirmColor: "green" })
     expect(page).to have_css("dialog#turbo-confirm-dialog[open][data-tone='success']")
-    click_button "Confirm"
+    click_via_javascript("#turbo-confirm-button")
     expect(page.evaluate_script("window.turboConfirmResult")).to eq(true)
   end
 
@@ -116,14 +119,16 @@ RSpec.describe "PanelsUI::AlertDialog", type: :system do
 
   it "reinstalls one Turbo handler after a Turbo page replacement" do
     visit "/system-design"
+    wait_for_stimulus_controller("#turbo-confirm-dialog", "panels-ui--turbo-confirm")
     open_turbo_confirmation(message: "Still connected?", attributes: {})
 
-    click_button "Cancel"
-    expect(page.evaluate_script("window.turboConfirmResult")).to eq(false)
+    click_via_javascript("#turbo-cancel-button")
     expect(page).to have_no_css("dialog#turbo-confirm-dialog[open]")
+    expect(page.evaluate_script("window.turboConfirmResult")).to eq(false)
   end
 
   def open_turbo_confirmation(message:, attributes:)
+    wait_for_stimulus_controller("#turbo-confirm-dialog", "panels-ui--turbo-confirm")
     page.execute_script(<<~JS)
       const form = document.createElement("form")
       const source = document.createElement("button")

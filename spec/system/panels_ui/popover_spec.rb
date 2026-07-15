@@ -5,31 +5,6 @@ require "rails_helper"
 RSpec.describe "PanelsUI::Popover", type: :system do
   before { visit "/system-design" }
 
-  def send_key(key)
-    page.execute_script(<<~JS)
-      document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: #{key.to_json}, bubbles: true }))
-    JS
-  end
-
-  # Preview components on /system-design hydrate after load and can replace their
-  # nodes continuously (Floating UI autoUpdate), so a Capybara handle can go stale
-  # between find and click. Query + click atomically in one JS call to avoid the race.
-  def js_click_css(selector)
-    page.execute_script(<<~JS, selector)
-      const el = document.querySelector(arguments[0])
-      if (!el) throw new Error(`element not found: ${arguments[0]}`)
-      el.click()
-    JS
-  end
-
-  def js_click_button(label)
-    page.execute_script(<<~JS, label)
-      const el = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === arguments[0])
-      if (!el) throw new Error(`button not found: ${arguments[0]}`)
-      el.click()
-    JS
-  end
-
   it "opens on trigger click and closes again on a second click" do
     click_button "Open popover"
     expect(page).to have_css("[role='dialog']:popover-open", text: "Dimensions")
@@ -42,7 +17,7 @@ RSpec.describe "PanelsUI::Popover", type: :system do
     click_button "Open popover"
     expect(page).to have_css("[role='dialog']:popover-open", text: "Dimensions")
 
-    send_key("Escape")
+    dispatch_key("Escape")
     expect(page).to have_no_css("[role='dialog']:popover-open", text: "Dimensions")
     expect(page.evaluate_script("document.activeElement.id")).to eq("popover-default-trigger")
   end
@@ -90,19 +65,23 @@ RSpec.describe "PanelsUI::Popover", type: :system do
     # Focus has moved into the panel (the trap's first tabbable).
     expect(page.evaluate_script("document.querySelector('[role=dialog]:popover-open').contains(document.activeElement)")).to be(true)
 
-    send_key("Escape")
+    dispatch_key("Escape")
     expect(page).to have_no_css("[role='dialog']:popover-open", text: "Rename layer")
     expect(page.evaluate_script("document.activeElement.id")).to eq("popover-focus-trigger")
   end
 
   it "closes an open dropdown menu when a popover opens (shared layer channel)" do
-    # The dropdown-menu preview lives on the same page; opening the popover must dismiss it.
-    js_click_css("[data-panels-ui--dropdown-menu-target='trigger']")
+    wait_for_stimulus_controller("#sd-dropdown", "panels-ui--dropdown-menu")
+    wait_for_stimulus_controller("#popover-default-trigger", "panels-ui--popover")
+
+    # Query and click atomically because Floating UI can invalidate a previously
+    # captured element handle while positioning the full preview catalogue.
+    click_via_javascript("#sd-dropdown-trigger")
     expect(page).to have_css("[role='menu']:popover-open")
 
     # The open menu overlaps the popover trigger, so dispatch the click directly rather
     # than hit-testing through the top-layer menu.
-    js_click_button("Open popover")
+    click_via_javascript("#popover-default-trigger")
     expect(page).to have_css("[role='dialog']:popover-open", text: "Dimensions")
     expect(page).to have_no_css("[role='menu']:popover-open")
   end

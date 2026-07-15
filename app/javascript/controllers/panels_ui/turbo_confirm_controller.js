@@ -58,6 +58,11 @@ export default class extends Controller {
   }
 
   closed() {
+    // Native close events are queued. If a confirmation is reopened before the
+    // previous event is delivered, that stale event must not cancel the new
+    // pending promise.
+    if (this.element.open) return
+
     this.settle(false)
   }
 

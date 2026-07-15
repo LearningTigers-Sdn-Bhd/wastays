@@ -59,7 +59,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      PARALLEL_TEST_PROCESSORS: 4
+      # System specs launch one Chrome process per RSpec worker. Three workers
+      # keep the browser suite within the hosted runner's CPU/memory envelope.
+      PARALLEL_TEST_PROCESSORS: 3
 
     services:
       postgres:

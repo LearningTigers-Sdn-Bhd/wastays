@@ -77,6 +77,7 @@ export default class extends Controller {
 
   startNavigation(anchor) {
     this.pendingAnchor = anchor
+    this.navigationDeadline = performance.now() + 1200
     if (this.navigationTimer) window.clearTimeout(this.navigationTimer)
     this.navigationTimer = window.setTimeout(this.finishNavigation, 1200)
   }
@@ -111,8 +112,16 @@ export default class extends Controller {
     this.setActive(active, true)
   }
 
-  finishNavigation() {
+  finishNavigation(event) {
     if (!this.pendingAnchor) return
+
+    // Native anchor scrolling and the preview catalogue's late layout work can
+    // emit scrollend before the requested section has reached its final position.
+    // Keep the requested anchor pinned for the full navigation window instead of
+    // allowing that premature event to hand control back to the scrollspy.
+    if (event?.type === "scrollend" && performance.now() < this.navigationDeadline) return
+
+    const completedAnchor = this.pendingAnchor
     const target = document.getElementById(this.pendingAnchor)
     const targetRect = target?.getBoundingClientRect()
     const targetIsVisible = targetRect && targetRect.bottom > 0 && targetRect.top < window.innerHeight
@@ -125,7 +134,7 @@ export default class extends Controller {
     this.pendingAnchor = null
     if (this.navigationTimer) window.clearTimeout(this.navigationTimer)
     this.navigationTimer = null
-    if (!targetReachedPosition && !(atPageEnd && targetIsVisible)) this.scheduleSync()
+    if (!targetReachedPosition && !(atPageEnd && targetIsVisible)) this.setActive(completedAnchor, false)
   }
 
   setActive(anchor, updateUrl) {

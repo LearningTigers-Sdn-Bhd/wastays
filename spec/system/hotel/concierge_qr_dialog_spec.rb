@@ -23,23 +23,18 @@ RSpec.describe "Concierge QR dialog", type: :system, js: true do
     create(:plan_feature, plan: plan, feature: concierge_feature, enabled: true)
 
     sign_in_through_ui(user)
+    visit hotel_general_settings_path(hotel)
   end
 
-  it "loads, closes, and reopens the QR dialog without leaving General settings" do
-    visit hotel_general_settings_path(hotel)
-    original_overflow = page.evaluate_script("document.body.style.overflow")
-
+  it "loads the QR actions without leaving General settings" do
     expect(page).to have_no_css("dialog#concierge-qr-code-dialog")
-    click_link "View QR"
-
-    expect(page).to have_css("dialog#concierge-qr-code-dialog[open]")
+    open_qr_dialog
     expect(page).to have_current_path(hotel_general_settings_path(hotel))
     expect(page).to have_css("#concierge-qr-print-area svg")
     expect(page).to have_link("Download SVG", href: hotel_concierge_qr_path(hotel, format: :svg))
     expect(page).to have_link("Download PNG", href: hotel_concierge_qr_path(hotel, format: :png))
     expect(page).to have_button("Print")
     expect(page).to have_button("Copy URL")
-    expect(page.evaluate_script("document.body.style.overflow")).to eq("hidden")
     expect(page.evaluate_script("document.activeElement.id")).to eq("concierge-qr-code-dialog-title")
 
     page.execute_script("window.print = () => { window.__conciergePrintCalled = true }")
@@ -55,19 +50,30 @@ RSpec.describe "Concierge QR dialog", type: :system, js: true do
     click_button "Copy URL"
     expect(page).to have_button("Copied")
     expect(page.evaluate_script("window.__conciergeCopiedUrl")).to include("/concierge/#{hotel.slug}")
+  end
+
+  it "restores page state after close and supports reopening and Escape" do
+    original_overflow = page.evaluate_script("document.body.style.overflow")
+    open_qr_dialog
 
     find("dialog#concierge-qr-code-dialog button[aria-label='Close']").click
 
     expect(page).to have_no_css("dialog#concierge-qr-code-dialog[open]")
     expect(page).to have_current_path(hotel_general_settings_path(hotel))
-    expect(page.evaluate_script("document.body.style.overflow")).to eq(original_overflow)
+    wait_for_body_overflow(original_overflow)
     expect(page.evaluate_script("document.activeElement.textContent.trim()")).to eq("View QR")
 
-    click_link "View QR"
-    expect(page).to have_css("dialog#concierge-qr-code-dialog[open]")
+    open_qr_dialog
 
     find("dialog#concierge-qr-code-dialog").send_keys(:escape)
     expect(page).to have_no_css("dialog#concierge-qr-code-dialog[open]")
     expect(page).to have_current_path(hotel_general_settings_path(hotel))
+    wait_for_body_overflow(original_overflow)
+  end
+
+  def open_qr_dialog
+    click_link "View QR"
+    expect(page).to have_css("dialog#concierge-qr-code-dialog[open]")
+    wait_for_body_overflow("hidden")
   end
 end

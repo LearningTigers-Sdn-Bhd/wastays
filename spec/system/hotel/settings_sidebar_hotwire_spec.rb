@@ -33,8 +33,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
       window.addEventListener("error", (event) => window.sidebarModeErrors.push(event.message))
     JS
 
-    find("#hotel-profile-trigger").click
-    within("#hotel-profile-menu") { click_link "Settings", href: hotel_general_settings_path(hotel) }
+    open_settings_from_profile
 
     expect(page).to have_current_path(hotel_general_settings_path(hotel))
     expect(page).to have_no_css("#hotel-sidebar", visible: :all)
@@ -52,9 +51,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
       expect(page).to have_no_link("Homepage")
     end
 
-    within("#hotel-settings-sidebar .panel-sidebar__header") do
-      find("a[aria-label='Hotel: #{hotel.name}'][href='#{hotel_dashboard_path(hotel)}']").click
-    end
+    return_to_dashboard
 
     expect(page).to have_current_path(hotel_dashboard_path(hotel))
     expect(page).to have_no_css("#hotel-settings-sidebar", visible: :all)
@@ -66,17 +63,27 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
       expect(page).to have_link("Help & support")
     end
     expect(page.evaluate_script("window.sidebarModeErrors")).to be_empty
+  end
+
+  it "reconnects profile-menu keyboard navigation after a settings Turbo round trip" do
+    visit hotel_dashboard_path(hotel)
+    open_settings_from_profile
+    expect(page).to have_current_path(hotel_general_settings_path(hotel))
+
+    return_to_dashboard
+    expect(page).to have_current_path(hotel_dashboard_path(hotel))
+    wait_for_stimulus_controller("#hotel-profile", "panels-ui--dropdown-menu")
 
     profile_toggle = find("#hotel-profile-trigger[aria-label='Open account menu'][aria-haspopup='menu'][aria-expanded='false']")
     profile_toggle.send_keys(:down)
     expect(page).to have_css("#hotel-profile-trigger[aria-expanded='true']")
     expect(page).to have_css("#hotel-profile-menu[role='menu']")
-    page.execute_script("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }))")
+    dispatch_key("Home")
     expect(page).to have_css("#hotel-profile-menu a:focus", text: "My account")
-    page.execute_script("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))")
+    dispatch_key("ArrowDown")
     expect(page.evaluate_script("document.activeElement.textContent.trim()")).to eq("Settings")
     expect(page).to have_css("a[role='menuitem'][href='#{hotel_general_settings_path(hotel)}']", text: "Settings")
-    page.execute_script("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))")
+    dispatch_key("Escape")
     expect(page).to have_no_css("#hotel-profile-menu:popover-open")
     expect(page).to have_css("#hotel-profile-trigger[aria-expanded='false']:focus")
   end
@@ -166,8 +173,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
     visit hotel_dashboard_path(hotel)
     find('button[aria-label="Collapse navigation"]').click
 
-    find("#hotel-profile-trigger").click
-    within("#hotel-profile-menu") { click_link "Settings", href: hotel_general_settings_path(hotel) }
+    open_settings_from_profile
 
     expect(page).to have_no_css("#hotel-sidebar", visible: :all)
     expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='true']")
@@ -191,5 +197,17 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
 
     find('button[aria-label="Collapse navigation"]').click
     expect(page).to have_css("#hotel-sidebar[data-collapsed='false']")
+  end
+
+  def open_settings_from_profile
+    wait_for_stimulus_controller("#hotel-profile", "panels-ui--dropdown-menu")
+    find("#hotel-profile-trigger").click
+    within("#hotel-profile-menu") { click_link "Settings", href: hotel_general_settings_path(hotel) }
+  end
+
+  def return_to_dashboard
+    within("#hotel-settings-sidebar .panel-sidebar__header") do
+      find("a[aria-label='Hotel: #{hotel.name}'][href='#{hotel_dashboard_path(hotel)}']").click
+    end
   end
 end
