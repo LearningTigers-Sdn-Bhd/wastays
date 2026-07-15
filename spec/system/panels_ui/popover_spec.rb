@@ -11,6 +11,25 @@ RSpec.describe "PanelsUI::Popover", type: :system do
     JS
   end
 
+  # Preview components on /system-design hydrate after load and can replace their
+  # nodes continuously (Floating UI autoUpdate), so a Capybara handle can go stale
+  # between find and click. Query + click atomically in one JS call to avoid the race.
+  def js_click_css(selector)
+    page.execute_script(<<~JS, selector)
+      const el = document.querySelector(arguments[0])
+      if (!el) throw new Error(`element not found: ${arguments[0]}`)
+      el.click()
+    JS
+  end
+
+  def js_click_button(label)
+    page.execute_script(<<~JS, label)
+      const el = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === arguments[0])
+      if (!el) throw new Error(`button not found: ${arguments[0]}`)
+      el.click()
+    JS
+  end
+
   it "opens on trigger click and closes again on a second click" do
     click_button "Open popover"
     expect(page).to have_css("[role='dialog']:popover-open", text: "Dimensions")
@@ -78,12 +97,12 @@ RSpec.describe "PanelsUI::Popover", type: :system do
 
   it "closes an open dropdown menu when a popover opens (shared layer channel)" do
     # The dropdown-menu preview lives on the same page; opening the popover must dismiss it.
-    first("[data-panels-ui--dropdown-menu-target='trigger']").click
+    js_click_css("[data-panels-ui--dropdown-menu-target='trigger']")
     expect(page).to have_css("[role='menu']:popover-open")
 
     # The open menu overlaps the popover trigger, so dispatch the click directly rather
     # than hit-testing through the top-layer menu.
-    find_button("Open popover").trigger("click")
+    js_click_button("Open popover")
     expect(page).to have_css("[role='dialog']:popover-open", text: "Dimensions")
     expect(page).to have_no_css("[role='menu']:popover-open")
   end

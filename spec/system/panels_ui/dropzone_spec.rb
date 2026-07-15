@@ -9,6 +9,19 @@ RSpec.describe "PanelsUI::Dropzone", type: :system do
 
   before { visit "/system-design" }
 
+  # The dropzone controller re-renders its attachments on connect, which can replace
+  # server-rendered nodes mid-interaction. Query + click atomically in one JS call,
+  # scoped to the file-upload section, so no re-render can stale a handle between
+  # find and click.
+  def click_in_upload_section(selector)
+    page.execute_script(<<~JS, selector)
+      const section = document.querySelector("#file-upload-preview-heading").closest("section")
+      const el = section.querySelector(arguments[0])
+      if (!el) throw new Error(`element not found: ${arguments[0]}`)
+      el.click()
+    JS
+  end
+
   it "renders native inputs, attachments, and dropzones in both themes" do
     expect(page).to have_css("#file-upload-preview-heading", text: "File uploads")
     expect(page).to have_css("[data-theme='panel-light'] input.panel-input[type='file']", visible: :all)
@@ -43,24 +56,38 @@ RSpec.describe "PanelsUI::Dropzone", type: :system do
   end
 
   it "activates the full-card trigger without trapping the attachment action" do
-    section = page.find("#file-upload-preview-heading").ancestor("section")
-    attachment = section.find("[data-theme='panel-light'] .panel-attachment[data-state='ready']")
-    trigger = attachment.find(".panel-attachment__trigger[aria-label='Open selected-file.pdf']")
-    action = attachment.find("button[aria-label='Remove selected-file.pdf']")
+    attachment_scope = "[data-theme='panel-light'] .panel-attachment[data-state='ready']"
+    trigger_selector = "#{attachment_scope} .panel-attachment__trigger[aria-label='Open selected-file.pdf']"
+    action_selector = "#{attachment_scope} button[aria-label='Remove selected-file.pdf']"
 
-    layering = page.evaluate_script(<<~JS, trigger, action)
-      ({
-        trigger: Number(getComputedStyle(arguments[0]).zIndex),
-        action: Number(getComputedStyle(arguments[1].closest(".panel-attachment__actions")).zIndex)
-      })
+    layering = page.evaluate_script(<<~JS, trigger_selector, action_selector)
+      (() => {
+        const section = document.querySelector("#file-upload-preview-heading").closest("section")
+        return {
+          trigger: Number(getComputedStyle(section.querySelector(arguments[0])).zIndex),
+          action: Number(getComputedStyle(section.querySelector(arguments[1]).closest(".panel-attachment__actions")).zIndex)
+        }
+      })()
     JS
     expect(layering.fetch("action")).to be > layering.fetch("trigger")
 
-    action.click
-    expect(URI.parse(page.current_url).fragment).to be_nil
+    # The page's scrollspy owns location.hash, so assert the full-card trigger's
+    # activation directly: the remove action must not activate the trigger link,
+    # while clicking the trigger itself must (navigating to the card's target).
+    page.execute_script(<<~JS, trigger_selector)
+      const section = document.querySelector("#file-upload-preview-heading").closest("section")
+      window.__attachmentTriggerHref = null
+      section.querySelector(arguments[0]).addEventListener("click", (event) => {
+        event.preventDefault()
+        window.__attachmentTriggerHref = event.currentTarget.getAttribute("href")
+      })
+    JS
 
-    trigger.click
-    expect(URI.parse(page.current_url).fragment).to eq("file-upload-preview-heading")
+    click_in_upload_section(action_selector)
+    expect(page.evaluate_script("window.__attachmentTriggerHref")).to be_nil
+
+    click_in_upload_section(trigger_selector)
+    expect(page.evaluate_script("window.__attachmentTriggerHref")).to eq("#file-upload-preview-heading")
   end
 
   it "accumulates unique files, renders image attachments, removes files, and clears the selection" do

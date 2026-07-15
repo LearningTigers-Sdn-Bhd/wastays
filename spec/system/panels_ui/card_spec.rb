@@ -7,10 +7,21 @@ RSpec.describe "PanelsUI::Card", type: :system do
 
   it "activates the primary link with the keyboard" do
     link = find("[data-testid='clickable-record-card'] .panel-card__primary-link")
-    page.execute_script("arguments[0].focus()", link)
+    # The system-design page runs a scrollspy that owns location.hash, so assert
+    # the keyboard activation directly (the accessibility intent) rather than the
+    # transient URL, which the scrollspy resets to the visible section on scroll.
+    page.execute_script(<<~JS, link)
+      const link = arguments[0]
+      window.__cardLinkActivatedHref = null
+      link.addEventListener("click", (event) => {
+        event.preventDefault()
+        window.__cardLinkActivatedHref = event.currentTarget.getAttribute("href")
+      }, { once: true })
+      link.focus()
+    JS
     link.send_keys(:enter)
 
-    expect(page).to have_current_path(%r{/system-design#card-booking-1042$}, url: true)
+    expect(page.evaluate_script("window.__cardLinkActivatedHref")).to eq("#card-booking-1042")
   end
 
   it "keeps a nested action independent from card navigation" do

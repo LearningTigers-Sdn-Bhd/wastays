@@ -33,7 +33,7 @@ RSpec.describe "PanelsUI::Tooltip", type: :system do
     page.execute_script("arguments[0].focus()", trigger)
     expect(page).to have_css("[role='tooltip']:popover-open", text: "Copy to clipboard")
 
-    page.execute_script("arguments[0].blur()", trigger)
+    page.execute_script("document.activeElement.blur()")
     expect(page).to have_no_css("[role='tooltip']:popover-open", text: "Copy to clipboard")
   end
 
