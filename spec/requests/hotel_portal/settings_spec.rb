@@ -108,6 +108,24 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(document.at_css("#hotel_property_policy_attributes_check_out_time")["value"]).to eq("11:00")
     end
 
+    it "renders Notifications as two columns with five independent Panels UI cards" do
+      get hotel_notification_settings_path(hotel)
+
+      document = response.parsed_body
+      section = document.at_css("section[aria-labelledby='communication-notifications-heading']")
+      expect(section.at_css(".grid.lg\:grid-cols-2")).to be_present
+      expect(section.css("article.panel-card").size).to eq(5)
+      expect(section.css("article.panel-card[data-dividers='none']").size).to eq(5)
+      expect(section.css("article.panel-card").first(2).map { |card| card["data-notification-type"] }).to eq(
+        %w[check_in_confirmation check_out_receipt_message]
+      )
+      expect(section.css("form[action='#{hotel_notification_settings_path(hotel)}']").size).to eq(5)
+      in_stay_wrapper = section.at_css("[data-notification-type='in_stay_guest_messaging']").ancestors.find { |node| node["class"].to_s.include?("lg:col-span-2") }
+      expect(in_stay_wrapper).to be_present
+      expect(section.at_css("input[name='notification_config[settings][review_link]']")).to be_present
+      expect(section.at_css("input[name='notification_config[settings][rules][mid_stay][time]']")).to be_present
+    end
+
     it "shows setup tabs in the settings tab bar" do
       get hotel_general_settings_path(hotel)
 

@@ -11,7 +11,7 @@
     @apply transition-[border-color,box-shadow,background-color] duration-200 hover:border-border-interactive hover:shadow-md focus-within:border-border-interactive focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2;
   }
 
-  .panel-card__layout { @apply flex min-w-0 flex-col; }
+  .panel-card__layout { @apply flex h-full min-w-0 flex-col; }
   .panel-card__sections { @apply flex min-w-0 flex-1 flex-col; }
   .panel-card__content { @apply flex-1; }
 
