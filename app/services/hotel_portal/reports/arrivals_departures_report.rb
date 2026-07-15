@@ -14,6 +14,8 @@ module HotelPortal
         :in_house_count,
         :departure_count,
         :checkout_count,
+        :hotel_time_zone,
+        :allow_boat_information,
         keyword_init: true
       )
 
@@ -44,7 +46,9 @@ module HotelPortal
           arrival_count: arrivals.size,
           in_house_count: in_house.size,
           departure_count: departures.size,
-          checkout_count: checkout.size
+          checkout_count: checkout.size,
+          hotel_time_zone: @hotel.hotel_time_zone,
+          allow_boat_information: @hotel.allow_boat_information
         )
       end
 
@@ -70,7 +74,7 @@ module HotelPortal
         @hotel.bookings
               .where(status: IN_HOUSE_STATUSES)
               .where("check_in <= ? AND check_out >= ?", @end_date, @start_date)
-              .includes(:booking_notes, booking_rooms: :room_type)
+              .includes(:booking_notes, :booking_guests, booking_rooms: :room_type)
               .order(:check_in, :created_at, :id)
       end
 
@@ -116,9 +120,11 @@ module HotelPortal
         }
       end
 
-      def in_house_fields(_booking)
+      def in_house_fields(booking)
+        primary_bg = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
         {
-          departure_status: "In house"
+          departure_status: "In house",
+          boat_departure: primary_bg&.boat_out_at
         }
       end
 

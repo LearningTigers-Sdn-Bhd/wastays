@@ -5,9 +5,10 @@ require "csv"
 module HotelPortal
   class ReportsController < HotelPortal::BaseController
     include FinancialFiltering
+    include ReportDateFiltering
 
     PAYOUT_TABS = %w[upcoming paid].freeze
-    GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards].freeze
+    GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards bibo].freeze
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
 
     before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability guest_reports folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
@@ -309,20 +310,31 @@ module HotelPortal
 
     def guest_reports
       @active_guest_report_tab = GUEST_REPORT_TABS.include?(params[:tab]) ? params[:tab] : "arrivals"
+      if @active_guest_report_tab == "bibo" && !current_hotel.allow_boat_information?
+        @active_guest_report_tab = "arrivals"
+      end
       @report_start_date, @report_end_date = parse_report_date_range
+
       @report = HotelPortal::Reports::ArrivalsDeparturesReport.new(
         hotel: current_hotel,
         start_date: @report_start_date,
         end_date: @report_end_date
       ).call
-      load_guest_registration_cards(start_date: @report.start_date, end_date: @report.end_date)
+
+      @bibo_report = HotelPortal::Reports::BiboReport.new(
+        hotel: current_hotel,
+        start_date: @report_start_date,
+        end_date: @report_end_date
+      ).call
+      load_guest_registration_cards(start_date: @report_start_date, end_date: @report_end_date)
 
       respond_to do |format|
         format.html
         format.csv do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: @report, tab: @active_guest_report_tab).generate
+          report_to_export = @active_guest_report_tab == "bibo" ? @bibo_report : @report
+          csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
           send_data csv,
             filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.csv",
             type: "text/csv"
@@ -330,7 +342,8 @@ module HotelPortal
         format.any(:xls) do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(report: @report, tab: @active_guest_report_tab).generate
+          report_to_export = @active_guest_report_tab == "bibo" ? @bibo_report : @report
+          workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
           send_data workbook,
             filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.xls",
             type: "application/vnd.ms-excel",
@@ -339,7 +352,8 @@ module HotelPortal
         format.pdf do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: @report, tab: @active_guest_report_tab).generate
+          report_to_export = @active_guest_report_tab == "bibo" ? @bibo_report : @report
+          pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: report_to_export, tab: @active_guest_report_tab).generate
           send_data pdf,
             filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.pdf",
             type: "application/pdf",
@@ -594,119 +608,12 @@ module HotelPortal
       @grc_cards = @grc_cards.page(params[:page]).per(25)
     end
 
-    def parse_report_date_range
-      # Handle date_preset parameter (e.g., "2026-05", "this_month", "custom")
-      date_preset = params[:date_preset].presence
-      date_preset ||= "custom" if params[:start_date].present? || params[:end_date].present?
-      date_preset ||= "legacy_date" if params[:date].present?
-      date_preset ||= default_report_date_preset
-      @date_preset = date_preset
-
-      if date_preset.present?
-        case date_preset
-        when "today"
-          return [ Date.current, Date.current ]
-        when "all_time"
-          return [ Date.new(2024, 1, 1), Date.current ]
-        when "this_year"
-          return [ Date.current.beginning_of_year, Date.current.end_of_year ]
-        when "last_month"
-          last_month = 1.month.ago.to_date
-          return [ last_month.beginning_of_month, last_month.end_of_month ]
-        when "this_month"
-          return [ Date.current.beginning_of_month, Date.current.end_of_month ]
-        when "custom"
-          start = parse_single_report_date(params[:start_date]) || Date.current.beginning_of_month
-          end_date = parse_single_report_date(params[:end_date]) || Date.current.end_of_month
-          end_date = start if end_date < start
-          return [ start, end_date ]
-        when "legacy_date"
-          parsed_date = parse_single_report_date(params[:date])
-          return [ parsed_date, parsed_date ] if parsed_date
-        else
-          # Check if it's a specific month (e.g. "2026-03")
-          if date_preset =~ /\A\d{4}-\d{2}\z/
-            start_date = Date.parse("#{date_preset}-01")
-            return [ start_date, start_date.end_of_month ]
-          end
-        end
-      end
-
-      # Backward compatible: if only `date` is provided, treat it as one-day range.
-      if params[:start_date].blank? && params[:end_date].blank? && params[:date].present?
-        parsed_date = parse_single_report_date(params[:date])
-        return [ parsed_date, parsed_date ]
-      end
-
-      start_date = parse_single_report_date(params[:start_date])
-      end_date = parse_single_report_date(params[:end_date])
-
-      start_date ||= end_date || Date.current
-      end_date ||= start_date
-      end_date = start_date if end_date < start_date
-
-      [ start_date, end_date ]
-    end
-
-    def parse_single_report_date(value)
-      return if value.blank?
-
-      Date.parse(value.to_s)
-    rescue ArgumentError, TypeError
-      nil
-    end
-
-    def parse_deposit_liability_date
-      date_preset = params[:date_preset].presence
-      date_preset ||= "custom" if params[:as_of_date].present?
-      date_preset ||= "today"
-      @date_preset = date_preset
-
-      if date_preset.present?
-        case date_preset
-        when "today"
-          return Date.current
-        when "all_time", "this_year"
-          # As of report - use current date for these
-          return Date.current
-        when "last_month"
-          last_month = 1.month.ago.to_date
-          return last_month.end_of_month
-        when "this_month"
-          return Date.current.end_of_month
-        when "custom"
-          # Use user-provided as_of_date or default to end of month
-          return parse_single_report_date(params[:as_of_date]) || Date.current.end_of_month
-        else
-          # Check if it's a specific month (e.g. "2026-03")
-          if date_preset =~ /\A\d{4}-\d{2}\z/
-            return Date.parse("#{date_preset}-01").end_of_month
-          end
-        end
-      end
-
-      # Fallback: use as_of_date param or date param or default
-      parse_single_report_date(params[:as_of_date]) || parse_single_report_date(params[:date]) || current_hotel.business_date_for || Date.current
-    end
-
-    def default_report_date_preset
-      "today"
-    end
-
     def authorize_view_reports!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_reports", hotel: current_hotel)
     end
 
     def authorize_view_payouts!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_payouts", hotel: current_hotel)
-    end
-
-    def parse_date_param(value)
-      return if value.blank?
-
-      Date.parse(value.to_s)
-    rescue ArgumentError
-      nil
     end
 
     def financial_performance_export_service

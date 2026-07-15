@@ -1,5 +1,4 @@
 <%# locals: (room:, date:, hotel_today:, current_hotel:, booking_timeline_board:, rate_text_class:, currency_text_class:) %>
-<% slot_params = { check_in: date, room_type_id: room[:room_type].id, room_number: room[:room_number], source: "booking_timeline_board", return_to: request.fullpath } %>
 <div class="absolute inset-0 z-0" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="right">
   <button type="button"
           class="flex h-full w-full flex-col justify-between p-1 transition-colors hover:bg-slate-50/80 focus-visible:z-20 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-900"
@@ -29,7 +28,7 @@
       <p class="text-xs font-bold text-slate-900">Room <%= room[:room_number] %></p>
       <p class="mt-0.5 text-[11px] font-medium text-slate-500"><%= date.strftime("%a, %b %-d, %Y") %></p>
     </div>
-    <% board_cell_action_items(date, hotel_today, current_hotel, slot_params).each do |action| %>
+    <% board_cell_action_items(date, hotel_today, current_hotel, room, request.fullpath).each do |action| %>
       <%= link_to action[:path],
         role: "menuitem", class: "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none",
         data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %>

@@ -1,16 +1,10 @@
 <div class="max-w-[1600px] mx-auto pb-20 space-y-8 print:max-w-none print:pb-0 print:space-y-4">
-  <% guest_report_tabs = [["Arrivals", "arrivals"], ["In-House", "in_house"], ["Departures", "departures"], ["Checkout", "checkout"], ["Registration Cards", "registration_cards"]] %>
   <div class="px-4 md:px-0 print:px-0">
     <div class="mt-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between print:mt-0 print:block">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl print:text-xl">Guest Reports</h1>
         <p class="mt-1 text-sm font-medium text-slate-600 print:text-xs">
-          <%= current_hotel.name %> ·
-          <% if @report.start_date == @report.end_date %>
-            <%= @report.start_date.strftime("%A, %d %b %Y") %>
-          <% else %>
-            <%= @report.start_date.strftime("%d %b %Y") %> - <%= @report.end_date.strftime("%d %b %Y") %>
-          <% end %>
+          <%= current_hotel.name %> · <%= guest_reports_date_range_label(@report) %>
         </p>
       </div>
 
@@ -37,7 +31,7 @@
           <% if feature_enabled_for_hotel?("excel_pdf_export") && @active_guest_report_tab != "registration_cards" %>
           <details class="relative min-w-[160px]">
             <summary class="list-none inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50">
-              <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <%= cached_icon "download", class: "size-4 me-2", stroke_width: 2.5 %>
               Export
             </summary>
             <div class="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
@@ -81,33 +75,21 @@
 
   <div class="px-4 md:px-0 print:hidden">
     <div class="flex flex-wrap items-center gap-2">
-      <% guest_report_tabs.each do |label, value| %>
-        <% count = {
-          "arrivals" => @report.arrival_count,
-          "in_house" => @report.in_house_count,
-          "departures" => @report.departure_count,
-          "checkout" => @report.checkout_count,
-          "registration_cards" => @grc_total_count
-        }[value] %>
-        <% active = value == @active_guest_report_tab %>
-        <%= link_to guest_reports_hotel_reports_path(
-            current_hotel,
-            start_date: @report.start_date,
-            end_date: @report.end_date,
-            date_preset: @date_preset,
-            tab: value
-          ),
-          class: "inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition #{active ? 'border-blue-600 bg-blue-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'}" do %>
-          <span><%= label %></span>
-          <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold <%= active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500' %>">
-            <%= count %>
-          </span>
+      <% guest_report_tabs_data(@report, @bibo_report, @active_guest_report_tab, @grc_total_count, current_hotel, @date_preset).each do |tab| %>
+        <%= link_to tab[:path],
+          class: "inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition #{tab[:active] ? 'border-blue-600 bg-blue-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'}" do %>
+          <span><%= tab[:label] %></span>
+          <% if tab[:count].present? %>
+            <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold <%= tab[:active] ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500' %>">
+              <%= tab[:count] %>
+            </span>
+          <% end %>
         <% end %>
       <% end %>
     </div>
   </div>
 
-  <% unless @active_guest_report_tab == "registration_cards" %>
+  <% if show_metrics_cards?(@active_guest_report_tab) %>
     <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-2 xl:grid-cols-4 print:grid-cols-2 print:rounded-none print:shadow-none">
       <div class="p-6 md:border-r md:border-slate-200 print:p-3">
         <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Arrivals</p>
@@ -140,7 +122,8 @@
       title: "In-House Guests",
       empty_message: "No in-house guests for this selected period.",
       rows: @report.in_house,
-      type: :departure
+      type: :departure,
+      show_boat_departure: current_hotel.allow_boat_information?
     } %>
   <% elsif @active_guest_report_tab == "departures" %>
     <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
@@ -155,6 +138,10 @@
       empty_message: "No checked-out guests for this selected period.",
       rows: @report.checkout,
       type: :departure
+    } %>
+  <% elsif @active_guest_report_tab == "bibo" %>
+    <%= render partial: "hotel_portal/reports/bibo_section", locals: {
+      report: @bibo_report
     } %>
   <% else %>
     <%= render "hotel_portal/reports/guest_registration_cards_section",

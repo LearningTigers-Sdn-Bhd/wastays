@@ -94,6 +94,7 @@ class Hotel < ApplicationRecord
 
   before_validation :normalize_default_currency
   before_validation :reset_pax_pricing_only_if_not_allowed
+  before_validation :normalize_hotel_prefix
   before_create :assign_hotel_prefix
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
@@ -617,6 +618,10 @@ class Hotel < ApplicationRecord
   def assign_hotel_prefix
     return if hotel_prefix.present?
     self.hotel_prefix = generate_unique_prefix
+  end
+
+  def normalize_hotel_prefix
+    self.hotel_prefix = nil if hotel_prefix.blank?
   end
 
   PREFIX_MIN_LENGTH = 3

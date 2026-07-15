@@ -4,16 +4,18 @@ module BookingGuests
   class UpdateSnapshot
     Result = Data.define(:success?, :errors)
     SNAPSHOT_ATTRIBUTES = %i[name email phone government_id gender country document_type date_of_birth].freeze
+    BIBO_ATTRIBUTES = %i[boat_in_at boat_out_at].freeze
 
-    def self.call(booking_guest:, attributes:, actor:, update_profile: false)
-      new(booking_guest:, attributes:, actor:, update_profile:).call
+    def self.call(booking_guest:, attributes:, actor:, update_profile: false, bibo_attributes: {})
+      new(booking_guest:, attributes:, actor:, update_profile:, bibo_attributes:).call
     end
 
-    def initialize(booking_guest:, attributes:, actor:, update_profile:)
+    def initialize(booking_guest:, attributes:, actor:, update_profile:, bibo_attributes:)
       @booking_guest = booking_guest
       @booking = booking_guest.booking
       @guest = booking_guest.guest
       @attributes = attributes.to_h.symbolize_keys.slice(*SNAPSHOT_ATTRIBUTES)
+      @bibo_attributes = bibo_attributes.to_h.symbolize_keys.slice(*BIBO_ATTRIBUTES)
       @actor = actor
       @update_profile = update_profile
     end
@@ -27,7 +29,7 @@ module BookingGuests
       old_values = snapshot_values
 
       ActiveRecord::Base.transaction do
-        @booking_guest.update!(snapshot_updates(normalized))
+        @booking_guest.update!(snapshot_updates(normalized).merge(@bibo_attributes))
         update_primary_booking!(normalized) if @booking_guest.primary?
         @guest.update!(normalized) if @update_profile
         record_audit!(old_values, normalized)
@@ -46,6 +48,7 @@ module BookingGuests
 
     def snapshot_values
       SNAPSHOT_ATTRIBUTES.to_h { |key| [ key.to_s, @booking_guest.public_send(:"#{key}_snapshot") ] }
+        .merge(BIBO_ATTRIBUTES.to_h { |key| [ key.to_s, @booking_guest.public_send(key) ] })
     end
 
     def update_primary_booking!(values)
@@ -65,7 +68,7 @@ module BookingGuests
         user: @actor,
         action_type: "guest_updated",
         old_value: old_values,
-        new_value: values.stringify_keys,
+        new_value: values.stringify_keys.merge(@bibo_attributes.stringify_keys),
         metadata: { "save_scope" => @update_profile ? "snapshot_and_profile" : "snapshot" }
       )
     end

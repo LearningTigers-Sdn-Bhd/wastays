@@ -1,0 +1,52 @@
+<div class="space-y-8">
+  <% [
+    { title: "Boat Arrivals", rows: report.boat_ins, empty_message: "No boat arrivals recorded or expected for this selected period." },
+    { title: "Boat Departures", rows: report.boat_outs, empty_message: "No boat departures recorded or expected for this selected period." }
+  ].each do |section| %>
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:rounded-none print:shadow-none print:break-inside-avoid">
+      <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 print:bg-white print:px-3 print:py-2">
+        <h2 class="text-lg font-bold tracking-tight text-slate-950 print:text-base"><%= section[:title] %></h2>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full table-fixed print:table-auto">
+          <thead class="bg-slate-100 print:bg-white">
+            <tr>
+              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8 print:px-2 print:py-2">Guest</th>
+              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 print:px-2 print:py-2">Room Type</th>
+              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 print:px-2 print:py-2">Room</th>
+              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 print:px-2 print:py-2">Stay Dates</th>
+              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8 print:px-2 print:py-2">Boat Time</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 bg-white">
+            <% if section[:rows].any? %>
+              <% section[:rows].each_with_index do |row, index| %>
+                <tr class="align-top transition-colors <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %> print:bg-white">
+                  <td class="px-6 py-4 sm:px-8 print:px-2 print:py-2">
+                    <p class="text-sm font-bold text-slate-900 print:text-xs"><%= row[:guest_name] %></p>
+                    <p class="mt-1 text-xs font-mono text-slate-500 print:text-[10px]"><%= row[:confirmation_token] %></p>
+                  </td>
+                  <td class="px-6 py-4 text-sm font-medium text-slate-700 print:px-2 print:py-2 print:text-xs"><%= row[:room_type] %></td>
+                  <td class="px-6 py-4 text-sm font-medium text-slate-700 print:px-2 print:py-2 print:text-xs"><%= row[:room_number] %></td>
+                  <td class="px-6 py-4 text-sm font-medium text-slate-700 print:px-2 print:py-2 print:text-xs"><%= row[:stay_dates] %></td>
+                  <td class="px-6 py-4 sm:px-8 print:px-2 print:py-2">
+                    <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-bold text-slate-700">
+                      <%= row[:boat_time] %>
+                    </span>
+                  </td>
+                </tr>
+              <% end %>
+            <% else %>
+              <tr>
+                <td colspan="5" class="px-6 py-16 text-center text-sm font-medium text-slate-500 sm:px-8 print:px-2 print:py-6 print:text-xs">
+                  <%= section[:empty_message] %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+</div>
