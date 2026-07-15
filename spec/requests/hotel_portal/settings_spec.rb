@@ -113,7 +113,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
       document = response.parsed_body
       section = document.at_css("section[aria-labelledby='communication-notifications-heading']")
-      expect(section.at_css(".grid.lg\:grid-cols-2")).to be_present
+      expect(section.at_css(".grid.lg\\:grid-cols-2")).to be_present
       expect(section.css("article.panel-card").size).to eq(5)
       expect(section.css("article.panel-card[data-dividers='none']").size).to eq(5)
       expect(section.css("article.panel-card").first(2).map { |card| card["data-notification-type"] }).to eq(
