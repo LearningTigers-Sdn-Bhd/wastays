@@ -3,14 +3,6 @@
 module HotelPortal
   module Reports
     class DailyRevenueReport
-      SOURCE_LABELS = {
-        "walk_in" => "Walk-in",
-        "agoda" => "Agoda",
-        "whatsapp" => "WhatsApp",
-        "corporate" => "Corporate",
-        "internal" => "Direct"
-      }.freeze
-
       AGENT_ACCOUNT_TYPES = %w[travel_agent airline].freeze
 
       Result = Struct.new(:start_date, :end_date, :totals, :rows, :source_rows, keyword_init: true)
@@ -227,9 +219,7 @@ module HotelPortal
       end
 
       def normalize_source(source)
-        source_key = source.to_s.strip
-        source_key = "unknown" if source_key.empty?
-        SOURCE_LABELS[source_key] || source_key.titleize.presence || "Others"
+        BookingSourceLabel.normalize(source)
       end
     end
   end

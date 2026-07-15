@@ -1,0 +1,59 @@
+<%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "right" } do %>
+  <div class="flex h-full min-h-0 flex-col bg-slate-100">
+    <header class="shrink-0 border-b border-slate-200 bg-white">
+      <div class="flex items-start justify-between gap-4 px-6 py-5">
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Daily Revenue Report</p>
+          <h2 class="mt-1 text-xl font-bold tracking-tight text-slate-950"><%= @detail.category_label %></h2>
+          <p class="mt-1 text-xs font-medium text-slate-500">
+            <% if @detail.start_date == @detail.end_date %>
+              <%= @detail.start_date.strftime("%A, %d %b %Y") %>
+            <% else %>
+              <%= @detail.start_date.strftime("%d %b") %> – <%= @detail.end_date.strftime("%d %b %Y") %>
+            <% end %>
+          </p>
+        </div>
+        <button type="button" class="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" data-action="click->offcanvas#close" aria-label="Close">
+          <%= cached_icon "x", stroke_width: 2.5, class: "size-5" %>
+        </button>
+      </div>
+    </header>
+
+    <div class="min-h-0 flex-1 overflow-y-auto p-6">
+      <% if @detail.entries.any? %>
+        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <table class="w-full text-left text-sm">
+            <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+              <tr>
+                <th class="px-4 py-3">Date</th>
+                <th class="px-4 py-3">Description</th>
+                <th class="px-4 py-3">Booking</th>
+                <th class="px-4 py-3">Source</th>
+                <th class="px-4 py-3 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% @detail.entries.each do |entry| %>
+                <tr>
+                  <td class="whitespace-nowrap px-4 py-3 text-slate-600"><%= entry.date.strftime("%d %b %Y") %></td>
+                  <td class="px-4 py-3 font-semibold text-slate-900"><%= entry.description %></td>
+                  <td class="px-4 py-3 text-slate-600">
+                    <% if entry.booking_reference.present? %>
+                      <%= entry.booking_reference %><% if entry.folio_reference.present? && entry.folio_reference != entry.booking_reference %> · <%= entry.folio_reference %><% end %>
+                    <% else %>
+                      —
+                    <% end %>
+                  </td>
+                  <td class="px-4 py-3 text-slate-600"><%= entry.source_label %></td>
+                  <td class="px-4 py-3 text-right font-semibold tabular-nums text-slate-950"><%= entry.currency %> <%= report_amount(entry.amount) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="px-6 py-10 text-center text-sm text-slate-500">No records found for this cell.</p>
+      <% end %>
+    </div>
+  </div>
+<% end %>

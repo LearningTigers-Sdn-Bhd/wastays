@@ -11,14 +11,14 @@ module HotelPortal
     GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards bibo meal_prep].freeze
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
 
-    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability guest_reports folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
+    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue daily_revenue_cell daily_revenue_source_bookings managers_flash outstanding_balance deposit_liability guest_reports folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
     before_action :authorize_view_payouts!, only: %i[payouts]
     before_action -> { require_feature!("daily_occupancy_revenue") }, only: %i[daily_occupancy]
     before_action -> { require_feature!("arrivals_departures_list") }, only: %i[guest_reports]
     before_action -> { require_feature!("outstanding_balance_noshow") }, only: %i[outstanding_balance]
     before_action -> { require_feature!("housekeeper_productivity") }, only: %i[managers_flash]
     before_action -> { require_feature!("booking_source_analysis") }, only: %i[breakdown]
-    before_action -> { require_feature!("revenue_allocation_per_night") }, only: %i[daily_revenue]
+    before_action -> { require_feature!("revenue_allocation_per_night") }, only: %i[daily_revenue daily_revenue_cell daily_revenue_source_bookings]
     before_action -> { require_feature!("excel_pdf_export") }, if: -> { %i[csv xls pdf].include?(request.format.symbol) }
 
     def index
@@ -209,6 +209,33 @@ module HotelPortal
             disposition: "attachment"
         end
       end
+    end
+
+    def daily_revenue_cell
+      date = parse_single_report_date(params[:date])
+      return head :bad_request if date.nil?
+
+      monthly = params[:date_preset].to_s == "this_year"
+      start_date = monthly ? date.beginning_of_month : date
+      end_date = monthly ? date.end_of_month : date
+
+      @detail = HotelPortal::Reports::DailyRevenueCellDetail.new(
+        hotel: current_hotel,
+        start_date: start_date,
+        end_date: end_date,
+        category: params[:category]
+      ).call
+    end
+
+    def daily_revenue_source_bookings
+      @report_start_date, @report_end_date = parse_report_date_range
+
+      @detail = HotelPortal::Reports::DailyRevenueSourceBookings.new(
+        hotel: current_hotel,
+        start_date: @report_start_date,
+        end_date: @report_end_date,
+        source: params[:source]
+      ).call
     end
 
     def managers_flash

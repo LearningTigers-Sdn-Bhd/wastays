@@ -1,4 +1,22 @@
+# frozen_string_literal: true
+
 module HotelPortal::ReportsHelper
+  def report_amount(value)
+    value.to_d.zero? ? "0" : number_with_precision(value, precision: 2)
+  end
+
+  def daily_revenue_cell(value, hotel:, date:, category:, date_preset:, negative: false)
+    amount = value.to_d
+    sign = negative && !amount.zero? ? "- " : ""
+    text = "#{sign}MYR #{report_amount(amount)}"
+    return text if amount.zero?
+
+    link_to text,
+      daily_revenue_cell_hotel_reports_path(hotel, date: date.iso8601, category: category, date_preset: date_preset),
+      class: "underline decoration-dotted decoration-slate-300 underline-offset-2 hover:decoration-slate-600",
+      data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }
+  end
+
   def guest_reports_date_range_label(report)
     if report.start_date == report.end_date
       report.start_date.strftime("%A, %d %b %Y")

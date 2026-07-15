@@ -36,6 +36,7 @@ hotel.default_currency = "MYR"
 hotel.usd_conversion_rate = 4.65
 hotel.tourism_tax_enabled = true
 hotel.tourism_tax_amount = 10.0
+hotel.sst_enabled = true
 hotel.save!
 puts "Hotel 'Tanjung Harbour Hotel' ready (id=#{hotel.id})."
 
@@ -46,6 +47,7 @@ hotel_corporate_account_ids = HotelCorporateAccount.where(hotel: hotel).pluck(:i
 
 ArPaymentAllocationReversal.where(ar_payment_allocation_id: ArPaymentAllocation.where(ar_payment_id: ArPayment.where(hotel_corporate_account_id: hotel_corporate_account_ids).select(:id)).select(:id)).delete_all
 ArPaymentAllocation.where(ar_payment_id: ArPayment.where(hotel_corporate_account_id: hotel_corporate_account_ids).select(:id)).delete_all
+ArPaymentSubmissionAllocation.where(ar_payment_submission_id: ArPaymentSubmission.where(hotel_corporate_account_id: hotel_corporate_account_ids).select(:id)).delete_all
 ArPaymentSubmission.where(hotel_corporate_account_id: hotel_corporate_account_ids).delete_all
 ArPayment.where(hotel_corporate_account_id: hotel_corporate_account_ids).delete_all
 ArInvoice.where(hotel_corporate_account_id: hotel_corporate_account_ids).delete_all
@@ -73,6 +75,11 @@ hotel.bookings.destroy_all
 puts "Cleaned up previous bookings and AR history for this hotel."
 
 Financials::EnsureDefaultGlMaps.call(hotel)
+Financials::EnsureDefaultTransactionCodes.call(hotel)
+room_revenue_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+room_revenue_code.update!(is_taxable: true)
+room_revenue_code.transaction_code_taxes.find_or_create_by!(primary_tax_key: "sst_tax")
+puts "SST 8% tax rule attached to Room Revenue."
 
 # Property Policy
 policy = PropertyPolicy.find_or_initialize_by(hotel: hotel)
@@ -347,6 +354,63 @@ def post_nightly_charges_for_dates(booking, date_limit)
   end
 end
 
+# Incidental extra charges (F&B, parking, laundry, spa) that a real hotel folio would
+# accumulate alongside room and tax charges, so "Other Charges" isn't always zero.
+EXTRA_CHARGE_OPTIONS = [
+  { category: "fb", description: "Restaurant - Dinner", min: 35, max: 180, probability: 45 },
+  { category: "fb", description: "Room Service - Breakfast", min: 20, max: 60, probability: 30 },
+  { category: "parking", description: "Valet Parking", min: 15, max: 30, probability: 20 },
+  { category: "other", description: "Laundry Service", min: 25, max: 70, probability: 15 },
+  { category: "other", description: "Spa Treatment", min: 80, max: 220, probability: 10 }
+].freeze
+
+def post_extra_charges_for_booking(booking, settle: false)
+  folio = booking.booking_folio
+  return unless folio
+
+  stay_dates = (booking.check_in.to_date...booking.check_out.to_date).to_a
+  return if stay_dates.empty?
+
+  total_extra = 0.to_d
+
+  EXTRA_CHARGE_OPTIONS.each do |option|
+    next if RNG.rand(100) >= option[:probability]
+
+    date = stay_dates.sample(random: RNG)
+    amount = RNG.rand(option[:min]..option[:max]).to_d
+
+    folio.folio_transactions.create!(
+      amount: amount,
+      currency: folio.currency,
+      transaction_type: "charge",
+      category: option[:category],
+      description: option[:description],
+      posted_at: date.to_time + RNG.rand(10..21).hours,
+      posting_date: date,
+      user: nil,
+      metadata: { posting_source: "seed_extra_charge" }
+    )
+    total_extra += amount
+  end
+
+  return if total_extra.zero? || !settle
+
+  # Guest-pay checkouts require a zero outstanding balance, so settle the extra
+  # charges in cash before the checkout transition runs. Direct-billed bookings
+  # skip this — their outstanding balance rolls into the AR invoice instead.
+  folio.folio_transactions.create!(
+    amount: total_extra,
+    currency: folio.currency,
+    transaction_type: "payment",
+    category: "cash",
+    description: "Extra charges settlement",
+    posted_at: stay_dates.last.to_time + 21.hours,
+    posting_date: stay_dates.last,
+    user: nil,
+    metadata: { posting_source: "seed_extra_charge_settlement" }
+  )
+end
+
 # seed_booking drives Bookings::CreateManualBooking end-to-end: creates,
 # posts nightly charges, transitions status, then (for past-dated
 # scenarios) shifts everything back in time so it lands on the intended
@@ -400,8 +464,10 @@ def seed_booking(hotel:, user:, room_type:, rate_plan:, guest:, check_in:, check
 
   if status == "checked_in"
     post_nightly_charges_for_dates(booking, effective_check_in)
+    post_extra_charges_for_booking(booking)
   elsif status == "completed"
     post_nightly_charges_for_dates(booking, effective_check_out)
+    post_extra_charges_for_booking(booking, settle: !direct_bill)
   end
 
   if status.in?(%w[checked_in completed])
@@ -599,7 +665,9 @@ puts "AR invoices: #{invoices.size} total (#{settled} fully paid, #{partial} par
 
 # 10. A couple of agent-submitted payment slips for the corporate portal demo
 travel_agent_hca = corporates[:travel_agent]
-if travel_agent_hca && File.exist?(Rails.root.join("spec/fixtures/files/sample_image.jpg"))
+travel_agent_outstanding_invoices = travel_agent_hca&.ar_invoices&.select { |inv| inv.outstanding_amount.to_d.positive? } || []
+
+if travel_agent_hca && travel_agent_outstanding_invoices.any? && File.exist?(Rails.root.join("spec/fixtures/files/sample_image.jpg"))
   agent_user = travel_agent_hca.corporate_account.users.first || User.create!(
     name: "Wanderlust Accounts",
     email: "accounts@borneowanderlust.example",
@@ -609,24 +677,32 @@ if travel_agent_hca && File.exist?(Rails.root.join("spec/fixtures/files/sample_i
     password_confirmation: "12345678"
   )
 
+  pending_invoice = travel_agent_outstanding_invoices.first
+  pending_amount = [ 850.0, pending_invoice.outstanding_amount.to_d ].min
   pending_submission = travel_agent_hca.ar_payment_submissions.new(
-    hotel: hotel, submitted_by: agent_user, amount: 850.0, currency: "MYR",
+    hotel: hotel, submitted_by: agent_user, amount: pending_amount, currency: "MYR",
     reference_number: "AGENT-SLIP-#{TODAY.strftime('%Y%m')}-01", received_at: TODAY - 2.days, payment_method: "bank_transfer",
     notes: "Settlement for last week's bookings"
   )
+  pending_submission.ar_payment_submission_allocations.build(ar_invoice: pending_invoice, amount: pending_amount)
   pending_submission.slip.attach(io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")), filename: "slip.jpg", content_type: "image/jpeg")
   pending_submission.save!
 
+  rejected_invoice = travel_agent_outstanding_invoices.second || pending_invoice
+  rejected_amount = [ 320.0, rejected_invoice.outstanding_amount.to_d ].min
   rejected_submission = travel_agent_hca.ar_payment_submissions.new(
-    hotel: hotel, submitted_by: agent_user, amount: 320.0, currency: "MYR",
+    hotel: hotel, submitted_by: agent_user, amount: rejected_amount, currency: "MYR",
     reference_number: "AGENT-SLIP-#{TODAY.strftime('%Y%m')}-02", received_at: TODAY - 6.days, payment_method: "bank_transfer",
     status: "rejected", rejection_reason: "Reference number does not match any outstanding invoice.",
     reviewed_by: front_desk_user, reviewed_at: TODAY - 5.days
   )
+  rejected_submission.ar_payment_submission_allocations.build(ar_invoice: rejected_invoice, amount: rejected_amount)
   rejected_submission.slip.attach(io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")), filename: "slip.jpg", content_type: "image/jpeg")
   rejected_submission.save!
 
   puts "Seeded 1 pending and 1 rejected agent payment submission for #{travel_agent_hca.corporate_account.name}."
+elsif travel_agent_hca
+  puts "  [Skip] No outstanding travel agent invoice available for agent payment submission demo."
 end
 
 puts "\n== Seeding complete =="
