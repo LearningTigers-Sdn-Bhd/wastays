@@ -54,7 +54,7 @@
   .panel-control-group {
     display: grid;
     width: 100%;
-    border: 1px solid var(--border-interactive);
+    border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: var(--card);
     color: var(--card-foreground);

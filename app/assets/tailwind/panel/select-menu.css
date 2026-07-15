@@ -37,7 +37,7 @@
     justify-content: space-between;
     gap: 0.5rem;
     min-height: 2rem;
-    border: 1px solid var(--border-interactive);
+    border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background-color: var(--card);
     color: var(--card-foreground);

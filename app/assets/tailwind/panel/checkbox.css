@@ -13,7 +13,7 @@
     width: 100%;
     min-height: 2rem;
     padding: 0.5rem;
-    border: 1px solid var(--border-interactive);
+    border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: var(--card);
     transition: border-color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard);
@@ -61,7 +61,7 @@
     height: 1.125rem;
     margin: 0;
     place-content: center;
-    border: 1px solid var(--border-interactive);
+    border: 1px solid var(--border);
     border-radius: calc(var(--radius-sm) + 1px);
     background-color: var(--card);
     color: var(--primary-foreground);

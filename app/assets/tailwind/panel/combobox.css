@@ -42,7 +42,7 @@
     align-items: center;
     gap: 0.375rem;
     overflow: hidden;
-    border: 1px solid var(--border-interactive);
+    border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: var(--card);
     color: var(--card-foreground);
