@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_14_083501) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_15_063511) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1256,6 +1256,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_14_083501) do
     t.boolean "allow_pax_pricing", default: false, null: false
     t.jsonb "guest_registration_card_fields"
     t.boolean "allow_boat_information", default: true, null: false
+    t.jsonb "boat_in_times", default: [], null: false
+    t.jsonb "boat_out_times", default: [], null: false
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true

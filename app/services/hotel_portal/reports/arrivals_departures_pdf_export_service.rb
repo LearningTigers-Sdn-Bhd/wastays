@@ -127,7 +127,7 @@ module HotelPortal
         end
 
         headers = if show_boat
-          [ "Guest / Ref", "Rooms", "Stay", "Departure", "Boat Departure", "Notes" ]
+          [ "Guest / Ref", "Rooms", "Stay", "Departure", "Boat-out", "Notes" ]
         else
           [ "Guest / Ref", "Rooms", "Stay", type == :arrival ? "Readiness" : "Departure", "Notes" ]
         end
@@ -153,9 +153,9 @@ module HotelPortal
       end
 
       def draw_bibo_sections(pdf)
-        draw_bibo_section(pdf, "Boat Arrivals", @report.boat_ins, "No boat arrivals recorded or expected for this selected period.")
+        draw_bibo_section(pdf, "Boat-ins", @report.boat_ins, "No boat-in records found or expected for this selected period.")
         pdf.move_down 20
-        draw_bibo_section(pdf, "Boat Departures", @report.boat_outs, "No boat departures recorded or expected for this selected period.")
+        draw_bibo_section(pdf, "Boat-outs", @report.boat_outs, "No boat-out records found or expected for this selected period.")
       end
 
       def draw_bibo_section(pdf, title, rows, empty_message)

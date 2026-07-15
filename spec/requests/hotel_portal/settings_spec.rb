@@ -154,6 +154,20 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(hotel.reload.guest_registration_card_fields).to eq(%w[phone room_type check_in])
     end
 
+    it "updates daily boat schedules" do
+      patch hotel_general_settings_path(hotel), params: {
+        form_id: "hotel_settings",
+        hotel: {
+          boat_in_times: [ "09:30", "12:00", "" ],
+          boat_out_times: [ "11:00", "15:30", "" ]
+        }
+      }
+
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+      expect(hotel.reload.boat_in_times).to eq([ "09:30", "12:00" ])
+      expect(hotel.boat_out_times).to eq([ "11:00", "15:30" ])
+    end
+
     it "discards unknown guest registration card fields and allows none" do
       patch hotel_general_settings_path(hotel), params: {
         form_id: "hotel_settings",

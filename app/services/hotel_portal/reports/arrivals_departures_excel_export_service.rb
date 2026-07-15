@@ -37,7 +37,7 @@ module HotelPortal
         if @tab == "bibo"
           @report.boat_ins.each do |row|
             rows << spreadsheet_row([
-              "Boat Arrival",
+              "Boat-in",
               row[:guest_name],
               row[:confirmation_token],
               row[:room_type],
@@ -48,7 +48,7 @@ module HotelPortal
           end
           @report.boat_outs.each do |row|
             rows << spreadsheet_row([
-              "Boat Departure",
+              "Boat-out",
               row[:guest_name],
               row[:confirmation_token],
               row[:room_type],
@@ -100,7 +100,7 @@ module HotelPortal
           if @report.respond_to?(:allow_boat_information) && !@report.allow_boat_information
             return [ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ]
           else
-            return [ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Boat Departure", "Notes" ]
+            return [ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Boat-out", "Notes" ]
           end
         end
 

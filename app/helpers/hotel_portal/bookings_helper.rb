@@ -45,20 +45,20 @@ module HotelPortal::BookingsHelper
       if primary_bg.boat_out_at.present?
         {
           type: :departure,
-          label: "Boat Departure",
+          label: "Boat-out",
           time_str: primary_bg.boat_out_at.in_time_zone(timezone).strftime("%H:%M"),
           class: "text-purple-600",
-          title: "Boat Departure Time"
+          title: "Boat-out Time"
         }
       end
     else
       if primary_bg.boat_in_at.present?
         {
           type: :arrival,
-          label: "Boat Arrival",
+          label: "Boat-in",
           time_str: primary_bg.boat_in_at.in_time_zone(timezone).strftime("%H:%M"),
           class: "text-blue-600",
-          title: "Boat Arrival Time"
+          title: "Boat-in Time"
         }
       end
     end

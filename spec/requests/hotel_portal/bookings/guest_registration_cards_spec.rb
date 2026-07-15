@@ -204,7 +204,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
 
     it "allows auto-saving remarks and notes via JSON format even if the card is signed" do
       card = create(:guest_registration_card, :signed, booking: booking, hotel: hotel)
-      
+
       patch hotel_booking_guest_registration_card_path(hotel, booking, format: :json), params: {
         guest_registration_card: {
           special_requests: "Changed pillow preference.",

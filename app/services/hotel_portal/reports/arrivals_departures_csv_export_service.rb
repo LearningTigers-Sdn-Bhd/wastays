@@ -15,10 +15,10 @@ module HotelPortal
           csv << headers_for_active_tab
           if @tab == "bibo"
             @report.boat_ins.each do |row|
-              csv << [ "Boat Arrival", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ]
+              csv << [ "Boat-in", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ]
             end
             @report.boat_outs.each do |row|
-              csv << [ "Boat Departure", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ]
+              csv << [ "Boat-out", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ]
             end
           else
             rows_for_active_tab.each do |row|
@@ -37,7 +37,7 @@ module HotelPortal
           if @report.respond_to?(:allow_boat_information) && !@report.allow_boat_information
             return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ]
           else
-            return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Boat Departure", "Notes" ]
+            return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Boat-out", "Notes" ]
           end
         end
 
