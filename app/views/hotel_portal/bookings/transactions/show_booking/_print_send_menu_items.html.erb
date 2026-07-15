@@ -24,6 +24,20 @@
   <% end %>
 <% end %>
 
+<% if booking.tourism_tax? && current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+  <% if booking.tourism_tax_voucher_number? %>
+    <%= link_to hotel_booking_tourism_tax_voucher_path(current_hotel, booking), target: "_blank", data: { turbo: false }, role: "menuitem", class: "flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none" do %>
+      <span class="flex items-center gap-2"><%= cached_icon "receipt", class: "size-4 shrink-0 text-emerald-600" %> Tourism Tax Voucher</span>
+      <%= cached_icon "download", class: "size-3.5 text-slate-400" %>
+    <% end %>
+  <% else %>
+    <%= button_to issue_hotel_booking_tourism_tax_voucher_path(current_hotel, booking), form: { target: "_blank", data: { turbo: false } }, class: "flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none" do %>
+      <span class="flex items-center gap-2"><%= cached_icon "receipt", class: "size-4 shrink-0 text-emerald-600" %> Issue Tourism Tax Voucher</span>
+      <%= cached_icon "download", class: "size-3.5 text-slate-400" %>
+    <% end %>
+  <% end %>
+<% end %>
+
 <div class="my-1.5 border-t border-slate-100"></div>
 <p class="px-3 pb-1 pt-1 text-[10px] font-black uppercase tracking-wider text-slate-400">Send</p>
 

@@ -15,6 +15,25 @@ RSpec.describe "HotelPortal booking show actions", type: :request do
     sign_in_as(user)
   end
 
+  describe "tourism tax voucher print menu entry" do
+    it "shows an active link whenever booking owes tourism tax" do
+      booking.update!(guest_country: "Singapore", tourism_tax_amount: 20.0, tourism_tax_applied: true, tax_lines: [ { "type" => "tourism_tax", "amount" => 20.0 } ])
+
+      get hotel_booking_transaction_show_booking_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Issue Tourism Tax Voucher")
+      expect(response.body).to include(issue_hotel_booking_tourism_tax_voucher_path(hotel, booking))
+    end
+
+    it "omits entry when booking has no tourism tax" do
+      get hotel_booking_transaction_show_booking_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).not_to include("Tourism Tax Voucher")
+    end
+  end
+
   it "renders guest add and edit sheets in the offcanvas frame" do
     additional = create(:booking_guest, booking: booking, is_primary: false)
 

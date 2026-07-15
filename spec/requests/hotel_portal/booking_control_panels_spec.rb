@@ -29,6 +29,30 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
   end
 
   describe "GET /hotel/:hotel_id/booking-control-panels/:booking_id" do
+    describe "tourism tax voucher entry in folio actions" do
+      before do
+        role.permissions << manage_bookings
+        create(:booking_folio, booking: booking, hotel: hotel)
+      end
+
+      it "shows active link when booking owes tourism tax" do
+        booking.update!(guest_country: "Singapore", tourism_tax_amount: 20.0, tax_lines: [ { "type" => "tourism_tax", "amount" => 20.0 } ])
+
+        get hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations")
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include("Issue Tourism Tax Voucher")
+        expect(response.body).to include(issue_hotel_booking_tourism_tax_voucher_path(hotel, booking))
+      end
+
+      it "omits entry when booking has no tourism tax" do
+        get hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations")
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).not_to include("Tourism Tax Voucher")
+      end
+    end
+
     it "renders plain booking, guest, stay, source, and room details" do
       guest = create(:guest, name: "Aina Rahman")
       room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
