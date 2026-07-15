@@ -33,7 +33,6 @@ module CorporateInvitations
           corporate_account: user.account,
           account_type: @invitation.account_type,
           relationship_type: @invitation.relationship_type,
-          direct_bill_enabled: @invitation.direct_bill_enabled,
           credit_limit: @invitation.credit_limit,
           credit_currency: @invitation.credit_currency,
           payment_terms_days: @invitation.payment_terms_days,

@@ -1,0 +1,23 @@
+<%= form_with url: hotel_corporate_accounts_path(current_hotel), method: :get, class: "space-y-2", data: { controller: "auto-submit", turbo_frame: "corporate_accounts_results", turbo_action: "advance" } do |form| %>
+  <div class="relative">
+    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+      <%= cached_icon "search", stroke_width: 2, class: "size-4 text-slate-400" %>
+    </div>
+    <%= form.text_field :query, value: presenter.query, placeholder: "Search name, email, code, or phone...",
+      class: "block w-full rounded-lg border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm shadow-sm",
+      data: { action: "input->auto-submit#submit" } %>
+  </div>
+
+  <div class="-mx-0.5 flex items-center gap-2 overflow-x-auto px-0.5 py-2 no-scrollbar">
+    <div class="shrink-0">
+      <input type="radio" name="status" value="" id="corporate_account_status_all" class="peer sr-only" <%= "checked" if presenter.selected_status.blank? %> data-action="change->auto-submit#submitNow">
+      <label for="corporate_account_status_all" class="inline-flex cursor-pointer rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white">All</label>
+    </div>
+    <% presenter.status_options.each do |label, value| %>
+      <div class="shrink-0">
+        <input type="radio" name="status" value="<%= value %>" id="corporate_account_status_<%= value %>" class="peer sr-only" <%= "checked" if presenter.selected_status == value %> data-action="change->auto-submit#submitNow">
+        <label for="corporate_account_status_<%= value %>" class="inline-flex cursor-pointer rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white"><%= label %></label>
+      </div>
+    <% end %>
+  </div>
+<% end %>

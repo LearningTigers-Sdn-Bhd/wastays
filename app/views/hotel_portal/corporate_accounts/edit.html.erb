@@ -1,0 +1,86 @@
+<%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "right" } do %>
+  <div class="flex h-full min-h-0 flex-col bg-slate-100">
+    <header class="shrink-0 border-b border-slate-200 bg-white">
+      <div class="flex items-start justify-between gap-4 px-6 py-5">
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Corporate Accounts</p>
+          <h2 class="mt-1 text-xl font-bold tracking-tight text-slate-950"><%= @relationship.corporate_account.name %></h2>
+          <p class="mt-1 text-xs font-medium text-slate-500">Update this hotel’s billing relationship with this account.</p>
+        </div>
+        <button type="button" class="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" data-action="click->offcanvas#close" aria-label="Close edit form">
+          <%= cached_icon "x", stroke_width: 2.5, class: "size-5" %>
+        </button>
+      </div>
+    </header>
+
+    <%= form_with model: @relationship,
+      url: hotel_corporate_account_path(current_hotel, @relationship),
+      method: :patch,
+      class: "flex min-h-0 flex-1 flex-col",
+      data: { turbo_stream: true } do |f| %>
+      <div class="min-h-0 flex-1 overflow-y-auto p-6">
+        <div class="mx-auto max-w-2xl space-y-6">
+          <% if @relationship.errors.any? %>
+            <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+              <%= @relationship.errors.full_messages.to_sentence %>
+            </div>
+          <% end %>
+
+          <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div>
+              <h3 class="text-sm font-bold text-slate-950">Account contact</h3>
+              <p class="mt-1 text-xs font-medium text-slate-500">Code <span class="font-mono font-semibold text-slate-700"><%= @relationship.agent_code %></span></p>
+            </div>
+            <div>
+              <%= f.label :account_type, "Account type", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+              <%= f.select :account_type,
+                HotelCorporateAccount::ACCOUNT_TYPES.map { |type| [ type.humanize, type ] },
+                {},
+                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+            </div>
+            <div>
+              <%= f.label :contact_email, "Contact email", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+              <%= f.email_field :contact_email, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+            </div>
+            <div>
+              <%= f.label :contact_phone, "Contact phone", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+              <%= f.text_field :contact_phone, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+            </div>
+          </section>
+
+          <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div>
+              <h3 class="text-sm font-bold text-slate-950">Billing relationship</h3>
+              <p class="mt-1 text-xs font-medium text-slate-500">These terms govern invoicing and credit exposure for this account at this hotel.</p>
+            </div>
+            <div>
+              <%= f.label :relationship_type, "Relationship", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+              <%= f.select :relationship_type,
+                [["Standard", "standard"], ["Direct bill", "direct_bill"]],
+                {},
+                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+            </div>
+            <div>
+              <%= f.label :credit_limit, "Credit limit", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+              <div class="flex gap-2">
+                <%= f.text_field :credit_currency, class: "w-24 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold uppercase text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+                <%= f.number_field :credit_limit, min: 0, step: "0.01", class: "min-w-0 flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+              </div>
+            </div>
+            <div>
+              <%= f.label :payment_terms_days, "Payment terms (days)", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+              <%= f.number_field :payment_terms_days, min: 0, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="shrink-0 border-t border-slate-200 bg-white px-6 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+        <div class="flex items-center justify-end gap-3">
+          <button type="button" data-action="click->offcanvas#close" class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">Cancel</button>
+          <%= f.submit "Save changes", class: "rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

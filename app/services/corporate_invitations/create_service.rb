@@ -51,7 +51,6 @@ module CorporateInvitations
         email: email,
         account_type: @attributes[:account_type].presence || "company",
         relationship_type: @attributes[:relationship_type].presence || "standard",
-        direct_bill_enabled: ActiveModel::Type::Boolean.new.cast(@attributes[:direct_bill_enabled]) || false,
         credit_limit: @attributes[:credit_limit].presence,
         credit_currency: @attributes[:credit_currency].presence || @hotel.default_currency,
         payment_terms_days: @attributes[:payment_terms_days].presence,

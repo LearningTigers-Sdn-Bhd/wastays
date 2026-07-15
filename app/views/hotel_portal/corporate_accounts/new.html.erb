@@ -66,10 +66,6 @@
               <%= f.label :payment_terms_days, "Payment terms (days)", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
               <%= f.number_field :payment_terms_days, value: @corporate_invitation.payment_terms_days, min: 0, class: "w-full rounded-xl border border-border px-4 py-3 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
             </div>
-            <label class="flex items-center gap-3 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground">
-              <%= f.check_box :direct_bill_enabled, { checked: @corporate_invitation.direct_bill_enabled, class: "rounded border-border-interactive" } %>
-              Enable direct billing
-            </label>
           </section>
         </div>
       </div>

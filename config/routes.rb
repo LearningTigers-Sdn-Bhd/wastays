@@ -277,7 +277,7 @@ Rails.application.routes.draw do
 
     resource :property_policy, only: [ :edit, :update ]
     scope "accounts-receivable" do
-      resources :corporate_accounts, only: [ :index, :new, :create ], path: "corporate-accounts" do
+      resources :corporate_accounts, only: [ :index, :new, :create, :edit, :update ], path: "corporate-accounts" do
         member do
           patch :suspend
           patch :reactivate

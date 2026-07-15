@@ -14,6 +14,7 @@ class CorporateInvitation < Invitation
   before_validation { self.kind = "corporate" }
   before_validation :default_credit_currency
   before_validation :default_account_type
+  before_validation :sync_direct_bill_enabled
 
   validates :relationship_type, inclusion: { in: %w[standard direct_bill] }
   validates :credit_limit, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
@@ -63,5 +64,9 @@ class CorporateInvitation < Invitation
 
   def default_account_type
     self.account_type ||= "company"
+  end
+
+  def sync_direct_bill_enabled
+    self.direct_bill_enabled = relationship_type == "direct_bill"
   end
 end

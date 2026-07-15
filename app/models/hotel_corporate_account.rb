@@ -26,6 +26,7 @@ class HotelCorporateAccount < ApplicationRecord
   validate :corporate_account_kind
 
   before_validation :generate_agent_code, on: :create
+  before_validation :sync_direct_bill_enabled
 
   scope :active, -> { where(status: "active") }
   scope :suspended, -> { where(status: "suspended") }
@@ -44,6 +45,10 @@ class HotelCorporateAccount < ApplicationRecord
     return if corporate_account.blank? || corporate_account.corporate?
 
     errors.add(:corporate_account, "must be a corporate account")
+  end
+
+  def sync_direct_bill_enabled
+    self.direct_bill_enabled = relationship_type_direct_bill?
   end
 
   def generate_agent_code
