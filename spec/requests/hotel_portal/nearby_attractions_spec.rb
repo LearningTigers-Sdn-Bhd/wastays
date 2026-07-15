@@ -51,6 +51,23 @@ RSpec.describe 'HotelPortal::NearbyAttractions', type: :request do
       expect(NearbyAttraction.last.name).to eq('Batu Caves')
     end
 
+    it 'responds with a turbo stream that refreshes the list and closes the sheet' do
+      post hotel_nearby_attractions_path(hotel), as: :turbo_stream, params: {
+        nearby_attraction: {
+          name: 'Batu Caves',
+          city: 'Kuala Lumpur',
+          country: 'Malaysia'
+        }
+      }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+      expect(response.body).to include('action="replace" target="nearby_attractions_list"')
+      expect(response.body).to include('action="update" target="nearby_attraction_form"')
+      expect(response.body).to include('action="append" target="toast-viewport"')
+      expect(response.body).to include('Nearby attraction created successfully.')
+    end
+
     it 'rejects invalid nearby attractions' do
       post hotel_nearby_attractions_path(hotel), params: {
         nearby_attraction: {
@@ -62,6 +79,7 @@ RSpec.describe 'HotelPortal::NearbyAttractions', type: :request do
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include('Add Nearby Attraction')
+      expect(response.body).to include('turbo-frame id="nearby_attraction_form"')
     end
   end
 
@@ -78,6 +96,25 @@ RSpec.describe 'HotelPortal::NearbyAttractions', type: :request do
       }
 
       expect(response).to redirect_to(hotel_nearby_attractions_path(hotel))
+      expect(nearby_attraction.reload.name).to eq('Petronas Twin Towers')
+    end
+
+    it 'responds with a turbo stream that refreshes the list and closes the sheet' do
+      nearby_attraction = create(:nearby_attraction, hotel: hotel, name: 'KL Tower')
+
+      patch hotel_nearby_attraction_path(hotel, nearby_attraction), as: :turbo_stream, params: {
+        nearby_attraction: {
+          name: 'Petronas Twin Towers',
+          city: 'Kuala Lumpur',
+          country: 'Malaysia'
+        }
+      }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+      expect(response.body).to include('action="replace" target="nearby_attractions_list"')
+      expect(response.body).to include('action="update" target="nearby_attraction_form"')
+      expect(response.body).to include('Nearby attraction updated successfully.')
       expect(nearby_attraction.reload.name).to eq('Petronas Twin Towers')
     end
   end

@@ -1,34 +1,25 @@
-<%= form_with model: [@hotel, nearby_attraction], local: true do |f| %>
-  <div class="grid gap-y-6">
-    <div>
-      <%= f.label :name, "Attraction Name", class: "block text-sm mb-2 font-medium" %>
-      <%= f.text_field :name, class: "py-3 px-4 block w-full border border-border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, placeholder: "e.g. Batu Caves" %>
-    </div>
+<%= form_with model: [@hotel, nearby_attraction], id: "nearby-attraction-form", local: true do |f| %>
+  <%= render PanelsUI::FieldGroup.new do %>
+    <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Attraction Name", required: true) do |field| %>
+      <% field.with_input placeholder: "e.g. Batu Caves" %>
+    <% end %>
 
-    <div>
-      <%= f.label :description, class: "block text-sm mb-2 font-medium" %>
-      <%= f.text_area :description, rows: 4, class: "py-3 px-4 block w-full border border-border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", placeholder: "Briefly describe what guests can expect here." %>
-    </div>
+    <%= render PanelsUI::FormField.new(form: f, attribute: :description, label: "Description") do |field| %>
+      <% field.with_text_area rows: 4, placeholder: "Briefly describe what guests can expect here." %>
+    <% end %>
 
-    <div>
-      <%= f.label :address, class: "block text-sm mb-2 font-medium" %>
-      <%= f.text_area :address, rows: 3, class: "py-3 px-4 block w-full border border-border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", placeholder: "Street address or directions." %>
-    </div>
+    <%= render PanelsUI::FormField.new(form: f, attribute: :address, label: "Address") do |field| %>
+      <% field.with_text_area rows: 3, placeholder: "Street address or directions." %>
+    <% end %>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <div>
-        <%= f.label :city, class: "block text-sm mb-2 font-medium" %>
-        <%= f.text_field :city, class: "py-3 px-4 block w-full border border-border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, placeholder: "Kuala Lumpur" %>
-      </div>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :city, label: "City", required: true) do |field| %>
+        <% field.with_input placeholder: "Kuala Lumpur" %>
+      <% end %>
 
-      <div>
-        <%= f.label :country, class: "block text-sm mb-2 font-medium" %>
-        <%= f.text_field :country, class: "py-3 px-4 block w-full border border-border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, placeholder: "Malaysia" %>
-      </div>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :country, label: "Country", required: true) do |field| %>
+        <% field.with_input placeholder: "Malaysia" %>
+      <% end %>
     </div>
-
-    <div class="mt-5">
-      <%= f.submit (nearby_attraction.new_record? ? "Create Nearby Attraction" : "Update Nearby Attraction"), class: "w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-primary-foreground hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
-    </div>
-  </div>
+  <% end %>
 <% end %>

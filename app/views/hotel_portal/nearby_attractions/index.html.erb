@@ -11,116 +11,17 @@
       <%= render PanelsUI::Button.new(
             href: new_hotel_nearby_attraction_path(current_hotel),
             size: :sm,
-            class: "w-full sm:w-auto") do %>
+            class: "w-full sm:w-auto",
+            data: { turbo_frame: "nearby_attraction_form" }) do %>
         <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %>
         <span>Create</span>
       <% end %>
     </div>
 
-    <div class="mt-5 hidden md:block">
-      <%= render PanelsUI::Table.new(
-            caption: "Nearby attractions",
-            hoverable: true,
-            wrapper_class: "rounded-lg border border-border bg-card") do |table| %>
-        <% table.with_header do %>
-          <tr>
-            <th scope="col">Attraction / Address</th>
-            <th scope="col">Description</th>
-            <th scope="col">Location</th>
-            <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
-          </tr>
-        <% end %>
-        <% table.with_body do %>
-          <% if @nearby_attractions.any? %>
-            <% @nearby_attractions.each do |nearby_attraction| %>
-              <tr>
-                <th scope="row">
-                  <p class="font-semibold text-foreground"><%= nearby_attraction.name %></p>
-                  <p class="mt-1 line-clamp-2 text-xs font-normal text-muted-foreground"><%= nearby_attraction.address.presence || "Address not provided" %></p>
-                </th>
-                <td class="max-w-md text-muted-foreground">
-                  <p class="line-clamp-3"><%= nearby_attraction.description.presence || "No description added." %></p>
-                </td>
-                <td class="whitespace-nowrap">
-                  <p class="font-medium text-foreground"><%= nearby_attraction.city %></p>
-                  <p class="mt-1 text-xs text-muted-foreground"><%= nearby_attraction.country %></p>
-                </td>
-                <td class="text-right">
-                  <%= render "hotel_portal/nearby_attractions/record_actions",
-                             nearby_attraction: nearby_attraction,
-                             id_prefix: "table" %>
-                </td>
-              </tr>
-            <% end %>
-          <% else %>
-            <tr>
-              <td colspan="4" class="h-40 text-center">
-                <p class="font-medium text-foreground">No nearby attractions found.</p>
-                <p class="mt-1 text-muted-foreground">Create the first local recommendation for this property.</p>
-                <div class="mt-4">
-                  <%= render PanelsUI::Button.new(
-                        label: "Create Nearby Attraction",
-                        href: new_hotel_nearby_attraction_path(current_hotel),
-                        size: :sm) %>
-                </div>
-              </td>
-            </tr>
-          <% end %>
-        <% end %>
-      <% end %>
-    </div>
-
-    <div class="mt-5 space-y-3 md:hidden">
-      <% if @nearby_attractions.any? %>
-        <% @nearby_attractions.each do |nearby_attraction| %>
-          <%= render PanelsUI::Card.new(
-                width: :full,
-                density: :compact,
-                variant: :outlined,
-                as: :article) do |card| %>
-            <% card.with_header(
-                 title: nearby_attraction.name,
-                 description: nearby_attraction.address.presence || "Address not provided") do |header| %>
-              <% header.with_actions do %>
-                <%= render "hotel_portal/nearby_attractions/record_actions",
-                           nearby_attraction: nearby_attraction,
-                           id_prefix: "card" %>
-              <% end %>
-            <% end %>
-            <% card.with_card_content do %>
-              <dl class="space-y-3 text-sm">
-                <div>
-                  <dt class="text-xs text-muted-foreground">Location</dt>
-                  <dd class="mt-1 font-medium text-foreground"><%= nearby_attraction.city %>, <%= nearby_attraction.country %></dd>
-                </div>
-                <div>
-                  <dt class="text-xs text-muted-foreground">Description</dt>
-                  <dd class="mt-1 text-muted-foreground"><%= nearby_attraction.description.presence || "No description added." %></dd>
-                </div>
-              </dl>
-            <% end %>
-          <% end %>
-        <% end %>
-      <% else %>
-        <%= render PanelsUI::Card.new(width: :full, density: :compact, variant: :outlined) do |card| %>
-          <% card.with_card_content do %>
-            <div class="py-6 text-center">
-              <p class="text-sm font-medium text-foreground">No nearby attractions found.</p>
-              <p class="mt-1 text-sm text-muted-foreground">Create the first local recommendation for this property.</p>
-              <div class="mt-4">
-                <%= render PanelsUI::Button.new(
-                      label: "Create Nearby Attraction",
-                      href: new_hotel_nearby_attraction_path(current_hotel),
-                      size: :sm) %>
-              </div>
-            </div>
-          <% end %>
-        <% end %>
-      <% end %>
-    </div>
-
-    <div class="mt-5 flex justify-center">
-      <%= paginate @nearby_attractions %>
-    </div>
+    <%= render "list" %>
   </section>
 </div>
+
+<% content_for :body_end do %>
+  <%= turbo_frame_tag "nearby_attraction_form" %>
+<% end %>

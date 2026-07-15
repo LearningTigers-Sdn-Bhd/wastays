@@ -8,7 +8,9 @@
        aria_label: "Actions for #{nearby_attraction.name}") do %>
     <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: "true" } %>
   <% end %>
-  <% menu.with_item(href: edit_hotel_nearby_attraction_path(current_hotel, nearby_attraction)) do %>
+  <% menu.with_item(
+       href: edit_hotel_nearby_attraction_path(current_hotel, nearby_attraction),
+       data: { turbo_frame: "nearby_attraction_form" }) do %>
     <%= app_icon "pencil", class: "size-4", aria: { hidden: "true" } %>
     <span>Edit details</span>
   <% end %>
