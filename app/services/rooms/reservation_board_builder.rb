@@ -57,7 +57,7 @@ module Rooms
 
     def fetch_all_bookings
       scope = @hotel.bookings
-        .includes(booking_notes: :user, booking_rooms: :room_type)
+        .includes(booking_notes: :user, booking_rooms: :room_type, booking_guests: :guest)
         .joins(:booking_rooms)
         .where("bookings.check_in::date < ? AND bookings.check_out::date > ?", dates.last + 1.day, @start_date)
         .select("bookings.*, booking_rooms.room_number, booking_rooms.room_type_id")

@@ -6,12 +6,14 @@
     </p>
   </div>
 
-  <div class="mt-0.5 flex items-center justify-between text-[9px] font-semibold text-slate-500">
-    <div class="flex items-center gap-1">
-      <span><%= block[:check_in].strftime("%b %-d") %> → <%= block[:check_out].strftime("%b %-d") %></span>
+  <div class="mt-0.5 flex items-start justify-between text-[9px] font-semibold text-slate-500">
+    <div class="flex flex-col min-w-0">
+      <div class="flex items-center gap-1">
+        <span><%= format_room_card_stay_dates(block[:check_in], block[:check_out]) %></span>
+      </div>
     </div>
-    <div class="flex items-center gap-1.5 text-slate-500 text-[9px]">
-      <% booking = block[:booking] %>
+    <% booking = block[:booking] %>
+    <div class="flex items-center gap-1.5 text-slate-500 text-[9px] self-start mt-0.5">
       <% if booking %>
         <span class="inline-flex items-center gap-0.5" title="<%= pluralize(booking.adults, 'Adult') %>">
           <%= cached_icon "user", stroke_width: 2.5, class: "size-2.5 text-slate-400" %>
@@ -24,4 +26,14 @@
       <% end %>
     </div>
   </div>
+
+  <% if booking && booking.hotel.allow_boat_information? %>
+    <% boat_details = room_card_boat_time_details(booking, defined?(current_user) ? current_user : nil) %>
+    <% if boat_details %>
+      <div class="flex items-center gap-1 text-[8px] <%= boat_details[:class] %> font-bold mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis w-full" title="<%= boat_details[:title] %>">
+        <%= cached_icon "ship", stroke_width: 2.5, class: "size-2.5 shrink-0" %>
+        <span class="truncate"><%= boat_details[:label] %>: <%= boat_details[:time_str] %></span>
+      </div>
+    <% end %>
+  <% end %>
 </div>

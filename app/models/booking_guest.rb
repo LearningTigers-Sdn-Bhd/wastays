@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class BookingGuest < ApplicationRecord
   ROLES = %w[primary additional].freeze
 
@@ -16,6 +18,8 @@ class BookingGuest < ApplicationRecord
     scope: :booking_id,
     conditions: -> { where(role: "primary") }
   }, if: :primary?
+  validate :boat_out_after_boat_in
+
   before_validation :synchronize_role
   before_validation :capture_guest_snapshot, on: :create
   after_create :ensure_guest_billing_party
@@ -23,6 +27,14 @@ class BookingGuest < ApplicationRecord
 
   def primary?
     role == "primary"
+  end
+
+  def boat_in?
+    boat_in_at.present?
+  end
+
+  def boat_out?
+    boat_out_at.present?
   end
 
   private
@@ -57,6 +69,14 @@ class BookingGuest < ApplicationRecord
   def sync_booking_vip_status
     if guest.vip?
       booking.update!(vip: true)
+    end
+  end
+
+  def boat_out_after_boat_in
+    return if boat_in_at.blank? || boat_out_at.blank?
+
+    if boat_out_at < boat_in_at
+      errors.add(:boat_out_at, "must be after boat in time")
     end
   end
 end

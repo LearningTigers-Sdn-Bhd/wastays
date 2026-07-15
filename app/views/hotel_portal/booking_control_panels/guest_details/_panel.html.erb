@@ -1,23 +1,13 @@
-<% booking_guest = presenter.selected_booking_guest %>
-<% guest = booking_guest&.guest %>
-<% guest_display = presenter.guest_display(booking_guest) %>
-<% can_manage = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-
+<%# locals: (booking:, presenter:, booking_presenter: nil, folio_show: nil, audit_logs: nil, audit_history: nil) %>
 <section class="h-full min-h-0" aria-labelledby="guest-details-heading">
-  <% if booking_guest && guest %>
-    <% mode = booking_guest.primary? ? "edit_primary" : "edit_additional" %>
-    <% return_to = hotel_booking_control_panel_path(current_hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id) %>
-    <% snapshot_name = booking_guest.name_snapshot.presence || guest.name %>
-    <% snapshot_email = booking_guest.email_snapshot.presence || guest.email %>
-    <% snapshot_phone = booking_guest.phone_snapshot.presence || guest.phone %>
-    <% snapshot_country = booking_guest.country_snapshot.presence || guest.country.presence || current_hotel.country %>
-    <% snapshot_gender = booking_guest.gender_snapshot.presence || guest.gender %>
-    <% snapshot_document_type = booking_guest.document_type_snapshot.presence || guest.document_type.presence || "ic" %>
-    <% snapshot_government_id = booking_guest.government_id_snapshot.presence || guest.government_id %>
-    <% snapshot_date_of_birth = booking_guest.date_of_birth_snapshot.presence || guest.date_of_birth %>
+  <% if presenter.selected_booking_guest && presenter.selected_guest %>
+    <% mode = presenter.guest_details_mode %>
+    <% return_to = presenter.guest_details_return_to %>
+    <% snapshots = presenter.guest_details_snapshots %>
+    <% boat_times = presenter.guest_details_boat_times %>
 
-    <%= form_with model: guest,
-        url: hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: mode, booking_guest_id: booking_guest.id),
+    <%= form_with model: presenter.selected_guest,
+        url: hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: mode, booking_guest_id: presenter.selected_booking_guest.id),
         method: :patch,
         id: "guest-details-form",
         class: "flex h-full min-h-0 flex-col bg-white",
@@ -27,8 +17,8 @@
 
       <header class="shrink-0 border-b border-slate-200 px-5 py-4">
         <p class="text-xs font-semibold text-slate-500">Booking No. <%= presenter.booking_number %></p>
-        <h2 id="guest-details-heading" class="mt-1 truncate text-lg font-bold text-slate-950"><%= guest_display[:name] %></h2>
-        <p class="mt-1 text-sm text-slate-600"><%= guest_display[:role] %></p>
+        <h2 id="guest-details-heading" class="mt-1 truncate text-lg font-bold text-slate-950"><%= presenter.guest_display[:name] %></h2>
+        <p class="mt-1 text-sm text-slate-600"><%= presenter.guest_display[:role] %></p>
       </header>
 
       <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar">
@@ -38,27 +28,27 @@
             <p class="mt-1 text-xs text-slate-500">Guest details recorded for this stay.</p>
           </div>
 
-          <fieldset <%= "disabled" unless can_manage %> class="space-y-6 disabled:opacity-70">
+          <fieldset <%= "disabled" unless presenter.can_manage_bookings?(current_user) %> class="space-y-6 disabled:opacity-70">
             <div class="grid gap-5 md:grid-cols-2">
               <div class="md:col-span-2">
                 <%= form.label :name, "Full Name", class: "booking-form__label" %>
-                <%= form.text_field :name, value: snapshot_name, required: true, autocomplete: "name", placeholder: "Enter full name", class: "booking-form__control" %>
+                <%= form.text_field :name, value: snapshots[:name], required: true, autocomplete: "name", placeholder: "Enter full name", class: "booking-form__control" %>
               </div>
               <div>
                 <%= form.label :email, "Email", class: "booking-form__label" %>
-                <%= form.email_field :email, value: snapshot_email, autocomplete: "email", spellcheck: false, placeholder: "guest@example.com", class: "booking-form__control" %>
+                <%= form.email_field :email, value: snapshots[:email], autocomplete: "email", spellcheck: false, placeholder: "guest@example.com", class: "booking-form__control" %>
               </div>
               <div>
                 <%= form.label :phone, "Phone", class: "booking-form__label" %>
-                <%= form.telephone_field :phone, value: snapshot_phone, autocomplete: "tel", placeholder: "+60 12-345 6789", class: "booking-form__control" %>
+                <%= form.telephone_field :phone, value: snapshots[:phone], autocomplete: "tel", placeholder: "+60 12-345 6789", class: "booking-form__control" %>
               </div>
               <div>
                 <%= form.label :country, "Country", class: "booking-form__label" %>
-                <%= form.select :country, options_for_select([["Select country", ""]] + COUNTRY_OPTIONS, snapshot_country), {}, class: "booking-form__control", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" } %>
+                <%= form.select :country, options_for_select([["Select country", ""]] + COUNTRY_OPTIONS, snapshots[:country]), {}, class: "booking-form__control", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" } %>
               </div>
               <div>
                 <%= form.label :gender, "Gender", class: "booking-form__label" %>
-                <%= form.select :gender, options_for_select([["Select gender", ""], ["Male", "male"], ["Female", "female"], ["Other", "other"]], snapshot_gender), {}, class: "booking-form__control" %>
+                <%= form.select :gender, options_for_select([["Select gender", ""], ["Male", "male"], ["Female", "female"], ["Other", "other"]], snapshots[:gender]), {}, class: "booking-form__control" %>
               </div>
             </div>
 
@@ -70,18 +60,37 @@
               <div class="grid gap-5 md:grid-cols-2">
                 <div>
                   <%= form.label :document_type, "Document Type", class: "booking-form__label" %>
-                  <%= form.select :document_type, options_for_select([["Select document type", ""], ["IC", "ic"], ["Passport", "passport"]], snapshot_document_type), {}, class: "booking-form__control", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" } %>
+                  <%= form.select :document_type, options_for_select([["Select document type", ""], ["IC", "ic"], ["Passport", "passport"]], snapshots[:document_type]), {}, class: "booking-form__control", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" } %>
                 </div>
                 <div>
                   <%= form.label :government_id, "IC / Passport No.", class: "booking-form__label" %>
-                  <%= form.text_field :government_id, value: snapshot_government_id, autocomplete: "off", spellcheck: false, placeholder: "Enter IC or passport number", class: "booking-form__control", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
+                  <%= form.text_field :government_id, value: snapshots[:government_id], autocomplete: "off", spellcheck: false, placeholder: "Enter IC or passport number", class: "booking-form__control", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
                 </div>
                 <div>
                   <%= form.label :date_of_birth, "Date of Birth", class: "booking-form__label" %>
-                  <%= form.date_field :date_of_birth, value: snapshot_date_of_birth, autocomplete: "bday", placeholder: "Select date", class: "booking-form__control", data: { guest_dob_target: "dateOfBirth" } %>
+                  <%= form.date_field :date_of_birth, value: snapshots[:date_of_birth], autocomplete: "bday", placeholder: "Select date", class: "booking-form__control", data: { guest_dob_target: "dateOfBirth" } %>
                 </div>
               </div>
             </section>
+
+            <% if current_hotel.allow_boat_information? %>
+              <section class="border-t border-slate-200 pt-6" aria-labelledby="guest-bibo-heading">
+                <div class="mb-4">
+                  <h3 id="guest-bibo-heading" class="text-sm font-bold text-slate-950">Boat Arrival & Departure</h3>
+                  <p class="mt-1 text-xs text-slate-500">Guest Boat Arrival / Boat Departure timestamps.</p>
+                </div>
+                <div class="grid gap-5 md:grid-cols-2">
+                  <div>
+                    <%= label_tag "booking_guest_boat_in_at", "Boat Arrival Time", class: "booking-form__label" %>
+                    <%= datetime_local_field_tag "booking_guest[boat_in_at]", boat_times[:boat_in], class: "booking-form__control" %>
+                  </div>
+                  <div>
+                    <%= label_tag "booking_guest_boat_out_at", "Boat Departure Time", class: "booking-form__label" %>
+                    <%= datetime_local_field_tag "booking_guest[boat_out_at]", boat_times[:boat_out], class: "booking-form__control" %>
+                  </div>
+                </div>
+              </section>
+            <% end %>
           </fieldset>
         </div>
       </div>
