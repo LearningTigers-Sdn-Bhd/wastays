@@ -22,7 +22,7 @@ export default class extends Controller {
     this.pendingResolve = null
 
     this.previousConfirm = Turbo.config.forms.confirm
-    this.confirmHandler = (message, source) => this.open(message, source)
+    this.confirmHandler = (message, form, submitter) => this.open(message, form, submitter)
     Turbo.config.forms.confirm = this.confirmHandler
   }
 
@@ -33,11 +33,11 @@ export default class extends Controller {
     }
   }
 
-  open(message, source) {
+  open(message, form, submitter) {
     this.settle(false)
     if (this.element.open) this.element.close()
 
-    const content = this.contentFor(message, source)
+    const content = this.contentFor(message, form, submitter)
     this.titleElement.textContent = content.title
     this.descriptionElement.textContent = content.description
     this.applyTone(content.tone)
@@ -69,25 +69,32 @@ export default class extends Controller {
     resolve(result)
   }
 
-  contentFor(message, source) {
-    const detailedMessage = source?.dataset?.turboConfirmText
-    const explicitTitle = source?.dataset?.turboConfirmTitle
+  contentFor(message, form, submitter) {
+    const detailedMessage = this.metadataValue("turboConfirmText", submitter, form)
+    const explicitTitle = this.metadataValue("turboConfirmTitle", submitter, form)
 
     return {
       title: explicitTitle || (detailedMessage ? message : "Confirm action"),
       description: detailedMessage || message,
-      tone: this.toneFor(source),
+      tone: this.toneFor(form, submitter),
     }
   }
 
-  toneFor(source) {
-    const explicitTone = source?.dataset?.turboConfirmTone
+  toneFor(form, submitter) {
+    const explicitTone = this.metadataValue("turboConfirmTone", submitter, form)
     if (TONES.includes(explicitTone)) return explicitTone
 
-    switch (source?.dataset?.turboConfirmColor) {
+    switch (this.metadataValue("turboConfirmColor", submitter, form)) {
       case "red": return "destructive"
       case "green": return "success"
       default: return "default"
+    }
+  }
+
+  metadataValue(key, ...sources) {
+    for (const source of sources) {
+      const value = source?.dataset?.[key]
+      if (value !== undefined) return value
     }
   }
 

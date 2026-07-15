@@ -125,10 +125,11 @@ RSpec.describe "PanelsUI::AlertDialog", type: :system do
 
   def open_turbo_confirmation(message:, attributes:)
     page.execute_script(<<~JS)
+      const form = document.createElement("form")
       const source = document.createElement("button")
       Object.assign(source.dataset, #{attributes.to_json})
       window.turboConfirmResult = "pending"
-      Turbo.config.forms.confirm(#{message.to_json}, source).then((result) => {
+      Turbo.config.forms.confirm(#{message.to_json}, form, source).then((result) => {
         window.turboConfirmResult = result
       })
     JS

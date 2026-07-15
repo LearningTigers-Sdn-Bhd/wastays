@@ -12,6 +12,12 @@ RSpec.describe PanelsUI::AttachmentGroup, type: :component do
   it "falls back unknown layouts to a list" do
     render_inline(described_class.new(layout: :tiles)) { "Files" }
 
-    expect(page).to have_css(".panel-attachment-group[data-layout='list']")
+    expect(page).to have_css(".panel-attachment-group[data-layout='list'][data-size='default']")
+  end
+
+  it "renders the large item size for roomier grids" do
+    render_inline(described_class.new(layout: :grid, size: :lg)) { "Files" }
+
+    expect(page).to have_css(".panel-attachment-group[data-layout='grid'][data-size='lg']")
   end
 end

@@ -1,7 +1,21 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["input", "queueList", "emptyState", "counterText", "warning", "error", "confirmButton", "discardButton"]
+  static targets = [
+    "input",
+    "uploadForm",
+    "queueList",
+    "emptyState",
+    "counterText",
+    "warning",
+    "error",
+    "confirmButton",
+    "discardButton",
+    "uploadTemplate",
+    "errorTemplate",
+    "queuedTemplate"
+  ]
+
   static values = {
     uploadUrl: String,
     clearUrl: String,
@@ -16,16 +30,23 @@ export default class extends Controller {
     this.refreshState()
   }
 
-  async queueSelectedFiles() {
+  async queueSelectedFiles(event) {
+    if (event.target !== this.inputTarget) return
+
     this.hideNotices()
 
+    // The Panels UI dropzone validates and normalizes this FileList before the
+    // change event bubbles to the hotel queue controller.
     const files = Array.from(this.inputTarget.files || [])
     if (files.length === 0) return
 
-    let remainingSlots = this.remainingSlots()
+    // Clear the transient dropzone previews. The attachment queue below is the
+    // authoritative representation once staging begins.
+    this.uploadFormTarget.reset()
+
+    const remainingSlots = this.remainingSlots()
     if (remainingSlots <= 0) {
       this.showWarning(`You already reached the maximum of ${this.maxCountValue} photos.`)
-      this.inputTarget.value = ""
       return
     }
 
@@ -33,14 +54,12 @@ export default class extends Controller {
       this.showWarning(`Only ${remainingSlots} more photo${remainingSlots === 1 ? "" : "s"} can be queued right now.`)
     }
 
-    const queueableFiles = files.slice(0, remainingSlots)
-    for (const file of queueableFiles) {
+    for (const file of files.slice(0, remainingSlots)) {
       // Keep uploads predictable and avoid race conditions in queue counters.
       // eslint-disable-next-line no-await-in-loop
       await this.uploadFile(file)
     }
 
-    this.inputTarget.value = ""
     this.refreshState()
   }
 
@@ -142,77 +161,76 @@ export default class extends Controller {
     const formData = new FormData()
     formData.append("photo", file)
 
-    const response = await fetch(this.uploadUrlValue, {
-      method: "POST",
-      headers: {
-        "X-CSRF-Token": this.csrfToken(),
-        "Accept": "application/json"
-      },
-      body: formData
-    })
+    try {
+      const response = await fetch(this.uploadUrlValue, {
+        method: "POST",
+        headers: {
+          "X-CSRF-Token": this.csrfToken(),
+          "Accept": "application/json"
+        },
+        body: formData
+      })
 
-    if (!response.ok) {
-      const payload = await this.safeJson(response)
+      if (!response.ok) {
+        const payload = await this.safeJson(response)
+        uploadRow.remove()
+        this.appendFailedRow(file, payload?.error || "Upload failed. Retry this file.")
+        return
+      }
+
+      const data = await response.json()
+      uploadRow.replaceWith(this.buildQueuedRow(data.queue_item))
+    } catch (_error) {
       uploadRow.remove()
-      this.appendFailedRow(file, payload?.error || "Upload failed. Retry this file.")
-      return
+      this.appendFailedRow(file, "Upload failed. Check your connection and try again.")
     }
-
-    const data = await response.json()
-    uploadRow.replaceWith(this.buildQueuedRow(data.queue_item))
   }
 
   appendUploadingRow(file) {
-    const wrapper = document.createElement("div")
-    wrapper.className = "flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3"
-    wrapper.innerHTML = `
-      <div class="min-w-0">
-        <p class="truncate text-sm font-medium text-slate-900">${this.escapeHtml(file.name)}</p>
-        <p class="text-xs text-slate-500">Uploading...</p>
-      </div>
-      <span class="text-xs font-semibold text-slate-500">Processing</span>
-    `
-    this.queueListTarget.appendChild(wrapper)
-    return wrapper
+    const attachment = this.cloneAttachment(this.uploadTemplateTarget)
+    this.updateAttachment(attachment, file.name, `Uploading · ${this.formatBytes(file.size)}`)
+    this.queueListTarget.appendChild(attachment)
+    return attachment
   }
 
   appendFailedRow(file, message) {
     const failedId = `${Date.now()}-${Math.random().toString(16).slice(2)}`
     this.failedFiles.set(failedId, file)
 
-    const wrapper = document.createElement("div")
-    wrapper.className = "flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-3"
-    wrapper.dataset.failedId = failedId
-    wrapper.innerHTML = `
-      <div class="min-w-0">
-        <p class="truncate text-sm font-medium text-rose-900">${this.escapeHtml(file.name)}</p>
-        <p class="text-xs text-rose-700">${this.escapeHtml(message)}</p>
-      </div>
-      <div class="flex items-center gap-2">
-        <button type="button" class="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100" data-action="hotel-photo-queue#retryUpload">Retry</button>
-        <button type="button" class="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100" data-action="hotel-photo-queue#removeQueuedPhoto">Remove</button>
-      </div>
-    `
+    const attachment = this.cloneAttachment(this.errorTemplateTarget)
+    attachment.dataset.failedId = failedId
+    this.updateAttachment(attachment, file.name, message)
+    attachment.querySelector("[data-action~='hotel-photo-queue#removeQueuedPhoto']")
+      ?.setAttribute("aria-label", `Remove failed upload ${file.name}`)
 
-    this.queueListTarget.appendChild(wrapper)
+    this.queueListTarget.appendChild(attachment)
     this.showError("Some files could not be queued. Retry or remove failed items.")
   }
 
   buildQueuedRow(item) {
-    const wrapper = document.createElement("div")
-    wrapper.className = "flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3"
-    wrapper.dataset.signedId = item.signed_id
-    wrapper.innerHTML = `
-      <div class="flex min-w-0 items-center gap-3">
-        <img src="${item.preview_url}" alt="${this.escapeHtml(item.filename)}" class="h-12 w-12 rounded-lg border border-slate-200 object-cover">
-        <div class="min-w-0">
-          <p class="truncate text-sm font-medium text-slate-900">${this.escapeHtml(item.filename)}</p>
-          <p class="text-xs text-slate-500">${this.escapeHtml(item.byte_size)}</p>
-        </div>
-      </div>
-      <button type="button" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100" data-action="hotel-photo-queue#removeQueuedPhoto">Remove</button>
-    `
-    return wrapper
+    const attachment = this.cloneAttachment(this.queuedTemplateTarget)
+    attachment.dataset.signedId = item.signed_id
+    this.updateAttachment(attachment, item.filename, `Queued · ${item.byte_size}`)
+
+    const image = attachment.querySelector(".panel-attachment__media img")
+    if (image) {
+      image.src = item.preview_url
+      image.alt = `Preview of ${item.filename}`
+    }
+
+    attachment.querySelector("[data-action~='hotel-photo-queue#removeQueuedPhoto']")
+      ?.setAttribute("aria-label", `Remove ${item.filename} from upload queue`)
+    return attachment
+  }
+
+  cloneAttachment(template) {
+    const fragment = template.content.cloneNode(true)
+    return fragment.querySelector(".panel-attachment")
+  }
+
+  updateAttachment(attachment, title, description) {
+    attachment.querySelector(".panel-attachment__title").textContent = title
+    attachment.querySelector(".panel-attachment__description").textContent = description
   }
 
   refreshState() {
@@ -243,18 +261,22 @@ export default class extends Controller {
   }
 
   showWarning(message) {
-    this.warningTarget.textContent = message
-    this.warningTarget.classList.remove("hidden")
+    this.showNotice(this.warningTarget, message)
   }
 
   showError(message) {
-    this.errorTarget.textContent = message
-    this.errorTarget.classList.remove("hidden")
+    this.showNotice(this.errorTarget, message)
   }
 
   hideNotices() {
     this.warningTarget.classList.add("hidden")
     this.errorTarget.classList.add("hidden")
+  }
+
+  showNotice(target, message) {
+    const content = target.querySelector(".panel-alert__content")
+    if (content) content.textContent = message
+    target.classList.remove("hidden")
   }
 
   jsonHeaders() {
@@ -276,12 +298,12 @@ export default class extends Controller {
     }
   }
 
-  escapeHtml(value) {
-    return String(value)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll("\"", "&quot;")
-      .replaceAll("'", "&#39;")
+  formatBytes(bytes) {
+    if (bytes === 0) return "0 Bytes"
+
+    const units = ["Bytes", "KB", "MB", "GB"]
+    const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
+    const value = bytes / (1024 ** index)
+    return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`
   }
 }

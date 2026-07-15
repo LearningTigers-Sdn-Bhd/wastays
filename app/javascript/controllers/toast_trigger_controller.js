@@ -9,12 +9,22 @@ export default class extends Controller {
 
   connect() {
     this.show = this.show.bind(this)
-    document.addEventListener("toast:ready", this.show)
-    this.show()
+    this.scheduleShow = this.scheduleShow.bind(this)
+    document.addEventListener("toast:ready", this.scheduleShow)
+    this.scheduleShow()
   }
 
   disconnect() {
-    document.removeEventListener("toast:ready", this.show)
+    document.removeEventListener("toast:ready", this.scheduleShow)
+    if (this.showFrame) cancelAnimationFrame(this.showFrame)
+  }
+
+  scheduleShow() {
+    if (this.showFrame) cancelAnimationFrame(this.showFrame)
+    this.showFrame = requestAnimationFrame(() => {
+      this.showFrame = null
+      this.show()
+    })
   }
 
   show() {

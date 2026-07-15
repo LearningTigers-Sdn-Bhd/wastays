@@ -27,7 +27,18 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
 
     it "lists all room types by default" do
       get hotel_room_types_path(hotel)
+
       expect(response).to have_http_status(:ok)
+      document = response.parsed_body
+      expect(document.css("h1").map { |heading| heading.text.squish }).to eq([ "Property Details Settings" ])
+      expect(document.at_css("h2#room-categories-heading").text.squish).to eq("Room Categories")
+      expect(document.at_css(".panel-table caption.sr-only").text.squish).to eq("Room categories")
+      table_headings = document.css(".panel-table thead th").map { |heading| heading.text.squish }
+      expect(table_headings).to include("Adults", "Children")
+      expect(document.css(".panel-card").count).to be >= 1
+      expect(document.css(".dropdown-menu-root").count).to be >= 2
+      expect(document.css("button[data-turbo-confirm-tone='destructive']").count).to be >= 2
+      expect(document.at_css("body").text).not_to include("Total Categories")
     end
 
     it "filters by room group id" do
@@ -40,9 +51,17 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(response).to have_http_status(:ok)
     end
 
+    it "falls back to the All tab for an unknown room group" do
+      get hotel_room_types_path(hotel), params: { room_group_id: "missing" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.at_css("#room-group-filter-tab-all")[:"aria-current"]).to eq("page")
+    end
+
     it "renders the room group filter tab navigation when room groups exist" do
       get hotel_room_types_path(hotel)
-      expect(response.body).to include('aria-label="Room Group Filter"')
+      expect(response.parsed_body.at_css("nav[aria-label='Room Group Filter']")).to be_present
+      expect(response.body).not_to include("Unassigned (")
     end
 
     context "when there are no room groups" do

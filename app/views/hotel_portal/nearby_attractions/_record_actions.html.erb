@@ -1,0 +1,26 @@
+<%= render PanelsUI::DropdownMenu.new(
+      id: "#{id_prefix}-nearby-attraction-#{nearby_attraction.id}-actions",
+      placement: :bottom_end,
+      class: "w-48") do |menu| %>
+  <% menu.with_trigger(
+       variant: :ghost,
+       size: :icon_sm,
+       aria_label: "Actions for #{nearby_attraction.name}") do %>
+    <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: "true" } %>
+  <% end %>
+  <% menu.with_item(href: edit_hotel_nearby_attraction_path(current_hotel, nearby_attraction)) do %>
+    <%= app_icon "pencil", class: "size-4", aria: { hidden: "true" } %>
+    <span>Edit details</span>
+  <% end %>
+  <% menu.with_item(
+       href: hotel_nearby_attraction_path(current_hotel, nearby_attraction),
+       method: :delete,
+       variant: :danger,
+       data: {
+         turbo_confirm: "Are you sure you want to delete this nearby attraction?",
+         turbo_confirm_tone: "destructive"
+       }) do %>
+    <%= app_icon "trash-2", class: "size-4", aria: { hidden: "true" } %>
+    <span>Delete attraction</span>
+  <% end %>
+<% end %>

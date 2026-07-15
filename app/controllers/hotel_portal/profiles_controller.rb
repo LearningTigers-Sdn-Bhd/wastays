@@ -8,6 +8,7 @@ module HotelPortal
     def edit
       authorize @hotel
       prepare_profile_page
+      render :edit, formats: :html if request.format.turbo_stream?
     end
 
     def update
@@ -18,10 +19,15 @@ module HotelPortal
 
       if upload_result
         flash[:alert] = upload_result.alert_message if upload_result.respond_to?(:trimmed?) && upload_result.trimmed?
-        redirect_to edit_hotel_profile_path(@hotel), notice: "Hotel profile updated successfully."
+        redirect_to edit_hotel_profile_path(@hotel), status: :see_other, flash: {
+          toast: {
+            message: "Hotel profile updated successfully.",
+            type: "success"
+          }
+        }
       else
         prepare_profile_page
-        render :edit, status: :unprocessable_content
+        render :edit, formats: :html, status: :unprocessable_content
       end
     end
 
@@ -32,9 +38,34 @@ module HotelPortal
       clear_featured_photo_if_needed(photo.id)
       photo.purge
 
-      redirect_to edit_hotel_profile_path(@hotel), notice: "Hotel photo removed successfully."
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: [
+            turbo_stream.replace(
+              "hotel-published-photos",
+              partial: "hotel_portal/profiles/published_photos",
+              locals: { hotel: @hotel }
+            ),
+            turbo_stream.append(
+              "toast-viewport",
+              partial: "shared/feedback/toast_trigger",
+              locals: { message: "Hotel photo removed successfully.", type: "success", description: nil }
+            )
+          ]
+        end
+        format.html { redirect_to edit_hotel_profile_path(@hotel), notice: "Hotel photo removed successfully." }
+      end
     rescue ActiveRecord::RecordNotFound
-      redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found."
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.append(
+            "toast-viewport",
+            partial: "shared/feedback/toast_trigger",
+            locals: { message: "Hotel photo could not be found.", type: "error", description: nil }
+          ), status: :not_found
+        end
+        format.html { redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found." }
+      end
     end
 
     def destroy_photos
@@ -66,12 +97,47 @@ module HotelPortal
       photo = @hotel.photos.attachments.find(params[:photo_id])
 
       if @hotel.update(featured_photo_attachment_id: photo.id)
-        redirect_to edit_hotel_profile_path(@hotel), notice: "Featured photo updated successfully."
+        respond_to do |format|
+          format.turbo_stream do
+            render turbo_stream: [
+              turbo_stream.replace(
+                "hotel-published-photos",
+                partial: "hotel_portal/profiles/published_photos",
+                locals: { hotel: @hotel }
+              ),
+              turbo_stream.append(
+                "toast-viewport",
+                partial: "shared/feedback/toast_trigger",
+                locals: { message: "Featured photo updated successfully.", type: "success", description: nil }
+              )
+            ]
+          end
+          format.html { redirect_to edit_hotel_profile_path(@hotel), notice: "Featured photo updated successfully." }
+        end
       else
-        redirect_to edit_hotel_profile_path(@hotel), alert: @hotel.errors.full_messages.to_sentence
+        message = @hotel.errors.full_messages.to_sentence
+        respond_to do |format|
+          format.turbo_stream do
+            render turbo_stream: turbo_stream.append(
+              "toast-viewport",
+              partial: "shared/feedback/toast_trigger",
+              locals: { message: message, type: "error", description: nil }
+            ), status: :unprocessable_content
+          end
+          format.html { redirect_to edit_hotel_profile_path(@hotel), alert: message }
+        end
       end
     rescue ActiveRecord::RecordNotFound
-      redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found."
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.append(
+            "toast-viewport",
+            partial: "shared/feedback/toast_trigger",
+            locals: { message: "Hotel photo could not be found.", type: "error", description: nil }
+          ), status: :not_found
+        end
+        format.html { redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found." }
+      end
     end
 
     def enqueue_photo

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_15_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -25,7 +25,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.string "account_kind", default: "hotel", null: false
     t.index ["account_kind"], name: "index_accounts_on_account_kind"
     t.index ["slug"], name: "index_accounts_on_slug", unique: true
-    t.check_constraint "account_kind::text = ANY (ARRAY['hotel'::character varying::text, 'corporate'::character varying::text])", name: "accounts_account_kind_allowed"
+    t.check_constraint "account_kind::text = ANY (ARRAY['hotel'::character varying, 'corporate'::character varying]::text[])", name: "accounts_account_kind_allowed"
   end
 
   create_table "active_storage_attachments", force: :cascade do |t|
@@ -127,7 +127,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.check_constraint "amount > 0::numeric", name: "ar_invoices_amount_positive"
     t.check_constraint "outstanding_amount >= 0::numeric", name: "ar_invoices_outstanding_amount_nonnegative"
     t.check_constraint "paid_amount >= 0::numeric", name: "ar_invoices_paid_amount_nonnegative"
-    t.check_constraint "status::text = ANY (ARRAY['open'::character varying::text, 'partially_paid'::character varying::text, 'paid'::character varying::text, 'overdue'::character varying::text, 'void'::character varying::text])", name: "ar_invoices_status_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'partially_paid'::character varying, 'paid'::character varying, 'overdue'::character varying, 'void'::character varying]::text[])", name: "ar_invoices_status_allowed"
   end
 
   create_table "ar_payment_allocation_reversals", force: :cascade do |t|
@@ -217,7 +217,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.datetime "occurred_at", null: false
     t.index ["auditable_type", "auditable_id", "occurred_at"], name: "idx_booking_audit_logs_on_auditable_time"
     t.index ["auditable_type", "auditable_id"], name: "index_booking_audit_logs_on_auditable"
-    t.index ["category", "occurred_at"], name: "idx_booking_audit_logs_on_category_time"
     t.index ["hotel_id", "category", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_category_time"
     t.index ["hotel_id", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_time"
     t.index ["hotel_id"], name: "index_booking_audit_logs_on_hotel_id"
@@ -247,8 +246,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["hotel_id", "archived_at"], name: "index_booking_billing_parties_on_hotel_id_and_archived_at"
     t.index ["hotel_id"], name: "index_booking_billing_parties_on_hotel_id"
     t.check_constraint "((booking_guest_id IS NOT NULL)::integer + (hotel_corporate_account_id IS NOT NULL)::integer) = 1", name: "booking_billing_parties_one_identity"
-    t.check_constraint "account_type IS NULL OR (account_type::text = ANY (ARRAY['company'::character varying::text, 'government'::character varying::text, 'travel_agent'::character varying::text]))", name: "booking_billing_parties_account_type_allowed"
-    t.check_constraint "party_kind::text = ANY (ARRAY['guest'::character varying::text, 'company'::character varying::text])", name: "booking_billing_parties_kind_allowed"
+    t.check_constraint "account_type IS NULL OR (account_type::text = ANY (ARRAY['company'::character varying, 'government'::character varying, 'travel_agent'::character varying]::text[]))", name: "booking_billing_parties_account_type_allowed"
+    t.check_constraint "party_kind::text = ANY (ARRAY['guest'::character varying, 'company'::character varying]::text[])", name: "booking_billing_parties_kind_allowed"
   end
 
   create_table "booking_billing_terms", force: :cascade do |t|
@@ -263,7 +262,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["booking_billing_party_id"], name: "index_booking_billing_terms_on_booking_billing_party_id", unique: true
     t.index ["created_by_id"], name: "index_booking_billing_terms_on_created_by_id"
     t.index ["updated_by_id"], name: "index_booking_billing_terms_on_updated_by_id"
-    t.check_constraint "settlement_type::text = ANY (ARRAY['cash_bank'::character varying::text, 'city_ledger'::character varying::text])", name: "booking_billing_terms_settlement_allowed"
+    t.check_constraint "settlement_type::text = ANY (ARRAY['cash_bank'::character varying, 'city_ledger'::character varying]::text[])", name: "booking_billing_terms_settlement_allowed"
   end
 
   create_table "booking_folios", force: :cascade do |t|
@@ -302,9 +301,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["hotel_id", "invoice_number"], name: "index_booking_folios_on_hotel_id_and_invoice_number", unique: true, where: "(invoice_number IS NOT NULL)"
     t.index ["hotel_id", "status"], name: "index_booking_folios_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_booking_folios_on_hotel_id"
-    t.check_constraint "folio_type::text = ANY (ARRAY['guest'::character varying::text, 'external'::character varying::text, 'house'::character varying::text])", name: "booking_folios_folio_type_allowed"
-    t.check_constraint "payer_type::text = ANY (ARRAY['guest'::character varying::text, 'company'::character varying::text, 'agent'::character varying::text, 'hotel'::character varying::text, 'custom'::character varying::text])", name: "booking_folios_payer_type_allowed"
-    t.check_constraint "status::text = ANY (ARRAY['open'::character varying::text, 'closed'::character varying::text, 'voided'::character varying::text])", name: "booking_folios_status_allowed"
+    t.check_constraint "folio_type::text = ANY (ARRAY['guest'::character varying, 'external'::character varying, 'house'::character varying]::text[])", name: "booking_folios_folio_type_allowed"
+    t.check_constraint "payer_type::text = ANY (ARRAY['guest'::character varying, 'company'::character varying, 'agent'::character varying, 'hotel'::character varying, 'custom'::character varying]::text[])", name: "booking_folios_payer_type_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'closed'::character varying, 'voided'::character varying]::text[])", name: "booking_folios_status_allowed"
   end
 
   create_table "booking_guests", force: :cascade do |t|
@@ -326,7 +325,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["booking_id"], name: "idx_booking_guests_one_primary_per_booking", unique: true, where: "((role)::text = 'primary'::text)"
     t.index ["booking_id"], name: "index_booking_guests_on_booking_id"
     t.index ["guest_id"], name: "index_booking_guests_on_guest_id"
-    t.check_constraint "role::text = ANY (ARRAY['primary'::character varying::text, 'additional'::character varying::text])", name: "booking_guests_role_allowed"
+    t.check_constraint "role::text = ANY (ARRAY['primary'::character varying, 'additional'::character varying]::text[])", name: "booking_guests_role_allowed"
   end
 
   create_table "booking_notes", force: :cascade do |t|
@@ -376,12 +375,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.decimal "display_total_amount", precision: 10, scale: 2
     t.decimal "display_exchange_rate", precision: 18, scale: 8
     t.string "display_rate_source"
-    t.bigint "corporate_entity_id"
     t.text "special_requests"
     t.bigint "agent_account_id"
     t.integer "infants", default: 0, null: false
     t.index ["agent_account_id"], name: "index_booking_quotes_on_agent_account_id"
-    t.index ["corporate_entity_id"], name: "index_booking_quotes_on_corporate_entity_id"
     t.index ["hotel_id"], name: "index_booking_quotes_on_hotel_id"
     t.index ["token"], name: "index_booking_quotes_on_token", unique: true
   end
@@ -421,7 +418,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["hotel_tax_id"], name: "index_booking_tax_inclusion_overrides_on_hotel_tax_id"
     t.index ["transaction_code_id"], name: "index_booking_tax_inclusion_overrides_on_transaction_code_id"
     t.check_constraint "((hotel_tax_id IS NOT NULL)::integer + (primary_tax_key IS NOT NULL)::integer) = 1", name: "booking_tax_overrides_one_tax_source"
-    t.check_constraint "action::text = ANY (ARRAY['include'::character varying::text, 'exclude'::character varying::text])", name: "booking_tax_overrides_action_allowed"
+    t.check_constraint "action::text = ANY (ARRAY['include'::character varying, 'exclude'::character varying]::text[])", name: "booking_tax_overrides_action_allowed"
   end
 
   create_table "bookings", force: :cascade do |t|
@@ -457,7 +454,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.string "payout_status"
     t.datetime "payout_at"
     t.string "payout_reference"
-    t.string "payout_batch_id"
+    t.bigint "payout_batch_id"
     t.string "source", default: "internal"
     t.string "external_reference"
     t.string "channel_manager_reference"
@@ -466,29 +463,27 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.integer "reservation_number"
     t.integer "receipt_number"
     t.integer "guest_registration_number"
-    t.bigint "corporate_entity_id"
-    t.string "guest_home_address"
     t.text "internal_notes"
     t.decimal "manual_rate_override"
     t.jsonb "tax_posting_snapshot", default: {}, null: false
+    t.string "guest_home_address"
     t.datetime "check_in", null: false
     t.datetime "check_out", null: false
     t.date "no_show_review_business_date"
     t.boolean "tourism_tax_collected", default: false, null: false
     t.text "special_requests"
     t.string "folio_account_reference"
+    t.bigint "group_booking_id"
+    t.integer "group_position"
     t.boolean "vip", default: false, null: false
     t.bigint "agent_account_id"
     t.integer "infants", default: 0, null: false
-    t.bigint "group_booking_id"
-    t.integer "group_position"
     t.index ["agent_account_id"], name: "index_bookings_on_agent_account_id"
     t.index ["booking_quote_id"], name: "index_bookings_on_booking_quote_id"
     t.index ["channel_manager_reference"], name: "index_bookings_on_channel_manager_reference"
     t.index ["check_in"], name: "index_bookings_on_check_in"
     t.index ["check_out"], name: "index_bookings_on_check_out"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
-    t.index ["corporate_entity_id"], name: "index_bookings_on_corporate_entity_id"
     t.index ["external_reference"], name: "index_bookings_on_external_reference"
     t.index ["group_booking_id", "group_position"], name: "idx_bookings_group_position", unique: true, where: "(group_booking_id IS NOT NULL)"
     t.index ["group_booking_id"], name: "index_bookings_on_group_booking_id"
@@ -498,6 +493,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["hotel_id", "status", "no_show_review_business_date"], name: "index_bookings_on_hotel_status_no_show_review_date"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
+    t.index ["payout_batch_id"], name: "index_bookings_on_payout_batch_id"
     t.index ["source"], name: "index_bookings_on_source"
     t.index ["status"], name: "index_bookings_on_status"
   end
@@ -606,17 +602,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
   end
 
-  create_table "complaints", force: :cascade do |t|
-    t.bigint "booking_id", null: false
-    t.string "category"
-    t.text "description"
-    t.string "status", default: "open"
-    t.datetime "resolved_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["booking_id"], name: "index_complaints_on_booking_id"
-  end
-
   create_table "corporate_ar_payment_intents", force: :cascade do |t|
     t.bigint "corporate_account_id", null: false
     t.bigint "user_id", null: false
@@ -648,18 +633,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["hotel_id"], name: "index_corporate_ar_payment_intents_on_hotel_id"
     t.index ["user_id"], name: "index_corporate_ar_payment_intents_on_user_id"
     t.check_constraint "amount > 0::numeric", name: "corporate_ar_payment_intents_amount_positive"
-  end
-
-  create_table "corporate_entities", force: :cascade do |t|
-    t.string "name"
-    t.string "code", null: false
-    t.string "domain_filter"
-    t.string "status", default: "active", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.bigint "hotel_id"
-    t.index ["code"], name: "index_corporate_entities_on_code", unique: true
-    t.index ["hotel_id"], name: "index_corporate_entities_on_hotel_id"
   end
 
   create_table "deposits", force: :cascade do |t|
@@ -834,7 +807,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["transaction_code_id"], name: "index_folio_routing_rules_on_transaction_code_id"
     t.index ["updated_by_id"], name: "index_folio_routing_rules_on_updated_by_id"
     t.check_constraint "coverage_percentage > 0::numeric AND coverage_percentage <= 100::numeric", name: "folio_routing_rules_coverage_percentage"
-    t.check_constraint "source_type::text = ANY (ARRAY['booking'::character varying::text, 'group'::character varying::text])", name: "folio_routing_rules_source_allowed"
+    t.check_constraint "source_type::text = ANY (ARRAY['booking'::character varying, 'group'::character varying]::text[])", name: "folio_routing_rules_source_allowed"
   end
 
   create_table "folio_transactions", force: :cascade do |t|
@@ -901,7 +874,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["group_booking_id", "idempotency_key"], name: "idx_group_billing_change_batches_idempotency", unique: true
     t.index ["group_booking_id"], name: "index_group_billing_change_batches_on_group_booking_id"
     t.index ["hotel_id"], name: "index_group_billing_change_batches_on_hotel_id"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'completed'::character varying::text])", name: "group_billing_change_batches_status_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'completed'::character varying]::text[])", name: "group_billing_change_batches_status_allowed"
   end
 
   create_table "group_bookings", force: :cascade do |t|
@@ -926,7 +899,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["hotel_id", "status"], name: "index_group_bookings_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_group_bookings_on_hotel_id"
     t.index ["organizer_guest_id"], name: "index_group_bookings_on_organizer_guest_id"
-    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying::text, 'active'::character varying::text, 'completed'::character varying::text, 'cancelled'::character varying::text])", name: "group_bookings_status_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'active'::character varying, 'completed'::character varying, 'cancelled'::character varying]::text[])", name: "group_bookings_status_allowed"
   end
 
   create_table "group_deposit_allocations", force: :cascade do |t|
@@ -951,7 +924,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["reversal_of_id"], name: "idx_group_deposit_allocations_one_reversal", unique: true, where: "(reversal_of_id IS NOT NULL)"
     t.index ["reversal_of_id"], name: "index_group_deposit_allocations_on_reversal_of_id"
     t.check_constraint "amount > 0::numeric", name: "group_deposit_allocations_amount_positive"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'reversed'::character varying::text])", name: "group_deposit_allocations_status_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'reversed'::character varying]::text[])", name: "group_deposit_allocations_status_allowed"
   end
 
   create_table "group_deposits", force: :cascade do |t|
@@ -977,7 +950,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["received_by_id"], name: "index_group_deposits_on_received_by_id"
     t.check_constraint "amount > 0::numeric", name: "group_deposits_amount_positive"
     t.check_constraint "refunded_amount >= 0::numeric AND refunded_amount <= amount", name: "group_deposits_refunded_amount_valid"
-    t.check_constraint "status::text = ANY (ARRAY['received'::character varying::text, 'partially_allocated'::character varying::text, 'allocated'::character varying::text, 'partially_refunded'::character varying::text, 'refunded'::character varying::text, 'cancelled'::character varying::text])", name: "group_deposits_status_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['received'::character varying, 'partially_allocated'::character varying, 'allocated'::character varying, 'partially_refunded'::character varying, 'refunded'::character varying, 'cancelled'::character varying]::text[])", name: "group_deposits_status_allowed"
   end
 
   create_table "guest_registration_cards", force: :cascade do |t|
@@ -993,7 +966,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.jsonb "display_fields_snapshot"
     t.index ["booking_id"], name: "index_guest_registration_cards_on_booking_id", unique: true
     t.index ["hotel_id"], name: "index_guest_registration_cards_on_hotel_id"
-    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying::text, 'signed'::character varying::text])", name: "guest_registration_cards_status_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'signed'::character varying]::text[])", name: "guest_registration_cards_status_allowed"
   end
 
   create_table "guests", force: :cascade do |t|
@@ -1041,7 +1014,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["hotel_id", "business_date", "status"], name: "idx_on_hotel_id_business_date_status_38d59d82f8"
     t.index ["hotel_id", "business_date"], name: "index_hotel_business_dates_on_hotel_id_and_business_date", unique: true
     t.index ["hotel_id", "status"], name: "index_hotel_business_dates_on_hotel_id_and_status"
-    t.index ["hotel_id"], name: "idx_one_current_business_date_per_hotel", unique: true, where: "((status)::text = ANY (ARRAY[('open'::character varying)::text, ('audit_running'::character varying)::text, ('audit_blocked'::character varying)::text]))"
+    t.index ["hotel_id"], name: "idx_one_current_business_date_per_hotel", unique: true, where: "((status)::text = ANY ((ARRAY['open'::character varying, 'audit_running'::character varying, 'audit_blocked'::character varying])::text[]))"
     t.index ["hotel_id"], name: "index_hotel_business_dates_on_hotel_id"
   end
 
@@ -1063,11 +1036,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["hotel_id", "corporate_account_id"], name: "idx_hotel_corporate_accounts_unique_relationship", unique: true
     t.index ["hotel_id", "status"], name: "idx_hotel_corporate_accounts_on_hotel_and_status"
     t.index ["hotel_id"], name: "index_hotel_corporate_accounts_on_hotel_id"
-    t.check_constraint "account_type::text = ANY (ARRAY['company'::character varying::text, 'government'::character varying::text, 'travel_agent'::character varying::text])", name: "hotel_corporate_accounts_account_type_allowed"
+    t.check_constraint "account_type::text = ANY (ARRAY['company'::character varying, 'government'::character varying, 'travel_agent'::character varying]::text[])", name: "hotel_corporate_accounts_account_type_allowed"
     t.check_constraint "credit_limit IS NULL OR credit_limit >= 0::numeric", name: "hotel_corporate_accounts_credit_limit_nonnegative"
     t.check_constraint "payment_terms_days IS NULL OR payment_terms_days >= 0", name: "hotel_corporate_accounts_payment_terms_nonnegative"
-    t.check_constraint "relationship_type::text = ANY (ARRAY['standard'::character varying::text, 'direct_bill'::character varying::text])", name: "hotel_corporate_accounts_relationship_type_allowed"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'suspended'::character varying::text])", name: "hotel_corporate_accounts_status_allowed"
+    t.check_constraint "relationship_type::text = ANY (ARRAY['standard'::character varying, 'direct_bill'::character varying]::text[])", name: "hotel_corporate_accounts_relationship_type_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying]::text[])", name: "hotel_corporate_accounts_status_allowed"
   end
 
   create_table "hotel_counters", force: :cascade do |t|
@@ -1163,9 +1136,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.integer "weekdays", default: [], null: false, array: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "corporate_entity_id"
     t.jsonb "metadata"
-    t.index ["corporate_entity_id"], name: "index_hotel_pricing_rules_on_corporate_entity_id"
     t.index ["hotel_id", "rule_type"], name: "index_hotel_pricing_rules_on_hotel_and_type"
     t.index ["hotel_id", "start_date", "end_date"], name: "index_hotel_pricing_rules_on_hotel_and_dates"
     t.index ["hotel_id"], name: "index_hotel_pricing_rules_on_hotel_id"
@@ -1225,25 +1196,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "10.0", null: false
     t.bigint "featured_photo_attachment_id"
     t.string "preferred_channel_manager"
-    t.integer "salesperson_id"
+    t.bigint "salesperson_id"
     t.date "onboarding_start_date"
     t.date "onboarding_end_date"
-    t.jsonb "amenities", default: [], null: false
-    t.string "slug", null: false
     t.boolean "ai_provider_enabled", default: false
     t.string "ai_provider_name"
     t.text "ai_provider_key"
+    t.jsonb "amenities", default: [], null: false
+    t.string "slug", null: false
     t.string "ai_concierge_tone", default: "basic", null: false
     t.boolean "sst_enabled", default: false, null: false
     t.string "hotel_prefix"
     t.string "time_zone"
+    t.time "business_starts_at", default: "2000-01-01 08:00:00", null: false
+    t.time "business_ends_at", default: "2000-01-01 02:00:00", null: false
+    t.integer "arrival_grace_period", default: 7200, null: false
     t.string "contact_phone"
     t.string "contact_email"
     t.string "whatsapp_number"
     t.boolean "concierge_enabled", default: true, null: false
-    t.time "business_starts_at", default: "2000-01-01 08:00:00", null: false
-    t.time "business_ends_at", default: "2000-01-01 02:00:00", null: false
-    t.integer "arrival_grace_period", default: 7200, null: false
     t.string "pre_suspension_status"
     t.bigint "plan_id"
     t.string "google_map_link"
@@ -1251,6 +1222,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.boolean "pax_pricing_only", default: false, null: false
     t.boolean "allow_pax_pricing", default: false, null: false
     t.jsonb "guest_registration_card_fields"
+    t.text "description"
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true
@@ -1325,7 +1297,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.index ["token_digest"], name: "index_invitations_on_token_digest", unique: true
     t.check_constraint "kind::text <> 'corporate'::text OR metadata ? 'relationship_type'::text AND ((metadata ->> 'relationship_type'::text) = ANY (ARRAY['standard'::text, 'direct_bill'::text]))", name: "invitations_corporate_fields_required"
     t.check_constraint "kind::text <> 'staff'::text OR role_id IS NOT NULL", name: "invitations_staff_role_required"
-    t.check_constraint "kind::text = ANY (ARRAY['staff'::character varying::text, 'corporate'::character varying::text])", name: "invitations_kind_allowed"
+    t.check_constraint "kind::text = ANY (ARRAY['staff'::character varying, 'corporate'::character varying]::text[])", name: "invitations_kind_allowed"
   end
 
   create_table "journal_batch_entries", force: :cascade do |t|
@@ -1656,9 +1628,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.string "currency", default: "MYR", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.boolean "sync_to_channels", default: true, null: false
-    t.bigint "corporate_entity_id"
-    t.string "visibility", default: "public", null: false
     t.decimal "single_supplement", precision: 10, scale: 2, default: "0.0", null: false
     t.decimal "child_price_multiplier", precision: 3, scale: 2, default: "1.0", null: false
     t.decimal "infant_price_multiplier", precision: 3, scale: 2, default: "0.0", null: false
@@ -1666,9 +1635,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.decimal "extra_pax_charge", precision: 10, scale: 2, default: "0.0", null: false
     t.bigint "hotel_id", null: false
     t.text "description"
-    t.index ["corporate_entity_id"], name: "index_rate_plans_on_corporate_entity_id"
     t.index ["hotel_id"], name: "index_rate_plans_on_hotel_id"
-    t.index ["visibility"], name: "index_rate_plans_on_visibility"
   end
 
   create_table "refund_policies", force: :cascade do |t|
@@ -1691,16 +1658,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["booking_id"], name: "index_refund_requests_on_booking_id", unique: true
-  end
-
-  create_table "request_notes", force: :cascade do |t|
-    t.string "noteable_type", null: false
-    t.bigint "noteable_id", null: false
-    t.text "body", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["noteable_type", "noteable_id", "created_at"], name: "index_request_notes_on_noteable_and_created_at"
-    t.index ["noteable_type", "noteable_id"], name: "index_request_notes_on_noteable"
   end
 
   create_table "role_permissions", force: :cascade do |t|
@@ -1812,8 +1769,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.boolean "closed_to_departure"
     t.boolean "stop_sell"
     t.decimal "walk_in_price", precision: 10, scale: 2
-    t.decimal "corporate_price", precision: 10, scale: 2
     t.string "applied_rule_type"
+    t.decimal "corporate_price", precision: 10, scale: 2
     t.decimal "single_supplement", precision: 10, scale: 2
     t.integer "base_occupancy"
     t.decimal "extra_pax_charge", precision: 10, scale: 2
@@ -1866,29 +1823,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "room_numbers"
-    t.string "room_number_mode"
+    t.string "room_number_mode", default: "range", null: false
     t.jsonb "amenities", default: [], null: false
     t.boolean "smoking_allowed", default: false, null: false
     t.boolean "pets_allowed", default: false, null: false
     t.bigint "room_group_id"
     t.index ["hotel_id"], name: "index_room_types_on_hotel_id"
     t.index ["room_group_id"], name: "index_room_types_on_room_group_id"
-  end
-
-  create_table "salespeople", force: :cascade do |t|
-    t.string "name", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-  end
-
-  create_table "salesperson_hotels", force: :cascade do |t|
-    t.bigint "salesperson_id", null: false
-    t.bigint "hotel_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["hotel_id"], name: "index_salesperson_hotels_on_hotel_id"
-    t.index ["salesperson_id", "hotel_id"], name: "index_salesperson_hotels_on_salesperson_and_hotel", unique: true
-    t.index ["salesperson_id"], name: "index_salesperson_hotels_on_salesperson_id"
   end
 
   create_table "setup_fee_rules", force: :cascade do |t|
@@ -2030,7 +1971,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
   add_foreign_key "booking_quote_items", "booking_quotes"
   add_foreign_key "booking_quote_items", "room_types"
   add_foreign_key "booking_quotes", "agent_accounts"
-  add_foreign_key "booking_quotes", "corporate_entities"
   add_foreign_key "booking_quotes", "hotels"
   add_foreign_key "booking_rooms", "bookings"
   add_foreign_key "booking_rooms", "rate_plans"
@@ -2042,9 +1982,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
   add_foreign_key "booking_tax_inclusion_overrides", "users", column: "actor_id"
   add_foreign_key "bookings", "agent_accounts"
   add_foreign_key "bookings", "booking_quotes"
-  add_foreign_key "bookings", "corporate_entities"
   add_foreign_key "bookings", "group_bookings"
   add_foreign_key "bookings", "hotels"
+  add_foreign_key "bookings", "payout_batches"
   add_foreign_key "channel_availability_rules", "hotels"
   add_foreign_key "channel_derived_settings", "hotels"
   add_foreign_key "channel_room_rates", "rate_plans"
@@ -2057,7 +1997,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
   add_foreign_key "corporate_ar_payment_intents", "hotel_corporate_accounts"
   add_foreign_key "corporate_ar_payment_intents", "hotels"
   add_foreign_key "corporate_ar_payment_intents", "users"
-  add_foreign_key "corporate_entities", "hotels"
   add_foreign_key "deposits", "booking_folios"
   add_foreign_key "deposits", "bookings"
   add_foreign_key "deposits", "hotels"
@@ -2125,7 +2064,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
   add_foreign_key "hotel_knowledge_diagnostics", "prospect_messages"
   add_foreign_key "hotel_knowledge_diagnostics", "prospects"
   add_foreign_key "hotel_knowledge_documents", "hotels"
-  add_foreign_key "hotel_pricing_rules", "corporate_entities"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotel_taxes", "hotels"
   add_foreign_key "hotel_taxes", "transaction_codes"
@@ -2170,7 +2108,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
   add_foreign_key "prospect_messages", "prospects"
   add_foreign_key "prospects", "guests"
   add_foreign_key "prospects", "hotels"
-  add_foreign_key "rate_plans", "corporate_entities"
   add_foreign_key "rate_plans", "hotels"
   add_foreign_key "refund_requests", "bookings"
   add_foreign_key "role_permissions", "permissions"
@@ -2197,7 +2134,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_100200) do
   add_foreign_key "room_type_rate_plans", "room_types"
   add_foreign_key "room_types", "hotels"
   add_foreign_key "room_types", "room_groups"
-  add_foreign_key "salesperson_hotels", "salespeople"
   add_foreign_key "transaction_code_taxes", "hotel_taxes"
   add_foreign_key "transaction_code_taxes", "transaction_codes"
   add_foreign_key "transaction_codes", "hotels"

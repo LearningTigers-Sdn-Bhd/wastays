@@ -16,11 +16,20 @@ RSpec.describe 'HotelPortal::NearbyAttractions', type: :request do
 
   describe 'GET /hotel/:hotel_id/nearby_attractions' do
     it 'renders the nearby attractions index' do
+      attraction = create(:nearby_attraction, hotel: hotel, name: "Batu Caves")
+
       get hotel_nearby_attractions_path(hotel)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('Nearby Attractions')
-      expect(response.body).to include('Add Nearby Attraction')
+      document = response.parsed_body
+      expect(document.css("h1").map { |heading| heading.text.squish }).to eq([ "Property Details Settings" ])
+      expect(document.at_css("h2#nearby-attractions-heading").text.squish).to eq("Nearby Attractions")
+      expect(document.css(".panel-button").map { |button| button.text.squish }).to include("Create")
+      expect(document.at_css(".panel-table caption.sr-only").text.squish).to eq("Nearby attractions")
+      expect(document.css(".panel-card").map { |card| card.text.squish }).to include(a_string_including(attraction.name))
+      expect(document.css("[id$='nearby-attraction-#{attraction.id}-actions'].dropdown-menu-root").count).to eq(2)
+      expect(document.css("button[data-turbo-confirm-tone='destructive']").count).to eq(2)
+      expect(document.at_css("body").text).not_to include("Total Attractions")
     end
   end
 

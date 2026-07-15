@@ -184,6 +184,11 @@
     grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
   }
 
+  .panel-attachment-group[data-layout="grid"][data-size="lg"] {
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 1rem;
+  }
+
   @keyframes panel-attachment-shimmer {
     to { transform: translateX(100%); }
   }
