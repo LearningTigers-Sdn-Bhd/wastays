@@ -1,0 +1,86 @@
+# frozen_string_literal: true
+
+module StayView
+  class LoadInventory
+    def self.call(hotel:, date_window:, capabilities:)
+      new(hotel:, date_window:, capabilities:).call
+    end
+
+    def initialize(hotel:, date_window:, capabilities:)
+      @hotel = hotel
+      @date_window = date_window
+      @capabilities = capabilities
+    end
+
+    def call
+      Inventory.new(
+        room_types: load_room_types,
+        bookings: load_bookings,
+        room_statuses: load_room_statuses,
+        room_blocks: load_room_blocks
+      )
+    end
+
+    private
+
+    attr_reader :hotel, :date_window, :capabilities
+
+    def load_room_types
+      hotel.room_types.order(:name, :id).pluck(:id, :name, :room_numbers, :smoking_allowed, :pets_allowed).map do |values|
+        RoomTypeRecord.new(**%i[id name room_numbers smoking_allowed pets_allowed].zip(values).to_h)
+      end
+    end
+
+    def load_bookings
+      guest_column = capabilities.view_booking? ? "bookings.guest_name" : Arel.sql("NULL")
+      columns = [
+        "booking_rooms.id", "bookings.id", "booking_rooms.room_type_id", "booking_rooms.room_number",
+        "bookings.status", guest_column, "bookings.check_in", "bookings.check_out"
+      ]
+
+      BookingRoom.joins(:booking)
+        .where(bookings: { hotel_id: hotel.id, status: visible_booking_statuses })
+        .where.not(room_number: [ nil, "" ])
+        .where("bookings.check_in < ? AND bookings.check_out > ?", date_window.window_end_at, date_window.window_start_at)
+        .pluck(*columns)
+        .map do |booking_room_id, booking_id, room_type_id, room_number, status, guest_name, check_in, check_out|
+          BookingRecord.new(
+            booking_room_id: booking_room_id,
+            booking_id: booking_id,
+            room_type_id: room_type_id,
+            room_number: room_number.to_s.freeze,
+            status: status.to_sym,
+            guest_name: guest_name&.to_s&.freeze,
+            check_in: check_in.in_time_zone(date_window.time_zone_name).to_date,
+            check_out: check_out.in_time_zone(date_window.time_zone_name).to_date
+          )
+        end
+    end
+
+    def visible_booking_statuses
+      Booking::OCCUPYING_STATUSES
+    end
+
+    def load_room_statuses
+      hotel.room_statuses.pluck(:room_type_id, :room_number, :status, :priority, :dnd, :dnd_date).map do |values|
+        RoomStatusRecord.new(
+          room_type_id: values[0], room_number: values[1].to_s.freeze, status: values[2].to_sym,
+          priority: values[3], dnd: values[4], dnd_date: values[5]
+        )
+      end
+    end
+
+    def load_room_blocks
+      hotel.room_blocks.where(completed_at: nil)
+        .where("start_date < ? AND end_date >= ?", date_window.end_date, date_window.start_date)
+        .pluck(:id, :room_type_id, :room_number, :block_type, :reason, :start_date, :end_date)
+        .map do |values|
+          RoomBlockRecord.new(
+            id: values[0], room_type_id: values[1], room_number: values[2].to_s.freeze,
+            block_type: values[3].to_sym, reason: values[4].to_s.freeze,
+            start_date: values[5], end_date: values[6]
+          )
+        end
+    end
+  end
+end

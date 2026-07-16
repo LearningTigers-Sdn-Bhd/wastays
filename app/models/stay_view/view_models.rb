@@ -1,0 +1,134 @@
+# frozen_string_literal: true
+
+module StayView
+  ViewModels = true
+
+  TrackRange = Data.define(:start_track, :end_track, :clipped_left, :clipped_right) do
+    alias_method :clipped_left?, :clipped_left
+    alias_method :clipped_right?, :clipped_right
+  end
+
+  Occupancy = Data.define(:state, :booking_id, :booking_status, :label) do
+    def initialize(state:, booking_id: nil, booking_status: nil, label: nil)
+      super(state: state.to_sym, booking_id: booking_id, booking_status: booking_status&.to_sym, label: label&.to_s&.freeze)
+    end
+  end
+
+  DayCell = Data.define(:date, :occupancies, :operational_kinds) do
+    def initialize(date:, occupancies:, operational_kinds: [])
+      super(date: date.to_date, occupancies: Immutable.array(occupancies), operational_kinds: Immutable.array(operational_kinds.map(&:to_sym)))
+    end
+  end
+
+  BookingSegment = Data.define(
+    :dom_id, :booking_id, :booking_room_id, :guest_label, :status, :check_in, :check_out,
+    :start_track, :end_track, :clipped_left, :clipped_right, :accessible_label, :capabilities
+  ) do
+    alias_method :clipped_left?, :clipped_left
+    alias_method :clipped_right?, :clipped_right
+
+    def initialize(**attributes)
+      attributes[:status] = attributes.fetch(:status).to_sym
+      %i[dom_id guest_label accessible_label].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
+      super(**attributes)
+    end
+  end
+
+  OperationalSegment = Data.define(
+    :dom_id, :kind, :label, :start_date, :end_date, :start_track, :end_track,
+    :clipped_left, :clipped_right, :accessible_label, :capabilities
+  ) do
+    alias_method :clipped_left?, :clipped_left
+    alias_method :clipped_right?, :clipped_right
+
+    def initialize(**attributes)
+      attributes[:kind] = attributes.fetch(:kind).to_sym
+      %i[dom_id label accessible_label].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
+      super(**attributes)
+    end
+  end
+
+  RoomRow = Data.define(
+    :key, :dom_id, :room_number, :room_type_id, :room_type_name, :smoking_allowed, :pets_allowed,
+    :current_physical_status, :operational_flags, :day_cells, :booking_segments,
+    :operational_segments, :capabilities
+  ) do
+    def initialize(**attributes)
+      %i[key dom_id room_number room_type_name].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
+      attributes[:current_physical_status] = attributes[:current_physical_status]&.to_sym
+      attributes[:operational_flags] = Immutable.hash(attributes.fetch(:operational_flags))
+      %i[day_cells booking_segments operational_segments].each do |key|
+        attributes[key] = Immutable.array(attributes.fetch(key))
+      end
+      super(**attributes)
+    end
+
+    def occupancy_for(date)
+      day_cells.find { |cell| cell.date == date.to_date }&.occupancies || EMPTY_OCCUPANCIES
+    end
+
+    EMPTY_OCCUPANCIES = [].freeze
+  end
+
+  RoomGroup = Data.define(:room_type_id, :name, :rooms) do
+    def initialize(room_type_id:, name:, rooms:)
+      super(room_type_id: room_type_id, name: name.to_s.freeze, rooms: Immutable.array(rooms))
+    end
+  end
+
+  FilterState = Data.define(:room_type_id, :booking_status, :occupancy, :physical_status) do
+    def self.build(value = {})
+      source = value.to_h.symbolize_keys
+      new(
+        room_type_id: Integer(source[:room_type_id], exception: false),
+        booking_status: normalize_symbol(source[:booking_status], Booking::OCCUPYING_STATUSES),
+        occupancy: normalize_symbol(source[:occupancy], %w[available arrival occupied departure]),
+        physical_status: normalize_symbol(source[:physical_status], RoomStatus::STATUSES - [ "late_checkout_detected" ])
+      )
+    end
+
+    def self.normalize_symbol(value, allowed)
+      candidate = value.to_s
+      allowed.include?(candidate) ? candidate.to_sym : nil
+    end
+
+    private_class_method :normalize_symbol
+  end
+
+  StatusCounts = Data.define(:rooms, :physical_statuses, :occupancies, :booking_statuses, :operational_segments) do
+    def initialize(rooms:, physical_statuses:, occupancies:, booking_statuses:, operational_segments:)
+      super(
+        rooms: rooms,
+        physical_statuses: Immutable.hash(physical_statuses),
+        occupancies: Immutable.hash(occupancies),
+        booking_statuses: Immutable.hash(booking_statuses),
+        operational_segments: Immutable.hash(operational_segments)
+      )
+    end
+  end
+
+  Capabilities = Data.define(
+    :view_board, :view_booking, :create_booking, :move_booking, :change_dates, :reassign_room,
+    :check_in, :check_out, :view_rates, :view_financial_status, :view_room_readiness,
+    :manage_room_status, :manage_housekeeping, :manage_room_blocks
+  ) do
+    members.each { |name| alias_method "#{name}?", name }
+  end
+
+  Board = Data.define(:view_mode, :date_window, :room_groups, :status_counts, :filters, :capabilities) do
+    def initialize(view_mode:, date_window:, room_groups:, status_counts:, filters:, capabilities:)
+      super(
+        view_mode: view_mode.to_sym,
+        date_window: date_window,
+        room_groups: Immutable.array(room_groups),
+        status_counts: status_counts,
+        filters: filters,
+        capabilities: capabilities
+      )
+    end
+
+    def empty?
+      room_groups.all? { |group| group.rooms.empty? }
+    end
+  end
+end
