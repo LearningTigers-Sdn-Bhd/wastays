@@ -1,0 +1,8 @@
+<%= tag.div(**root_attributes) do %>
+  <span class="sr-only"><%= caption %></span>
+  <span id="<%= hint_id %>" class="sr-only">Scroll horizontally to view additional dates.</span>
+  <%= header %>
+  <div class="panel-timeline__body" role="presentation">
+    <%= safe_join(groups) %>
+  </div>
+<% end %>

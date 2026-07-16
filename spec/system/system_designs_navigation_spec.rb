@@ -116,4 +116,38 @@ RSpec.describe "System design navigation", type: :system do
     expect(page).to have_current_path(%r{/system-design#alert-preview$}, url: true)
     expect(page).to have_css("a[href='#alert-preview'][aria-current='location']", count: 2, visible: :all)
   end
+
+  it "renders the timeline preview with responsive overflow and keyboard-accessible stays" do
+    page.current_window.resize_to(390, 844)
+    visit "/system-design#timeline-preview"
+
+    expect(page).to have_css("section[data-theme='panel-light'] #timeline-preview-panel-light")
+    expect(page).to have_css("section[data-theme='panel-dark'] #timeline-preview-panel-dark")
+    expect(page).to have_css(".panel-timeline__segment[data-emphasis='hatched']", visible: :all)
+    expect(page).to have_link("Ada Lovelace", exact: true, visible: :all)
+
+    geometry = page.evaluate_script(<<~JS)
+      (() => {
+        const timeline = document.getElementById("timeline-preview-panel-light")
+        const header = timeline.querySelector(".panel-timeline__header")
+        const room = timeline.querySelector(".panel-timeline__room-summary")
+        return {
+          overflows: timeline.scrollWidth > timeline.clientWidth,
+          timelinePosition: getComputedStyle(timeline).position,
+          headerPosition: getComputedStyle(header).position,
+          roomPosition: getComputedStyle(room).position
+        }
+      })()
+    JS
+
+    expect(geometry).to include(
+      "overflows" => true,
+      "timelinePosition" => "relative",
+      "headerPosition" => "sticky",
+      "roomPosition" => "sticky"
+    )
+
+    find("#timeline-preview-panel-light").send_keys(:tab)
+    expect(page.evaluate_script("document.activeElement.classList.contains('panel-timeline__segment-action')")).to be(true)
+  end
 end

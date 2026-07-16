@@ -34,6 +34,7 @@
 @import "./panel/card.css";
 @import "./panel/metric-card.css";
 @import "./panel/table.css";
+@import "./panel/timeline.css";
 @import "./panel/floating.css";
 @import "./panel/dropdown-menu.css";
 @import "./panel/profile-menu.css";
