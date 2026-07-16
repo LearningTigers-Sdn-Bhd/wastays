@@ -25,6 +25,52 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     sign_in_through_ui(user)
   end
 
+  def dispatch_pointer_down(segment_id:, edge: nil, pointer_type: "mouse", pointer_id: 41)
+    page.execute_script(<<~JS)
+      (() => {
+        const segment = document.getElementById(#{segment_id.to_json})
+        const source = #{edge.to_json} ? segment.querySelector(`[data-resize-edge="${#{edge.to_json}}"]`) : segment.querySelector(".panel-timeline__segment-content")
+        const rect = source.getBoundingClientRect()
+        window.phaseFivePointer = {
+          segmentId: #{segment_id.to_json}, pointerId: #{pointer_id}, pointerType: #{pointer_type.to_json},
+          x: rect.left + rect.width / 2, y: rect.top + rect.height / 2
+        }
+        source.dispatchEvent(new PointerEvent("pointerdown", {
+          bubbles: true, cancelable: true, pointerId: #{pointer_id}, pointerType: #{pointer_type.to_json},
+          isPrimary: true, button: 0, clientX: window.phaseFivePointer.x, clientY: window.phaseFivePointer.y
+        }))
+      })()
+    JS
+  end
+
+  def dispatch_pointer_finish(room_number:, day_delta:, pointer_id: 41)
+    page.execute_script(<<~JS)
+      (() => {
+        const pointer = window.phaseFivePointer
+        const row = document.querySelector(`[data-room-number="#{room_number}"][data-stay-view--interaction-target~="row"]`)
+        const rowRect = row.querySelector(".panel-timeline__row-track").getBoundingClientRect()
+        const dayWidth = row.querySelector(".panel-timeline__cell").getBoundingClientRect().width
+        const x = pointer.x + (dayWidth * #{day_delta})
+        const y = rowRect.top + rowRect.height / 2
+        window.dispatchEvent(new PointerEvent("pointermove", {
+          bubbles: true, cancelable: true, pointerId: #{pointer_id}, pointerType: pointer.pointerType,
+          isPrimary: true, button: 0, clientX: x, clientY: y
+        }))
+        window.dispatchEvent(new PointerEvent("pointerup", {
+          bubbles: true, cancelable: true, pointerId: #{pointer_id}, pointerType: pointer.pointerType,
+          isPrimary: true, button: 0, clientX: x, clientY: y
+        }))
+      })()
+    JS
+  end
+
+  def drag_booking(room_number:, day_delta:, edge: nil, pointer_type: "mouse", long_press: false)
+    segment_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}"
+    dispatch_pointer_down(segment_id:, edge:, pointer_type:)
+    sleep 0.4 if long_press
+    dispatch_pointer_finish(room_number:, day_delta:)
+  end
+
   it "switches between URL-backed views and restores the prior view with browser history" do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
 
@@ -100,6 +146,140 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     expect(page).to have_css("#stay_view_room_#{room_type.id}_102", text: "Ada Lovelace")
     expect(booking.reload.booking_rooms.first.room_number).to eq("102")
+  end
+
+  it "opens a cross-room drag proposal without mutation and confirms it through the existing command" do
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+
+    drag_booking(room_number: "102", day_delta: 1)
+
+    within("#offcanvas_drawer") do
+      expect(page).to have_content("Move or reassign stay")
+      expect(find("#booking_check_in", visible: :all).value).to eq((Date.current + 1.day).iso8601)
+      expect(find("#booking_room_assignment", visible: :all).value).to eq("#{room_type.id}|102")
+    end
+    expect(booking.reload.check_in.to_date).to eq(Date.current)
+    expect(booking.booking_rooms.first.reload.room_number).to eq("101")
+
+    within("#offcanvas_drawer") { click_button "Confirm move" }
+
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_102 #stay_view_booking_room_#{booking.booking_rooms.sole.id}")
+    expect(booking.reload.check_in.to_date).to eq(Date.current + 1.day)
+    expect(booking.booking_rooms.first.reload.room_number).to eq("102")
+  end
+
+  it "resizes either visible booking edge through date proposals" do
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current - 1.day, days: 7)
+
+    drag_booking(room_number: "101", day_delta: 1, edge: "start")
+    within("#offcanvas_drawer") do
+      expect(page).to have_content("Change stay dates")
+      expect(find("#booking_check_in", visible: :all).value).to eq((Date.current + 1.day).iso8601)
+      expect(find("#booking_check_out", visible: :all).value).to eq((Date.current + 2.days).iso8601)
+      click_button "Save dates"
+    end
+    expect(booking.reload.check_in.to_date).to eq(Date.current + 1.day)
+    expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 2)
+
+    drag_booking(room_number: "101", day_delta: 1, edge: "end")
+    within("#offcanvas_drawer") do
+      expect(find("#booking_check_out", visible: :all).value).to eq((Date.current + 3.days).iso8601)
+      click_button "Save dates"
+    end
+    expect(booking.reload.check_out.to_date).to eq(Date.current + 3.days)
+  end
+
+  it "uses long-press for touch drag while an early swipe cancels activation" do
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+    segment_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}"
+
+    dispatch_pointer_down(segment_id:, pointer_type: "touch")
+    dispatch_pointer_finish(room_number: "102", day_delta: 1)
+    expect(page).to have_no_css("#offcanvas_drawer", text: "Move or reassign stay", visible: :visible)
+
+    dispatch_pointer_down(segment_id:, pointer_type: "touch")
+    sleep 0.4
+    dispatch_pointer_finish(room_number: "102", day_delta: 0)
+
+    within("#offcanvas_drawer") do
+      expect(page).to have_content("Move or reassign stay")
+      click_button "Cancel"
+    end
+    expect(booking.reload.booking_rooms.first.room_number).to eq("101")
+  end
+
+  it "cancels an active drag with Escape without opening a proposal" do
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+    segment_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}"
+    find("##{segment_id}").hover
+    expect(page).to have_css("##{segment_id}-panel", visible: :visible)
+    dispatch_pointer_down(segment_id:)
+
+    page.execute_script(<<~JS)
+      (() => {
+        const pointer = window.phaseFivePointer
+        window.dispatchEvent(new PointerEvent("pointermove", {
+          bubbles: true, cancelable: true, pointerId: pointer.pointerId, pointerType: pointer.pointerType,
+          isPrimary: true, button: 0, clientX: pointer.x + 40, clientY: pointer.y
+        }))
+      })()
+    JS
+
+    expect(page).to have_css(".panel-timeline__segment-proposal .panel-timeline__segment-content > span", count: 2)
+    expect(page).to have_css(".panel-timeline__segment-proposal", text: "Ada Lovelace")
+    expect(page).to have_css(".panel-timeline__segment-proposal", text: "Confirmed")
+    expect(page).to have_no_css("##{segment_id}-panel", visible: :visible)
+
+    page.execute_script('window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Escape" }))')
+
+    expect(page).to have_no_css(".panel-timeline__segment-proposal")
+    expect(page).to have_no_css("#offcanvas_drawer", text: "Move or reassign stay", visible: :visible)
+    expect(booking.reload.check_in.to_date).to eq(Date.current)
+  end
+
+  it "treats unchanged and outside drops as cancellations" do
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+    segment_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}"
+
+    drag_booking(room_number: "101", day_delta: 0)
+    expect(page).to have_no_css("#offcanvas_drawer", text: "Move or reassign stay", visible: :visible)
+
+    dispatch_pointer_down(segment_id:)
+    page.execute_script(<<~JS)
+      (() => {
+        const pointer = window.phaseFivePointer
+        window.dispatchEvent(new PointerEvent("pointermove", {
+          bubbles: true, cancelable: true, pointerId: pointer.pointerId, pointerType: pointer.pointerType,
+          isPrimary: true, button: 0, clientX: 4, clientY: 4
+        }))
+        window.dispatchEvent(new PointerEvent("pointerup", {
+          bubbles: true, cancelable: true, pointerId: pointer.pointerId, pointerType: pointer.pointerType,
+          isPrimary: true, button: 0, clientX: 4, clientY: 4
+        }))
+      })()
+    JS
+
+    expect(page).to have_no_css(".panel-timeline__segment-proposal")
+    expect(page).to have_no_css("#offcanvas_drawer", text: "Move or reassign stay", visible: :visible)
+    expect(booking.reload.booking_rooms.first.room_number).to eq("101")
+  end
+
+  it "preserves timeline scroll and restores focus to the moved segment after a selective refresh" do
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 30)
+    page.execute_script("document.getElementById('stay-view-timeline').scrollLeft = 20")
+
+    drag_booking(room_number: "102", day_delta: 0)
+    within("#offcanvas_drawer") { click_button "Confirm move" }
+
+    trigger_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}-trigger"
+    expect(page).to have_css("##{trigger_id}", wait: 10)
+    expect(page).to have_css("##{trigger_id}:focus", wait: 2)
+    expect(page.evaluate_script("document.getElementById('stay-view-timeline').scrollLeft")).to be_within(2).of(20)
+
+    refresh
+
+    expect(page).to have_css("##{trigger_id}", wait: 10)
+    expect(page).to have_no_css("##{trigger_id}:focus")
   end
 
   it "auto-applies filters, start date, and duration through the board frame" do

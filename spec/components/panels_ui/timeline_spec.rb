@@ -228,4 +228,17 @@ RSpec.describe PanelsUI::Timeline::Table, type: :component do
     expect(stylesheet).not_to match(/\b(?:slate|gray|stone|indigo|blue|red|green|purple)-\d/)
     expect(stylesheet).to include("var(--card)", "var(--border)", "var(--status-warning-background)", "var(--ring)")
   end
+
+  it "provides semantic proposal, drop-target, reduced-motion, and minimum pointer-target styles" do
+    stylesheet = Rails.root.join("app/assets/tailwind/panel/timeline.css").read
+
+    expect(stylesheet).to match(/\.panel-timeline__resize-handle\s*\{[^}]*width:\s*1\.5rem/m)
+    expect(stylesheet).to include(
+      ".panel-timeline__segment-proposal",
+      "data-drop-target=\"active\"",
+      "var(--status-destructive-background)",
+      "@media (prefers-reduced-motion: reduce)"
+    )
+    expect(stylesheet).not_to match(/data-drop-target="active"[^}]*box-shadow/m)
+  end
 end

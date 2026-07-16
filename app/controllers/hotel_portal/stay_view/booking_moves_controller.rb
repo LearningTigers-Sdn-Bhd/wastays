@@ -8,6 +8,7 @@ module HotelPortal
 
       def edit
         prepare_form
+        validate_proposal if pointer_proposal?
       end
 
       def update
@@ -16,6 +17,7 @@ module HotelPortal
         room_type_id, room_number = parse_assignment(move_params[:room_assignment])
         room_type = current_hotel.room_types.find(room_type_id)
         raise ArgumentError, "Select a configured room." unless room_type.room_numbers.map(&:to_s).include?(room_number)
+        original_room_key = room_key(@original_room.room_type_id, @original_room.room_number)
 
         result = ::Bookings::UpdateStayService.new(
           booking: @booking,
@@ -28,7 +30,12 @@ module HotelPortal
           user: current_user
         ).call
 
-        return respond_with_board("Stay moved.") if result.success?
+        if result.success?
+          return respond_with_board(
+            "Stay moved.",
+            affected_room_keys: [ original_room_key, room_key(room_type.id, room_number) ]
+          )
+        end
 
         add_error(@booking, result.errors)
         render_sheet_error("hotel_portal/stay_view/booking_moves/form")
@@ -71,6 +78,25 @@ module HotelPortal
 
       def assignment_value(room_type_id, room_number)
         "#{room_type_id}|#{room_number}"
+      end
+
+      def validate_proposal
+        check_in = scheduled_date(move_params[:check_in], :check_in)
+        room_type_id, room_number = parse_assignment(move_params[:room_assignment])
+        room_type = current_hotel.room_types.find(room_type_id)
+        validate_pointer_proposal(
+          booking: @booking,
+          room_type:,
+          room_number:,
+          check_in:,
+          check_out: check_in + (@booking.check_out - @booking.check_in)
+        )
+      rescue ArgumentError => e
+        add_error(@booking, e.message)
+      end
+
+      def room_key(room_type_id, room_number)
+        "#{room_type_id}:#{room_number}"
       end
     end
   end

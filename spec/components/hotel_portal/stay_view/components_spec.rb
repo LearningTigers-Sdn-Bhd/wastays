@@ -91,6 +91,39 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_css("#stay-view-booking-1-panel", text: "Single booking", visible: :all)
   end
 
+  it "renders capability-gated pointer metadata and only visible resize handles" do
+    interactive = booking_segment.with(
+      clipped_left: true,
+      clipped_right: false,
+      capabilities: capabilities.with(move_booking: true, change_dates: true)
+    )
+
+    render_inline(HotelPortal::StayView::BookingBar.new(
+      segment: interactive,
+      interaction: {
+        room_type_id: 1,
+        room_number: "101",
+        move_url: "/stay-view/bookings/1/move/edit?proposal=pointer",
+        dates_url: "/stay-view/bookings/1/dates/edit?proposal=pointer"
+      }
+    ))
+
+    expect(page).to have_css(
+      "#stay-view-booking-1[data-stay-view--interaction-target='segment']" \
+      "[data-action*='pointerdown->stay-view--interaction#start'][data-room-type-id='1'][data-room-number='101']"
+    )
+    expect(page).to have_css(".panel-timeline__resize-handle[data-resize-edge='end']", count: 1)
+    expect(page).to have_no_css(".panel-timeline__resize-handle[data-resize-edge='start']")
+    expect(page.find("#stay-view-booking-1-trigger")[:draggable]).to eq("false")
+  end
+
+  it "omits pointer hooks when booking mutations are not permitted" do
+    render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment))
+
+    expect(page).to have_no_css("[data-stay-view--interaction-target='segment']")
+    expect(page).to have_no_css(".panel-timeline__resize-handle")
+  end
+
   it "shows group identity on a grouped booking segment" do
     grouped = booking_segment.with(
       group_booking_id: 7,

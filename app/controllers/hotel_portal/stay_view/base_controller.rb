@@ -5,7 +5,7 @@ module HotelPortal
     class BaseController < HotelPortal::BaseController
       include OffcanvasTransactionCompletion
 
-      helper_method :stay_view_state
+      helper_method :stay_view_state, :pointer_proposal?
 
       before_action :set_stay_view_context
 
@@ -37,7 +37,7 @@ module HotelPortal
         raise Pundit::NotAuthorizedError unless capabilities.public_send("#{name}?")
       end
 
-      def respond_with_board(message)
+      def respond_with_board(message, affected_room_keys: [])
         respond_to do |format|
           format.turbo_stream do
             board = ::StayView::BuildBoard.call(
@@ -46,15 +46,7 @@ module HotelPortal
               capabilities:,
               **stay_view_state.build_options
             )
-            render turbo_stream: [
-              turbo_stream.replace(
-                "stay_view_board",
-                partial: "hotel_portal/stay_view/board/board",
-                locals: { board:, state: stay_view_state }
-              ),
-              helpers.turbo_stream_action_tag(:complete_offcanvas, target: "offcanvas_drawer"),
-              toast_stream(message, type: :success)
-            ]
+            render turbo_stream: board_streams(board, message, affected_room_keys)
           end
           format.html { redirect_to @return_to, notice: message, status: :see_other }
         end
@@ -74,6 +66,56 @@ module HotelPortal
 
       def add_error(record, message)
         record.errors.add(:base, Array(message).to_sentence)
+      end
+
+      def pointer_proposal?
+        params[:proposal] == "pointer"
+      end
+
+      def validate_pointer_proposal(booking:, room_type:, room_number:, check_in:, check_out:)
+        ::StayView::ValidateBookingProposal.call(
+          booking:, room_type:, room_number:, check_in:, check_out:
+        ).each { |message| add_error(booking, message) }
+      end
+
+      def board_streams(board, message, affected_room_keys)
+        streams = selective_timeline_streams(board, affected_room_keys)
+        streams ||= [
+          turbo_stream.replace(
+            "stay_view_board",
+            partial: "hotel_portal/stay_view/board/board",
+            locals: { board:, state: stay_view_state }
+          )
+        ]
+        streams + [
+          helpers.turbo_stream_action_tag(:complete_offcanvas, target: "offcanvas_drawer"),
+          toast_stream(message, type: :success)
+        ]
+      end
+
+      def selective_timeline_streams(board, affected_room_keys)
+        return unless board.view_mode == :timeline
+        return unless board.filters.to_h.compact.empty?
+
+        keys = affected_room_keys.compact.map(&:to_s).uniq
+        return if keys.empty?
+
+        rooms = board.room_groups.flat_map(&:rooms).index_by(&:key).values_at(*keys)
+        return if rooms.any?(&:nil?)
+
+        [
+          turbo_stream.replace(
+            "stay_view_toolbar",
+            partial: "hotel_portal/stay_view/board/toolbar",
+            locals: { board:, state: stay_view_state }
+          ),
+          *rooms.map do |room|
+            turbo_stream.replace(
+              room.dom_id,
+              html: view_context.render(HotelPortal::StayView::TimelineRow.new(room:, state: stay_view_state))
+            )
+          end
+        ]
       end
     end
   end

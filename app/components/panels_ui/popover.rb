@@ -106,6 +106,7 @@ module PanelsUI
     def root_attributes
       attributes = @attributes.deep_dup
       data = attributes.delete(:data) || attributes.delete("data") || {}
+      caller_action = data.delete(:action) || data.delete("action")
 
       attributes.merge(
         id: attributes.delete(:id) || @id,
@@ -119,7 +120,7 @@ module PanelsUI
           panels_ui__popover_trigger_on_value: @trigger_on,
           panels_ui__popover_focus_value: focus?,
           panels_ui__popover_owner_value: @owner,
-          action: root_action
+          action: [ root_action, caller_action ].compact_blank.join(" ").presence
         ).compact
       )
     end

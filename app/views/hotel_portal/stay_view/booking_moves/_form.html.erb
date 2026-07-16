@@ -5,6 +5,9 @@
     <%= render "hotel_portal/stay_view/state_fields", state: stay_view_state, return_to: @return_to %>
     <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
       <%= render "hotel_portal/stay_view/errors", record: @booking, title: "The stay could not be moved." %>
+      <% if pointer_proposal? %>
+        <p class="text-sm text-muted-foreground">Review the proposed room and date. Availability will be checked again when you confirm.</p>
+      <% end %>
 
       <dl class="grid gap-3 rounded-md border border-border bg-muted p-3 text-sm sm:grid-cols-2">
         <div><dt class="text-xs text-muted-foreground">Current dates</dt><dd class="mt-1 font-medium text-foreground"><%= @booking.check_in.to_date.to_fs(:medium) %> – <%= @booking.check_out.to_date.to_fs(:medium) %></dd></div>

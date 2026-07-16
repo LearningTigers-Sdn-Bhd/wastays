@@ -16,12 +16,13 @@ module HotelPortal
         no_show: :destructive
       }.freeze
 
-      def initialize(segment:, href: nil, id: nil, class: nil, link_attributes: {}, **attributes)
+      def initialize(segment:, href: nil, id: nil, class: nil, link_attributes: {}, interaction: {}, **attributes)
         @segment = segment
         @href = href
         @id = id
         @class = binding.local_variable_get(:class)
         @link_attributes = link_attributes
+        @interaction = interaction
         @attributes = attributes
       end
 
@@ -45,9 +46,11 @@ module HotelPortal
         ) do |popover|
           popover.with_trigger(**trigger_attributes) do
             safe_join([
+              resize_handle(:start),
               tag.span(segment_label, class: "min-w-0 flex-1 truncate"),
-              tag.span(@segment.status.to_s.humanize, class: "shrink-0 text-xs font-medium")
-            ])
+              tag.span(@segment.status.to_s.humanize, class: "shrink-0 text-xs font-medium"),
+              resize_handle(:end)
+            ].compact)
           end
           popover_content
         end
@@ -64,13 +67,27 @@ module HotelPortal
       end
 
       def segment_data
-        {
+        data = {
           slot: "timeline-segment",
           tone: STATUS_TONES.fetch(@segment.status, :neutral),
           emphasis: :solid,
           clipped_left: @segment.clipped_left?.to_s,
           clipped_right: @segment.clipped_right?.to_s
         }
+        return data unless interactive?
+
+        data.merge(
+          "stay-view--interaction-target": "segment",
+          action: "pointerdown->stay-view--interaction#start",
+          booking_id: @segment.booking_id,
+          booking_room_id: @segment.booking_room_id,
+          check_in: @segment.check_in.iso8601,
+          check_out: @segment.check_out.iso8601,
+          room_type_id: @interaction[:room_type_id],
+          room_number: @interaction[:room_number],
+          move_url: @interaction[:move_url],
+          dates_url: @interaction[:dates_url]
+        ).compact
       end
 
       def trigger_attributes
@@ -78,6 +95,7 @@ module HotelPortal
         aria = attributes.delete(:aria) || attributes.delete("aria") || {}
         attributes.merge(
           href: permitted_href,
+          draggable: false,
           unstyled: true,
           class: tw_merge(
             "panel-timeline__segment-content gap-2",
@@ -86,6 +104,26 @@ module HotelPortal
           ),
           aria_label: aria.delete(:label) || aria.delete("label") || @segment.accessible_label,
           aria:
+        )
+      end
+
+      def interactive?
+        @interaction[:move_url].present? || @interaction[:dates_url].present?
+      end
+
+      def resize_handle(edge)
+        return unless @interaction[:dates_url].present?
+        return if edge == :start && @segment.clipped_left?
+        return if edge == :end && @segment.clipped_right?
+
+        tag.span(
+          "",
+          class: "panel-timeline__resize-handle",
+          aria: { hidden: true },
+          data: {
+            "stay-view--interaction-target": "handle",
+            resize_edge: edge
+          }
         )
       end
 

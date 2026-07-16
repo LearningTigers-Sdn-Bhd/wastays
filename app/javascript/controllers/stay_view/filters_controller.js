@@ -7,11 +7,16 @@ export default class extends Controller {
     this.submitting = false
     this.pendingSignature = null
     this.onPopState = this.restoreForLocation.bind(this)
+    this.onTurboRender = this.restoreForLocation.bind(this)
     window.addEventListener("popstate", this.onPopState)
+    document.addEventListener("turbo:render", this.onTurboRender)
+    document.addEventListener("turbo:load", this.onTurboRender)
   }
 
   disconnect() {
     window.removeEventListener("popstate", this.onPopState)
+    document.removeEventListener("turbo:render", this.onTurboRender)
+    document.removeEventListener("turbo:load", this.onTurboRender)
     this.cancelPending()
     if (this.historyTimer !== null) window.clearTimeout(this.historyTimer)
     this.submitting = false

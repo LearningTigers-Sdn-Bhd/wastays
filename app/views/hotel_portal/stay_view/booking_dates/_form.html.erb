@@ -4,6 +4,9 @@
     <%= render "hotel_portal/stay_view/state_fields", state: stay_view_state, return_to: @return_to %>
     <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
       <%= render "hotel_portal/stay_view/errors", record: @booking, title: "The stay dates could not be changed." %>
+      <% if pointer_proposal? %>
+        <p class="text-sm text-muted-foreground">Review the proposed dates. Availability will be checked again when you confirm.</p>
+      <% end %>
       <p class="text-sm text-muted-foreground">The assigned room stays the same. Use Move or reassign if the room also needs to change.</p>
       <%= render PanelsUI::FormField.new(form:, attribute: :check_in, label: "Check-in", required: true) do |field| %>
         <% field.with_date_picker(value: @check_in_value, linked_to: :check_out) %>

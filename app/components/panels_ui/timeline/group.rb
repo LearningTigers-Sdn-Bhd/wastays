@@ -3,7 +3,13 @@
 module PanelsUI
   module Timeline
     class Group < PanelsUI::BaseComponent
-      renders_many :rows, ->(**args) { Row.new(track_count: @track_count, **args) }
+      renders_many :rows, types: {
+        standard: ->(**args) { Row.new(track_count: @track_count, **args) },
+        component: ->(component:) { component }
+      }
+
+      def with_row(...) = with_row_standard(...)
+      def with_custom_row(...) = with_row_component(...)
 
       def initialize(track_count:, label:, count: nil, class: nil, **attributes)
         @track_count = track_count

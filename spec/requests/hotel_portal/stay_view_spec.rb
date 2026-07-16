@@ -136,7 +136,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).to include("Change stay dates", "assigned room stays the same")
     end
 
-    it "moves a stay and replaces the complete board over Turbo Stream" do
+    it "moves a stay and selectively replaces unfiltered Timeline rows over Turbo Stream" do
       patch hotel_stay_view_booking_move_path(hotel, booking), params: {
         return_to: hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7),
         booking: { check_in: Date.current + 3.days, room_assignment: "#{room_type.id}|102" }
@@ -144,9 +144,69 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
-      expect(response.body).to include('target="stay_view_board"', 'target="offcanvas_drawer"', "Stay moved.")
+      expect(response.body).to include(
+        'target="stay_view_toolbar"',
+        "target=\"stay_view_room_#{room_type.id}_101\"",
+        "target=\"stay_view_room_#{room_type.id}_102\"",
+        'target="offcanvas_drawer"',
+        "Stay moved."
+      )
+      expect(response.body).not_to include('target="stay_view_board"')
       expect(booking.reload.check_in.to_date).to eq(Date.current + 3.days)
       expect(booking.booking_rooms.first.reload.room_number).to eq("102")
+    end
+
+
+    it "prefills and validates pointer move and resize proposals without mutation" do
+      conflicting = create(:booking, hotel:, check_in: Date.current + 2.days, check_out: Date.current + 4.days)
+      create(:booking_room, booking: conflicting, room_type:, room_number: "102")
+      original_dates = [ booking.check_in, booking.check_out ]
+
+      get edit_hotel_stay_view_booking_move_path(hotel, booking), params: {
+        proposal: "pointer",
+        booking: { check_in: Date.current + 2.days, room_assignment: "#{room_type.id}|102" }
+      }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Review the proposed room and date", "Room 102 is not available")
+      expect(response.body).to include("value=\"#{Date.current + 2.days}\"")
+
+      get edit_hotel_stay_view_booking_dates_path(hotel, booking), params: {
+        proposal: "pointer",
+        booking: { check_in: Date.current, check_out: Date.current + 3.days }
+      }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Review the proposed dates", "value=\"#{Date.current + 3.days}\"")
+      expect([ booking.reload.check_in, booking.check_out ]).to eq(original_dates)
+    end
+
+    it "rejects a pointer proposal that names another hotel's room type" do
+      other_hotel = create(:hotel)
+      other_type = create(:room_type, hotel: other_hotel, room_numbers: [ "900" ])
+
+      get edit_hotel_stay_view_booking_move_path(hotel, booking), params: {
+        proposal: "pointer",
+        booking: { check_in: Date.current, room_assignment: "#{other_type.id}|900" }
+      }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:not_found)
+      expect(booking.reload.booking_rooms.first.room_number).to eq("101")
+    end
+
+    it "falls back to replacing the complete board when Timeline filters are active" do
+      patch hotel_stay_view_booking_dates_path(hotel, booking), params: {
+        return_to: hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7, occupancy: :occupied),
+        view: :timeline,
+        start_date: Date.current,
+        days: 7,
+        occupancy: :occupied,
+        booking: { check_in: Date.current + 1.day, check_out: Date.current + 3.days }
+      }, headers: turbo_headers
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('target="stay_view_board"', 'target="offcanvas_drawer"')
+      expect(response.body).not_to include('target="stay_view_toolbar"')
     end
 
     it "uses a 303 redirect for the HTML mutation fallback" do

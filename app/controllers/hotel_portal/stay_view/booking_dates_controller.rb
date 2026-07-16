@@ -8,6 +8,7 @@ module HotelPortal
 
       def edit
         prepare_form
+        validate_proposal if pointer_proposal?
       end
 
       def update
@@ -22,7 +23,10 @@ module HotelPortal
           user: current_user
         ).call
 
-        return respond_with_board("Stay dates changed.") if result.success?
+        if result.success?
+          room = @booking.booking_rooms.first
+          return respond_with_board("Stay dates changed.", affected_room_keys: [ "#{room.room_type_id}:#{room.room_number}" ])
+        end
 
         add_error(@booking, result.errors)
         render_sheet_error("hotel_portal/stay_view/booking_dates/form")
@@ -51,6 +55,23 @@ module HotelPortal
         raise ArgumentError, "#{kind.to_s.humanize} is required." if value.blank?
 
         ::Bookings::ScheduledStay.at_hotel_time(hotel: current_hotel, value:, kind:)
+      end
+
+      def validate_proposal
+        check_in = scheduled_date(date_params[:check_in], :check_in)
+        check_out = scheduled_date(date_params[:check_out], :check_out)
+        room = @booking.booking_rooms.first
+        raise ArgumentError, "The booking does not have an assigned room." unless room
+
+        validate_pointer_proposal(
+          booking: @booking,
+          room_type: room.room_type,
+          room_number: room.room_number,
+          check_in:,
+          check_out:
+        )
+      rescue ArgumentError => e
+        add_error(@booking, e.message)
       end
     end
   end
