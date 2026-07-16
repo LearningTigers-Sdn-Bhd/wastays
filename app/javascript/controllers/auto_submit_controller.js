@@ -7,6 +7,7 @@ export default class extends Controller {
 
   connect() {
     this.timeout = null
+    this.reenableTimers = []
     this.cleanupBound = this.cleanupEmptyInputs.bind(this)
     this.element.addEventListener("submit", this.cleanupBound)
   }
@@ -15,6 +16,11 @@ export default class extends Controller {
     if (this.timeout) {
       clearTimeout(this.timeout)
     }
+    this.reenableTimers.forEach(({ timer, inputs }) => {
+      clearTimeout(timer)
+      inputs.forEach(input => { input.disabled = false })
+    })
+    this.reenableTimers = []
     this.element.removeEventListener("submit", this.cleanupBound)
   }
 
@@ -65,10 +71,12 @@ export default class extends Controller {
     })
 
     // Re-enable them immediately in the next event loop tick so they remain usable
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       disabledInputs.forEach(input => {
         input.disabled = false
       })
+      this.reenableTimers = this.reenableTimers.filter(entry => entry.timer !== timer)
     }, 0)
+    this.reenableTimers = [...this.reenableTimers, { timer, inputs: disabledInputs }]
   }
 }

@@ -25,6 +25,10 @@ RSpec.describe "Hotel booking show tab redirects", type: :request do
   end
 
   it "redirects the legacy 'history' tab to the Booking Control Panel's audit_trails tab" do
+    hotel.update!(plan: create(:plan))
+    feature = create(:feature, feature_group: create(:feature_group), slug: "full_audit_trail")
+    create(:plan_feature, plan: hotel.plan, feature: feature, enabled: true)
+
     get hotel_booking_path(hotel, booking, tab: "history")
 
     expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "audit_trails"))

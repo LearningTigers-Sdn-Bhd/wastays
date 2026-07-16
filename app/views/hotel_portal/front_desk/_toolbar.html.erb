@@ -6,8 +6,8 @@
     <% excluded = [search_key, @page_param] + date_keys %>
     <% state.except(*excluded).merge(tab: @tab, view: @view).each { |key, value| concat hidden_field_tag(key, value) } %>
     <div class="relative min-w-72 flex-1">
-      <%= cached_icon "magnifying-glass", class: "pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" %>
-      <%= form.search_field search_key, value: @query, aria: { label: "Search reservations" }, placeholder: "Search guest, contact, or booking reference", class: "w-full rounded-lg border border-border-interactive bg-card py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/20", data: { action: "input->auto-submit#submit" } %>
+      <%= cached_icon "magnifying-glass", class: "pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" %>
+      <%= form.search_field search_key, value: @query, aria: { label: "Search reservations" }, placeholder: "Search guest, contact, or booking reference", class: "w-full rounded-lg border border-border-interactive bg-card py-2 pl-7 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/20", data: { action: "input->auto-submit#submit" } %>
     </div>
     <%= render PanelsUI::ButtonGroup.new(aria: { label: "Reservation view" }) do %>
       <% { "rooms" => [ "Rooms", "bed" ], "list" => [ "List", "list" ] }.each do |view, (label, icon)| %>

@@ -209,7 +209,7 @@ module HotelPortal
     end
 
     def tabs
-      TABS
+      hotel.feature_enabled?("full_audit_trail") ? TABS : TABS.reject { |tab| tab.key == "audit_trails" }
     end
 
     def active_tab

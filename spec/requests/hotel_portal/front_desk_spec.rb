@@ -396,10 +396,10 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       hotel.update!(time_zone: "Kuala Lumpur")
       created_at = Time.utc(2026, 7, 15, 18, 30)
       records = {
-        bookings: booking(status: "confirmed", confirmation_token: "ROOM-BOOKING", created_at:, adults: 2, children: 0),
-        arrivals: booking(status: "confirmed", confirmation_token: "ROOM-ARRIVAL", check_in: Date.current, created_at:, adults: 2, children: 0),
-        in_house: booking(status: "checked_in", confirmation_token: "ROOM-IN-HOUSE", checked_in_at: Time.current, created_at:, adults: 2, children: 0),
-        departures: booking(status: "completed", confirmation_token: "ROOM-DEPARTURE", checked_out_at: Time.current, created_at:, adults: 2, children: 0)
+        bookings: booking(status: "confirmed", confirmation_token: "ROOM-BOOKING", guest_name: "AReallyLongGuestNameWithoutSpacesThatMustRemainFullyVisible", created_at:, adults: 2, children: 0),
+        arrivals: booking(status: "confirmed", confirmation_token: "ROOM-ARRIVAL", guest_name: "AReallyLongGuestNameWithoutSpacesThatMustRemainFullyVisible", check_in: Date.current, created_at:, adults: 2, children: 0),
+        in_house: booking(status: "checked_in", confirmation_token: "ROOM-IN-HOUSE", guest_name: "AReallyLongGuestNameWithoutSpacesThatMustRemainFullyVisible", checked_in_at: Time.current, created_at:, adults: 2, children: 0),
+        departures: booking(status: "completed", confirmation_token: "ROOM-DEPARTURE", guest_name: "AReallyLongGuestNameWithoutSpacesThatMustRemainFullyVisible", checked_out_at: Time.current, created_at:, adults: 2, children: 0)
       }
       queries = {
         bookings: { booking_query: "ROOM-BOOKING" }, arrivals: { arrival_q: "ROOM-ARRIVAL" },
@@ -427,7 +427,65 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
         expect(card.css("dt").map { |label| label.text.strip }).to include("Total", "Paid", "Balance")
         expect(card.at_css("button[aria-label='Booking actions']")).to be_present
         expect(card.css("header > span > span").map { |line| line.text.strip }).to eq(%w[Unassigned Room])
+        guest_name = card.at_xpath(".//p[normalize-space()='AReallyLongGuestNameWithoutSpacesThatMustRemainFullyVisible']")
+        expect(guest_name["class"]).to include("break-words")
+        expect(guest_name["class"]).not_to include("truncate")
       end
+    end
+
+    it "shows audit trail actions on all room-card tabs only when feature and permission allow", :room_cards do
+      grant_arrival_permission
+      grant_booking_permission
+      plan = create(:plan)
+      hotel.update!(plan: plan)
+      feature = create(:feature, feature_group: create(:feature_group), slug: "full_audit_trail")
+      plan_feature = create(:plan_feature, plan: plan, feature: feature, enabled: true)
+      records = {
+        bookings: booking(status: "confirmed", confirmation_token: "AUDIT-BOOKING"),
+        arrivals: booking(status: "confirmed", confirmation_token: "AUDIT-ARRIVAL", check_in: Date.current),
+        in_house: booking(status: "checked_in", confirmation_token: "AUDIT-IN-HOUSE", checked_in_at: Time.current),
+        departures: booking(status: "completed", confirmation_token: "AUDIT-DEPARTURE", checked_out_at: Time.current)
+      }
+      queries = {
+        bookings: { booking_query: "AUDIT-BOOKING" }, arrivals: { arrival_q: "AUDIT-ARRIVAL" },
+        in_house: { in_house_query: "AUDIT-IN-HOUSE" }, departures: { departure_query: "AUDIT-DEPARTURE" }
+      }
+
+      records.each do |tab, record|
+        get hotel_front_desk_path(hotel), params: { tab:, view: "rooms", **queries.fetch(tab) }
+
+        action = response.parsed_body.at_xpath("//a[normalize-space()='Audit trail']")
+        expect(action).to be_present, "expected Audit trail on #{tab}"
+        expect(action["href"]).to eq(audit_trail_hotel_booking_control_panel_path(hotel, record))
+        expect(action["data-turbo-frame"]).to eq("offcanvas_drawer")
+        expect(action["data-offcanvas-variant"]).to eq("right")
+        menu = action.ancestors.find { |ancestor| ancestor["role"] == "menu" }
+        expect(menu.css('[role="separator"]').size).to eq(1)
+        group = action.ancestors.find { |ancestor| ancestor["role"] == "group" }
+        expected_order = [ "label", "separator" ] + Array.new(menu.css('[role="menuitem"]').size, "menuitem")
+        expect(group.element_children.map { |child| child["role"] || ("menuitem" if child.at_css('[role="menuitem"]')) || "label" }).to eq(
+          expected_order
+        )
+      end
+
+      plan_feature.update!(enabled: false)
+      get hotel_front_desk_path(hotel), params: { tab: :bookings, view: "rooms", **queries.fetch(:bookings) }
+      expect(response.parsed_body.at_xpath("//a[normalize-space()='Audit trail']")).to be_nil
+
+      plan_feature.update!(enabled: true)
+      role.permissions.delete(Permission.find_by!(slug: "view_bookings"))
+      get hotel_front_desk_path(hotel), params: { tab: :bookings, view: "rooms", **queries.fetch(:bookings) }
+      expect(response.parsed_body.at_xpath("//a[normalize-space()='Audit trail']")).to be_nil
+    end
+
+    it "keeps compact spacing between the search icon and text" do
+      grant_booking_permission
+
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "rooms" }
+
+      search = response.parsed_body.at_css('input[aria-label="Search reservations"]')
+      expect(search["class"]).to include("pl-7")
+      expect(search["class"]).not_to include("pl-8", "pl-9")
     end
 
     it "renders accessible arrivals workspace controls and list actions" do
