@@ -71,6 +71,16 @@
               <%= f.label :payment_terms_days, "Payment terms (days)", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
               <%= f.number_field :payment_terms_days, min: 0, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
             </div>
+            <label class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-4 cursor-pointer hover:bg-slate-50 transition-all duration-200">
+              <div>
+                <span class="text-sm font-bold text-slate-900 block">Auto-allocate payments</span>
+                <span class="text-xs text-slate-500 font-medium mt-1 leading-normal block">Applies unallocated payments to this account's oldest outstanding invoices first (FIFO) instead of leaving them for manual allocation.</span>
+              </div>
+              <span class="relative inline-flex items-center shrink-0">
+                <%= f.check_box :auto_allocate_payments, class: "sr-only peer" %>
+                <span class="peer h-6 w-11 rounded-full bg-slate-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full"></span>
+              </span>
+            </label>
           </section>
         </div>
       </div>

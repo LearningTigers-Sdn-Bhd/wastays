@@ -1078,6 +1078,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
     t.string "agent_code"
     t.string "contact_email"
     t.string "contact_phone"
+    t.boolean "auto_allocate_payments", default: false, null: false
     t.index ["corporate_account_id", "status"], name: "idx_hotel_corporate_accounts_on_account_and_status"
     t.index ["corporate_account_id"], name: "index_hotel_corporate_accounts_on_corporate_account_id"
     t.index ["hotel_id", "agent_code"], name: "index_hotel_corporate_accounts_on_hotel_id_and_agent_code", unique: true

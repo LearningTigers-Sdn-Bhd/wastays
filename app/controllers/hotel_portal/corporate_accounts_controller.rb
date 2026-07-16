@@ -95,7 +95,8 @@ module HotelPortal
         :credit_currency,
         :payment_terms_days,
         :contact_email,
-        :contact_phone
+        :contact_phone,
+        :auto_allocate_payments
       )
     end
   end
