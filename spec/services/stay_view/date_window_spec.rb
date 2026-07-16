@@ -52,4 +52,12 @@ RSpec.describe StayView::DateWindow do
     expect(clipped.to_h).to include(start_track: 1, end_track: 15, clipped_left: true, clipped_right: true)
     expect(full_day.to_h).to include(start_track: 3, end_track: 7)
   end
+
+  it "gives same-day stays a minimal positive width" do
+    window = described_class.new(hotel:, start_date: "2026-07-16", days: 7, now:)
+
+    same_day = window.booking_tracks(Date.new(2026, 7, 18), Date.new(2026, 7, 18))
+
+    expect(same_day.to_h).to include(start_track: 6, end_track: 7, clipped_left: false, clipped_right: false)
+  end
 end

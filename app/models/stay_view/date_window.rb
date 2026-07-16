@@ -48,9 +48,14 @@ module StayView
     def booking_tracks(check_in, check_out)
       start_on = check_in.to_date
       end_on = check_out.to_date
+      start_track = start_on < start_date ? 1 : centre_track(start_on)
+      end_track = end_on >= end_date ? final_track : centre_track(end_on)
+      # Same-day (zero-night) stays land on a single centre track; give them a
+      # minimal half-day width so the segment renders as a positive range.
+      end_track = start_track + 1 if end_track <= start_track
       TrackRange.new(
-        start_track: start_on < start_date ? 1 : centre_track(start_on),
-        end_track: end_on >= end_date ? final_track : centre_track(end_on),
+        start_track: start_track,
+        end_track: end_track,
         clipped_left: start_on < start_date,
         clipped_right: end_on >= end_date
       )
