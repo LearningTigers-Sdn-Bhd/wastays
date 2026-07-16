@@ -1,7 +1,11 @@
 <div class="w-full space-y-3.5">
   <%= render PanelsUI::PageHeader.new(
         title: "Pay Invoices",
-        description: "Choose a hotel, select the invoices you want to pay, then choose how — online or by bank transfer.") %>
+        description: "Choose a hotel, select the invoices you want to pay, then choose how — online or by bank transfer.") do |header| %>
+    <% header.with_actions do %>
+      <%= link_to "Prefer to pay a lump sum instead? →", pay_balance_corporate_ar_payments_path, class: "text-sm font-bold text-muted-foreground hover:text-foreground" %>
+    <% end %>
+  <% end %>
 
   <% if @presenter.relationships.empty? %>
     <section class="rounded-2xl border border-border bg-card p-12 text-center shadow-sm">

@@ -266,6 +266,64 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
     expect(JSON.parse(response.body)["error"]).to eq("Corporate relationship is not available for payment.")
   end
 
+  it "shows the outstanding balance and a Pay button on pay balance, without invoice details" do
+    relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
+    invoice = create_invoice(relationship)
+
+    get pay_balance_corporate_ar_payments_path(hotel_corporate_account_id: relationship.id)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Pay Account Balance")
+    expect(response.body).to include(relationship.hotel.name)
+    expect(response.body).to include("Outstanding balance")
+    expect(response.body).to include("MYR 100.00")
+    expect(response.body).to include(new_corporate_ar_payment_submission_path)
+    expect(response.body).to include("hotel_corporate_account_id%5D=#{relationship.id}")
+    expect(response.body).not_to include(invoice.formatted_invoice_number)
+  end
+
+  it "creates a lump-sum intent without invoice_ids and renders review" do
+    relationship = create(:hotel_corporate_account, corporate_account: user.account)
+    create(:payment_setting, settable: relationship.hotel, gateway: "razorpay", api_key: "key", secret_key: "secret", status: "active")
+    invoice = create_invoice(relationship)
+
+    expect do
+      post review_corporate_ar_payments_path, params: {
+        corporate_ar_payment: {
+          hotel_corporate_account_id: relationship.id,
+          amount: "60.00",
+          currency: relationship.hotel.default_currency,
+          gateway: "razorpay",
+          lump_sum: "true"
+        }
+      }
+    end.to change(CorporateArPaymentIntent, :count).by(1)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Review Payment")
+    expect(response.body).to include(invoice.formatted_invoice_number)
+    expect(CorporateArPaymentIntent.last.metadata["lump_sum"]).to eq(true)
+  end
+
+  it "re-renders pay balance when a lump-sum review fails" do
+    relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
+    relationship.update!(status: "suspended", suspended_at: Time.current)
+
+    post review_corporate_ar_payments_path, params: {
+      corporate_ar_payment: {
+        hotel_corporate_account_id: relationship.id,
+        amount: "60.00",
+        currency: relationship.hotel.default_currency,
+        gateway: "razorpay",
+        lump_sum: "true"
+      }
+    }
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("Pay Account Balance")
+    expect(response.body).to include("Corporate relationship is not available for payment.")
+  end
+
   def create_invoice(relationship)
     booking = create(:booking, hotel: relationship.hotel)
     folio = create(:booking_folio, :secondary, booking: booking, hotel: relationship.hotel, hotel_corporate_account: relationship)

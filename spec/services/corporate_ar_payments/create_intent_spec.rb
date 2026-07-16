@@ -41,6 +41,46 @@ RSpec.describe CorporateArPayments::CreateIntent do
     expect(result.error).to eq("Corporate relationship is not available for payment.")
   end
 
+  context "lump sum payments" do
+    it "creates an intent without requiring invoice_ids, sourced from all open invoices" do
+      later = create_invoice(amount: 200, due_on: Date.current + 10.days)
+      earlier = create_invoice(amount: 100, due_on: Date.current + 1.day)
+
+      result = described_class.call(
+        user: user,
+        hotel_corporate_account_id: relationship.id,
+        invoice_ids: [],
+        amount: "150.00",
+        currency: relationship.hotel.default_currency,
+        gateway: "razorpay",
+        lump_sum: true
+      )
+
+      expect(result).to be_success
+      expect(result.intent.metadata["lump_sum"]).to eq(true)
+      expect(result.intent.metadata["selected_invoice_ids"]).to eq([])
+      expect(result.intent.remittance_suggestions.map { |row| row["invoice_number"] }).to eq([ earlier.invoice_number, later.invoice_number ])
+      expect(result.intent.remittance_suggestions.map { |row| row["suggested_amount"] }).to eq([ "100.0", "50.0" ])
+    end
+
+    it "still rejects a zero amount or suspended relationship" do
+      relationship.update!(status: "suspended", suspended_at: Time.current)
+
+      result = described_class.call(
+        user: user,
+        hotel_corporate_account_id: relationship.id,
+        invoice_ids: [],
+        amount: "100.00",
+        currency: relationship.hotel.default_currency,
+        gateway: "razorpay",
+        lump_sum: true
+      )
+
+      expect(result).not_to be_success
+      expect(result.error).to eq("Corporate relationship is not available for payment.")
+    end
+  end
+
   def create_invoice(amount:, due_on: Date.current + 30.days)
     booking = create(:booking, hotel: relationship.hotel)
     folio = create(:booking_folio, :secondary, booking: booking, hotel: relationship.hotel, hotel_corporate_account: relationship)

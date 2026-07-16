@@ -147,9 +147,11 @@ Rails.application.routes.draw do
     get "dashboard", to: "dashboard#index", as: :dashboard
     resource :profile, only: [ :show ]
     resources :ar_invoices, only: [ :index, :show ], path: "invoices"
+    resources :ar_statements, only: [ :index, :show ], path: "statements"
     resources :ar_payments, only: [ :index, :show ], path: "payments" do
       collection do
         get :pay_invoices, path: "pay-invoices"
+        get :pay_balance, path: "pay-balance"
         get :choose_method, path: "choose-method"
         post :review
         post :checkout_session

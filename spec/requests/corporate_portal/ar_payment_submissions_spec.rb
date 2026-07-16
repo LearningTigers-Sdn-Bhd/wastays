@@ -124,9 +124,97 @@ RSpec.describe "CorporatePortal::ArPaymentSubmissions", type: :request do
     expect(response).to redirect_to(pay_invoices_corporate_ar_payments_path)
   end
 
-  def create_open_invoice(relationship:, amount:)
+  it "shows the outstanding balance and a simplified form for a lump-sum bank transfer, without itemizing invoices" do
+    invoice = create_open_invoice(relationship: relationship, amount: 200, due_on: Date.current + 5.days)
+    create_open_invoice(relationship: relationship, amount: 300, due_on: Date.current + 15.days)
+
+    get new_corporate_ar_payment_submission_path(ar_payment_submission: { lump_sum: "true", hotel_corporate_account_id: relationship.id, currency: "MYR", amount: "150.00" })
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Outstanding balance")
+    expect(response.body).to include("MYR 500.00")
+    expect(response.body).to include("150.00")
+    expect(response.body).to include("Reference number")
+    expect(response.body).to include("Amount paid")
+    expect(response.body).to include("Transaction slip")
+    expect(response.body).to include("Note")
+    expect(response.body).not_to include("Estimated Allocation")
+    expect(response.body).not_to include(invoice.formatted_invoice_number)
+    expect(response.body).not_to include("Date paid")
+    expect(response.body).not_to include("Payment method")
+  end
+
+  it "submits a lump-sum bank transfer, allocating it FIFO across open invoices" do
+    older = create_open_invoice(relationship: relationship, amount: 200, due_on: Date.current + 5.days)
+    newer = create_open_invoice(relationship: relationship, amount: 300, due_on: Date.current + 15.days)
+
+    expect {
+      post corporate_ar_payment_submissions_path, params: {
+        ar_payment_submission: {
+          lump_sum: "true",
+          hotel_corporate_account_id: relationship.id,
+          currency: "MYR",
+          amount: "250.00",
+          reference_number: "BANK-REF-LUMP",
+          received_at: Date.current,
+          payment_method: "bank_transfer",
+          slip: fixture_file_upload(Rails.root.join("spec/fixtures/files/sample_image.jpg"), "image/jpeg")
+        }
+      }
+    }.to change(ArPaymentSubmission, :count).by(1)
+
+    submission = ArPaymentSubmission.last
+    expect(submission).to have_attributes(hotel_corporate_account: relationship, amount: 250.to_d, reference_number: "BANK-REF-LUMP")
+    expect(submission.ar_payment_submission_allocations.find_by(ar_invoice: older).amount).to eq(200.to_d)
+    expect(submission.ar_payment_submission_allocations.find_by(ar_invoice: newer).amount).to eq(50.to_d)
+    expect(response).to redirect_to(corporate_ar_payments_path)
+  end
+
+  it "rejects a lump-sum bank transfer that exceeds the total outstanding balance" do
+    create_open_invoice(relationship: relationship, amount: 100)
+
+    expect {
+      post corporate_ar_payment_submissions_path, params: {
+        ar_payment_submission: {
+          lump_sum: "true",
+          hotel_corporate_account_id: relationship.id,
+          currency: "MYR",
+          amount: "500.00",
+          reference_number: "BANK-REF-OVER",
+          received_at: Date.current,
+          payment_method: "bank_transfer",
+          slip: fixture_file_upload(Rails.root.join("spec/fixtures/files/sample_image.jpg"), "image/jpeg")
+        }
+      }
+    }.not_to change(ArPaymentSubmission, :count)
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("cannot exceed your total outstanding balance")
+  end
+
+  it "does not allow a lump-sum bank transfer against another corporate account's relationship" do
+    other_relationship = create(:hotel_corporate_account)
+
+    post corporate_ar_payment_submissions_path, params: {
+      ar_payment_submission: {
+        lump_sum: "true",
+        hotel_corporate_account_id: other_relationship.id,
+        currency: "MYR",
+        amount: "100.00",
+        reference_number: "BANK-REF-HIDDEN",
+        received_at: Date.current,
+        payment_method: "bank_transfer",
+        slip: fixture_file_upload(Rails.root.join("spec/fixtures/files/sample_image.jpg"), "image/jpeg")
+      }
+    }
+
+    expect(response).to redirect_to(pay_balance_corporate_ar_payments_path)
+    expect(ArPaymentSubmission.count).to eq(0)
+  end
+
+  def create_open_invoice(relationship:, amount:, due_on: Date.current + 30.days)
     booking = create(:booking, hotel: relationship.hotel)
     folio = create(:booking_folio, :secondary, booking: booking, hotel: relationship.hotel, hotel_corporate_account: relationship)
-    create(:ar_invoice, hotel: relationship.hotel, booking_folio: folio, hotel_corporate_account: relationship, amount: amount, paid_amount: 0, outstanding_amount: amount, currency: "MYR")
+    create(:ar_invoice, hotel: relationship.hotel, booking_folio: folio, hotel_corporate_account: relationship, amount: amount, paid_amount: 0, outstanding_amount: amount, currency: "MYR", due_on: due_on)
   end
 end

@@ -20,10 +20,18 @@ module CorporatePortal
           active: controller_name == "ar_payments",
           icon: "landmark",
           children: [
-            PanelsUI::Navigation::Item.new(label: "Payment History", path: corporate_ar_payments_path, search_text: "Payment History Accounts Receivable Payment Submissions Bank Transfer", active: controller_name.in?(%w[ar_payments ar_payment_submissions]) && !(controller_name == "ar_payments" && action_name.in?(%w[pay_invoices choose_method review checkout_session verify])), icon: "history"),
+            PanelsUI::Navigation::Item.new(label: "Payment History", path: corporate_ar_payments_path, search_text: "Payment History Accounts Receivable Payment Submissions Bank Transfer", active: controller_name.in?(%w[ar_payments ar_payment_submissions]) && !(controller_name == "ar_payments" && action_name.in?(%w[pay_invoices pay_balance choose_method review checkout_session verify])), icon: "history"),
             PanelsUI::Navigation::Item.new(label: "Pay Invoices", path: pay_invoices_corporate_ar_payments_path, search_text: "Pay Invoices Accounts Receivable", active: controller_name == "ar_payments" && action_name.in?(%w[pay_invoices choose_method review checkout_session verify]), icon: "credit-card"),
+            PanelsUI::Navigation::Item.new(label: "Pay Account Balance", path: pay_balance_corporate_ar_payments_path, search_text: "Pay Account Balance Lump Sum Accounts Receivable", active: controller_name == "ar_payments" && action_name == "pay_balance", icon: "wallet"),
             PanelsUI::Navigation::Item.new(label: "Submit Payment", path: corporate_ar_payment_submissions_path, search_text: "Submit Payment Slip Bank Transfer Accounts Receivable", active: controller_name == "ar_payment_submissions", icon: "upload")
           ]
+        ),
+        PanelsUI::Navigation::Item.new(
+          label: "Statements",
+          path: corporate_ar_statements_path,
+          search_text: "Statements Statement of Account Ledger Running Balance Debits Credits",
+          active: controller_name == "ar_statements",
+          icon: "file-clock"
         )
       ]
 
