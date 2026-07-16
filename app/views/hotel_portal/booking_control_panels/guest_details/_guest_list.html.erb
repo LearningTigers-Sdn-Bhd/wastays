@@ -17,12 +17,12 @@
     <table class="w-full table-fixed min-w-[1100px] divide-y divide-slate-200 text-sm">
       <thead class="bg-white text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500">
         <tr>
-          <th class="<%= show_bibo ? 'w-[12%]' : 'w-[15%]' %> px-4 py-2">Guest</th>
-          <th class="<%= show_bibo ? 'w-[9%]' : 'w-[10%]' %> px-4 py-2">Guest Type</th>
-          <th class="<%= show_bibo ? 'w-[19%]' : 'w-[22%]' %> px-4 py-2">Contact</th>
-          <th class="<%= show_bibo ? 'w-[15%]' : 'w-[17%]' %> px-4 py-2">Identity</th>
-          <th class="<%= show_bibo ? 'w-[10%]' : 'w-[12%]' %> px-4 py-2">Guest Reg No.</th>
-          <th class="<%= show_bibo ? 'w-[10%]' : 'w-[12%]' %> px-4 py-2">Country</th>
+          <th class="<%= guest_list_column_width_class(show_bibo, :guest) %> px-4 py-2">Guest</th>
+          <th class="<%= guest_list_column_width_class(show_bibo, :guest_type) %> px-4 py-2">Guest Type</th>
+          <th class="<%= guest_list_column_width_class(show_bibo, :contact) %> px-4 py-2">Contact</th>
+          <th class="<%= guest_list_column_width_class(show_bibo, :identity) %> px-4 py-2">Identity</th>
+          <th class="<%= guest_list_column_width_class(show_bibo, :guest_reg_no) %> px-4 py-2">Guest Reg No.</th>
+          <th class="<%= guest_list_column_width_class(show_bibo, :country) %> px-4 py-2">Country</th>
           <% if show_bibo %>
             <th class="w-[13%] px-4 py-2">BIBO</th>
           <% end %>
@@ -39,15 +39,15 @@
             <span class="mt-1 inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Primary</span>
           </td>
           <td class="px-4 py-3 align-top text-slate-700">
-            <p class="flex min-w-0 items-start gap-1"><%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= presenter.primary_guest_email.presence || "—" %></span></p>
-            <p class="flex min-w-0 items-start gap-1 text-xs text-slate-500"><%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= presenter.primary_guest_phone.presence || "—" %></span></p>
+            <p class="flex min-w-0 items-start gap-1"><%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= guest_display_field(presenter.primary_guest_email) %></span></p>
+            <p class="flex min-w-0 items-start gap-1 text-xs text-slate-500"><%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= guest_display_field(presenter.primary_guest_phone) %></span></p>
           </td>
           <td class="px-4 py-3 align-top text-slate-700">
-            <p class="inline-flex items-center gap-1"><%= cached_icon "id-card", class: "size-3 text-slate-400" %><%= presenter.primary_guest_document_type.to_s.upcase %></p>
+            <p class="inline-flex items-center gap-1"><%= cached_icon "id-card", class: "size-3 text-slate-400" %><%= guest_document_type_display(presenter.primary_guest_document_type) %></p>
             <p class="text-xs text-slate-500"><%= presenter.primary_guest_government_id %></p>
           </td>
-          <td class="px-4 py-3 align-top text-slate-700"><%= booking.formatted_guest_registration_number || "—" %></td>
-          <td class="px-4 py-3 align-top text-slate-700"><%= presenter.primary_guest_country %></td>
+          <td class="px-4 py-3 align-top text-slate-700"><%= guest_display_field(booking.formatted_guest_registration_number) %></td>
+          <td class="px-4 py-3 align-top text-slate-700"><%= guest_display_field(presenter.primary_guest_country) %></td>
           <% if show_bibo %>
             <td class="px-4 py-3 align-top text-slate-700">
               <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Boat-in</p>
@@ -77,15 +77,15 @@
               <span class="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">Additional</span>
             </td>
             <td class="px-4 py-3 align-top text-slate-700">
-              <p class="flex min-w-0 items-start gap-1"><%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= guest.email.presence || "—" %></span></p>
-              <p class="flex min-w-0 items-start gap-1 text-xs text-slate-500"><%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= guest.phone.presence || "—" %></span></p>
+              <p class="flex min-w-0 items-start gap-1"><%= cached_icon "mail", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= guest_display_field(guest.email) %></span></p>
+              <p class="flex min-w-0 items-start gap-1 text-xs text-slate-500"><%= cached_icon "phone", class: "mt-0.5 size-3 shrink-0 text-slate-400" %><span class="min-w-0 break-all"><%= guest_display_field(guest.phone) %></span></p>
             </td>
             <td class="px-4 py-3 align-top text-slate-700">
-              <p class="inline-flex items-center gap-1"><%= cached_icon "id-card", class: "size-3 text-slate-400" %><%= guest.document_type.presence&.upcase || "IC/PASSPORT" %></p>
-              <p class="text-xs text-slate-500"><%= guest.government_id.presence || "—" %></p>
+              <p class="inline-flex items-center gap-1"><%= cached_icon "id-card", class: "size-3 text-slate-400" %><%= guest_document_type_display(guest.document_type) %></p>
+              <p class="text-xs text-slate-500"><%= guest_display_field(guest.government_id) %></p>
             </td>
-            <td class="px-4 py-3 align-top text-slate-700"><%= booking.formatted_guest_registration_number || "—" %></td>
-            <td class="px-4 py-3 align-top text-slate-700"><%= guest.country.presence || "—" %></td>
+            <td class="px-4 py-3 align-top text-slate-700"><%= guest_display_field(booking.formatted_guest_registration_number) %></td>
+            <td class="px-4 py-3 align-top text-slate-700"><%= guest_display_field(guest.country) %></td>
             <% if show_bibo %>
               <td class="px-4 py-3 align-top text-slate-700">
                 <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Boat-in</p>

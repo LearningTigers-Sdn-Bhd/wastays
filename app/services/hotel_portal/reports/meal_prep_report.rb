@@ -73,7 +73,7 @@ module HotelPortal
       end
 
       def meal_types_for(time, transfer_type)
-        return ["—"] if time.nil?
+        return [ "—" ] if time.nil?
 
         hour = time.in_time_zone(@hotel.hotel_time_zone).hour
         meals = []

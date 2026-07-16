@@ -61,5 +61,29 @@ module HotelPortal
     def due_amount
       total_charges - amount_paid
     end
+
+    def guest_country_display
+      guest_country.presence || "-"
+    end
+
+    def guest_count_display
+      "#{booking.adults.to_i} adult(s), #{booking.children.to_i} child(ren)"
+    end
+
+    def room_price
+      booking.booking_rooms.sum(:subtotal)
+    end
+
+    def room_price_display
+      format_money(room_price)
+    end
+
+    def room_numbers_display
+      booking.room_numbers.presence || "To be assigned"
+    end
+
+    def rate_type_display
+      booking.booking_rooms.first&.rate_plan&.name || "Standard"
+    end
   end
 end

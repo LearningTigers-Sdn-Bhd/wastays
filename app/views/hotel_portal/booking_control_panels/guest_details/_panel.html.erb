@@ -24,7 +24,7 @@
       <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar">
         <div class="mx-auto max-w-5xl px-5 py-6 lg:px-8">
           <div class="mb-5">
-            <h3 class="text-sm font-bold text-slate-950">Guest Details</h3>
+            <h3 class="text-sm font-bold text-slate-955">Guest Details</h3>
             <p class="mt-1 text-xs text-slate-500">Guest details recorded for this stay.</p>
           </div>
 
@@ -54,7 +54,7 @@
 
             <section class="border-t border-slate-200 pt-6" aria-labelledby="guest-identity-heading">
               <div class="mb-4">
-                <h3 id="guest-identity-heading" class="text-sm font-bold text-slate-950">Identity Information</h3>
+                <h3 id="guest-identity-heading" class="text-sm font-bold text-slate-955">Identity Information</h3>
                 <p class="mt-1 text-xs text-slate-500">Use the identification presented by the guest.</p>
               </div>
               <div class="grid gap-5 md:grid-cols-2">
@@ -76,22 +76,17 @@
             <% if current_hotel.allow_boat_information? %>
               <section class="border-t border-slate-200 pt-6" aria-labelledby="guest-bibo-heading">
                 <div class="mb-4">
-                  <h3 id="guest-bibo-heading" class="text-sm font-bold text-slate-950">Boat transfer</h3>
+                  <h3 id="guest-bibo-heading" class="text-sm font-bold text-slate-955">Boat transfer</h3>
                   <p class="mt-1 text-xs text-slate-500">Guest Boat-In / Boat-Out timestamps.</p>
                 </div>
                 <div class="grid gap-5 md:grid-cols-2">
                   <!-- Boat-In -->
-                  <%
-                    in_date = boat_times[:boat_in]&.split("T")&.first
-                    in_time = boat_times[:boat_in]&.split("T")&.last
-                    boat_in_options = (current_hotel.boat_in_times || []).sort
-                  %>
                   <div class="space-y-1.5" data-controller="boat-time-combiner">
                     <%= label_tag "booking_guest_boat_in_at", "Boat-In", class: "booking-form__label" %>
                     <%= hidden_field_tag "booking_guest[boat_in_at]", boat_times[:boat_in], data: { boat_time_combiner_target: "datetimeInput" } %>
                     <div class="grid grid-cols-2 gap-2">
                       <input type="date" 
-                             value="<%= in_date %>" 
+                             value="<%= presenter.guest_details_boat_in_date %>" 
                              data-boat-time-combiner-target="dateInput" 
                              data-action="change->boat-time-combiner#combine" 
                              class="booking-form__control">
@@ -99,29 +94,18 @@
                               data-action="change->boat-time-combiner#combine" 
                               class="booking-form__control">
                         <option value="">Select time</option>
-                        <% boat_in_options.each do |t| %>
-                          <%
-                            t_obj = Time.zone.parse("2000-01-01 #{t}")
-                            label = t_obj.strftime("%I:%M %p") rescue t
-                          %>
-                          <option value="<%= t %>" <%= 'selected' if in_time == t %>><%= label %></option>
-                        <% end %>
+                        <%= options_for_select(presenter.guest_details_boat_in_time_options, presenter.guest_details_boat_in_time) %>
                       </select>
                     </div>
                   </div>
 
                   <!-- Boat-Out -->
-                  <%
-                    out_date = boat_times[:boat_out]&.split("T")&.first
-                    out_time = boat_times[:boat_out]&.split("T")&.last
-                    boat_out_options = (current_hotel.boat_out_times || []).sort
-                  %>
                   <div class="space-y-1.5" data-controller="boat-time-combiner">
                     <%= label_tag "booking_guest_boat_out_at", "Boat-Out", class: "booking-form__label" %>
                     <%= hidden_field_tag "booking_guest[boat_out_at]", boat_times[:boat_out], data: { boat_time_combiner_target: "datetimeInput" } %>
                     <div class="grid grid-cols-2 gap-2">
                       <input type="date" 
-                             value="<%= out_date %>" 
+                             value="<%= presenter.guest_details_boat_out_date %>" 
                              data-boat-time-combiner-target="dateInput" 
                              data-action="change->boat-time-combiner#combine" 
                              class="booking-form__control">
@@ -129,13 +113,7 @@
                               data-action="change->boat-time-combiner#combine" 
                               class="booking-form__control">
                         <option value="">Select time</option>
-                        <% boat_out_options.each do |t| %>
-                          <%
-                            t_obj = Time.zone.parse("2000-01-01 #{t}")
-                            label = t_obj.strftime("%I:%M %p") rescue t
-                          %>
-                          <option value="<%= t %>" <%= 'selected' if out_time == t %>><%= label %></option>
-                        <% end %>
+                        <%= options_for_select(presenter.guest_details_boat_out_time_options, presenter.guest_details_boat_out_time) %>
                       </select>
                     </div>
                   </div>

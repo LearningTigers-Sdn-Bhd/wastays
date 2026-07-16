@@ -613,27 +613,20 @@ module HotelPortal
     def load_guest_registration_cards(start_date: nil, end_date: nil)
       @status_filter = params[:status].to_s
       @grc_query = params[:q].to_s.strip
-      base_scope = current_hotel.guest_registration_cards
-                                .includes(:hotel, booking: :booking_rooms)
-                                .joins(:booking)
-      base_scope = base_scope.where(bookings: { check_in: start_date..end_date }) if start_date && end_date
-      @grc_total_count = base_scope.count
-      @grc_signed_count = base_scope.where(status: "signed").count
-      @grc_draft_count = base_scope.where(status: "draft").count
-      @grc_cards = base_scope.order("bookings.check_in DESC")
-      @grc_cards = @grc_cards.where(status: @status_filter) if %w[draft signed].include?(@status_filter)
-      if @grc_query.present?
-        query = "%#{ActiveRecord::Base.sanitize_sql_like(@grc_query.downcase)}%"
-        compact_query = "%#{ActiveRecord::Base.sanitize_sql_like(@grc_query.downcase.delete("-"))}%"
-        hotel_prefix = ActiveRecord::Base.connection.quote(current_hotel.hotel_prefix.to_s.downcase)
-        formatted_grc_sql = "LOWER(CONCAT(#{hotel_prefix}, '-2', LPAD(CAST(bookings.guest_registration_number AS TEXT), 7, '0')))"
-        @grc_cards = @grc_cards.where(
-          "LOWER(bookings.guest_name) LIKE :query OR LOWER(bookings.confirmation_token) LIKE :query OR CAST(bookings.guest_registration_number AS TEXT) LIKE :query OR #{formatted_grc_sql} LIKE :query OR REPLACE(#{formatted_grc_sql}, '-', '') LIKE :compact_query",
-          compact_query: compact_query,
-          query: query
-        )
-      end
-      @grc_cards = @grc_cards.page(params[:page]).per(25)
+
+      query_obj = HotelPortal::GuestRegistrationCardsQuery.new(
+        hotel: current_hotel,
+        start_date: start_date,
+        end_date: end_date,
+        status: @status_filter,
+        query: @grc_query,
+        page: params[:page]
+      )
+
+      @grc_total_count = query_obj.total_count
+      @grc_signed_count = query_obj.signed_count
+      @grc_draft_count = query_obj.draft_count
+      @grc_cards = query_obj.results
     end
 
     def authorize_view_reports!

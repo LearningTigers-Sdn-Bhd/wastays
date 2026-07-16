@@ -383,6 +383,38 @@ module HotelPortal
       }
     end
 
+    def guest_details_boat_in_date
+      guest_details_boat_times[:boat_in]&.split("T")&.first
+    end
+
+    def guest_details_boat_in_time
+      guest_details_boat_times[:boat_in]&.split("T")&.last
+    end
+
+    def guest_details_boat_in_time_options
+      (hotel.boat_in_times || []).sort.map do |t|
+        t_obj = Time.zone.parse("2000-01-01 #{t}") rescue nil
+        label = t_obj ? t_obj.strftime("%I:%M %p") : t
+        [ label, t ]
+      end
+    end
+
+    def guest_details_boat_out_date
+      guest_details_boat_times[:boat_out]&.split("T")&.first
+    end
+
+    def guest_details_boat_out_time
+      guest_details_boat_times[:boat_out]&.split("T")&.last
+    end
+
+    def guest_details_boat_out_time_options
+      (hotel.boat_out_times || []).sort.map do |t|
+        t_obj = Time.zone.parse("2000-01-01 #{t}") rescue nil
+        label = t_obj ? t_obj.strftime("%I:%M %p") : t
+        [ label, t ]
+      end
+    end
+
     def guest_display(booking_guest = selected_booking_guest)
       record = booking_guest
       {

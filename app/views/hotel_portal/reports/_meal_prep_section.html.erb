@@ -1,7 +1,7 @@
 <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:rounded-none print:shadow-none print:break-inside-avoid">
   <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 print:bg-white print:px-3 print:py-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <h2 class="text-lg font-bold tracking-tight text-slate-950 print:text-base">
-      <%= params[:meal_type].present? ? "Meal Prep — #{params[:meal_type].titleize}" : "Meal Prep" %>
+      <%= meal_prep_title(params[:meal_type]) %>
     </h2>
     <div class="flex flex-wrap items-center gap-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 print:text-[10px]">
       <div>Total Pax: <span class="text-slate-900 bg-slate-100 rounded-full px-2.5 py-1 font-mono font-bold"><%= report.total_pax %></span></div>
@@ -24,17 +24,6 @@
       <tbody class="divide-y divide-slate-200 bg-white">
         <% if report.records.any? %>
           <% report.records.each_with_index do |row, index| %>
-            <%
-              # Color code for transfers matching user mockup
-              transfer_classes = case row[:type]
-              when "Boat-in"
-                "bg-[#e0f2fe] text-[#0369a1]"
-              when "Boat-out"
-                "bg-[#fee2e2] text-[#b91c1c]"
-              else
-                "bg-slate-100 text-slate-700"
-              end
-            %>
             <tr class="align-top transition-colors <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %> print:bg-white">
               <td class="px-6 py-4 sm:px-8 print:px-2 print:py-2">
                 <p class="text-sm font-bold text-slate-900 print:text-xs"><%= row[:guest_name] %></p>
@@ -46,7 +35,7 @@
               <td class="px-6 py-4 text-sm font-medium text-slate-700 print:px-2 print:py-2 print:text-xs"><%= row[:room_type] %></td>
               <td class="px-6 py-4 text-sm font-medium text-slate-700 print:px-2 print:py-2 print:text-xs"><%= row[:room_number] %></td>
               <td class="px-6 py-4 text-sm font-medium text-slate-700 print:px-2 print:py-2 print:text-xs">
-                <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold <%= transfer_classes %>">
+                <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold <%= meal_prep_transfer_class(row[:type]) %>">
                   <%= row[:type] %>
                 </span>
               </td>
@@ -57,22 +46,8 @@
               </td>
               <td class="px-6 py-4 text-sm font-medium text-slate-700 print:px-2 print:py-2 print:text-xs">
                 <div class="flex flex-col gap-1">
-                  <%
-                    meals = row[:meal_type].to_s.split(", ")
-                    if params[:meal_type].present?
-                      meals = meals.select { |m| m.casecmp?(params[:meal_type]) }
-                    end
-                  %>
-                  <% meals.each do |meal| %>
-                    <%
-                      meal_color = case meal.downcase
-                      when "breakfast" then "text-[#b45309]"
-                      when "lunch" then "text-[#15803d]"
-                      when "dinner" then "text-[#c2410c]"
-                      else "text-slate-700"
-                      end
-                    %>
-                    <span class="font-bold text-[13px] <%= meal_color %> whitespace-nowrap">✓ Eating <%= meal %></span>
+                  <% meal_prep_display_meals(row[:meal_type], params[:meal_type]).each do |meal| %>
+                    <span class="font-bold text-[13px] <%= meal_prep_color_class(meal) %> whitespace-nowrap">✓ Eating <%= meal %></span>
                   <% end %>
                 </div>
               </td>

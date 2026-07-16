@@ -1,8 +1,5 @@
 <div class="space-y-8">
-  <% [
-    { title: "Boat-ins", rows: report.boat_ins, empty_message: "No boat-in records found or expected for this selected period." },
-    { title: "Boat-outs", rows: report.boat_outs, empty_message: "No boat-out records found or expected for this selected period." }
-  ].each do |section| %>
+  <% bibo_sections(report).each do |section| %>
     <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:rounded-none print:shadow-none print:break-inside-avoid">
       <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 print:bg-white print:px-3 print:py-2">
         <h2 class="text-lg font-bold tracking-tight text-slate-950 print:text-base"><%= section[:title] %></h2>
@@ -22,7 +19,7 @@
           <tbody class="divide-y divide-slate-200 bg-white">
             <% if section[:rows].any? %>
               <% section[:rows].each_with_index do |row, index| %>
-                <tr class="align-top transition-colors <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %> print:bg-white">
+                <tr class="<%= bibo_row_class(index) %>">
                   <td class="px-6 py-4 sm:px-8 print:px-2 print:py-2">
                     <p class="text-sm font-bold text-slate-900 print:text-xs"><%= row[:guest_name] %></p>
                     <p class="mt-1 text-xs font-mono text-slate-500 print:text-[10px]"><%= row[:confirmation_token] %></p>

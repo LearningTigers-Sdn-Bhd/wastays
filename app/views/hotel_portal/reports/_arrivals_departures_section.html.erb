@@ -22,7 +22,7 @@
       <tbody class="divide-y divide-slate-200 bg-white">
         <% if rows.any? %>
           <% rows.each_with_index do |row, index| %>
-            <tr class="align-top transition-colors <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %> print:bg-white">
+            <tr class="<%= arrivals_departures_row_class(index) %>">
               <td class="px-6 py-4 sm:px-8 print:px-2 print:py-2">
                 <p class="text-sm font-bold text-slate-900 print:text-xs"><%= row[:guest_name] %></p>
                 <p class="mt-1 text-xs font-mono text-slate-500 print:text-[10px]"><%= row[:confirmation_token] %></p>
@@ -43,9 +43,8 @@
               </td>
               <% if local_assigns[:show_boat_departure] %>
                 <td class="px-6 py-4 print:px-2 print:py-2">
-                  <% boat_val = (type == :arrival ? row[:boat_arrival] : row[:boat_departure]) %>
-                  <% if boat_val.present? %>
-                    <% formatted = format_report_boat_time(boat_val, current_hotel) %>
+                  <% formatted = arrivals_departures_boat_time(row, type, current_hotel) %>
+                  <% if formatted %>
                     <p class="text-sm font-semibold text-slate-900 print:text-xs"><%= formatted[:date] %></p>
                     <p class="mt-1 text-xs font-medium text-slate-500 print:text-[10px]"><%= formatted[:time] %></p>
                   <% else %>
@@ -54,7 +53,7 @@
                 </td>
               <% end %>
               <td class="px-6 py-4 sm:px-8 print:px-2 print:py-2">
-                <p class="text-sm text-slate-700 print:text-xs"><%= row[:latest_note].presence || "-" %></p>
+                <p class="text-sm text-slate-700 print:text-xs"><%= display_latest_note(row[:latest_note]) %></p>
               </td>
             </tr>
           <% end %>
