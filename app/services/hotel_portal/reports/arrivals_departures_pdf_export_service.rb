@@ -188,7 +188,8 @@ module HotelPortal
       end
 
       def draw_meal_prep_section(pdf)
-        pdf.text "Meal Prep Report", size: 12, style: :bold
+        meal_suffix = @report.respond_to?(:meal_type) && @report.meal_type.present? ? " - #{@report.meal_type.titleize}" : ""
+        pdf.text "Meal Prep Report#{meal_suffix}", size: 12, style: :bold
         pdf.move_down 6
 
         if @report.records.empty?
@@ -203,11 +204,10 @@ module HotelPortal
             row[:pax].to_s,
             row[:room_type],
             row[:room_number],
-            row[:formatted_boat_time],
-            row[:meal_type]
+            row[:formatted_boat_time]
           ]
         end
-        headers = [ "Type", "Guest / Ref", "Pax", "Room Type", "Room", "Boat Time", "Meal Type" ]
+        headers = [ "Type", "Guest / Ref", "Pax", "Room Type", "Room", "Boat Time" ]
         pdf.table([ headers ] + table_rows, width: pdf.bounds.width, cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] }) do
           row(0).font_style = :bold
           row(0).background_color = "F1F5F9"
@@ -236,13 +236,17 @@ module HotelPortal
       end
 
       def active_tab_heading
+        if @tab == "meal_prep"
+          meal_suffix = @report.respond_to?(:meal_type) && @report.meal_type.present? ? " - #{@report.meal_type.titleize}" : ""
+          return "Meal Prep"
+        end
+
         {
           "arrivals" => "Arrivals",
           "in_house" => "In-House",
           "departures" => "Departures",
           "checkout" => "Checkout",
-          "bibo" => "Boat Transfers",
-          "meal_prep" => "Meal Prep"
+          "bibo" => "Boat Transfers"
         }.fetch(@tab, "Arrivals")
       end
 

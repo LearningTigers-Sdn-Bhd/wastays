@@ -18,7 +18,6 @@
           <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 print:px-2 print:py-2">Room</th>
           <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 print:px-2 print:py-2">Transfer</th>
           <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8 print:px-2 print:py-2">Boat Time</th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 print:px-2 print:py-2">Meal Status</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-200 bg-white">
@@ -44,18 +43,12 @@
                   <%= row[:formatted_boat_time] %>
                 </span>
               </td>
-              <td class="px-6 py-4 text-sm font-medium text-slate-700 print:px-2 print:py-2 print:text-xs">
-                <div class="flex flex-col gap-1">
-                  <% meal_prep_display_meals(row[:meal_type], params[:meal_type]).each do |meal| %>
-                    <span class="font-bold text-[13px] <%= meal_prep_color_class(meal) %> whitespace-nowrap">✓ Eating <%= meal %></span>
-                  <% end %>
-                </div>
-              </td>
+
             </tr>
           <% end %>
         <% else %>
           <tr>
-            <td colspan="7" class="px-6 py-16 text-center text-sm font-medium text-slate-500 sm:px-8 print:px-2 print:py-6 print:text-xs">
+            <td colspan="6" class="px-6 py-16 text-center text-sm font-medium text-slate-500 sm:px-8 print:px-2 print:py-6 print:text-xs">
               No boat transfers or meal records found for the selected period.
             </td>
           </tr>

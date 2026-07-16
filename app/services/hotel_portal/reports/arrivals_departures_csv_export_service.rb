@@ -29,12 +29,11 @@ module HotelPortal
                 row[:pax],
                 row[:room_type],
                 row[:room_number],
-                row[:formatted_boat_time],
-                row[:meal_type]
+                row[:formatted_boat_time]
               ]
             end
             csv << []
-            csv << [ "", "", "", "", "", "", "Total Pax", @report.total_pax ]
+            csv << [ "", "", "", "", "", "Total Pax", @report.total_pax ]
           else
             rows_for_active_tab.each do |row|
               csv << values_for_active_tab(row)
@@ -47,7 +46,7 @@ module HotelPortal
 
       def headers_for_active_tab
         return [ "Type", "Guest Name", "Booking Ref", "Room Type", "Room Number", "Stay Dates", "Boat Time" ] if @tab == "bibo"
-        return [ "Type", "Guest Name", "Booking Ref", "Pax", "Room Type", "Room Number", "Boat Time", "Meal Type" ] if @tab == "meal_prep"
+        return [ "Type", "Guest Name", "Booking Ref", "Pax", "Room Type", "Room Number", "Boat Time" ] if @tab == "meal_prep"
 
         allow_boat = @report.respond_to?(:allow_boat_information) && @report.allow_boat_information && @tab != "checkout"
 

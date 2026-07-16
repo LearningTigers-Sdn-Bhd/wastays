@@ -8,6 +8,7 @@ module HotelPortal
         :end_date,
         :records,
         :total_pax,
+        :meal_type,
         keyword_init: true
       )
 
@@ -60,7 +61,8 @@ module HotelPortal
           start_date: @start_date,
           end_date: @end_date,
           records: raw_records,
-          total_pax: raw_records.sum { |r| r[:pax] }
+          total_pax: raw_records.sum { |r| r[:pax] },
+          meal_type: @meal_type
         )
       end
 

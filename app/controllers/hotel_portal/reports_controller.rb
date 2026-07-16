@@ -328,62 +328,68 @@ module HotelPortal
       ).call
 
       if @active_guest_report_tab == "meal_prep"
+        params[:meal_type] = "breakfast" unless %w[breakfast lunch dinner].include?(params[:meal_type])
         @meal_prep_report = HotelPortal::Reports::MealPrepReport.new(
           hotel: current_hotel,
           start_date: @report_start_date,
           end_date: @report_end_date,
           meal_type: params[:meal_type]
         ).call
+
+        full_report = HotelPortal::Reports::MealPrepReport.new(
+          hotel: current_hotel,
+          start_date: @report_start_date,
+          end_date: @report_end_date
+        ).call
+
+        @meal_prep_counts = {
+          "breakfast" => full_report.records.count { |r| r[:meal_type].downcase.include?("breakfast") },
+          "lunch"     => full_report.records.count { |r| r[:meal_type].downcase.include?("lunch") },
+          "dinner"    => full_report.records.count { |r| r[:meal_type].downcase.include?("dinner") }
+        }
       end
 
       load_guest_registration_cards(start_date: @report_start_date, end_date: @report_end_date)
+
+      report_to_export = if @active_guest_report_tab == "bibo"
+        @bibo_report
+      elsif @active_guest_report_tab == "meal_prep"
+        @meal_prep_report
+      else
+        @report
+      end
+
+      filename_suffix = if @active_guest_report_tab == "meal_prep"
+        "meal-prep-#{params[:meal_type]}"
+      else
+        @active_guest_report_tab.tr('_', '-')
+      end
 
       respond_to do |format|
         format.html
         format.csv do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          report_to_export = if @active_guest_report_tab == "bibo"
-            @bibo_report
-          elsif @active_guest_report_tab == "meal_prep"
-            @meal_prep_report
-          else
-            @report
-          end
           csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
           send_data csv,
-            filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.csv",
+            filename: "guest-reports-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.csv",
             type: "text/csv"
         end
         format.any(:xls) do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          report_to_export = if @active_guest_report_tab == "bibo"
-            @bibo_report
-          elsif @active_guest_report_tab == "meal_prep"
-            @meal_prep_report
-          else
-            @report
-          end
           workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
           send_data workbook,
-            filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.xls",
+            filename: "guest-reports-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.xls",
             type: "application/vnd.ms-excel",
             disposition: "attachment"
         end
         format.pdf do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          report_to_export = if @active_guest_report_tab == "bibo"
-            @bibo_report
-          elsif @active_guest_report_tab == "meal_prep"
-            @meal_prep_report
-          else
-            @report
-          end
           pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: report_to_export, tab: @active_guest_report_tab).generate
           send_data pdf,
-            filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.pdf",
+            filename: "guest-reports-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.pdf",
             type: "application/pdf",
             disposition: "attachment"
         end
