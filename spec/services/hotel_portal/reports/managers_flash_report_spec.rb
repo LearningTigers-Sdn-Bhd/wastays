@@ -14,9 +14,12 @@ RSpec.describe HotelPortal::Reports::ManagersFlashReport, type: :service do
       create(:room_inventory, room_type: room_type, date: start_date, quantity: 8, status: "open")
       create(:room_inventory, room_type: room_type, date: end_date, quantity: 10, status: "open")
 
-      # Occupancy part: Booking spanning 2 days
-      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 2.days)
-      create_list(:booking_room, 2, booking: booking, room_type: room_type, subtotal: 200) # 200 per day
+      # Occupancy part: two grouped child bookings spanning 2 days
+      group = create(:group_booking, hotel: hotel)
+      booking = create(:booking, hotel: hotel, group_booking: group, group_position: 1, status: "confirmed", check_in: start_date, check_out: start_date + 2.days)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "confirmed", check_in: start_date, check_out: start_date + 2.days)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 200)
+      create(:booking_room, booking: sibling, room_type: room_type, subtotal: 200) # 200 per day across both children
 
       # Posted Revenue part: Folio transactions on start_date
       folio = create(:booking_folio, booking: booking)

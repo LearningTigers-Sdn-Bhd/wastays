@@ -14,8 +14,11 @@ RSpec.describe HotelPortal::Reports::DailyOccupancyReport, type: :service do
       create(:room_inventory, room_type: room_type, date: start_date, quantity: 8, status: "open")
       create(:room_inventory, room_type: room_type, date: end_date, quantity: 10, status: "open")
 
-      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, total_amount: 400)
-      create_list(:booking_room, 2, booking: booking, room_type: room_type, subtotal: 150)
+      group = create(:group_booking, hotel: hotel)
+      first_booking = create(:booking, hotel: hotel, group_booking: group, group_position: 1, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, total_amount: 200)
+      second_booking = create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, total_amount: 200)
+      create(:booking_room, booking: first_booking, room_type: room_type, subtotal: 150)
+      create(:booking_room, booking: second_booking, room_type: room_type, subtotal: 150)
 
       create(:booking, hotel: other_hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, total_amount: 500)
 

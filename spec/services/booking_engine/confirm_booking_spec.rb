@@ -90,8 +90,8 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(quote.reload.special_requests).to eq('Late arrival at 10 PM')
     end
 
-    it "expands a multi-room quote into grouped one-room bookings when the backend gate is enabled" do
-      allow(BookingRedesign).to receive(:enabled?).and_return(true)
+    it "always expands a multi-room quote into grouped one-room bookings" do
+      expect(BookingRedesign).not_to receive(:enabled?)
       allow(Notifications::Dispatcher).to receive(:new).and_return(instance_double(Notifications::Dispatcher, call: []))
       quote_item.update!(quantity: 2, subtotal: 400)
       quote.update!(total_amount: 400, adults: 2)

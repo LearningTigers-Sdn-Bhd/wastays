@@ -87,21 +87,25 @@ RSpec.describe Booking, type: :model do
     let(:booking) { create(:booking) }
     let(:room_type) { create(:room_type, hotel: booking.hotel) }
 
-    it "is false without booking rooms" do
+    it "is false without a group booking" do
       expect(booking).not_to be_group_booking
     end
 
-    it "is false for one booked room" do
+    it "is false for a standalone booking with one room" do
       create(:booking_room, booking: booking, room_type: room_type)
 
       expect(booking.reload).not_to be_group_booking
     end
 
-    it "is true for multiple booking room rows" do
+    it "is true for each child of a multi-room group booking" do
+      group = create(:group_booking, hotel: booking.hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: booking.hotel, group_booking: group, group_position: 2)
       create(:booking_room, booking: booking, room_type: room_type)
-      create(:booking_room, booking: booking, room_type: room_type)
+      create(:booking_room, booking: sibling, room_type: room_type)
 
       expect(booking.reload).to be_group_booking
+      expect(sibling.reload).to be_group_booking
     end
   end
 

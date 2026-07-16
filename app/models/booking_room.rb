@@ -7,6 +7,7 @@ class BookingRoom < ApplicationRecord
   delegate :hotel, to: :booking
 
   validates :subtotal, presence: true
+  validates :booking_id, uniqueness: true, on: :create
 
   def quantity
     1

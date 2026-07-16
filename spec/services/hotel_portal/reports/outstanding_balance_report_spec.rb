@@ -35,17 +35,25 @@ RSpec.describe HotelPortal::Reports::OutstandingBalanceReport, type: :service do
       expect(result.totals[:outstanding_amount]).to eq(180.to_d)
     end
 
-    it "uses room snapshot/name fallback and room number fallback" do
-      booking = create(:booking, hotel: hotel, status: "checked_in", payment_status: "authorized", check_in: start_date, check_out: start_date + 1.day)
+    it "uses room snapshot/name fallback and room number fallback for grouped child bookings" do
+      group = create(:group_booking, hotel: hotel)
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin")
-      create_list(:booking_room, 2, booking: booking, room_type: room_type, room_number: nil, room_type_snapshot: { "name" => "Snapshot Twin" })
-      folio = create(:booking_folio, booking: booking, hotel: hotel)
-      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
+      first_booking = create(:booking, hotel: hotel, group_booking: group, group_position: 1, status: "checked_in", payment_status: "authorized", check_in: start_date, check_out: start_date + 1.day)
+      second_booking = create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "checked_in", payment_status: "authorized", check_in: start_date, check_out: start_date + 1.day)
+      create(:booking_room, booking: first_booking, room_type: room_type, room_number: nil, room_type_snapshot: { "name" => "Snapshot Twin" })
+      create(:booking_room, booking: second_booking, room_type: room_type, room_number: nil, room_type_snapshot: {})
+      first_folio = create(:booking_folio, booking: first_booking, hotel: hotel)
+      second_folio = create(:booking_folio, booking: second_booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: first_folio, transaction_type: "charge", category: "accommodation", amount: 50)
+      create(:folio_transaction, booking_folio: second_folio, transaction_type: "charge", category: "accommodation", amount: 50)
 
-      row = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call.rows.first
+      result = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
-      expect(row[:room_details]).to eq("2x Snapshot Twin")
-      expect(row[:room_numbers]).to eq("TBA, TBA")
+      expect(result.rows.map { |row| row[:booking_id] }).to contain_exactly(first_booking.id, second_booking.id)
+      expect(result.rows.map { |row| row[:room_details] }).to contain_exactly("1x Snapshot Twin", "1x Deluxe Twin")
+      expect(result.rows.map { |row| row[:room_numbers] }).to contain_exactly("TBA", "TBA")
+      expect(result.totals[:booking_count]).to eq(2)
+      expect(result.totals[:outstanding_amount]).to eq(100.to_d)
     end
 
     it "excludes pending bookings with a settled folio balance" do

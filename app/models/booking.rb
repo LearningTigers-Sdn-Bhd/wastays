@@ -254,7 +254,7 @@ class Booking < ApplicationRecord
   end
 
   def group_booking?
-    group_booking_id.present? || booking_rooms.size > 1
+    group_booking_id.present?
   end
 
   def payout_eligible?

@@ -27,23 +27,28 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesReport, type: :service do
       expect(result.departures.map { |row| row[:booking_id] }).to eq([ departure.id ])
     end
 
-    it "normalizes room details, TBA room number, and latest note" do
-      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, adults: 2, children: 1, confirmation_token: "WS-ROOMS")
+    it "normalizes grouped child room details, TBA room numbers, and latest notes" do
+      group = create(:group_booking, hotel: hotel)
       deluxe = create(:room_type, hotel: hotel, name: "Deluxe King")
       twin = create(:room_type, hotel: hotel, name: "Twin Share")
-      create(:booking_room, booking: booking, room_type: deluxe, room_number: "301", room_type_snapshot: { "name" => "Snapshot Deluxe" })
-      create_list(:booking_room, 2, booking: booking, room_type: twin, room_number: nil, room_type_snapshot: {})
-      create(:booking_note, booking: booking, body: "Older note", created_at: 2.hours.ago)
-      create(:booking_note, booking: booking, body: "VIP guest", created_at: 1.hour.ago)
+      deluxe_booking = create(:booking, hotel: hotel, group_booking: group, group_position: 1, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, adults: 2, children: 1, confirmation_token: "WS-ROOMS-1")
+      first_twin_booking = create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, confirmation_token: "WS-ROOMS-2")
+      second_twin_booking = create(:booking, hotel: hotel, group_booking: group, group_position: 3, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, confirmation_token: "WS-ROOMS-3")
+      create(:booking_room, booking: deluxe_booking, room_type: deluxe, room_number: "301", room_type_snapshot: { "name" => "Snapshot Deluxe" })
+      create(:booking_room, booking: first_twin_booking, room_type: twin, room_number: nil, room_type_snapshot: {})
+      create(:booking_room, booking: second_twin_booking, room_type: twin, room_number: nil, room_type_snapshot: {})
+      create(:booking_note, booking: deluxe_booking, body: "Older note", created_at: 2.hours.ago)
+      create(:booking_note, booking: deluxe_booking, body: "VIP guest", created_at: 1.hour.ago)
 
-      row = service.call.arrivals.first
+      rows = service.call.arrivals
+      deluxe_row = rows.find { |row| row[:booking_id] == deluxe_booking.id }
 
-      expect(row[:booking_id]).to eq(booking.id)
-      expect(row[:confirmation_token]).to eq("WS-ROOMS")
-      expect(row[:room_details]).to eq("1x Snapshot Deluxe, 2x Twin Share")
-      expect(row[:room_numbers]).to eq("301, TBA, TBA")
-      expect(row[:guest_count]).to eq("2 adults, 1 child")
-      expect(row[:latest_note]).to eq("VIP guest")
+      expect(rows.map { |row| row[:booking_id] }).to contain_exactly(deluxe_booking.id, first_twin_booking.id, second_twin_booking.id)
+      expect(rows.map { |row| row[:room_details] }).to contain_exactly("1x Snapshot Deluxe", "1x Twin Share", "1x Twin Share")
+      expect(rows.map { |row| row[:room_numbers] }).to contain_exactly("301", "TBA", "TBA")
+      expect(deluxe_row[:confirmation_token]).to eq("WS-ROOMS-1")
+      expect(deluxe_row[:guest_count]).to eq("2 adults, 1 child")
+      expect(deluxe_row[:latest_note]).to eq("VIP guest")
     end
 
     it "marks completed checkout rows with checkout time" do
