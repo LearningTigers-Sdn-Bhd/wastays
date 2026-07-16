@@ -179,7 +179,7 @@ module HotelPortal
         when "completed", "resolved" then "bg-green-50 text-green-700 border border-green-100"
         when "cancel", "rejected", "cancelled" then "bg-red-50 text-red-700 border border-red-100"
         when "pending", "requested" then "bg-yellow-50 text-yellow-700 border border-yellow-100"
-        else "bg-gray-50 text-gray-700 border border-gray-100"
+        else "bg-muted text-foreground border border-border"
         end
       else
         case status.to_s
@@ -187,7 +187,7 @@ module HotelPortal
         when "in_progress" then "bg-blue-50 text-blue-700 border border-blue-100"
         when "failed", "cancelled" then "bg-red-50 text-red-700 border border-red-100"
         when "pending" then "bg-yellow-50 text-yellow-700 border border-yellow-100"
-        else "bg-gray-50 text-gray-700 border border-gray-100"
+        else "bg-muted text-foreground border border-border"
         end
       end
     end

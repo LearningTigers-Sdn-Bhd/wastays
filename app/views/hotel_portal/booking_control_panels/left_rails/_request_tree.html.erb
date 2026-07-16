@@ -1,14 +1,14 @@
-<div class="divide-y divide-slate-100">
+<div class="divide-y divide-border">
   <% presenter.request_tree_groups.each do |group| %>
     <details open>
-      <summary class="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-800 hover:bg-slate-50">
+      <summary class="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-foreground hover:bg-muted">
         <span><%= group.label %></span>
-        <span class="text-[11px] font-semibold text-slate-500"><%= group.description %></span>
+        <span class="text-[11px] font-semibold text-muted-foreground"><%= group.description %></span>
       </summary>
       <div class="space-y-1 px-3 pb-3">
         <% group.rows.each do |row| %>
           <% param_key = row.kind == "request" ? :request_scope : :room_id %>
-          <%= link_to hotel_booking_control_panel_path(current_hotel, booking, tab: presenter.active_tab, param_key => row.id), data: { turbo_frame: "booking_control_panel_workspace", turbo_action: "advance" }, class: "block rounded-lg px-3 py-2 text-sm #{row.active ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}" do %>
+          <%= link_to hotel_booking_control_panel_path(current_hotel, booking, tab: presenter.active_tab, param_key => row.id), data: { turbo_frame: "booking_control_panel_workspace", turbo_action: "advance" }, class: "block rounded-lg px-3 py-2 text-sm #{row.active ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"}" do %>
             <span class="block font-bold"><%= row.label %></span>
             <span class="block truncate text-xs opacity-75"><%= row.description %></span>
           <% end %>

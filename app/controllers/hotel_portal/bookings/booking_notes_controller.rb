@@ -109,11 +109,7 @@ class HotelPortal::Bookings::BookingNotesController < ApplicationController
         partial: "hotel_portal/bookings/show/internal_notes",
         locals: { booking: @booking }
       ),
-      turbo_stream.append(
-        "flash_toasts",
-        partial: "shared/toast",
-        locals: { key: key.to_s, value: message }
-      )
+      toast_stream_for_flash(message, key)
     ], status: status
   end
 end

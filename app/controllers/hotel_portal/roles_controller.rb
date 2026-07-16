@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class RolesController < HotelPortal::BaseController
+  class RolesController < HotelPortal::SettingsBaseController
     before_action :authorize_manage_users!
     before_action -> { require_feature!("role_based_access_control") }
     before_action :set_role, only: %i[edit update destroy]

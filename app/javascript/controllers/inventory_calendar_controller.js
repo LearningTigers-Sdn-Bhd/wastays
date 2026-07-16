@@ -100,9 +100,7 @@ export default class extends Controller {
         
         // Synchronized direct jump to top if anchor is in URL or success message is visible
         const hasTopAnchor = window.location.href.includes("#top")
-        const hasFlashMessage = frame.querySelector('[data-controller="toast"]')
-        
-        if (hasTopAnchor || hasFlashMessage) {
+        if (hasTopAnchor) {
           this.scrollToTop()
         }
       }

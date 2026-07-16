@@ -1,37 +1,51 @@
-<p class="px-3 pb-1 pt-2 text-[10px] font-black uppercase tracking-wider text-slate-400">Print</p>
+<p class="px-3 pb-1 pt-2 text-[10px] font-black uppercase tracking-wider text-muted-foreground">Print</p>
 
-<%= link_to receipt_booking_path(booking.confirmation_token), target: "_blank", data: { turbo: false }, role: "menuitem", class: "flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none" do %>
+<%= link_to receipt_booking_path(booking.confirmation_token), target: "_blank", data: { turbo: false }, role: "menuitem", class: "flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none" do %>
   <span class="flex items-center gap-2"><%= cached_icon "receipt", class: "size-4 shrink-0 text-emerald-600" %> Receipt</span>
-  <%= cached_icon "download", class: "size-3.5 text-slate-400" %>
+  <%= cached_icon "download", class: "size-3.5 text-muted-foreground" %>
 <% end %>
 
 <% if booking.status == "completed" %>
-  <%= link_to invoice_booking_path(booking.confirmation_token), target: "_blank", data: { turbo: false }, role: "menuitem", class: "flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none" do %>
+  <%= link_to invoice_booking_path(booking.confirmation_token), target: "_blank", data: { turbo: false }, role: "menuitem", class: "flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none" do %>
     <span class="flex items-center gap-2"><%= cached_icon "file-text", class: "size-4 shrink-0 text-blue-600" %> Invoice</span>
-    <%= cached_icon "download", class: "size-3.5 text-slate-400" %>
+    <%= cached_icon "download", class: "size-3.5 text-muted-foreground" %>
   <% end %>
 <% else %>
-  <div class="flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-slate-400">
-    <span class="flex items-center gap-2"><%= cached_icon "file-text", class: "size-4 shrink-0 text-slate-300" %> Invoice</span>
-    <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">After checkout</span>
+  <div class="flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-muted-foreground">
+    <span class="flex items-center gap-2"><%= cached_icon "file-text", class: "size-4 shrink-0 text-primary-foreground" %> Invoice</span>
+    <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">After checkout</span>
   </div>
 <% end %>
 
 <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-  <%= link_to hotel_booking_guest_registration_card_path(current_hotel, booking), target: "_blank", data: { turbo: false }, role: "menuitem", class: "flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none" do %>
+  <%= link_to hotel_booking_guest_registration_card_path(current_hotel, booking), target: "_blank", data: { turbo: false }, role: "menuitem", class: "flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none" do %>
     <span class="flex items-center gap-2"><%= cached_icon "clipboard-list", class: "size-4 shrink-0 text-amber-600" %> Guest Registration Card</span>
-    <%= cached_icon "chevron-right", class: "size-3.5 text-slate-400" %>
+    <%= cached_icon "chevron-right", class: "size-3.5 text-muted-foreground" %>
   <% end %>
 <% end %>
 
-<div class="my-1.5 border-t border-slate-100"></div>
-<p class="px-3 pb-1 pt-1 text-[10px] font-black uppercase tracking-wider text-slate-400">Send</p>
+<% if booking.tourism_tax? && current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+  <% if booking.tourism_tax_voucher_number? %>
+    <%= link_to hotel_booking_tourism_tax_voucher_path(current_hotel, booking), target: "_blank", data: { turbo: false }, role: "menuitem", class: "flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none" do %>
+      <span class="flex items-center gap-2"><%= cached_icon "receipt", class: "size-4 shrink-0 text-emerald-600" %> Tourism Tax Voucher</span>
+      <%= cached_icon "download", class: "size-3.5 text-muted-foreground" %>
+    <% end %>
+  <% else %>
+    <%= button_to issue_hotel_booking_tourism_tax_voucher_path(current_hotel, booking), form: { target: "_blank", data: { turbo: false } }, class: "flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none" do %>
+      <span class="flex items-center gap-2"><%= cached_icon "receipt", class: "size-4 shrink-0 text-emerald-600" %> Issue Tourism Tax Voucher</span>
+      <%= cached_icon "download", class: "size-3.5 text-muted-foreground" %>
+    <% end %>
+  <% end %>
+<% end %>
 
-<div class="flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-slate-400">
-  <span class="flex items-center gap-2"><%= cached_icon "send", class: "size-4 shrink-0 text-slate-300" %> Resend Confirmation</span>
-  <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">Unavailable</span>
+<div class="my-1.5 border-t border-border"></div>
+<p class="px-3 pb-1 pt-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground">Send</p>
+
+<div class="flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-muted-foreground">
+  <span class="flex items-center gap-2"><%= cached_icon "send", class: "size-4 shrink-0 text-primary-foreground" %> Resend Confirmation</span>
+  <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Unavailable</span>
 </div>
-<div class="flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-slate-400">
-  <span class="flex items-center gap-2"><%= cached_icon "message-circle", class: "size-4 shrink-0 text-slate-300" %> Resend Pre-Check-in</span>
-  <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">Unavailable</span>
+<div class="flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-semibold text-muted-foreground">
+  <span class="flex items-center gap-2"><%= cached_icon "message-circle", class: "size-4 shrink-0 text-primary-foreground" %> Resend Pre-Check-in</span>
+  <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Unavailable</span>
 </div>

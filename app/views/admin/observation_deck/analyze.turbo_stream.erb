@@ -7,7 +7,7 @@
       </div>
       <div class="flex items-center gap-2">
         <span class="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase"><%= @analysis[:model] || "Analysis" %></span>
-        <%= button_to analyze_admin_observation_deck_path(@entry, force: true), 
+        <%= button_to analyze_admin_observation_deck_path(@entry, force: true),
             method: :post,
             data: { action: "click->ai-analysis#start", ai_analysis_target: "button" },
             class: "hidden group-hover:block text-[10px] font-bold text-indigo-400 hover:text-indigo-600 transition-colors uppercase underline decoration-dotted" do %>
@@ -15,13 +15,13 @@
         <% end %>
       </div>
     </div>
-    
+
     <% if @analysis[:error] %>
       <div class="p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-700 text-xs font-medium">
         <%= @analysis[:error] %>
       </div>
     <% else %>
-      <div class="prose prose-sm max-w-none text-slate-700" data-ai-analysis-target="content">
+      <div class="prose prose-sm max-w-none text-foreground" data-ai-analysis-target="content">
         <%= sanitize(@analysis[:html]) %>
       </div>
 

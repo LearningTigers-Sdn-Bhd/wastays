@@ -1,27 +1,27 @@
 <%# locals: (block:) %>
 <div class="flex flex-col min-w-0">
   <div class="flex items-start justify-between gap-1.5">
-    <p class="truncate font-black text-xs text-slate-800 leading-tight">
+    <p class="truncate font-black text-xs text-foreground leading-tight">
       <%= block[:guest_name] %>
     </p>
   </div>
 
-  <div class="mt-0.5 flex items-start justify-between text-[9px] font-semibold text-slate-500">
+  <div class="mt-0.5 flex items-start justify-between text-[9px] font-semibold text-muted-foreground">
     <div class="flex flex-col min-w-0">
       <div class="flex items-center gap-1">
         <span><%= format_room_card_stay_dates(block[:check_in], block[:check_out]) %></span>
       </div>
     </div>
     <% booking = block[:booking] %>
-    <div class="flex items-center gap-1.5 text-slate-500 text-[9px] self-start mt-0.5">
+    <div class="flex items-center gap-1.5 text-muted-foreground text-[9px] self-start mt-0.5">
       <% if booking %>
         <span class="inline-flex items-center gap-0.5" title="<%= pluralize(booking.adults, 'Adult') %>">
-          <%= cached_icon "user", stroke_width: 2.5, class: "size-2.5 text-slate-400" %>
-          <span class="font-bold text-slate-700 leading-none"><%= booking.adults %></span>
+          <%= cached_icon "user", stroke_width: 2.5, class: "size-2.5 text-muted-foreground" %>
+          <span class="font-bold text-foreground leading-none"><%= booking.adults %></span>
         </span>
         <span class="inline-flex items-center gap-0.5" title="<%= pluralize(booking.children.to_i, 'Child') %>">
-          <%= cached_icon "baby", stroke_width: 2.5, class: "size-2.5 text-slate-400" %>
-          <span class="font-bold text-slate-700 leading-none"><%= booking.children.to_i %></span>
+          <%= cached_icon "baby", stroke_width: 2.5, class: "size-2.5 text-muted-foreground" %>
+          <span class="font-bold text-foreground leading-none"><%= booking.children.to_i %></span>
         </span>
       <% end %>
     </div>

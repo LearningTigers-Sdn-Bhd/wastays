@@ -9,16 +9,16 @@
      data-booking-calc-availability-url-value="<%= availability_hotel_bookings_path(current_hotel) %>"
      data-booking-calc-rate-options-url-value="<%= rate_options_hotel_bookings_path(current_hotel) %>"
      data-booking-calc-exclude-booking-id-value="<%= booking.id %>">
-  <section class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Scheduled Stay</h3>
+  <section class="rounded-2xl border border-border bg-muted p-5">
+    <h3 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Scheduled Stay</h3>
     <div class="mt-3 grid gap-4 sm:grid-cols-2">
       <div>
-        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Check-in</p>
-        <p class="mt-1 text-sm font-bold text-slate-800"><%= booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %></p>
+        <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Check-in</p>
+        <p class="mt-1 text-sm font-bold text-foreground"><%= booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %></p>
       </div>
       <div>
-        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Check-out</p>
-        <p class="mt-1 text-sm font-bold text-slate-800"><%= booking.check_out.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %></p>
+        <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Check-out</p>
+        <p class="mt-1 text-sm font-bold text-foreground"><%= booking.check_out.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %></p>
       </div>
     </div>
     <%= hidden_field_tag "#{dom_prefix}_check_in", booking.check_in.to_date, data: { booking_calc_target: "checkIn" } %>
@@ -29,20 +29,20 @@
     <section class="space-y-5">
       <%= hidden_field_tag "#{input_prefix}[#{index}][id]", room.id %>
       <div>
-        <%= label_tag "#{dom_prefix}_room_type_#{index}", "Room Category", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
+        <%= label_tag "#{dom_prefix}_room_type_#{index}", "Room Category", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground" %>
         <%= select_tag "#{input_prefix}[#{index}][room_type_id]",
           options_from_collection_for_select(current_hotel.room_types.order(:name), :id, :name, room.room_type_id),
           id: "#{dom_prefix}_room_type_#{index}",
-          class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm",
+          class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm",
           data: { booking_calc_target: "roomType", reinstatement_required: true, action: "change->booking-calc#updateRoomNumbers change->booking-calc#calculate" } %>
       </div>
       <div>
-        <%= label_tag "#{dom_prefix}_rate_#{index}", "Rate", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
+        <%= label_tag "#{dom_prefix}_rate_#{index}", "Rate", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground" %>
         <%= select_tag "#{input_prefix}[#{index}][rate_plan_id]",
           options_for_select(room.rate_plan ? [[room.rate_plan.name, room.rate_plan.id]] : [], room.rate_plan_id),
           include_blank: "Select a rate",
           id: "#{dom_prefix}_rate_#{index}",
-          class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm",
+          class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm",
           data: { booking_calc_target: "ratePlanSelect" } %>
       </div>
       <div data-controller="room-lock"
@@ -50,11 +50,11 @@
            data-room-lock-room-type-id-value="<%= room.room_type_id %>"
            data-room-lock-current-room-value="<%= room.room_number %>"
            data-booking-calc-target="roomNumberContainer">
-        <%= label_tag "#{dom_prefix}_room_number_#{index}", "Room Number", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
+        <%= label_tag "#{dom_prefix}_room_number_#{index}", "Room Number", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground" %>
         <%= select_tag "#{input_prefix}[#{index}][room_number]",
           options_for_select([[room.room_number, room.room_number]], room.room_number),
           id: "#{dom_prefix}_room_number_#{index}",
-          class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm",
+          class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm",
           data: { booking_calc_target: "roomNumberSelect", reinstatement_required: true, action: "change->room-lock#lock" } %>
       </div>
     </section>

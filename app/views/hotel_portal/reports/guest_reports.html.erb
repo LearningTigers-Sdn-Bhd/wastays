@@ -1,93 +1,42 @@
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8 print:max-w-none print:pb-0 print:space-y-4">
-  <div class="px-4 md:px-0 print:px-0">
-    <div class="mt-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between print:mt-0 print:block">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl print:text-xl">Guest Reports</h1>
-        <p class="mt-1 text-sm font-medium text-slate-600 print:text-xs">
-          <%= current_hotel.name %> · <%= guest_reports_date_range_label(@report) %>
-        </p>
-      </div>
-
-      <div class="print:hidden">
-        <%= form_with url: guest_reports_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "arrivals-date-range-form", data: { controller: "date-preset auto-submit" } do |f| %>
-          <%= hidden_field_tag :tab, @active_guest_report_tab %>
-
-          <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Time Period</label>
-            <%= select_tag :date_preset, options_for_select(date_preset_options(include_single: true), @date_preset), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->date-preset#toggleCustom" } %>
-          </div>
-
-
-
-          <div id="custom-date-range" class="<%= custom_date_range_class(@date_preset) %> gap-3">
-            <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
-                <%= @date_preset == 'single' ? 'Date' : 'Start Date' %>
-              </label>
-              <%= f.date_field :start_date, value: @report.start_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", id: "arrivals-start-date", data: { action: "change->auto-submit#submit" } %>
-            </div>
-
-            <div class="<%= end_date_container_class(@date_preset) %>">
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">End Date</label>
-              <%= f.date_field :end_date, value: @report.end_date, disabled: @date_preset == 'single', class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", id: "arrivals-end-date", data: { action: "change->auto-submit#submit" } %>
-            </div>
-          </div>
-
-          <% if show_guest_report_export?(@active_guest_report_tab) %>
-          <details class="relative min-w-[160px]">
-            <summary class="list-none inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50">
-              <%= cached_icon "download", class: "size-4 me-2", stroke_width: 2.5 %>
-              Export
-            </summary>
-            <div class="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-              <%= link_to "Export PDF",
-                guest_reports_hotel_reports_path(
-                  current_hotel,
-                  start_date: @report.start_date,
-                  end_date: @report.end_date,
-                  date_preset: @date_preset,
-                  tab: @active_guest_report_tab,
-                  meal_type: params[:meal_type],
-                  format: :pdf
-                ),
-                class: "block px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
-              <%= link_to "Export Excel",
-                guest_reports_hotel_reports_path(
-                  current_hotel,
-                  start_date: @report.start_date,
-                  end_date: @report.end_date,
-                  date_preset: @date_preset,
-                  tab: @active_guest_report_tab,
-                  meal_type: params[:meal_type],
-                  format: :xls
-                ),
-                class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
-              <%= link_to "Export CSV",
-                guest_reports_hotel_reports_path(
-                  current_hotel,
-                  start_date: @report.start_date,
-                  end_date: @report.end_date,
-                  date_preset: @date_preset,
-                  tab: @active_guest_report_tab,
-                  meal_type: params[:meal_type],
-                  format: :csv
-                ),
-                class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
-            </div>
-          </details>
+<div class="w-full space-y-5 print:max-w-none print:pb-0 print:space-y-4">
+  <div class="print:px-0">
+    <%= render PanelsUI::PageHeader.new(title: "Guest Reports", class: "print:block") do |header| %>
+      <% header.with_caption do %>
+        <p class="text-sm font-medium text-muted-foreground print:text-xs">
+          <%= current_hotel.name %> ·
+          <% if @report.start_date == @report.end_date %>
+            <%= @report.start_date.strftime("%A, %d %b %Y") %>
+          <% else %>
+            <%= @report.start_date.strftime("%d %b %Y") %> - <%= @report.end_date.strftime("%d %b %Y") %>
           <% end %>
-        <% end %>
-      </div>
-    </div>
+        </p>
+      <% end %>
+      <% header.with_actions do %>
+        <div class="print:hidden">
+          <%= render "preset_report_actions",
+            form_url: guest_reports_hotel_reports_path(current_hotel), form_id: "arrivals-date-range-form",
+            date_preset: @date_preset, start_date: @report.start_date, end_date: @report.end_date,
+            hidden_params: { tab: @active_guest_report_tab, q: params[:q], status: params[:status] }.compact,
+            show_export: feature_enabled_for_hotel?("excel_pdf_export") && @active_guest_report_tab != "registration_cards",
+            export_menu_id: "guest-reports-export",
+            export_items: [
+              ["Export PDF", guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :pdf)],
+              ["Export Excel", guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :xls)],
+              ["Export CSV", guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :csv)]
+            ] %>
+        </div>
+      <% end %>
+    <% end %>
   </div>
 
-  <div class="px-4 md:px-0 print:hidden">
+  <div class="print:hidden">
     <div class="flex flex-wrap items-center gap-2">
       <% guest_report_tabs_data(@report, @bibo_report, @active_guest_report_tab, @grc_total_count, current_hotel, @date_preset).each do |tab| %>
-        <%= link_to tab[:path], class: guest_report_tab_class(tab) do %>
+        <%= link_to tab[:path],
+            class: "inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition #{tab[:active] ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-border bg-card text-foreground hover:border-border-interactive hover:bg-muted'}" do %>
           <span><%= tab[:label] %></span>
           <% if tab[:count].present? %>
-            <span class="<%= guest_report_tab_count_class(tab) %>">
+            <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold <%= tab[:active] ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground' %>">
               <%= tab[:count] %>
             </span>
           <% end %>
@@ -97,22 +46,22 @@
   </div>
 
   <% if show_metrics_cards?(@active_guest_report_tab) %>
-    <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-2 xl:grid-cols-4 print:grid-cols-2 print:rounded-none print:shadow-none">
-      <div class="p-6 md:border-r md:border-slate-200 print:p-3">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Arrivals</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950 print:text-xl"><%= @report.arrival_count %></h2>
+    <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-2 xl:grid-cols-4 print:grid-cols-2 print:rounded-none print:shadow-none">
+      <div class="p-6 md:border-r md:border-border print:p-3">
+        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Arrivals</p>
+        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground print:text-xl"><%= @report.arrival_count %></h2>
       </div>
-      <div class="bg-slate-50/30 p-6 xl:border-r xl:border-slate-200 print:p-3 print:bg-white">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">In-House</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950 print:text-xl"><%= @report.in_house_count %></h2>
+      <div class="bg-muted/30 p-6 xl:border-r xl:border-border print:p-3 print:bg-card">
+        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">In-House</p>
+        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground print:text-xl"><%= @report.in_house_count %></h2>
       </div>
-      <div class="p-6 md:border-r md:border-slate-200 print:p-3">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Departures</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950 print:text-xl"><%= @report.departure_count %></h2>
+      <div class="p-6 md:border-r md:border-border print:p-3">
+        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Departures</p>
+        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground print:text-xl"><%= @report.departure_count %></h2>
       </div>
-      <div class="bg-slate-50/30 p-6 print:p-3 print:bg-white">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Checkout</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950 print:text-xl"><%= @report.checkout_count %></h2>
+      <div class="bg-muted/30 p-6 print:p-3 print:bg-card">
+        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Checkout</p>
+        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground print:text-xl"><%= @report.checkout_count %></h2>
       </div>
     </div>
   <% end %>
@@ -159,10 +108,10 @@
           <% is_active = (params[:meal_type] == m_type) %>
           <% count = @meal_prep_counts[m_type] %>
           <%= link_to guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: "meal_prep", meal_type: m_type),
-              class: "inline-flex h-9 items-center gap-2 rounded-xl px-4 text-xs font-bold transition #{is_active ? 'bg-slate-900 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'}" do %>
+              class: "inline-flex h-9 items-center gap-2 rounded-xl px-4 text-xs font-bold transition #{is_active ? 'bg-primary text-primary-foreground shadow-sm' : 'border border-border bg-card text-foreground hover:border-border-interactive hover:bg-muted'}" do %>
             <span><%= m_type.titleize %></span>
             <% if count.present? %>
-              <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold <%= is_active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500' %>">
+              <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold <%= is_active ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground' %>">
                 <%= count %>
               </span>
             <% end %>

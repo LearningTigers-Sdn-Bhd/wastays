@@ -40,7 +40,7 @@ module HotelPortal
       when "completed" then "border-emerald-200 bg-emerald-50 text-emerald-700"
       when "pending" then "border-amber-200 bg-amber-50 text-amber-700"
       when "failed" then "border-red-200 bg-red-50 text-red-700"
-      else "border-slate-200 bg-slate-50 text-slate-700"
+      else "border-border bg-muted text-foreground"
       end
       mobile ? variant.gsub("border-", "dummy-").gsub(" ", " border ") : variant
     end

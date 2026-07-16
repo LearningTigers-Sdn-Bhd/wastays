@@ -16,7 +16,7 @@
             setting = @derived_settings_by_channel_id[channel["id"]] || ChannelDerivedSetting.new(channel_id: channel["id"]) 
             title = channel.dig("attributes", "title") || "Connected Channel"
           %>
-          <%= form_with url: update_channel_derived_pricing_hotel_inventory_dashboards_path(current_hotel), method: :post, local: true, class: "rounded-xl border border-slate-200 bg-slate-50/50 p-5 space-y-5 shadow-sm transition hover:border-slate-300" do |f| %>
+          <%= form_with url: update_channel_derived_pricing_hotel_inventory_dashboards_path(current_hotel), method: :post, local: true, class: "rounded-xl border border-slate-200 bg-slate-50/50 p-5 space-y-5 shadow-sm transition hover:border-slate-300", data: { controller: "pricing-mode" } do |f| %>
             <%= hidden_field_tag :channel_id, channel["id"] %>
 
             <!-- Header -->
@@ -33,17 +33,17 @@
               <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">Derived Pricing Mode</label>
               <div class="grid grid-cols-3 gap-2">
                 <label class="flex flex-col items-center justify-center p-3 rounded-lg border border-slate-200 bg-white text-center cursor-pointer transition hover:bg-slate-50 [&:has(input:checked)]:border-indigo-600 [&:has(input:checked)]:ring-1 [&:has(input:checked)]:ring-indigo-600">
-                  <%= f.radio_button :pricing_mode, "same", checked: setting.pricing_mode == "same", class: "sr-only", data: { action: "change->subtabs#togglePricingInput" } %>
+                  <%= f.radio_button :pricing_mode, "same", checked: setting.pricing_mode == "same", class: "sr-only", data: { action: "change->pricing-mode#toggle" } %>
                   <span class="text-xs font-bold text-slate-900">Same Price</span>
                   <span class="text-[10px] text-slate-400 mt-0.5">Use default rate</span>
                 </label>
                 <label class="flex flex-col items-center justify-center p-3 rounded-lg border border-slate-200 bg-white text-center cursor-pointer transition hover:bg-slate-50 [&:has(input:checked)]:border-indigo-600 [&:has(input:checked)]:ring-1 [&:has(input:checked)]:ring-indigo-600">
-                  <%= f.radio_button :pricing_mode, "multiplier", checked: setting.pricing_mode == "multiplier", class: "sr-only", data: { action: "change->subtabs#togglePricingInput" } %>
+                  <%= f.radio_button :pricing_mode, "multiplier", checked: setting.pricing_mode == "multiplier", class: "sr-only", data: { action: "change->pricing-mode#toggle" } %>
                   <span class="text-xs font-bold text-slate-900">Multiplier (%)</span>
                   <span class="text-[10px] text-slate-400 mt-0.5">E.g., +10%</span>
                 </label>
                 <label class="flex flex-col items-center justify-center p-3 rounded-lg border border-slate-200 bg-white text-center cursor-pointer transition hover:bg-slate-50 [&:has(input:checked)]:border-indigo-600 [&:has(input:checked)]:ring-1 [&:has(input:checked)]:ring-indigo-600">
-                  <%= f.radio_button :pricing_mode, "offset", checked: setting.pricing_mode == "offset", class: "sr-only", data: { action: "change->subtabs#togglePricingInput" } %>
+                  <%= f.radio_button :pricing_mode, "offset", checked: setting.pricing_mode == "offset", class: "sr-only", data: { action: "change->pricing-mode#toggle" } %>
                   <span class="text-xs font-bold text-slate-900">Fixed Offset</span>
                   <span class="text-[10px] text-slate-400 mt-0.5">E.g., +RM 20</span>
                 </label>
@@ -51,7 +51,7 @@
             </div>
 
             <!-- Derived Pricing Value -->
-            <div class="pricing-value-input <%= setting.pricing_mode == 'same' ? 'hidden' : '' %>">
+            <div class="pricing-value-input <%= setting.pricing_mode == 'same' ? 'hidden' : '' %>" data-pricing-mode-target="value">
               <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Adjustment Value</label>
               <div class="relative rounded-lg shadow-sm">
                 <%= f.number_field :pricing_value, value: setting.pricing_value, step: 0.01, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", placeholder: "0.00" %>

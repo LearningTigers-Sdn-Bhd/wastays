@@ -1,44 +1,44 @@
-<dl class="border-t border-slate-200">
+<dl class="border-t border-border">
   <% [
     [ "Received date", presenter.received_on, "Payment method", presenter.payment_method ],
     [ "Corporate account", presenter.company_name, "Recorded at", presenter.recorded_at ]
   ].each do |left_label, left_value, right_label, right_value| %>
-    <div class="grid border-b border-slate-100 sm:grid-cols-2">
+    <div class="grid border-b border-border sm:grid-cols-2">
       <div class="grid grid-cols-[8.5rem_minmax(0,1fr)] px-4 py-3.5 sm:px-5">
-        <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= left_label %></dt>
-        <dd class="text-sm font-bold text-slate-950"><%= left_value %></dd>
+        <dt class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><%= left_label %></dt>
+        <dd class="text-sm font-bold text-foreground"><%= left_value %></dd>
       </div>
-      <div class="grid grid-cols-[8.5rem_minmax(0,1fr)] border-t border-slate-100 px-4 py-3.5 sm:border-l sm:border-t-0 sm:px-5">
-        <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= right_label %></dt>
-        <dd class="text-sm font-bold text-slate-950"><%= right_value %></dd>
+      <div class="grid grid-cols-[8.5rem_minmax(0,1fr)] border-t border-border px-4 py-3.5 sm:border-l sm:border-t-0 sm:px-5">
+        <dt class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><%= right_label %></dt>
+        <dd class="text-sm font-bold text-foreground"><%= right_value %></dd>
       </div>
     </div>
   <% end %>
   <div class="grid grid-cols-[8.5rem_minmax(0,1fr)] px-4 py-3.5 sm:px-5">
-    <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Notes</dt>
-    <dd class="whitespace-pre-wrap text-sm font-medium leading-6 text-slate-800"><%= presenter.notes %></dd>
+    <dt class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Notes</dt>
+    <dd class="whitespace-pre-wrap text-sm font-medium leading-6 text-foreground"><%= presenter.notes %></dd>
   </div>
   <% if presenter.corporate_gateway_payment? %>
-    <div class="grid border-t border-slate-100 sm:grid-cols-2">
+    <div class="grid border-t border-border sm:grid-cols-2">
       <div class="grid grid-cols-[8.5rem_minmax(0,1fr)] px-4 py-3.5 sm:px-5">
-        <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Origin</dt>
-        <dd class="text-sm font-bold text-slate-950">Corporate portal gateway payment</dd>
+        <dt class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Origin</dt>
+        <dd class="text-sm font-bold text-foreground">Corporate portal gateway payment</dd>
       </div>
-      <div class="grid grid-cols-[8.5rem_minmax(0,1fr)] border-t border-slate-100 px-4 py-3.5 sm:border-l sm:border-t-0 sm:px-5">
-        <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Gateway ref</dt>
-        <dd class="text-sm font-bold text-slate-950"><%= presenter.gateway_name %> · <%= presenter.gateway_reference %></dd>
+      <div class="grid grid-cols-[8.5rem_minmax(0,1fr)] border-t border-border px-4 py-3.5 sm:border-l sm:border-t-0 sm:px-5">
+        <dt class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Gateway ref</dt>
+        <dd class="text-sm font-bold text-foreground"><%= presenter.gateway_name %> · <%= presenter.gateway_reference %></dd>
       </div>
     </div>
     <% if presenter.remittance_suggestions.any? %>
-      <div class="border-t border-slate-100 px-4 py-3.5 sm:px-5">
-        <dt class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Corporate remittance suggestions</dt>
+      <div class="border-t border-border px-4 py-3.5 sm:px-5">
+        <dt class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Corporate remittance suggestions</dt>
         <dd class="mt-2 overflow-x-auto">
           <table class="min-w-[560px] text-left text-xs">
-            <thead class="text-[9px] font-bold uppercase tracking-wider text-slate-500"><tr><th class="py-2 pr-4">Invoice</th><th class="py-2 pr-4">Due</th><th class="py-2 pr-4 text-right">Outstanding snapshot</th><th class="py-2 text-right">Suggested</th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
+            <thead class="text-[9px] font-bold uppercase tracking-wider text-muted-foreground"><tr><th class="py-2 pr-4">Invoice</th><th class="py-2 pr-4">Due</th><th class="py-2 pr-4 text-right">Outstanding snapshot</th><th class="py-2 text-right">Suggested</th></tr></thead>
+            <tbody class="divide-y divide-border">
               <% presenter.remittance_suggestions.each do |suggestion| %>
                 <% due_on = suggestion["due_on"] || suggestion[:due_on] %>
-                <tr><td class="py-2 pr-4 font-bold"><%= suggestion["invoice_label"] || suggestion[:invoice_label] || suggestion["invoice_number"] || suggestion[:invoice_number] %></td><td class="py-2 pr-4 text-slate-600"><%= due_on.present? ? Date.iso8601(due_on).strftime("%d %b %Y") : "—" %></td><td class="py-2 pr-4 text-right"><%= presenter.payment.currency %> <%= number_with_precision(suggestion["outstanding_amount"] || suggestion[:outstanding_amount], precision: 2) %></td><td class="py-2 text-right font-bold"><%= presenter.payment.currency %> <%= number_with_precision(suggestion["suggested_amount"] || suggestion[:suggested_amount], precision: 2) %></td></tr>
+                <tr><td class="py-2 pr-4 font-bold"><%= suggestion["invoice_label"] || suggestion[:invoice_label] || suggestion["invoice_number"] || suggestion[:invoice_number] %></td><td class="py-2 pr-4 text-muted-foreground"><%= due_on.present? ? Date.iso8601(due_on).strftime("%d %b %Y") : "—" %></td><td class="py-2 pr-4 text-right"><%= presenter.payment.currency %> <%= number_with_precision(suggestion["outstanding_amount"] || suggestion[:outstanding_amount], precision: 2) %></td><td class="py-2 text-right font-bold"><%= presenter.payment.currency %> <%= number_with_precision(suggestion["suggested_amount"] || suggestion[:suggested_amount], precision: 2) %></td></tr>
               <% end %>
             </tbody>
           </table>

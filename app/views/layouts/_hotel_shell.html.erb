@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html class="h-full">
+  <head>
+    <title><%= content_for(:title) || "Hotel Admin | WAStays" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= content_for(:head) %>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="h-full overflow-hidden" data-theme="panel-light" data-controller="<%= content_for(:body_controllers) %>" <%= content_for(:body_attributes) %>>
+    <div class="flex flex-col h-screen h-dvh min-h-screen min-h-dvh bg-background">
+      <%= render PanelsUI::Navbar.new(key: navigation_key, sidebar_state_key: navigation_state_key, navigation: !locked_hotel_portal_shell?) do |navbar| %>
+        <% navbar.with_brand do %>
+          <a href="<%= current_hotel ? hotel_dashboard_path(current_hotel) : '#' %>" class="flex items-center" aria-label="WAStays">
+            <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>
+          </a>
+        <% end %>
+        <% navbar.with_actions do %>
+          <% unless locked_hotel_portal_shell? %>
+            <%= render PanelsUI::CommandPalette.new(endpoint: hotel_global_search_index_path(current_hotel), placeholder: "Search dashboard pages...") %>
+          <% end %>
+          <a class="panel-navbar__action" href="<%= help_center_path %>">
+            <%= cached_icon "circle-question-mark", class: "size-4" %>
+            Help
+          </a>
+        <% end %>
+        <% navbar.with_profile do %>
+          <%= render PanelsUI::ProfileMenu.new(
+                id: "hotel-profile",
+                display_name: current_user.name || "Hotel Admin",
+                secondary_text: current_user.email,
+                trigger_label: "Open account menu"
+              ) do |menu| %>
+            <% menu.with_item(label: "My account", href: edit_hotel_user_profile_path(current_hotel), icon: "user") %>
+            <% if (settings_path = hotel_settings_landing_path) %>
+              <% menu.with_item(label: "Settings", href: settings_path, icon: "settings") %>
+            <% end %>
+            <% menu.with_sign_out(label: "Sign out", path: logout_path) %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <div class="flex flex-1 overflow-hidden">
+        <% unless locked_hotel_portal_shell? %>
+          <%= render sidebar_partial %>
+        <% end %>
+
+        <main class="flex-1 flex flex-col overflow-hidden">
+          <% if breadcrumb_parts.present? %>
+            <div class="portal-breadcrumb-bar shrink-0 h-[53px] flex items-center border-b border-sidebar-border bg-sidebar text-sidebar-foreground px-4 sm:px-6">
+              <div class="w-full overflow-x-auto overscroll-x-contain whitespace-nowrap custom-scrollbar">
+                <%= breadcrumb_markup %>
+              </div>
+            </div>
+          <% end %>
+
+          <div class="flex min-h-0 flex-1 flex-col <%= content_for?(:full_height_page) ? '' : 'overflow-y-auto [scrollbar-gutter:stable]' %> overscroll-contain custom-scrollbar">
+            <div class="panel-page <%= content_for?(:full_height_page) ? 'panel-page--workspace' : 'space-y-5' %>">
+              <div class="<%= content_for?(:full_height_page) ? 'flex min-h-0 flex-1 flex-col' : 'grid grid-cols-1' %> <%= (!locked_hotel_portal_shell? && content_for?(:right_sidebar)) ? 'xl:grid-cols-4 gap-6' : '' %>">
+                <div class="<%= content_for?(:full_height_page) ? 'flex min-h-0 flex-1 flex-col' : '' %> <%= (!locked_hotel_portal_shell? && content_for?(:right_sidebar)) ? 'xl:col-span-3' : '' %>">
+                  <%= yield %>
+                </div>
+
+                <% if !locked_hotel_portal_shell? && content_for?(:right_sidebar) %>
+                  <div class="xl:col-span-1 space-y-6">
+                    <%= content_for(:right_sidebar) %>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <%= render "shared/turbo_confirm" %>
+    <%= render "shared/room_lock_alert" %>
+    <%= render "shared/offcanvas_drawer" %>
+    <%= render "shared/offcanvas_drawer_secondary" %>
+    <%= content_for(:body_end) %>
+    <%= render PanelsUI::ToastViewport.new %>
+    <%= render "shared/feedback/flash_toast_triggers", flash: flash %>
+  </body>
+</html>

@@ -1,0 +1,148 @@
+<section aria-labelledby="button-group-preview-heading" class="border-t border-border pt-8">
+  <h2 id="button-group-preview-heading" class="text-lg font-semibold text-foreground">Button Group</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Shadcn-style related actions, split buttons, and joined form controls using the Nova control scale.
+    Groups support horizontal and vertical orientation, nested clusters, text, and decorative separators.
+  </p>
+
+  <div class="grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= label %> action groups</h3>
+
+        <div class="mt-4 flex flex-wrap items-start gap-4">
+          <%= render PanelsUI::ButtonGroup.new(aria: { label: "Editing actions" }) do %>
+            <%= render PanelsUI::Button.new(variant: :neutral) do %>
+              <%= app_icon "copy", class: "size-4", aria: { hidden: "true" } %>
+              Copy
+            <% end %>
+            <%= render PanelsUI::Button.new(variant: :neutral) do %>
+              <%= app_icon "clipboard", class: "size-4", aria: { hidden: "true" } %>
+              Paste
+            <% end %>
+            <%= render PanelsUI::Button.new(variant: :neutral, disabled: true) do %>
+              <%= app_icon "scissors", class: "size-4", aria: { hidden: "true" } %>
+              Cut
+            <% end %>
+          <% end %>
+
+          <%= render PanelsUI::ButtonGroup.new(orientation: :vertical, aria: { label: "Zoom controls" }) do %>
+            <%= render PanelsUI::Button.new(variant: :neutral, size: :icon, aria_label: "Zoom in") do %>
+              <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %>
+            <% end %>
+            <%= render PanelsUI::Button.new(variant: :neutral, size: :icon, aria_label: "Reset zoom") do %>
+              <%= app_icon "rotate-ccw", class: "size-4", aria: { hidden: "true" } %>
+            <% end %>
+            <%= render PanelsUI::Button.new(variant: :neutral, size: :icon, aria_label: "Zoom out") do %>
+              <%= app_icon "minus", class: "size-4", aria: { hidden: "true" } %>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="mt-5 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+    <h3 class="text-sm font-semibold">Nova sizes</h3>
+    <div class="mt-4 flex flex-wrap items-center gap-4">
+      <% [ [ :xs, :icon_xs, "Extra small" ], [ :sm, :icon_sm, "Small" ], [ :md, :icon, "Default" ], [ :lg, :icon_lg, "Large" ] ].each do |size, icon_size, label| %>
+        <%= render PanelsUI::ButtonGroup.new(aria: { label: "#{label} actions" }) do %>
+          <%= render PanelsUI::Button.new(variant: :neutral, size: size) do %>
+            <%= label %>
+          <% end %>
+          <%= render PanelsUI::Button.new(variant: :neutral, size: icon_size, aria_label: "Add #{label.downcase} item") do %>
+            <%= app_icon "plus", class: icon_size == :icon_xs ? "size-3" : "size-4", aria: { hidden: "true" } %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+      <h3 class="text-sm font-semibold">Separator and split actions</h3>
+      <div class="mt-4 flex flex-wrap gap-4">
+        <%= render PanelsUI::ButtonGroup.new(aria: { label: "Clipboard actions" }) do %>
+          <%= render PanelsUI::Button.new do %>
+            Copy
+          <% end %>
+          <%= render PanelsUI::ButtonGroup::Separator.new %>
+          <%= render PanelsUI::Button.new do %>
+            Paste
+          <% end %>
+        <% end %>
+
+        <%= render PanelsUI::ButtonGroup.new(aria: { label: "Follow actions" }) do %>
+          <%= render PanelsUI::Button.new do %>
+            Follow
+          <% end %>
+          <%= render PanelsUI::DropdownMenu.new(id: "sd-button-group-follow", placement: :bottom_end) do |menu| %>
+            <% menu.with_trigger(variant: :primary, size: :icon, aria_label: "More follow options") do %>
+              <%= app_icon "chevron-down", class: "size-4", aria: { hidden: "true" } %>
+            <% end %>
+            <% menu.with_item { "Follow quietly" } %>
+            <% menu.with_item { "Turn on notifications" } %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+      <h3 class="text-sm font-semibold">Nested groups and popover</h3>
+      <div class="mt-4 flex flex-wrap gap-4">
+        <%= render PanelsUI::ButtonGroup.new(aria: { label: "Editor toolbar" }) do %>
+          <%= render PanelsUI::ButtonGroup.new(aria: { label: "History actions" }) do %>
+            <%= render PanelsUI::Button.new(variant: :neutral, size: :icon, aria_label: "Undo") do %>
+              <%= app_icon "undo-2", class: "size-4", aria: { hidden: "true" } %>
+            <% end %>
+            <%= render PanelsUI::Button.new(variant: :neutral, size: :icon, aria_label: "Redo") do %>
+              <%= app_icon "redo-2", class: "size-4", aria: { hidden: "true" } %>
+            <% end %>
+          <% end %>
+          <%= render PanelsUI::ButtonGroup.new(aria: { label: "Assistant actions" }) do %>
+            <%= render PanelsUI::Popover.new(id: "sd-button-group-assistant", placement: :bottom_end) do |popover| %>
+              <% popover.with_trigger(variant: :neutral) do %>
+                <%= app_icon "bot", class: "size-4", aria: { hidden: "true" } %>
+                Assistant
+              <% end %>
+              <p class="w-56 text-sm">Ask the assistant to summarize this booking.</p>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-5 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+    <h3 class="text-sm font-semibold">Joined form controls</h3>
+    <p class="mt-1 text-sm text-muted-foreground">Text can render as a real label; native fallbacks remain usable before JavaScript enhancement.</p>
+
+    <div class="mt-4 grid gap-4 lg:grid-cols-2">
+      <%= form_with url: "#button-group-preview-heading", scope: :button_group_search, class: "min-w-0" do |form| %>
+        <%= render PanelsUI::ButtonGroup.new(class: "w-full", aria: { label: "Booking search" }) do %>
+          <%= render PanelsUI::ButtonGroup::Text.new(as: :label, for: form.field_id(:query)) do %>
+            Search
+          <% end %>
+          <%= render PanelsUI::Input.new(form: form, attribute: :query, type: :search, placeholder: "Guest or booking") %>
+          <%= render PanelsUI::Button.new(size: :icon, aria_label: "Search bookings") do %>
+            <%= app_icon "search", class: "size-4", aria: { hidden: "true" } %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <%= form_with url: "#button-group-preview-heading", scope: :button_group_amount, class: "min-w-0" do |form| %>
+        <%= render PanelsUI::ButtonGroup.new(class: "w-full", aria: { label: "Currency amount" }) do %>
+          <%= render PanelsUI::ButtonGroup::Text.new(as: :label, for: form.field_id(:currency)) do %>
+            Currency
+          <% end %>
+          <%= render PanelsUI::SelectMenu.new(
+                form: form,
+                attribute: :currency,
+                choices: [ [ "MYR", "myr" ], [ "USD", "usd" ], [ "SGD", "sgd" ] ],
+                selected: "myr") %>
+          <%= render PanelsUI::Input.new(form: form, attribute: :amount, type: :number, placeholder: "0.00", min: 0, step: "0.01") %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</section>

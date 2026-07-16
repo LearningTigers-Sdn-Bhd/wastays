@@ -66,7 +66,7 @@ RSpec.describe "Hotel night audits", type: :system do
       expect(page).to have_css("[data-testid='audit-history-table']")
       expect(page).to have_css("[data-testid='night-audit-index-tabs']")
       expect(page).to have_css("[data-testid='audit-history-panel']")
-      expect(page).to have_css("[data-testid='index-advanced-actions-panel'].hidden", visible: :all)
+      expect(page).to have_css("[data-testid='index-advanced-actions-panel'][hidden]", visible: :all)
       expect(page).to have_link("Night Audit", href: hotel_night_audits_path(hotel))
       expect(page).to have_no_field("Business Date")
       expect(page).to have_content(business_date.strftime("%d %b %Y"))
@@ -94,8 +94,8 @@ RSpec.describe "Hotel night audits", type: :system do
         expect(page).to have_content("Hard Blockers")
         expect(page).to have_content("Warnings / Review Items")
       end
-      expect(page).to have_css("[data-testid='financial-summary-panel'].hidden", visible: :all)
-      expect(page).to have_css("[data-testid='show-advanced-actions-panel'].hidden", visible: :all)
+      expect(page).to have_css("[data-testid='financial-summary-panel'][hidden]", visible: :all)
+      expect(page).to have_css("[data-testid='show-advanced-actions-panel'][hidden]", visible: :all)
       expect(page).to have_link("View Audit Packet")
     end
 
@@ -228,6 +228,9 @@ RSpec.describe "Hotel night audits", type: :system do
       expect(page).to have_css("[data-testid='index-advanced-actions-panel']")
       expect(page).to have_css("[data-testid='audit-history-panel']", visible: :hidden)
       expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Advanced Actions")
+      refresh
+      expect(page).to have_css("[data-testid='index-advanced-actions-panel']")
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Advanced Actions")
 
       visit hotel_night_audit_path(hotel, audit)
 
@@ -243,6 +246,9 @@ RSpec.describe "Hotel night audits", type: :system do
       expect(page).to have_current_path(hotel_night_audit_path(hotel, audit, tab: "advanced-actions"))
       expect(page).to have_css("[data-testid='show-advanced-actions-panel']")
       expect(page).to have_css("[data-testid='manual-adjustments']")
+      expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Advanced Actions")
+      refresh
+      expect(page).to have_css("[data-testid='show-advanced-actions-panel']")
       expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Advanced Actions")
     end
   end

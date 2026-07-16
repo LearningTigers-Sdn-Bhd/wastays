@@ -1,0 +1,179 @@
+@layer components {
+  .panel-switch {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--foreground);
+    cursor: pointer;
+  }
+
+  .panel-switch[data-variant="card"] {
+    display: flex;
+    width: 100%;
+    min-height: 2rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--card);
+    transition: border-color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-switch[data-variant="card"]:hover:not([data-disabled="true"]):not([data-invalid="true"]) {
+    border-color: var(--border-interactive);
+  }
+
+  .panel-switch[data-variant="card"][data-invalid="true"]:hover:not([data-disabled="true"]) {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-switch[data-variant="card"]:not([data-invalid="true"]):has(.panel-switch__input:checked) {
+    border-color: var(--primary);
+    background: color-mix(in oklab, var(--primary) 9%, var(--card));
+  }
+
+  .panel-switch[data-invalid="true"] .panel-switch__label {
+    color: var(--destructive-on-surface);
+  }
+
+  .panel-switch[data-disabled="true"] {
+    cursor: not-allowed;
+    color: var(--muted-foreground);
+    opacity: 0.6;
+  }
+
+  .panel-switch[data-disabled="true"][data-variant="card"] {
+    border-color: color-mix(in oklab, var(--border) 76%, var(--muted-foreground));
+    background: color-mix(in oklab, var(--muted) 64%, var(--card));
+  }
+
+  /* The input IS the track; its ::before is the thumb. */
+  .panel-switch__input {
+    appearance: none;
+    position: relative;
+    flex: none;
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background-color: color-mix(in oklab, var(--muted) 60%, var(--card));
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  /* Off-state thumb. Uses --muted-foreground (not --card) so it clears WCAG
+     1.4.11 (>=3:1) against the low-contrast track in BOTH themes — a white
+     thumb on this track is ~1:1 and would rely on the shadow alone, which is
+     not a countable contrast affordance and disappears on dark surfaces. In the
+     dark theme this tone is light-on-dark, so the visible thumb also gives the
+     otherwise near-invisible off control a perceivable boundary. */
+  .panel-switch__input::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    inset-inline-start: 0.1875rem;
+    width: 0.8125rem;
+    height: 0.8125rem;
+    border-radius: 50%;
+    background-color: var(--muted-foreground);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+    transform: translateY(-50%);
+    transition: inset-inline-start var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-switch__input:hover:not(:disabled) {
+    border-color: var(--primary);
+  }
+
+  .panel-switch__input:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-switch[data-invalid="true"] .panel-switch__input:focus-visible {
+    outline-color: var(--destructive-on-surface);
+  }
+
+  .panel-switch[data-variant="card"]:has(.panel-switch__input:focus-visible) {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-switch[data-variant="card"] .panel-switch__input:focus-visible {
+    outline: none;
+  }
+
+  .panel-switch__input:checked {
+    border-color: var(--primary);
+    background-color: var(--primary);
+  }
+
+  .panel-switch__input:checked::before {
+    /* track width - thumb width - both insets */
+    inset-inline-start: calc(100% - 0.8125rem - 0.1875rem);
+    background-color: var(--primary-foreground);
+  }
+
+  .panel-switch[data-invalid="true"] .panel-switch__input,
+  .panel-switch[data-invalid="true"][data-variant="card"] {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-switch[data-invalid="true"] .panel-switch__input:checked {
+    background-color: var(--destructive-on-surface);
+  }
+
+  /* Off-state thumb carries the destructive tint so the error isn't signalled by
+     the track border alone (SC 1.4.1), staying well above 3:1 on the track
+     (8.2 light / 4.9 dark). Scoped to :not(:checked): the on-state track is
+     already destructive, so a red thumb on it would collapse contrast — the
+     checked thumb keeps its neutral --primary-foreground fill instead. */
+  .panel-switch[data-invalid="true"] .panel-switch__input:not(:checked)::before {
+    background-color: var(--destructive-on-surface);
+  }
+
+  .panel-switch__input:disabled {
+    border-color: color-mix(in oklab, var(--border) 76%, var(--muted-foreground));
+    background-color: color-mix(in oklab, var(--muted) 64%, var(--card));
+    cursor: not-allowed;
+  }
+
+  .panel-switch__content {
+    display: grid;
+    min-width: 0;
+    gap: 0.125rem;
+    padding-block: 0.0625rem;
+  }
+
+  .panel-switch__label {
+    @apply inline text-sm font-medium leading-5;
+  }
+
+  .panel-switch__description,
+  .panel-switch__error {
+    @apply text-xs leading-5;
+    margin: 0;
+  }
+
+  .panel-switch__description { color: var(--muted-foreground); }
+  .panel-switch__error { color: var(--destructive-on-surface); }
+  .panel-switch__required { margin-inline-start: 0.1875rem; color: var(--destructive-on-surface); }
+
+  .panel-switch[data-size="sm"] { gap: 0.5rem; }
+  .panel-switch[data-size="sm"] .panel-switch__input { width: 2rem; height: 1.125rem; }
+  .panel-switch[data-size="sm"] .panel-switch__input::before { width: 0.6875rem; height: 0.6875rem; }
+  .panel-switch[data-size="sm"] .panel-switch__input:checked::before { inset-inline-start: calc(100% - 0.6875rem - 0.1875rem); }
+  .panel-switch[data-size="sm"] .panel-switch__label { @apply text-xs; }
+
+  .panel-switch[data-size="lg"] { gap: 0.625rem; }
+  .panel-switch[data-size="lg"] .panel-switch__input { width: 2.5rem; height: 1.375rem; }
+  .panel-switch[data-size="lg"] .panel-switch__input::before { width: 0.9375rem; height: 0.9375rem; }
+  .panel-switch[data-size="lg"] .panel-switch__input:checked::before { inset-inline-start: calc(100% - 0.9375rem - 0.1875rem); }
+  .panel-switch[data-size="lg"] .panel-switch__label { @apply text-sm; }
+
+  @media (pointer: coarse) {
+    .panel-switch { min-height: 2.5rem; }
+  }
+}

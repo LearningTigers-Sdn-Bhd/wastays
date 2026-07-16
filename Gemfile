@@ -18,6 +18,10 @@ gem "turbo-rails"
 gem "stimulus-rails"
 # Use Tailwind CSS [https://github.com/rails/tailwindcss-rails]
 gem "tailwindcss-rails"
+# Merge conflicting Tailwind classes server-side (for ViewComponent variants) [https://github.com/gjtorikian/tailwind_merge]
+gem "tailwind_merge"
+# Reusable, testable view components (PanelsUI primitive library) [https://viewcomponent.org]
+gem "view_component"
 gem "rails_icons"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"

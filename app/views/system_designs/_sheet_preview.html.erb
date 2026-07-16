@@ -1,0 +1,170 @@
+<section aria-labelledby="sheet-preview-heading" class="border-t border-border pt-8">
+  <h2 id="sheet-preview-heading" class="text-lg font-semibold text-foreground">Sheet</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Native modal <code>&lt;dialog&gt;</code> surfaces anchored to a viewport edge.
+    Sheets share the dialog overlay stack and close in last-opened, first-closed order.
+  </p>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <%= render PanelsUI::Button.new(variant: :primary, command: "show-modal", commandfor: "sd-sheet-right") do %>
+      Open right sheet
+    <% end %>
+    <%= render PanelsUI::Button.new(variant: :secondary, command: "show-modal", commandfor: "sd-sheet-floating") do %>
+      Open floating sheet
+    <% end %>
+    <%= render PanelsUI::Button.new(variant: :secondary, command: "show-modal", commandfor: "sd-sheet-left") do %>
+      Open left sheet
+    <% end %>
+    <%= render PanelsUI::Button.new(variant: :secondary, command: "show-modal", commandfor: "sd-sheet-top") do %>
+      Open top sheet
+    <% end %>
+    <%= render PanelsUI::Button.new(variant: :secondary, command: "show-modal", commandfor: "sd-sheet-bottom") do %>
+      Open bottom sheet
+    <% end %>
+    <%= render PanelsUI::Button.new(variant: :secondary, command: "show-modal", commandfor: "sd-sheet-full") do %>
+      Open full sheet
+    <% end %>
+    <%= render PanelsUI::Button.new(variant: :secondary, command: "show-modal", commandfor: "sd-sheet-required") do %>
+      Open required sheet
+    <% end %>
+
+    <%= render PanelsUI::Sheet.new(
+          id: "sd-sheet-right",
+          side: :right,
+          size: :md,
+          title: "Booking filters",
+          description: "Filter the reservation list without leaving the page.") do |sheet| %>
+      <% sheet.with_body do %>
+        <div class="space-y-4">
+          <p>The body scrolls independently while the header and footer remain visible.</p>
+          <%= render PanelsUI::Button.new(
+                id: "sd-sheet-stack-trigger",
+                variant: :secondary,
+                command: "show-modal",
+                commandfor: "sd-sheet-stacked") do %>
+            Open stacked sheet
+          <% end %>
+        </div>
+      <% end %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(variant: :secondary, data: { action: "panels-ui--sheet#close" }) do %>
+          Cancel filters
+        <% end %>
+        <%= render PanelsUI::Button.new(variant: :primary) do %>
+          Apply filters
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%# DOM sibling opened from inside the right sheet. %>
+    <%= render PanelsUI::Sheet.new(
+          id: "sd-sheet-stacked",
+          side: :bottom,
+          size: :sm,
+          title: "Choose a saved view",
+          description: "This bottom sheet is stacked above the filter sheet.") do |sheet| %>
+      <% sheet.with_body do %>
+        <p>The filter sheet remains open and inert underneath.</p>
+      <% end %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--sheet#close" }) do %>
+          Back to filters
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::Sheet.new(
+          id: "sd-sheet-floating",
+          side: :left,
+          size: :sm,
+          variant: :floating,
+          title: "Invite people",
+          description: "Send an invite and they'll join the workspace right away.") do |sheet| %>
+      <% sheet.with_body do %>
+        <div class="space-y-4">
+          <label class="block text-sm font-medium" for="floating-sheet-email">Email</label>
+          <input id="floating-sheet-email" type="email" class="input" placeholder="teammate@example.com">
+        </div>
+      <% end %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(variant: :secondary, data: { action: "panels-ui--sheet#close" }) do %>
+          Cancel invite
+        <% end %>
+        <%= render PanelsUI::Button.new(variant: :primary) do %>
+          Send invite
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::Sheet.new(
+          id: "sd-sheet-left",
+          side: :left,
+          size: :sm,
+          title: "Navigation sheet",
+          description: "A compact sheet anchored to the left edge.") do |sheet| %>
+      <% sheet.with_body { "Left-side content." } %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--sheet#close" }) do %>
+          Close left sheet
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::Sheet.new(
+          id: "sd-sheet-top",
+          side: :top,
+          size: :sm,
+          title: "Notification settings",
+          description: "A sheet anchored to the top edge.") do |sheet| %>
+      <% sheet.with_body { "Top-side content." } %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--sheet#close" }) do %>
+          Close top sheet
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::Sheet.new(
+          id: "sd-sheet-bottom",
+          side: :bottom,
+          size: :md,
+          title: "Mobile actions",
+          description: "A sheet anchored to the bottom edge.") do |sheet| %>
+      <% sheet.with_body { "Bottom-side content." } %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--sheet#close" }) do %>
+          Close bottom sheet
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::Sheet.new(
+          id: "sd-sheet-full",
+          side: :right,
+          size: :full,
+          title: "Full-screen workflow",
+          description: "A viewport-filling sheet with no rounded edge.") do |sheet| %>
+      <% sheet.with_body { "Full-screen sheet content." } %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--sheet#close" }) do %>
+          Close full sheet
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::Sheet.new(
+          id: "sd-sheet-required",
+          side: :bottom,
+          size: :sm,
+          dismissible: false,
+          title: "Required step",
+          description: "Complete this step using its explicit action.") do |sheet| %>
+      <% sheet.with_body { "This sheet ignores Escape and backdrop dismissal." } %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--sheet#close" }) do %>
+          Finish required step
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+</section>

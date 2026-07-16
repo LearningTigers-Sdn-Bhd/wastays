@@ -1,10 +1,21 @@
 module HotelPortal
   class NightAuditsController < BaseController
+    INDEX_TAB_LABELS = {
+      "audit-history" => "Audit History",
+      "advanced-actions" => "Advanced Actions"
+    }.freeze
+    SHOW_TAB_LABELS = {
+      "results" => "Results",
+      "financial-summary" => "Financial Summary",
+      "advanced-actions" => "Advanced Actions"
+    }.freeze
+
     before_action :authorize_night_audit_access!
     before_action -> { require_feature!("no_show_auto_handling") }
 
     def index
-      append_breadcrumb({ label: "Audit History", tab_label: true })
+      @active_tab = selected_tab(INDEX_TAB_LABELS, default: "audit-history")
+      append_breadcrumb({ label: INDEX_TAB_LABELS.fetch(@active_tab), tab_label: true, tabs_id: "night-audit-index-tabs" })
       @suggested_business_date = authoritative_business_date
       @night_audits = current_hotel.night_audits.recent_first.page(params[:page]).per(25)
       @pre_audit_evaluation = ::NightAudits::Evaluate.new(hotel: current_hotel, business_date: @suggested_business_date).call
@@ -19,8 +30,9 @@ module HotelPortal
 
     def show
       @night_audit = current_hotel.night_audits.find(params[:id])
+      @active_tab = selected_tab(SHOW_TAB_LABELS, default: "results")
       append_breadcrumb @night_audit.business_date.strftime("%d %b %Y"), hotel_night_audit_path(current_hotel, @night_audit)
-      append_breadcrumb({ label: "Results", tab_label: true })
+      append_breadcrumb({ label: SHOW_TAB_LABELS.fetch(@active_tab), tab_label: true, tabs_id: "night-audit-show-tabs" })
 
       @adjustments = FolioTransaction.joins(booking_folio: :booking)
         .where(bookings: { hotel_id: current_hotel.id })
@@ -161,6 +173,10 @@ module HotelPortal
     end
 
     private
+
+    def selected_tab(labels, default:)
+      labels.key?(params[:tab]) ? params[:tab] : default
+    end
 
     def authorize_night_audit_access!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_night_audit", hotel: current_hotel)

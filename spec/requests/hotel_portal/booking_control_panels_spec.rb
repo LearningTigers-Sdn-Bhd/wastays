@@ -29,6 +29,30 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
   end
 
   describe "GET /hotel/:hotel_id/booking-control-panels/:booking_id" do
+    describe "tourism tax voucher entry in folio actions" do
+      before do
+        role.permissions << manage_bookings
+        create(:booking_folio, booking: booking, hotel: hotel)
+      end
+
+      it "shows active link when booking owes tourism tax" do
+        booking.update!(guest_country: "Singapore", tourism_tax_amount: 20.0, tax_lines: [ { "type" => "tourism_tax", "amount" => 20.0 } ])
+
+        get hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations")
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include("Issue Tourism Tax Voucher")
+        expect(response.body).to include(issue_hotel_booking_tourism_tax_voucher_path(hotel, booking))
+      end
+
+      it "omits entry when booking has no tourism tax" do
+        get hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations")
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).not_to include("Tourism Tax Voucher")
+      end
+    end
+
     it "renders plain booking, guest, stay, source, and room details" do
       guest = create(:guest, name: "Aina Rahman")
       room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
@@ -47,7 +71,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response.body).to include("208")
       expect(response.body).to include(booking.check_in.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y"))
       expect(response.body).to include(booking.check_out.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y"))
-      expect(response.body).to include("overflow-hidden rounded-xl border border-slate-200")
+      expect(response.body).to include("overflow-hidden rounded-xl border border-border")
     end
 
     it "renders explicit rate, source, and deposit form states" do
@@ -63,7 +87,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response.body).to include("Not provided")
 
       get hotel_booking_control_panel_path(hotel, booking, tab: "security_deposits")
-      expect(response.body).to include("border border-slate-300 bg-white")
+      expect(response.body).to include("border border-border-interactive bg-card")
       expect(response.body).to include("No held deposit is available to release")
 
       get hotel_booking_control_panel_path(hotel, booking, tab: "housekeeping_requests")
@@ -84,7 +108,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(document.at_css("aside h2").text).to include("Booking / Details")
       expect(links.size).to eq(1)
       expect(links.first.text.squish).to eq("Room 208 Executive Suite - Fallback Name")
-      expect(links.first["class"]).to include("bg-slate-900")
+      expect(links.first["class"]).to include("bg-primary")
       expect(links.first.at_css("svg")).to be_present
       expect(nav.text).not_to include("Overview", booking.formatted_reservation_number, booking.status.humanize)
     end
@@ -229,7 +253,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(folio_summary.text.squish).to include("Room 208", "Garden Suite - Rail Guest Name")
       expect(folio_summary.text).not_to include(booking.formatted_reservation_number)
       expect(folio_summary.at_css('.group-open\\:rotate-90')).to be_present
-      expect(folio_nav.at_css("a.bg-slate-900").text).to include(folio.display_name)
+      expect(folio_nav.at_css("a.bg-primary").text).to include(folio.display_name)
       expect(folio_nav.to_html).not_to include("border-l-2")
 
       get hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
@@ -239,7 +263,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       guest_summary = guest_nav.at_css("details[open] summary")
       expect(guest_summary.text.squish).to include("Room 208", "Garden Suite - Rail Guest Name")
       expect(guest_summary.text).not_to include(booking.formatted_reservation_number)
-      expect(guest_nav.at_css("a.bg-slate-900").text).to include(guest.name)
+      expect(guest_nav.at_css("a.bg-primary").text).to include(guest.name)
       expect(guest_nav.to_html).not_to include("border-l-2")
     end
 
@@ -442,7 +466,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(form).to be_present
       expect(footer.parent["id"]).to eq("booking_control_panel_workspace")
       expect(footer.ancestors("#booking-control-panel-content")).to be_empty
-      expect(footer["class"]).to include("border-t", "bg-white")
+      expect(footer["class"]).to include("border-t", "bg-card")
       expect(footer["class"]).not_to include("shadow")
       expect(document.at_xpath("//a[normalize-space()='Edit Guest']")).to be_nil
       expect(save_guest["form"]).to eq("guest-details-form")
@@ -602,7 +626,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(links.map { |link| link.text.squish }).to include("Overview", "Confirmed Room 105 Garden Prestige Suite - Hanami Ume")
       expect(links).to all(satisfy { |link| link.at_css("svg").present? })
       expect(links.first["href"]).to include("tab=booking_details", "scope=group")
-      expect(links.first["class"]).to include("bg-slate-900")
+      expect(links.first["class"]).to include("bg-primary")
       expect(nav.text).not_to include(group.formatted_reservation_number, "Hidden Group Name")
 
       get hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
@@ -611,8 +635,8 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       summary = child_document.at_css('section[aria-label="Booking summary"]')
       expect(summary.text).to include("Booking No. #{group.formatted_reservation_number}")
       expect(summary.text).not_to include("Booking No. #{booking.formatted_reservation_number}")
-      expect(child_nav.css("a").last["class"]).to include("bg-slate-900")
-      expect(child_nav.css("a").first["class"]).not_to include("bg-slate-900")
+      expect(child_nav.css("a").last["class"]).to include("bg-primary")
+      expect(child_nav.css("a").first["class"]).not_to include("bg-primary")
       expect(child_nav.css("a").last["data-turbo-frame"]).to eq("_top")
     end
 
@@ -748,7 +772,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       document = Nokogiri::HTML(response.body)
       expect(document.at_css("aside").text).not_to include("Group Statement", "Group Guest Overview")
       expect(document.at_css("aside h2").text).to include("Bookings / Folios")
-      expect(document.at_css('nav[aria-label="Bookings and folios"] a.bg-slate-900').text).to include(sibling_folio.display_name)
+      expect(document.at_css('nav[aria-label="Bookings and folios"] a.bg-primary').text).to include(sibling_folio.display_name)
     end
 
     it "renders group deposits under group security deposits" do

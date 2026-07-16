@@ -102,7 +102,7 @@ module HotelPortal
       end
 
       def smoking_color
-        room_type.smoking_allowed ? "text-emerald-500" : "text-slate-400"
+        room_type.smoking_allowed ? "text-emerald-500" : "text-muted-foreground"
       end
 
       def pets_label
@@ -110,7 +110,7 @@ module HotelPortal
       end
 
       def pets_color
-        room_type.pets_allowed ? "text-emerald-500" : "text-slate-400"
+        room_type.pets_allowed ? "text-emerald-500" : "text-muted-foreground"
       end
 
       def smoking_icon
@@ -162,7 +162,7 @@ module HotelPortal
       end
 
       def dnd_action_icon_class
-        active_dnd? ? "bg-slate-100 text-slate-500" : "bg-rose-50 text-rose-500"
+        active_dnd? ? "bg-muted text-muted-foreground" : "bg-rose-50 text-rose-500"
       end
 
       def dnd_action_label
@@ -273,7 +273,7 @@ module HotelPortal
     end
 
     def compact_toggle_bg_class
-      comfortable_mode? ? "bg-slate-200" : "bg-slate-900"
+      comfortable_mode? ? "bg-muted" : "bg-primary"
     end
 
     def compact_toggle_dot_class
@@ -388,8 +388,8 @@ module HotelPortal
     def status_badge_meta(status, failure_note = nil)
       {
         container_class: "inline-flex items-center justify-center rounded-full border size-5 #{status_style(status)} cursor-help shadow-sm",
-        tooltip_wrapper_class: "hidden z-[100] #{(status == 'inspection_failed' && failure_note.present?) ? 'px-4 py-3 rounded-2xl w-64' : 'px-3 py-1.5 rounded-full'} bg-white border border-slate-200 shadow-xl pointer-events-none",
-        icon_bg_class: "inline-flex items-center justify-center rounded-full border size-5 #{status_style(status, fallback: 'border-slate-400 bg-slate-400 text-slate-700')}",
+        tooltip_wrapper_class: "hidden z-[100] #{(status == 'inspection_failed' && failure_note.present?) ? 'px-4 py-3 rounded-2xl w-64' : 'px-3 py-1.5 rounded-full'} bg-card border border-border shadow-xl pointer-events-none",
+        icon_bg_class: "inline-flex items-center justify-center rounded-full border size-5 #{status_style(status, fallback: 'border-border-interactive bg-muted text-foreground')}",
         label: room_status_label(status)
       }
     end
@@ -398,9 +398,9 @@ module HotelPortal
       status.present? ? status.to_s.humanize.titleize : "Unknown Status"
     end
 
-    def status_style(status, fallback: "border-slate-200 bg-slate-50 text-slate-700")
+    def status_style(status, fallback: "border-border bg-muted text-foreground")
       {
-        "all" => "border-slate-300 bg-slate-100 text-slate-700",
+        "all" => "border-border-interactive bg-muted text-foreground",
         "ready" => "border-emerald-200 bg-emerald-50 text-emerald-700",
         "occupied" => "border-sky-200 bg-sky-50 text-sky-700",
         "dirty" => "border-orange-200 bg-orange-50 text-orange-700",
@@ -408,7 +408,7 @@ module HotelPortal
         "late_checkout_detected" => "border-amber-200 bg-amber-50 text-amber-700",
         "awaiting_inspection" => "border-indigo-200 bg-indigo-50 text-indigo-700",
         "inspection_failed" => "border-rose-200 bg-rose-50 text-rose-700",
-        "out_of_service" => "border-slate-300 bg-slate-100 text-slate-700"
+        "out_of_service" => "border-border-interactive bg-muted text-foreground"
       }.fetch(status.to_s, fallback)
     end
 
@@ -417,9 +417,9 @@ module HotelPortal
         none: "bg-emerald-50", # Available (Green)
         arrival: "bg-amber-100", # Arriving (Yellow)
         occupied: "bg-rose-100", # Occupied (Red)
-        completed: "bg-white", # Completed Booking (White)
-        out_of_service: "bg-slate-100" # Blocked/Maintenance (Grey)
-      }.fetch(booking_state, "bg-white")
+        completed: "bg-card", # Completed Booking (White)
+        out_of_service: "bg-muted" # Blocked/Maintenance (Grey)
+      }.fetch(booking_state, "bg-card")
     end
 
     def status_icon(status)
@@ -446,7 +446,7 @@ module HotelPortal
         "checked_in" => "border-violet-200 bg-violet-50 text-violet-700",
         "review_due_out" => "border-amber-200 bg-amber-50 text-amber-700",
         "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700",
-        "cancelled" => "border-slate-300 bg-slate-100 text-slate-600"
+        "cancelled" => "border-border-interactive bg-muted text-muted-foreground"
       }.fetch(status.to_s, "border-sky-200 bg-sky-50 text-sky-700")
     end
 

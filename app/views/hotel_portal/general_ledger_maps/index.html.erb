@@ -1,49 +1,40 @@
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
-  <div class="px-4 md:px-0">
-    <div class="mt-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">General Ledger Mappings</h1>
-        <p class="mt-1 text-sm font-medium text-slate-600">Configure how transaction categories map to your accounting system.</p>
-      </div>
-    </div>
-  </div>
+<div class="w-full space-y-3.5">
+  <%= render PanelsUI::PageHeader.new(title: "General Ledger Mappings", description: "Configure how transaction categories map to your accounting system.") %>
 
-  <div class="px-4 md:px-0">
-    <%= render "hotel_portal/settings/group_tabs" %>
-  </div>
+  <%= render "hotel_portal/settings/group_tabs" %>
 
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-slate-50">
+      <table class="min-w-full divide-y divide-border">
+        <thead class="bg-muted">
           <tr>
-            <th scope="col" class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Category</th>
-            <th scope="col" class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">General Ledger Code (GL Code)</th>
-            <th scope="col" class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Description</th>
+            <th scope="col" class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Category</th>
+            <th scope="col" class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">General Ledger Code (GL Code)</th>
+            <th scope="col" class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Description</th>
             <th scope="col" class="relative px-8 py-4">
               <span class="sr-only">Edit</span>
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200 bg-white">
+        <tbody class="divide-y divide-border bg-card">
           <% @gl_maps.each do |map| %>
-            <tr class="hover:bg-slate-50 transition-colors">
+            <tr class="hover:bg-muted transition-colors">
               <td class="whitespace-nowrap px-8 py-5">
                 <div class="flex flex-col">
-                  <span class="text-sm font-bold text-slate-900 capitalize"><%= map.transaction_category.humanize %></span>
-                  <span class="text-[10px] font-medium text-slate-500 uppercase tracking-tight"><%= map.transaction_category %></span>
+                  <span class="text-sm font-bold text-foreground capitalize"><%= map.transaction_category.humanize %></span>
+                  <span class="text-[10px] font-medium text-muted-foreground uppercase tracking-tight"><%= map.transaction_category %></span>
                 </div>
               </td>
               <td class="px-8 py-5">
-                <span class="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-mono font-bold text-slate-700 border border-slate-200">
+                <span class="inline-flex items-center rounded-lg bg-muted px-2.5 py-1 text-xs font-mono font-bold text-foreground border border-border">
                   <%= map.gl_code %>
                 </span>
               </td>
-              <td class="px-8 py-5 text-sm text-slate-600 max-w-md">
+              <td class="px-8 py-5 text-sm text-muted-foreground max-w-md">
                 <%= map.description %>
               </td>
               <td class="whitespace-nowrap px-8 py-5 text-right text-sm font-medium">
-                <%= link_to edit_hotel_general_ledger_map_path(current_hotel, map), class: "inline-flex items-center text-slate-900 hover:text-blue-600 transition-colors" do %>
+                <%= link_to edit_hotel_general_ledger_map_path(current_hotel, map), class: "inline-flex items-center text-foreground hover:text-blue-600 transition-colors" do %>
                   <svg class="size-4 me-1.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                   Edit
                 <% end %>

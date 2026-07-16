@@ -15,44 +15,17 @@
 
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
     <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
-    <% unless Rails.env.test? %>
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/preline@2.4.1/dist/preline.min.css">
-    <% end %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="bg-[#fdfbf7] text-neutral-text-primary font-sans antialiased" data-preline-enabled="<%= !Rails.env.test? %>">
-
-    <% if flash.any? %>
-      <div class="fixed bottom-6 right-6 z-[200] flex flex-col gap-y-3 pointer-events-none">
-        <% flash.each do |key, value| %>
-          <div data-controller="toast"
-               class="pointer-events-auto flex items-start gap-x-3 w-80 bg-white rounded-2xl shadow-xl shadow-black/10 border border-neutral-border/60 px-4 py-3.5 transition-all duration-250"
-               role="alert">
-            <% if key == 'alert' %>
-              <div class="flex-none w-8 h-8 rounded-full bg-red-50 flex items-center justify-center mt-0.5">
-                <svg class="w-4 h-4 text-status-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              </div>
-            <% else %>
-              <div class="flex-none w-8 h-8 rounded-full bg-green-50 flex items-center justify-center mt-0.5">
-                <svg class="w-4 h-4 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              </div>
-            <% end %>
-            <div class="flex-1 min-w-0 pt-0.5">
-              <p class="text-sm font-semibold text-neutral-text-primary"><%= key == 'alert' ? 'Something went wrong' : 'Success' %></p>
-              <p class="text-xs text-neutral-text-secondary mt-0.5 leading-relaxed"><%= value %></p>
-            </div>
-            <button data-action="click->toast#dismiss" class="flex-none text-neutral-text-secondary hover:text-neutral-text-primary transition-colors mt-0.5 focus:outline-none">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-          </div>
-        <% end %>
-      </div>
-    <% end %>
+  <body class="bg-background text-foreground font-sans antialiased">
 
     <main id="content" role="main">
       <%= yield %>
     </main>
+
+    <%= render PanelsUI::ToastViewport.new %>
+    <%= render "shared/feedback/flash_toast_triggers", flash: flash %>
 
   </body>
 </html>

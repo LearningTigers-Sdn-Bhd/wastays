@@ -12,42 +12,42 @@
     <% end %>
 
     <div>
-      <%= f.label :name, "Full Name", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
-      <%= f.text_field :name, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+      <%= f.label :name, "Full Name", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground" %>
+      <%= f.text_field :name, required: true, class: "w-full rounded-xl border border-border px-4 py-3" %>
     </div>
     <div class="grid gap-5 sm:grid-cols-2">
       <div>
-        <%= f.label :email, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
-        <%= f.email_field :email, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+        <%= f.label :email, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground" %>
+        <%= f.email_field :email, class: "w-full rounded-xl border border-border px-4 py-3" %>
       </div>
       <div>
-        <%= f.label :phone, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
-        <%= f.telephone_field :phone, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+        <%= f.label :phone, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground" %>
+        <%= f.telephone_field :phone, class: "w-full rounded-xl border border-border px-4 py-3" %>
       </div>
       <div>
-        <%= f.label :country, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
-        <%= f.select :country, options_for_select(COUNTRY_OPTIONS, guest.country.presence || current_hotel.country), {}, class: "w-full rounded-xl border border-slate-200 px-4 py-3", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" } %>
+        <%= f.label :country, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground" %>
+        <%= f.select :country, options_for_select(COUNTRY_OPTIONS, guest.country.presence || current_hotel.country), {}, class: "w-full rounded-xl border border-border px-4 py-3", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" } %>
       </div>
       <div>
-        <%= f.label :gender, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
-        <%= f.select :gender, options_for_select([ [ "— Select —", "" ], [ "Male", "male" ], [ "Female", "female" ], [ "Other", "other" ] ], guest.gender), {}, class: "w-full rounded-xl border border-slate-200 px-4 py-3" %>
+        <%= f.label :gender, class: "mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground" %>
+        <%= f.select :gender, options_for_select([ [ "— Select —", "" ], [ "Male", "male" ], [ "Female", "female" ], [ "Other", "other" ] ], guest.gender), {}, class: "w-full rounded-xl border border-border px-4 py-3" %>
       </div>
       <div>
-        <%= f.label :document_type, "Document Type", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
-        <%= f.select :document_type, options_for_select([ [ "IC", "ic" ], [ "Passport", "passport" ] ], guest.document_type.presence || "ic"), {}, class: "w-full rounded-xl border border-slate-200 px-4 py-3", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" } %>
+        <%= f.label :document_type, "Document Type", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground" %>
+        <%= f.select :document_type, options_for_select([ [ "IC", "ic" ], [ "Passport", "passport" ] ], guest.document_type.presence || "ic"), {}, class: "w-full rounded-xl border border-border px-4 py-3", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" } %>
       </div>
       <div>
-        <%= f.label :government_id, "IC / Passport No.", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
-        <%= f.text_field :government_id, class: "w-full rounded-xl border border-slate-200 px-4 py-3", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
+        <%= f.label :government_id, "IC / Passport No.", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground" %>
+        <%= f.text_field :government_id, class: "w-full rounded-xl border border-border px-4 py-3", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
       </div>
       <div>
-        <%= f.label :date_of_birth, "Date of Birth", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500" %>
-        <%= f.date_field :date_of_birth, class: "w-full rounded-xl border border-slate-200 px-4 py-3", data: { guest_dob_target: "dateOfBirth" } %>
+        <%= f.label :date_of_birth, "Date of Birth", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground" %>
+        <%= f.date_field :date_of_birth, class: "w-full rounded-xl border border-border px-4 py-3", data: { guest_dob_target: "dateOfBirth" } %>
       </div>
     </div>
   </div>
 
   <%= render "hotel_portal/bookings/board/partials/content_footer",
     show_full_page_link: false,
-    submit_button: f.submit(mode == "add" ? "Add Guest" : "Save Guest", class: "rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white") %>
+    submit_button: f.submit(mode == "add" ? "Add Guest" : "Save Guest", class: "rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground") %>
 <% end %>

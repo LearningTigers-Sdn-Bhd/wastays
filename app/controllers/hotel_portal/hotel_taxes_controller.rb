@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class HotelPortal::HotelTaxesController < HotelPortal::BaseController
+class HotelPortal::HotelTaxesController < HotelPortal::SettingsBaseController
   before_action :authorize!
   before_action :set_tax, only: %i[edit update destroy]
 

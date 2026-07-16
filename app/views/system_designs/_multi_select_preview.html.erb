@@ -1,0 +1,52 @@
+<section aria-labelledby="multi-select-preview-heading" class="border-t border-border pt-8">
+  <h2 id="multi-select-preview-heading" class="text-lg font-semibold text-foreground">Searchable multi-select</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    A searchable multi-select enhanced from a native <code>&lt;select multiple&gt;</code>. Type to filter, click to add
+    a removable pill, and use the × on each pill to remove it. Without JavaScript, the native multiple select remains
+    available.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> multi-selects</h3>
+        <% scope = "multi_select_#{theme.tr('-', '_')}".to_sym %>
+        <%= form_with url: "#multi-select-preview", scope: scope, class: "mt-4 space-y-4" do |form| %>
+          <%= render PanelsUI::FieldGroup.new do %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :destination,
+                  label: "Destinations",
+                  hint: "Search and add as many destinations as you like.") do |field| %>
+              <% field.with_multi_select(
+                   [
+                     [ "Bangkok, Thailand", "bangkok" ],
+                     [ "Berlin, Germany", "berlin" ],
+                     [ "Kuala Lumpur, Malaysia", "kuala_lumpur" ],
+                     { label: "Kuching, Malaysia (temporarily unavailable)", value: "kuching", disabled: true },
+                     [ "London, United Kingdom", "london" ],
+                     [ "Singapore", "singapore" ],
+                     [ "Tokyo, Japan", "tokyo" ]
+                   ],
+                   prompt: "Search destinations",
+                   empty_text: "No destinations match your search.") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :amenities,
+                  label: "Amenities",
+                  hint: "Trigger shows the first 3; the rest collapse into a “+N more” badge.") do |field| %>
+              <% field.with_multi_select(
+                   [ [ "Wi-Fi", "wifi" ], [ "Pool", "pool" ], [ "Parking", "parking" ], [ "Breakfast", "breakfast" ], [ "Gym", "gym" ] ],
+                   selected: [ "wifi", "pool", "parking", "breakfast" ],
+                   prompt: "Search amenities") %>
+            <% end %>
+          <% end %>
+
+          <button type="reset" class="panel-button" data-variant="outline" data-size="sm">Reset multi-selects</button>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

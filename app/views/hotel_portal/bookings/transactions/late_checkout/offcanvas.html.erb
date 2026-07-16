@@ -1,5 +1,5 @@
 <%= turbo_frame_tag "offcanvas_drawer" do %>
-  <div class="flex flex-col h-full bg-white">
+  <div class="flex flex-col h-full bg-card">
     <%= form_with url: process_late_checkout_hotel_booking_path(current_hotel, @booking), method: :post,
         class: "flex flex-col h-full", data: { controller: "group-lifecycle-targets" } do |f| %>
       <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
@@ -11,7 +11,7 @@
                   icon: cached_icon("clock-alert", stroke_width: 2.5, class: "size-5") %>
 
       <%# Modal Content %>
-      <div class="flex-1 bg-slate-50 <%= @booking.group_booking_id? ? 'grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none' : 'overflow-y-auto' %>">
+      <div class="flex-1 bg-muted <%= @booking.group_booking_id? ? 'grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none' : 'overflow-y-auto' %>">
         <%= render "hotel_portal/bookings/transactions/shared/group_target_selector",
           target_presenter: HotelPortal::BookingLifecycleTargetPresenter.new(booking: @booking, action: :late_checkout) %>
 
@@ -32,7 +32,7 @@
       <%# Modal Footer %>
       <%= render "hotel_portal/bookings/board/partials/content_footer",
                  show_full_page_link: false,
-                 submit_button: f.submit("Process Late Checkout", class: "px-6 py-2 bg-amber-600 text-white rounded-xl text-sm font-bold hover:bg-amber-700 transition-colors shadow-sm") %>
+                 submit_button: f.submit("Process Late Checkout", class: "px-6 py-2 bg-amber-600 text-primary-foreground rounded-xl text-sm font-bold hover:bg-amber-700 transition-colors shadow-sm") %>
     <% end %>
   </div>
 <% end %>

@@ -1,0 +1,79 @@
+@layer components {
+  .tabs-root {
+    @apply flex min-w-0 flex-col;
+  }
+
+  .tabs-list {
+    @apply flex max-w-full items-center overflow-x-auto;
+  }
+
+  .tabs-tab {
+    @apply inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap px-3 text-sm font-medium text-muted-foreground transition-colors;
+  }
+
+  .tabs-tab:hover {
+    @apply text-foreground;
+  }
+
+  .tabs-tab:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2;
+    --tw-ring-offset-color: var(--background);
+  }
+
+  .tabs-tab__count {
+    @apply rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground;
+  }
+
+  .tabs-list--line {
+    @apply w-full gap-0 border-b border-border;
+  }
+
+  .tabs-tab--line {
+    @apply rounded-none border-b-2 border-transparent font-semibold;
+    margin-bottom: -1px;
+  }
+
+  .tabs-tab--line:hover {
+    @apply border-border-interactive;
+  }
+
+  .tabs-tab--line[aria-selected="true"],
+  .tabs-tab--line[aria-current="page"] {
+    @apply border-border-interactive font-bold text-foreground;
+  }
+
+  .tabs-list--pill {
+    @apply inline-flex w-fit gap-0.5 rounded-lg border border-border bg-card p-1 shadow-sm;
+  }
+
+  .tabs-tab--pill {
+    @apply h-8 min-h-8 rounded-md;
+  }
+
+  .tabs-tab--pill:hover {
+    @apply bg-muted;
+  }
+
+  .tabs-tab--pill[aria-selected="true"],
+  .tabs-tab--pill[aria-current="page"] {
+    @apply bg-primary font-semibold text-primary-foreground;
+  }
+
+  .tabs-tab--pill[aria-selected="true"] .tabs-tab__count,
+  .tabs-tab--pill[aria-current="page"] .tabs-tab__count {
+    background: color-mix(in oklab, var(--primary-foreground) 24%, transparent);
+    @apply text-primary-foreground;
+  }
+
+  .tabs-panel {
+    @apply mt-3;
+  }
+
+  @media (pointer: coarse) {
+    .tabs-tab { min-height: 2.5rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tabs-tab { transition-duration: 0.01ms; }
+  }
+}

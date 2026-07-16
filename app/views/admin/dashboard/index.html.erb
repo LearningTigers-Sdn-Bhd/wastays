@@ -1,52 +1,50 @@
 <% content_for :title, "Dashboard | WAStays" %>
 
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
-  
-  <%# ─── PAGE TITLE ─── %>
-  <div class="px-4 md:px-0">
-    <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Dashboard</h1>
-    <p class="mt-1 text-sm font-medium text-slate-600">Platform overview and real-time operational status.</p>
-  </div>
+<div class="w-full space-y-8">
+
+  <%= render PanelsUI::PageHeader.new(
+        title: "Dashboard",
+        description: "Platform overview and real-time operational status.") %>
 
   <%# ─── TOP HEADER: FINANCIAL SUMMARY ─── %>
-  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-4">
-    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Money Collected <span class="text-[10px] font-medium text-slate-400">(This Month)</span></p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950">RM <%= number_with_delimiter(number_with_precision(@revenue_this_month, precision: 2)) %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">Gross value of all bookings</p>
+  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-4">
+    <div class="p-6 md:border-r md:border-border md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Total Money Collected <span class="text-[10px] font-medium text-muted-foreground">(This Month)</span></p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">RM <%= number_with_delimiter(number_with_precision(@revenue_this_month, precision: 2)) %></h2>
+      <p class="mt-2 text-sm font-medium text-muted-foreground">Gross value of all bookings</p>
     </div>
 
-    <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Platform Earnings <span class="text-[10px] font-medium text-slate-400">(This Month)</span></p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950">RM <%= number_with_delimiter(number_with_precision(@margin_this_month, precision: 2)) %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">Net profit from commissions</p>
+    <div class="bg-muted/30 p-6 md:border-r md:border-border md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Platform Earnings <span class="text-[10px] font-medium text-muted-foreground">(This Month)</span></p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">RM <%= number_with_delimiter(number_with_precision(@margin_this_month, precision: 2)) %></h2>
+      <p class="mt-2 text-sm font-medium text-muted-foreground">Net profit from commissions</p>
     </div>
 
-    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Bookings Processed</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @total_bookings_count %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">Successful reservations to date</p>
+    <div class="p-6 md:border-r md:border-border md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Bookings Processed</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground"><%= @total_bookings_count %></h2>
+      <p class="mt-2 text-sm font-medium text-muted-foreground">Successful reservations to date</p>
     </div>
 
     <div class="p-6 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Active Hotels</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @hotels_count %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">Hotels live on the platform</p>
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Active Hotels</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground"><%= @hotels_count %></h2>
+      <p class="mt-2 text-sm font-medium text-muted-foreground">Hotels live on the platform</p>
     </div>
   </div>
 
   <%# ─── MAIN CONTENT: SPLIT PANE ─── %>
   <div class="grid lg:grid-cols-12 gap-8">
-    
+
     <%# SIDE PANE: STATUS & TOOLS %>
     <div class="lg:col-span-3 space-y-8">
-      
+
       <%# Payment Connection Status %>
-      <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-        <h3 class="mb-4 border-b border-slate-200 pb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Payment Sync Status</h3>
+      <div class="bg-card border border-border rounded-2xl p-6 shadow-sm">
+        <h3 class="mb-4 border-b border-border pb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Payment Sync Status</h3>
 
         <div class="mb-4 flex items-center justify-between">
-          <span class="text-sm font-semibold text-slate-800">Gateway Signals</span>
+          <span class="text-sm font-semibold text-foreground">Gateway Signals</span>
           <div class="flex items-center gap-x-2">
             <span class="text-[10px] font-black uppercase <%= @failed_webhooks_count > 0 ? 'text-red-600' : 'text-emerald-600' %>">
               <%= @failed_webhooks_count > 0 ? "INTERRUPTED" : "HEALTHY" %>
@@ -64,67 +62,67 @@
             <p class="text-sm font-semibold leading-snug text-red-950">
               <%= pluralize(@failed_webhooks_count, "payment signal") %> failed to sync. Manual check required.
             </p>
-            <%= link_to admin_reconciliations_path, class: "mt-3 flex items-center justify-center w-full py-2 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-red-700 transition-colors shadow-sm" do %>
+            <%= link_to admin_reconciliations_path, class: "mt-3 flex items-center justify-center w-full py-2 bg-red-600 text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-red-700 transition-colors shadow-sm" do %>
               Review Payment Issues
             <% end %>
           </div>
         <% else %>
-          <p class="text-sm font-medium italic leading-relaxed text-slate-600">
+          <p class="text-sm font-medium italic leading-relaxed text-muted-foreground">
             * All payment signals are currently being received correctly.
           </p>
         <% end %>
       </div>
 
       <%# Management Shortcuts %>
-      <div class="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 class="mb-2 border-b border-slate-200 pb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Shortcuts</h3>
+      <div class="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <h3 class="mb-2 border-b border-border pb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Shortcuts</h3>
         <div class="flex flex-col gap-y-2">
-          <%= link_to admin_analytics_path, class: "group flex items-center justify-between rounded-xl border border-slate-200 p-3 shadow-sm transition-all hover:bg-slate-50" do %>
-            <span class="text-sm font-semibold text-slate-800 group-hover:text-slate-950">Performance Reports</span>
-            <svg class="size-4 text-slate-400 transition-colors group-hover:text-slate-700" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          <%= link_to admin_analytics_path, class: "group flex items-center justify-between rounded-xl border border-border p-3 shadow-sm transition-all hover:bg-muted" do %>
+            <span class="text-sm font-semibold text-foreground group-hover:text-foreground">Performance Reports</span>
+            <svg class="size-4 text-muted-foreground transition-colors group-hover:text-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           <% end %>
-          <%= link_to admin_hotels_path, class: "group flex items-center justify-between rounded-xl border border-slate-200 p-3 shadow-sm transition-all hover:bg-slate-50" do %>
-            <span class="text-sm font-semibold text-slate-800 group-hover:text-slate-950">Hotel Inventory</span>
-            <svg class="size-4 text-slate-400 transition-colors group-hover:text-slate-700" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          <%= link_to admin_hotels_path, class: "group flex items-center justify-between rounded-xl border border-border p-3 shadow-sm transition-all hover:bg-muted" do %>
+            <span class="text-sm font-semibold text-foreground group-hover:text-foreground">Hotel Inventory</span>
+            <svg class="size-4 text-muted-foreground transition-colors group-hover:text-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           <% end %>
-          <%= link_to admin_reconciliation_dashboard_path, class: "group flex items-center justify-between rounded-xl border border-slate-200 p-3 shadow-sm transition-all hover:bg-slate-50" do %>
-            <span class="text-sm font-semibold text-slate-800 group-hover:text-slate-950">Payment Issues</span>
-            <svg class="size-4 text-slate-400 transition-colors group-hover:text-slate-700" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          <%= link_to admin_reconciliation_dashboard_path, class: "group flex items-center justify-between rounded-xl border border-border p-3 shadow-sm transition-all hover:bg-muted" do %>
+            <span class="text-sm font-semibold text-foreground group-hover:text-foreground">Payment Issues</span>
+            <svg class="size-4 text-muted-foreground transition-colors group-hover:text-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           <% end %>
         </div>
       </div>
 
       <%# Approval Queue %>
-      <div class="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="mb-2 flex items-center justify-between border-b border-slate-200 pb-3">
-          <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Approvals</h3>
-          <span class="inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-black text-white bg-brand-primary"><%= @pending_hotels_count %> NEW</span>
+      <div class="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div class="mb-2 flex items-center justify-between border-b border-border pb-3">
+          <h3 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Approvals</h3>
+          <span class="inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-black text-primary-foreground bg-brand-primary"><%= @pending_hotels_count %> NEW</span>
         </div>
         <div class="space-y-3">
           <% if @pending_hotels.any? %>
             <% @pending_hotels.each do |hotel| %>
-              <div class="group rounded-xl border border-slate-200 bg-slate-50/50 p-4 transition-colors hover:border-slate-400">
+              <div class="group rounded-xl border border-border bg-muted/50 p-4 transition-colors hover:border-border-interactive">
                 <div class="mb-1 flex items-start justify-between">
-                  <h4 class="text-sm font-semibold text-slate-900"><%= hotel.name %></h4>
-                  <span class="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-400"><%= time_ago_in_words(hotel.created_at) %> ago</span>
+                  <h4 class="text-sm font-semibold text-foreground"><%= hotel.name %></h4>
+                  <span class="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground"><%= time_ago_in_words(hotel.created_at) %> ago</span>
                 </div>
-                <p class="mb-3 text-sm font-medium text-slate-600"><%= hotel.account.name %></p>
+                <p class="mb-3 text-sm font-medium text-muted-foreground"><%= hotel.account.name %></p>
                 <%= link_to "Review Application", admin_hotel_path(hotel), class: "text-sm font-semibold text-brand-primary hover:underline" %>
               </div>
             <% end %>
           <% else %>
-            <p class="text-sm font-medium italic text-slate-600">All applications reviewed.</p>
+            <p class="text-sm font-medium italic text-muted-foreground">All applications reviewed.</p>
           <% end %>
         </div>
       </div>
     </div>
 
     <%# MAIN PANE: TRANSACTION LEDGER %>
-    <div id="recent-successful-bookings" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-9 self-start">
-      <div class="flex items-center justify-between border-b border-slate-200 bg-slate-50/50 px-8 py-6">
+    <div id="recent-successful-bookings" class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm lg:col-span-9 self-start">
+      <div class="flex items-center justify-between border-b border-border bg-muted/50 px-8 py-6">
         <div>
-          <h3 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Recent Successful Bookings</h3>
-          <p class="mt-1 text-sm font-medium text-slate-600">The latest 5 transactions confirmed on the platform.</p>
+          <h3 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Recent Successful Bookings</h3>
+          <p class="mt-1 text-sm font-medium text-muted-foreground">The latest 5 transactions confirmed on the platform.</p>
         </div>
         <%= link_to "View All Bookings", admin_bookings_path, class: "text-sm font-semibold text-brand-primary hover:underline" %>
       </div>
@@ -132,41 +130,41 @@
       <div id="admin-dashboard-mobile-bookings" class="space-y-4 p-4 sm:p-6 lg:hidden">
         <% if @recent_bookings.any? %>
           <% @recent_bookings.each do |booking| %>
-            <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
+            <div class="rounded-2xl border border-border bg-muted/60 p-4 shadow-sm">
               <div class="flex items-start justify-between gap-3">
                 <div>
-                  <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Reference</p>
-                  <p class="mt-1 inline-flex rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-mono text-sm font-semibold text-slate-800">#<%= booking.confirmation_token %></p>
+                  <p class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Reference</p>
+                  <p class="mt-1 inline-flex rounded-lg border border-border bg-card px-2.5 py-1 font-mono text-sm font-semibold text-foreground">#<%= booking.confirmation_token %></p>
                 </div>
-                <p class="text-base font-semibold tabular-nums text-slate-950">RM <%= number_with_precision(booking.total_amount, precision: 2) %></p>
+                <p class="text-base font-semibold tabular-nums text-foreground">RM <%= number_with_precision(booking.total_amount, precision: 2) %></p>
               </div>
 
               <dl class="mt-4 space-y-3 text-sm">
                 <div>
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Guest</dt>
-                  <dd class="mt-1 font-semibold text-slate-900"><%= booking.guest_name %></dd>
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Guest</dt>
+                  <dd class="mt-1 font-semibold text-foreground"><%= booking.guest_name %></dd>
                 </div>
                 <div>
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Hotel</dt>
-                  <dd class="mt-1 text-slate-700"><%= booking.hotel.name %></dd>
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Hotel</dt>
+                  <dd class="mt-1 text-foreground"><%= booking.hotel.name %></dd>
                 </div>
                 <div>
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Stay Dates</dt>
-                  <dd class="mt-1 text-slate-700"><%= booking.check_in.strftime("%d %b %Y") %> → <%= booking.check_out.strftime("%d %b %Y") %></dd>
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Stay Dates</dt>
+                  <dd class="mt-1 text-foreground"><%= booking.check_in.strftime("%d %b %Y") %> → <%= booking.check_out.strftime("%d %b %Y") %></dd>
                 </div>
                 <div>
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Created Date</dt>
-                  <dd class="mt-1 text-slate-700">
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Created Date</dt>
+                  <dd class="mt-1 text-foreground">
                     <div class="flex flex-col gap-0.5">
                       <span><%= booking.created_at.strftime("%I:%M %p") %></span>
-                      <span class="text-xs text-slate-500"><%= booking.created_at.strftime("%d %b %Y") %></span>
+                      <span class="text-xs text-muted-foreground"><%= booking.created_at.strftime("%d %b %Y") %></span>
                     </div>
                   </dd>
                 </div>
               </dl>
 
               <div class="mt-4 flex justify-end">
-                <%= link_to admin_booking_path(booking), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-900 hover:text-white" do %>
+                <%= link_to admin_booking_path(booking), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-primary-hover hover:text-primary-foreground" do %>
                   <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                   View
                 <% end %>
@@ -174,55 +172,55 @@
             </div>
           <% end %>
         <% else %>
-          <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center text-sm text-slate-500">
+          <div class="rounded-2xl border border-dashed border-border bg-muted/60 px-4 py-8 text-center text-sm text-muted-foreground">
             No recent bookings yet.
           </div>
         <% end %>
       </div>
 
       <div class="hidden lg:block overflow-x-auto">
-        <table class="min-w-full divide-y divide-slate-200">
-          <thead class="bg-slate-50">
+        <table class="min-w-full divide-y divide-border">
+          <thead class="bg-muted">
             <tr>
-              <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Reference</th>
-              <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Guest</th>
-              <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Hotel</th>
-              <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Stay Dates</th>
-              <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Created Date</th>
-              <th class="px-8 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Amount</th>
-              <th class="px-8 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Action</th>
+              <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Reference</th>
+              <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Guest</th>
+              <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Hotel</th>
+              <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Stay Dates</th>
+              <th class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Created Date</th>
+              <th class="px-8 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Amount</th>
+              <th class="px-8 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Action</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 bg-white">
+          <tbody class="divide-y divide-border bg-card">
             <% @recent_bookings.each do |booking| %>
-              <tr class="group transition-colors odd:bg-white even:bg-slate-50/60 hover:bg-slate-100/70">
+              <tr class="group transition-colors odd:bg-card even:bg-muted/60 hover:bg-muted/70">
                 <td class="whitespace-nowrap px-8 py-4">
-                  <span class="rounded border border-slate-200 bg-slate-100 px-2 py-1 font-mono text-sm font-semibold text-slate-800">#<%= booking.confirmation_token %></span>
+                  <span class="rounded border border-border bg-muted px-2 py-1 font-mono text-sm font-semibold text-foreground">#<%= booking.confirmation_token %></span>
                 </td>
                 <td class="whitespace-nowrap px-8 py-4">
-                  <span class="text-sm font-semibold text-slate-950"><%= booking.guest_name %></span>
+                  <span class="text-sm font-semibold text-foreground"><%= booking.guest_name %></span>
                 </td>
                 <td class="whitespace-nowrap px-8 py-4">
-                  <span class="text-sm font-medium text-slate-700"><%= booking.hotel.name %></span>
+                  <span class="text-sm font-medium text-foreground"><%= booking.hotel.name %></span>
                 </td>
                 <td class="whitespace-nowrap px-8 py-4">
-                  <div class="inline-flex items-center gap-x-2 text-sm font-medium text-slate-700">
+                  <div class="inline-flex items-center gap-x-2 text-sm font-medium text-foreground">
                     <span><%= booking.check_in.strftime("%b %d") %></span>
-                    <svg class="size-3 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+                    <svg class="size-3 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
                     <span><%= booking.check_out.strftime("%b %d") %></span>
                   </div>
                 </td>
                 <td class="whitespace-nowrap px-8 py-4">
-                  <div class="flex flex-col gap-0.5 text-sm font-medium text-slate-700">
+                  <div class="flex flex-col gap-0.5 text-sm font-medium text-foreground">
                     <span><%= booking.created_at.strftime("%I:%M %p") %></span>
-                    <span class="text-xs text-slate-500"><%= booking.created_at.strftime("%d %b %Y") %></span>
+                    <span class="text-xs text-muted-foreground"><%= booking.created_at.strftime("%d %b %Y") %></span>
                   </div>
                 </td>
                 <td class="whitespace-nowrap px-8 py-4 text-right">
-                  <span class="text-base font-semibold tabular-nums text-slate-950">RM <%= number_with_precision(booking.total_amount, precision: 2) %></span>
+                  <span class="text-base font-semibold tabular-nums text-foreground">RM <%= number_with_precision(booking.total_amount, precision: 2) %></span>
                 </td>
                 <td class="px-8 py-4 text-center">
-                  <%= link_to admin_booking_path(booking), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-all group-hover:border-slate-900 hover:bg-slate-900 hover:text-white" do %>
+                  <%= link_to admin_booking_path(booking), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition-all group-hover:border-border-interactive hover:bg-primary-hover hover:text-primary-foreground" do %>
                     <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                     View
                   <% end %>

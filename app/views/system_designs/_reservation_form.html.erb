@@ -1,0 +1,35 @@
+<%# locals: reservation (SystemDesigns::ReservationRequest), state (:idle | :saved | :invalid) %>
+<% state ||= :idle %>
+<%= turbo_frame_tag "system-design-reservation-form" do %>
+  <%= form_with model: reservation,
+                scope: :reservation_request,
+                url: system_design_submit_form_path,
+                data: { turbo_frame: "system-design-reservation-form" } do |form| %>
+    <%= render PanelsUI::FieldSet.new(
+          legend: "Reservation request",
+          description: "Submits over Turbo. A loading toast shows while the request is in flight, then resolves to a result toast.") do %>
+      <%= render PanelsUI::FieldGroup.new do %>
+        <%= render PanelsUI::FormField.new(form: form, attribute: :guest_name, label: "Guest name", required: true) do |field| %>
+          <% field.with_input placeholder: "Ada Lovelace", autocomplete: "name" %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(form: form, attribute: :email, label: "Email", required: true) do |field| %>
+          <% field.with_input type: :email, placeholder: "guest@example.com", autocomplete: "email" %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(form: form, attribute: :nights, label: "Nights", hint: "Optional — must be a positive whole number.") do |field| %>
+          <% field.with_input type: :number, min: 1, step: 1, placeholder: "2" %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <div class="mt-4 flex items-center gap-3">
+      <%= render PanelsUI::Button.new(type: "submit", data: { turbo_submits_with: "Saving…" }) do %>
+        Submit reservation
+      <% end %>
+      <% if state == :saved %>
+        <span class="text-sm font-medium" style="color: var(--success-on-surface);">Saved — the form reset.</span>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

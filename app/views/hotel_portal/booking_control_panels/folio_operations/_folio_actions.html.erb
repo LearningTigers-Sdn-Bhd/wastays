@@ -8,15 +8,15 @@
   <div class="flex flex-wrap items-center gap-2">
     <% if folio_show.actions_blocked? %>
       <div class="max-w-2xl">
-        <p class="text-sm font-black text-slate-900"><%= folio_show.actions_blocked_title %></p>
-        <p class="mt-1 text-sm font-medium text-slate-500"><%= folio_show.actions_blocked_reason %></p>
+        <p class="text-sm font-black text-foreground"><%= folio_show.actions_blocked_title %></p>
+        <p class="mt-1 text-sm font-medium text-muted-foreground"><%= folio_show.actions_blocked_reason %></p>
         <% if folio_show.actions_blocked_url.present? %>
-          <%= link_to folio_show.actions_blocked_link_label, folio_show.actions_blocked_url, class: "mt-3 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
+          <%= link_to folio_show.actions_blocked_link_label, folio_show.actions_blocked_url, class: "mt-3 inline-flex items-center justify-center rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" %>
         <% end %>
       </div>
     <% elsif folio_show.action_section_state == :closed %>
-      <span class="text-sm font-medium text-slate-500"><%= folio_show.closed_folio_action_message %></span>
-    <% elsif folio_show.normal_folio_actions_available? %>
+      <span class="text-sm font-medium text-muted-foreground"><%= folio_show.closed_folio_action_message %></span>
+    <% elsif folio_show.normal_folio_actions_available? || (booking.tourism_tax? && current_user.has_permission?("manage_bookings", hotel: hotel)) %>
     <% if folio_show.can_post_payment? %>
       <%= link_to new_hotel_folio_transaction_path(hotel, booking,
           transaction_type: "payment",
@@ -24,7 +24,7 @@
           redirect_to_folio: redirect_to_folio,
           folio_origin: folio_origin),
           data: offcanvas_data,
-          class: "inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-slate-700" do %>
+          class: "inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary-hover" do %>
         <%= cached_icon "credit-card", class: "size-3" %>
         Post Payment
       <% end %>
@@ -36,7 +36,7 @@
           redirect_to_folio: redirect_to_folio,
           folio_origin: folio_origin),
           data: offcanvas_data,
-          class: "inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" do %>
+          class: "inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" do %>
         <%= cached_icon "plus", class: "size-3" %>
         Post Charge
       <% end %>
@@ -48,18 +48,18 @@
           redirect_to_folio: redirect_to_folio,
           folio_origin: folio_origin),
           data: offcanvas_data,
-          class: "inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-black text-amber-800 shadow-sm transition hover:bg-amber-50" do %>
+          class: "inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-card px-3 py-2 text-xs font-black text-amber-800 shadow-sm transition hover:bg-amber-50" do %>
         <%= cached_icon "receipt-text", class: "size-3" %>
         Post Adjustment
       <% end %>
     <% end %>
 
     <div class="relative inline-block text-left" data-controller="dropdown" data-dropdown-align="right">
-      <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-expanded="false" aria-haspopup="true">
+      <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-expanded="false" aria-haspopup="true">
         More Actions
         <%= cached_icon "chevron-down", class: "size-3" %>
       </button>
-      <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-950/10 focus:outline-none" role="menu" aria-orientation="vertical" tabindex="-1">
+      <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-2xl border border-border bg-card p-1.5 shadow-xl shadow-foreground/10 focus:outline-none" role="menu" aria-orientation="vertical" tabindex="-1">
         <% if folio_show.can_execute_refund? %>
           <%= link_to new_hotel_folio_transaction_path(hotel, booking,
               transaction_type: "payment",
@@ -69,21 +69,34 @@
               folio_origin: folio_origin),
               role: "menuitem",
               data: offcanvas_data,
-              class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none" do %>
+              class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none" do %>
             <%= cached_icon "rotate-ccw", class: "size-4 text-amber-600" %>
             Issue Refund
           <% end %>
         <% end %>
+        <% if booking.tourism_tax? && current_user.has_permission?("manage_bookings", hotel: hotel) %>
+          <% if booking.tourism_tax_voucher_number? %>
+            <%= link_to hotel_booking_tourism_tax_voucher_path(hotel, booking), target: "_blank", data: { turbo: false }, role: "menuitem", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none" do %>
+              <%= cached_icon "receipt", class: "size-4 text-emerald-600" %>
+              Tourism Tax Voucher
+            <% end %>
+          <% else %>
+            <%= button_to issue_hotel_booking_tourism_tax_voucher_path(hotel, booking), form: { target: "_blank", data: { turbo: false } }, role: "menuitem", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none" do %>
+              <%= cached_icon "receipt", class: "size-4 text-emerald-600" %>
+              Issue Tourism Tax Voucher
+            <% end %>
+          <% end %>
+        <% end %>
         <% [ [ "Transfer Charge", "arrow-right" ], [ "Print Folio", "file-text" ], [ "Void / Reverse", "rotate-ccw" ] ].each do |label, icon| %>
-          <button type="button" role="menuitem" disabled class="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-400">
-            <%= cached_icon icon, class: "size-4 text-slate-300" %>
+          <button type="button" role="menuitem" disabled class="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-muted-foreground">
+            <%= cached_icon icon, class: "size-4 text-primary-foreground" %>
             <span><%= label %></span>
           </button>
         <% end %>
       </div>
     </div>
     <% else %>
-      <span class="text-sm font-medium text-slate-500">No posting actions available</span>
+      <span class="text-sm font-medium text-muted-foreground">No posting actions available</span>
     <% end %>
   </div>
 </section>

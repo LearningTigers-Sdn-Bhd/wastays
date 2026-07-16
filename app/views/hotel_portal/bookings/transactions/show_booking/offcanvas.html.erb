@@ -3,56 +3,56 @@
 <% is_group = booking.group_booking_id.present? %>
 
 <%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "compact-right" } do %>
-  <div class="flex h-full flex-col bg-white">
-    <div class="flex items-start justify-between gap-3 border-b border-slate-200 px-6 py-5">
+  <div class="flex h-full flex-col bg-card">
+    <div class="flex items-start justify-between gap-3 border-b border-border px-6 py-5">
       <div class="flex min-w-0 items-center gap-3">
-        <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-700">
+        <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground">
           <%= cached_icon "building-2", class: "size-5" %>
         </div>
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-2">
-            <h2 class="truncate text-lg font-black tracking-tight text-slate-950"><%= presenter.summary_heading %></h2>
+            <h2 class="truncate text-lg font-black tracking-tight text-foreground"><%= presenter.summary_heading %></h2>
             <% if is_group %>
               <span class="rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-700">Group</span>
             <% end %>
           </div>
-          <p class="mt-0.5 flex items-center gap-1 text-xs font-semibold text-slate-500">
+          <p class="mt-0.5 flex items-center gap-1 text-xs font-semibold text-muted-foreground">
             <%= cached_icon "map-pin", class: "size-3" %> <%= current_hotel.country.presence || current_hotel.name %>
           </p>
         </div>
       </div>
-      <button type="button" data-action="click->offcanvas#close" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+      <button type="button" data-action="click->offcanvas#close" class="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-muted-foreground">
         <%= cached_icon "x", class: "size-5" %>
       </button>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 px-6 py-3">
-      <%= link_to "Booking Control Panel", hotel_booking_control_panel_path(current_hotel, booking), data: { turbo: false }, class: "rounded-lg bg-slate-950 px-3.5 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-700" %>
+    <div class="flex flex-wrap items-center gap-2 border-b border-border px-6 py-3">
+      <%= link_to "Booking Control Panel", hotel_booking_control_panel_path(current_hotel, booking), data: { turbo: false }, class: "rounded-lg bg-primary px-3.5 py-2 text-xs font-black text-primary-foreground shadow-sm hover:bg-primary-hover" %>
 
       <% if presenter.summary_actions.any? %>
         <div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true">
-          <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-50" aria-haspopup="menu" aria-expanded="false" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown">
+          <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-black text-foreground shadow-sm hover:bg-muted" aria-haspopup="menu" aria-expanded="false" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown">
             Actions
             <%= cached_icon "chevron-down", class: "size-3.5" %>
           </button>
-          <div data-dropdown-target="menu" class="hidden w-56 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg" role="menu" tabindex="-1">
+          <div data-dropdown-target="menu" class="hidden w-56 rounded-lg border border-border bg-card p-1.5 shadow-lg" role="menu" tabindex="-1">
             <%= render "hotel_portal/bookings/transactions/show_booking/actions_menu_items", presenter: presenter %>
           </div>
         </div>
       <% end %>
 
       <% if is_group %>
-        <%= link_to hotel_booking_transaction_show_booking_print_send_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer_secondary", offcanvas_variant: "right" }, class: "inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-50" do %>
+        <%= link_to hotel_booking_transaction_show_booking_print_send_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer_secondary", offcanvas_variant: "right" }, class: "inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-black text-foreground shadow-sm hover:bg-muted" do %>
           <%= cached_icon "file-text", class: "size-3.5" %>
           Print / Send
         <% end %>
       <% else %>
         <div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true">
-          <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-50" aria-haspopup="menu" aria-expanded="false" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown">
+          <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-black text-foreground shadow-sm hover:bg-muted" aria-haspopup="menu" aria-expanded="false" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown">
             Print / Send
             <%= cached_icon "chevron-down", class: "size-3.5" %>
           </button>
-          <div data-dropdown-target="menu" class="hidden w-64 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg" role="menu" tabindex="-1">
+          <div data-dropdown-target="menu" class="hidden w-64 rounded-lg border border-border bg-card p-1.5 shadow-lg" role="menu" tabindex="-1">
             <%= render "hotel_portal/bookings/transactions/show_booking/print_send_menu_items", booking: booking %>
           </div>
         </div>
@@ -63,73 +63,73 @@
       <% if is_group %>
         <div class="grid grid-cols-2 gap-x-4 gap-y-5">
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Group Reservation No.</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= presenter.group_booking_number %></p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Group Reservation No.</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= presenter.group_booking_number %></p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Group Status</p>
-            <p class="mt-1 text-sm font-bold text-slate-950">
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Group Status</p>
+            <p class="mt-1 text-sm font-bold text-foreground">
               <%= presenter.group_status_counts.map { |status, count| "#{count} #{HotelPortal::BookingControlPanelPresenter::STATUS_LABELS.fetch(status, status.humanize)}" }.to_sentence %>
             </p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Arrival Date</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= presenter.summary_items.to_h["Arrival"] %></p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Arrival Date</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= presenter.summary_items.to_h["Arrival"] %></p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Departure Date</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= presenter.summary_items.to_h["Departure"] %></p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Departure Date</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= presenter.summary_items.to_h["Departure"] %></p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Rooms</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= presenter.child_bookings.size %> rooms</p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Rooms</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= presenter.child_bookings.size %> rooms</p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Pax (total)</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= presenter.child_bookings.sum { |child| child.adults.to_i } %> adults, <%= presenter.child_bookings.sum { |child| child.children.to_i } %> children</p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Pax (total)</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= presenter.child_bookings.sum { |child| child.adults.to_i } %> adults, <%= presenter.child_bookings.sum { |child| child.children.to_i } %> children</p>
           </div>
         </div>
       <% else %>
         <div class="grid grid-cols-2 gap-x-4 gap-y-5">
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Reservation Number</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= presenter.booking_number %></p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Reservation Number</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= presenter.booking_number %></p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Status</p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Status</p>
             <p class="mt-1"><span class="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-800"><%= presenter.status_label %></span></p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Arrival Date</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M:%S") %></p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Arrival Date</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M:%S") %></p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Departure Date</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= booking.check_out.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M:%S") %></p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Departure Date</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= booking.check_out.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M:%S") %></p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Booking Date</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= booking.created_at.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M:%S") %></p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Booking Date</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= booking.created_at.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M:%S") %></p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Room Type</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= presenter.room_summary %></p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Room Type</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= presenter.room_summary %></p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Room Number</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= booking.booking_rooms.first&.room_number.presence || "Unassigned" %></p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Room Number</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= booking.booking_rooms.first&.room_number.presence || "Unassigned" %></p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Rate Plan</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= booking.booking_rooms.first&.rate_plan&.name.presence || "Standard" %></p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Rate Plan</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= booking.booking_rooms.first&.rate_plan&.name.presence || "Standard" %></p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Pax</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= booking.adults.to_i %> adults, <%= booking.children.to_i %> children</p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Pax</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= booking.adults.to_i %> adults, <%= booking.children.to_i %> children</p>
           </div>
           <div>
-            <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Nightly Rate</p>
-            <p class="mt-1 text-sm font-bold text-slate-950"><%= presenter.nightly_rate_label %></p>
+            <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Nightly Rate</p>
+            <p class="mt-1 text-sm font-bold text-foreground"><%= presenter.nightly_rate_label %></p>
           </div>
         </div>
       <% end %>
@@ -138,17 +138,17 @@
     <% total_amount = is_group ? presenter.child_bookings.sum { |child| child.total_amount.to_d } : booking.total_amount.to_d %>
     <% outstanding_balance = is_group ? presenter.group_total_balance : presenter.total_balance %>
     <% paid_amount = [ total_amount - outstanding_balance, 0 ].max %>
-    <div class="flex items-center justify-end gap-6 border-t border-slate-200 bg-slate-50 px-6 py-4">
+    <div class="flex items-center justify-end gap-6 border-t border-border bg-muted px-6 py-4">
       <div class="text-right">
-        <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Total</p>
-        <p class="text-sm font-black text-slate-950"><%= presenter.money(total_amount) %></p>
+        <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Total</p>
+        <p class="text-sm font-black text-foreground"><%= presenter.money(total_amount) %></p>
       </div>
       <div class="text-right">
-        <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Paid</p>
-        <p class="text-sm font-black text-slate-950"><%= presenter.money(paid_amount) %></p>
+        <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Paid</p>
+        <p class="text-sm font-black text-foreground"><%= presenter.money(paid_amount) %></p>
       </div>
       <div class="text-right">
-        <p class="text-[10px] font-black uppercase tracking-wider text-slate-500">Balance</p>
+        <p class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Balance</p>
         <p class="text-sm font-black text-rose-600"><%= presenter.money(outstanding_balance) %></p>
       </div>
     </div>

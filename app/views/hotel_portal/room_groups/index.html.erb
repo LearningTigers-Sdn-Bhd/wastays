@@ -1,14 +1,14 @@
 <%= turbo_frame_tag "offcanvas_drawer" do %>
-  <div class="flex h-full flex-col bg-white overflow-hidden">
+  <div class="flex h-full flex-col bg-card overflow-hidden">
     <!-- Header -->
-    <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+    <div class="flex items-center justify-between border-b border-border px-6 py-5">
       <div>
-        <h3 class="text-lg font-bold text-slate-900">Manage Room Groups</h3>
-        <p class="mt-1 text-xs text-slate-500">Group your room categories into hotel zones (e.g. Left Wing, Right Wing).</p>
+        <h3 class="text-lg font-bold text-foreground">Manage Room Groups</h3>
+        <p class="mt-1 text-xs text-muted-foreground">Group your room categories into hotel zones (e.g. Left Wing, Right Wing).</p>
       </div>
-      <button type="button" 
-              data-action="click->offcanvas#close" 
-              class="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition hover:bg-slate-50">
+      <button type="button"
+              data-action="click->offcanvas#close"
+              class="rounded-xl border border-border bg-card p-2.5 text-muted-foreground shadow-sm transition hover:bg-muted">
         <%= cached_icon "x", class: "size-4.5" %>
       </button>
     </div>
@@ -16,9 +16,9 @@
     <!-- Scrollable Content -->
     <div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
       <!-- Create Form -->
-      <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 space-y-4">
-        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Create New Group</h4>
-        
+      <div class="rounded-2xl border border-border bg-muted/50 p-5 space-y-4">
+        <h4 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Create New Group</h4>
+
         <%= form_with model: [@hotel, @room_group], local: true, class: "space-y-4" do |f| %>
           <% if @room_group.errors.any? %>
             <div class="p-3 text-xs text-red-600 bg-red-50 rounded-xl border border-red-100 font-medium">
@@ -28,42 +28,42 @@
 
           <div class="flex gap-3">
             <div class="flex-1">
-              <%= f.text_field :name, 
-                               placeholder: "e.g. Left Wing, Main Tower", 
-                               class: "py-3 px-4 block w-full border border-slate-200 rounded-xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all bg-white shadow-xs",
+              <%= f.text_field :name,
+                               placeholder: "e.g. Left Wing, Main Tower",
+                               class: "py-3 px-4 block w-full border border-border rounded-xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all bg-card shadow-xs",
                                required: true %>
             </div>
-            <%= f.submit "Create", class: "inline-flex items-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-xs transition hover:bg-slate-700 cursor-pointer" %>
+            <%= f.submit "Create", class: "inline-flex items-center rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-xs transition hover:bg-primary-hover cursor-pointer" %>
           </div>
         <% end %>
       </div>
 
       <!-- List of Groups -->
       <div class="space-y-4">
-        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Existing Groups (<%= @room_groups.size %>)</h4>
-        
+        <h4 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Existing Groups (<%= @room_groups.size %>)</h4>
+
         <% if @room_groups.any? %>
-          <div class="divide-y divide-slate-100 border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-xs">
+          <div class="divide-y divide-border border border-border rounded-2xl bg-card overflow-hidden shadow-xs">
             <% @room_groups.each do |group| %>
-              <div class="flex items-center justify-between px-5 py-4 hover:bg-slate-50/50 transition-colors">
+              <div class="flex items-center justify-between px-5 py-4 hover:bg-muted/50 transition-colors">
                 <div class="flex items-center gap-x-3">
-                  <div class="size-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-                    <%= cached_icon "layout-grid", class: "size-4 text-slate-500" %>
+                  <div class="size-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
+                    <%= cached_icon "layout-grid", class: "size-4 text-muted-foreground" %>
                   </div>
                   <div class="flex flex-col">
-                    <span class="text-sm font-semibold text-slate-900"><%= group.name %></span>
-                    <span class="text-[10px] text-slate-400 font-medium"><%= pluralize(group.room_types.size, 'category') %> assigned</span>
+                    <span class="text-sm font-semibold text-foreground"><%= group.name %></span>
+                    <span class="text-[10px] text-muted-foreground font-medium"><%= pluralize(group.room_types.size, 'category') %> assigned</span>
                   </div>
                 </div>
 
                 <div class="flex items-center gap-x-1.5">
-                  <%= link_to edit_hotel_room_group_path(@hotel, group), 
-                              class: "inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-xs transition hover:border-slate-300 hover:text-slate-900" do %>
+                  <%= link_to edit_hotel_room_group_path(@hotel, group),
+                              class: "inline-flex size-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs transition hover:border-border-interactive hover:text-foreground" do %>
                     <%= cached_icon "pencil", class: "size-3.5" %>
                   <% end %>
-                  <%= link_to hotel_room_group_path(@hotel, group), 
-                              data: { turbo_method: :delete, turbo_confirm: "Are you sure you want to delete this room group? Assigned room categories will become unassigned." }, 
-                              class: "inline-flex size-8 items-center justify-center rounded-lg border border-red-100 bg-white text-red-500 shadow-xs transition hover:bg-red-50 hover:text-red-700" do %>
+                  <%= link_to hotel_room_group_path(@hotel, group),
+                              data: { turbo_method: :delete, turbo_confirm: "Are you sure you want to delete this room group? Assigned room categories will become unassigned." },
+                              class: "inline-flex size-8 items-center justify-center rounded-lg border border-red-100 bg-card text-red-500 shadow-xs transition hover:bg-red-50 hover:text-red-700" do %>
                     <%= cached_icon "trash-2", class: "size-3.5" %>
                   <% end %>
                 </div>
@@ -71,9 +71,9 @@
             <% end %>
           </div>
         <% else %>
-          <div class="text-center py-10 border border-dashed border-slate-200 rounded-2xl bg-slate-50/30">
-            <%= cached_icon "layers", class: "size-8 text-slate-300 mx-auto mb-3" %>
-            <p class="text-xs text-slate-400 font-medium">No room groups defined yet.</p>
+          <div class="text-center py-10 border border-dashed border-border rounded-2xl bg-muted/30">
+            <%= cached_icon "layers", class: "size-8 text-primary-foreground mx-auto mb-3" %>
+            <p class="text-xs text-muted-foreground font-medium">No room groups defined yet.</p>
           </div>
         <% end %>
       </div>

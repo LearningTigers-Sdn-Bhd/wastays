@@ -6,7 +6,6 @@ export default class extends Controller {
 
   connect() {
     this.beforeVisitHandler = this.persistScroll.bind(this)
-    this.beforeRenderHandler = this.refreshForModeChange.bind(this)
     this.loadHandler = this.syncAndRestore.bind(this)
     this.clickHandler = this.closeFlyoutsFromOutsideClick.bind(this)
     this.sidebarClickHandler = this.togglePinnedGroup.bind(this)
@@ -15,7 +14,6 @@ export default class extends Controller {
     this.stateChangeHandler = this.handleStateChange.bind(this)
 
     document.addEventListener("turbo:before-visit", this.beforeVisitHandler)
-    document.addEventListener("turbo:before-render", this.beforeRenderHandler)
     document.addEventListener("turbo:load", this.loadHandler)
     document.addEventListener("click", this.clickHandler)
     document.addEventListener("keydown", this.keydownHandler)
@@ -29,7 +27,6 @@ export default class extends Controller {
 
   disconnect() {
     document.removeEventListener("turbo:before-visit", this.beforeVisitHandler)
-    document.removeEventListener("turbo:before-render", this.beforeRenderHandler)
     document.removeEventListener("turbo:load", this.loadHandler)
     document.removeEventListener("click", this.clickHandler)
     document.removeEventListener("keydown", this.keydownHandler)
@@ -43,19 +40,6 @@ export default class extends Controller {
   syncAndRestore() {
     this.syncActiveLinks()
     this.restoreScroll()
-  }
-
-  refreshForModeChange(event) {
-    const nextSidebar = event.detail.newBody?.querySelector(`#${this.element.id}`)
-    if (!nextSidebar) return
-    if (nextSidebar.dataset.sidebarMode === this.element.dataset.sidebarMode) return
-
-    this.unbindHoverInteractions()
-    this.element.dataset.sidebarMode = nextSidebar.dataset.sidebarMode
-    this.element.innerHTML = nextSidebar.innerHTML
-    window.dispatchEvent(new CustomEvent("sidebar:refresh-desktop-state"))
-    this.bindHoverInteractions()
-    this.syncActiveLinks()
   }
 
   syncActiveLinks() {

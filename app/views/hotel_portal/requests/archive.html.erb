@@ -1,65 +1,62 @@
 <% content_for :title, "Request Archive | WAStays" %>
 
-<div class="space-y-6">
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-    <div>
-      <%= link_to hotel_requests_path(current_hotel), data: { turbo_frame: "_top" }, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-gray-500 hover:text-blue-600 focus:outline-none focus:text-blue-600" do %>
+<div class="space-y-3.5">
+  <div>
+      <%= link_to hotel_requests_path(current_hotel), data: { turbo_frame: "_top" }, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-muted-foreground hover:text-blue-600 focus:outline-none focus:text-blue-600" do %>
         <%= cached_icon "chevron-left", class: "flex-shrink-0 w-4 h-4" %>
         Back to requests
       <% end %>
-      <h1 class="text-3xl font-bold text-gray-800">Request Archive</h1>
-      <p class="mt-1 text-sm text-gray-500">Search and filter archived housekeeping and complaint requests.</p>
-    </div>
+      <%= render PanelsUI::PageHeader.new(title: "Request Archive", description: "Search and filter archived housekeeping and complaint requests.") %>
   </div>
 
-  <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+  <div class="rounded-2xl border border-border bg-card p-4 shadow-sm">
     <%= form_with url: hotel_request_archive_path(current_hotel), method: :get, data: { controller: "auto-submit", turbo_frame: "request_archive_results" }, class: "grid gap-4 md:grid-cols-4" do |f| %>
       <div>
-        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Search</label>
-        <%= text_field_tag :q, params[:q], autocomplete: "off", class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500", placeholder: "Guest, booking, request...", data: { action: "input->auto-submit#submit" } %>
+        <label class="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Search</label>
+        <%= text_field_tag :q, params[:q], autocomplete: "off", class: "w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500", placeholder: "Guest, booking, request...", data: { action: "input->auto-submit#submit" } %>
       </div>
       <div>
-        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Type</label>
-        <%= select_tag :kind, options_for_select([["All", "all"], ["Housekeeping", "housekeeping"], ["Complaint", "complaint"], ["Checkout", "checkout"]], params[:kind].presence || "all"), class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" %>
+        <label class="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Type</label>
+        <%= select_tag :kind, options_for_select([["All", "all"], ["Housekeeping", "housekeeping"], ["Complaint", "complaint"], ["Checkout", "checkout"]], params[:kind].presence || "all"), class: "w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" %>
       </div>
       <div>
-        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Status</label>
-        <%= select_tag :status, options_for_select([["All", "all"], ["Pending", "pending"], ["Completed", "completed"], ["Cancelled", "cancelled"]], params[:status].presence || "all"), class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" %>
+        <label class="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Status</label>
+        <%= select_tag :status, options_for_select([["All", "all"], ["Pending", "pending"], ["Completed", "completed"], ["Cancelled", "cancelled"]], params[:status].presence || "all"), class: "w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" %>
       </div>
       <div>
-        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Date</label>
-        <%= date_field_tag :date, params[:date], class: "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" %>
+        <label class="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Date</label>
+        <%= date_field_tag :date, params[:date], class: "w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" %>
       </div>
       <div class="md:col-span-4 flex justify-end">
         <div class="flex items-center gap-2">
-          <%= f.submit "Apply Filters", class: "inline-flex items-center gap-x-2 rounded-lg border border-transparent bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700" %>
-          <%= link_to "Clear", hotel_request_archive_path(current_hotel), class: "inline-flex items-center gap-x-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50", data: { turbo_frame: "_top" } %>
+          <%= f.submit "Apply Filters", class: "inline-flex items-center gap-x-2 rounded-lg border border-transparent bg-blue-600 px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-blue-700" %>
+          <%= link_to "Clear", hotel_request_archive_path(current_hotel), class: "inline-flex items-center gap-x-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm hover:bg-muted", data: { turbo_frame: "_top" } %>
         </div>
       </div>
     <% end %>
   </div>
 
   <%= turbo_frame_tag "request_archive_results" do %>
-    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <div class="border-b border-gray-200 bg-gray-50 px-6 py-4">
-        <h2 class="text-lg font-semibold text-gray-800">Every Request</h2>
+    <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div class="border-b border-border bg-muted px-6 py-4">
+        <h2 class="text-lg font-semibold text-foreground">Every Request</h2>
       </div>
 
       <% if @presenter.rows? %>
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-white">
+          <table class="min-w-full divide-y divide-border">
+            <thead class="bg-card">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Type</th>
-                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Request</th>
-                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Guest</th>
-                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Status</th>
-                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Requested At</th>
-                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Completed At</th>
-                <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">Action</th>
+                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Type</th>
+                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Request</th>
+                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Guest</th>
+                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Requested At</th>
+                <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Completed At</th>
+                <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">Action</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200 bg-white">
+            <tbody class="divide-y divide-border bg-card">
               <% @presenter.archive_rows.each do |row| %>
                 <tr data-controller="request-dialog">
                   <td class="px-6 py-4 whitespace-nowrap">
@@ -71,84 +68,84 @@
                     <div class="space-y-1">
                       <button
                         type="button"
-                        class="text-left text-sm font-semibold text-gray-800 hover:text-blue-600"
+                        class="text-left text-sm font-semibold text-foreground hover:text-blue-600"
                         data-action="request-dialog#open"
                       >
                         <%= row[:title] %>
                       </button>
-                      <p class="text-xs text-gray-500">Booking: <%= row[:booking_token] %></p>
+                      <p class="text-xs text-muted-foreground">Booking: <%= row[:booking_token] %></p>
                     </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><%= row[:guest_name] %></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-foreground"><%= row[:guest_name] %></td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <span class="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= row[:status_class] %>">
                       <%= row[:status].titleize %>
                     </span>
                   </td>
-                  <td class="px-6 py-4 text-sm text-gray-600">
+                  <td class="px-6 py-4 text-sm text-muted-foreground">
                     <%= @presenter.formatted_requested_at(row) %>
                   </td>
-                  <td class="px-6 py-4 text-sm text-gray-600">
+                  <td class="px-6 py-4 text-sm text-muted-foreground">
                     <%= @presenter.formatted_completed_at(row) %>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-right">
                     <div class="flex items-center justify-end gap-2">
                       <% if @presenter.show_open_link?(row) %>
-                        <%= link_to "Open", row[:booking_url], data: { turbo_frame: "_top" }, class: "inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
+                        <%= link_to "Open", row[:booking_url], data: { turbo_frame: "_top" }, class: "inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm hover:bg-muted" %>
                       <% end %>
-                      <%= button_to row[:archive_action], row[:archive_url], method: :patch, class: "inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50" %>
+                      <%= button_to row[:archive_action], row[:archive_url], method: :patch, class: "inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm hover:bg-muted" %>
                     </div>
-                    <dialog data-request-dialog-target="dialog" data-action="click->request-dialog#closeOnBackdrop" class="fixed inset-0 m-auto w-[min(92vw,48rem)] rounded-2xl p-0 backdrop:bg-black/40">
-                      <div class="rounded-2xl bg-white shadow-2xl">
-                        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <dialog data-request-dialog-target="dialog" data-action="click->request-dialog#closeOnBackdrop" class="fixed inset-0 m-auto w-[min(92vw,48rem)] rounded-2xl p-0 backdrop:bg-foreground/40">
+                      <div class="rounded-2xl bg-card shadow-2xl">
+                        <div class="flex items-center justify-between border-b border-border px-6 py-4">
                           <div>
-                            <h3 class="text-lg font-semibold text-gray-800">Request Details</h3>
-                            <p class="text-sm text-gray-500"><%= row[:booking_token] %></p>
+                            <h3 class="text-lg font-semibold text-foreground">Request Details</h3>
+                            <p class="text-sm text-muted-foreground"><%= row[:booking_token] %></p>
                           </div>
-                          <button type="button" class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50" data-action="request-dialog#close">X</button>
+                          <button type="button" class="rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-muted" data-action="request-dialog#close">X</button>
                         </div>
                         <div class="grid gap-5 px-6 py-6 text-left md:grid-cols-2">
                           <div class="space-y-4">
                             <div>
-                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Type</p>
-                              <p class="mt-1 text-sm font-semibold text-gray-800"><%= row[:kind].titleize %></p>
+                              <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Type</p>
+                              <p class="mt-1 text-sm font-semibold text-foreground"><%= row[:kind].titleize %></p>
                             </div>
                             <div>
-                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Guest</p>
-                              <p class="mt-1 text-sm text-gray-800"><%= row[:guest_name] %></p>
+                              <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Guest</p>
+                              <p class="mt-1 text-sm text-foreground"><%= row[:guest_name] %></p>
                             </div>
                             <div>
-                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Requested At</p>
-                              <p class="mt-1 text-sm text-gray-800"><%= @presenter.formatted_requested_at(row) %></p>
+                              <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Requested At</p>
+                              <p class="mt-1 text-sm text-foreground"><%= @presenter.formatted_requested_at(row) %></p>
                             </div>
                             <div>
-                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Completed At</p>
-                              <p class="mt-1 text-sm text-gray-800"><%= @presenter.formatted_completed_at(row) %></p>
+                              <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Completed At</p>
+                              <p class="mt-1 text-sm text-foreground"><%= @presenter.formatted_completed_at(row) %></p>
                             </div>
                           </div>
                           <div class="space-y-4">
                             <div>
-                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Requests</p>
-                              <p class="mt-1 text-sm leading-relaxed text-gray-800"><%= row[:title] %></p>
+                              <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Requests</p>
+                              <p class="mt-1 text-sm leading-relaxed text-foreground"><%= row[:title] %></p>
                             </div>
                             <div>
-                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Status</p>
+                              <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</p>
                               <span class="mt-1 inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= row[:status_class] %>">
                                 <%= row[:status].titleize %>
                               </span>
                             </div>
                             <div>
-                              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Internal Notes</p>
+                              <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Internal Notes</p>
                               <% if @presenter.internal_notes?(row) %>
                                 <div class="mt-2 space-y-2">
                                   <% @presenter.internal_notes_for(row).each do |note| %>
-                                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                      <p class="whitespace-pre-wrap text-sm text-gray-800"><%= @presenter.note_body(note) %></p>
+                                    <div class="rounded-lg border border-border bg-muted p-3">
+                                      <p class="whitespace-pre-wrap text-sm text-foreground"><%= @presenter.note_body(note) %></p>
                                     </div>
                                   <% end %>
                                 </div>
                               <% else %>
-                                <p class="mt-1 text-sm text-gray-500">No internal notes.</p>
+                                <p class="mt-1 text-sm text-muted-foreground">No internal notes.</p>
                               <% end %>
                             </div>
                           </div>
@@ -162,10 +159,10 @@
           </table>
         </div>
       <% else %>
-        <div class="p-8 text-sm text-gray-500">No requests match your filters.</div>
+        <div class="p-8 text-sm text-muted-foreground">No requests match your filters.</div>
       <% end %>
 
-      <div class="flex justify-center border-t border-gray-200 bg-gray-50/50 px-6 py-5">
+      <div class="flex justify-center border-t border-border bg-muted/50 px-6 py-5">
         <%= paginate @presenter.archive_rows %>
       </div>
     </div>

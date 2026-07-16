@@ -1,26 +1,15 @@
-<div class="mx-auto max-w-[1600px] space-y-8 pb-20">
-  <div class="px-4 md:px-0">
-    <div class="mt-5">
-      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Transaction Codes</h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">Configure transaction codes used when posting charges, refunds, payments, and adjustments to guest folios.</p>
-    </div>
-  </div>
+<div class="w-full space-y-3.5">
+  <%= render PanelsUI::PageHeader.new(title: "Transaction Codes", description: "Configure transaction codes used when posting charges, refunds, payments, and adjustments to guest folios.") %>
 
-  <div class="px-4 md:px-0">
-    <%= render "hotel_portal/settings/group_tabs" %>
-  </div>
+  <%= render "hotel_portal/settings/group_tabs" %>
 
-  <div data-controller="tabs"
-       data-tabs-default-tab-value="<%= @presenter.active_tab %>"
-       class="space-y-6 px-4 md:px-0">
-    <%= render "tabs", presenter: @presenter %>
+  <div data-testid="transaction-codes-tabs">
+  <%= render PanelsUI::Tabs.new(id: "transaction-codes-tabs", active: @presenter.active_tab, variant: :pill, url: { param: "tab" }, class: "space-y-6", aria_label: "Transaction code sections") do |tabs| %>
+    <% @presenter.tabs.each do |tab| %>
+      <% tabs.with_tab(name: tab[:name], label: tab[:label], icon: tab[:icon], panel_id: "#{tab[:name]}-panel") %>
+    <% end %>
 
-    <div id="default_codes-panel"
-         data-tabs-target="panel"
-         data-tab-panel="default_codes"
-         class="<%= @presenter.active_tab == "default_codes" ? "space-y-6" : "hidden space-y-6" %>"
-         role="tabpanel"
-         data-testid="transaction-codes-default-codes-panel">
+    <% tabs.with_panel(name: "default_codes", id: "default_codes-panel", class: "space-y-6", data: { testid: "transaction-codes-default-codes-panel" }) do %>
       <% @presenter.default_code_sections.each do |section| %>
         <%= render "default_codes",
                    transaction_codes: section[:transaction_codes],
@@ -30,19 +19,14 @@
                    test_id: section[:test_id],
                    action: section[:action] %>
       <% end %>
-    </div>
+    <% end %>
 
-    <div id="additional_service_codes-panel"
-         data-tabs-target="panel"
-         data-tab-panel="additional_service_codes"
-         class="<%= @presenter.active_tab == "additional_service_codes" ? "space-y-6" : "hidden space-y-6" %>"
-          role="tabpanel"
-          data-testid="transaction-codes-additional-service-codes-panel">
+    <% tabs.with_panel(name: "additional_service_codes", id: "additional_service_codes-panel", class: "space-y-6", data: { testid: "transaction-codes-additional-service-codes-panel" }) do %>
       <div class="flex justify-end">
         <%= link_to "New Code",
                     hotel_new_transaction_code_path(current_hotel),
                     data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" },
-                    class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-700" %>
+                    class: "inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground transition hover:bg-primary-hover" %>
       </div>
       <%= render "default_codes",
                  transaction_codes: @presenter.additional_service_codes,
@@ -50,15 +34,11 @@
                  description: "Hotel-specific non-tax transaction codes for additional service postings.",
                  empty_message: "No additional service transaction codes found.",
                  test_id: "transaction-codes-additional-service-list" %>
-    </div>
+    <% end %>
 
-    <div id="configuration-panel"
-         data-tabs-target="panel"
-         data-tab-panel="configuration"
-         class="<%= @presenter.active_tab == "configuration" ? "space-y-6" : "hidden space-y-6" %>"
-         role="tabpanel"
-         data-testid="transaction-codes-configuration-panel">
+    <% tabs.with_panel(name: "configuration", id: "configuration-panel", class: "space-y-6", data: { testid: "transaction-codes-configuration-panel" }) do %>
       <%= render "configuration", configuration: @presenter.transaction_configuration %>
-    </div>
+    <% end %>
+  <% end %>
   </div>
 </div>

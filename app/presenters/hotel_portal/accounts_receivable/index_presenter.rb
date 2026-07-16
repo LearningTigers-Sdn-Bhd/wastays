@@ -10,7 +10,7 @@ module HotelPortal
         { key: "partially_paid", label: "Partially Paid", icon: "circle-dollar-sign", class: "peer-checked:border-amber-400 peer-checked:bg-amber-50 peer-checked:text-amber-700" },
         { key: "paid", label: "Paid", icon: "circle-check", class: "peer-checked:border-emerald-400 peer-checked:bg-emerald-50 peer-checked:text-emerald-700" },
         { key: "overdue", label: "Overdue", icon: "triangle-alert", class: "peer-checked:border-red-400 peer-checked:bg-red-50 peer-checked:text-red-700" },
-        { key: "void", label: "Void", icon: "circle-slash", class: "peer-checked:border-slate-500 peer-checked:bg-slate-100 peer-checked:text-slate-700" }
+        { key: "void", label: "Void", icon: "circle-slash", class: "peer-checked:border-border-interactive peer-checked:bg-muted peer-checked:text-foreground" }
       ].freeze
 
       Metric = Struct.new(:label, :amounts, :description, :icon, :class_name, keyword_init: true)
@@ -245,7 +245,7 @@ module HotelPortal
           when "partially_paid" then "border-amber-200 bg-amber-50 text-amber-700"
           when "paid" then "border-emerald-200 bg-emerald-50 text-emerald-700"
           when "overdue" then "border-red-200 bg-red-50 text-red-700"
-          else "border-slate-200 bg-slate-100 text-slate-600"
+          else "border-border bg-muted text-muted-foreground"
           end
         end
 

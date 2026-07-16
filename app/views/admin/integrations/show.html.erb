@@ -1,12 +1,10 @@
 <% content_for :title, "Integrations | WAStays Admin" %>
 
-<div class="mx-auto flex min-h-screen max-w-[1600px] flex-col space-y-6 pb-6">
-  <div class="px-4 md:px-0">
-    <div class="mt-5">
-      <p class="text-xs font-black uppercase tracking-[0.22em] text-brand-primary">Platform Control</p>
-      <h1 class="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Integrations</h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">Configure external connections and global AI services for WAStays.</p>
-    </div>
+<div class="w-full space-y-6">
+  <div class="space-y-2">
+    <%= render PanelsUI::PageHeader.new(
+          title: "Integrations",
+          description: "Configure external connections and global AI services for WAStays.") %>
   </div>
 
   <div class="grid min-h-0 flex-1 grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">

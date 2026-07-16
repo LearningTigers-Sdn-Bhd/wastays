@@ -1,0 +1,82 @@
+@layer components {
+  .panel-text-area {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--card);
+    color: var(--card-foreground);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    outline: none;
+    resize: vertical;
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-text-area::placeholder {
+    color: var(--muted-foreground);
+    opacity: 1;
+  }
+
+  .panel-text-area:hover:not(:disabled):not([readonly]):not([aria-invalid="true"]) {
+    border-color: var(--border-interactive);
+  }
+
+  .panel-text-area:focus-visible {
+    border-color: var(--border-interactive);
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-text-area[aria-invalid="true"] {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-text-area[aria-invalid="true"]:focus-visible {
+    outline-color: var(--destructive-on-surface);
+  }
+
+  .panel-text-area:disabled {
+    cursor: not-allowed;
+    border-color: var(--border);
+    background: color-mix(in oklab, var(--muted) 82%, var(--background));
+    color: var(--muted-foreground);
+  }
+
+  .panel-text-area[readonly] {
+    background: color-mix(in oklab, var(--muted) 52%, var(--card));
+  }
+
+  .panel-text-area[data-resize="none"] {
+    resize: none;
+  }
+
+  .panel-text-area[data-size="sm"] {
+    min-height: 4rem;
+    padding: 0.5rem 0.625rem;
+    @apply text-xs;
+  }
+
+  .panel-text-area[data-size="lg"] {
+    min-height: 6rem;
+    padding: 0.625rem 0.875rem;
+    @apply text-sm;
+  }
+
+  .panel-control-group[data-layout="block"] .panel-text-area {
+    grid-row: 2;
+    min-height: 5rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    outline: 0;
+  }
+
+  .panel-control-group[data-layout="block"] .panel-text-area:focus-visible {
+    outline: 0;
+  }
+
+}

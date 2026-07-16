@@ -1,17 +1,17 @@
 <div class="py-12 text-center">
   <% if presenter.filters_active? %>
-    <span class="mx-auto inline-flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+    <span class="mx-auto inline-flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
       <%= cached_icon "search-x", class: "size-5", aria: { hidden: true } %>
     </span>
-    <p class="mt-3 text-sm font-semibold text-slate-700">No invoices match your filters</p>
-    <p class="mt-1 text-xs text-slate-500">Try adjusting your search or clearing the filters.</p>
+    <p class="mt-3 text-sm font-semibold text-foreground">No invoices match your filters</p>
+    <p class="mt-1 text-xs text-muted-foreground">Try adjusting your search or clearing the filters.</p>
     <%= link_to "Clear filters", corporate_ar_invoices_path,
-                class: "mt-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" %>
+                class: "mt-4 inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-4 py-2 text-xs font-bold text-foreground shadow-sm transition hover:bg-muted" %>
   <% else %>
-    <span class="mx-auto inline-flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+    <span class="mx-auto inline-flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
       <%= cached_icon "file-text", class: "size-5", aria: { hidden: true } %>
     </span>
-    <p class="mt-3 text-sm font-semibold text-slate-700">No AR invoices yet</p>
-    <p class="mt-1 text-xs text-slate-500">Direct Bill invoices issued to your account will appear here.</p>
+    <p class="mt-3 text-sm font-semibold text-foreground">No AR invoices yet</p>
+    <p class="mt-1 text-xs text-muted-foreground">Direct Bill invoices issued to your account will appear here.</p>
   <% end %>
 </div>

@@ -22,7 +22,7 @@ RSpec.describe 'Admin mobile sidebar', type: :system do
   end
 
   it 'opens from the mobile toggle and lets the user navigate to audit logs' do
-    find('button[aria-label="Toggle navigation"]').click
+    find('button[aria-label="Open navigation"]').click
 
     within('#admin-sidebar-mobile') do
       audit_link = find("a[href='#{admin_audit_logs_path}']", text: 'Audit Logs', visible: :all)

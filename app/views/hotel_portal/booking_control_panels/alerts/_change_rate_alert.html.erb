@@ -1,5 +1,5 @@
 <% room = booking.booking_rooms.first %>
-<dialog class="fixed inset-0 z-[130] m-auto w-[min(92vw,32rem)] rounded-xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-slate-950/55"
+<dialog class="fixed inset-0 z-[130] m-auto w-[min(92vw,32rem)] rounded-xl border border-border bg-card p-0 shadow-2xl backdrop:bg-primary/55"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="change-rate-alert-title"
@@ -8,26 +8,26 @@
         data-warning-dialog-close-url-value="<%= presenter.close_alert_path %>"
         data-warning-dialog-trigger-selector-value='[data-warning-dialog-trigger="change-rate"]'
         data-action="click->warning-dialog#closeOnBackdrop">
-  <div class="border-b border-slate-200 px-5 py-4">
+  <div class="border-b border-border px-5 py-4">
     <div class="flex items-start justify-between gap-4">
       <div>
         <p class="text-xs font-semibold text-amber-700">Review financial impact</p>
-        <h2 id="change-rate-alert-title" class="mt-1 text-lg font-bold text-slate-950">Change stay or rate?</h2>
+        <h2 id="change-rate-alert-title" class="mt-1 text-lg font-bold text-foreground">Change stay or rate?</h2>
       </div>
-      <button type="button" class="rounded-md p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" aria-label="Close rate change warning" data-action="warning-dialog#close"><%= cached_icon "x", class: "size-4" %></button>
+      <button type="button" class="rounded-md p-2 text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" aria-label="Close rate change warning" data-action="warning-dialog#close"><%= cached_icon "x", class: "size-4" %></button>
     </div>
   </div>
 
   <div class="px-5 py-5">
-    <p id="change-rate-alert-description" class="text-sm leading-6 text-slate-600">Changing dates or rates can alter the forecasted stay value. Charges already posted to a folio remain financial records and must be reviewed separately.</p>
-    <dl class="mt-4 grid gap-3 border-y border-slate-200 py-4 text-sm sm:grid-cols-2">
-      <div><dt class="text-xs font-semibold text-slate-500">Current rate plan</dt><dd class="mt-1 font-semibold text-slate-950"><%= room&.rate_plan&.name.presence || "Standard" %></dd></div>
-      <div><dt class="text-xs font-semibold text-slate-500">Estimated room value</dt><dd class="mt-1 font-semibold tabular-nums text-slate-950"><%= presenter.money(room&.subtotal || 0) %></dd></div>
+    <p id="change-rate-alert-description" class="text-sm leading-6 text-muted-foreground">Changing dates or rates can alter the forecasted stay value. Charges already posted to a folio remain financial records and must be reviewed separately.</p>
+    <dl class="mt-4 grid gap-3 border-y border-border py-4 text-sm sm:grid-cols-2">
+      <div><dt class="text-xs font-semibold text-muted-foreground">Current rate plan</dt><dd class="mt-1 font-semibold text-foreground"><%= room&.rate_plan&.name.presence || "Standard" %></dd></div>
+      <div><dt class="text-xs font-semibold text-muted-foreground">Estimated room value</dt><dd class="mt-1 font-semibold tabular-nums text-foreground"><%= presenter.money(room&.subtotal || 0) %></dd></div>
     </dl>
   </div>
 
-  <div class="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
-    <button type="button" class="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" data-action="warning-dialog#close">Cancel</button>
-    <%= link_to "Continue to editor", hotel_booking_transaction_amend_stay_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right", action: "warning-dialog#proceed" }, class: "rounded-md bg-slate-950 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" %>
+  <div class="flex flex-col-reverse gap-2 border-t border-border px-5 py-4 sm:flex-row sm:justify-end">
+    <button type="button" class="rounded-md border border-border-interactive bg-card px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" data-action="warning-dialog#close">Cancel</button>
+    <%= link_to "Continue to editor", hotel_booking_transaction_amend_stay_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right", action: "warning-dialog#proceed" }, class: "rounded-md bg-primary px-4 py-2.5 text-center text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" %>
   </div>
 </dialog>

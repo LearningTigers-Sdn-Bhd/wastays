@@ -4,8 +4,8 @@
   <%= hidden_field_tag :route_booking_id, @routing_booking.id if @routing_booking != @booking %>
   <div class="relative z-0 min-h-0 flex-1 overflow-auto">
     <table class="w-full min-w-[920px] table-fixed text-left text-xs">
-      <thead class="sticky top-0 z-10 bg-slate-50 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-        <tr class="border-b border-slate-200">
+      <thead class="sticky top-0 z-10 bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <tr class="border-b border-border">
           <th class="w-10 px-3 py-2"></th>
           <th class="w-24 px-3 py-2">Code</th>
           <th class="px-3 py-2">Transaction</th>
@@ -14,14 +14,14 @@
           <th class="w-56 px-3 py-2">Target folio</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-slate-100">
+      <tbody class="divide-y divide-border">
         <%= render "hotel_portal/booking_control_panels/actions/billing_routes/routing_rows",
           matrix: @routing_matrix, booking: @routing_booking, draft: @route_draft, field_prefix: "routes" %>
       </tbody>
     </table>
   </div>
-  <div class="sticky bottom-0 z-30 flex shrink-0 items-center justify-between border-t border-slate-200 bg-white px-6 py-4 pointer-events-auto">
-    <p class="text-xs text-slate-500">Changes are reviewed and applied together. Need another destination? <%= link_to "Add folio", new_folio_window_hotel_booking_control_panel_path(current_hotel, @booking, folio_window: { booking_id: @routing_booking.id }), data: { turbo_frame: "offcanvas_drawer" }, class: "font-semibold text-blue-700" %>.</p>
-    <div class="relative z-40 flex gap-3 pointer-events-auto"><button type="button" class="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700" data-action="offcanvas#close">Cancel</button><%= submit_tag "Apply changes", class: "rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white pointer-events-auto" %></div>
+  <div class="sticky bottom-0 z-30 flex shrink-0 items-center justify-between border-t border-border bg-card px-6 py-4 pointer-events-auto">
+    <p class="text-xs text-muted-foreground">Changes are reviewed and applied together. Need another destination? <%= link_to "Add folio", new_folio_window_hotel_booking_control_panel_path(current_hotel, @booking, folio_window: { booking_id: @routing_booking.id }), data: { turbo_frame: "offcanvas_drawer" }, class: "font-semibold text-blue-700" %>.</p>
+    <div class="relative z-40 flex gap-3 pointer-events-auto"><button type="button" class="rounded-md border border-border-interactive px-4 py-2 text-sm font-semibold text-foreground" data-action="offcanvas#close">Cancel</button><%= submit_tag "Apply changes", class: "rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground pointer-events-auto" %></div>
   </div>
 <% end %>

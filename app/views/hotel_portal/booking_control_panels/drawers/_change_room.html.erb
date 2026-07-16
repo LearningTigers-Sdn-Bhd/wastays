@@ -1,5 +1,5 @@
 <div class="space-y-4">
-  <p class="text-sm text-slate-600">Room changes apply only to <strong>Booking No. <%= booking.formatted_reservation_number.presence || "—" %></strong>. Sibling bookings are not changed.</p>
-  <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm"><span class="text-slate-500">Current room</span><p class="mt-1 font-bold text-slate-950"><%= booking.booking_rooms.first&.room_number.presence || "Unassigned" %> · <%= booking.booking_rooms.first&.room_type&.name || "Room type unavailable" %></p></div>
-  <%= link_to "Open room assignment", hotel_booking_transaction_edit_booking_timeline_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "block rounded-lg bg-slate-950 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-slate-700" %>
+  <p class="text-sm text-muted-foreground">Room changes apply only to <strong>Booking No. <%= booking.formatted_reservation_number.presence || "—" %></strong>. Sibling bookings are not changed.</p>
+  <div class="rounded-lg border border-border bg-muted p-3 text-sm"><span class="text-muted-foreground">Current room</span><p class="mt-1 font-bold text-foreground"><%= booking.booking_rooms.first&.room_number.presence || "Unassigned" %> · <%= booking.booking_rooms.first&.room_type&.name || "Room type unavailable" %></p></div>
+  <%= link_to "Open room assignment", hotel_booking_transaction_edit_booking_timeline_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "block rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
 </div>

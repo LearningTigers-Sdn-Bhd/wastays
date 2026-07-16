@@ -1,6 +1,6 @@
 <%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "fullscreen-bottom" } do %>
   <% group_number = @group.formatted_reservation_number.presence || "—" %>
-  <div class="flex h-full min-h-0 flex-col bg-white">
+  <div class="flex h-full min-h-0 flex-col bg-card">
     <%= render "hotel_portal/bookings/board/partials/content_header",
       title: "Change Group Billing Routes",
       subtitle: "Group No. #{group_number} · #{@group_bookings.size} bookings · Billing Preferences",

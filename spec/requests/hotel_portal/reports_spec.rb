@@ -53,6 +53,38 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
     end
+
+    it "parses date_range and preserves the query in resolved export links" do
+      get hotel_reports_path(hotel), params: { date_range: "2026-05-06/2026-05-08", q: "A&B" }
+
+      page = Capybara.string(response.body)
+      expect(response).to have_http_status(:success)
+      expect(page).to have_css('select[name="date_preset"] option[selected][value="custom"]')
+      expect(page).to have_css('input[name="date_range"][value="2026-05-06/2026-05-08"]', visible: :all)
+      expect(page).to have_link("Export CSV", href: hotel_reports_path(hotel, start_date: "2026-05-06", end_date: "2026-05-08", q: "A&B", date_preset: "custom", format: :csv))
+    end
+
+    it "prefers resolved export dates over a relative preset" do
+      get hotel_reports_path(hotel), params: {
+        date_preset: "today",
+        start_date: "2026-05-06",
+        end_date: "2026-05-08"
+      }
+
+      page = Capybara.string(response.body)
+      expect(response).to have_http_status(:success)
+      expect(page).to have_link(
+        "Export CSV",
+        href: hotel_reports_path(
+          hotel,
+          start_date: "2026-05-06",
+          end_date: "2026-05-08",
+          q: nil,
+          date_preset: "today",
+          format: :csv
+        )
+      )
+    end
   end
 
   describe "GET /guest_reports" do
@@ -229,6 +261,29 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("10 May")
       expect(response.body).not_to include("08 May")
+    end
+
+    it "normalizes a reversed date_range and preserves the active tab in export links" do
+      get guest_reports_hotel_reports_path(hotel), params: {
+        date_range: "2026-05-10/2026-05-08",
+        tab: "departures"
+      }
+
+      page = Capybara.string(response.body)
+      expected_href = guest_reports_hotel_reports_path(
+        hotel,
+        start_date: "2026-05-10",
+        end_date: "2026-05-10",
+        date_preset: "custom",
+        tab: "departures",
+        q: nil,
+        format: :csv
+      )
+
+      expect(response).to have_http_status(:success)
+      expect(page).to have_css('input[name="date_range"][value="2026-05-10/2026-05-10"]', visible: :all)
+      expect(page).to have_link("Export CSV", href: expected_href)
+      expect(page.find_link("Export CSV")["data-turbo"]).to eq("false")
     end
 
     it "exports CSV for the selected range" do
@@ -471,6 +526,51 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include("Rooms Sold")
     end
 
+    it "renders the two-month date_range component for a custom preset" do
+      get daily_occupancy_hotel_reports_path(hotel), params: { date_range: "2026-05-06/2026-05-07" }
+
+      page = Capybara.string(response.body)
+      picker = page.find('[data-panels-ui--date-picker-mode-value="range"]')
+      expect(response).to have_http_status(:success)
+      expect(picker["data-panels-ui--date-picker-months-value"]).to eq("2")
+      expect(picker["data-panels-ui--date-picker-responsive-months-value"]).to eq("true")
+      expect(picker["data-action"]).to include("change->date-preset#submitDate")
+      expect(page).to have_no_button("Apply")
+      expect(page).to have_css('[data-controller~="panels-ui--dropdown-menu"]')
+      expect(page).to have_no_css("details")
+    end
+
+    it "prefers resolved export dates over a relative preset" do
+      get daily_occupancy_hotel_reports_path(hotel), params: {
+        date_preset: "today",
+        start_date: "2026-05-06",
+        end_date: "2026-05-08"
+      }
+
+      page = Capybara.string(response.body)
+      expect(response).to have_http_status(:success)
+      expect(page).to have_link(
+        "Export CSV",
+        href: daily_occupancy_hotel_reports_path(
+          hotel,
+          start_date: "2026-05-06",
+          end_date: "2026-05-08",
+          date_preset: "today",
+          format: :csv
+        )
+      )
+    end
+
+    it "rejects non-ISO date_range endpoints" do
+      travel_to(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
+        get daily_occupancy_hotel_reports_path(hotel), params: { date_range: "2026-05-06junk/2026-05-08" }
+
+        page = Capybara.string(response.body)
+        expect(response).to have_http_status(:success)
+        expect(page).to have_css('input[name="date_range"][value="2026-06-01/2026-06-30"]', visible: :all)
+      end
+    end
+
     it "does not include data from another hotel" do
       room_type = create(:room_type, hotel: create(:hotel), quantity: 10)
       booking = create(:booking, hotel: room_type.hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
@@ -624,6 +724,17 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).not_to include("Gateway Guest")
     end
 
+    it "renders one auto-submitting single-date picker for a custom date" do
+      get deposit_liability_hotel_reports_path(hotel), params: { as_of_date: as_of_date.to_s }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css('input[name="as_of_date"][value="2026-05-20"]', visible: :all)
+      expect(page).to have_no_css('input[name="date_range"]', visible: :all)
+      picker = page.find('[data-panels-ui--date-picker-mode-value="single"]')
+      expect(picker["data-action"]).to include("change->date-preset#submitDate")
+      expect(page).to have_no_button("Apply")
+    end
+
     it "does not show bookings from another hotel" do
       other_hotel = create(:hotel)
       booking = create(:booking, hotel: other_hotel, status: "confirmed", check_in: as_of_date + 1.day, check_out: as_of_date + 2.days, guest_name: "Other Deposit Guest")
@@ -768,18 +879,56 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get payouts_hotel_reports_path(hotel), params: { tab: "paid" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('data-tabs-default-tab-value="paid"')
-      expect(response.body).to include('data-testid="payouts-upcoming-panel"')
-      expect(response.body).to include('data-testid="payouts-paid-panel"')
-      expect(response.body).to include("data-tabs-breadcrumb-label>Paid History</span>")
+      page = Capybara.string(response.body)
+      expect(page).to have_css('[data-panels-ui--tabs-active-value="paid"]')
+      expect(page).to have_css('[data-testid="payouts-upcoming-panel"]', visible: :all)
+      expect(page).to have_css('[data-testid="payouts-paid-panel"]')
+      expect(page).to have_css('[data-panels-ui--breadcrumb-target="tabLabel"]', text: "Paid History")
     end
 
     it "falls back to upcoming for an unknown tab" do
       get payouts_hotel_reports_path(hotel), params: { tab: "unknown" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('data-tabs-default-tab-value="upcoming"')
-      expect(response.body).to include("data-tabs-breadcrumb-label>Upcoming &amp; Processing</span>")
+      page = Capybara.string(response.body)
+      expect(page).to have_css('[data-panels-ui--tabs-active-value="upcoming"]')
+      expect(page).to have_css(
+        '[data-panels-ui--breadcrumb-target="tabLabel"]',
+        text: "Upcoming & Processing"
+      )
+    end
+
+    it "uses an auto-submitting two-month range picker for paid history" do
+      create(
+        :payout_batch,
+        hotel: hotel,
+        status: "paid",
+        period_start: Date.new(2026, 5, 1),
+        period_end: Date.new(2026, 5, 31)
+      )
+
+      get payouts_hotel_reports_path(hotel), params: {
+        tab: "paid",
+        paid_date_range: "2026-05-01/2026-05-31"
+      }
+
+      page = Capybara.string(response.body)
+      picker = page.find('[data-panels-ui--date-picker-mode-value="range"]')
+      expect(response).to have_http_status(:success)
+      expect(picker["data-panels-ui--date-picker-months-value"]).to eq("2")
+      expect(picker["data-action"]).to include("change->date-preset#submitDate")
+      expect(page).to have_css('input[name="paid_date_range"][value="2026-05-01/2026-05-31"]', visible: :all)
+      expect(page).to have_no_button("Filter")
+      expect(page).to have_link(
+        "Export CSV",
+        href: payouts_hotel_reports_path(
+          hotel,
+          tab: "paid",
+          paid_start_date: Date.new(2026, 5, 1),
+          paid_end_date: Date.new(2026, 5, 31),
+          format: :csv
+        )
+      )
     end
 
     it "exports csv/xls/pdf for upcoming tab" do
@@ -909,6 +1058,21 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include("Month")
       expect(response.body).to include("May 2026")
       expect(response.body).not_to include("07 May 2026")
+    end
+  end
+
+  describe "GET /journal_batches" do
+    it "uses an auto-submitting two-month range picker and CSV dropdown" do
+      get journal_batches_hotel_reports_path(hotel), params: { date_range: "2026-05-01/2026-05-31" }
+
+      page = Capybara.string(response.body)
+      picker = page.find('[data-panels-ui--date-picker-mode-value="range"]')
+      expect(response).to have_http_status(:success)
+      expect(picker["data-panels-ui--date-picker-months-value"]).to eq("2")
+      expect(picker["data-action"]).to include("change->date-preset#submitDate")
+      expect(page).to have_no_button("Filter")
+      expect(page).to have_link("Export CSV", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :csv))
+      expect(page).to have_css('[data-controller~="panels-ui--dropdown-menu"]')
     end
   end
 end

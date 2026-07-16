@@ -1,0 +1,72 @@
+<section aria-labelledby="avatar-preview-heading" class="border-t border-border pt-8">
+  <h2 id="avatar-preview-heading" class="text-lg font-semibold text-foreground">Avatar</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    Compact identity images with deterministic initials or icon fallbacks, semantic status badges,
+    failed-image recovery, and overlapping groups.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> avatars</h3>
+
+        <div class="mt-4 flex flex-wrap items-end gap-4">
+          <% %i[sm default lg].each do |size| %>
+            <div class="space-y-2 text-center">
+              <%= render PanelsUI::Avatar.new(name: "Aisha Rahman", size: size) %>
+              <p class="text-[10px] text-muted-foreground"><%= size %></p>
+            </div>
+          <% end %>
+
+          <%= render PanelsUI::Avatar.new(
+                name: "WAStays",
+                src: image_path("logo/icon-logo.png"),
+                fallback: "WA",
+                size: :lg) %>
+
+          <%= render PanelsUI::Avatar.new(name: "Corporate account", icon: "building-2", size: :lg) %>
+
+          <%= render PanelsUI::Avatar.new(
+                name: "Failed image preview",
+                src: "data:image/png;base64,broken-preview-image",
+                fallback: "FI",
+                size: :lg,
+                data: { testid: "failed-avatar-#{theme}" }) %>
+        </div>
+
+        <div class="mt-5 flex flex-wrap items-center gap-3">
+          <% PanelsUI::Avatar::Badge::VARIANTS.each do |variant| %>
+            <%= render PanelsUI::Avatar.new(name: variant.to_s.humanize, size: :default) do |avatar| %>
+              <% avatar.with_badge(label: variant.to_s.humanize, variant: variant) %>
+            <% end %>
+          <% end %>
+
+          <%= render PanelsUI::Avatar.new(name: "Verified guest", size: :lg) do |avatar| %>
+            <% avatar.with_badge(label: "Verified", variant: :success) do %>
+              <%= app_icon "check", aria: { hidden: "true" } %>
+            <% end %>
+          <% end %>
+        </div>
+
+        <div class="mt-6 grid grid-cols-2 gap-6">
+          <% PanelsUI::AvatarGroup::VARIANTS.each do |variant| %>
+            <div class="space-y-3">
+              <p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"><%= variant %></p>
+              <% %i[sm default lg].each do |size| %>
+                <%= render PanelsUI::AvatarGroup.new(
+                      aria_label: "Assigned staff, #{variant}, #{size}",
+                      size: size,
+                      variant: variant) do |group| %>
+                  <% group.with_avatar(name: "Aisha Rahman") %>
+                  <% group.with_avatar(name: "Daniel Wong") %>
+                  <% group.with_avatar(name: "Nur Imani") %>
+                  <% group.with_count(count: 4) %>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</section>

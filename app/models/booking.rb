@@ -381,6 +381,31 @@ class Booking < ApplicationRecord
     format_number(guest_registration_number, type_code: 2)
   end
 
+  def formatted_tourism_tax_voucher_number
+    format_number(tourism_tax_voucher_number, type_code: 6)
+  end
+
+  def assign_tourism_tax_voucher_number!(user:)
+    with_lock do
+      reload
+      return tourism_tax_voucher_number if tourism_tax_voucher_number.present?
+
+      number = HotelCounter.increment!(hotel: hotel, type: "tourism_tax_voucher")
+      update!(tourism_tax_voucher_number: number)
+      Bookings::RecordAuditLog.new(
+        auditable: self,
+        user: user,
+        action_type: "tourism_tax_voucher_issued",
+        category: "financial",
+        source: "staff",
+        old_value: {},
+        new_value: { "tourism_tax_voucher_number" => number },
+        metadata: { "tourism_tax_total" => tourism_tax_total.to_s, "tourism_tax_collected" => tourism_tax_collected? }
+      ).call!
+      number
+    end
+  end
+
   def room_numbers
     booking_rooms.pluck(:room_number).compact.join(", ")
   end

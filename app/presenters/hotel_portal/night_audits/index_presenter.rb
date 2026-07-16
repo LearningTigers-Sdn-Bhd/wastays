@@ -113,9 +113,9 @@ module HotelPortal
       when "AUDIT_RUNNING" then "border-sky-200 bg-sky-50 text-sky-700"
       when "AUDIT_BLOCKED" then "border-amber-200 bg-amber-50 text-amber-700"
       when "AUDIT_FAILED" then "border-red-200 bg-red-50 text-red-700"
-      when "CLOSED" then "border-slate-200 bg-slate-50 text-slate-700"
+      when "CLOSED" then "border-border bg-muted text-foreground"
       when "FORCE_CLOSED" then "border-red-300 bg-red-50 text-red-800"
-      else "border-slate-200 bg-white text-slate-700"
+      else "border-border bg-card text-foreground"
       end
     end
 
@@ -130,7 +130,7 @@ module HotelPortal
       when "audit_blocked" then "border-amber-200 bg-amber-50 text-amber-700"
       when "closed" then "border-emerald-200 bg-emerald-50 text-emerald-700"
       when "force_closed" then "border-red-300 bg-red-50 text-red-800"
-      else "border-slate-200 bg-slate-50 text-slate-600"
+      else "border-border bg-muted text-muted-foreground"
       end
     end
 
@@ -456,7 +456,7 @@ module HotelPortal
       when "blocked" then "border-amber-200 bg-amber-50 text-amber-700"
       when "failed" then "border-red-200 bg-red-50 text-red-700"
       when "running", "pending" then "border-sky-200 bg-sky-50 text-sky-700"
-      else "border-slate-200 bg-slate-50 text-slate-700"
+      else "border-border bg-muted text-foreground"
       end
     end
 

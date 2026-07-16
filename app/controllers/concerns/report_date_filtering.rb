@@ -26,4 +26,10 @@ module ReportDateFiltering
   def parse_date_range(start_val, end_val)
     [ HotelPortal::Reports::DateRangeParser.parse_date(start_val), HotelPortal::Reports::DateRangeParser.parse_date(end_val) ]
   end
+
+  # Parses a combined "start/end" range value (emitted by the reports and
+  # payout date-range pickers) into [start_date, end_date].
+  def parse_report_date_range_param(value)
+    HotelPortal::Reports::DateRangeParser.parse_date_range_param(value)
+  end
 end

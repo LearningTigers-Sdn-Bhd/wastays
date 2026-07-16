@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class UsersController < HotelPortal::BaseController
+  class UsersController < HotelPortal::SettingsBaseController
     include StaffAssignableRoles
     before_action :authorize_manage_users!
     before_action :set_hotel_access, only: %i[update destroy reactivate]

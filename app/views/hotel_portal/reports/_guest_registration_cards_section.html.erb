@@ -1,31 +1,31 @@
 <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-  <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total Cards</p>
-    <h2 class="text-2xl font-bold tracking-tight text-slate-950"><%= @grc_total_count %></h2>
+  <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Cards</p>
+    <h2 class="text-2xl font-bold tracking-tight text-foreground"><%= @grc_total_count %></h2>
   </div>
-  <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Signed</p>
+  <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Signed</p>
     <h2 class="text-2xl font-bold tracking-tight text-emerald-700"><%= @grc_signed_count %></h2>
   </div>
-  <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Draft</p>
+  <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Draft</p>
     <h2 class="text-2xl font-bold tracking-tight text-amber-700"><%= @grc_draft_count %></h2>
   </div>
 </div>
 
-<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-  <div class="border-b border-slate-200 bg-slate-50/50 px-6 py-5">
+<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+  <div class="border-b border-border bg-muted/50 px-6 py-5">
     <%= form_with url: form_url, method: :get, class: "flex flex-col gap-3 lg:flex-row lg:items-end", data: { controller: "auto-submit", turbo_frame: "grc_results", turbo_action: "advance" } do |f| %>
       <% hidden_fields.each do |name, value| %>
         <%= hidden_field_tag name, value %>
       <% end %>
       <div class="w-full lg:flex-1">
-        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Search</label>
-        <%= f.search_field :q, value: @grc_query, placeholder: "Search GRC no, guest name, or booking ref...", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm", data: { action: "input->auto-submit#submit" } %>
+        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Search</label>
+        <%= f.search_field :q, value: @grc_query, placeholder: "Search GRC no, guest name, or booking ref...", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm", data: { action: "input->auto-submit#submit" } %>
       </div>
       <div class="w-full sm:w-56">
-        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Status</label>
-        <%= select_tag :status, options_for_select([ [ "All", "" ], [ "Draft", "draft" ], [ "Signed", "signed" ] ], @status_filter), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
+        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Status</label>
+        <%= select_tag :status, options_for_select([ [ "All", "" ], [ "Draft", "draft" ], [ "Signed", "signed" ] ], @status_filter), class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
       </div>
     <% end %>
   </div>
@@ -33,47 +33,47 @@
   <%= turbo_frame_tag "grc_results" do %>
     <div class="overflow-x-auto">
       <table class="min-w-full">
-        <thead class="bg-slate-100">
+        <thead class="bg-muted">
           <tr>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">GRC No.</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Guest</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Stay</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
-            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Action</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">GRC No.</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Guest</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Stay</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
+            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Action</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200 bg-white">
+        <tbody class="divide-y divide-border bg-card">
           <% if @grc_cards.any? %>
             <% @grc_cards.each do |card| %>
               <% booking = card.booking %>
-              <tr class="hover:bg-slate-50">
-                <td class="px-6 py-4 text-sm font-black text-slate-950"><%= booking.guest_registration_card_number_display %></td>
+              <tr class="hover:bg-muted">
+                <td class="px-6 py-4 text-sm font-black text-foreground"><%= booking.guest_registration_card_number_display %></td>
                 <td class="px-6 py-4">
-                  <p class="text-sm font-semibold text-slate-950"><%= booking.guest_name %></p>
-                  <p class="text-xs text-slate-500"><%= booking.confirmation_token %></p>
+                  <p class="text-sm font-semibold text-foreground"><%= booking.guest_name %></p>
+                  <p class="text-xs text-muted-foreground"><%= booking.confirmation_token %></p>
                 </td>
-                <td class="px-6 py-4 text-sm text-slate-700">
+                <td class="px-6 py-4 text-sm text-foreground">
                   <%= l(booking.check_in.to_date) %> -> <%= l(booking.check_out.to_date) %>
                 </td>
                 <td class="px-6 py-4">
                   <span class="rounded-full px-2 py-1 text-xs font-bold <%= card.signed? ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' %>"><%= card.status.titleize %></span>
                 </td>
                 <td class="px-6 py-4 text-right">
-                  <%= link_to "View", hotel_booking_guest_registration_card_path(current_hotel, booking), class: "inline-flex rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50", data: { turbo: false } %>
-                  <%= link_to "Print / Save as PDF", hotel_booking_guest_registration_card_path(current_hotel, booking), class: "ml-2 inline-flex rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700", data: { turbo: false } %>
+                  <%= link_to "View", hotel_booking_guest_registration_card_path(current_hotel, booking), class: "inline-flex rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted", data: { turbo: false } %>
+                  <%= link_to "Print / Save as PDF", hotel_booking_guest_registration_card_path(current_hotel, booking), class: "ml-2 inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover", data: { turbo: false } %>
                 </td>
               </tr>
             <% end %>
           <% else %>
             <tr>
-              <td colspan="5" class="px-6 py-14 text-center text-sm font-medium text-slate-500">No guest registration cards found.</td>
+              <td colspan="5" class="px-6 py-14 text-center text-sm font-medium text-muted-foreground">No guest registration cards found.</td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
 
-    <div class="flex justify-center border-t border-slate-200 bg-slate-50/50 px-6 py-4 sm:px-8">
+    <div class="flex justify-center border-t border-border bg-muted/50 px-6 py-4 sm:px-8">
       <%= paginate @grc_cards if @grc_cards.respond_to?(:total_pages) %>
     </div>
   <% end %>

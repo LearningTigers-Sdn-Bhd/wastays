@@ -1,0 +1,20 @@
+<section aria-labelledby="form-submission-preview-heading"
+         class="border-t border-border pt-8"
+         data-controller="system-designs--form-submission-preview"
+         data-action="turbo:submit-start->system-designs--form-submission-preview#start
+                      turbo:submit-end->system-designs--form-submission-preview#end">
+  <h2 id="form-submission-preview-heading" class="text-lg font-semibold text-foreground">Form submission</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    A real Turbo round-trip: the form posts to the server inside a
+    <code>&lt;turbo-frame&gt;</code>. On submit a persistent <code>loading</code> toast appears
+    (and the button switches to “Saving…” via <code>data-turbo-submits-with</code>); when the
+    response lands it's dismissed and replaced by a success or error toast. Submit empty to see
+    inline validation errors drive the error toast.
+  </p>
+
+  <div class="max-w-md rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+    <%= render "system_designs/reservation_form",
+          reservation: @reservation_request || SystemDesigns::ReservationRequest.new,
+          state: :idle %>
+  </div>
+</section>

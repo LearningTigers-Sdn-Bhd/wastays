@@ -1,15 +1,16 @@
-<div class="max-w-[1600px] mx-auto pb-20 space-y-6">
+<div class="w-full space-y-6">
   <div>
-    <%= link_to admin_api_keys_path, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-900" do %>
+    <%= link_to admin_api_keys_path, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground" do %>
       <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
       Back to API Access
     <% end %>
   </div>
 
-  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 px-6 py-6 sm:px-8">
-      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Create API Access Key</h1>
-      <p class="mt-2 text-sm font-medium text-slate-600 sm:text-base">Generate a credential for platform-wide or restricted integration access.</p>
+  <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div class="border-b border-border px-6 py-6 sm:px-8">
+      <%= render PanelsUI::PageHeader.new(
+            title: "Create API Access Key",
+            description: "Generate a credential for platform-wide or restricted integration access.") %>
     </div>
 
     <div class="grid gap-6 px-6 py-6 sm:px-8 sm:py-8 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -28,57 +29,57 @@
 
           <div class="space-y-5">
             <div>
-              <%= f.label :name, "Key Identifier", class: "mb-2 block text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500" %>
-              <%= f.text_field :name, placeholder: "e.g. WhatsApp Chatbot - Main", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0", required: true %>
-              <p class="mt-2 text-sm text-slate-500">Use a specific name so the key owner and purpose are obvious later.</p>
+              <%= f.label :name, "Key Identifier", class: "mb-2 block text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground" %>
+              <%= f.text_field :name, placeholder: "e.g. WhatsApp Chatbot - Main", class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-0", required: true %>
+              <p class="mt-2 text-sm text-muted-foreground">Use a specific name so the key owner and purpose are obvious later.</p>
             </div>
           </div>
 
-          <div class="space-y-5 border-t border-slate-200 pt-8">
+          <div class="space-y-5 border-t border-border pt-8">
             <div>
-              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Scope & Restriction</p>
-              <p class="mt-1 text-sm text-slate-500">Global keys have broad access. Restricted keys reduce blast radius for external integrations.</p>
+              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Scope & Restriction</p>
+              <p class="mt-1 text-sm text-muted-foreground">Global keys have broad access. Restricted keys reduce blast radius for external integrations.</p>
             </div>
 
             <div class="grid gap-5 md:grid-cols-2">
               <div>
-                <%= f.label :bearer_type, "Restriction Level", class: "mb-2 block text-sm font-semibold text-slate-900" %>
-                <%= f.select :bearer_type, [["Global (Superadmin)", ""], ["Hotel Specific", "Hotel"], ["Account Specific", "Account"]], {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-0", id: "bearer_type_select" %>
+                <%= f.label :bearer_type, "Restriction Level", class: "mb-2 block text-sm font-semibold text-foreground" %>
+                <%= f.select :bearer_type, [["Global (Superadmin)", ""], ["Hotel Specific", "Hotel"], ["Account Specific", "Account"]], {}, class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0", id: "bearer_type_select" %>
               </div>
 
               <div id="bearer_id_container" class="hidden">
-                <%= f.label :bearer_id, "Target Entity ID", class: "mb-2 block text-sm font-semibold text-slate-900" %>
-                <%= f.number_field :bearer_id, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0", placeholder: "Enter target ID" %>
-                <p class="mt-2 text-sm text-slate-500">Provide the exact record ID that this key should be allowed to access.</p>
+                <%= f.label :bearer_id, "Target Entity ID", class: "mb-2 block text-sm font-semibold text-foreground" %>
+                <%= f.number_field :bearer_id, class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-0", placeholder: "Enter target ID" %>
+                <p class="mt-2 text-sm text-muted-foreground">Provide the exact record ID that this key should be allowed to access.</p>
               </div>
             </div>
 
-            <div id="scope_explanation" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-relaxed text-slate-600">
-              <strong class="text-slate-900">Global Key:</strong> Can access all hotels and bookings in the entire system.
+            <div id="scope_explanation" class="rounded-2xl border border-border bg-muted px-4 py-4 text-sm leading-relaxed text-muted-foreground">
+              <strong class="text-foreground">Global Key:</strong> Can access all hotels and bookings in the entire system.
             </div>
           </div>
 
-          <div class="mt-auto flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-end">
-            <%= f.submit "Generate API Key", class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800" %>
-            <%= link_to "Cancel", admin_api_keys_path, class: "inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50" %>
+          <div class="mt-auto flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-end">
+            <%= f.submit "Generate API Key", class: "inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover" %>
+            <%= link_to "Cancel", admin_api_keys_path, class: "inline-flex items-center justify-center rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" %>
           </div>
         <% end %>
       </div>
 
       <div class="space-y-6">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 class="text-base font-bold text-slate-950">Restriction Guide</h3>
-        <div class="mt-4 space-y-4 text-sm text-slate-600">
-          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p class="font-semibold text-slate-900">Global</p>
+      <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <h3 class="text-base font-bold text-foreground">Restriction Guide</h3>
+        <div class="mt-4 space-y-4 text-sm text-muted-foreground">
+          <div class="rounded-xl border border-border bg-muted p-4">
+            <p class="font-semibold text-foreground">Global</p>
             <p class="mt-1">Use for internal trusted services that need access across hotels and bookings.</p>
           </div>
-          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p class="font-semibold text-slate-900">Hotel Specific</p>
+          <div class="rounded-xl border border-border bg-muted p-4">
+            <p class="font-semibold text-foreground">Hotel Specific</p>
             <p class="mt-1">Limits requests to one hotel record. Best for hotel-managed automations.</p>
           </div>
-          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p class="font-semibold text-slate-900">Account Specific</p>
+          <div class="rounded-xl border border-border bg-muted p-4">
+            <p class="font-semibold text-foreground">Account Specific</p>
             <p class="mt-1">Allows access across hotels under one account without exposing the full platform.</p>
           </div>
         </div>
@@ -106,13 +107,13 @@
 
       if (type === '') {
         idContainer.classList.add('hidden');
-        explanation.innerHTML = '<strong class="text-slate-900">Global Key:</strong> Can access all hotels and bookings in the entire system.';
+        explanation.innerHTML = '<strong class="text-foreground">Global Key:</strong> Can access all hotels and bookings in the entire system.';
       } else if (type === 'Hotel') {
         idContainer.classList.remove('hidden');
-        explanation.innerHTML = '<strong class="text-slate-900">Hotel Restriction:</strong> This key will only be able to access data for the specific hotel ID you provide.';
+        explanation.innerHTML = '<strong class="text-foreground">Hotel Restriction:</strong> This key will only be able to access data for the specific hotel ID you provide.';
       } else if (type === 'Account') {
         idContainer.classList.remove('hidden');
-        explanation.innerHTML = '<strong class="text-slate-900">Account Restriction:</strong> This key can access hotels belonging to the specified account ID without exposing the rest of the platform.';
+        explanation.innerHTML = '<strong class="text-foreground">Account Restriction:</strong> This key can access hotels belonging to the specified account ID without exposing the rest of the platform.';
       }
     };
 

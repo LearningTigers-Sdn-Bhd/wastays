@@ -1,13 +1,13 @@
 <%= turbo_frame_tag "offcanvas_drawer" do %>
-  <div class="flex h-full flex-col bg-white overflow-hidden">
+  <div class="flex h-full flex-col bg-card overflow-hidden">
     <!-- Header -->
-    <div class="flex items-center gap-x-4 border-b border-slate-100 px-6 py-5">
-      <%= link_to hotel_room_groups_path(@hotel), class: "rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition hover:bg-slate-50" do %>
+    <div class="flex items-center gap-x-4 border-b border-border px-6 py-5">
+      <%= link_to hotel_room_groups_path(@hotel), class: "rounded-xl border border-border bg-card p-2.5 text-muted-foreground shadow-sm transition hover:bg-muted" do %>
         <%= cached_icon "chevron-left", class: "size-4.5" %>
       <% end %>
       <div>
-        <h3 class="text-lg font-bold text-slate-900">Edit Room Group</h3>
-        <p class="mt-1 text-xs text-slate-500">Update the name of your room group / wing.</p>
+        <h3 class="text-lg font-bold text-foreground">Edit Room Group</h3>
+        <p class="mt-1 text-xs text-muted-foreground">Update the name of your room group / wing.</p>
       </div>
     </div>
 
@@ -21,15 +21,15 @@
         <% end %>
 
         <div class="space-y-2">
-          <%= f.label :name, "Group Name", class: "block text-sm font-semibold text-slate-800" %>
-          <%= f.text_field :name, 
-                           class: "py-3.5 px-5 block w-full border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm bg-white",
+          <%= f.label :name, "Group Name", class: "block text-sm font-semibold text-foreground" %>
+          <%= f.text_field :name,
+                           class: "py-3.5 px-5 block w-full border border-border rounded-2xl text-sm focus:border-blue-500 focus:ring-blue-500 transition-all shadow-sm bg-card",
                            required: true %>
         </div>
 
         <div class="flex gap-x-3 pt-4">
-          <%= f.submit "Update Group", class: "flex-1 inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 cursor-pointer" %>
-          <%= link_to "Cancel", hotel_room_groups_path(@hotel), class: "flex-1 inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" %>
+          <%= f.submit "Update Group", class: "flex-1 inline-flex items-center justify-center rounded-2xl bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover cursor-pointer" %>
+          <%= link_to "Cancel", hotel_room_groups_path(@hotel), class: "flex-1 inline-flex items-center justify-center rounded-2xl border border-border bg-card px-5 py-3.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted" %>
         </div>
       <% end %>
     </div>

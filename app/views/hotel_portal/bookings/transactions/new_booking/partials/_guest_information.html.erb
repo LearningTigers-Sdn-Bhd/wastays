@@ -1,8 +1,8 @@
-<div class="relative z-40 h-full overflow-visible rounded-2xl border border-slate-200 bg-white shadow-sm" 
+<div class="relative z-40 h-full overflow-visible rounded-2xl border border-border bg-card shadow-sm"
      data-controller="guest-autocomplete guest-dob"
      data-guest-autocomplete-url-value="<%= search_hotel_guests_path(current_hotel) %>">
-  <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
-    <h3 class="text-sm font-bold text-slate-900">Main Guest Information</h3>
+  <div class="border-b border-border bg-muted/70 px-6 py-4">
+    <h3 class="text-sm font-bold text-foreground">Main Guest Information</h3>
   </div>
   <!-- Banned Guest Warning -->
   <div data-guest-autocomplete-target="bannedWarning" class="hidden border-b border-rose-200 bg-rose-50 px-6 py-3.5 text-sm text-rose-800 flex items-start gap-x-2">
@@ -14,68 +14,68 @@
   </div>
   <div class="p-6 space-y-6">
     <div class="relative z-50">
-      <%= f.label :guest_name, "Full Name", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-      <%= f.text_field :guest_name, required: true, placeholder: "Search or enter name", 
-          class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+      <%= f.label :guest_name, "Full Name", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+      <%= f.text_field :guest_name, required: true, placeholder: "Search or enter name",
+          class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm",
           role: "combobox",
           aria: { expanded: "false", controls: "booking_guest_results", autocomplete: "list" },
-            data: { 
+            data: {
             guest_autocomplete_target: "input", guest_change_confirmation_target: "name",
-            action: "input->guest-autocomplete#clearGuestId input->guest-autocomplete#search focus->guest-autocomplete#search blur->guest-autocomplete#hideOnBlur change->guest-autocomplete#checkBannedStatus" 
+            action: "input->guest-autocomplete#clearGuestId input->guest-autocomplete#search focus->guest-autocomplete#search blur->guest-autocomplete#hideOnBlur change->guest-autocomplete#checkBannedStatus"
           } %>
       <%= f.hidden_field :existing_guest_id, data: { guest_autocomplete_target: "guestId", guest_change_confirmation_target: "guestId" } %>
       <div id="booking_guest_results"
-           class="absolute z-20 w-full mt-1 bg-white rounded-xl border border-slate-200 shadow-xl max-h-60 overflow-y-auto hidden"
+           class="absolute z-20 w-full mt-1 bg-card rounded-xl border border-border shadow-xl max-h-60 overflow-y-auto hidden"
            role="listbox"
            data-guest-autocomplete-target="results"></div>
     </div>
     <div class="grid sm:grid-cols-2 gap-6">
       <div>
-        <%= f.label :guest_email, "Email Address", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-        <%= f.email_field :guest_email, required: true, placeholder: "john@example.com", 
-            class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+        <%= f.label :guest_email, "Email Address", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+        <%= f.email_field :guest_email, required: true, placeholder: "john@example.com",
+            class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm",
             data: { guest_autocomplete_target: "email", guest_change_confirmation_target: "email", action: "change->guest-autocomplete#checkBannedStatus" } %>
       </div>
       <div>
-        <%= f.label :guest_phone, "Phone Number", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-        <%= f.telephone_field :guest_phone, required: true, placeholder: "+60 12-345 6789", 
-            class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+        <%= f.label :guest_phone, "Phone Number", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+        <%= f.telephone_field :guest_phone, required: true, placeholder: "+60 12-345 6789",
+            class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm",
             data: { guest_autocomplete_target: "phone", guest_change_confirmation_target: "phone", action: "change->guest-autocomplete#checkBannedStatus" } %>
       </div>
     </div>
     <div class="grid sm:grid-cols-2 gap-6">
       <div>
-        <%= f.label :guest_country, "Country", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.label :guest_country, "Country", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
         <%= f.text_field :guest_country, placeholder: current_hotel.country.presence || "Malaysia",
-            class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+            class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm",
             data: { guest_autocomplete_target: "country", guest_change_confirmation_target: "country", guest_dob_target: "country", booking_calc_target: "guestCountry", action: "input->booking-calc#calculate input->guest-dob#autofill" } %>
       </div>
       <div>
-        <%= f.label :guest_gender, "Gender", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.label :guest_gender, "Gender", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
         <%= f.select :guest_gender, Guest::GENDERS.map { |gender| [gender.titleize, gender] }, { include_blank: "Select gender" },
-            { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+            { class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm",
               data: { guest_autocomplete_target: "gender", guest_change_confirmation_target: "gender" } } %>
       </div>
     </div>
     <div class="grid sm:grid-cols-2 gap-6">
       <div>
-        <%= f.label :guest_document_type, "Document Type", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.label :guest_document_type, "Document Type", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
         <%= f.select :guest_document_type, Booking::DOCUMENT_TYPES, { include_blank: "Select document type" },
-            { class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+            { class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm",
               data: { guest_autocomplete_target: "documentType", guest_change_confirmation_target: "documentType", guest_dob_target: "documentType", action: "change->guest-dob#autofill" } } %>
       </div>
       <div>
-        <%= f.label :guest_government_id, "IC / Passport No.", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.label :guest_government_id, "IC / Passport No.", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
         <%= f.text_field :guest_government_id, placeholder: "Identity card or passport number",
-            class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+            class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm",
             data: { guest_autocomplete_target: "governmentId", guest_change_confirmation_target: "governmentId", guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
       </div>
     </div>
     <div class="grid sm:grid-cols-2 gap-6">
       <div>
-        <%= f.label :guest_date_of_birth, "Date of Birth", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
+        <%= f.label :guest_date_of_birth, "Date of Birth", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
         <%= f.date_field :guest_date_of_birth,
-            class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+            class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm",
             data: { guest_autocomplete_target: "dateOfBirth", guest_dob_target: "dateOfBirth" } %>
       </div>
     </div>
