@@ -17,6 +17,27 @@ module Reports
         keyword_init: true
       )
 
+      InvoiceDetail = Struct.new(
+        :invoice,
+        :billing_name,
+        :bill_no,
+        :check_in,
+        :check_out,
+        :room_label,
+        :balance,
+        :line_items,
+        keyword_init: true
+      )
+
+      LineItem = Struct.new(
+        :date,
+        :description,
+        :charge,
+        :credit,
+        :balance,
+        keyword_init: true
+      )
+
       AgingTotals = Struct.new(
         :current,
         :days_1_30,
@@ -46,6 +67,7 @@ module Reports
         :unapplied_credit,
         :aging,
         :ledger_rows,
+        :invoice_details,
         :notes,
         keyword_init: true
       )
@@ -54,12 +76,13 @@ module Reports
         new(**kwargs).call
       end
 
-      def initialize(hotel:, hotel_corporate_account:, start_date:, end_date:, currency: nil)
+      def initialize(hotel:, hotel_corporate_account:, start_date:, end_date:, currency: nil, include_invoice_details: false)
         @hotel = hotel
         @hotel_corporate_account = hotel_corporate_account
         @start_date = parse_date(start_date, "Start date")
         @end_date = parse_date(end_date, "End date")
         @requested_currency = currency.to_s.presence
+        @include_invoice_details = include_invoice_details
       end
 
       def call
@@ -83,6 +106,7 @@ module Reports
           unapplied_credit: unapplied_credit,
           aging: aging_totals,
           ledger_rows: ledger_rows,
+          invoice_details: invoice_details,
           notes: notes
         )
       end
@@ -165,8 +189,21 @@ module Reports
         @invoices ||= invoice_scope
           .where(currency: selected_currency)
           .where(issued_on: ..@end_date)
-          .includes({ booking_folio: [ :booking, { booking_billing_party: :billing_terms } ] }, ar_payment_allocations: [ :ar_payment, :reversal ])
+          .includes(invoice_includes, ar_payment_allocations: [ :ar_payment, :reversal ])
           .to_a
+      end
+
+      def invoice_includes
+        return { booking_folio: [ :booking, { booking_billing_party: :billing_terms } ] } unless @include_invoice_details
+
+        {
+          booking_folio: [
+            :folio_transactions,
+            { booking: { booking_rooms: :room_type } },
+            { booking_room: :room_type },
+            { booking_billing_party: :billing_terms }
+          ]
+        }
       end
 
       def payments
@@ -325,6 +362,79 @@ module Reports
           days_61_90: 0.to_d,
           days_over_90: 0.to_d
         }
+      end
+
+      def invoice_details
+        @invoice_details ||= begin
+          return [] unless @include_invoice_details
+
+          period_invoices
+            .sort_by { |invoice| [ invoice.issued_on, invoice.invoice_number ] }
+            .map { |invoice| build_invoice_detail(invoice) }
+        end
+      end
+
+      def build_invoice_detail(invoice)
+        folio = invoice.booking_folio
+        booking = folio&.booking
+        line_items = folio_line_items(folio)
+
+        InvoiceDetail.new(
+          invoice: invoice,
+          billing_name: booking&.guest_name.presence || folio&.display_name,
+          bill_no: invoice.formatted_invoice_number,
+          check_in: booking&.check_in,
+          check_out: booking&.check_out,
+          room_label: room_label_for(folio, booking),
+          balance: line_items.last&.balance || 0.to_d,
+          line_items: line_items
+        )
+      end
+
+      def folio_line_items(folio)
+        return [] if folio.blank?
+
+        balance = 0.to_d
+        folio.folio_transactions.sort_by { |transaction| [ transaction.posting_date, transaction.created_at, transaction.id ] }.map do |transaction|
+          charge, credit = transaction_amounts(transaction)
+          balance += charge - credit
+          LineItem.new(date: transaction.posting_date, description: transaction_description(transaction), charge: charge, credit: credit, balance: balance)
+        end
+      end
+
+      def transaction_amounts(transaction)
+        amount = transaction.amount.to_d
+        if transaction.payment?
+          amount.negative? ? [ amount.abs, 0.to_d ] : [ 0.to_d, amount.abs ]
+        else
+          amount.negative? ? [ 0.to_d, amount.abs ] : [ amount.abs, 0.to_d ]
+        end
+      end
+
+      def transaction_description(transaction)
+        return "Reversal - #{transaction.description}" if transaction.reversal_of_transaction_id.present?
+        return "Refund - #{transaction.description}" if transaction.category == "refund"
+        return "Payment - #{transaction.description}" if transaction.payment?
+
+        transaction.description.to_s
+      end
+
+      def room_label_for(folio, booking)
+        return "-" if booking.blank?
+
+        rooms = if folio&.booking_room.present?
+          [ folio.booking_room ]
+        else
+          booking.booking_rooms
+        end
+
+        labels = rooms.map { |room| room_label(room) }.compact
+        labels.presence&.join(", ") || "-"
+      end
+
+      def room_label(room)
+        type_name = room.room_type_snapshot.to_h["name"].presence || room.room_type&.name
+        [ room.room_number.presence, type_name ].compact.join(" - ").presence
       end
 
       def notes

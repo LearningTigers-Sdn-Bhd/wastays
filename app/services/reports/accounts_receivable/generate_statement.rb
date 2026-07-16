@@ -18,9 +18,10 @@ module Reports
       BOTTOM_MARGIN = 72
       FOOTER_Y = -26
 
-      def initialize(report:, printed_by: nil)
+      def initialize(report:, printed_by: nil, detail: false)
         @report = report
         @printed_by = printed_by.presence || "-"
+        @detail = detail
       end
 
       def generate
@@ -37,17 +38,21 @@ module Reports
 
         draw_header(pdf)
         pdf.move_down 14
-        draw_hotel_information(pdf)
-        pdf.move_down 12
-        draw_statement_information(pdf)
-        pdf.move_down 16
-        draw_transactions(pdf)
-        pdf.move_down 16
-        draw_summary(pdf)
+        draw_hotel_name(pdf)
+        pdf.move_down 10
+        draw_account_details_line(pdf)
+        pdf.move_down 6
+        draw_statement_period(pdf)
+        pdf.move_down 6
+        draw_statement_balance_line(pdf)
         pdf.move_down 14
         draw_aging(pdf)
-        pdf.move_down 14
-        draw_notes(pdf)
+        pdf.move_down 16
+
+        @detail ? draw_invoice_details(pdf) : draw_summary_ledger(pdf)
+        pdf.move_down 16
+        draw_summary(pdf)
+
         draw_footer(pdf)
 
         pdf.render
@@ -66,7 +71,7 @@ module Reports
 
         pdf.move_up 32
         pdf.fill_color DARK_GREEN
-        pdf.text "ACCOUNT STATEMENT", size: 18, style: :bold, align: :right
+        pdf.text "ACCOUNT STATEMENT", size: 13.5, style: :bold, align: :right
         pdf.move_down 12
         pdf.stroke_color DARK_GREEN
         pdf.line_width 0.5
@@ -75,52 +80,38 @@ module Reports
         pdf.fill_color TEXT_PRIMARY
       end
 
-      def draw_hotel_information(pdf)
-        rows = [
-          [ "Hotel Name", @report.hotel.name ],
-          [ "Address", hotel_address ],
-          [ "Contact", hotel_contact ]
-        ].select { |_label, value| value.present? }
-
-        section_title(pdf, "HOTEL INFORMATION")
-        detail_table(pdf, rows)
+      def draw_hotel_name(pdf)
+        pdf.fill_color DARK_GREEN
+        pdf.text @report.hotel.name, size: 14, style: :bold
+        pdf.fill_color TEXT_PRIMARY
       end
 
-      def draw_statement_information(pdf)
-        left_rows = [
-          [ "Corporate Account", @report.corporate_account.name ],
-          [ "Contact Email", @report.contact_email.presence || "-" ],
-          [ "Currency", @report.currency ]
-        ]
-        right_rows = [
-          [ "Statement Period", "#{format_date(@report.start_date)} - #{format_date(@report.end_date)}" ],
-          [ "Payment Terms", payment_terms ],
-          [ "Closing Balance", money(@report.closing_balance) ]
-        ]
-        row_count = [ left_rows.size, right_rows.size ].max
-        rows = [
-          [
-            { content: "ACCOUNT DETAILS", colspan: 2, font_style: :bold, background_color: LIGHT_GRAY },
-            { content: "STATEMENT DETAILS", colspan: 2, font_style: :bold, background_color: LIGHT_GRAY }
-          ]
-        ]
-        rows += row_count.times.map do |index|
-          left = left_rows[index] || [ "", "" ]
-          right = right_rows[index] || [ "", "" ]
-          [ label_cell(left.first), value_cell(left.last), label_cell(right.first), value_cell(right.last) ]
-        end
+      def draw_account_details_line(pdf)
+        one_line_table(pdf, [ "Corporate Account", @report.corporate_account.name ], [ "Contact", account_contact ])
+      end
 
-        label_width = 84
-        value_width = (pdf.bounds.width - (label_width * 2)) / 2.0
-        pdf.table(rows, width: pdf.bounds.width, column_widths: [ label_width, value_width, label_width, value_width ]) do
+      def draw_statement_period(pdf)
+        one_line_table(pdf, [ "Statement Period", "#{format_date(@report.start_date)} - #{format_date(@report.end_date)}" ])
+      end
+
+      def draw_statement_balance_line(pdf)
+        one_line_table(pdf, [ "Opening Balance", money(@report.opening_balance) ], [ "Closing Balance", money(@report.closing_balance) ])
+      end
+
+      def one_line_table(pdf, *pairs)
+        label_width = 100
+        value_width = (pdf.bounds.width - (label_width * pairs.size)) / pairs.size.to_f
+        row = pairs.flat_map { |label, value| [ label_cell(label), value_cell(value) ] }
+        column_widths = pairs.size.times.flat_map { [ label_width, value_width ] }
+
+        pdf.table([ row ], width: pdf.bounds.width, column_widths: column_widths) do
           cells.border_color = BORDER_GRAY
           cells.padding = [ 5, 7, 5, 7 ]
           cells.size = 8
-          row(0).padding = [ 6, 7, 6, 7 ]
         end
       end
 
-      def draw_transactions(pdf)
+      def draw_summary_ledger(pdf)
         rows = [
           [
             header_cell("Date"),
@@ -163,6 +154,80 @@ module Reports
       def transaction_widths(pdf)
         width = pdf.bounds.width
         [ 48, 42, 58, width - 48 - 42 - 58 - 48 - 58 - 58 - 64, 48, 58, 58, 64 ]
+      end
+
+      def draw_invoice_details(pdf)
+        if @report.invoice_details.empty?
+          pdf.table([ [ { content: "No invoices issued in this statement period.", align: :center, text_color: TEXT_MUTED } ] ], width: pdf.bounds.width) do
+            cells.border_color = BORDER_GRAY
+            cells.padding = [ 10, 8, 10, 8 ]
+            cells.size = 8
+          end
+          return
+        end
+
+        @report.invoice_details.each_with_index do |detail, index|
+          pdf.move_down 10 unless index.zero?
+          draw_invoice_detail_header(pdf, detail)
+          draw_invoice_detail_lines(pdf, detail)
+        end
+      end
+
+      def draw_invoice_detail_header(pdf, detail)
+        rows = [
+          [ "Billing Name", "Bill No", "Check In", "Check Out", "Balance" ].map { |label| header_cell(label) },
+          [
+            body_cell(detail.billing_name),
+            body_cell(detail.bill_no),
+            body_cell(detail.check_in ? format_date(detail.check_in.to_date) : "-", color: TEXT_MUTED),
+            body_cell(detail.check_out ? format_date(detail.check_out.to_date) : "-", color: TEXT_MUTED),
+            money_cell(detail.balance)
+          ]
+        ]
+
+        pdf.table(rows, width: pdf.bounds.width, column_widths: invoice_header_widths(pdf)) do
+          cells.border_color = BORDER_GRAY
+          cells.padding = [ 5, 6, 5, 6 ]
+          cells.size = 7.5
+          row(0).background_color = LIGHT_GRAY
+          row(0).font_style = :bold
+          row(1).font_style = :bold
+        end
+      end
+
+      def invoice_header_widths(pdf)
+        width = pdf.bounds.width
+        [ width * 0.32, width * 0.16, width * 0.16, width * 0.16, width * 0.20 ]
+      end
+
+      def draw_invoice_detail_lines(pdf, detail)
+        rows = [
+          [ header_cell("Date"), header_cell("Room"), header_cell("Description"), header_cell("Charges", align: :right), header_cell("Credits", align: :right), header_cell("Balance", align: :right) ]
+        ]
+
+        detail.line_items.each do |item|
+          rows << [
+            body_cell(format_date(item.date), color: TEXT_MUTED),
+            body_cell(detail.room_label, color: TEXT_MUTED),
+            body_cell(item.description),
+            money_cell(item.charge),
+            money_cell(item.credit, credit: item.credit.to_d.positive?),
+            money_cell(item.balance, balance: true)
+          ]
+        end
+
+        pdf.table(rows, width: pdf.bounds.width, column_widths: invoice_line_widths(pdf)) do
+          cells.border_color = BORDER_GRAY
+          cells.padding = [ 4, 6, 4, 6 ]
+          cells.size = 7
+          row(0).background_color = LIGHT_GRAY
+          row(0).font_style = :bold
+        end
+      end
+
+      def invoice_line_widths(pdf)
+        width = pdf.bounds.width
+        [ 58, 90, width - 58 - 90 - 60 - 60 - 64, 60, 60, 64 ]
       end
 
       def draw_summary(pdf)
@@ -215,15 +280,6 @@ module Reports
         end
       end
 
-      def draw_notes(pdf)
-        section_title(pdf, "NOTES")
-        pdf.table(@report.notes.map { |note| [ { content: note, text_color: TEXT_MUTED } ] }, width: pdf.bounds.width) do
-          cells.border_color = BORDER_GRAY
-          cells.padding = [ 5, 8, 5, 8 ]
-          cells.size = 7.5
-        end
-      end
-
       def draw_footer(pdf)
         pdf.repeat(:all) do
           pdf.stroke_color BORDER_GRAY
@@ -239,14 +295,6 @@ module Reports
           at: [ pdf.bounds.right - 75, FOOTER_Y ],
           size: 7,
           color: TEXT_MUTED
-      end
-
-      def detail_table(pdf, rows)
-        pdf.table(rows.map { |label, value| [ label_cell(label), value_cell(value) ] }, width: pdf.bounds.width, column_widths: [ 120, pdf.bounds.width - 120 ]) do
-          cells.border_color = BORDER_GRAY
-          cells.padding = [ 4, 7, 4, 7 ]
-          cells.size = 8
-        end
       end
 
       def section_title(pdf, title, width: pdf.bounds.width, position: nil)
@@ -295,20 +343,8 @@ module Reports
         date.strftime("%d %b %Y")
       end
 
-      def payment_terms
-        days = @report.hotel_corporate_account.payment_terms_days
-        return "-" if days.nil?
-        return "Due on receipt" if days.zero?
-
-        "Net #{days} days"
-      end
-
-      def hotel_address
-        [ @report.hotel.address, @report.hotel.city, @report.hotel.country ].compact_blank.join(", ")
-      end
-
-      def hotel_contact
-        [ @report.hotel.contact_phone, @report.hotel.contact_email ].compact_blank.join(" · ")
+      def account_contact
+        [ @report.contact_email, @report.hotel_corporate_account.contact_phone ].compact_blank.join(" · ").presence || "-"
       end
 
       def escape(value)

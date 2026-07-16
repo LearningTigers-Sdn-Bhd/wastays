@@ -1,7 +1,5 @@
 <% start_date = @presenter&.start_date || @start_date %>
 <% end_date = @presenter&.end_date || @end_date %>
-<% currencies = @presenter&.available_currencies || @available_currencies %>
-<% selected_currency = @presenter&.currency || @selected_currency %>
 
 <div class="w-full space-y-3.5">
   <div>
@@ -18,7 +16,7 @@
                 method: :get,
                 class: "rounded-xl border border-border bg-card p-4 shadow-sm",
                 data: { controller: "auto-submit", turbo_frame: "ar_statement_results", turbo_action: "advance" } do |form| %>
-    <div class="grid gap-3 sm:grid-cols-3">
+    <div class="grid gap-3 sm:grid-cols-2">
       <div>
         <%= form.label :start_date, "Start Date", class: "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground" %>
         <%= form.date_field :start_date, value: start_date, max: end_date, class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground", data: { action: "change->auto-submit#submitNow" } %>
@@ -26,10 +24,6 @@
       <div>
         <%= form.label :end_date, "End Date", class: "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground" %>
         <%= form.date_field :end_date, value: end_date, min: start_date, max: (current_hotel.current_business_date || current_hotel.business_date_for(Time.current)), class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground", data: { action: "change->auto-submit#submitNow" } %>
-      </div>
-      <div>
-        <%= form.label :currency, "Currency", class: "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground" %>
-        <%= form.select :currency, options_for_select(currencies, selected_currency), {}, class: "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground", data: { action: "change->auto-submit#submitNow" } %>
       </div>
     </div>
   <% end %>
@@ -41,20 +35,52 @@
       </div>
     <% else %>
       <div class="flex justify-end">
-        <%= link_to hotel_ar_statement_path(
-              current_hotel,
-              @hotel_corporate_account,
-              start_date: @presenter.start_date,
-              end_date: @presenter.end_date,
-              currency: @presenter.currency,
-              format: :pdf
-            ),
-            target: "_blank",
-            class: "inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover",
-            data: { turbo: false } do %>
-          <%= cached_icon "download", class: "size-4" %>
-          Download PDF
-        <% end %>
+        <div class="relative inline-block text-left" data-controller="dropdown" data-dropdown-align="right">
+          <button type="button"
+                  class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover"
+                  data-dropdown-target="button"
+                  data-action="click->dropdown#toggle keydown->dropdown#handleKeydown"
+                  aria-expanded="false"
+                  aria-haspopup="true">
+            <%= cached_icon "download", class: "size-4" %>
+            Download PDF
+            <%= cached_icon "chevron-down", class: "size-3" %>
+          </button>
+          <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-2xl border border-border bg-card p-1.5 shadow-xl shadow-foreground/10 focus:outline-none" role="menu" aria-orientation="vertical" tabindex="-1">
+            <%= link_to hotel_ar_statement_path(
+                  current_hotel,
+                  @hotel_corporate_account,
+                  start_date: @presenter.start_date,
+                  end_date: @presenter.end_date,
+                  currency: @presenter.currency,
+                  report_type: "summary",
+                  format: :pdf
+                ),
+                role: "menuitem",
+                target: "_blank",
+                class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
+                data: { turbo: false } do %>
+              <%= cached_icon "file-text", class: "size-4 text-muted-foreground" %>
+              <span>Summary</span>
+            <% end %>
+            <%= link_to hotel_ar_statement_path(
+                  current_hotel,
+                  @hotel_corporate_account,
+                  start_date: @presenter.start_date,
+                  end_date: @presenter.end_date,
+                  currency: @presenter.currency,
+                  report_type: "detail",
+                  format: :pdf
+                ),
+                role: "menuitem",
+                target: "_blank",
+                class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
+                data: { turbo: false } do %>
+              <%= cached_icon "file-text", class: "size-4 text-muted-foreground" %>
+              <span>Detail</span>
+            <% end %>
+          </div>
+        </div>
       </div>
 
       <section class="grid grid-cols-2 overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:grid-cols-5">
