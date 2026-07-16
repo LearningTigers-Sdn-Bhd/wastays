@@ -11,8 +11,9 @@ module HotelPortal
         admin_hold: :warning
       }.freeze
 
-      def initialize(segment:, class: nil, **attributes)
+      def initialize(segment:, id: nil, class: nil, **attributes)
         @segment = segment
+        @id = id
         @class = binding.local_variable_get(:class)
         @attributes = attributes
       end
@@ -33,7 +34,7 @@ module HotelPortal
           clipped_left: @segment.clipped_left?,
           clipped_right: @segment.clipped_right?,
           class: @class,
-          id: @segment.dom_id,
+          id: @id.presence || @segment.dom_id,
           **@attributes
         ) do
           tag.span(@segment.label, class: "truncate")

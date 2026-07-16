@@ -131,8 +131,11 @@ RSpec.describe "System design navigation", type: :system do
         const timeline = document.getElementById("timeline-preview-panel-light")
         const header = timeline.querySelector(".panel-timeline__header")
         const room = timeline.querySelector(".panel-timeline__room-summary")
+        const grace = timeline.querySelector("#timeline-preview-booking-grace-panel-light").getBoundingClientRect()
+        const ada = timeline.querySelector("#timeline-preview-booking-ada-panel-light").getBoundingClientRect()
         return {
           overflows: timeline.scrollWidth > timeline.clientWidth,
+          sequentialStaysDoNotOverlap: grace.right <= ada.left,
           timelinePosition: getComputedStyle(timeline).position,
           headerPosition: getComputedStyle(header).position,
           roomPosition: getComputedStyle(room).position
@@ -142,6 +145,7 @@ RSpec.describe "System design navigation", type: :system do
 
     expect(geometry).to include(
       "overflows" => true,
+      "sequentialStaysDoNotOverlap" => true,
       "timelinePosition" => "relative",
       "headerPosition" => "sticky",
       "roomPosition" => "sticky"

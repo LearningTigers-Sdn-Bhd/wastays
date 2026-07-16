@@ -88,6 +88,16 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page.find("#stay-view-booking-1 a")[:"aria-label"]).to eq(booking_segment.accessible_label)
   end
 
+  it "allows a composition to namespace booking and operational segment ids" do
+    render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment, id: "light-booking-1"))
+    expect(page).to have_css("#light-booking-1.panel-timeline__segment")
+    expect(page).to have_no_css("#stay-view-booking-1")
+
+    render_inline(HotelPortal::StayView::OperationalBar.new(segment: operational_segment, id: "light-block-1"))
+    expect(page).to have_css("#light-block-1.panel-timeline__segment")
+    expect(page).to have_no_css("#stay-view-block-1")
+  end
+
   it "omits a booking link when the projection does not permit booking details" do
     redacted = booking_segment.with(capabilities: capabilities.with(view_booking: false), guest_label: "Reserved")
 

@@ -42,6 +42,7 @@ RSpec.describe "System design showcase", type: :request do
     table_preview
     tabs_preview
     time_picker_preview
+    timeline_preview
     toast_preview
     tooltip_preview
   ].freeze
@@ -149,6 +150,15 @@ RSpec.describe "System design showcase", type: :request do
       expect(preview.text).to include("_#{partial}.html.erb")
       expect(document.css("a[href='##{anchor}']").size).to eq(2)
     end
+  end
+
+  it "renders unique ids across side-by-side theme previews" do
+    get system_design_path
+
+    document = Nokogiri::HTML(response.body)
+    ids = document.css("[id]").filter_map { |element| element["id"].presence }
+
+    expect(ids.tally.select { |_id, count| count > 1 }).to be_empty
   end
 
   describe "POST submit-form" do

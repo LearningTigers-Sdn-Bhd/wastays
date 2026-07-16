@@ -16,9 +16,10 @@ module HotelPortal
         no_show: :destructive
       }.freeze
 
-      def initialize(segment:, href: nil, class: nil, link_attributes: {}, **attributes)
+      def initialize(segment:, href: nil, id: nil, class: nil, link_attributes: {}, **attributes)
         @segment = segment
         @href = href
+        @id = id
         @class = binding.local_variable_get(:class)
         @link_attributes = link_attributes
         @attributes = attributes
@@ -42,7 +43,7 @@ module HotelPortal
           href: permitted_href,
           class: @class,
           link_attributes: @link_attributes,
-          id: @segment.dom_id,
+          id: @id.presence || @segment.dom_id,
           **@attributes
         ) do
           tag.span(@segment.guest_label, class: "truncate")

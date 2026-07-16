@@ -39,21 +39,6 @@
         day_cells: cells_for.call,
         booking_segments: [
           ::StayView::BookingSegment.new(
-            dom_id: "timeline-preview-booking-ada",
-            booking_id: 1,
-            booking_room_id: 11,
-            guest_label: "Ada Lovelace",
-            status: :confirmed,
-            check_in: Date.new(2026, 7, 16),
-            check_out: Date.new(2026, 7, 17),
-            start_track: 2,
-            end_track: 4,
-            clipped_left: false,
-            clipped_right: false,
-            accessible_label: "Ada Lovelace, confirmed, room 101, Deluxe King, 16 July 2026 to 17 July 2026",
-            capabilities: capabilities
-          ),
-          ::StayView::BookingSegment.new(
             dom_id: "timeline-preview-booking-grace",
             booking_id: 2,
             booking_room_id: 12,
@@ -66,6 +51,21 @@
             clipped_left: true,
             clipped_right: false,
             accessible_label: "Grace Hopper, checked in, continues from before this range, room 101, Deluxe King, 14 July 2026 to 20 July 2026",
+            capabilities: capabilities
+          ),
+          ::StayView::BookingSegment.new(
+            dom_id: "timeline-preview-booking-ada",
+            booking_id: 1,
+            booking_room_id: 11,
+            guest_label: "Ada Lovelace",
+            status: :confirmed,
+            check_in: Date.new(2026, 7, 20),
+            check_out: Date.new(2026, 7, 21),
+            start_track: 10,
+            end_track: 12,
+            clipped_left: false,
+            clipped_right: false,
+            accessible_label: "Ada Lovelace, confirmed, room 101, Deluxe King, 20 July 2026 to 21 July 2026",
             capabilities: capabilities
           )
         ],
@@ -142,12 +142,17 @@
             <% end %>
             <% room.booking_segments.each do |segment| %>
               <% row.with_segment do %>
-                <%= render HotelPortal::StayView::BookingBar.new(segment: segment, href: "#timeline-preview-heading") %>
+                <%= render HotelPortal::StayView::BookingBar.new(
+                      segment: segment,
+                      href: "#timeline-preview-heading",
+                      id: "#{segment.dom_id}-#{theme}") %>
               <% end %>
             <% end %>
             <% room.operational_segments.each do |segment| %>
               <% row.with_segment do %>
-                <%= render HotelPortal::StayView::OperationalBar.new(segment: segment) %>
+                <%= render HotelPortal::StayView::OperationalBar.new(
+                      segment: segment,
+                      id: "#{segment.dom_id}-#{theme}") %>
               <% end %>
             <% end %>
           <% end %>
