@@ -1,0 +1,77 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe StayView::ApplyFilters do
+  let(:capabilities) do
+    StayView::Capabilities.new(**StayView::Capabilities.members.index_with { false })
+  end
+
+  it "filters room attributes and removes booking states outside the selected status" do
+    confirmed = booking_segment(id: 1, status: :confirmed)
+    checked_in = booking_segment(id: 2, status: :checked_in)
+    matching_room = room_row(
+      room_number: "101",
+      physical_status: :dirty,
+      occupancies: [
+        StayView::Occupancy.new(state: :arrival, booking_id: 1, booking_status: :confirmed, label: "Arrival"),
+        StayView::Occupancy.new(state: :occupied, booking_id: 2, booking_status: :checked_in, label: "Occupied")
+      ],
+      booking_segments: [ confirmed, checked_in ]
+    )
+    other_room = room_row(room_number: "102", physical_status: :ready)
+    group = StayView::RoomGroup.new(room_type_id: 3, name: "Deluxe", rooms: [ matching_room, other_room ])
+    filters = StayView::FilterState.build(
+      room_type_id: 3,
+      booking_status: :confirmed,
+      occupancy: :arrival,
+      physical_status: :dirty
+    )
+
+    result = described_class.call(room_groups: [ group ], filters:)
+
+    expect(result.one?).to be(true)
+    expect(result.first.rooms.map(&:room_number)).to eq([ "101" ])
+    expect(result.first.rooms.first.booking_segments).to eq([ confirmed ])
+    expect(result.first.rooms.first.day_cells.first.occupancies.map(&:booking_status)).to eq([ :confirmed ])
+    expect(result).to be_frozen
+  end
+
+  private
+
+  def booking_segment(id:, status:)
+    StayView::BookingSegment.new(
+      dom_id: "booking-#{id}",
+      booking_id: id,
+      booking_room_id: id,
+      guest_label: "Guest #{id}",
+      status:,
+      check_in: Date.new(2026, 7, 16),
+      check_out: Date.new(2026, 7, 18),
+      start_track: 2,
+      end_track: 6,
+      clipped_left: false,
+      clipped_right: false,
+      accessible_label: "Guest #{id}",
+      capabilities:
+    )
+  end
+
+  def room_row(room_number:, physical_status:, occupancies: [], booking_segments: [])
+    StayView::RoomRow.new(
+      key: "3:#{room_number}",
+      dom_id: "room-#{room_number}",
+      room_number:,
+      room_type_id: 3,
+      room_type_name: "Deluxe",
+      smoking_allowed: false,
+      pets_allowed: false,
+      current_physical_status: physical_status,
+      operational_flags: {},
+      day_cells: [ StayView::DayCell.new(date: Date.new(2026, 7, 16), occupancies:) ],
+      booking_segments:,
+      operational_segments: [],
+      capabilities:
+    )
+  end
+end
