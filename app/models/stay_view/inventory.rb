@@ -36,15 +36,27 @@ module StayView
   end
   RoomStatusRecord = Data.define(:room_type_id, :room_number, :status, :priority, :dnd, :dnd_date)
   RoomBlockRecord = Data.define(:id, :room_type_id, :room_number, :block_type, :reason, :start_date, :end_date)
+  HousekeepingAlertRecord = Data.define(
+    :request_id, :room_type_id, :room_number, :details, :status, :requested_at, :assigned_to_id, :assigned_to_name
+  ) do
+    def initialize(**attributes)
+      attributes[:room_number] = attributes.fetch(:room_number).to_s.freeze
+      attributes[:details] = attributes.fetch(:details).to_s.freeze
+      attributes[:status] = attributes.fetch(:status).to_sym
+      attributes[:assigned_to_name] = attributes[:assigned_to_name].presence&.to_s&.freeze
+      super(**attributes)
+    end
+  end
 
-  Inventory = Data.define(:room_types, :bookings, :group_rooms, :room_statuses, :room_blocks) do
-    def initialize(room_types:, bookings:, group_rooms:, room_statuses:, room_blocks:)
+  Inventory = Data.define(:room_types, :bookings, :group_rooms, :room_statuses, :room_blocks, :housekeeping_alerts) do
+    def initialize(room_types:, bookings:, group_rooms:, room_statuses:, room_blocks:, housekeeping_alerts: [])
       super(
         room_types: Immutable.array(room_types),
         bookings: Immutable.array(bookings),
         group_rooms: Immutable.hash(group_rooms),
         room_statuses: Immutable.array(room_statuses),
-        room_blocks: Immutable.array(room_blocks)
+        room_blocks: Immutable.array(room_blocks),
+        housekeeping_alerts: Immutable.array(housekeeping_alerts)
       )
     end
   end

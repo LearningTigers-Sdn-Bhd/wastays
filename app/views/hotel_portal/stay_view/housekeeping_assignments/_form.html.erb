@@ -1,0 +1,20 @@
+<div class="flex h-full flex-col bg-card">
+  <%= render "hotel_portal/stay_view/sheet_header", title: "Assign room tasks", subtitle: "Room #{@room_key.split(":", 2).last}" %>
+  <%= form_with url: hotel_stay_view_housekeeping_request_assignment_path(current_hotel, @housekeeping_request), method: :patch, scope: :assignment, class: "flex min-h-0 flex-1 flex-col", data: { turbo_stream: true } do |form| %>
+    <%= render "hotel_portal/stay_view/state_fields", state: stay_view_state, return_to: @return_to %>
+    <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
+      <%= render "hotel_portal/stay_view/errors", record: @housekeeping_request, title: "The room tasks could not be assigned." %>
+      <p class="text-sm text-muted-foreground">This updates all active housekeeping requests for this room together.</p>
+      <%= render PanelsUI::FormField.new(form:, attribute: :assigned_to, label: "Assign to") do |field| %>
+        <% field.with_select_menu(
+          [{ label: "Unassigned", value: "" }] + @staff_members.map { |staff| { label: staff.name, value: staff.id } },
+          selected: @housekeeping_request.metadata.to_h["assigned_to"]
+        ) %>
+      <% end %>
+    </div>
+    <div class="flex justify-end gap-2 border-t border-border p-4">
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "click->offcanvas#close" }) do %>Cancel<% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Save assignment<% end %>
+    </div>
+  <% end %>
+</div>

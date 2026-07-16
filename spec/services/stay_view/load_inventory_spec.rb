@@ -76,6 +76,54 @@ RSpec.describe StayView::LoadInventory do
     expect(record.group_name).to be_frozen
   end
 
+  it "loads active hotel-owned and legacy booking-owned housekeeping alerts without booking identity" do
+    room_type = create(:room_type, hotel:, room_numbers: %w[101 102])
+    booking = create(:booking, hotel:, guest_name: "Sensitive Guest", check_in: start_date, check_out: start_date + 2.days)
+    create(:booking_room, booking:, room_type:, room_number: "102")
+    direct = create(
+      :housekeeping_request,
+      booking: nil,
+      hotel:,
+      room_type:,
+      room_number: "101",
+      request_details: "Replace towels",
+      status: "assigned",
+      metadata: { "assigned_to" => 7, "assigned_to_name" => "Sam" }
+    )
+    legacy = create(
+      :housekeeping_request,
+      booking:,
+      hotel: nil,
+      room_type: nil,
+      room_number: nil,
+      request_details: "Bring water",
+      status: "in_progress"
+    )
+    create(:housekeeping_request, booking:, status: "completed", request_details: "Excluded completed")
+    create(:housekeeping_request, booking:, status: "new", archived_at: Time.current, request_details: "Excluded archived")
+    create(:housekeeping_request, booking:, status: "pending", request_details: "Excluded pending")
+
+    alerts = described_class.call(hotel:, date_window: window, capabilities:).housekeeping_alerts
+
+    expect(alerts.map(&:request_id)).to contain_exactly(direct.id, legacy.id)
+    expect(alerts.find { |alert| alert.request_id == direct.id }).to have_attributes(
+      room_type_id: room_type.id,
+      room_number: "101",
+      details: "Replace towels",
+      status: :assigned,
+      assigned_to_id: 7,
+      assigned_to_name: "Sam"
+    )
+    expect(alerts.find { |alert| alert.request_id == legacy.id }).to have_attributes(
+      room_type_id: room_type.id,
+      room_number: "102",
+      details: "Bring water",
+      status: :in_progress
+    )
+    expect(StayView::HousekeepingAlertRecord.members).not_to include(:booking_id, :guest_name)
+    expect(alerts).to be_frozen
+  end
+
   it "loads the primary guest and every occupying group room in one display-ready collection" do
     room_type = create(:room_type, hotel:, name: "Deluxe", room_numbers: %w[101 102 103])
     group = create(:group_booking, hotel:, name: "Conference Group")

@@ -101,6 +101,10 @@ It includes:
 - Sticky date header
 - Room grouping by room type
 - Collapsible room-type groups
+- Sticky room-type headers that remain below the date header until the group's last room leaves the viewport
+- Number-only available-inventory badges per room type and date
+- Permission-gated standard nightly rate per room type and date
+- Sticky timeline footer with number-only available inventory and occupancy percentage per date
 - Centre-of-day booking bars
 - Arrival and departure edges
 - Booking status and guest identity
@@ -261,6 +265,7 @@ Loads all records required for the selected hotel and date window in a bounded n
 - Current room statuses
 - Active room blocks
 - Relevant housekeeping flags
+- Dated room inventory
 - Rates only when enabled and permitted
 
 It must prevent N+1 queries and avoid loading folios, full histories, notes, or guest records that the board does not render.
@@ -278,6 +283,30 @@ Coordinates loading and projection. It returns a `StayView::Board`, not a hash c
 ### `StayView::ProjectRoom`
 
 Builds one immutable room row from preloaded records. It does not execute additional queries.
+
+### Inventory and rate summaries
+
+The Timeline View projects a summary for every visible room type and date:
+
+- The room-type header shows available inventory as a number-only `PanelsUI::Badge`.
+- The standard nightly rate appears as supporting text below the badge when `view_rates?` is true.
+- An authorized user sees `N/A` when no valid standard rate can be resolved for that room type and date.
+- A user without `view_rates?` does not receive rate records or rate placeholders in the rendered HTML.
+
+The standard rate must use the same master-plan and dated-rate resolution as the authoritative booking pricing flow. A dated standard rate falls back to the room type base price where the booking pricing flow does the same. Stay View must not introduce a competing definition of the standard rate.
+
+Available inventory and occupancy use checkout-exclusive nightly occupancy:
+
+```text
+sellable inventory = configured rooms - rooms with an active dated block
+sold inventory     = unique rooms with check_in <= date < check_out
+available inventory = max(sellable inventory - sold inventory, 0)
+occupancy rate      = sold inventory / sellable inventory * 100
+```
+
+A checkout-only room is therefore not sold for the checkout date. When sellable inventory is zero, the occupancy rate is unavailable rather than `0%`. The calculation must be reconciled with the authoritative `RoomInventory` and inventory-sync rules so the Stay View does not present a competing availability count.
+
+Room-type summaries and footer totals describe the currently visible filtered projection. Their accessible labels retain full meaning even though the visible UI is compact, for example `4 rooms available` and `67 percent occupied`.
 
 ### `StayView::ProjectBooking`
 
@@ -470,6 +499,9 @@ PanelsUI owns reusable presentation and interaction foundations:
 - Timeline viewport
 - Sticky room column
 - Sticky date header
+- Sticky group headers constrained by their row group
+- Generic per-date group-summary slots
+- Sticky footer with a sticky first-column label and aligned per-date summary slots
 - Timeline groups, rows, and cells
 - Half-day grid tracks
 - Generic segments
@@ -503,6 +535,8 @@ Stay View owns hotel meaning:
 - Permission-aware action menus
 - Hover/focus booking-detail popovers composed with `PanelsUI::Popover`
 - Timeline and Room View composition
+- Available-inventory and standard-rate summaries
+- Occupancy-rate footer content
 
 ### Helpers
 
@@ -883,7 +917,8 @@ Expected query groups:
 3. Current room statuses
 4. Active room blocks
 5. Relevant housekeeping flags
-6. Rates only when enabled and authorized
+6. Dated room inventory
+7. Standard rates only when enabled and authorized
 
 Requirements:
 
@@ -893,6 +928,7 @@ Requirements:
 - No layout measurement during initial JavaScript render
 - No full booking histories or folios without explicit need
 - Rates and sensitive financial data are not loaded without permission
+- Inventory and occupancy summary query count remains stable as dates and room rows grow
 - Instrument service duration, render duration, row count, and segment count
 
 Before adding indexes, inspect current indexes and query plans. Likely access paths include:
@@ -971,6 +1007,15 @@ Database migrations should only be added when verified query plans demonstrate t
 - Scroll preserved after Turbo update
 - Room-status change updates the board
 - Housekeeping action updates alerts
+- Room-type headers remain sticky below the date header and release after their final room
+- Room-type date cells render number-only available-inventory badges
+- Authorized rate cells render the standard nightly rate or `N/A`
+- Unauthorized responses contain neither rates nor rate placeholders
+- The sticky footer uses the room column for the `Available inventory` label
+- Footer date cells render a bold number-only availability value and an occupancy percentage
+- Checkout-only rooms are available inventory on their checkout date
+- Active room blocks reduce sellable and available inventory
+- Zero sellable inventory produces an unavailable occupancy rate rather than `0%`
 - No duplicate Stimulus listeners after repeated Turbo navigation
 - Relevant mobile/touch workflow
 
@@ -1020,11 +1065,62 @@ Core lifecycle examples must not remain skipped or pending.
 
 ### Phase 6 — Operational parity
 
-- Add housekeeping alerts and actions
-- Add DND and priority indicators
-- Add room blocks
-- Add permission-gated rates and financial signals
-- Validate parity against both legacy boards
+Deliver Phase 6 in ordered slices. Each slice must keep the server-rendered projection authoritative, preserve the legacy boundary, and include its service, component, request, and system coverage before the next dependent slice begins.
+
+#### Slice 6.1 — Operational indicators and housekeeping
+
+- Render the DND and priority state already available through the room-status projection.
+- Load active housekeeping requests in a bounded query set and project presentation-ready alerts without exposing unauthorized guest or booking data.
+- Show housekeeping, DND, and priority indicators in both Timeline View and Room View.
+- Add permission-gated housekeeping actions through the existing authoritative commands and workflows.
+- Retain the existing Stay View room-block projection, action sheets, and authoritative mutations; add any missing parity coverage rather than introducing a second implementation.
+
+#### Slice 6.2 — Inventory summary projection
+
+- Add immutable per-room-type, per-date summary view models for sellable, sold, available, and occupancy values.
+- Reconcile the calculation with authoritative `RoomInventory` and inventory-sync rules.
+- Use checkout-exclusive occupancy and subtract active room blocks from sellable inventory.
+- Calculate summaries after applicable filters so they describe the same visible room projection as the timeline rows.
+- Represent zero sellable inventory as unavailable occupancy rather than `0%`.
+- Prove that summary query count remains stable as dates and room rows grow.
+
+#### Slice 6.3 — Timeline summary structure
+
+- Extend PanelsUI timeline groups with generic per-date summary slots; keep the primitive free of hotel, inventory, and rate meaning.
+- Add sticky room-type headers that remain below the date header and release after their final room leaves the viewport.
+- Render number-only available-inventory badges for every visible room type and date with complete accessible labels.
+- Add a generic sticky timeline footer with a sticky first-column label and aligned per-date summary slots.
+- Preserve exact date-column alignment during horizontal and vertical scrolling.
+
+#### Slice 6.4 — Standard nightly rates
+
+- Resolve the standard nightly rate through the authoritative master-plan and dated-rate pricing flow, including its established base-price fallback.
+- Load rate records only when `view_rates?` is true.
+- Render the standard nightly rate as supporting room-type summary text.
+- Render `N/A` for an authorized missing-rate state.
+- Ensure unauthorized responses contain neither rate values nor rate placeholders.
+
+#### Slice 6.5 — Timeline footer metrics
+
+- Label the sticky footer room column `Available inventory`.
+- Render a bold number-only available-inventory value for every visible date.
+- Render occupancy percentage as supporting text, or an unavailable state when sellable inventory is zero.
+- Derive footer totals from the same filtered summary projection as the room-type values.
+- Add coverage for checkout-day availability and active-block capacity reduction.
+
+#### Slice 6.6 — Financial signals
+
+- Define the exact financial signals that are operationally useful on Stay View before loading or rendering financial data.
+- Map each signal to an existing explicit permission, or introduce an approved capability contract before enabling `view_financial_status?`.
+- Project only the minimum display-ready values required by the board.
+- Omit all financial values and related HTML/data attributes when permission is absent.
+
+#### Slice 6.7 — Parity validation and hardening
+
+- Validate behaviour against both legacy boards with a written parity matrix without referencing or reusing legacy projection code.
+- Verify desktop, mobile, light, dark, keyboard, touch, long-content, empty, conflict, and permission-change states.
+- Verify bounded query counts and instrument service duration, render duration, row count, and segment count.
+- Run the complete Stay View service, component, request, and system suites with no skipped core lifecycle examples.
 
 ### Phase 7 — Adoption
 
@@ -1052,6 +1148,10 @@ The refactor is ready to replace the legacy boards when:
 - Physical status and occupancy remain visually and logically distinct.
 - Current room status is not falsely projected across dates.
 - Filters and legend counts describe the same visible rows.
+- Room-type and footer inventory summaries describe the same visible filtered projection as the timeline rows.
+- Inventory uses checkout-exclusive occupancy and excludes active room blocks from sellable capacity.
+- Standard rates reuse authoritative pricing resolution and are neither loaded nor rendered without permission.
+- Sticky room-type headers and the timeline footer preserve date-column alignment during horizontal and vertical scrolling.
 - View switching and filters are URL-backed.
 - Semantic theme tokens are used without portal palette utilities.
 - Permissions control data loading, rendering, and server mutations.

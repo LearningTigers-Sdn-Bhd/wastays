@@ -148,6 +148,15 @@ RSpec.describe StayView::BuildBoard do
 
     room_numbers.each do |room_number|
       create(:room_status, hotel: current_hotel, room_type:, room_number:, status: "dirty")
+      create(
+        :housekeeping_request,
+        booking: nil,
+        hotel: current_hotel,
+        room_type:,
+        room_number:,
+        status: "new",
+        request_details: "Clean room #{room_number}"
+      )
       booking = create(:booking, hotel: current_hotel, check_in: start_date, check_out: start_date + 2.days)
       create(:booking_room, booking:, room_type:, room_number:)
     end

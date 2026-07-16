@@ -68,6 +68,26 @@ module HotelPortal
         record.errors.add(:base, Array(message).to_sentence)
       end
 
+      def find_housekeeping_request!(id)
+        HousekeepingRequest.includes(booking: :booking_rooms)
+          .left_joins(:booking)
+          .where(archived_at: nil, status: %w[new assigned in_progress])
+          .where("housekeeping_requests.hotel_id = :hotel_id OR bookings.hotel_id = :hotel_id", hotel_id: current_hotel.id)
+          .find(id)
+      end
+
+      def housekeeping_room_key(housekeeping_request)
+        booking_room = housekeeping_request.booking&.booking_rooms&.first
+        room_number = housekeeping_request.room_number.presence || booking_room&.room_number
+        room_type_id = housekeeping_request.room_type_id || booking_room&.room_type_id
+        raise ActiveRecord::RecordNotFound if room_number.blank? || room_type_id.blank?
+
+        room_type = current_hotel.room_types.find(room_type_id)
+        raise ActiveRecord::RecordNotFound unless room_type.room_numbers.map(&:to_s).include?(room_number.to_s)
+
+        "#{room_type.id}:#{room_number}"
+      end
+
       def pointer_proposal?
         params[:proposal] == "pointer"
       end

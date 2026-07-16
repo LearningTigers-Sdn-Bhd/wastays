@@ -61,6 +61,20 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     )
   end
 
+
+  let(:housekeeping_alert) do
+    ::StayView::HousekeepingAlert.new(
+      request_id: 21,
+      room_key: "1:101",
+      details: "Replace towels and replenish the minibar before the guest returns",
+      status: :assigned,
+      requested_at: Time.zone.local(2026, 7, 16, 9, 30),
+      assigned_to_id: 8,
+      assigned_to_name: "Sam Lee",
+      capabilities:
+    )
+  end
+
   it "renders a compact room summary from the immutable row projection" do
     render_inline(HotelPortal::StayView::RoomSummary.new(room: room, data: { room: "101" }))
 
@@ -68,6 +82,31 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_no_css("[data-slot='stay-view-room-summary']", text: room.room_type_name)
     expect(page).to have_css("button[aria-label='Room status: Inspection failed'] .panel-badge-rounded[data-variant='destructive']")
     expect(page).to have_css("##{room.dom_id}-status-panel", text: "Inspection failed", visible: :all)
+  end
+
+
+  it "renders accessible current operational flags and housekeeping details" do
+    operational_room = room.with(
+      operational_flags: { dnd: true, priority: true },
+      housekeeping_alerts: [ housekeeping_alert, housekeeping_alert.with(request_id: 22, assigned_to_name: nil) ]
+    )
+
+    render_inline(HotelPortal::StayView::OperationalIndicators.new(room: operational_room))
+
+    expect(page).to have_css("[data-slot='stay-view-operational-indicators'][aria-label='Current operational indicators for room 101']")
+    expect(page).to have_css("[role='img'][aria-label='Do not disturb'][tabindex='0']")
+    expect(page).to have_css("[role='img'][aria-label='Priority room'][tabindex='0']")
+    expect(page).to have_css("button[aria-label='2 active housekeeping requests']")
+    expect(page).to have_css("##{room.dom_id}-housekeeping-panel[role='dialog']", text: housekeeping_alert.details, visible: :all)
+    expect(page).to have_css("##{room.dom_id}-housekeeping-panel", text: "Assigned · Sam Lee", visible: :all)
+    expect(page).to have_css("##{room.dom_id}-housekeeping-panel", text: "Assigned · Unassigned", visible: :all)
+    expect(page.native.to_html).not_to match(/(?:slate|gray|indigo|red|green)-\d+/)
+  end
+
+  it "renders no operational indicator wrapper when the room has no active flags or requests" do
+    render_inline(HotelPortal::StayView::OperationalIndicators.new(room: room))
+
+    expect(page).to have_no_css("[data-slot='stay-view-operational-indicators']")
   end
 
   it "maps an editable booking projection to an actionable semantic segment" do

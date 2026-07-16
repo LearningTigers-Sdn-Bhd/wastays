@@ -308,6 +308,10 @@ Rails.application.routes.draw do
       resources :room_blocks, only: [ :new, :edit, :create, :update, :destroy ] do
         post :finish, on: :member
       end
+      resources :housekeeping_requests, only: [] do
+        resource :assignment, only: [ :edit, :update ], controller: "housekeeping_assignments"
+        resource :status, only: [ :edit, :update ], controller: "housekeeping_statuses"
+      end
     end
     resources :bookings, only: [ :index, :show, :update ] do
       collection do

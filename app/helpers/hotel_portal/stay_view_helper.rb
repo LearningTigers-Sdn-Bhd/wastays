@@ -74,6 +74,26 @@ module HotelPortal::StayViewHelper
         }
       end
     end
+    if room.housekeeping_alerts.any? && room.capabilities.manage_housekeeping?
+      actions << {
+        label: "Assign room tasks",
+        href: edit_hotel_stay_view_housekeeping_request_assignment_path(
+          current_hotel,
+          room.housekeeping_alerts.first.request_id,
+          return_to:
+        ),
+        icon: "user-round-check"
+      }
+    end
+    if room.capabilities.update_housekeeping_status?
+      room.housekeeping_alerts.each do |alert|
+        actions << {
+          label: "Update task status — #{truncate(alert.details, length: 36)}",
+          href: edit_hotel_stay_view_housekeeping_request_status_path(current_hotel, alert.request_id, return_to:),
+          icon: "clipboard-list"
+        }
+      end
+    end
     actions
   end
 

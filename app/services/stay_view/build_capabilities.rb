@@ -25,6 +25,7 @@ module StayView
       manage_arrivals = permission_slugs.include?("manage_guest_arrival")
       manage_room_status = permission_slugs.include?("manage_room_status")
       view_readiness = manage_room_status || permission_slugs.include?("view_room_readiness")
+      housekeeping_enabled = hotel.feature_enabled?("task_assignment_minibar_log")
 
       Capabilities.new(
         view_board: view_bookings || manage_bookings || view_readiness,
@@ -39,7 +40,8 @@ module StayView
         view_financial_status: false,
         view_room_readiness: view_readiness,
         manage_room_status: manage_room_status,
-        manage_housekeeping: permission_slugs.include?("manage_housekeeping_tasks"),
+        manage_housekeeping: housekeeping_enabled && permission_slugs.include?("manage_housekeeping_tasks"),
+        update_housekeeping_status: housekeeping_enabled && permission_slugs.include?("manage_requests"),
         manage_room_blocks: manage_room_status
       )
     end

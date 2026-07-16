@@ -101,6 +101,61 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_css("##{segment[:id]}-panel", text: "Confirmed", visible: :visible)
   end
 
+  it "shows operational indicators and completes housekeeping workflows from Room View" do
+    plan = create(:plan)
+    hotel.update!(plan:)
+    feature = create(:feature, slug: "task_assignment_minibar_log")
+    create(:plan_feature, plan:, feature:, enabled: true)
+    %w[manage_housekeeping_tasks manage_requests].each do |slug|
+      permission = Permission.find_or_create_by!(slug:) { |record| record.name = slug.humanize }
+      RolePermission.find_or_create_by!(role:, permission:)
+    end
+    housekeeper_role = create(:role, account:, slug: "housekeeper", name: "Housekeeper")
+    housekeeper = create(:user, account:, name: "Sam Lee", role: "hotel_staff")
+    create(:user_hotel_access, user: housekeeper, hotel:, role: housekeeper_role)
+    create(:room_status, hotel:, room_type:, room_number: "101", status: "cleaning", priority: true, dnd: true, dnd_date: Date.current)
+    housekeeping_request = create(
+      :housekeeping_request,
+      booking: nil,
+      hotel:,
+      room_type:,
+      room_number: "101",
+      status: "new",
+      request_details: "Fresh towels"
+    )
+
+    visit hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
+
+    within("#stay_view_room_#{room_type.id}_101") do
+      expect(page).to have_css("[role='img'][aria-label='Do not disturb']")
+      expect(page).to have_css("[role='img'][aria-label='Priority room']")
+      find("button[aria-label='1 active housekeeping request']").click
+      expect(page).to have_css("#stay_view_room_#{room_type.id}_101-housekeeping-panel", text: "Fresh towels", visible: :visible)
+    end
+
+    find("button[aria-label='Actions for room 101']").click
+    click_link "Assign room tasks"
+    within("#offcanvas_drawer") do
+      expect(page).to have_content("updates all active housekeeping requests")
+      find("#assignment_assigned_to-trigger").click
+      find("[role='option']", text: "Sam Lee").click
+      click_button "Save assignment"
+    end
+    expect(housekeeping_request.reload.metadata).to include("assigned_to_name" => "Sam Lee")
+
+    find("button[aria-label='Actions for room 101']").click
+    click_link "Update task status — Fresh towels"
+    within("#offcanvas_drawer") do
+      find("#housekeeping_request_status-trigger").click
+      find("[role='option']", text: "Completed").click
+      click_button "Update status"
+    end
+
+    expect(page).to have_no_css("button[aria-label='1 active housekeeping request']")
+    expect(housekeeping_request.reload.status).to eq("completed")
+    expect(hotel.room_statuses.find_by(room_type:, room_number: "101").status).to eq("ready")
+  end
+
   it "nests Timeline booking actions by guest and opens the selected action sheet" do
     duplicate = create(
       :booking,

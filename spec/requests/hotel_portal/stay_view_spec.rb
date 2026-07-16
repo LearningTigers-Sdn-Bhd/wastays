@@ -19,6 +19,14 @@ RSpec.describe "HotelPortal Stay View", type: :request do
     { "Accept" => Mime[:turbo_stream].to_s, "Turbo-Frame" => "offcanvas_drawer" }
   end
 
+  def enable_housekeeping_feature
+    plan = create(:plan)
+    hotel.update!(plan:)
+    feature = create(:feature, slug: "task_assignment_minibar_log")
+    create(:plan_feature, plan:, feature:, enabled: true)
+    hotel.remove_instance_variable(:@plan_feature_map) if hotel.instance_variable_defined?(:@plan_feature_map)
+  end
+
   before do
     grant("view_bookings")
     grant("manage_bookings")
@@ -62,6 +70,31 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-testid="stay-view-room-cards"', "Room 101", "Room 102")
       expect(response.body).not_to include("stay-view-timeline")
+    end
+
+    it "renders DND, priority, and full read-only housekeeping details in both views" do
+      create(:room_status, hotel:, room_type:, room_number: "101", status: "dirty", priority: true, dnd: true, dnd_date: Date.current)
+      create(
+        :housekeeping_request,
+        booking: nil,
+        hotel:,
+        room_type:,
+        room_number: "101",
+        status: "assigned",
+        request_details: "Replace towels",
+        metadata: { "assigned_to_name" => "Sam Lee" }
+      )
+
+      get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Do not disturb", "Priority room", "Replace towels", "Sam Lee")
+      expect(response.body).not_to include("Assign room tasks", "Update task status")
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Do not disturb", "Priority room", "Replace towels", "Sam Lee")
     end
 
     it "falls back safely for invalid URL state" do
@@ -329,6 +362,143 @@ RSpec.describe "HotelPortal Stay View", type: :request do
         delete hotel_stay_view_room_block_path(hotel, second), params: { return_to: hotel_stay_view_path(hotel) }, headers: turbo_headers
       }.to change(RoomBlock, :count).by(-1)
       expect(response.body).to include('target="stay_view_board"', "Room block removed.")
+    end
+  end
+
+  describe "housekeeping actions" do
+    let!(:housekeeping_request) do
+      create(
+        :housekeeping_request,
+        booking: nil,
+        hotel:,
+        room_type:,
+        room_number: "101",
+        status: "new",
+        request_details: "Fresh towels"
+      )
+    end
+
+    before do
+      enable_housekeeping_feature
+      grant("manage_housekeeping_tasks")
+      grant("manage_requests")
+    end
+
+    it "renders separate assignment and status sheets" do
+      housekeeper_role = create(:role, account: hotel.account, slug: "housekeeper", name: "Housekeeper")
+      housekeeper = create(:user, account: hotel.account, name: "Sam Lee")
+      create(:user_hotel_access, user: housekeeper, hotel:, role: housekeeper_role)
+
+      get edit_hotel_stay_view_housekeeping_request_assignment_path(hotel, housekeeping_request),
+        params: { return_to: hotel_stay_view_path(hotel) },
+        headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Assign room tasks", "all active housekeeping requests", "Sam Lee")
+
+      get edit_hotel_stay_view_housekeeping_request_status_path(hotel, housekeeping_request),
+        params: { return_to: hotel_stay_view_path(hotel) },
+        headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Update task status", "Fresh towels", "In progress", "Completed")
+    end
+
+    it "renders assignment and status actions according to their independent permissions" do
+      manage_requests = Permission.find_by!(slug: "manage_requests")
+      role.role_permissions.find_by!(permission: manage_requests).destroy!
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+      expect(response.body).to include("Assign room tasks")
+      expect(response.body).not_to include("Update task status")
+
+      manage_housekeeping = Permission.find_by!(slug: "manage_housekeeping_tasks")
+      role.role_permissions.find_by!(permission: manage_housekeeping).destroy!
+      create(:role_permission, role:, permission: manage_requests)
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+      expect(response.body).not_to include("Assign room tasks")
+      expect(response.body).to include("Update task status")
+    end
+
+    it "assigns room tasks through the authoritative service and selectively refreshes the room" do
+      housekeeper_role = create(:role, account: hotel.account, slug: "housekeeper", name: "Housekeeper")
+      housekeeper = create(:user, account: hotel.account, name: "Sam Lee")
+      create(:user_hotel_access, user: housekeeper, hotel:, role: housekeeper_role)
+
+      patch hotel_stay_view_housekeeping_request_assignment_path(hotel, housekeeping_request), params: {
+        return_to: hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7),
+        assignment: { assigned_to: housekeeper.id }
+      }, headers: turbo_headers
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("target=\"stay_view_room_#{room_type.id}_101\"", "Room tasks assigned.", "Sam Lee")
+      expect(housekeeping_request.reload).to have_attributes(status: "assigned")
+      expect(housekeeping_request.metadata).to include("assigned_to" => housekeeper.id, "assigned_to_name" => "Sam Lee")
+    end
+
+    it "updates status through the authoritative service and removes completed alerts" do
+      create(:room_status, hotel:, room_type:, room_number: "101", status: "cleaning")
+
+      patch hotel_stay_view_housekeeping_request_status_path(hotel, housekeeping_request), params: {
+        return_to: hotel_stay_view_path(hotel, view: :rooms, date: Date.current),
+        housekeeping_request: { status: "completed" }
+      }, headers: turbo_headers
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('target="stay_view_board"', "Housekeeping status updated.")
+      expect(response.body).not_to include("Fresh towels")
+      expect(housekeeping_request.reload).to have_attributes(status: "completed")
+      expect(hotel.room_statuses.find_by(room_type:, room_number: "101")).to have_attributes(status: "ready")
+    end
+
+    it "uses a 303 HTML fallback and rejects unavailable statuses" do
+      patch hotel_stay_view_housekeeping_request_status_path(hotel, housekeeping_request), params: {
+        return_to: hotel_stay_view_path(hotel, view: :rooms, date: Date.current),
+        housekeeping_request: { status: "in_progress" }
+      }
+
+      expect(response).to have_http_status(:see_other)
+      expect(response).to redirect_to(hotel_stay_view_path(hotel, view: :rooms, date: Date.current))
+
+      patch hotel_stay_view_housekeeping_request_status_path(hotel, housekeeping_request), params: {
+        housekeeping_request: { status: "failed" }
+      }, headers: turbo_headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Status is not available")
+    end
+
+    it "does not allow another hotel's request through either workflow" do
+      other_hotel = create(:hotel)
+      other_type = create(:room_type, hotel: other_hotel, room_numbers: [ "900" ])
+      other_request = create(
+        :housekeeping_request,
+        booking: nil,
+        hotel: other_hotel,
+        room_type: other_type,
+        room_number: "900",
+        status: "new"
+      )
+
+      get edit_hotel_stay_view_housekeeping_request_assignment_path(hotel, other_request)
+      expect(response).to have_http_status(:not_found)
+
+      get edit_hotel_stay_view_housekeeping_request_status_path(hotel, other_request)
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "does not reopen completed or archived requests from stale action URLs" do
+      housekeeping_request.update!(status: "completed")
+
+      get edit_hotel_stay_view_housekeeping_request_status_path(hotel, housekeeping_request)
+      expect(response).to have_http_status(:not_found)
+
+      housekeeping_request.update!(status: "new", archived_at: Time.current)
+      get edit_hotel_stay_view_housekeeping_request_assignment_path(hotel, housekeeping_request)
+      expect(response).to have_http_status(:not_found)
     end
   end
 end

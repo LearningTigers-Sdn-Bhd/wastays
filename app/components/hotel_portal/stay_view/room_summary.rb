@@ -54,7 +54,7 @@ module HotelPortal
 
       def controls
         tag.div(class: "flex shrink-0 items-center gap-1") do
-          safe_join([ amenity_badges, status_popover, actions_menu ].compact)
+          safe_join([ amenity_badges, operational_indicators, status_popover, actions_menu ].compact)
         end
       end
 
@@ -100,6 +100,10 @@ module HotelPortal
             ])
           end
         end
+      end
+
+      def operational_indicators
+        render OperationalIndicators.new(room: @room)
       end
 
       def amenity_badges

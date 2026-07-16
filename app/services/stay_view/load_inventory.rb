@@ -19,7 +19,8 @@ module StayView
         bookings:,
         group_rooms: load_group_rooms(bookings.filter_map(&:group_booking_id).uniq),
         room_statuses: load_room_statuses,
-        room_blocks: load_room_blocks
+        room_blocks: load_room_blocks,
+        housekeeping_alerts: load_housekeeping_alerts
       )
     end
 
@@ -28,7 +29,7 @@ module StayView
     attr_reader :hotel, :date_window, :capabilities
 
     def load_room_types
-      hotel.room_types.order(:name, :id).pluck(:id, :name, :room_numbers, :smoking_allowed, :pets_allowed).map do |values|
+      @room_types ||= hotel.room_types.order(:name, :id).pluck(:id, :name, :room_numbers, :smoking_allowed, :pets_allowed).map do |values|
         RoomTypeRecord.new(**%i[id name room_numbers smoking_allowed pets_allowed].zip(values).to_h)
       end
     end
@@ -120,6 +121,66 @@ module StayView
             start_date: values[5], end_date: values[6]
           )
         end
+    end
+
+    def load_housekeeping_alerts
+      configured_rooms = load_room_keys
+      rows = hotel_owned_housekeeping_rows + legacy_booking_owned_housekeeping_rows
+
+      rows.filter_map do |values|
+        request_id, room_type_id, request_room_number, booking_room_type_id, booking_room_number,
+          details, status, requested_at, created_at, metadata = values
+        room_number = request_room_number.presence || booking_room_number.presence
+        resolved_room_type_id = room_type_id || booking_room_type_id
+        key = [ resolved_room_type_id, room_number.to_s ]
+        next unless room_number.present? && configured_rooms.include?(key)
+
+        metadata = metadata.to_h
+        HousekeepingAlertRecord.new(
+          request_id:,
+          room_type_id: resolved_room_type_id,
+          room_number:,
+          details:,
+          status:,
+          requested_at: (requested_at || created_at).in_time_zone(date_window.time_zone_name),
+          assigned_to_id: metadata["assigned_to"],
+          assigned_to_name: metadata["assigned_to_name"]
+        )
+      end.uniq { |record| [ record.request_id, record.room_type_id, record.room_number ] }
+        .sort_by { |record| [ -record.requested_at.to_i, record.request_id ] }
+    end
+
+    def load_room_keys
+      load_room_types.flat_map do |room_type|
+        room_type.room_numbers.map { |room_number| [ room_type.id, room_number ] }
+      end.to_set
+    end
+
+    def hotel_owned_housekeeping_rows
+      housekeeping_scope
+        .where(housekeeping_requests: { hotel_id: hotel.id })
+        .pluck(*housekeeping_columns)
+    end
+
+    def legacy_booking_owned_housekeeping_rows
+      housekeeping_scope
+        .where(housekeeping_requests: { hotel_id: nil })
+        .where(bookings: { hotel_id: hotel.id })
+        .pluck(*housekeeping_columns)
+    end
+
+    def housekeeping_scope
+      HousekeepingRequest.left_joins(booking: :booking_rooms)
+        .where(archived_at: nil, status: %w[new assigned in_progress])
+    end
+
+    def housekeeping_columns
+      [
+        "housekeeping_requests.id", "housekeeping_requests.room_type_id", "housekeeping_requests.room_number",
+        "booking_rooms.room_type_id", "booking_rooms.room_number", "housekeeping_requests.request_details",
+        "housekeeping_requests.status", "housekeeping_requests.requested_at", "housekeeping_requests.created_at",
+        "housekeeping_requests.metadata"
+      ]
     end
   end
 end

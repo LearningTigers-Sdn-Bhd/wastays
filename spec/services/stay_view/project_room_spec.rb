@@ -55,4 +55,52 @@ RSpec.describe StayView::ProjectRoom do
     expect(segment.end_track).to eq(7)
     expect(row.current_physical_status).to eq(:ready)
   end
+
+
+  it "projects immutable housekeeping alerts without executing SQL" do
+    room_type = StayView::RoomTypeRecord.new(
+      id: 3,
+      name: "Deluxe",
+      room_numbers: [ "101" ],
+      smoking_allowed: false,
+      pets_allowed: false
+    )
+    alert = StayView::HousekeepingAlertRecord.new(
+      request_id: 9,
+      room_type_id: 3,
+      room_number: "101",
+      details: "Fresh towels",
+      status: :assigned,
+      requested_at: Time.zone.local(2026, 7, 16, 9),
+      assigned_to_id: 4,
+      assigned_to_name: "Sam"
+    )
+    sql = []
+    current_window = window
+
+    row = ActiveSupport::Notifications.subscribed(
+      ->(_name, _start, _finish, _id, payload) { sql << payload[:sql] unless payload[:cached] },
+      "sql.active_record"
+    ) do
+      described_class.call(
+        room_type:,
+        room_number: "101",
+        bookings: [],
+        room_status: nil,
+        room_blocks: [],
+        housekeeping_alerts: [ alert ],
+        date_window: current_window,
+        capabilities:
+      )
+    end
+
+    expect(sql).to be_empty
+    expect(row.housekeeping_alerts.sole).to have_attributes(
+      room_key: "3:101",
+      details: "Fresh towels",
+      status: :assigned,
+      assigned_to_name: "Sam"
+    )
+    expect(row.housekeeping_alerts).to be_frozen
+  end
 end

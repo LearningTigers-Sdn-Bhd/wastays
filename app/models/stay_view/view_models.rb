@@ -64,16 +64,29 @@ module StayView
     end
   end
 
+  HousekeepingAlert = Data.define(
+    :request_id, :room_key, :details, :status, :requested_at, :assigned_to_id, :assigned_to_name, :capabilities
+  ) do
+    def initialize(**attributes)
+      attributes[:room_key] = attributes.fetch(:room_key).to_s.freeze
+      attributes[:details] = attributes.fetch(:details).to_s.freeze
+      attributes[:status] = attributes.fetch(:status).to_sym
+      attributes[:assigned_to_name] = attributes[:assigned_to_name].presence&.to_s&.freeze
+      super(**attributes)
+    end
+  end
+
   RoomRow = Data.define(
     :key, :dom_id, :room_number, :room_type_id, :room_type_name, :smoking_allowed, :pets_allowed,
     :current_physical_status, :operational_flags, :day_cells, :booking_segments,
-    :operational_segments, :capabilities
+    :operational_segments, :housekeeping_alerts, :capabilities
   ) do
     def initialize(**attributes)
       %i[key dom_id room_number room_type_name].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
       attributes[:current_physical_status] = attributes[:current_physical_status]&.to_sym
       attributes[:operational_flags] = Immutable.hash(attributes.fetch(:operational_flags))
-      %i[day_cells booking_segments operational_segments].each do |key|
+      attributes[:housekeeping_alerts] ||= []
+      %i[day_cells booking_segments operational_segments housekeeping_alerts].each do |key|
         attributes[key] = Immutable.array(attributes.fetch(key))
       end
       super(**attributes)
@@ -132,7 +145,7 @@ module StayView
   Capabilities = Data.define(
     :view_board, :view_booking, :create_booking, :move_booking, :change_dates, :reassign_room,
     :check_in, :check_out, :view_rates, :view_financial_status, :view_room_readiness,
-    :manage_room_status, :manage_housekeeping, :manage_room_blocks
+    :manage_room_status, :manage_housekeeping, :update_housekeeping_status, :manage_room_blocks
   ) do
     members.each { |name| alias_method "#{name}?", name }
   end

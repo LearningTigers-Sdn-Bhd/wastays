@@ -15,10 +15,19 @@ RSpec.describe StayView::BuildCapabilities do
     create(:user_hotel_access, user:, hotel:, role:)
   end
 
+  def enable_housekeeping
+    plan = create(:plan)
+    hotel.update!(plan:)
+    feature = create(:feature, slug: "task_assignment_minibar_log")
+    create(:plan_feature, plan:, feature:, enabled: true)
+    hotel.remove_instance_variable(:@plan_feature_map) if hotel.instance_variable_defined?(:@plan_feature_map)
+  end
+
   it "maps existing hotel permissions to explicit capabilities" do
+    enable_housekeeping
     grant(
       "view_bookings", "manage_bookings", "manage_guest_arrival", "manage_rates",
-      "manage_room_status", "manage_housekeeping_tasks"
+      "manage_room_status", "manage_housekeeping_tasks", "manage_requests"
     )
 
     capabilities = described_class.call(user:, hotel:)
@@ -35,8 +44,19 @@ RSpec.describe StayView::BuildCapabilities do
     expect(capabilities).to be_view_room_readiness
     expect(capabilities).to be_manage_room_status
     expect(capabilities).to be_manage_housekeeping
+    expect(capabilities).to be_update_housekeeping_status
     expect(capabilities).to be_manage_room_blocks
     expect(capabilities).not_to be_view_financial_status
+  end
+
+
+  it "keeps housekeeping mutations disabled when the plan feature is unavailable" do
+    grant("view_room_readiness", "manage_housekeeping_tasks", "manage_requests")
+
+    capabilities = described_class.call(user:, hotel:)
+
+    expect(capabilities).not_to be_manage_housekeeping
+    expect(capabilities).not_to be_update_housekeeping_status
   end
 
   it "allows a readiness-only user to view a redacted board" do

@@ -2,16 +2,17 @@
 
 module StayView
   class ProjectRoom
-    def self.call(room_type:, room_number:, bookings:, room_status:, room_blocks:, group_rooms: {}, date_window:, capabilities:)
-      new(room_type:, room_number:, bookings:, room_status:, room_blocks:, group_rooms:, date_window:, capabilities:).call
+    def self.call(room_type:, room_number:, bookings:, room_status:, room_blocks:, housekeeping_alerts: [], group_rooms: {}, date_window:, capabilities:)
+      new(room_type:, room_number:, bookings:, room_status:, room_blocks:, housekeeping_alerts:, group_rooms:, date_window:, capabilities:).call
     end
 
-    def initialize(room_type:, room_number:, bookings:, room_status:, room_blocks:, group_rooms:, date_window:, capabilities:)
+    def initialize(room_type:, room_number:, bookings:, room_status:, room_blocks:, housekeeping_alerts:, group_rooms:, date_window:, capabilities:)
       @room_type = room_type
       @room_number = room_number
       @bookings = bookings
       @room_status = room_status
       @room_blocks = room_blocks
+      @housekeeping_alerts = housekeeping_alerts
       @group_rooms = group_rooms
       @date_window = date_window
       @capabilities = capabilities
@@ -43,13 +44,27 @@ module StayView
         day_cells: build_day_cells(operational_segments),
         booking_segments: booking_segments,
         operational_segments: operational_segments,
+        housekeeping_alerts: housekeeping_alerts.map { |alert| project_housekeeping_alert(alert) },
         capabilities: capabilities
       )
     end
 
     private
 
-    attr_reader :room_type, :room_number, :bookings, :room_status, :room_blocks, :group_rooms, :date_window, :capabilities
+    attr_reader :room_type, :room_number, :bookings, :room_status, :room_blocks, :housekeeping_alerts, :group_rooms, :date_window, :capabilities
+
+    def project_housekeeping_alert(alert)
+      HousekeepingAlert.new(
+        request_id: alert.request_id,
+        room_key: "#{alert.room_type_id}:#{alert.room_number}",
+        details: alert.details,
+        status: alert.status,
+        requested_at: alert.requested_at,
+        assigned_to_id: alert.assigned_to_id,
+        assigned_to_name: alert.assigned_to_name,
+        capabilities:
+      )
+    end
 
     def build_day_cells(operational_segments)
       date_window.dates.map do |date|
