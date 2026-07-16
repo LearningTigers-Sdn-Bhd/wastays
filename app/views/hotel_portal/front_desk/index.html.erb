@@ -1,0 +1,59 @@
+<% state = { booking_query: params[:booking_query], booking_status: params[:booking_status], booking_check_in_date: params[:booking_check_in_date], booking_page: params[:booking_page], start_date: @start_date || params[:start_date], end_date: @end_date || params[:end_date], arrival_q: params[:arrival_q], in_house_query: params[:in_house_query], departure_query: params[:departure_query], room_assignment: params[:room_assignment], arrival_page: params[:arrival_page], in_house_page: params[:in_house_page], departure_page: params[:departure_page] }.compact %>
+<div class="mx-auto max-w-[1600px] space-y-6 pb-16" data-front-desk-tab="<%= @tab %>" data-front-desk-view="<%= @view %>">
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Operations</p>
+      <h1 class="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Reservations</h1>
+      <p class="mt-1 text-sm font-medium text-slate-600">Track bookings, arrivals, in-house guests, and departures.</p>
+    </div>
+    <% if @tab == "bookings" && current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+      <div class="relative inline-block text-left" data-controller="dropdown">
+        <button data-action="click->dropdown#toggle click@window->dropdown#hide" type="button" class="inline-flex items-center gap-x-1.5 rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 active:scale-95 md:px-4" id="add-booking-menu-button" aria-expanded="false" aria-haspopup="true">
+          <%= cached_icon "plus", class: "size-4 text-slate-300" %><span class="hidden md:inline">New</span><%= cached_icon "chevron-down", class: "-mr-1 hidden size-4 text-slate-400 md:inline-block" %>
+        </button>
+        <div data-dropdown-target="menu" class="absolute right-0 z-50 mt-2 hidden w-60 origin-top-right rounded-2xl border border-slate-800 bg-slate-900 p-1.5 shadow-xl shadow-slate-950/20" role="menu" aria-labelledby="add-booking-menu-button" tabindex="-1">
+          <div class="border-b border-slate-800 px-3.5 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">Insert Transaction</div>
+          <%= link_to hotel_booking_transaction_quick_booking_path(current_hotel), class: "group flex items-center rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %><%= cached_icon "calendar-plus", class: "mr-3 size-4 text-slate-500" %>New Booking<% end %>
+          <%= link_to hotel_booking_transaction_walk_in_check_in_path(current_hotel), class: "group flex items-center rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %><%= cached_icon "user-check", class: "mr-3 size-4 text-slate-500" %>Walk-in Check-in<% end %>
+          <%= link_to hotel_booking_transaction_backdated_check_in_path(current_hotel), class: "group flex items-center rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:bg-slate-800 hover:text-white", role: "menuitem", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } do %><%= cached_icon "calendar-clock", class: "mr-3 size-4 text-slate-500" %>Backdated Check-in<% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-front-desk-metrics>
+    <% @allowed_tabs.each do |tab| %>
+      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500"><%= tab == "in_house" ? "In House" : tab.titleize %></p>
+        <p class="mt-1 text-3xl font-bold tracking-tight text-slate-950"><%= @metrics.fetch(tab) %></p>
+        <span class="sr-only">metric:<%= tab %>:<%= @metrics.fetch(tab) %></span>
+      </div>
+    <% end %>
+  </section>
+
+  <nav class="relative flex w-full items-center gap-1.5 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm" aria-label="Reservation sections">
+    <% @allowed_tabs.each do |tab| %>
+      <% icon = { "bookings" => "calendar-days", "arrivals" => "user-plus", "in_house" => "users", "departures" => "log-out" }.fetch(tab) %>
+      <%= link_to hotel_front_desk_path(current_hotel, state.merge(tab:, view: @view)), class: "flex flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-xl px-5 py-3 text-xs font-bold transition-all duration-200 active:scale-[0.98] #{tab == @tab ? 'bg-blue-600 text-white shadow-sm' : 'bg-transparent text-slate-500'}", aria: (tab == @tab ? { current: "page" } : {}) do %>
+        <%= cached_icon icon, class: "size-4 #{tab == @tab ? 'text-white' : 'text-slate-400'}" %>
+        <span><%= tab == "in_house" ? "In House" : tab.titleize %></span>
+        <span class="inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold <%= tab == @tab ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600' %>"><%= @metrics.fetch(tab) %></span>
+      <% end %>
+      <span class="sr-only">tab:<%= tab %></span>
+    <% end %>
+  </nav>
+
+  <%= render "toolbar", state: %>
+  <main id="front-desk-results">
+    <span class="sr-only">active-tab:<%= @tab %> active-view:<%= @view %> page:<%= @bookings.current_page %></span>
+    <% if @tab == "bookings" %>
+      <%= render @view == "rooms" ? "bookings_rooms" : "bookings_list", state: %>
+    <% elsif @view == "rooms" %>
+      <% partial = { "arrivals" => "arrivals_rooms", "in_house" => "in_house_rooms", "departures" => "departures_rooms" }.fetch(@tab) %>
+      <%= render partial, state: %>
+    <% else %>
+      <% partial = { "arrivals" => "arrivals_list", "in_house" => "in_house_list", "departures" => "departures_list" }.fetch(@tab) %>
+      <%= render partial, state: %>
+    <% end %>
+  </main>
+</div>

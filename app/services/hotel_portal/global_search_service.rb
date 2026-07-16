@@ -4,12 +4,9 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
   GROUP_PRIORITY = { "Bookings" => 0, "Pages" => 1, "Requests" => 2 }.freeze
   PAGE_RESULTS = [
     { title: "Hotel Dashboard", subtitle: "Overview and recent activity", route: :hotel_dashboard_path, keywords: "dashboard overview recent bookings" },
-    { title: "Arrival Board", subtitle: "Check-ins and arrivals", route: :hotel_arrivals_path, keywords: "arrival board arrivals check in" },
+    { title: "Front Desk", subtitle: "Arrivals, in-house guests, and departures", route: :hotel_front_desk_path, keywords: "front desk arrival board arrivals check in in house guests departures today check outs checked out" },
     { title: "Timeline Board", subtitle: "Centralized booking management and planning", route: :board_hotel_bookings_path, keywords: "booking timeline board calendar tape chart" },
     { title: "Room Status", subtitle: "Live room status and occupancy timeline", route: :hotel_room_status_board_path, keywords: "tape chart room status housekeeping assignment" },
-    { title: "In-House Guests", subtitle: "Current in-house guests", route: :hotel_in_house_guests_path, keywords: "in house guests" },
-    { title: "Departures", subtitle: "Guests checked out today", route: :hotel_checked_out_guests_path, keywords: "today check outs checked out departures" },
-    { title: "Bookings", subtitle: "All hotel bookings", route: :hotel_bookings_path, keywords: "bookings reservations recent bookings" },
     { title: "Folios", subtitle: "Guest folios, balances, and refund due review", route: :hotel_folios_path, keywords: "folios ledger balances balance due refund due finance" },
     { title: "Requests", subtitle: "Housekeeping and complaints", route: :hotel_requests_path, keywords: "requests housekeeping complaints" },
     { title: "Request Archive", subtitle: "Archived housekeeping and complaint requests", route: :hotel_request_archive_path, keywords: "request archive archived housekeeping complaints" },
@@ -59,10 +56,10 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
 
   def quick_actions
     [
-      { group: "Bookings", label: "Go to bookings", url: hotel_bookings_path(@hotel) },
+      { group: "Bookings", label: "Go to reservations", url: hotel_front_desk_path(@hotel, tab: "bookings", view: "list") },
       { group: "Pages", label: "Go to folios", url: hotel_folios_path(@hotel) },
       { group: "Requests", label: "Go to requests", url: hotel_requests_path(@hotel) },
-      { group: "Pages", label: "Go to arrival board", url: hotel_arrivals_path(@hotel) }
+      { group: "Pages", label: "Go to front desk", url: hotel_front_desk_path(@hotel) }
     ]
   end
 

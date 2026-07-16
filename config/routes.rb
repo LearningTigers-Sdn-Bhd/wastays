@@ -417,6 +417,7 @@ Rails.application.routes.draw do
       end
     end
 
+    get "front-desk", to: "front_desk#index", as: :front_desk
     resources :arrivals, only: [ :index ]
     resources :checked_out_guests, only: [ :index ]
     resources :audit_logs, only: [ :index ]

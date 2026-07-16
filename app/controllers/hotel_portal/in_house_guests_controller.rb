@@ -3,19 +3,13 @@
 module HotelPortal
   class InHouseGuestsController < HotelPortal::BaseController
     def index
-      @query_service = HotelPortal::InHouseGuestsQuery.new(
-        hotel: current_hotel,
-        params: params
-      )
+      redirect_to hotel_front_desk_path(current_hotel, in_house_params), status: :moved_permanently
+    end
 
-      @all_in_house_guests = @query_service.call
-      @in_house_guests = @all_in_house_guests.page(params[:page]).per(25)
+    private
 
-      @in_house_count = @query_service.in_house_count
-      @check_outs_today_count = @query_service.check_outs_today_count
-
-      @query = params[:query].to_s.strip
-      @room_assignment = params[:room_assignment].to_s
+    def in_house_params
+      { tab: "in_house", view: "list", in_house_query: params[:query], room_assignment: params[:room_assignment], in_house_page: params[:page] }.compact
     end
   end
 end

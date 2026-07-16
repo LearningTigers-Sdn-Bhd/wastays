@@ -7,9 +7,9 @@ class HotelPortal::Bookings::SyncsController < HotelPortal::BaseController
     result = ChannelManagers::FetchBookingsService.new(hotel: current_hotel).call
 
     if result.success?
-      redirect_to hotel_bookings_path(current_hotel), notice: result.message
+      redirect_to hotel_front_desk_path(current_hotel, tab: "bookings", view: "list"), notice: result.message
     else
-      redirect_to hotel_bookings_path(current_hotel), alert: result.message
+      redirect_to hotel_front_desk_path(current_hotel, tab: "bookings", view: "list"), alert: result.message
     end
   end
 

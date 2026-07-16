@@ -52,7 +52,7 @@ class HotelPortal::RefundRequestsController < HotelPortal::BaseController
   def set_breadcrumbs
     override_breadcrumbs(
       { label: "Operations" },
-      { label: "Bookings", path: hotel_bookings_path(current_hotel) },
+      { label: "Reservations", path: hotel_front_desk_path(current_hotel, tab: "bookings", view: "list") },
       { label: @booking.confirmation_token, path: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details") },
       { label: "Refund Request" }
     )

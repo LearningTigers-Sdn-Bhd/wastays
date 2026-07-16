@@ -34,9 +34,8 @@ RSpec.describe 'Hotel layout shell', type: :system do
     visit hotel_dashboard_path(hotel)
 
     expect(page).to have_link('Dashboard', href: hotel_dashboard_path(hotel))
-    expect(page).to have_link('Arrivals', href: hotel_arrivals_path(hotel), visible: :all)
-    expect(page).to have_link('Bookings', href: hotel_bookings_path(hotel), visible: :all)
-    expect(page).to have_link('In-House Guests', href: hotel_in_house_guests_path(hotel), visible: :all)
+    expect(page).to have_css('summary.sidebar-group-parent', text: 'Front Office', visible: :all)
+    expect(page).to have_link('Reservations', href: hotel_front_desk_path(hotel), visible: :all)
     expect(page).to have_link('Rates & Inventory', href: hotel_inventory_index_path(hotel), visible: :all)
     expect(page).to have_link('Guest Records', href: hotel_guests_path(hotel), visible: :all)
     expect(page).to have_no_link('Hotel Details', href: edit_hotel_profile_path(hotel), visible: :all)

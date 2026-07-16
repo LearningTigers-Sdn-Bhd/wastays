@@ -176,8 +176,11 @@ domain_paths() {
         spec/requests/hotel_portal/night_audits_spec.rb \
         spec/requests/hotel_portal/night_audits_force_roll_spec.rb \
         spec/requests/hotel_portal/arrivals_spec.rb \
+        spec/requests/hotel_portal/front_desk_spec.rb \
+        spec/queries/hotel_portal/front_desk/arrivals_query_spec.rb \
         spec/requests/hotel_portal/in_house_guests_spec.rb \
         spec/requests/hotel_portal/checked_out_guests_spec.rb \
+        spec/queries/hotel_portal/front_desk/departures_query_spec.rb \
         spec/requests/hotel_portal/inventory_dashboards_spec.rb \
         spec/requests/hotel_portal/room_status_board_spec.rb \
         spec/requests/hotel_portal/room_statuses_spec.rb \
@@ -192,8 +195,6 @@ domain_paths() {
         spec/system/hotel/room_status_sidebar_spec.rb \
         spec/system/hotel/operational_exceptions_spec.rb \
         spec/system/hotel/hotel_room_assignment_locks_spec.rb \
-        spec/system/hotel/in_house_guests_page_spec.rb \
-        spec/system/hotel/checked_out_guests_page_spec.rb
       ;;
     financials)
       printf "%s\n" \
@@ -899,7 +900,15 @@ elif (( serial )); then
   while IFS= read -r path; do
     paths+=("$path")
   done < <(existing_domain_paths "$domain")
-  run_serial "${paths[@]}" "${rspec_args[@]}"
+  if (( ${#rspec_args[@]} > 0 )); then
+    run_serial "${paths[@]}" "${rspec_args[@]}"
+  else
+    run_serial "${paths[@]}"
+  fi
 else
-  run_parallel "$domain" "${rspec_args[@]}"
+  if (( ${#rspec_args[@]} > 0 )); then
+    run_parallel "$domain" "${rspec_args[@]}"
+  else
+    run_parallel "$domain"
+  fi
 fi

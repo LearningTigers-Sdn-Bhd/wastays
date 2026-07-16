@@ -57,22 +57,19 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
 
     within("#hotel-sidebar") do
       expect(page).to have_link("Dashboard")
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Front Desk")
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Reservations")
+      expect(page).to have_css("summary.sidebar-group-parent", text: "Front Office")
+      expect(page).to have_css("summary.sidebar-group-parent", text: "Planning & Inventory")
       expect(page).to have_css(".sidebar-section-label", text: "Billing")
       expect(page).to have_css(".sidebar-section-label", text: "Reports")
 
       within(".sidebar-nav-group[data-section-label='']") do
         expect(page).to have_link("Dashboard")
-        expect(page).to have_css("summary.sidebar-group-parent", text: "Front Desk")
-        expect(page).to have_css("summary.sidebar-group-parent", text: "Reservations")
-        expect(page).to have_link("Arrivals", visible: :all)
-        expect(page).to have_link("In-House Guests", visible: :all)
-        expect(page).to have_link("Departures", visible: :all)
+        expect(page).to have_css("summary.sidebar-group-parent", text: "Front Office")
+        expect(page).to have_css("summary.sidebar-group-parent", text: "Planning & Inventory")
+        expect(page).to have_link("Reservations", href: hotel_front_desk_path(hotel), visible: :all)
         expect(page).to have_link("Room Status", visible: :all)
         expect(page).to have_link("Requests", visible: :all)
         expect(page).to have_link("Night Audit", visible: :all)
-        expect(page).to have_link("Bookings", visible: :all)
         expect(page).to have_link("Timeline Board", visible: :all)
         expect(page).to have_link("Rates & Inventory", visible: :all)
         expect(page).to have_link("Guest Records", visible: :all)
@@ -142,10 +139,7 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
 
     within("#hotel-sidebar") do
       expect(page).to have_link("Dashboard", href: hotel_dashboard_path(hotel))
-      expect(page).to have_link("Arrivals", href: hotel_arrivals_path(hotel), visible: :all)
-      expect(page).to have_link("In-House Guests", href: hotel_in_house_guests_path(hotel), visible: :all)
-      expect(page).to have_link("Departures", href: hotel_checked_out_guests_path(hotel), visible: :all)
-      expect(page).to have_link("Bookings", href: hotel_bookings_path(hotel), visible: :all)
+      expect(page).to have_link("Reservations", href: hotel_front_desk_path(hotel), visible: :all)
       expect(page).to have_link("Timeline Board", href: board_hotel_bookings_path(hotel), visible: :all)
       expect(page).to have_link("Rates & Inventory", href: hotel_inventory_index_path(hotel), visible: :all)
       expect(page).to have_link("Room Status", href: hotel_room_status_board_path(hotel), visible: :all)
@@ -157,8 +151,8 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
       expect(page).to have_no_link("Homepage")
       expect(page).to have_link("Night Audit", href: hotel_night_audits_path(hotel), visible: :all)
 
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Front Desk")
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Reservations")
+      expect(page).to have_css("summary.sidebar-group-parent", text: "Front Office")
+      expect(page).to have_css("summary.sidebar-group-parent", text: "Planning & Inventory")
       expect(page).to have_css("summary.sidebar-group-parent", text: "Accounts Receivable")
       expect(page).to have_css("summary.sidebar-group-parent", text: "Financial", visible: :all)
       expect(page).to have_css("summary.sidebar-group-parent", text: "Tax & Compliance", visible: :all)

@@ -181,8 +181,8 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Bookings")
-      expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
+      expect(response.body).to include("Reservations")
+      expect(Nokogiri::HTML(response.body).at_css("a[aria-label='Back to Reservations']")&.[]("href")).to eq(hotel_front_desk_path(hotel, tab: "bookings", view: "list"))
       expect(response.body).to include(%(href="#{booking_details_path(booking)}"))
       expect(response.body).to include('id="folio-operations-heading"')
       expect(response.body).not_to include("Back to Booking")

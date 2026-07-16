@@ -39,15 +39,16 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       create(:pre_checkin, booking: booking, status: "completed", document_status: "uploaded")
     end
 
-    it "returns http success" do
+    it "permanently redirects to Reservations" do
       get "/hotel/#{hotel.id}/bookings"
-      expect(response).to have_http_status(:success)
+      expect(response).to have_http_status(:moved_permanently)
+      expect(response).to redirect_to(hotel_front_desk_path(hotel, tab: "bookings", view: "list"))
     end
 
     it "hides booking creation actions from read-only users" do
       role.permissions.delete(Permission.find_by!(slug: "manage_bookings"))
 
-      get hotel_bookings_path(hotel)
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list" }
 
       expect(response).to have_http_status(:success)
       expect(response.body).not_to include(hotel_booking_transaction_quick_booking_path(hotel))
@@ -66,11 +67,10 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       superadmin = create(:user, :superadmin)
       sign_in_as(superadmin)
 
-      get "/hotel/#{hotel.id}/bookings"
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include(%(href="/hotel/#{hotel.slug}/arrivals"))
-      expect(response.body).to include(%(href="/hotel/#{hotel.slug}/bookings"))
+      expect(response.body).to include(%(href="/hotel/#{hotel.slug}/front-desk"))
       expect(response.body).to include(%(href="/hotel/#{hotel.slug}/settings/general"))
     end
   end
@@ -117,8 +117,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Stay")
       expect(response.body).to include("Room 101")
-      expect(response.body).to include("Bookings")
-      expect(response.body).to include(%(href="#{hotel_bookings_path(hotel)}">Bookings</a>))
+      expect(response.body).to include("Reservations")
+      expect(Nokogiri::HTML(response.body).at_css("a[aria-label='Back to Reservations']")&.[]("href")).to eq(hotel_front_desk_path(hotel, tab: "bookings", view: "list"))
       expect(response.body).to include(booking.confirmation_token)
       expect(response.body).to include(%(href="#{folio_operations_path(booking)}"))
     end

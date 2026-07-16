@@ -1,0 +1,19 @@
+<div class="relative shrink-0" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="end">
+  <button type="button" class="inline-flex size-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-label="Booking actions" aria-expanded="false" aria-haspopup="menu">
+    <%= cached_icon "ellipsis-vertical", class: "size-4" %>
+  </button>
+  <div class="hidden w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl" data-dropdown-target="menu" role="menu">
+    <div class="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Actions</div>
+    <div class="divide-y divide-slate-100 border-t border-slate-100">
+      <% actions.each do |action| %>
+        <div class="py-1">
+          <% if action[:method] %>
+            <%= button_to action[:label], action[:path], method: action[:method], class: "flex w-full items-center rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50", form: { role: "none" }, role: "menuitem", data: action[:data] || {} %>
+          <% else %>
+            <%= link_to action[:label], action[:path], class: "flex items-center rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50", role: "menuitem", data: action[:data] || {} %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

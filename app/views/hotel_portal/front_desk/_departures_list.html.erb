@@ -1,0 +1,54 @@
+<section aria-label="Reservation view" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+  <div class="hidden overflow-x-auto lg:block">
+    <table class="min-w-full table-fixed">
+      <thead class="border-b border-slate-200 bg-slate-50/50">
+        <tr>
+          <% [ "Guest / Reference", "Contact", "Stay Dates", "Checked In", "Checked Out", "Rooms", "Actions" ].each do |header| %>
+            <th class="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 <%= header == 'Actions' ? 'text-right' : 'text-left' %>"><%= header %></th>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200">
+        <% if @bookings.any? %>
+          <% @bookings.each do |booking| %>
+            <% rooms_summary = booking.booking_rooms.group_by { |room| room.room_type_snapshot["name"].presence || room.room_type.name }.map { |name, rooms| "#{rooms.size}x #{name}" }.join(", ").presence || "No rooms assigned" %>
+            <tr class="transition-colors hover:bg-slate-50/80">
+              <th scope="row" class="px-4 py-4 text-left"><%= booking.guest_name %><br><span class="font-mono text-xs font-normal">booking:<%= booking.confirmation_token %></span></th>
+              <td class="px-4 py-4 text-sm"><%= booking.guest_email %><br><%= booking.guest_phone %></td>
+              <td class="px-4 py-4 text-sm"><%= booking.check_in.strftime("%d %b %Y") %> to <%= booking.check_out.strftime("%d %b %Y") %></td>
+              <td class="px-4 py-4 text-sm"><%= booking.checked_in_at&.in_time_zone(current_user.time_zone)&.strftime("%d %b %Y, %I:%M %p") || "—" %></td>
+              <td class="px-4 py-4 text-sm"><%= booking.checked_out_at&.in_time_zone(current_user.time_zone)&.strftime("%d %b %Y, %I:%M %p") || "—" %></td>
+              <td class="px-4 py-4 text-sm"><%= rooms_summary %></td>
+              <td class="px-4 py-4 text-right"><%= link_to "View booking", hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"), class: "inline-flex min-h-9 items-center rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2" %></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr><td colspan="7" class="px-4 py-12 text-center text-sm text-slate-500">No guests have checked out today.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="space-y-3 p-4 lg:hidden">
+    <% if @bookings.any? %>
+      <% @bookings.each do |booking| %>
+        <% rooms_summary = booking.booking_rooms.group_by { |room| room.room_type_snapshot["name"].presence || room.room_type.name }.map { |name, rooms| "#{rooms.size}x #{name}" }.join(", ").presence || "No rooms assigned" %>
+        <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <strong><%= booking.guest_name %></strong>
+          <span class="ml-2 text-xs text-slate-600">Checked out</span>
+          <p class="font-mono text-xs"><%= booking.confirmation_token %></p>
+          <p class="text-sm">Contact: <%= booking.guest_email %> · <%= booking.guest_phone %></p>
+          <p class="text-sm">Stay Dates: <%= booking.check_in.strftime("%d %b %Y") %> to <%= booking.check_out.strftime("%d %b %Y") %></p>
+          <p class="text-sm">Checked In: <%= booking.checked_in_at&.in_time_zone(current_user.time_zone)&.strftime("%d %b %Y, %I:%M %p") || "—" %></p>
+          <p class="text-sm">Checked Out: <%= booking.checked_out_at&.in_time_zone(current_user.time_zone)&.strftime("%d %b %Y, %I:%M %p") || "—" %></p>
+          <p class="text-sm">Rooms: <%= rooms_summary %></p>
+          <%= link_to "View booking", hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"), class: "mt-2 inline-flex min-h-9 items-center rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2" %>
+        </article>
+      <% end %>
+    <% else %>
+      <p class="py-8 text-center text-sm text-slate-500">No guests have checked out today.</p>
+    <% end %>
+  </div>
+
+  <div class="flex justify-center border-t border-slate-200 bg-slate-50/70 p-4"><%= paginate @bookings, param_name: @page_param %></div>
+</section>

@@ -1,0 +1,40 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe HotelPortal::FrontDesk::BookingsQuery do
+  let(:hotel) { create(:hotel, status: "approved") }
+
+  describe "#call" do
+    it "returns all hotel bookings when no date range is selected" do
+      older_booking = create(:booking, hotel:, check_in: hotel_time("2026-07-14"))
+      newer_booking = create(:booking, hotel:, check_in: hotel_time("2026-07-16"))
+      create(:booking, hotel: create(:hotel, status: "approved"), check_in: hotel_time("2026-07-15"))
+
+      expect(described_class.new(hotel:, params: {}).call).to contain_exactly(older_booking, newer_booking)
+    end
+
+    it "uses an end-only date as a single-day filter" do
+      matching_booking = create(:booking, hotel:, check_in: hotel_time("2026-07-15"))
+      create(:booking, hotel:, check_in: hotel_time("2026-07-16"))
+
+      query = described_class.new(hotel:, params: { end_date: "2026-07-15" })
+
+      expect(query.call).to contain_exactly(matching_booking)
+    end
+
+    it "normalizes reversed date ranges" do
+      matching_booking = create(:booking, hotel:, check_in: hotel_time("2026-07-15"))
+
+      query = described_class.new(hotel:, params: { start_date: "2026-07-16", end_date: "2026-07-14" })
+
+      expect(query.start_date).to eq(Date.new(2026, 7, 14))
+      expect(query.end_date).to eq(Date.new(2026, 7, 16))
+      expect(query.call).to include(matching_booking)
+    end
+  end
+
+  def hotel_time(date)
+    Bookings::ScheduledStay.at_hotel_time(hotel:, value: Date.iso8601(date), kind: :check_in)
+  end
+end
