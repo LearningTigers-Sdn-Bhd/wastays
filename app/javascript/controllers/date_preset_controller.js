@@ -37,9 +37,22 @@ export default class extends Controller {
     customDates.classList.toggle("hidden", !custom && !single)
     customDates.classList.toggle("flex", custom || single)
 
+    const singleWrapper = this.element.querySelector("#single-date-wrapper")
+    const customWrapper = this.element.querySelector("#custom-date-wrapper")
+    if (singleWrapper) {
+      singleWrapper.classList.toggle("hidden", !single)
+    }
+    if (customWrapper) {
+      customWrapper.classList.toggle("hidden", !custom)
+    }
+
     customDates.querySelectorAll('input[name="date_range"], input[name="start_date"], input[name="end_date"], input[name="as_of_date"]')
       .forEach((input) => {
-        if (input.name === "end_date") {
+        if (input.name === "date_range") {
+          input.disabled = !custom
+        } else if (input.name === "start_date") {
+          input.disabled = !single
+        } else if (input.name === "end_date") {
           input.disabled = !custom
         } else {
           input.disabled = (!custom && !single)

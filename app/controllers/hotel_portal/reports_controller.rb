@@ -364,7 +364,7 @@ module HotelPortal
       filename_suffix = if @active_guest_report_tab == "meal_prep"
         "meal-prep-#{params[:meal_type]}"
       else
-        @active_guest_report_tab.tr('_', '-')
+        @active_guest_report_tab.tr("_", "-")
       end
 
       respond_to do |format|

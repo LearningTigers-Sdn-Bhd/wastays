@@ -6,7 +6,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
   let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
-  let(:hotel) { create(:hotel, account: account, status: 'registered', plan: plan) }
+  let(:hotel) { create(:hotel, account: account, status: 'registered', plan: plan, allow_boat_information: false) }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 
   before do
@@ -340,6 +340,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
 
     it "updates daily boat schedules" do
+      hotel.update!(allow_boat_information: true)
       patch hotel_general_settings_path(hotel), params: {
         form_id: "hotel_settings",
         hotel: {

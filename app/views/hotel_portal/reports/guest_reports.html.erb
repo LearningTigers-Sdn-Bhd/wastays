@@ -103,18 +103,19 @@
     } %>
   <% elsif @active_guest_report_tab == "meal_prep" %>
     <div class="space-y-6">
-      <div class="px-4 md:px-0 flex flex-wrap items-center gap-2 print:hidden">
-        <% %w[breakfast lunch dinner].each do |m_type| %>
-          <% is_active = (params[:meal_type] == m_type) %>
-          <% count = @meal_prep_counts[m_type] %>
-          <%= link_to guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: "meal_prep", meal_type: m_type),
-              class: "inline-flex h-9 items-center gap-2 rounded-xl px-4 text-xs font-bold transition #{is_active ? 'bg-primary text-primary-foreground shadow-sm' : 'border border-border bg-card text-foreground hover:border-border-interactive hover:bg-muted'}" do %>
-            <span><%= m_type.titleize %></span>
-            <% if count.present? %>
-              <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold <%= is_active ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground' %>">
-                <%= count %>
-              </span>
-            <% end %>
+      <div class="px-4 md:px-0 print:hidden">
+        <%= render PanelsUI::Tabs.new(
+              id: "meal-type-tabs",
+              active: params[:meal_type],
+              variant: :pill,
+              aria_label: "Meal types"
+            ) do |tabs| %>
+          <% %w[breakfast lunch dinner].each do |m_type| %>
+            <% tabs.with_tab(
+                 name: m_type,
+                 label: m_type.titleize,
+                 href: guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: "meal_prep", meal_type: m_type)
+               ) %>
           <% end %>
         <% end %>
       </div>

@@ -34,8 +34,8 @@
       <%= render PanelsUI::MetricCard.new(
             label: "Hotel Status",
             value: status,
-            detail: status.to_s.downcase.in?(%w[live approved]) ? "Ready for guests" : "Setup in progress",
-            detail_variant: status.to_s.downcase.in?(%w[live approved]) ? :success : :neutral,
+            detail: %w[live approved].include?(status.to_s.downcase) ? "Ready for guests" : "Setup in progress",
+            detail_variant: %w[live approved].include?(status.to_s.downcase) ? :success : :neutral,
             icon: "building-2",
             density: :compact) %>
       <%= render PanelsUI::MetricCard.new(
@@ -141,7 +141,7 @@
               name: "hotel[guest_registration_card_fields][]",
               id: "hotel_guest_registration_card_field_#{key}",
               value: key,
-              checked: key.in?(selected_fields),
+              checked: Array(selected_fields).include?(key),
               label: label,
               variant: :card,
               size: :sm,
