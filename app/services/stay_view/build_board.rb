@@ -55,7 +55,7 @@ module StayView
           key = [ room_type.id, room_number ]
           ProjectRoom.call(
             room_type:, room_number:, bookings: bookings.fetch(key, EMPTY), room_status: statuses[key],
-            room_blocks: blocks.fetch(key, EMPTY), date_window:, capabilities:
+            room_blocks: blocks.fetch(key, EMPTY), group_rooms: inventory.group_rooms, date_window:, capabilities:
           )
         end
         RoomGroup.new(room_type_id: room_type.id, name: room_type.name, rooms: rooms)

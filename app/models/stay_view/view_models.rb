@@ -20,19 +20,31 @@ module StayView
     end
   end
 
+  GroupRoomSummary = Data.define(:booking_id, :booking_room_id, :group_position, :room_number, :room_type_name) do
+    def initialize(**attributes)
+      %i[room_number room_type_name].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
+      super(**attributes)
+    end
+  end
+
   BookingSegment = Data.define(
-    :dom_id, :booking_id, :booking_room_id, :guest_label, :status, :check_in, :check_out,
+    :dom_id, :booking_id, :booking_room_id, :guest_label, :primary_guest_name, :booking_type, :status, :check_in, :check_out,
     :start_track, :end_track, :clipped_left, :clipped_right, :accessible_label, :capabilities,
-    :group_booking_id, :group_reference, :group_name, :group_position
+    :group_booking_id, :group_reference, :group_name, :group_position, :group_rooms
   ) do
     alias_method :clipped_left?, :clipped_left
     alias_method :clipped_right?, :clipped_right
 
     def initialize(**attributes)
       %i[group_booking_id group_reference group_name group_position].each { |key| attributes[key] ||= nil }
+      attributes[:primary_guest_name] ||= attributes[:guest_label]
+      attributes[:booking_type] ||= attributes[:group_booking_id].present? ? :group : :single
+      attributes[:group_rooms] ||= []
+      attributes[:booking_type] = attributes.fetch(:booking_type).to_sym
       attributes[:status] = attributes.fetch(:status).to_sym
-      %i[dom_id guest_label accessible_label].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
+      %i[dom_id guest_label primary_guest_name accessible_label].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
       %i[group_reference group_name].each { |key| attributes[key] = attributes[key]&.to_s&.freeze }
+      attributes[:group_rooms] = Immutable.array(attributes.fetch(:group_rooms, []))
       super(**attributes)
     end
   end

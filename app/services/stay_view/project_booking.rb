@@ -2,9 +2,11 @@
 
 module StayView
   class ProjectBooking
-    def self.call(booking:, room_type_name:, date_window:, capabilities:)
+    def self.call(booking:, room_type_name:, group_rooms: [], date_window:, capabilities:)
       tracks = date_window.booking_tracks(booking.check_in, booking.check_out)
       guest_label = capabilities.view_booking? ? booking.guest_name.presence || "Guest" : "Reserved"
+      primary_guest_name = capabilities.view_booking? ? booking.primary_guest_name.presence || guest_label : "Reserved"
+      booking_type = booking.group_booking_id.present? ? :group : :single
       group_reference = booking.group_reference if capabilities.view_booking?
       group_name = booking.group_name if capabilities.view_booking?
       room_label = booking.room_number
@@ -18,6 +20,8 @@ module StayView
         booking_id: booking.booking_id,
         booking_room_id: booking.booking_room_id,
         guest_label: guest_label,
+        primary_guest_name:,
+        booking_type:,
         status: booking.status,
         check_in: booking.check_in,
         check_out: booking.check_out,
@@ -30,8 +34,27 @@ module StayView
         group_booking_id: booking.group_booking_id,
         group_reference:,
         group_name:,
-        group_position: booking.group_position
+        group_position: booking.group_position,
+        group_rooms: project_group_rooms(group_rooms, booking, capabilities)
       )
     end
+
+    def self.project_group_rooms(group_rooms, booking, capabilities)
+      return [] unless capabilities.view_booking? && booking.group_booking_id.present?
+
+      group_rooms.filter_map do |room|
+        next if room.booking_id == booking.booking_id
+
+        GroupRoomSummary.new(
+          booking_id: room.booking_id,
+          booking_room_id: room.booking_room_id,
+          group_position: room.group_position,
+          room_number: room.room_number,
+          room_type_name: room.room_type_name
+        )
+      end
+    end
+
+    private_class_method :project_group_rooms
   end
 end

@@ -65,8 +65,9 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     render_inline(HotelPortal::StayView::RoomSummary.new(room: room, data: { room: "101" }))
 
     expect(page).to have_css("[data-slot='stay-view-room-summary'][data-room='101']", text: "101")
-    expect(page).to have_css(".truncate", text: room.room_type_name)
-    expect(page).to have_css(".panel-badge[data-variant='destructive']", text: "Inspection failed")
+    expect(page).to have_no_css("[data-slot='stay-view-room-summary']", text: room.room_type_name)
+    expect(page).to have_css("button[aria-label='Room status: Inspection failed'] .panel-badge-rounded[data-variant='destructive']")
+    expect(page).to have_css("##{room.dom_id}-status-panel", text: "Inspection failed", visible: :all)
   end
 
   it "maps an editable booking projection to an actionable semantic segment" do
@@ -81,19 +82,38 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
       "[data-clipped-left='true'][data-clipped-right='false']"
     )
     expect(page).to have_link(
-      booking_segment.guest_label,
-      href: "/hotel/1/bookings/1",
-      exact: true
+      href: "/hotel/1/bookings/1"
     )
-    expect(page.find("#stay-view-booking-1 a")[:"aria-label"]).to eq(booking_segment.accessible_label)
+    expect(page.find("#stay-view-booking-1-trigger")[:"aria-label"]).to eq(booking_segment.accessible_label)
+    expect(page.find("#stay-view-booking-1-trigger")).to have_text(booking_segment.guest_label)
+    expect(page.find("#stay-view-booking-1-trigger")).to have_text("Checked in")
+    expect(page).to have_css("#stay-view-booking-1[data-action*='mouseenter->panels-ui--popover#show']")
+    expect(page).to have_css("#stay-view-booking-1-panel", text: "Single booking", visible: :all)
   end
 
   it "shows group identity on a grouped booking segment" do
-    grouped = booking_segment.with(group_booking_id: 7, group_reference: "0000001-1", group_name: "Tour Group", group_position: 2)
+    grouped = booking_segment.with(
+      group_booking_id: 7,
+      group_reference: "0000001-1",
+      group_name: "Tour Group",
+      group_position: 2,
+      booking_type: :group,
+      group_rooms: [
+        StayView::GroupRoomSummary.new(
+          booking_id: 2,
+          booking_room_id: 12,
+          group_position: 1,
+          room_number: "201",
+          room_type_name: "Suite"
+        )
+      ]
+    )
 
     render_inline(HotelPortal::StayView::BookingBar.new(segment: grouped))
 
     expect(page).to have_text("#{booking_segment.guest_label} · 0000001-1")
+    expect(page).to have_css("#stay-view-booking-1-panel", text: "Group booking", visible: :all)
+    expect(page).to have_css("#stay-view-booking-1-panel", text: "201 – Suite", visible: :all)
   end
 
   it "allows a composition to namespace booking and operational segment ids" do
@@ -112,7 +132,9 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     render_inline(HotelPortal::StayView::BookingBar.new(segment: redacted, href: "/hotel/1/bookings/1"))
 
     expect(page).to have_no_link
-    expect(page).to have_css("[role='img'][aria-label='#{booking_segment.accessible_label}']", text: "Reserved")
+    expect(page).to have_css("#stay-view-booking-1-trigger", text: "Reserved")
+    expect(page).to have_css("#stay-view-booking-1-trigger", text: "Checked in")
+    expect(page.find("#stay-view-booking-1-trigger")[:"aria-label"]).to eq(booking_segment.accessible_label)
   end
 
   it "maps operational projections to a hatched lower lane" do
@@ -124,6 +146,24 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
       text: "Air-conditioning maintenance"
     )
     expect(page).to have_no_link
+  end
+
+  it "renders room identity with icon-only amenity tooltips" do
+    restricted_room = room.with(pets_allowed: false)
+    render_inline(HotelPortal::StayView::RoomSummary.new(
+      room: restricted_room,
+      actions: [ { href: "/rooms/101", icon: "sparkles", label: "Change status" } ]
+    ))
+
+    expect(page).to have_css("[data-slot='stay-view-room-summary']", text: "101")
+    expect(page).to have_no_css("[data-slot='stay-view-room-summary']", text: room.room_type_name)
+    expect(page).to have_css("[data-slot='stay-view-room-summary'] > .w-full.justify-between")
+    expect(page).to have_css(".panel-badge-rounded[role='img'][aria-label='No smoking'][tabindex='0']")
+    expect(page).to have_css(".panel-badge-rounded[role='img'][aria-label='No pets'][tabindex='0']")
+    expect(page).to have_css("##{room.dom_id}-smoking-tooltip[role='tooltip']", text: "No smoking", visible: :all)
+    expect(page).to have_css("##{room.dom_id}-pets-tooltip[role='tooltip']", text: "No pets", visible: :all)
+    expect(page).to have_css(".panel-badge-rounded svg[aria-hidden='true']", count: 3)
+    expect(page).to have_css("##{room.dom_id}-actions-trigger svg", count: 1)
   end
 
   it "rejects objects outside the Phase 1 projection contract" do

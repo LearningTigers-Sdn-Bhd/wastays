@@ -40,6 +40,24 @@ RSpec.describe PanelsUI::Popover, type: :component do
     expect(trigger["aria-controls"]).to eq("pop-panel")
   end
 
+  it "supports a hover/focus link trigger and caller attributes on the root" do
+    render_popover(
+      trigger_on: :hover,
+      root_class: "timeline-segment",
+      style: "grid-column: 2 / 6",
+      data: { tone: "success" },
+      trigger_args: { href: "/bookings/1", unstyled: true, aria_label: "Open Ada's booking" }
+    )
+
+    root = page.find("#pop")
+    expect(root[:class]).to include("timeline-segment")
+    expect(root[:style]).to eq("grid-column: 2 / 6")
+    expect(root["data-tone"]).to eq("success")
+    expect(page).to have_link("Open", href: "/bookings/1")
+    expect(page.find("#pop-trigger")["aria-label"]).to eq("Open Ada's booking")
+    expect(page.find("#pop-trigger")["data-action"]).to be_nil
+  end
+
   it "renders the trigger content alongside a closed dialog panel" do
     render_popover
 

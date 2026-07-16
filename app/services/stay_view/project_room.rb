@@ -2,16 +2,17 @@
 
 module StayView
   class ProjectRoom
-    def self.call(room_type:, room_number:, bookings:, room_status:, room_blocks:, date_window:, capabilities:)
-      new(room_type:, room_number:, bookings:, room_status:, room_blocks:, date_window:, capabilities:).call
+    def self.call(room_type:, room_number:, bookings:, room_status:, room_blocks:, group_rooms: {}, date_window:, capabilities:)
+      new(room_type:, room_number:, bookings:, room_status:, room_blocks:, group_rooms:, date_window:, capabilities:).call
     end
 
-    def initialize(room_type:, room_number:, bookings:, room_status:, room_blocks:, date_window:, capabilities:)
+    def initialize(room_type:, room_number:, bookings:, room_status:, room_blocks:, group_rooms:, date_window:, capabilities:)
       @room_type = room_type
       @room_number = room_number
       @bookings = bookings
       @room_status = room_status
       @room_blocks = room_blocks
+      @group_rooms = group_rooms
       @date_window = date_window
       @capabilities = capabilities
     end
@@ -19,7 +20,13 @@ module StayView
     def call
       status = ResolveCurrentRoomStatus.call(room_status: room_status, operational_date: date_window.operational_date)
       booking_segments = bookings.map do |booking|
-        ProjectBooking.call(booking:, room_type_name: room_type.name, date_window:, capabilities:)
+        ProjectBooking.call(
+          booking:,
+          room_type_name: room_type.name,
+          group_rooms: group_rooms.fetch(booking.group_booking_id, []),
+          date_window:,
+          capabilities:
+        )
       end
       operational_segments = room_blocks.map { |block| project_block(block) }
 
@@ -42,7 +49,7 @@ module StayView
 
     private
 
-    attr_reader :room_type, :room_number, :bookings, :room_status, :room_blocks, :date_window, :capabilities
+    attr_reader :room_type, :room_number, :bookings, :room_status, :room_blocks, :group_rooms, :date_window, :capabilities
 
     def build_day_cells(operational_segments)
       date_window.dates.map do |date|

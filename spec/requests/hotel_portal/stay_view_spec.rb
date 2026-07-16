@@ -46,7 +46,12 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to match(/<turbo-frame[^>]+id="stay_view_board"/)
       expect(response.body).to include("stay-view-timeline", "Ada Lovelace")
-      expect(response.body).to include('data-density="comfortable"')
+      expect(response.body).to include('data-density="compact"')
+      expect(response.body).not_to include('id="density-select-menu"')
+      expect(response.body).to include('tabs-root--pill', 'data-controller="stay-view--filters"')
+      expect(response.body).to include('id="start_date-date-picker"', 'id="days-select-menu"')
+      expect(response.body).to include("All room types", "All booking statuses", "All occupancy states", "All physical statuses")
+      expect(response.body).to include("Confirmed")
     end
 
     it "renders Room View from the shared projection" do

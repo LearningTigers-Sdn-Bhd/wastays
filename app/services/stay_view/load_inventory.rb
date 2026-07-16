@@ -13,9 +13,11 @@ module StayView
     end
 
     def call
+      bookings = load_bookings
       Inventory.new(
         room_types: load_room_types,
-        bookings: load_bookings,
+        bookings:,
+        group_rooms: load_group_rooms(bookings.filter_map(&:group_booking_id).uniq),
         room_statuses: load_room_statuses,
         room_blocks: load_room_blocks
       )
@@ -33,11 +35,12 @@ module StayView
 
     def load_bookings
       guest_column = capabilities.view_booking? ? "bookings.guest_name" : Arel.sql("NULL")
+      primary_guest_column = capabilities.view_booking? ? primary_guest_name_column : Arel.sql("NULL")
       group_reference_column = capabilities.view_booking? ? "group_bookings.reservation_number" : Arel.sql("NULL")
       group_name_column = capabilities.view_booking? ? "group_bookings.name" : Arel.sql("NULL")
       columns = [
         "booking_rooms.id", "bookings.id", "booking_rooms.room_type_id", "booking_rooms.room_number",
-        "bookings.status", guest_column, "bookings.check_in", "bookings.check_out", "bookings.group_booking_id",
+        "bookings.status", guest_column, primary_guest_column, "bookings.check_in", "bookings.check_out", "bookings.group_booking_id",
         group_reference_column, group_name_column, "bookings.group_position"
       ]
 
@@ -47,7 +50,7 @@ module StayView
         .where.not(room_number: [ nil, "" ])
         .where("bookings.check_in < ? AND bookings.check_out > ?", date_window.window_end_at, date_window.window_start_at)
         .pluck(*columns)
-        .map do |booking_room_id, booking_id, room_type_id, room_number, status, guest_name, check_in, check_out,
+        .map do |booking_room_id, booking_id, room_type_id, room_number, status, guest_name, primary_guest_name, check_in, check_out,
                  group_booking_id, group_reservation_number, group_name, group_position|
           BookingRecord.new(
             booking_room_id: booking_room_id,
@@ -56,6 +59,7 @@ module StayView
             room_number: room_number.to_s.freeze,
             status: status.to_sym,
             guest_name: guest_name&.to_s&.freeze,
+            primary_guest_name: primary_guest_name&.to_s&.freeze,
             check_in: check_in.in_time_zone(date_window.time_zone_name).to_date,
             check_out: check_out.in_time_zone(date_window.time_zone_name).to_date,
             group_booking_id:,
@@ -64,6 +68,28 @@ module StayView
             group_position:
           )
         end
+    end
+
+    def primary_guest_name_column
+      primary_guest = BookingGuest.joins(:guest)
+        .where("booking_guests.booking_id = bookings.id", role: "primary")
+        .select("COALESCE(booking_guests.name_snapshot, guests.name)")
+        .limit(1)
+      Arel.sql("COALESCE((#{primary_guest.to_sql}), bookings.guest_name)")
+    end
+
+    def load_group_rooms(group_booking_ids)
+      return {} if group_booking_ids.empty? || !capabilities.view_booking?
+
+      BookingRoom.joins(:booking, :room_type)
+        .where(bookings: { hotel_id: hotel.id, group_booking_id: group_booking_ids, status: visible_booking_statuses })
+        .where.not(room_number: [ nil, "" ])
+        .order("bookings.group_booking_id", "bookings.group_position", "bookings.id", "booking_rooms.id")
+        .pluck("bookings.group_booking_id", "bookings.id", "booking_rooms.id", "bookings.group_position", "booking_rooms.room_number", "room_types.name")
+        .map do |group_booking_id, booking_id, booking_room_id, group_position, room_number, room_type_name|
+          GroupRoomRecord.new(group_booking_id:, booking_id:, booking_room_id:, group_position:, room_number:, room_type_name:)
+        end
+        .group_by(&:group_booking_id)
     end
 
     def group_reference(reservation_number)

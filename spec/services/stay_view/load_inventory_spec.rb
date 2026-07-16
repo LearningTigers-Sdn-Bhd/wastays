@@ -75,4 +75,25 @@ RSpec.describe StayView::LoadInventory do
     expect(record.group_reference).to be_frozen
     expect(record.group_name).to be_frozen
   end
+
+  it "loads the primary guest and every occupying group room in one display-ready collection" do
+    room_type = create(:room_type, hotel:, name: "Deluxe", room_numbers: %w[101 102 103])
+    group = create(:group_booking, hotel:, name: "Conference Group")
+    visible = create(:booking, hotel:, group_booking: group, group_position: 1, check_in: start_date, check_out: start_date + 2.days)
+    outside = create(:booking, hotel:, group_booking: group, group_position: 2, status: "completed", check_in: start_date - 30.days, check_out: start_date - 29.days)
+    cancelled = create(:booking, hotel:, group_booking: group, group_position: 3, status: "cancelled", check_in: start_date, check_out: start_date + 2.days)
+    create(:booking_room, booking: visible, room_type:, room_number: "101")
+    create(:booking_room, booking: outside, room_type:, room_number: "102")
+    create(:booking_room, booking: cancelled, room_type:, room_number: "103")
+    primary_guest = create(:guest, name: "Primary Snapshot Guest")
+    create(:booking_guest, booking: visible, guest: primary_guest, is_primary: true, role: "primary")
+
+    inventory = described_class.call(hotel:, date_window: window, capabilities: capabilities.with(view_booking: true))
+
+    expect(inventory.bookings.sole.primary_guest_name).to eq("Primary Snapshot Guest")
+    expect(inventory.group_rooms.fetch(group.id).map(&:booking_id)).to eq([ visible.id, outside.id ])
+    expect(inventory.group_rooms.fetch(group.id).map(&:room_number)).to eq(%w[101 102])
+    expect(inventory.group_rooms).to be_frozen
+    expect(inventory.group_rooms.fetch(group.id)).to be_frozen
+  end
 end

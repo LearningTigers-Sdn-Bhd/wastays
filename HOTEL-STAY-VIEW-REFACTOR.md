@@ -104,6 +104,8 @@ It includes:
 - Centre-of-day booking bars
 - Arrival and departure edges
 - Booking status and guest identity
+- Visible booking status on every segment
+- Hover- and focus-triggered booking details with primary guest, booking type, dates, and active group rooms
 - Maintenance and out-of-service blocks
 - Current physical room status
 - Housekeeping, DND, and priority alerts
@@ -127,7 +129,7 @@ It includes:
 - Checkout countdown or overdue warning
 - Housekeeping requests
 - DND and priority flags
-- Smoking and pet attributes
+- Explicit Smoking/No smoking and Pets/No pets badges
 - Add Booking, Walk-in, and permitted backdated actions
 - Booking lifecycle actions
 - Room-status actions
@@ -135,7 +137,7 @@ It includes:
 
 ### View switching
 
-Use `PanelsUI::Tabs` with the `line` variant. The selected view must be URL-backed and bookmarkable.
+Use `PanelsUI::Tabs` with the explicitly requested `pill` variant. The selected view must be URL-backed and bookmarkable.
 
 Example URLs:
 
@@ -355,6 +357,9 @@ StayView::BookingSegment
   .group_name
   .group_position
   .guest_label
+  .primary_guest_name
+  .booking_type
+  .group_rooms
   .status
   .check_in
   .check_out
@@ -496,6 +501,7 @@ Stay View owns hotel meaning:
 - Housekeeping, DND, and priority alerts
 - Available cell actions
 - Permission-aware action menus
+- Hover/focus booking-detail popovers composed with `PanelsUI::Popover`
 - Timeline and Room View composition
 
 ### Helpers
@@ -724,8 +730,8 @@ Endpoints and identifiers should be passed through Stimulus values.
 
 Responsibilities:
 
-- Submit filters through the board frame
-- Debounce only inputs that benefit from it
+- Submit date, duration, and filter changes automatically through the board frame
+- Debounce only enough to coalesce duplicate control events
 - Preserve explicit URL state
 - Avoid duplicate submissions
 
@@ -825,7 +831,6 @@ Timeline example:
 &occupancy=occupied
 &physical_status=ready
 &rate_plan_id=8
-&density=comfortable
 ```
 
 Room View example:
@@ -846,6 +851,9 @@ Rules:
 - Hidden or unauthorized filters are ignored server-side.
 - Switching views preserves compatible filters.
 - Refresh, sharing, browser back, and browser forward retain state.
+- Timeline dates use a start-date picker plus an allow-listed 7, 14, 21, or 30 day duration control.
+- Room View uses a single-date picker.
+- Stay View always renders the compact timeline density; density is not user-configurable or URL-backed.
 
 ## Empty, loading, and error states
 
@@ -990,6 +998,8 @@ Core lifecycle examples must not remain skipped or pending.
 - Implement Timeline View
 - Implement Room View
 - Add URL-backed view switching, dates, and filters
+- Auto-apply date, duration, and filter changes through the board frame
+- Add explicit room amenity badges, visible segment status, and booking detail popovers
 - Validate desktop, mobile, light, and dark themes
 
 ### Phase 4 — Turbo actions

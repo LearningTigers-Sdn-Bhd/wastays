@@ -51,19 +51,16 @@
           <% end %>
         </div>
 
-        <div class="mt-auto flex flex-wrap items-center gap-2 border-t border-border pt-4">
-          <% if room.smoking_allowed %><span class="inline-flex items-center gap-1 text-xs text-muted-foreground"><%= app_icon "cigarette", class: "size-3", aria: { hidden: true } %> Smoking</span><% end %>
-          <% if room.pets_allowed %><span class="inline-flex items-center gap-1 text-xs text-muted-foreground"><%= app_icon "paw-print", class: "size-3", aria: { hidden: true } %> Pets</span><% end %>
-          <% if room.capabilities.create_booking? && cell.occupancies.one? && cell.occupancies.first.state == :available && room.operational_segments.empty? %>
+        <% if room.capabilities.create_booking? && cell.occupancies.one? && cell.occupancies.first.state == :available && room.operational_segments.empty? %>
+          <div class="mt-auto flex justify-end border-t border-border pt-4">
             <%= render PanelsUI::Button.new(
               href: hotel_booking_transaction_new_booking_path(current_hotel, check_in: cell.date, check_out: cell.date + 1.day, room_type_id: room.room_type_id, room_number: room.room_number, return_to: state.return_path(current_hotel)),
               variant: :secondary,
               size: :xs,
-              class: "ml-auto",
               data: stay_view_action_data
             ) do %>Add booking<% end %>
-          <% end %>
-        </div>
+          </div>
+        <% end %>
       </article>
     <% end %>
   <% end %>

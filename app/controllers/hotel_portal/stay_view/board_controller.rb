@@ -27,7 +27,7 @@ module HotelPortal
       end
 
       def board_params
-        params.permit(:view, :start_date, :date, :days, :density, :room_type_id, :booking_status, :occupancy, :physical_status)
+        params.permit(:view, :start_date, :date, :days, :room_type_id, :booking_status, :occupancy, :physical_status)
       end
     end
   end

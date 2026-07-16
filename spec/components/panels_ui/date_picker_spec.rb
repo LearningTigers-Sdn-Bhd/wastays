@@ -38,6 +38,12 @@ RSpec.describe PanelsUI::DatePicker, type: :component do
     expect(page).to have_css(".popover-root#{selector}[data-controller~='panels-ui--popover']")
   end
 
+  it "applies the requested size to the visible trigger" do
+    render_inline(described_class.new(form: form_for, attribute: :check_in, size: :sm))
+
+    expect(page).to have_css("button.panel-date-picker__display[data-size='sm']")
+  end
+
   it "renders a range calendar and range placeholder for a single-input range" do
     render_inline(described_class.new(form: form_for, attribute: :window, range: true))
 

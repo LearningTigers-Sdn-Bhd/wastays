@@ -42,7 +42,8 @@ RSpec.describe StayView::ProjectBooking do
       group_booking_id: 5,
       group_reference: nil,
       group_name: nil,
-      group_position: 2
+      group_position: 2,
+      group_rooms: []
     )
   end
 
@@ -62,9 +63,14 @@ RSpec.describe StayView::ProjectBooking do
       group_position: 2
     )
 
+    group_rooms = [
+      StayView::GroupRoomRecord.new(group_booking_id: 5, booking_id: 7, booking_room_id: 11, group_position: 2, room_number: "101", room_type_name: "Deluxe"),
+      StayView::GroupRoomRecord.new(group_booking_id: 5, booking_id: 8, booking_room_id: 12, group_position: 3, room_number: "202", room_type_name: "Suite")
+    ]
     segment = described_class.call(
       booking:,
       room_type_name: "Deluxe",
+      group_rooms:,
       date_window: window,
       capabilities: capabilities.with(view_booking: true)
     )
@@ -73,8 +79,11 @@ RSpec.describe StayView::ProjectBooking do
       group_booking_id: 5,
       group_reference: "HTL-10000005",
       group_name: "Lovelace Conference",
-      group_position: 2
+      group_position: 2,
+      booking_type: :group,
+      primary_guest_name: "Ada Lovelace"
     )
+    expect(segment.group_rooms.map(&:room_number)).to eq([ "202" ])
     expect(segment).to be_frozen
     expect(segment.group_reference).to be_frozen
     expect(segment.group_name).to be_frozen

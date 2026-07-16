@@ -20,7 +20,7 @@ module HotelPortal
       end
 
       def state_source
-        direct = params.permit(:view, :start_date, :date, :days, :density, :room_type_id, :booking_status, :occupancy, :physical_status).to_h
+        direct = params.permit(:view, :start_date, :date, :days, :room_type_id, :booking_status, :occupancy, :physical_status).to_h
         return direct if direct.present?
 
         query = URI.parse(@return_to).query

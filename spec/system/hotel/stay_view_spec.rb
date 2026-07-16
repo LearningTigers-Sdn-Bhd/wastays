@@ -42,6 +42,19 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(URI.parse(page.current_url).query).to include("view=rooms", "date=2026-07-16")
   end
 
+  it "shows booking details on hover and keyboard focus without replacing click navigation" do
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+
+    segment = find("#stay_view_booking_room_#{booking.booking_rooms.sole.id}")
+    segment.hover
+    expect(page).to have_css("##{segment[:id]}-panel", text: "Ada Lovelace", visible: :visible)
+    expect(page).to have_css("##{segment[:id]}-panel", text: "Single booking", visible: :visible)
+    expect(URI.parse(segment.find("a")[:href]).path).to eq(hotel_booking_transaction_show_booking_path(hotel, booking))
+
+    page.execute_script("document.querySelector('##{segment[:id]}-trigger').focus()")
+    expect(page).to have_css("##{segment[:id]}-panel", text: "Confirmed", visible: :visible)
+  end
+
   it "moves a stay without dragging and refreshes the Room View board" do
     visit hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
 
@@ -62,5 +75,34 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     expect(page).to have_css("#stay_view_room_#{room_type.id}_102", text: "Ada Lovelace")
     expect(booking.reload.booking_rooms.first.room_number).to eq("102")
+  end
+
+  it "auto-applies filters, start date, and duration through the board frame" do
+    create(:room_status, hotel:, room_type:, room_number: "101", status: "dirty")
+    create(:room_status, hotel:, room_type:, room_number: "102", status: "ready")
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 14)
+
+    find("#physical_status-trigger").click
+    find("#physical_status-option-2", text: "Dirty").click
+
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_101")
+    expect(page).to have_no_css("#stay_view_room_#{room_type.id}_102")
+    expect(URI.parse(page.current_url).query).to include("physical_status=dirty")
+
+    find("#physical_status-trigger").click
+    find("#physical_status-option-0", text: "All physical statuses").click
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_102")
+
+    find("#days-trigger").click
+    find("#days-option-0", text: "7 days").click
+    expect(URI.parse(page.current_url).query).to include("days=7")
+
+    page.execute_script(<<~JS)
+      const startDate = document.querySelector('#start_date')
+      startDate.value = '#{(Date.current + 7.days).iso8601}'
+      startDate.dispatchEvent(new Event('change', { bubbles: true }))
+    JS
+    expect(page).to have_css("#stay-view-timeline[aria-label*='July 23, 2026']", wait: 10)
+    expect(URI.parse(page.current_url).query).to include("start_date=#{(Date.current + 7.days).iso8601}")
   end
 end

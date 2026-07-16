@@ -14,10 +14,11 @@ RSpec.describe StayView::BoardState do
       occupancy: "arrival"
     })
 
-    expect(state).to have_attributes(view_mode: :timeline, density: :comfortable)
+    expect(state).to have_attributes(view_mode: :timeline, density: :compact)
     expect(state.date_window).to have_attributes(start_date: Date.new(2026, 7, 20), days: 21)
     expect(state.filters.occupancy).to eq(:arrival)
-    expect(state.query).to include(view: :timeline, start_date: Date.new(2026, 7, 20), days: 21, density: "comfortable", occupancy: :arrival)
+    expect(state.query).to include(view: :timeline, start_date: Date.new(2026, 7, 20), days: 21, occupancy: :arrival)
+    expect(state.query).not_to have_key(:density)
   end
 
   it "uses the room date and safe defaults for invalid state" do
@@ -25,7 +26,8 @@ RSpec.describe StayView::BoardState do
 
     expect(state).to have_attributes(view_mode: :rooms, density: :compact)
     expect(state.date_window).to have_attributes(start_date: Date.new(2026, 7, 16), days: 1)
-    expect(state.query).to include(view: :rooms, date: Date.new(2026, 7, 16), density: "compact")
+    expect(state.query).to include(view: :rooms, date: Date.new(2026, 7, 16))
+    expect(state.query).not_to have_key(:density)
     expect(state.query).not_to have_key(:days)
   end
 

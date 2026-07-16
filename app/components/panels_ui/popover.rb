@@ -21,7 +21,7 @@ module PanelsUI
     # the trigger into the panel — a DOM descendant of the root — doesn't self-close.
     class Trigger < PanelsUI::BaseComponent
       def initialize(id:, panel_id:, aria_haspopup:, variant: :secondary, size: :md,
-                     aria_label: nil, unstyled: false, class: nil, **attributes)
+                     aria_label: nil, unstyled: false, href: nil, class: nil, **attributes)
         @id = id
         @panel_id = panel_id
         @variant = Button::VARIANTS.include?(variant) ? variant : :secondary
@@ -29,6 +29,7 @@ module PanelsUI
         @aria_label = aria_label
         @aria_haspopup = aria_haspopup
         @unstyled = ActiveModel::Type::Boolean.new.cast(unstyled)
+        @href = href
         @class = binding.local_variable_get(:class)
         @attributes = attributes
       end
@@ -38,20 +39,22 @@ module PanelsUI
         data = attributes.delete(:data) || {}
         aria = attributes.delete(:aria) || {}
 
-        tag.button(
+        tag.public_send(
+          (@href.present? ? :a : :button),
           content,
           **attributes.merge(
             id: @id,
-            type: "button",
+            href: @href,
+            type: ("button" unless @href.present?),
             class: tw_merge(("panel-button" unless @unstyled), "popover__trigger", @class),
-            data: data.merge(
+            data: data.merge({
               variant: (@variant unless @unstyled),
               size: (@size unless @unstyled),
               panels_ui__popover_target: "trigger",
-              action: "click->panels-ui--popover#toggle keydown->panels-ui--popover#onTriggerKeydown"
-            ).compact,
+              action: ("click->panels-ui--popover#toggle keydown->panels-ui--popover#onTriggerKeydown" unless @href.present?)
+            }.compact),
             aria: aria.merge(
-              label: @aria_label,
+              label: @aria_label || aria.delete(:label) || aria.delete("label"),
               haspopup: @aria_haspopup,
               expanded: "false",
               controls: @panel_id
@@ -67,7 +70,7 @@ module PanelsUI
 
     def initialize(id:, placement: :bottom, offset: 8, delay: 120, close_delay: 0, arrow: true,
                    trigger_on: :click, focus: false, class: nil, root_class: nil,
-                   role: "dialog", aria_haspopup: "dialog", owner: nil)
+                   role: "dialog", aria_haspopup: "dialog", owner: nil, **attributes)
       @id = id
       @placement = PLACEMENTS.include?(placement) ? placement : :bottom
       @offset = offset.to_f
@@ -82,6 +85,7 @@ module PanelsUI
       @role = role
       @aria_haspopup = aria_haspopup
       @owner = owner
+      @attributes = attributes
     end
 
     def arrow? = @arrow
@@ -97,6 +101,27 @@ module PanelsUI
 
       "mouseenter->panels-ui--popover#show mouseleave->panels-ui--popover#hide " \
         "focusin->panels-ui--popover#show focusout->panels-ui--popover#hide"
+    end
+
+    def root_attributes
+      attributes = @attributes.deep_dup
+      data = attributes.delete(:data) || attributes.delete("data") || {}
+
+      attributes.merge(
+        id: attributes.delete(:id) || @id,
+        class: tw_merge("popover-root", @root_class, attributes.delete(:class)),
+        data: data.merge(
+          controller: "panels-ui--popover",
+          panels_ui__popover_placement_value: floating_placement,
+          panels_ui__popover_offset_value: @offset,
+          panels_ui__popover_delay_value: @delay,
+          panels_ui__popover_close_delay_value: @close_delay,
+          panels_ui__popover_trigger_on_value: @trigger_on,
+          panels_ui__popover_focus_value: focus?,
+          panels_ui__popover_owner_value: @owner,
+          action: root_action
+        ).compact
+      )
     end
   end
 end
