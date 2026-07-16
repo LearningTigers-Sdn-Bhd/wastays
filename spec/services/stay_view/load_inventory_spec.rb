@@ -50,6 +50,59 @@ RSpec.describe StayView::LoadInventory do
     expect(inventory.bookings).to be_frozen
   end
 
+  it "loads immutable room inventory records only for the hotel room types and visible dates" do
+    room_type = create(:room_type, hotel:, room_numbers: %w[101 102])
+    other_hotel = create(:hotel)
+    other_room_type = create(:room_type, hotel: other_hotel, room_numbers: [ "201" ])
+    included = create(
+      :room_inventory,
+      room_type:,
+      date: start_date,
+      quantity: 1,
+      status: "open",
+      available_room_numbers: [ "102" ]
+    )
+    create(:room_inventory, room_type:, date: window.end_date, quantity: 2)
+    create(:room_inventory, room_type: other_room_type, date: start_date, quantity: 1)
+
+    records = described_class.call(hotel:, date_window: window, capabilities:).room_inventories
+
+    expect(records.map(&:room_type_id)).to eq([ room_type.id ])
+    expect(records.sole).to have_attributes(
+      date: start_date,
+      quantity: included.quantity,
+      status: :open,
+      available_room_numbers: [ "102" ]
+    )
+    expect(records).to be_frozen
+    expect(records.sole.available_room_numbers).to be_frozen
+  end
+
+  it "excludes completed and out-of-range room blocks before inventory summary projection" do
+    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    create(
+      :room_block,
+      hotel:,
+      room_type:,
+      room_number: "101",
+      start_date:,
+      end_date: start_date + 1.day,
+      completed_at: Time.current
+    )
+    create(
+      :room_block,
+      hotel:,
+      room_type:,
+      room_number: "101",
+      start_date: window.end_date,
+      end_date: window.end_date + 1.day
+    )
+
+    inventory = described_class.call(hotel:, date_window: window, capabilities:)
+
+    expect(inventory.room_blocks).to be_empty
+  end
+
   it "loads display-ready group identity as scalar values with booking permission" do
     room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
     group = create(:group_booking, hotel:, name: "Conference Group")

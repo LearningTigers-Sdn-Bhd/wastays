@@ -25,7 +25,15 @@ module StayView
       date_window = DateWindow.new(hotel:, start_date:, days:, view_mode:, now:)
       inventory = LoadInventory.call(hotel:, date_window:, capabilities: resolved_capabilities)
       normalized_filters = FilterState.build(filters)
-      groups = ApplyFilters.call(room_groups: project_groups(inventory, date_window, resolved_capabilities), filters: normalized_filters)
+      filtered_groups = ApplyFilters.call(
+        room_groups: project_groups(inventory, date_window, resolved_capabilities),
+        filters: normalized_filters
+      )
+      groups = CalculateInventorySummaries.call(
+        room_groups: filtered_groups,
+        room_inventories: inventory.room_inventories,
+        dates: date_window.dates
+      )
       counts = CalculateCounts.call(room_groups: groups)
       room_type_options = inventory.room_types.map { |room_type| RoomTypeOption.new(id: room_type.id, name: room_type.name) }
       board = Board.new(

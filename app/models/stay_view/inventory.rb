@@ -48,15 +48,30 @@ module StayView
     end
   end
 
-  Inventory = Data.define(:room_types, :bookings, :group_rooms, :room_statuses, :room_blocks, :housekeeping_alerts) do
-    def initialize(room_types:, bookings:, group_rooms:, room_statuses:, room_blocks:, housekeeping_alerts: [])
+  RoomInventoryRecord = Data.define(:room_type_id, :date, :quantity, :status, :available_room_numbers) do
+    def initialize(room_type_id:, date:, quantity:, status:, available_room_numbers: [])
+      super(
+        room_type_id:,
+        date: date.to_date,
+        quantity: Integer(quantity),
+        status: status.to_sym,
+        available_room_numbers: Immutable.array(
+          Array(available_room_numbers).flatten.compact.map(&:to_s).reject(&:blank?)
+        )
+      )
+    end
+  end
+
+  Inventory = Data.define(:room_types, :bookings, :group_rooms, :room_statuses, :room_blocks, :housekeeping_alerts, :room_inventories) do
+    def initialize(room_types:, bookings:, group_rooms:, room_statuses:, room_blocks:, housekeeping_alerts: [], room_inventories: [])
       super(
         room_types: Immutable.array(room_types),
         bookings: Immutable.array(bookings),
         group_rooms: Immutable.hash(group_rooms),
         room_statuses: Immutable.array(room_statuses),
         room_blocks: Immutable.array(room_blocks),
-        housekeeping_alerts: Immutable.array(housekeeping_alerts)
+        housekeeping_alerts: Immutable.array(housekeeping_alerts),
+        room_inventories: Immutable.array(room_inventories)
       )
     end
   end

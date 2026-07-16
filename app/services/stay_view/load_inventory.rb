@@ -20,7 +20,8 @@ module StayView
         group_rooms: load_group_rooms(bookings.filter_map(&:group_booking_id).uniq),
         room_statuses: load_room_statuses,
         room_blocks: load_room_blocks,
-        housekeeping_alerts: load_housekeeping_alerts
+        housekeeping_alerts: load_housekeeping_alerts,
+        room_inventories: load_room_inventories
       )
     end
 
@@ -119,6 +120,17 @@ module StayView
             id: values[0], room_type_id: values[1], room_number: values[2].to_s.freeze,
             block_type: values[3].to_sym, reason: values[4].to_s.freeze,
             start_date: values[5], end_date: values[6]
+          )
+        end
+    end
+
+    def load_room_inventories
+      RoomInventory.where(room_type_id: load_room_types.map(&:id), date: date_window.start_date...date_window.end_date)
+        .order(:room_type_id, :date)
+        .pluck(:room_type_id, :date, :quantity, :status, :available_room_numbers)
+        .map do |values|
+          RoomInventoryRecord.new(
+            **%i[room_type_id date quantity status available_room_numbers].zip(values).to_h
           )
         end
     end

@@ -85,6 +85,37 @@ RSpec.describe StayView::BuildBoard do
     expect(board.status_counts.physical_statuses).to eq(dirty: 1)
     expect(board.status_counts.booking_statuses).to eq(confirmed: 1)
     expect(board.status_counts.occupancies[:arrival]).to eq(1)
+    expect(board.room_groups.sole.inventory_summary_for(start_date)).to have_attributes(
+      sellable: 1,
+      sold: 1,
+      available: 0,
+      occupancy: 1.0
+    )
+  end
+
+  it "builds date summaries from authoritative inventory without exposing active records" do
+    room_type = create(:room_type, hotel:, room_numbers: %w[101 102])
+    booking = create(:booking, hotel:, check_in: start_date, check_out: start_date + 1.day)
+    create(:booking_room, booking:, room_type:, room_number: "101")
+    create(:room_inventory, room_type:, date: start_date, quantity: 1, available_room_numbers: [ "102" ])
+
+    board = described_class.call(hotel:, user:, start_date:, days: 7)
+    group = board.room_groups.sole
+
+    expect(group.inventory_summaries.size).to eq(7)
+    expect(group.inventory_summary_for(start_date)).to have_attributes(
+      sellable: 2,
+      sold: 1,
+      available: 1,
+      occupancy: 0.5
+    )
+    expect(group.inventory_summary_for(start_date + 1.day)).to have_attributes(
+      sellable: 2,
+      sold: 0,
+      available: 2,
+      occupancy: 0.0
+    )
+    expect(active_record_values(board)).to be_empty
   end
 
   it "ignores a non-occupying booking status filter instead of emptying the board" do
@@ -126,17 +157,17 @@ RSpec.describe StayView::BuildBoard do
     expect(events.first.payload).to include(:duration_ms, row_count: 1, segment_count: 0, operational_segment_count: 0)
   end
 
-  it "keeps query count stable as projected data grows" do
-    small_hotel, small_user = create_board_fixture(room_count: 1)
-    large_hotel, large_user = create_board_fixture(room_count: 6)
+  it "keeps query count stable as projected rows, dates, and inventory records grow" do
+    small_hotel, small_user = create_board_fixture(room_count: 1, days: 7)
+    large_hotel, large_user = create_board_fixture(room_count: 6, days: 30)
 
     small_count = count_sql_queries { described_class.call(hotel: small_hotel, user: small_user, start_date:, days: 7) }
-    large_count = count_sql_queries { described_class.call(hotel: large_hotel, user: large_user, start_date:, days: 7) }
+    large_count = count_sql_queries { described_class.call(hotel: large_hotel, user: large_user, start_date:, days: 30) }
 
     expect(large_count).to be <= small_count + 1
   end
 
-  def create_board_fixture(room_count:)
+  def create_board_fixture(room_count:, days:)
     current_hotel = create(:hotel, accounting_business_date: start_date)
     current_user = create(:user, account: current_hotel.account)
     current_role = create(:role, account: current_hotel.account)
@@ -145,6 +176,9 @@ RSpec.describe StayView::BuildBoard do
     create(:user_hotel_access, user: current_user, hotel: current_hotel, role: current_role)
     room_numbers = room_count.times.map { |index| (200 + index).to_s }
     room_type = create(:room_type, hotel: current_hotel, room_numbers: room_numbers)
+    days.times do |offset|
+      create(:room_inventory, room_type:, date: start_date + offset.days, quantity: room_count)
+    end
 
     room_numbers.each do |room_number|
       create(:room_status, hotel: current_hotel, room_type:, room_number:, status: "dirty")

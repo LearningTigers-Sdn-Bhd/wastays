@@ -99,9 +99,30 @@ module StayView
     EMPTY_OCCUPANCIES = [].freeze
   end
 
-  RoomGroup = Data.define(:room_type_id, :name, :rooms) do
-    def initialize(room_type_id:, name:, rooms:)
-      super(room_type_id: room_type_id, name: name.to_s.freeze, rooms: Immutable.array(rooms))
+  InventoryDateSummary = Data.define(:date, :sellable, :sold, :available, :occupancy) do
+    def initialize(date:, sellable:, sold:, available:, occupancy:)
+      super(
+        date: date.to_date,
+        sellable: Integer(sellable),
+        sold: Integer(sold),
+        available: Integer(available),
+        occupancy:
+      )
+    end
+  end
+
+  RoomGroup = Data.define(:room_type_id, :name, :rooms, :inventory_summaries) do
+    def initialize(room_type_id:, name:, rooms:, inventory_summaries: [])
+      super(
+        room_type_id: room_type_id,
+        name: name.to_s.freeze,
+        rooms: Immutable.array(rooms),
+        inventory_summaries: Immutable.array(inventory_summaries)
+      )
+    end
+
+    def inventory_summary_for(date)
+      inventory_summaries.find { |summary| summary.date == date.to_date }
     end
   end
 
