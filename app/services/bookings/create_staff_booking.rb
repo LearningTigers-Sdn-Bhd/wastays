@@ -11,6 +11,7 @@ module Bookings
       @common_params = common_params.to_h.symbolize_keys
       @backdate_reason = @common_params.delete(:backdate_reason)
       @retroactive_reason = @common_params.delete(:retroactive_reason)
+      @hotel_corporate_account_id = @common_params.delete(:hotel_corporate_account_id)
       @room_rows = Array(room_rows).map { |row| row.to_h.symbolize_keys }
       @user = user
       @booking_type = booking_type.presence || "reservation"
@@ -150,13 +151,13 @@ module Bookings
     def backdated? = @booking_type == "backdated_check_in"
 
     def apply_corporate_billing!(bookings)
-      account_id = @common_params[:hotel_corporate_account_id]
+      account_id = @hotel_corporate_account_id
       return if account_id.blank?
 
       bookings.each do |booking|
         result = BookingBillingParties::ManageCompany.call(
           booking: booking, actor: @user,
-          attributes: { hotel_corporate_account_id: account_id, settlement_type: "city_ledger" }
+          attributes: { hotel_corporate_account_id: account_id, settlement_type: "cash_bank" }
         )
         raise CreationFailed, result.error unless result.success?
 

@@ -54,6 +54,16 @@ RSpec.describe Bookings::CreateStaffBooking do
     expect(Booking.where(hotel: hotel)).to be_empty
   end
 
+  it "applies corporate billing without leaking the account id into booking attributes" do
+    corporate_account = create(:hotel_corporate_account, hotel: hotel)
+    params = common_params.merge(hotel_corporate_account_id: corporate_account.id)
+
+    result = described_class.new(hotel: hotel, common_params: params, room_rows: room_rows, user: nil).call
+
+    expect(result.errors).to be_empty
+    expect(result.booking.booking_folio).to have_attributes(payer_type: "company", hotel_corporate_account_id: corporate_account.id)
+  end
+
   it "rolls back all rooms when cumulative unassigned reservations exceed inventory" do
     room_type.update!(quantity: 1)
     create(:room_inventory, room_type: room_type, date: Date.current, quantity: 1, status: "open")
