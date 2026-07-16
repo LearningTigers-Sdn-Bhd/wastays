@@ -8,7 +8,7 @@ module HotelPortal
     include ReportDateFiltering
 
     PAYOUT_TABS = %w[upcoming paid].freeze
-    GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards bibo].freeze
+    GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards bibo meal_prep].freeze
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
 
     before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability guest_reports folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
@@ -310,7 +310,7 @@ module HotelPortal
 
     def guest_reports
       @active_guest_report_tab = GUEST_REPORT_TABS.include?(params[:tab]) ? params[:tab] : "arrivals"
-      if @active_guest_report_tab == "bibo" && !current_hotel.allow_boat_information?
+      if %w[bibo meal_prep].include?(@active_guest_report_tab) && !current_hotel.allow_boat_information?
         @active_guest_report_tab = "arrivals"
       end
       @report_start_date, @report_end_date = parse_report_date_range
@@ -326,6 +326,16 @@ module HotelPortal
         start_date: @report_start_date,
         end_date: @report_end_date
       ).call
+
+      if @active_guest_report_tab == "meal_prep"
+        @meal_prep_report = HotelPortal::Reports::MealPrepReport.new(
+          hotel: current_hotel,
+          start_date: @report_start_date,
+          end_date: @report_end_date,
+          meal_type: params[:meal_type]
+        ).call
+      end
+
       load_guest_registration_cards(start_date: @report_start_date, end_date: @report_end_date)
 
       respond_to do |format|
@@ -333,7 +343,13 @@ module HotelPortal
         format.csv do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          report_to_export = @active_guest_report_tab == "bibo" ? @bibo_report : @report
+          report_to_export = if @active_guest_report_tab == "bibo"
+            @bibo_report
+          elsif @active_guest_report_tab == "meal_prep"
+            @meal_prep_report
+          else
+            @report
+          end
           csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
           send_data csv,
             filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.csv",
@@ -342,7 +358,13 @@ module HotelPortal
         format.any(:xls) do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          report_to_export = @active_guest_report_tab == "bibo" ? @bibo_report : @report
+          report_to_export = if @active_guest_report_tab == "bibo"
+            @bibo_report
+          elsif @active_guest_report_tab == "meal_prep"
+            @meal_prep_report
+          else
+            @report
+          end
           workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
           send_data workbook,
             filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.xls",
@@ -352,7 +374,13 @@ module HotelPortal
         format.pdf do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          report_to_export = @active_guest_report_tab == "bibo" ? @bibo_report : @report
+          report_to_export = if @active_guest_report_tab == "bibo"
+            @bibo_report
+          elsif @active_guest_report_tab == "meal_prep"
+            @meal_prep_report
+          else
+            @report
+          end
           pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: report_to_export, tab: @active_guest_report_tab).generate
           send_data pdf,
             filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.pdf",

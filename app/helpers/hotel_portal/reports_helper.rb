@@ -18,6 +18,13 @@ module HotelPortal::ReportsHelper
 
     if current_hotel.allow_boat_information?
       tabs << { label: "Boat Transfers", value: "bibo", count: bibo_report ? (bibo_report.boat_in_count + bibo_report.boat_out_count) : 0 }
+
+      meal_prep_count = HotelPortal::Reports::MealPrepReport.new(
+        hotel: current_hotel,
+        start_date: report.start_date,
+        end_date: report.end_date
+      ).call.records.size
+      tabs << { label: "Meal Prep", value: "meal_prep", count: meal_prep_count }
     end
 
     tabs.map do |tab|
@@ -34,7 +41,7 @@ module HotelPortal::ReportsHelper
   end
 
   def show_metrics_cards?(active_tab)
-    !%w[registration_cards bibo].include?(active_tab)
+    !%w[registration_cards bibo meal_prep].include?(active_tab)
   end
 
   def format_report_boat_time(boat_departure, hotel)

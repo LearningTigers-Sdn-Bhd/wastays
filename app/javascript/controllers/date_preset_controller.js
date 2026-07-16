@@ -11,6 +11,51 @@ export default class extends Controller {
     if (select.value === "custom") {
       customDates.classList.remove("hidden")
       customDates.classList.add("flex")
+
+      const startInput = form.querySelector('input[name="start_date"]')
+      const endInput = form.querySelector('input[name="end_date"]')
+
+      if (startInput) {
+        startInput.disabled = false
+        const startDiv = startInput.closest("div")
+        if (startDiv) {
+          startDiv.classList.remove("hidden")
+          const label = startDiv.querySelector("label")
+          if (label) label.textContent = "Start Date"
+        }
+      }
+
+      if (endInput) {
+        endInput.disabled = false
+        const endDiv = endInput.closest("div")
+        if (endDiv) {
+          endDiv.classList.remove("hidden")
+        }
+      }
+    } else if (select.value === "single") {
+      customDates.classList.remove("hidden")
+      customDates.classList.add("flex")
+
+      const startInput = form.querySelector('input[name="start_date"]')
+      const endInput = form.querySelector('input[name="end_date"]')
+
+      if (startInput) {
+        startInput.disabled = false
+        const startDiv = startInput.closest("div")
+        if (startDiv) {
+          startDiv.classList.remove("hidden")
+          const label = startDiv.querySelector("label")
+          if (label) label.textContent = "Date"
+        }
+      }
+
+      if (endInput) {
+        endInput.disabled = true
+        const endDiv = endInput.closest("div")
+        if (endDiv) {
+          endDiv.classList.add("hidden")
+        }
+      }
     } else {
       customDates.classList.add("hidden")
       customDates.classList.remove("flex")

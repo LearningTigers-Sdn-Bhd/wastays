@@ -9,22 +9,32 @@
       </div>
 
       <div class="print:hidden">
-        <%= form_with url: guest_reports_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "arrivals-date-range-form", data: { controller: "date-preset" } do |f| %>
+        <%= form_with url: guest_reports_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-end", id: "arrivals-date-range-form", data: { controller: "date-preset auto-submit" } do |f| %>
           <%= hidden_field_tag :tab, @active_guest_report_tab %>
+
           <div>
             <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Time Period</label>
-            <%= select_tag :date_preset, options_for_select(date_preset_options, @date_preset), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->date-preset#toggleCustom" } %>
+            <%= select_tag :date_preset, options_for_select(date_preset_options(include_single: true), @date_preset), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->date-preset#toggleCustom" } %>
           </div>
 
-          <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'flex' : 'hidden' %> gap-3">
+          <% if @active_guest_report_tab == "meal_prep" %>
             <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Start Date</label>
-              <%= f.date_field :start_date, value: @report.start_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", id: "arrivals-start-date" %>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Meal Type</label>
+              <%= select_tag :meal_type, options_for_select([["All Meals", ""], ["Breakfast", "breakfast"], ["Lunch", "lunch"], ["Dinner", "dinner"]], params[:meal_type]), class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "change->auto-submit#submitNow" } %>
+            </div>
+          <% end %>
+
+          <div id="custom-date-range" class="<%= ['custom', 'single'].include?(@date_preset) ? 'flex' : 'hidden' %> gap-3">
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                <%= @date_preset == 'single' ? 'Date' : 'Start Date' %>
+              </label>
+              <%= f.date_field :start_date, value: @report.start_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", id: "arrivals-start-date", data: { action: "change->auto-submit#submit" } %>
             </div>
 
-            <div>
+            <div class="<%= @date_preset == 'single' ? 'hidden' : '' %>">
               <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">End Date</label>
-              <%= f.date_field :end_date, value: @report.end_date, class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", id: "arrivals-end-date" %>
+              <%= f.date_field :end_date, value: @report.end_date, disabled: @date_preset == 'single', class: "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", id: "arrivals-end-date", data: { action: "change->auto-submit#submit" } %>
             </div>
           </div>
 
@@ -42,6 +52,7 @@
                   end_date: @report.end_date,
                   date_preset: @date_preset,
                   tab: @active_guest_report_tab,
+                  meal_type: params[:meal_type],
                   format: :pdf
                 ),
                 class: "block px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
@@ -52,6 +63,7 @@
                   end_date: @report.end_date,
                   date_preset: @date_preset,
                   tab: @active_guest_report_tab,
+                  meal_type: params[:meal_type],
                   format: :xls
                 ),
                 class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
@@ -62,6 +74,7 @@
                   end_date: @report.end_date,
                   date_preset: @date_preset,
                   tab: @active_guest_report_tab,
+                  meal_type: params[:meal_type],
                   format: :csv
                 ),
                 class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
@@ -115,7 +128,8 @@
       title: "Expected Arrivals",
       empty_message: "No arrivals scheduled for this selected period.",
       rows: @report.arrivals,
-      type: :arrival
+      type: :arrival,
+      show_boat_departure: current_hotel.allow_boat_information?
     } %>
   <% elsif @active_guest_report_tab == "in_house" %>
     <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
@@ -130,7 +144,8 @@
       title: "Expected Departures",
       empty_message: "No departures scheduled for this selected period.",
       rows: @report.departures,
-      type: :departure
+      type: :departure,
+      show_boat_departure: current_hotel.allow_boat_information?
     } %>
   <% elsif @active_guest_report_tab == "checkout" %>
     <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
@@ -142,6 +157,10 @@
   <% elsif @active_guest_report_tab == "bibo" %>
     <%= render partial: "hotel_portal/reports/bibo_section", locals: {
       report: @bibo_report
+    } %>
+  <% elsif @active_guest_report_tab == "meal_prep" %>
+    <%= render partial: "hotel_portal/reports/meal_prep_section", locals: {
+      report: @meal_prep_report
     } %>
   <% else %>
     <%= render "hotel_portal/reports/guest_registration_cards_section",

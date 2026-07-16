@@ -37,6 +37,9 @@ module HotelPortal
             return [ last_month.beginning_of_month, last_month.end_of_month ]
           when "this_month"
             return [ Date.current.beginning_of_month, Date.current.end_of_month ]
+          when "single"
+            single_date = self.class.parse_date(@params[:start_date]) || self.class.parse_date(@params[:date]) || Date.current
+            return [ single_date, single_date ]
           when "custom"
             start = self.class.parse_date(@params[:start_date]) || Date.current.beginning_of_month
             end_date = self.class.parse_date(@params[:end_date]) || Date.current.end_of_month
@@ -84,6 +87,8 @@ module HotelPortal
             return last_month.end_of_month
           when "this_month"
             return Date.current.end_of_month
+          when "single"
+            return self.class.parse_date(@params[:start_date]) || Date.current
           when "custom"
             return self.class.parse_date(@params[:as_of_date]) || Date.current.end_of_month
           else

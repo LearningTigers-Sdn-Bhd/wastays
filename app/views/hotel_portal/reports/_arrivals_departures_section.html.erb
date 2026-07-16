@@ -12,7 +12,9 @@
           <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 print:px-2 print:py-2">Stay</th>
           <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 print:px-2 print:py-2"><%= type == :arrival ? "Readiness" : "Departure" %></th>
           <% if local_assigns[:show_boat_departure] %>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 print:px-2 print:py-2">Boat-out</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 print:px-2 print:py-2">
+              <%= type == :arrival ? "Boat-in" : "Boat-out" %>
+            </th>
           <% end %>
           <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8 print:px-2 print:py-2">Notes</th>
         </tr>
@@ -41,8 +43,9 @@
               </td>
               <% if local_assigns[:show_boat_departure] %>
                 <td class="px-6 py-4 print:px-2 print:py-2">
-                  <% if row[:boat_departure].present? %>
-                    <% formatted = format_report_boat_time(row[:boat_departure], current_hotel) %>
+                  <% boat_val = (type == :arrival ? row[:boat_arrival] : row[:boat_departure]) %>
+                  <% if boat_val.present? %>
+                    <% formatted = format_report_boat_time(boat_val, current_hotel) %>
                     <p class="text-sm font-semibold text-slate-900 print:text-xs"><%= formatted[:date] %></p>
                     <p class="mt-1 text-xs font-medium text-slate-500 print:text-[10px]"><%= formatted[:time] %></p>
                   <% else %>
