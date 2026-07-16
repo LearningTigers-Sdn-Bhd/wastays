@@ -30,8 +30,10 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
     end
 
     def grant_booking_permission
-      permission = Permission.find_or_create_by!(slug: "manage_bookings") { |record| record.name = "Manage Bookings" }
-      role.permissions << permission
+      %w[view_bookings manage_bookings].each do |slug|
+        permission = Permission.find_or_create_by!(slug:) { |record| record.name = slug.humanize }
+        role.permissions << permission unless role.permissions.exists?(permission.id)
+      end
     end
 
     it "logs out suspended accounts" do
@@ -136,6 +138,53 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       get hotel_front_desk_path(hotel), params: { tab: "arrivals", arrival_page: 2 }
       expect(response.body).not_to include(matching.confirmation_token)
       expect(response.body).to include("ARRIVAL-24")
+    end
+
+    it "keeps calendar ranges independent between tabs" do
+      grant_arrival_permission
+      grant_booking_permission
+      arrival = booking(status: "confirmed", confirmation_token: "ARRIVAL-RANGE", check_in: Date.new(2026, 7, 15))
+      booking_record = booking(status: "confirmed", confirmation_token: "BOOKING-RANGE", check_in: Date.new(2026, 7, 16))
+
+      get hotel_front_desk_path(hotel), params: {
+        tab: "arrivals", arrival_start_date: "2026-07-15", arrival_end_date: "2026-07-15"
+      }
+      expect(response.body).to include(arrival.confirmation_token)
+
+      document = Nokogiri::HTML(response.body)
+      bookings_link = document.css("[aria-label='Reservation sections'] a").find { |link| link.text.include?("Bookings") }
+
+      get bookings_link["href"]
+      expect(response.body).to include(booking_record.confirmation_token)
+      expect(response.body).not_to include('name="booking_start_date" value="2026-07-15"')
+    end
+
+    it "keeps legacy date ranges working while scoped dates take precedence" do
+      grant_arrival_permission
+      legacy_arrival = booking(status: "confirmed", confirmation_token: "LEGACY-ARRIVAL", check_in: Date.new(2026, 7, 15))
+      scoped_arrival = booking(status: "confirmed", confirmation_token: "SCOPED-ARRIVAL", check_in: Date.new(2026, 7, 16))
+
+      get hotel_front_desk_path(hotel), params: { tab: "arrivals", start_date: "2026-07-15", end_date: "2026-07-15" }
+      expect(response.body).to include(legacy_arrival.confirmation_token)
+      expect(response.body).not_to include(scoped_arrival.confirmation_token)
+
+      get hotel_front_desk_path(hotel), params: {
+        tab: "arrivals", start_date: "2026-07-15", end_date: "2026-07-15",
+        arrival_start_date: "2026-07-16", arrival_end_date: "2026-07-16"
+      }
+      expect(response.body).to include(scoped_arrival.confirmation_token)
+      expect(response.body).not_to include(legacy_arrival.confirmation_token)
+    end
+
+    it "does not preserve structured date parameters in tab links" do
+      grant_arrival_permission
+
+      get hotel_front_desk_path(hotel), params: { tab: "arrivals", arrival_start_date: [ "2026-07-15" ], arrival_end_date: { date: "2026-07-15" } }
+
+      document = Nokogiri::HTML(response.body)
+      document.css("[aria-label='Reservation sections'] a, [aria-label='Reservation view'] a").each do |link|
+        expect(link["href"]).not_to include("arrival_start_date", "arrival_end_date")
+      end
     end
 
     it "orders arrivals by created_at ascending with a 25-record page boundary" do
@@ -254,7 +303,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(document.css("[data-front-desk-metrics] a, [data-front-desk-metrics] button")).to be_empty
       expect(document.at_css("[aria-label='Reservation sections'] a[aria-current='page']")&.text).to include("Arrivals")
       expect(document.at_css("[aria-label='Reservation view'] a[href*='view=rooms']")&.[]("href")).to include("in_house_query=Stay", "departure_query=Departure", "in_house_page=2", "departure_page=3")
-      expect(document.at_css("input[name='start_date']")).to be_present
+      expect(document.at_css("input[name='arrival_start_date']")).to be_present
       expect(document.css("th").map(&:text).map(&:strip)).to include("Guest / Reference", "Pre-Checkin", "Guarantee", "Docs / Notes")
       expect(response.body).to include("Not Started")
       expect(response.body).to include("Check In")

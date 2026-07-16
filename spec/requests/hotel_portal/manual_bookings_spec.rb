@@ -54,7 +54,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
     end
 
     it "resets date-filtered empty results in both views" do
-      params = { tab: "bookings", start_date: "2099-01-01", end_date: "2099-01-01" }
+      params = { tab: "bookings", booking_start_date: "2099-01-01", booking_end_date: "2099-01-01" }
 
       get hotel_front_desk_path(hotel), params: params.merge(view: "list")
       expect(Nokogiri::HTML(response.body).at_css("a[aria-label='Reset booking filters']")&.[]("href")).to eq(hotel_front_desk_path(hotel, tab: "bookings", view: "list"))

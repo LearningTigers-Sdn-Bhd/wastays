@@ -2,7 +2,8 @@
 <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
   <%= form_with url: hotel_front_desk_path(current_hotel), method: :get, class: "flex flex-col gap-3 lg:flex-row lg:items-center", data: { controller: "auto-submit" } do |form| %>
     <% search_key = @tab == "bookings" ? :booking_query : @tab == "arrivals" ? :arrival_q : @tab == "in_house" ? :in_house_query : :departure_query %>
-    <% excluded = [search_key, @page_param] + (@tab.in?(["bookings", "arrivals", "departures"]) ? [:start_date, :end_date] : []) %>
+    <% date_keys = @tab == "bookings" ? %i[booking_start_date booking_end_date] : @tab == "arrivals" ? %i[arrival_start_date arrival_end_date] : @tab == "departures" ? %i[departure_start_date departure_end_date] : [] %>
+    <% excluded = [search_key, @page_param] + date_keys %>
     <% state.except(*excluded).merge(tab: @tab, view: @view).each { |key, value| concat hidden_field_tag(key, value) } %>
     <div class="relative min-w-72 flex-1">
       <%= cached_icon "magnifying-glass", class: "pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" %>
@@ -17,8 +18,8 @@
     </nav>
     <% if @tab.in?(["bookings", "arrivals", "departures"]) %>
       <div class="relative shrink-0" data-controller="front-desk-date-range">
-        <%= form.hidden_field :start_date, value: @start_date, data: { front_desk_date_range_target: "start" } %>
-        <%= form.hidden_field :end_date, value: @end_date, data: { front_desk_date_range_target: "end" } %>
+        <%= form.hidden_field date_keys.first, value: @start_date, data: { front_desk_date_range_target: "start" } %>
+        <%= form.hidden_field date_keys.second, value: @end_date, data: { front_desk_date_range_target: "end" } %>
         <button type="button" class="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" data-front-desk-date-range-target="button" data-action="click->front-desk-date-range#toggle" aria-label="Select date range" aria-controls="front-desk-date-range-panel" aria-expanded="false">
           <%= cached_icon "calendar-range", class: "size-4 text-slate-400" %>
           <span data-front-desk-date-range-target="display"><%= @start_date ? "#{@start_date.strftime("%d %b %Y")} - #{@end_date.strftime("%d %b %Y")}" : "All stay dates" %></span>

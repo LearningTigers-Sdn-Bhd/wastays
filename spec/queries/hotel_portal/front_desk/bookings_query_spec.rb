@@ -18,7 +18,7 @@ RSpec.describe HotelPortal::FrontDesk::BookingsQuery do
       matching_booking = create(:booking, hotel:, check_in: hotel_time("2026-07-15"))
       create(:booking, hotel:, check_in: hotel_time("2026-07-16"))
 
-      query = described_class.new(hotel:, params: { end_date: "2026-07-15" })
+      query = described_class.new(hotel:, params: { booking_end_date: "2026-07-15" })
 
       expect(query.call).to contain_exactly(matching_booking)
     end
@@ -26,11 +26,21 @@ RSpec.describe HotelPortal::FrontDesk::BookingsQuery do
     it "normalizes reversed date ranges" do
       matching_booking = create(:booking, hotel:, check_in: hotel_time("2026-07-15"))
 
-      query = described_class.new(hotel:, params: { start_date: "2026-07-16", end_date: "2026-07-14" })
+      query = described_class.new(hotel:, params: { booking_start_date: "2026-07-16", booking_end_date: "2026-07-14" })
 
       expect(query.start_date).to eq(Date.new(2026, 7, 14))
       expect(query.end_date).to eq(Date.new(2026, 7, 16))
       expect(query.call).to include(matching_booking)
+    end
+
+    it "prefers scoped dates over legacy dates" do
+      legacy_booking = create(:booking, hotel:, check_in: hotel_time("2026-07-15"))
+      scoped_booking = create(:booking, hotel:, check_in: hotel_time("2026-07-16"))
+
+      query = described_class.new(hotel:, params: { start_date: "2026-07-15", booking_start_date: "2026-07-16" })
+
+      expect(query.call).to contain_exactly(scoped_booking)
+      expect(query.call).not_to include(legacy_booking)
     end
   end
 

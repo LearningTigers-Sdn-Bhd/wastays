@@ -1,4 +1,4 @@
-<% state = { booking_query: params[:booking_query], booking_status: params[:booking_status], booking_check_in_date: params[:booking_check_in_date], booking_page: params[:booking_page], start_date: @start_date || params[:start_date], end_date: @end_date || params[:end_date], arrival_q: params[:arrival_q], in_house_query: params[:in_house_query], departure_query: params[:departure_query], room_assignment: params[:room_assignment], arrival_page: params[:arrival_page], in_house_page: params[:in_house_page], departure_page: params[:departure_page] }.compact %>
+<% state = @state %>
 <div class="mx-auto max-w-[1600px] space-y-6 pb-16" data-front-desk-tab="<%= @tab %>" data-front-desk-view="<%= @view %>">
   <div class="flex items-start justify-between gap-4">
     <div>

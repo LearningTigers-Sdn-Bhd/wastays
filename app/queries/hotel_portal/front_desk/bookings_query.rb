@@ -11,8 +11,8 @@ module HotelPortal
         @hotel = hotel
         @query = params[:booking_query].to_s.strip
         @status = params[:booking_status].presence_in(STATUSES)
-        @start_date = parse_date(params[:start_date].presence || params[:booking_check_in_date]) if params[:start_date].present? || params[:booking_check_in_date].present?
-        @end_date = parse_date(params[:end_date]) if params[:end_date].present?
+        @start_date = parse_date(params[:booking_start_date].presence || params[:booking_check_in_date].presence || params[:start_date]) if params[:booking_start_date].present? || params[:booking_check_in_date].present? || params[:start_date].present?
+        @end_date = parse_date(params[:booking_end_date].presence || params[:end_date]) if params[:booking_end_date].present? || params[:end_date].present?
         @start_date ||= @end_date
         @end_date ||= @start_date
         @start_date, @end_date = @end_date, @start_date if @start_date && @end_date && @end_date < @start_date

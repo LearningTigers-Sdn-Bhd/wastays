@@ -93,6 +93,16 @@ RSpec.describe HotelPortal::FrontDesk::ArrivalsQuery do
     end
   end
 
+  it "prefers scoped dates over legacy dates" do
+    legacy_booking = create(:booking, hotel:, status: "confirmed", check_in: hotel_time("2026-07-15"))
+    scoped_booking = create(:booking, hotel:, status: "confirmed", check_in: hotel_time("2026-07-16"))
+
+    query = described_class.new(hotel:, params: { start_date: "2026-07-15", arrival_start_date: "2026-07-16" })
+
+    expect(query.call).to contain_exactly(scoped_booking)
+    expect(query.call).not_to include(legacy_booking)
+  end
+
   describe "counts" do
     it "keeps selected range count unfiltered" do
       create(:booking, hotel:, status: "confirmed", check_in: hotel_time("2026-07-15"), guest_name: "Aisha")

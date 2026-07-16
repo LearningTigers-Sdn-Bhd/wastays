@@ -10,6 +10,7 @@ module HotelPortal
 
     def index
       @view = VIEWS.include?(params[:view]) ? params[:view] : "list"
+      @state = front_desk_state
       load_metrics
 
       case @tab
@@ -83,11 +84,11 @@ module HotelPortal
     end
 
     def booking_params
-      %i[booking_query booking_status booking_check_in_date start_date end_date].index_with { |key| scalar_param(key) }
+      %i[booking_query booking_status booking_check_in_date booking_start_date booking_end_date start_date end_date].index_with { |key| scalar_param(key) }
     end
 
     def query_params
-      %i[arrival_date start_date end_date arrival_q departure_query].index_with { |key| scalar_param(key) }
+      %i[arrival_date arrival_start_date arrival_end_date arrival_q departure_start_date departure_end_date departure_query start_date end_date].index_with { |key| scalar_param(key) }
     end
 
     def scalar_param(key)
@@ -98,6 +99,15 @@ module HotelPortal
     def page_param(key)
       value = Integer(params[key], exception: false).to_i
       value.positive? ? value : 1
+    end
+
+    def front_desk_state
+      %i[
+        booking_query booking_status booking_check_in_date booking_start_date booking_end_date booking_page
+        arrival_start_date arrival_end_date arrival_q arrival_page
+        in_house_query room_assignment in_house_page
+        departure_start_date departure_end_date departure_query departure_page
+      ].index_with { |key| scalar_param(key) }.compact
     end
   end
 end

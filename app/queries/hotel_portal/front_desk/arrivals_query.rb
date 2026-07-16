@@ -7,8 +7,8 @@ module HotelPortal
 
       def initialize(hotel:, params:)
         @hotel = hotel
-        @start_date = parse_date(params[:start_date].presence || params[:arrival_date])
-        @end_date = parse_date(params[:end_date].presence || @start_date)
+        @start_date = parse_date(params[:arrival_start_date].presence || params[:start_date].presence || params[:arrival_date])
+        @end_date = parse_date(params[:arrival_end_date].presence || params[:end_date].presence || @start_date)
         @start_date, @end_date = @end_date, @start_date if @end_date < @start_date
         @query = params[:arrival_q].to_s.strip
       end

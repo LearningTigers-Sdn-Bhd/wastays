@@ -9,6 +9,10 @@ RSpec.describe HotelPortal::FrontDesk::DeparturesQuery do
     travel_to(Time.zone.local(2026, 7, 15, 12)) { example.run }
   end
 
+  def hotel_time(date)
+    Bookings::ScheduledStay.at_hotel_time(hotel:, value: Date.iso8601(date), kind: :check_out)
+  end
+
   describe "#call" do
     it "returns only completed bookings checked out today for current hotel" do
       matching_booking = create(:booking, hotel:, status: "completed", checked_out_at: 1.hour.ago)
@@ -67,6 +71,16 @@ RSpec.describe HotelPortal::FrontDesk::DeparturesQuery do
 
       expect(query.call).to eq([ later_booking, earlier_booking ])
     end
+  end
+
+  it "prefers scoped dates over legacy dates" do
+    legacy_booking = create(:booking, hotel:, status: "completed", checked_out_at: hotel_time("2026-07-15"))
+    scoped_booking = create(:booking, hotel:, status: "completed", checked_out_at: hotel_time("2026-07-16"))
+
+    query = described_class.new(hotel:, params: { start_date: "2026-07-15", departure_start_date: "2026-07-16" })
+
+    expect(query.call).to contain_exactly(scoped_booking)
+    expect(query.call).not_to include(legacy_booking)
   end
 
   describe "#total_count" do
