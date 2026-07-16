@@ -279,9 +279,9 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
   end
 
-  describe "GET /hotel/:hotel_id/settings?tab=rates" do
+  describe "GET /hotel/:hotel_id/settings/general/rates" do
     it "renders the rate settings tab with a rate plan list and a New Rate Plan trigger" do
-      get hotel_settings_path(hotel, tab: "rates")
+      get hotel_rates_settings_path(hotel)
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Rate Settings")
@@ -293,7 +293,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       create(:rate_plan, hotel: hotel, name: "Standard Rate", sell_mode: "per_person")
       create(:rate_plan, hotel: hotel, name: "Walk-in Rate", sell_mode: "per_room")
 
-      get hotel_settings_path(hotel, tab: "rates")
+      get hotel_rates_settings_path(hotel)
 
       expect(response).to have_http_status(:ok)
       expect(response.body).not_to include("Walk-in Rate")

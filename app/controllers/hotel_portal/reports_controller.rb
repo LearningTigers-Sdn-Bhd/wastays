@@ -212,7 +212,7 @@ module HotelPortal
     end
 
     def daily_revenue_cell
-      date = parse_single_report_date(params[:date])
+      date = parse_date_param(params[:date])
       return head :bad_request if date.nil?
 
       monthly = params[:date_preset].to_s == "this_year"
