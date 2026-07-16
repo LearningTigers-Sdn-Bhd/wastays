@@ -37,6 +37,13 @@
       <% menu.with_submenu(label: "Export") do |submenu| %>
         <% submenu.with_item(href: "#pdf") { "PDF" } %>
         <% submenu.with_item(href: "#csv") { "CSV" } %>
+        <% submenu.with_submenu(label: "Statements", id: "sd-dropdown-statements") do |statements| %>
+          <% statements.with_item(href: "#monthly") { "Monthly" } %>
+          <% statements.with_item(href: "#annual") { "Annual" } %>
+        <% end %>
+        <% submenu.with_submenu(label: "Archives", id: "sd-dropdown-archives") do |archives| %>
+          <% archives.with_item(href: "#zip") { "ZIP" } %>
+        <% end %>
       <% end %>
     <% end %>
 

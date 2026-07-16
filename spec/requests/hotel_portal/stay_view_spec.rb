@@ -107,6 +107,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Reserved")
       expect(response.body).not_to include("Sensitive Guest", "Move or reassign", "Change dates")
+      expect(response.body).not_to include("#{room_type.id}_101-booking-actions")
     end
 
     it "rejects users without board access before loading the board" do

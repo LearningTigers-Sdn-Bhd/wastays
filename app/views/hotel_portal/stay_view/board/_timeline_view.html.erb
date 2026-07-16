@@ -24,7 +24,7 @@
         <% room_group.rooms.each do |room| %>
           <% group.with_row(accessible_label: "Room #{room.room_number}, #{room.room_type_name}", id: room.dom_id) do |row| %>
             <% row.with_summary do %>
-              <%= render HotelPortal::StayView::RoomSummary.new(room:, actions: stay_view_room_menu_actions(room, state)) %>
+              <%= render HotelPortal::StayView::RoomSummary.new(room:, actions: stay_view_timeline_menu_actions(room, state)) %>
             <% end %>
 
             <% room.day_cells.each_with_index do |cell, index| %>

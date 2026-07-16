@@ -55,6 +55,31 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_css("##{segment[:id]}-panel", text: "Confirmed", visible: :visible)
   end
 
+  it "nests Timeline booking actions by guest and opens the selected action sheet" do
+    duplicate = create(
+      :booking,
+      hotel:,
+      guest_name: booking.guest_name,
+      check_in: Date.current + 3.days,
+      check_out: Date.current + 4.days
+    )
+    create(:booking_room, booking: duplicate, room_type:, room_number: "101")
+
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+
+    find("button[aria-label='Actions for room 101']").click
+    click_button "Booking"
+    expect(page).to have_button("Ada Lovelace · 2026-07-16–2026-07-18")
+    expect(page).to have_button("Ada Lovelace · 2026-07-19–2026-07-20")
+    click_button "Ada Lovelace · 2026-07-16–2026-07-18"
+    click_link "Move or reassign"
+
+    within("#offcanvas_drawer") do
+      expect(page).to have_content("Move or reassign stay")
+      expect(page).to have_content("Ada Lovelace")
+    end
+  end
+
   it "moves a stay without dragging and refreshes the Room View board" do
     visit hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
 

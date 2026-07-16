@@ -67,6 +67,29 @@ RSpec.describe PanelsUI::DropdownMenu, type: :component do
     expect(page).to have_css("[role='menu'][popover='manual'][aria-label='Export'] a[href='/export.pdf']", text: "PDF", visible: :all)
   end
 
+  it "renders recursively nested submenus with independent accessibility relationships" do
+    render_inline(described_class.new(id: "booking-actions")) do |menu|
+      menu.with_trigger { "Actions" }
+      menu.with_submenu(label: "Booking", id: "booking-menu") do |bookings|
+        bookings.with_submenu(label: "Jack", id: "jack-menu") do |booking|
+          booking.with_item(
+            href: "/bookings/1/move",
+            variant: :danger,
+            data: { turbo_frame: "offcanvas_drawer" }
+          ) { "Move or reassign" }
+        end
+      end
+    end
+
+    expect(page).to have_css("[role='menuitem'][aria-controls='booking-menu'][aria-expanded='false']", text: "Booking")
+    expect(page).to have_css("#booking-menu[role='menu'][aria-label='Booking'] [role='menuitem'][aria-controls='jack-menu']", text: "Jack", visible: :all)
+    expect(page).to have_css(
+      "#jack-menu[role='menu'][aria-label='Jack'] a[href='/bookings/1/move'][data-variant='danger'][data-turbo-frame='offcanvas_drawer']",
+      text: "Move or reassign",
+      visible: :all
+    )
+  end
+
   it "normalizes placement for Floating UI and merges menu classes" do
     render_menu(placement: :top_end, class_name: "w-72")
 

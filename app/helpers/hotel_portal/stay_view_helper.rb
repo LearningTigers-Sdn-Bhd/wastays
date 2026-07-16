@@ -88,11 +88,42 @@ module HotelPortal::StayViewHelper
     end
   end
 
+  def stay_view_timeline_menu_actions(room, state)
+    booking_entries = room.booking_segments.filter_map do |segment|
+      actions = stay_view_booking_actions(segment, state)
+      next if actions.empty?
+
+      {
+        label: timeline_booking_menu_label(segment, room.booking_segments),
+        id: "#{room.dom_id}-booking-#{segment.booking_id}-actions",
+        children: actions.map { |action| action.merge(data: stay_view_action_data) }
+      }
+    end
+
+    actions = []
+    if booking_entries.any?
+      actions << {
+        label: "Booking",
+        id: "#{room.dom_id}-booking-actions",
+        children: booking_entries
+      }
+    end
+    actions.concat(stay_view_room_actions(room, state).map { |action| action.merge(data: stay_view_action_data) })
+  end
+
   def stay_view_occupancy_label(occupancy)
     OCCUPANCY_LABELS.fetch(occupancy.state, occupancy.state.to_s.humanize)
   end
 
   def stay_view_date_label(date)
     l(date, format: "%a %-d %b")
+  end
+
+  private
+
+  def timeline_booking_menu_label(segment, segments)
+    return segment.guest_label if segments.count { |candidate| candidate.guest_label == segment.guest_label } == 1
+
+    "#{segment.guest_label} · #{segment.check_in.to_fs(:medium)}–#{segment.check_out.to_fs(:medium)}"
   end
 end

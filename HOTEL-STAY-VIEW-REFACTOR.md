@@ -1011,6 +1011,7 @@ Core lifecycle examples must not remain skipped or pending.
 
 ### Phase 5 — Enhanced interactions
 
+- Organize Timeline booking fallbacks as `Booking → guest → actions` nested menus while keeping room operations at the root
 - Add pointer drag proposals
 - Add pointer resize proposals
 - Add scroll and focus preservation

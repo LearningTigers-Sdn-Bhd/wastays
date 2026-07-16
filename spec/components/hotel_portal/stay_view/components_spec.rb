@@ -166,6 +166,37 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_css("##{room.dom_id}-actions-trigger svg", count: 1)
   end
 
+  it "renders recursive booking actions separately from root room actions" do
+    render_inline(HotelPortal::StayView::RoomSummary.new(
+      room: room,
+      actions: [
+        {
+          label: "Booking",
+          id: "room-101-bookings",
+          children: [
+            {
+              label: "Jack",
+              id: "room-101-booking-1",
+              children: [
+                {
+                  href: "/bookings/1/move",
+                  icon: "move",
+                  label: "Move or reassign",
+                  data: { turbo_frame: "offcanvas_drawer" }
+                }
+              ]
+            }
+          ]
+        },
+        { href: "/rooms/101/status", icon: "sparkles", label: "Change room status" }
+      ]
+    ))
+
+    expect(page).to have_css("#room-101-bookings[aria-label='Booking'] #room-101-booking-1[aria-label='Jack']", visible: :all)
+    expect(page).to have_css("#room-101-booking-1 a[data-turbo-frame='offcanvas_drawer']", text: "Move or reassign", visible: :all)
+    expect(page).to have_css("##{room.dom_id}-actions-menu > a", text: "Change room status", visible: :all)
+  end
+
   it "rejects objects outside the Phase 1 projection contract" do
     expect { render_inline(HotelPortal::StayView::RoomSummary.new(room: Object.new)) }
       .to raise_error(ArgumentError, /StayView::RoomRow/)

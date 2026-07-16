@@ -14,6 +14,7 @@ export default class extends Controller {
   connect() {
     this.cleanupPosition = null
     this.submenuCleanups = new Map()
+    this.submenuOpenSources = new Map()
     this.typeahead = ""
     this.typeaheadTimer = null
     this.submenuCloseTimer = null
@@ -116,7 +117,7 @@ export default class extends Controller {
       case "ArrowRight":
         if (item.dataset.dropdownMenuKind === "submenu") {
           event.preventDefault()
-          this.openSubmenu(item, true)
+          this.openSubmenu(item, true, "keyboard")
         }
         break
       case "ArrowLeft":
@@ -164,7 +165,12 @@ export default class extends Controller {
         break
       case "submenu":
         event.preventDefault()
-        this.isSubmenuOpen(item) ? this.closeSubmenu(item) : this.openSubmenu(item, false)
+        if (this.isSubmenuOpen(item) && this.submenuOpenSources.get(item) === "hover") {
+          this.cancelSubmenuClose()
+          this.submenuOpenSources.set(item, "click")
+        } else {
+          this.isSubmenuOpen(item) ? this.closeSubmenu(item) : this.openSubmenu(item, false, "click")
+        }
         break
       default:
         this.close()
@@ -195,12 +201,13 @@ export default class extends Controller {
   openSubmenuFromPointer(event) {
     if (event.currentTarget.getAttribute("aria-disabled") === "true") return
     this.cancelSubmenuClose()
-    this.openSubmenu(event.currentTarget, false)
+    this.openSubmenu(event.currentTarget, false, "hover")
   }
 
   scheduleSubmenuClose(event) {
-    const trigger = event.currentTarget.querySelector('[data-panels-ui--dropdown-menu-target~="submenuTrigger"]')
+    const trigger = event.currentTarget.querySelector(':scope > [data-panels-ui--dropdown-menu-target~="submenuTrigger"]')
     if (!trigger) return
+    if (this.submenuOpenSources.get(trigger) !== "hover") return
 
     this.cancelSubmenuClose()
     this.submenuCloseTimer = window.setTimeout(() => this.closeSubmenu(trigger), SUBMENU_CLOSE_DELAY_MS)
@@ -212,15 +219,20 @@ export default class extends Controller {
     this.submenuCloseTimer = null
   }
 
-  openSubmenu(trigger, focusFirst) {
+  openSubmenu(trigger, focusFirst, source) {
     if (trigger.getAttribute("aria-disabled") === "true") return
 
-    this.submenuTriggerTargets.filter(candidate => candidate !== trigger).forEach(candidate => this.closeSubmenu(candidate))
+    const parentMenu = trigger.closest('[role="menu"]')
+    this.itemsFor(parentMenu)
+      .filter(candidate => candidate !== trigger && candidate.dataset.dropdownMenuKind === "submenu")
+      .forEach(candidate => this.closeSubmenu(candidate))
     const panel = this.panelFor(trigger)
     if (!panel) return
 
+    const openSource = this.isOpen(panel) && source === "hover" ? this.submenuOpenSources.get(trigger) || source : source
     if (!this.isOpen(panel)) panel.showPopover()
     trigger.setAttribute("aria-expanded", "true")
+    this.submenuOpenSources.set(trigger, openSource)
     this.startSubmenuPositioning(trigger, panel)
     if (focusFirst) requestAnimationFrame(() => this.itemsFor(panel)[0]?.focus())
   }
@@ -229,9 +241,11 @@ export default class extends Controller {
     const panel = this.panelFor(trigger)
     if (!panel) return
 
-    this.stopSubmenuPositioning(panel)
-    if (this.isOpen(panel)) panel.hidePopover()
-    trigger.setAttribute("aria-expanded", "false")
+    this.submenuTriggerTargets
+      .filter(candidate => panel.contains(candidate))
+      .reverse()
+      .forEach(candidate => this.hideSubmenu(candidate))
+    this.hideSubmenu(trigger)
   }
 
   closeSubmenuPanel(panel, restoreFocus) {
@@ -243,7 +257,7 @@ export default class extends Controller {
   }
 
   closeAllSubmenus() {
-    this.submenuTriggerTargets.forEach(trigger => this.closeSubmenu(trigger))
+    this.submenuTriggerTargets.slice().reverse().forEach(trigger => this.hideSubmenu(trigger))
   }
 
   isSubmenuOpen(trigger) {
@@ -253,6 +267,16 @@ export default class extends Controller {
 
   panelFor(trigger) {
     return this.submenuPanelTargets.find(panel => panel.id === trigger.getAttribute("aria-controls"))
+  }
+
+  hideSubmenu(trigger) {
+    const panel = this.panelFor(trigger)
+    if (!panel) return
+
+    this.stopSubmenuPositioning(panel)
+    if (this.isOpen(panel)) panel.hidePopover()
+    trigger.setAttribute("aria-expanded", "false")
+    this.submenuOpenSources.delete(trigger)
   }
 
   itemsFor(menu) {

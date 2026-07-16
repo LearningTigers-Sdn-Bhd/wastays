@@ -144,17 +144,31 @@ module HotelPortal
           menu.with_trigger(variant: :ghost, size: :icon_xs, aria_label: "Actions for room #{@room.room_number}") do
             helpers.app_icon("ellipsis-vertical", class: "size-4", aria: { hidden: true })
           end
-          @actions.each do |action|
-            menu.with_item(
-              href: action.fetch(:href),
-              variant: action.fetch(:variant, :default),
-              data: action.fetch(:data, {})
-            ) do
-              safe_join([
-                helpers.app_icon(action.fetch(:icon), class: "size-4", aria: { hidden: true }),
-                tag.span(action.fetch(:label))
-              ])
-            end
+          @actions.each { |action| render_menu_action(menu, action) }
+        end
+      end
+
+      def render_menu_action(menu, action)
+        if action[:children]
+          menu.with_submenu(
+            label: action.fetch(:label),
+            id: action[:id],
+            variant: action.fetch(:variant, :default),
+            disabled: action.fetch(:disabled, false),
+            class: action[:class]
+          ) do |submenu|
+            action.fetch(:children).each { |child| render_menu_action(submenu, child) }
+          end
+        else
+          menu.with_item(
+            href: action.fetch(:href),
+            variant: action.fetch(:variant, :default),
+            data: action.fetch(:data, {})
+          ) do
+            safe_join([
+              helpers.app_icon(action.fetch(:icon), class: "size-4", aria: { hidden: true }),
+              tag.span(action.fetch(:label))
+            ])
           end
         end
       end
