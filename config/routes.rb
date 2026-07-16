@@ -77,6 +77,9 @@ Rails.application.routes.draw do
         resources :complaint_requests, only: [ :create ], module: :bookings
       end
     end
+    namespace :v2 do
+      resources :bookings, only: [ :show ]
+    end
   end
 
   # Public Concierge (front-desk QR)
