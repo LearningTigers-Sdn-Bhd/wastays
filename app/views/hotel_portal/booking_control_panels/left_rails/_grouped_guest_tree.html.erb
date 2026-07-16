@@ -1,8 +1,8 @@
 <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && booking.status.in?(%w[confirmed checked_in]) %>
-  <div class="border-b border-slate-200 px-4 py-3">
+  <div class="border-b border-border px-4 py-3">
     <%= link_to hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: "add", return_to: presenter.close_drawer_path),
         data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" },
-        class: "inline-flex w-full items-center justify-center rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" do %>
+        class: "inline-flex w-full items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" do %>
       + Add Guest
     <% end %>
   </div>

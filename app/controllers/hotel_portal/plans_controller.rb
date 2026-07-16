@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class PlansController < BaseController
+  class PlansController < SettingsBaseController
     def show
       @plan = current_hotel.plan
       @feature_groups = FeatureGroup.ordered.includes(:features)

@@ -1,0 +1,17 @@
+<%= tag.public_send(@as, **root_attributes) do %>
+  <% if media? && media.position == :background %>
+    <%= media %>
+  <% end %>
+
+  <div class="panel-card__layout">
+    <% if media? && media.position != :background %>
+      <%= media %>
+    <% end %>
+
+    <div class="panel-card__sections">
+      <%= header if header? %>
+      <%= card_content if card_content? %>
+      <%= footer if footer? %>
+    </div>
+  </div>
+<% end %>

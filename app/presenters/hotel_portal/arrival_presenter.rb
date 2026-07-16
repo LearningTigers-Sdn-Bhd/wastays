@@ -37,10 +37,10 @@ module HotelPortal
 
     def pre_checkin_badge_class
       case pre_checkin_status
-      when "completed" then "border-emerald-200 bg-emerald-50 text-emerald-700"
-      when "pending" then "border-amber-200 bg-amber-50 text-amber-700"
-      when "failed" then "border-red-200 bg-red-50 text-red-700"
-      else "border-slate-200 bg-slate-50 text-slate-700"
+      when "completed" then "border-success/30 bg-success/10 text-success"
+      when "pending" then "border-warning/30 bg-warning/10 text-warning"
+      when "failed" then "border-destructive/30 bg-destructive/10 text-destructive"
+      else "border-border bg-muted text-foreground"
       end
     end
 

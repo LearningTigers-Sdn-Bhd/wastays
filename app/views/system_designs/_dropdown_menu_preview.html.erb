@@ -1,0 +1,57 @@
+<section aria-labelledby="dropdown-menu-preview-heading" class="border-t border-border pt-8">
+  <h2 id="dropdown-menu-preview-heading" class="text-lg font-semibold text-foreground">Dropdown menu</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Collision-aware action and selection menus with groups, semantic variants, and nested menus.
+  </p>
+
+  <form id="sd-dropdown-form" class="flex flex-wrap items-center gap-3" onsubmit="return false">
+    <%= render PanelsUI::DropdownMenu.new(id: "sd-dropdown", placement: :bottom_start) do |menu| %>
+      <% menu.with_trigger(variant: :primary) do %>
+        Menu options
+        <%= app_icon("chevron-down", class: "size-4", aria: { hidden: "true" }) %>
+      <% end %>
+
+      <% menu.with_group(label: "Actions") do |group| %>
+        <% group.with_item(variant: :primary) { "Edit booking" } %>
+        <% group.with_item(variant: :info) { "View details" } %>
+        <% group.with_item(variant: :success) { "Confirm stay" } %>
+        <% group.with_item(variant: :warning) { "Flag for review" } %>
+        <% group.with_item(variant: :danger) { "Cancel booking" } %>
+        <% group.with_item(disabled: true) { "Unavailable action" } %>
+      <% end %>
+
+      <% menu.with_separator %>
+
+      <% menu.with_group(label: "Visible columns") do |group| %>
+        <% group.with_checkbox(name: "columns[]", value: "guest", checked: true) { "Guest" } %>
+        <% group.with_checkbox(name: "columns[]", value: "rate") { "Rate" } %>
+      <% end %>
+
+      <% menu.with_radio_group(name: "density", label: "Density") do |group| %>
+        <% group.with_option(value: "comfortable", checked: true) { "Comfortable" } %>
+        <% group.with_option(value: "compact") { "Compact" } %>
+      <% end %>
+
+      <% menu.with_separator %>
+
+      <% menu.with_submenu(label: "Export") do |submenu| %>
+        <% submenu.with_item(href: "#pdf") { "PDF" } %>
+        <% submenu.with_item(href: "#csv") { "CSV" } %>
+      <% end %>
+    <% end %>
+
+    <% {
+      top_start: "Top",
+      right_start: "Right",
+      bottom_end: "Bottom end",
+      left_start: "Left"
+    }.each do |placement, label| %>
+      <%= render PanelsUI::DropdownMenu.new(id: "sd-dropdown-#{placement}", placement: placement) do |menu| %>
+        <% menu.with_trigger(variant: :secondary) { label } %>
+        <% menu.with_item { "Alpha" } %>
+        <% menu.with_item { "Bravo" } %>
+        <% menu.with_item { "Charlie" } %>
+      <% end %>
+    <% end %>
+  </form>
+</section>

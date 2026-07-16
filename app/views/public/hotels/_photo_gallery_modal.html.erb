@@ -10,20 +10,20 @@
          data-action="click->gallery-toggle#stop">
       
       <!-- Header -->
-      <div class="flex items-center justify-between gap-4 border-b border-neutral-border px-5 py-4 sm:px-8 sm:py-6 shrink-0 bg-white z-20">
+      <div class="flex items-center justify-between gap-4 border-b border-border px-5 py-4 sm:px-8 sm:py-6 shrink-0 bg-white z-20">
         <div class="flex items-center gap-x-4">
           <button type="button" 
                   data-gallery-toggle-target="backButton"
                   data-action="click->gallery-toggle#closeViewer"
-                  class="hidden h-9 w-9 flex items-center justify-center rounded-full bg-neutral-bg text-neutral-text-primary hover:bg-neutral-border transition-colors">
+                  class="hidden h-9 w-9 flex items-center justify-center rounded-full bg-muted text-foreground hover:bg-border transition-colors">
             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           </button>
-          <h2 class="text-xl font-extrabold text-neutral-text-primary">
+          <h2 class="text-xl font-extrabold text-foreground">
             <span data-gallery-toggle-target="headerTitle">Hotel Photos</span>
           </h2>
         </div>
 
-        <button type="button" data-action="click->gallery-toggle#hide" class="h-10 w-10 flex items-center justify-center rounded-full border border-neutral-border text-neutral-text-secondary hover:bg-neutral-bg hover:text-neutral-text-primary transition-colors">
+        <button type="button" data-action="click->gallery-toggle#hide" class="h-10 w-10 flex items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
           <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </div>
@@ -34,7 +34,7 @@
         <div data-gallery-toggle-target="grid" class="h-full overflow-y-auto p-5 sm:p-8">
           <div class="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
             <% hotel.ordered_photo_attachments.each_with_index do |photo, index| %>
-              <div class="aspect-[4/3] overflow-hidden rounded-2xl border border-neutral-border bg-neutral-bg cursor-pointer group"
+              <div class="aspect-[4/3] overflow-hidden rounded-2xl border border-border bg-muted cursor-pointer group"
                    data-action="click->gallery-toggle#openViewer"
                    data-index="<%= index %>">
                 <%= image_tag photo, class: "w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" %>

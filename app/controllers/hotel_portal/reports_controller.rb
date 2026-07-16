@@ -66,15 +66,17 @@ module HotelPortal
     def payouts
       cutoff_date = Booking.last_friday.end_of_day
       @active_tab = PAYOUT_TABS.include?(params[:tab]) ? params[:tab] : "upcoming"
-      append_breadcrumb({ label: payout_tab_label(@active_tab), tab_label: true }) if request.format.html?
+      append_breadcrumb({ label: payout_tab_label(@active_tab), tab_label: true, tabs_id: "payout-tabs" }) if request.format.html?
 
       @upcoming_bookings = current_hotel.bookings.unbatched_upcoming(cutoff_date)
       @upcoming_payout_amount = current_hotel.upcoming_payout_amount(cutoff_date)
 
       @processing_batches = current_hotel.payout_batches.where(status: "processing")
 
-      @paid_start_date = parse_date_param(params[:paid_start_date])
-      @paid_end_date = parse_date_param(params[:paid_end_date])
+      paid_range_start, paid_range_end = parse_report_date_range_param(params[:paid_date_range])
+      @paid_start_date = paid_range_start || parse_date_param(params[:paid_start_date])
+      @paid_end_date = paid_range_end || parse_date_param(params[:paid_end_date])
+      @paid_end_date = @paid_start_date if @paid_start_date && @paid_end_date && @paid_end_date < @paid_start_date
 
       @payout_history = current_hotel.payout_batches_for_reports(
         start_date: @paid_start_date,

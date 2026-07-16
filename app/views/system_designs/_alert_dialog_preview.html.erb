@@ -1,0 +1,85 @@
+<section aria-labelledby="alert-dialog-preview-heading" class="border-t border-border pt-8">
+  <h2 id="alert-dialog-preview-heading" class="text-lg font-semibold text-foreground">Alert dialog</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Blocking confirmations with explicit responses. Escape and backdrop dismissal are intentionally disabled.
+  </p>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <%= render PanelsUI::Button.new(variant: :primary, command: "show-modal", commandfor: "sd-alert-dialog-basic") do %>
+      Basic
+    <% end %>
+    <%= render PanelsUI::AlertDialog.new(
+          id: "sd-alert-dialog-basic",
+          title: "Continue with this change?",
+          description: "The updated settings will apply immediately."
+        ) do |dialog| %>
+      <% dialog.with_cancel(label: "Cancel") %>
+      <% dialog.with_action(label: "Continue") %>
+    <% end %>
+
+    <%= render PanelsUI::Button.new(variant: :secondary, command: "show-modal", commandfor: "sd-alert-dialog-small") do %>
+      Small
+    <% end %>
+    <%= render PanelsUI::AlertDialog.new(
+          id: "sd-alert-dialog-small",
+          size: :sm,
+          title: "Allow this connection?",
+          description: "The service will receive access to this property."
+        ) do |dialog| %>
+      <% dialog.with_cancel(label: "Don't allow") %>
+      <% dialog.with_action(label: "Allow") %>
+    <% end %>
+
+    <%= button_to system_design_confirm_alert_dialog_path,
+                  id: "sd-turbo-confirm-trigger",
+                  class: "panel-button",
+                  form: {
+                    class: "contents",
+                    data: {
+                      turbo_confirm: "Test the global confirmation?",
+                      turbo_confirm_title: "Turbo confirmation",
+                      turbo_confirm_tone: :info
+                    }
+                  },
+                  data: { variant: :neutral, size: :md } do %>
+      Test Turbo confirmation
+    <% end %>
+  </div>
+
+  <div class="mt-5 grid gap-3 sm:grid-cols-2" aria-label="Alert dialog tone and size combinations">
+    <% {
+         info: [ "info", "Review connection details", "The integration can read availability and rate information." ],
+         warning: [ "triangle-alert", "Change the current rate?", "This may alter the forecasted value of the stay." ],
+         success: [ "circle-check", "Mark the payout complete?", "Confirm that the funds have been transferred." ],
+         destructive: [ "trash-2", "Delete this room?", "This permanently removes the room and cannot be undone." ]
+       }.each do |tone, (icon, title, description)| %>
+      <div class="rounded-lg border border-border bg-card p-3">
+        <p class="text-sm font-semibold text-card-foreground"><%= tone.to_s.humanize %></p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <% %i[default sm].each do |size| %>
+            <% dialog_id = "sd-alert-dialog-#{tone}-#{size}" %>
+            <%= render PanelsUI::Button.new(
+                  variant: tone,
+                  size: :sm,
+                  command: "show-modal",
+                  commandfor: dialog_id
+                ) do %>
+              <%= size == :default ? "Default" : "Small" %>
+            <% end %>
+            <%= render PanelsUI::AlertDialog.new(
+                  id: dialog_id,
+                  size: size,
+                  tone: tone,
+                  title: title,
+                  description: description
+                ) do |dialog| %>
+              <% dialog.with_icon { app_icon(icon, aria: { hidden: "true" }) } %>
+              <% dialog.with_cancel(label: tone == :destructive ? "Keep room" : "Cancel") %>
+              <% dialog.with_action(label: tone == :destructive ? "Delete" : "Confirm") %>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</section>

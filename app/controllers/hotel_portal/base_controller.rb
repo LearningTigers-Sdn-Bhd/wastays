@@ -5,6 +5,7 @@ module HotelPortal
     include Breadcrumbable
 
     layout "hotel"
+    helper HotelPortal::SettingsNavigationHelper
     before_action :authenticate_user!
     before_action :reject_corporate_user!
     before_action :ensure_hotel_access!

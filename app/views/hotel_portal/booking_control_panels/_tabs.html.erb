@@ -1,10 +1,16 @@
-<div class="shrink-0 border-b border-slate-200 bg-white px-2">
-  <nav class="flex items-center overflow-x-auto overscroll-x-contain" aria-label="Booking control panel tabs">
+<div class="shrink-0 border-b border-border bg-card px-2">
+  <%= render PanelsUI::Tabs.new(
+        id: "booking-control-tabs",
+        active: presenter.active_tab,
+        aria_label: "Booking control panel tabs"
+      ) do |tabs| %>
     <% presenter.tabs.each do |tab| %>
-      <% active = tab.key == presenter.active_tab %>
-      <%= link_to presenter.tab_path(tab.key), class: "inline-flex h-12 shrink-0 items-center whitespace-nowrap border-b-2 px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 #{active ? "border-slate-950 font-bold text-slate-950" : "border-transparent font-semibold text-slate-500 hover:border-slate-300 hover:text-slate-950"}", aria: { current: active ? "page" : nil } do %>
-        <span><%= tab.label %></span>
-      <% end %>
+      <% tabs.with_tab(
+           name: tab.key,
+           label: tab.label,
+           href: presenter.tab_path(tab.key),
+           data: { turbo_frame: "booking_control_panel_workspace", turbo_action: "advance" }
+         ) %>
     <% end %>
-  </nav>
+  <% end %>
 </div>

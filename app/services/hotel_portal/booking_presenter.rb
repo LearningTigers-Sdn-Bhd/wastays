@@ -29,7 +29,7 @@ module HotelPortal
       when "completed" then "border-emerald-800 text-emerald-800"
       when "cancelled" then "border-red-800 text-red-800"
       when "pending" then "border-yellow-800 text-yellow-800"
-      else "border-gray-800 text-gray-800"
+      else "border-border-interactive text-foreground"
       end
     end
 
@@ -66,13 +66,13 @@ module HotelPortal
     end
 
     def checked_in_at_form_value
-      (booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M")
+      (booking.checked_in_at || Time.current).in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")
     end
 
     def checked_out_at_form_value
       return booking.check_out.in_time_zone(booking.hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M") if booking.checkout_required?
 
-      Time.current.strftime("%Y-%m-%dT%H:%M")
+      Time.current.in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")
     end
 
     def check_in_title
@@ -209,7 +209,7 @@ module HotelPortal
       when "captured", "completed" then "border-emerald-800 text-emerald-800"
       when "pending", "authorized" then "border-yellow-800 text-yellow-800"
       when "failed", "cancelled", "refunded" then "border-red-800 text-red-800"
-      else "border-gray-800 text-gray-800"
+      else "border-border-interactive text-foreground"
       end
     end
 
@@ -223,7 +223,7 @@ module HotelPortal
       when "in_progress" then "border-blue-800 text-blue-800"
       when "failed" then "border-red-800 text-red-800"
       when "pending" then "border-yellow-800 text-yellow-800"
-      else "border-gray-800 text-gray-800"
+      else "border-border-interactive text-foreground"
       end
     end
 
@@ -349,7 +349,7 @@ module HotelPortal
       room_type = primary_room.room_type
       quantity = booking.booking_rooms.count
 
-      today = Time.current.to_date
+      today = Time.current.in_time_zone(hotel.hotel_time_zone).to_date
       rate = room_type.room_rates.find_by(date: today)&.price || room_type.base_price
 
       base_amount = (rate.to_d * quantity).round(2)
@@ -463,7 +463,7 @@ module HotelPortal
       case status
       when "confirmed" then "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
       when "cancelled" then "bg-red-50 text-red-700 ring-red-600/20"
-      else "bg-slate-100 text-slate-700 ring-slate-500/20"
+      else "bg-muted text-foreground ring-ring/20"
       end
     end
 
@@ -484,33 +484,33 @@ module HotelPortal
         "review_due_out" => "peer-checked:border-orange-400 peer-checked:bg-orange-50 peer-checked:text-orange-700 peer-checked:hover:bg-orange-100",
         "checkout_required" => "peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700 peer-checked:hover:bg-rose-100",
         "completed" => "peer-checked:border-emerald-400 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 peer-checked:hover:bg-emerald-100",
-        "cancelled" => "peer-checked:border-slate-500 peer-checked:bg-slate-100 peer-checked:text-slate-700 peer-checked:hover:bg-slate-200",
+        "cancelled" => "peer-checked:border-border-interactive peer-checked:bg-muted peer-checked:text-foreground peer-checked:hover:bg-muted",
         "no_show" => "peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700 peer-checked:hover:bg-rose-100",
         "overbooked" => "peer-checked:border-red-400 peer-checked:bg-red-50 peer-checked:text-red-700 peer-checked:hover:bg-red-100",
         "not_ready" => "peer-checked:border-red-400 peer-checked:bg-red-50 peer-checked:text-red-700 peer-checked:hover:bg-red-100"
       }
-      booking_pill_styles[status] || "peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900"
+      booking_pill_styles[status] || "peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-border-interactive"
     end
 
     def created_at_date
-      format_date(booking.created_at, :long)
+      format_date(booking.created_at.in_time_zone(hotel.hotel_time_zone), :long)
     end
 
     def status_variant_class
       booking_styles = {
-        "pending" => "border-amber-200 bg-amber-50 text-amber-700",
-        "confirmed" => "border-blue-200 bg-blue-50 text-blue-700",
-        "review_no_show" => "border-amber-300 bg-amber-50 text-amber-800",
-        "checked_in" => "border-violet-200 bg-violet-50 text-violet-700",
-        "review_due_out" => "border-orange-200 bg-orange-50 text-orange-700",
-        "checkout_required" => "border-rose-200 bg-rose-50 text-rose-700",
-        "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700",
-        "cancelled" => "border-slate-300 bg-slate-100 text-slate-600",
-        "no_show" => "border-rose-200 bg-rose-50 text-rose-700",
-        "overbooked" => "border-red-200 bg-red-50 text-red-700",
-        "not_ready" => "border-red-200 bg-red-50 text-red-700"
+        "pending" => "border-warning/30 bg-warning/10 text-warning",
+        "confirmed" => "border-info/30 bg-info/10 text-info",
+        "review_no_show" => "border-warning/30 bg-warning/10 text-warning",
+        "checked_in" => "border-success/30 bg-success/10 text-success",
+        "review_due_out" => "border-warning/30 bg-warning/10 text-warning",
+        "checkout_required" => "border-destructive/30 bg-destructive/10 text-destructive",
+        "completed" => "border-success/30 bg-success/10 text-success",
+        "cancelled" => "border-border-interactive bg-muted text-muted-foreground",
+        "no_show" => "border-destructive/30 bg-destructive/10 text-destructive",
+        "overbooked" => "border-destructive/30 bg-destructive/10 text-destructive",
+        "not_ready" => "border-destructive/30 bg-destructive/10 text-destructive"
       }
-      booking_styles[status] || "border-slate-200 bg-slate-50 text-slate-600"
+      booking_styles[status] || "border-border bg-muted text-muted-foreground"
     end
 
     def status_label_humanized

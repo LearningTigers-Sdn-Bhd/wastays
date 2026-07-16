@@ -5,7 +5,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
   let(:user) { create(:user, account: account, role: 'admin', email: 'owner@example.com') }
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
-  let(:hotel) { create(:hotel, account: account, plan: plan, status: 'approved') }
+  let(:hotel) { create(:hotel, account: account, plan: plan, name: "O'Conner Hotel", status: 'approved') }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 
   before do
@@ -34,7 +34,11 @@ RSpec.describe 'Hotel layout shell', type: :system do
     visit hotel_dashboard_path(hotel)
 
     expect(page).to have_link('Dashboard', href: hotel_dashboard_path(hotel))
-    expect(page).to have_css('summary.sidebar-group-parent', text: 'Front Office', visible: :all)
+    within("#hotel-sidebar .panel-sidebar__header") do
+      hotel_home_link = find_link(hotel.name, href: hotel_dashboard_path(hotel))
+      expect(hotel_home_link["aria-label"]).to eq("Hotel: #{hotel.name}")
+    end
+    expect(page).to have_css('button.panel-sidebar__group-trigger', text: 'Front Office', visible: :all)
     expect(page).to have_link('Reservations', href: hotel_front_desk_path(hotel), visible: :all)
     expect(page).to have_link('Rates & Inventory', href: hotel_inventory_index_path(hotel), visible: :all)
     expect(page).to have_link('Guest Records', href: hotel_guests_path(hotel), visible: :all)
@@ -44,9 +48,25 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_text('Reports')
     expect(page).to have_link('Summary', href: hotel_reports_path(hotel), visible: :all)
     expect(page).to have_link('Night Audit', href: hotel_night_audits_path(hotel), visible: :all)
-    expect(page).to have_css('#flash_toasts')
-    expect(page).to have_css("#hotel-sidebar a.sidebar-nav-link-active[data-sidebar-route]", text: "Dashboard")
-    expect(page).to have_css("#hotel-sidebar summary.sidebar-group-parent", text: "Financial", visible: :all)
-    expect(page).to have_no_css("#hotel-sidebar summary.sidebar-nav-link-active", visible: :all)
+    expect(page).to have_css('#toast-viewport[data-controller="toast"]')
+    expect(page).to have_css("header.panel-navbar[data-sticky='true']")
+    expect(page).to have_css("#hotel-profile[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_css("button[command='show-modal'][commandfor='hotel-sidebar-mobile']")
+    expect(page).to have_no_css("nav[aria-label='Mobile navigation']", visible: :all)
+    expect(page).to have_css("#hotel-sidebar a.panel-sidebar__link[data-sidebar-route][aria-current='page']", text: "Dashboard")
+    expect(page).to have_css("#hotel-sidebar button.panel-sidebar__group-trigger", text: "Financial", visible: :all)
+    expect(page).to have_no_css("#hotel-sidebar button.panel-sidebar__group-trigger[aria-current='page']", visible: :all)
+  end
+
+  it "renders the reduced Navbar while the hotel shell is locked" do
+    hotel.update!(status: "pending_review")
+
+    visit hotel_dashboard_path(hotel)
+
+    expect(page).to have_css("header.panel-navbar")
+    expect(page).to have_css("#hotel-profile[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_no_css("#hotel-sidebar", visible: :all)
+    expect(page).to have_no_css("button[command='show-modal'][commandfor='hotel-sidebar-mobile']", visible: :all)
+    expect(page).to have_no_css("[data-controller='panels-ui--sidebar-toggle']", visible: :all)
   end
 end

@@ -1,0 +1,53 @@
+<section aria-labelledby="alert-preview-heading" class="border-t border-border pt-8">
+  <h2 id="alert-preview-heading" class="text-lg font-semibold text-foreground">Alert</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Inline contextual feedback with semantic tones, optional actions, custom icons, and dismissal.
+  </p>
+
+  <% alert_tones = {
+    default: [ "Booking note", "This reservation was created by the front desk." ],
+    info: [ "Rate information", "Taxes are calculated when the folio is finalized." ],
+    success: [ "Payment recorded", "The guest balance has been updated." ],
+    warning: [ "Outstanding balance", "Payment is required before checkout." ],
+    destructive: [ "Payment failed", "The card was declined by the payment provider." ]
+  } %>
+
+  <div class="grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="space-y-3 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> alerts</h3>
+        <% alert_tones.each do |tone, (title, copy)| %>
+          <%= render PanelsUI::Alert.new(tone: tone, title: title) do |alert| %>
+            <% alert.with_description { copy } %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="mt-5 space-y-3 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+    <h3 class="text-sm font-semibold">Composition and dismissal</h3>
+    <%= render PanelsUI::Alert.new(tone: :info, dismissible: true, data: { testid: "dismissible-alert" }) do |alert| %>
+      <% alert.with_icon do %>
+        <%= app_icon "sparkles", class: "size-5", aria: { hidden: "true" } %>
+      <% end %>
+      <% alert.with_description { "Description-only alerts remain accessible and compact." } %>
+      <% alert.with_actions do %>
+        <%= render PanelsUI::Button.new(size: :sm, variant: :secondary) do %>
+          Review
+        <% end %>
+      <% end %>
+    <% end %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "Icon intentionally hidden", show_icon: false) do |alert| %>
+      <% alert.with_description { "Use this treatment when an adjacent interface already supplies enough context." } %>
+    <% end %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "Plan upgrade", actions_layout: :stacked) do |alert| %>
+      <% alert.with_description { "Stack actions below the message when an inline action would compress the copy." } %>
+      <% alert.with_actions do %>
+        <%= render PanelsUI::Button.new(size: :sm, variant: :warning, class: "w-full") do %>
+          Review upgrade options
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+</section>

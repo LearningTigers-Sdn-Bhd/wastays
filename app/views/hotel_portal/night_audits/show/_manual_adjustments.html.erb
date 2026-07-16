@@ -1,47 +1,47 @@
-<section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" data-testid="manual-adjustments">
-  <header class="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/70 px-4 py-3">
+<section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" data-testid="manual-adjustments">
+  <header class="flex items-center justify-between gap-3 border-b border-border bg-muted/70 px-4 py-3">
     <div>
-      <h2 class="inline-flex items-center gap-2 text-sm font-bold text-slate-950">
+      <h2 class="inline-flex items-center gap-2 text-sm font-bold text-foreground">
         <span class="inline-flex size-6 items-center justify-center rounded-md bg-amber-50 text-amber-700"><%= cached_icon "receipt-text", class: "size-3.5", aria: { hidden: true } %></span>
         Manual Adjustments & Voids
       </h2>
-      <p class="mt-0.5 text-xs text-slate-500">Staff interventions, rebates, voids, and revenue corrections.</p>
+      <p class="mt-0.5 text-xs text-muted-foreground">Staff interventions, rebates, voids, and revenue corrections.</p>
     </div>
-    <span class="shrink-0 text-xs font-bold text-slate-500"><%= presenter.manual_adjustment_rows.count %> records</span>
+    <span class="shrink-0 text-xs font-bold text-muted-foreground"><%= presenter.manual_adjustment_rows.count %> records</span>
   </header>
 
   <div>
     <% if presenter.manual_adjustment_rows.any? %>
       <div class="hidden overflow-x-auto md:block">
-        <table class="min-w-full divide-y divide-slate-200 text-sm">
-          <thead class="bg-slate-50 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
+        <table class="min-w-full divide-y divide-border text-sm">
+          <thead class="bg-muted text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             <tr><th class="px-4 py-2">Time</th><th class="px-4 py-2">Guest / Ref</th><th class="px-4 py-2">Category</th><th class="px-4 py-2">User</th><th class="px-4 py-2">Reason</th><th class="px-4 py-2 text-right">Amount</th></tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
+          <tbody class="divide-y divide-border">
             <% presenter.manual_adjustment_rows.each do |row| %>
               <tr>
-                <td class="px-4 py-2.5 text-slate-600"><%= row.time %></td>
-                <td class="px-4 py-2.5"><p class="font-semibold text-slate-950"><%= row.guest %></p><p class="text-[10px] text-slate-500">#<%= row.reference %></p></td>
+                <td class="px-4 py-2.5 text-muted-foreground"><%= row.time %></td>
+                <td class="px-4 py-2.5"><p class="font-semibold text-foreground"><%= row.guest %></p><p class="text-[10px] text-muted-foreground">#<%= row.reference %></p></td>
                 <td class="px-4 py-2.5 text-amber-700"><%= row.category %></td>
-                <td class="px-4 py-2.5 text-slate-600"><%= row.user %></td>
-                <td class="px-4 py-2.5 text-slate-600"><%= row.reason %></td>
-                <td class="px-4 py-2.5 text-right font-bold tabular-nums text-slate-950"><%= row.amount %></td>
+                <td class="px-4 py-2.5 text-muted-foreground"><%= row.user %></td>
+                <td class="px-4 py-2.5 text-muted-foreground"><%= row.reason %></td>
+                <td class="px-4 py-2.5 text-right font-bold tabular-nums text-foreground"><%= row.amount %></td>
               </tr>
             <% end %>
           </tbody>
         </table>
       </div>
-      <div class="divide-y divide-slate-100 md:hidden">
+      <div class="divide-y divide-border md:hidden">
         <% presenter.manual_adjustment_rows.each do |row| %>
           <article class="px-4 py-3">
-            <div class="flex items-center justify-between gap-3"><p class="text-xs font-bold text-amber-700"><%= row.category %></p><p class="text-sm font-bold tabular-nums text-slate-950"><%= row.amount %></p></div>
-            <p class="mt-1 text-sm font-semibold text-slate-950"><%= row.guest %> · #<%= row.reference %></p>
-            <p class="mt-1 text-xs text-slate-600"><%= row.time %> · <%= row.user %> · <%= row.reason %></p>
+            <div class="flex items-center justify-between gap-3"><p class="text-xs font-bold text-amber-700"><%= row.category %></p><p class="text-sm font-bold tabular-nums text-foreground"><%= row.amount %></p></div>
+            <p class="mt-1 text-sm font-semibold text-foreground"><%= row.guest %> · #<%= row.reference %></p>
+            <p class="mt-1 text-xs text-muted-foreground"><%= row.time %> · <%= row.user %> · <%= row.reason %></p>
           </article>
         <% end %>
       </div>
     <% else %>
-      <p class="px-4 py-3 text-sm font-medium text-slate-600"><%= presenter.empty_state(:adjustments) %></p>
+      <p class="px-4 py-3 text-sm font-medium text-muted-foreground"><%= presenter.empty_state(:adjustments) %></p>
     <% end %>
   </div>
 </section>

@@ -1,14 +1,14 @@
 <%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "fullscreen-bottom" } do %>
   <% persisted = hotel_tax.persisted? %>
-  <div class="flex h-full min-h-0 flex-col bg-slate-100">
-    <header class="z-10 shrink-0 border-b border-slate-200 bg-white">
+  <div class="flex h-full min-h-0 flex-col bg-muted">
+    <header class="z-10 shrink-0 border-b border-border bg-card">
       <div class="mx-auto flex max-w-[1100px] items-start justify-between gap-4 px-4 py-4 sm:px-6">
         <div class="min-w-0">
-          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Taxes &amp; Fees</p>
-          <h2 class="mt-0.5 text-lg font-bold tracking-tight text-slate-950"><%= title %></h2>
-          <p class="mt-1 text-xs font-medium text-slate-500">Configure custom levies and service fees that appear as invoice line items.</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Taxes &amp; Fees</p>
+          <h2 class="mt-0.5 text-lg font-bold tracking-tight text-foreground"><%= title %></h2>
+          <p class="mt-1 text-xs font-medium text-muted-foreground">Configure custom levies and service fees that appear as invoice line items.</p>
         </div>
-        <button type="button" class="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" data-action="click->offcanvas#close" aria-label="Close fee form">
+        <button type="button" class="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" data-action="click->offcanvas#close" aria-label="Close fee form">
           <%= cached_icon "x", stroke_width: 2.5, class: "size-5" %>
         </button>
       </div>
@@ -28,32 +28,32 @@
 
           <div class="space-y-5" data-controller="tax-code-field">
             <div>
-              <%= f.label :name, "Name", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+              <%= f.label :name, "Name", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
               <%= f.text_field :name,
                   placeholder: "e.g. Heritage Fee",
-                  class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+                  class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
             </div>
 
             <div class="grid gap-5 md:grid-cols-2">
               <div>
-                <%= f.label :charge_type, "Charge Type", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+                <%= f.label :charge_type, "Charge Type", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
                 <%= f.select :charge_type,
                     [["Tax", "tax"], ["Charge", "charge"], ["Others", "others"]],
                     {},
                     data: { tax_code_field_target: "chargeType", action: "change->tax-code-field#updatePrefix" },
-                    class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+                    class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
               </div>
 
               <div>
-                <%= f.label :code, "Transaction Code", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
-                <div class="flex rounded-xl border border-slate-200 bg-white focus-within:border-slate-400">
-                  <span class="inline-flex items-center rounded-l-xl border-r border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-500" data-tax-code-field-target="prefix" <%= "hidden" unless hotel_tax.charge_type == "tax" %>>TAX_</span>
+                <%= f.label :code, "Transaction Code", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
+                <div class="flex rounded-xl border border-border bg-card focus-within:border-border-interactive">
+                  <span class="inline-flex items-center rounded-l-xl border-r border-border bg-muted px-3 text-sm font-bold text-muted-foreground" data-tax-code-field-target="prefix" <%= "hidden" unless hotel_tax.charge_type == "tax" %>>TAX_</span>
                   <%= f.text_field :code,
                       placeholder: "e.g. DBKK",
                       data: { tax_code_field_target: "input", action: "input->tax-code-field#format" },
-                      class: "min-w-0 flex-1 border-0 bg-white px-4 py-3 text-sm font-semibold uppercase text-slate-700 focus:outline-none focus:ring-0 #{hotel_tax.charge_type == "tax" ? "rounded-r-xl" : "rounded-xl"}" %>
+                      class: "min-w-0 flex-1 border-0 bg-card px-4 py-3 text-sm font-semibold uppercase text-foreground focus:outline-none focus:ring-0 #{hotel_tax.charge_type == "tax" ? "rounded-r-xl" : "rounded-xl"}" %>
                 </div>
-                <p class="mt-1.5 text-xs font-medium text-slate-500" data-tax-code-field-target="help">
+                <p class="mt-1.5 text-xs font-medium text-muted-foreground" data-tax-code-field-target="help">
                   <%= hotel_tax.charge_type == "tax" ? "Used as transaction code suffix. Example: DBKK becomes TAX_DBKK. Spaces become underscores." : "Used as transaction code. Example: SC stays SC. Spaces become underscores." %>
                 </p>
               </div>
@@ -61,26 +61,26 @@
 
             <div class="grid gap-5 md:grid-cols-2">
               <div>
-                <%= f.label :rate_type, "Amount Type", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+                <%= f.label :rate_type, "Amount Type", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
                 <%= f.select :rate_type,
                     [["Fixed RM", "flat"], ["Percentage", "percentage"]],
                     {},
-                    class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+                    class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
               </div>
 
               <div>
-                <%= f.label :amount, "Amount", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+                <%= f.label :amount, "Amount", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
                 <%= f.number_field :amount,
                     step: 0.01,
                     min: 0,
                     placeholder: "e.g. 10.00",
-                    class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+                    class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
               </div>
             </div>
 
             <div class="grid gap-5 md:grid-cols-2">
               <div>
-                <span class="mb-2 block text-sm font-semibold text-slate-900">Status</span>
+                <span class="mb-2 block text-sm font-semibold text-foreground">Status</span>
                 <%= render "hotel_portal/taxes_fees/status_toggle",
                            form: f,
                            field: :enabled,
@@ -89,7 +89,7 @@
               </div>
 
               <div>
-                <span class="mb-2 block text-sm font-semibold text-slate-900">Rule</span>
+                <span class="mb-2 block text-sm font-semibold text-foreground">Rule</span>
                 <%= render "hotel_portal/taxes_fees/status_toggle",
                            form: f,
                            field: :foreign_guests_only,
@@ -101,10 +101,10 @@
         </div>
       </div>
 
-      <footer class="z-10 shrink-0 border-t border-slate-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(15,23,42,0.06)] sm:px-6">
+      <footer class="z-10 shrink-0 border-t border-border bg-card px-4 py-3 shadow-[0_-4px_12px_rgba(15,23,42,0.06)] sm:px-6">
         <div class="mx-auto flex max-w-[1100px] items-center justify-end gap-2">
-          <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100" data-action="click->offcanvas#close">Cancel</button>
-          <%= f.submit submit_label, class: "cursor-pointer rounded-md bg-slate-900 px-5 py-2 text-sm font-bold text-white transition hover:bg-slate-700", data: { turbo_submits_with: "Saving..." } %>
+          <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted" data-action="click->offcanvas#close">Cancel</button>
+          <%= f.submit submit_label, class: "cursor-pointer rounded-md bg-primary px-5 py-2 text-sm font-bold text-primary-foreground transition hover:bg-primary-hover", data: { turbo_submits_with: "Saving..." } %>
         </div>
       </footer>
     <% end %>

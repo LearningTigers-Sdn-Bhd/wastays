@@ -1,5 +1,5 @@
 <%= turbo_frame_tag "offcanvas_drawer" do %>
-  <div class="flex h-full flex-col bg-white">
+  <div class="flex h-full flex-col bg-card">
     <%= render "hotel_portal/bookings/board/partials/content_header",
       title: "Repair No-show Folio",
       subtitle: @booking.guest_name,
@@ -12,21 +12,21 @@
           This will post an audited correction for tourism tax charged when this booking was marked as a no-show. Other no-show charges and taxes will remain unchanged.
         </div>
 
-        <section class="rounded-2xl border border-slate-200 p-5">
+        <section class="rounded-2xl border border-border p-5">
           <div class="flex items-center justify-between gap-4">
-            <span class="text-sm font-semibold text-slate-600">Tourism tax to remove</span>
-            <span class="text-base font-bold text-slate-950"><%= @booking.currency %> <%= format("%.2f", @tourism_tax_total) %></span>
+            <span class="text-sm font-semibold text-muted-foreground">Tourism tax to remove</span>
+            <span class="text-base font-bold text-foreground"><%= @booking.currency %> <%= format("%.2f", @tourism_tax_total) %></span>
           </div>
         </section>
 
         <div class="space-y-3">
           <% @projected_balances.each do |folio, projected_balance| %>
-            <div class="rounded-xl border border-slate-200 p-4">
+            <div class="rounded-xl border border-border p-4">
               <div class="flex items-center justify-between gap-4">
-                <span class="text-sm font-bold text-slate-800"><%= folio.display_name %></span>
-                <span class="text-sm font-semibold text-slate-700"><%= folio.currency %> <%= format("%.2f", projected_balance) %></span>
+                <span class="text-sm font-bold text-foreground"><%= folio.display_name %></span>
+                <span class="text-sm font-semibold text-foreground"><%= folio.currency %> <%= format("%.2f", projected_balance) %></span>
               </div>
-              <p class="mt-1 text-xs font-medium text-slate-500">
+              <p class="mt-1 text-xs font-medium text-muted-foreground">
                 <%= projected_balance.zero? ? "This folio will close after the correction." : "This folio will remain open because its projected balance is not zero." %>
               </p>
             </div>
@@ -36,7 +36,7 @@
 
       <%= render "hotel_portal/bookings/board/partials/content_footer",
         show_full_page_link: false,
-        submit_button: f.submit("Remove Tourism Tax", class: "rounded-xl bg-amber-600 px-6 py-2.5 text-sm font-bold text-white") %>
+        submit_button: f.submit("Remove Tourism Tax", class: "rounded-xl bg-amber-600 px-6 py-2.5 text-sm font-bold text-primary-foreground") %>
     <% end %>
   </div>
 <% end %>

@@ -1,0 +1,35 @@
+@layer components {
+  .panel-skeleton {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: var(--muted);
+    color: transparent;
+    pointer-events: none;
+    user-select: none;
+    animation: panel-skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .panel-skeleton[data-shape="square"] { border-radius: var(--radius-sm); }
+  .panel-skeleton[data-shape="circle"] { border-radius: 9999px; }
+
+  .panel-skeleton-table__rows { display: grid; gap: 0.75rem; }
+
+  .panel-skeleton-table__row {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    gap: 0.75rem;
+  }
+
+  .panel-skeleton-table__cell { height: 0.75rem; }
+
+  @keyframes panel-skeleton-pulse {
+    50% { opacity: 0.5; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel-skeleton { animation: none; }
+  }
+}

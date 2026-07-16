@@ -15,4 +15,8 @@ export default class extends Controller {
       }
     })
   }
+
+  preventSubmit(event) {
+    event.preventDefault()
+  }
 }

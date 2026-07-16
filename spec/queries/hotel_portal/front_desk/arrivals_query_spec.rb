@@ -6,7 +6,8 @@ RSpec.describe HotelPortal::FrontDesk::ArrivalsQuery do
   let(:hotel) { create(:hotel, status: "approved") }
 
   around do |example|
-    travel_to(Date.new(2026, 7, 15)) { example.run }
+    time = example.metadata[:hotel_midnight] ? Time.utc(2026, 7, 15, 18, 30) : Date.new(2026, 7, 15)
+    travel_to(time) { example.run }
   end
 
   describe "#call" do
@@ -90,6 +91,15 @@ RSpec.describe HotelPortal::FrontDesk::ArrivalsQuery do
       query = described_class.new(hotel:, params: { arrival_date: "not-a-date" })
 
       expect(query.start_date).to eq(Date.today)
+    end
+
+    it "uses the hotel-local day for invalid and missing dates", :hotel_midnight do
+      hotel.update!(time_zone: "Kuala Lumpur")
+      invalid = described_class.new(hotel:, params: { arrival_start_date: "not-a-date" })
+      missing = described_class.new(hotel:, params: {})
+
+      expect([ invalid.start_date, invalid.end_date ]).to eq([ Date.new(2026, 7, 16) ] * 2)
+      expect([ missing.start_date, missing.end_date ]).to eq([ Date.new(2026, 7, 16) ] * 2)
     end
   end
 

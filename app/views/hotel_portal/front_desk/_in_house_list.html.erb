@@ -1,32 +1,32 @@
-<section aria-label="Reservation view" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+<section aria-label="Reservation view" class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
   <div class="hidden overflow-x-auto lg:block">
     <table class="min-w-full table-fixed">
-      <thead class="border-b border-slate-200 bg-slate-50/50">
+      <thead class="border-b border-border bg-muted">
         <tr>
           <% [ "Guest / Reference", "Contact", "Stay Dates", "Checked In", "Rooms", "Actions" ].each do |header| %>
-            <th class="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 <%= header == 'Actions' ? 'text-right' : 'text-left' %>"><%= header %></th>
+            <th class="px-4 py-3 text-xs font-medium text-muted-foreground <%= header == 'Actions' ? 'text-right' : 'text-left' %>"><%= header %></th>
           <% end %>
         </tr>
       </thead>
-      <tbody class="divide-y divide-slate-200">
+      <tbody class="divide-y divide-border">
         <% if @bookings.any? %>
           <% @bookings.each do |booking| %>
             <% presenter = HotelPortal::InHouseGuestPresenter.new(booking, current_user.time_zone) %>
-            <tr class="transition-colors hover:bg-slate-50/80 <%= "bg-rose-50 hover:bg-rose-50" if presenter.blacklisted? %>">
+            <tr class="transition-colors hover:bg-muted <%= "bg-muted" if presenter.blacklisted? %>">
               <th scope="row" class="px-4 py-4 text-left">
                 <div class="flex items-center gap-1.5">
                   <span><%= presenter.guest_name %></span>
                   <% if presenter.vip? %>
-                    <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500" %>
-                    <span class="text-xs text-amber-700">VIP</span>
+                    <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-warning" %>
+                    <span class="text-xs text-warning">VIP</span>
                   <% end %>
                   <% if presenter.blacklisted? %>
-                    <%= cached_icon "ban", class: "size-4 text-rose-600" %>
-                    <span class="text-xs text-rose-700">Blacklisted</span>
+                    <%= cached_icon "ban", class: "size-4 text-destructive" %>
+                    <span class="text-xs text-destructive">Blacklisted</span>
                   <% end %>
                   <% if presenter.repeat? %>
-                    <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500" %>
-                    <span class="text-xs text-blue-700">Repeat guest</span>
+                    <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-info" %>
+                    <span class="text-xs text-info">Repeat guest</span>
                   <% end %>
                 </div>
                 <span class="font-mono text-xs font-normal">booking:<%= presenter.confirmation_token %></span>
@@ -41,7 +41,7 @@
           <% end %>
         <% else %>
           <tr>
-            <td colspan="6" class="px-4 py-12 text-center text-sm text-slate-500">No guests are currently checked in.</td>
+            <td colspan="6" class="px-4 py-12 text-center text-sm text-muted-foreground">No guests are currently checked in.</td>
           </tr>
         <% end %>
       </tbody>
@@ -52,20 +52,20 @@
     <% if @bookings.any? %>
       <% @bookings.each do |booking| %>
         <% presenter = HotelPortal::InHouseGuestPresenter.new(booking, current_user.time_zone) %>
-        <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm <%= "border-l-4 border-l-rose-600" if presenter.blacklisted? %>">
+        <article class="rounded-xl border border-border bg-card p-4 shadow-sm <%= "border-l-4 border-l-destructive" if presenter.blacklisted? %>">
           <div class="flex flex-wrap items-center gap-1.5">
             <strong><%= presenter.guest_name %></strong>
             <% if presenter.vip? %>
-              <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500" %>
-              <span class="text-xs text-amber-700">VIP</span>
+              <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-warning" %>
+              <span class="text-xs text-warning">VIP</span>
             <% end %>
             <% if presenter.blacklisted? %>
-              <%= cached_icon "ban", class: "size-4 text-rose-600" %>
-              <span class="text-xs text-rose-700">Blacklisted</span>
+              <%= cached_icon "ban", class: "size-4 text-destructive" %>
+              <span class="text-xs text-destructive">Blacklisted</span>
             <% end %>
             <% if presenter.repeat? %>
-              <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500" %>
-              <span class="text-xs text-blue-700">Repeat guest</span>
+              <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-info" %>
+              <span class="text-xs text-info">Repeat guest</span>
             <% end %>
           </div>
           <p class="font-mono text-xs"><%= presenter.confirmation_token %></p>
@@ -78,9 +78,9 @@
         </article>
       <% end %>
     <% else %>
-      <p class="py-8 text-center text-sm text-slate-500">No guests are currently checked in.</p>
+      <p class="py-8 text-center text-sm text-muted-foreground">No guests are currently checked in.</p>
     <% end %>
   </div>
 
-  <div class="flex justify-center border-t border-slate-200 bg-slate-50/70 p-4"><%= paginate @bookings, param_name: @page_param %></div>
+  <div class="flex justify-center border-t border-border bg-muted p-4"><%= paginate @bookings, param_name: @page_param %></div>
 </section>

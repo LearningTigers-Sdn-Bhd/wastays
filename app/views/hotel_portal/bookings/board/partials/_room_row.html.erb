@@ -1,8 +1,8 @@
 <%# locals: (room:, row_min_base:, block_step:, visible_start_date:, grid_template_columns:, card_padding:, room_number_class:, board_dates:, summary_padding:, can_manage_bookings:, rate_text_class:, currency_text_class:, hotel_today:, current_hotel:, booking_timeline_board:, block_left_pad:, block_top:, visible_end_exclusive:, board_view_type:) %>
 
-<div class="grid border-b border-slate-100" style="grid-template-columns: <%= grid_template_columns %>; min-height: <%= booking_timeline_board_row_height(room, row_min_base, block_step, visible_start_date) %>px;">
-  <div class="sticky left-0 z-20 border-r border-slate-200 bg-white shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= card_padding %> flex items-center justify-between gap-4">
-    <p class="font-black leading-none text-slate-950 <%= room_number_class %>"><%= room[:room_number] %></p>
+<div class="grid border-b border-border" style="grid-template-columns: <%= grid_template_columns %>; min-height: <%= booking_timeline_board_row_height(room, row_min_base, block_step, visible_start_date) %>px;">
+  <div class="sticky left-0 z-20 border-r border-border bg-card shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= card_padding %> flex items-center justify-between gap-4">
+    <p class="font-black leading-none text-foreground <%= room_number_class %>"><%= room[:room_number] %></p>
 
     <div class="flex items-center gap-2">
       <%= render "shared/room_attribute_icon",
@@ -23,7 +23,7 @@
     </div>
   </div>
   <% board_dates.each_with_index do |date, index| %>
-    <div class="relative border-l <%= 'border-r' if index == board_dates.size - 1 %> border-slate-100 <%= summary_padding %> <%= board_cell_bg_class(date) %> group/cell"
+    <div class="relative border-l <%= 'border-r' if index == board_dates.size - 1 %> border-border <%= summary_padding %> <%= board_cell_bg_class(date) %> group/cell"
          data-booking-timeline-target="cell"
          data-date="<%= date %>"
          data-room-number="<%= room[:room_number] %>"

@@ -5,7 +5,7 @@
 
     <!-- Deep radial glow -->
     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-      <div class="w-[600px] h-[600px] bg-brand-primary/15 rounded-full blur-[120px]"></div>
+      <div class="w-[600px] h-[600px] bg-primary/15 rounded-full blur-[120px]"></div>
     </div>
 
 
@@ -88,16 +88,16 @@
         </div>
 
         <div class="flex items-center justify-center gap-x-3 mb-6">
-          <span class="w-6 h-px bg-brand-primary/30"></span>
-          <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary">Sign In</span>
-          <span class="w-6 h-px bg-brand-primary/30"></span>
+          <span class="w-6 h-px bg-primary/30"></span>
+          <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Sign In</span>
+          <span class="w-6 h-px bg-primary/30"></span>
         </div>
-        <h2 class="text-4xl font-serif text-neutral-text-primary leading-tight mb-3">
-          Access Your <span class="italic text-brand-primary">Hotel Portal</span>
+        <h2 class="text-4xl font-serif text-foreground leading-tight mb-3">
+          Access Your <span class="italic text-primary">Hotel Portal</span>
         </h2>
-        <p class="text-neutral-text-secondary text-sm leading-relaxed">
+        <p class="text-muted-foreground text-sm leading-relaxed">
           Don't have an account?
-          <%= link_to "Register your hotel", register_path, class: "text-brand-primary font-semibold hover:underline underline-offset-2" %>
+          <%= link_to "Register your hotel", register_path, class: "text-primary font-semibold hover:underline underline-offset-2" %>
         </p>
       </div>
 
@@ -105,10 +105,10 @@
 
         <!-- Email -->
         <div>
-          <label for="email" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2">Email Address</label>
+          <label for="email" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Email Address</label>
           <%= f.email_field :email,
               id: "email",
-              class: "w-full bg-white border border-neutral-border rounded-xl px-4 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+              class: "w-full bg-white border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200",
               required: true,
               placeholder: "you@example.com" %>
         </div>
@@ -116,19 +116,19 @@
         <!-- Password -->
         <div>
           <div class="flex items-center justify-between mb-2">
-            <label for="password" class="block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Password</label>
+            <label for="password" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</label>
           </div>
           <div class="relative" data-controller="password-toggle">
             <%= f.password_field :password,
                 id: "password",
-                class: "w-full bg-white border border-neutral-border rounded-xl px-4 pe-12 py-3 text-sm text-neutral-text-primary placeholder:text-neutral-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-colors duration-200",
+                class: "w-full bg-white border border-border rounded-xl px-4 pe-12 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors duration-200",
                 required: true,
                 placeholder: "••••••••",
                 autocomplete: "current-password",
                 data: { password_toggle_target: "input" } %>
             <button
               type="button"
-              class="absolute inset-y-0 end-0 flex items-center pe-4 text-neutral-text-secondary/50 hover:text-brand-primary transition-colors"
+              class="absolute inset-y-0 end-0 flex items-center pe-4 text-muted-foreground/50 hover:text-primary transition-colors"
               data-password-toggle-target="button"
               data-action="click->password-toggle#toggle"
               aria-label="Show password"
@@ -147,18 +147,18 @@
         <div class="flex items-center justify-between gap-4 pt-1">
           <div class="flex items-center gap-x-2.5 min-w-0">
             <%= f.check_box :remember_me,
-                class: "h-4 w-4 rounded border-neutral-border text-brand-primary focus:ring-brand-primary/30 focus:ring-2 cursor-pointer" %>
-            <label for="sessions_remember_me" class="text-xs font-medium text-neutral-text-secondary cursor-pointer select-none">
+                class: "h-4 w-4 rounded border-border text-primary focus:ring-primary/30 focus:ring-2 cursor-pointer" %>
+            <label for="sessions_remember_me" class="text-xs font-medium text-muted-foreground cursor-pointer select-none">
               Keep me signed in for 30 days
             </label>
           </div>
-          <a href="mailto:support@wastays.com?subject=Password Reset Request" class="shrink-0 text-[11px] text-brand-primary font-semibold hover:underline underline-offset-2">Forgot password?</a>
+          <a href="mailto:support@wastays.com?subject=Password Reset Request" class="shrink-0 text-[11px] text-primary font-semibold hover:underline underline-offset-2">Forgot password?</a>
         </div>
 
         <!-- Submit -->
         <div class="pt-3">
           <%= f.submit "Sign In to Portal",
-              class: "w-full inline-flex items-center justify-center btn btn-primary py-4 rounded-xl text-base font-bold shadow-lg shadow-brand-primary/20 cursor-pointer hover:shadow-xl hover:shadow-brand-primary/30 transition-all duration-200" %>
+              class: "w-full inline-flex items-center justify-center btn btn-primary py-4 rounded-xl text-base font-bold shadow-lg shadow-primary/20 cursor-pointer hover:shadow-xl hover:shadow-primary/30 transition-all duration-200" %>
         </div>
 
       <% end %>

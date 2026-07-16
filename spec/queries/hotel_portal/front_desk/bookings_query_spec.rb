@@ -12,6 +12,7 @@ RSpec.describe HotelPortal::FrontDesk::BookingsQuery do
       create(:booking, hotel: create(:hotel, status: "approved"), check_in: hotel_time("2026-07-15"))
 
       expect(described_class.new(hotel:, params: {}).call).to contain_exactly(older_booking, newer_booking)
+      expect(described_class.new(hotel:, params: {}).start_date).to be_nil
     end
 
     it "uses an end-only date as a single-day filter" do
@@ -41,6 +42,17 @@ RSpec.describe HotelPortal::FrontDesk::BookingsQuery do
 
       expect(query.call).to contain_exactly(scoped_booking)
       expect(query.call).not_to include(legacy_booking)
+    end
+
+
+    it "uses the hotel-local day for an invalid supplied date" do
+      hotel.update!(time_zone: "Kuala Lumpur")
+
+      travel_to(Time.utc(2026, 7, 15, 18, 30)) do
+        query = described_class.new(hotel:, params: { booking_start_date: "not-a-date" })
+
+        expect([ query.start_date, query.end_date ]).to eq([ Date.new(2026, 7, 16) ] * 2)
+      end
     end
   end
 

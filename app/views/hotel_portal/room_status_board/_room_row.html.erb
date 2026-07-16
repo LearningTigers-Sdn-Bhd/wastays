@@ -1,11 +1,11 @@
 <% room_row = presenter.room_row(room) %>
-<div class="grid border-b border-slate-100 <%= room_row.row_bg_class %>" style="grid-template-columns: <%= presenter.grid_template_columns %>; min-height: <%= presenter.row_min_height(room) %>px;">
-  <div class="sticky left-0 z-20 border-r border-slate-200 bg-white shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= presenter.card_padding %> flex flex-col justify-center">
+<div class="grid border-b border-border <%= room_row.row_bg_class %>" style="grid-template-columns: <%= presenter.grid_template_columns %>; min-height: <%= presenter.row_min_height(room) %>px;">
+  <div class="sticky left-0 z-20 border-r border-border bg-card shadow-[4px_0_12px_rgba(0,0,0,0.03)] <%= presenter.card_padding %> flex flex-col justify-center">
     <div class="flex items-center justify-between gap-1.5 w-full min-w-0">
       <div class="flex items-center gap-1.5 shrink-0">
-        <p class="font-medium leading-none text-slate-800 <%= presenter.room_number_class %>"><%= room[:room_number] %></p>
+        <p class="font-medium leading-none text-foreground <%= presenter.room_number_class %>"><%= room[:room_number] %></p>
       </div>
-      
+
       <div class="flex items-center justify-end gap-1.5 min-w-0 flex-1">
         <%# Room Badges & Status Icon (Priority, Housekeeping, DND, Smoking, Pets, Status Icon) %>
         <% if room_row.priority? %>
@@ -13,10 +13,10 @@
             <div data-floating-target="reference" class="flex items-center justify-center rounded-full bg-rose-50 border border-rose-100 text-rose-500 size-5 cursor-help">
               <%= cached_icon "warning", library: "phosphor", variant: "light", class: "size-3 text-rose-500" %>
             </div>
-            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1.5 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white text-left max-w-[200px] whitespace-normal leading-tight">
+            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1.5 bg-primary rounded-lg shadow-xl pointer-events-none text-primary-foreground text-left max-w-[200px] whitespace-normal leading-tight">
               <p class="text-[8px] font-bold uppercase tracking-wider">Priority Room</p>
               <% if room_row.notes.present? %>
-                <p class="mt-0.5 text-[9px] font-medium text-slate-300"><%= room_row.notes %></p>
+                <p class="mt-0.5 text-[9px] font-medium text-primary-foreground"><%= room_row.notes %></p>
               <% end %>
             </div>
           </div>
@@ -24,12 +24,12 @@
 
         <% if room[:housekeeping_requests].any? %>
           <div data-controller="floating" data-floating-trigger-value="hover" data-floating-placement-value="top" class="inline-flex">
-            <%= link_to hotel_room_status_housekeeping_requests_path(current_hotel, room[:room_number]), 
+            <%= link_to hotel_room_status_housekeeping_requests_path(current_hotel, room[:room_number]),
                         data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right", floating_target: "reference" },
                         class: "cursor-pointer flex items-center justify-center transition-transform active:scale-90 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-full size-5 focus:outline-none" do %>
               <%= cached_icon "clipboard-text", library: "phosphor", variant: "light", class: "size-3" %>
             <% end %>
-            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap">
+            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-primary rounded-lg shadow-xl pointer-events-none text-primary-foreground whitespace-nowrap">
               <span class="text-[8px] font-bold uppercase tracking-wider">Housekeeping Requests (<%= room[:housekeeping_requests].count %>)</span>
             </div>
           </div>
@@ -39,7 +39,7 @@
             <div data-floating-target="reference" class="flex items-center justify-center rounded-full bg-rose-50 border border-rose-100 text-rose-500 size-5 cursor-help">
               <%= cached_icon "hand-palm", library: "phosphor", variant: "light", class: "size-3 text-rose-500" %>
             </div>
-            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap">
+            <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-primary rounded-lg shadow-xl pointer-events-none text-primary-foreground whitespace-nowrap">
               <span class="text-[8px] font-bold uppercase tracking-wider">Do Not Disturb</span>
             </div>
           </div>
@@ -49,7 +49,7 @@
           <div data-floating-target="reference" class="<%= room_row.smoking_color %> cursor-help">
             <%= room_row.smoking_icon %>
           </div>
-          <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap">
+          <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-primary rounded-lg shadow-xl pointer-events-none text-primary-foreground whitespace-nowrap">
             <span class="text-[8px] font-bold uppercase tracking-wider"><%= room_row.smoking_label %></span>
           </div>
         </div>
@@ -58,7 +58,7 @@
           <div data-floating-target="reference" class="<%= room_row.pets_color %> cursor-help">
             <%= room_row.pets_icon %>
           </div>
-          <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-slate-900 rounded-lg shadow-xl pointer-events-none text-white whitespace-nowrap">
+          <div data-floating-target="floating" class="hidden z-[100] px-2 py-1 bg-primary rounded-lg shadow-xl pointer-events-none text-primary-foreground whitespace-nowrap">
             <span class="text-[8px] font-bold uppercase tracking-wider"><%= room_row.pets_label %></span>
           </div>
         </div>
@@ -69,17 +69,17 @@
           <span data-floating-target="reference" class="<%= badge_meta[:container_class] %>">
             <div class="scale-90"><%= presenter.status_icon(room_row.status) %></div>
           </span>
-          
+
           <div data-floating-target="floating" class="<%= badge_meta[:tooltip_wrapper_class] %>">
             <div class="flex items-center gap-2 <%= room_row.tooltip_header_class %>">
               <div class="<%= badge_meta[:icon_bg_class] %>">
                 <div class="scale-90"><%= presenter.status_icon(room_row.status) %></div>
               </div>
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-700"><%= badge_meta[:label] %></span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-foreground"><%= badge_meta[:label] %></span>
             </div>
 
             <% if room_row.status == "inspection_failed" && room_row.failure_note.present? %>
-              <div class="mt-2 border-t border-slate-50 pt-2">
+              <div class="mt-2 border-t border-border pt-2">
                 <p class="text-[11px] font-medium text-rose-600 leading-relaxed italic"><%= room_row.failure_note %></p>
               </div>
             <% end %>
@@ -98,7 +98,7 @@
   <% presenter.board_dates.each_with_index do |date, index| %>
     <% cell_meta = presenter.cell_meta(room, date) %>
     <div
-      class="relative border-l <%= 'border-r' if index == presenter.board_dates.size - 1 %> border-slate-100 <%= presenter.summary_padding %> <%= cell_meta[:bg_class] %> <%= cell_meta[:is_interactable] ? 'cursor-pointer hover:bg-slate-50/50' : 'cursor-default' %> transition-colors"
+      class="relative border-l <%= 'border-r' if index == presenter.board_dates.size - 1 %> border-border <%= presenter.summary_padding %> <%= cell_meta[:bg_class] %> <%= cell_meta[:is_interactable] ? 'cursor-pointer hover:bg-muted/50' : 'cursor-default' %> transition-colors"
       <% if cell_meta[:is_interactable] %>
         data-action="dblclick->room-block-modal#open"
         data-room-block-modal-date-param="<%= date.to_s %>"
@@ -121,14 +121,14 @@
           <p class="truncate <%= presenter.comfortable_mode? ? 'text-sm' : 'text-[11px]' %> font-bold"><%= block[:guest_name] %></p>
           <p class="truncate <%= presenter.comfortable_mode? ? 'text-xs' : 'text-[9px]' %> font-semibold uppercase tracking-wide"><%= block[:status].to_s.humanize.titleize %></p>
 
-          <div data-floating-target="floating" class="hidden z-[100] w-64 p-3 bg-white border border-slate-200 rounded-xl shadow-xl pointer-events-none">
+          <div data-floating-target="floating" class="hidden z-[100] w-64 p-3 bg-card border border-border rounded-xl shadow-xl pointer-events-none">
             <div class="flex items-center gap-2 mb-2">
               <div class="size-2 rounded-full <%= block_meta[:style_class].split(' ').first %>"></div>
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= block[:status].to_s.humanize %></span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><%= block[:status].to_s.humanize %></span>
             </div>
-            <p class="text-sm font-bold text-slate-900"><%= block[:guest_name] %></p>
+            <p class="text-sm font-bold text-foreground"><%= block[:guest_name] %></p>
             <div class="mt-2 space-y-1">
-              <div class="flex items-center gap-2 text-[11px] text-slate-600">
+              <div class="flex items-center gap-2 text-[11px] text-muted-foreground">
                 <%= cached_icon "calendar", library: "phosphor", variant: "light", class: "size-3" %>
                 <span><%= presenter.format_block_date_range(block[:check_in], block[:check_out]) %></span>
               </div>
@@ -139,7 +139,7 @@
 
       <%# Render Maintenance Blocks %>
       <% presenter.maintenance_blocks_for(room, date).each_with_index do |block, block_index| %>
-        <% 
+        <%
           booking_count_at_this_start = presenter.booking_count_at(room, date)
           block_meta = presenter.maintenance_block_meta(block)
         %>
@@ -148,7 +148,7 @@
           data-floating-trigger-value="click"
           data-floating-placement-value="bottom"
           data-action="click->floating#toggle:stop"
-          class="absolute z-10 overflow-hidden rounded-xl border border-slate-300 bg-slate-100 text-slate-600 <%= presenter.block_padding_class %> shadow-sm <%= block_meta[:clip_corner_class] %>"
+          class="absolute z-10 overflow-hidden rounded-xl border border-border-interactive bg-muted text-muted-foreground <%= presenter.block_padding_class %> shadow-sm <%= block_meta[:clip_corner_class] %>"
           style="top: <%= presenter.block_top + ((block_index + booking_count_at_this_start) * presenter.block_step) %>px; left: <%= block_meta[:left_offset] %>px; width: <%= block_meta[:width_calc] %>; <%= 'min-width: 88px;' if presenter.comfortable_mode? %>"
           data-floating-target="reference"
           title="<%= block[:reason] %>"
@@ -158,22 +158,22 @@
             <p class="truncate <%= presenter.comfortable_mode? ? 'text-[11px]' : 'text-[9px]' %> font-black uppercase tracking-wider"><%= block[:block_type].humanize %></p>
           </div>
 
-          <div data-floating-target="floating" class="hidden z-[100] w-64 p-3 bg-white border border-slate-200 rounded-xl shadow-xl">
+          <div data-floating-target="floating" class="hidden z-[100] w-64 p-3 bg-card border border-border rounded-xl shadow-xl">
             <div class="flex items-center gap-2 mb-2">
-              <div class="size-2 rounded-full bg-slate-400"></div>
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Room Block</span>
+              <div class="size-2 rounded-full bg-muted"></div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Room Block</span>
             </div>
-            <p class="text-sm font-bold text-slate-900"><%= block[:block_type].humanize.titleize %></p>
-            <p class="mt-1 text-xs text-slate-600 leading-relaxed italic">"<%= block[:reason] %>"</p>
+            <p class="text-sm font-bold text-foreground"><%= block[:block_type].humanize.titleize %></p>
+            <p class="mt-1 text-xs text-muted-foreground leading-relaxed italic">"<%= block[:reason] %>"</p>
             <div class="mt-3 space-y-1">
-              <div class="flex items-center gap-2 text-[11px] text-slate-600">
+              <div class="flex items-center gap-2 text-[11px] text-muted-foreground">
                 <%= cached_icon "calendar", library: "phosphor", variant: "light", class: "size-3" %>
                 <span><%= presenter.format_block_date_range(block[:start_date], block[:end_date]) %></span>
               </div>
             </div>
 
             <% if room_row.can_manage? %>
-              <div class="mt-4 border-t border-slate-50 pt-3 flex gap-2">
+              <div class="mt-4 border-t border-border pt-3 flex gap-2">
                 <button type="button"
                     data-action="click->room-block-modal#edit click->floating#hide"
                     data-room-block-modal-id-param="<%= block[:id] %>"
@@ -185,21 +185,21 @@
                     data-room-block-modal-block-type-param="<%= block[:block_type] %>"
                     data-room-block-modal-reason-param="<%= block[:reason] %>"
                     data-room-block-modal-update-url-param="<%= presenter.maintenance_block_update_url(block) %>"
-                    class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-colors">
+                    class="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-foreground hover:bg-muted transition-colors">
                   Edit Room Block
                 </button>
-                <%= button_to presenter.finish_maintenance_block_path(block), 
+                <%= button_to presenter.finish_maintenance_block_path(block),
                     method: :post,
-                    data: { 
+                    data: {
                       turbo_confirm: "Mark this maintenance block as finished?",
                       floating_close: true
                     },
                     class: "flex-1 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 transition-colors pointer-events-auto" do %>
                   Finish
                 <% end %>
-                <%= button_to presenter.delete_maintenance_block_path(block), 
+                <%= button_to presenter.delete_maintenance_block_path(block),
                     method: :delete,
-                    data: { 
+                    data: {
                       turbo_confirm: "Are you sure you want to remove this maintenance block?",
                       floating_close: true
                     },

@@ -1,0 +1,88 @@
+<div class="<%= root_class %>"
+     data-controller="panels-ui--command-palette"
+     data-panels-ui--command-palette-endpoint-value="<%= endpoint %>">
+
+  <%# ─── Mobile trigger (icon only) ─── %>
+  <button type="button"
+          class="panel-command-palette__trigger-icon"
+          data-action="click->panels-ui--command-palette#open"
+          aria-label="<%= label %>"
+          aria-haspopup="dialog">
+    <%= helpers.cached_icon "search", class: "size-4 text-muted-foreground shrink-0" %>
+  </button>
+
+  <%# ─── Desktop trigger (wide pill with placeholder + ⌘K hint) ─── %>
+  <button type="button"
+          class="panel-command-palette__trigger"
+          data-action="click->panels-ui--command-palette#open"
+          aria-label="<%= label %>"
+          aria-haspopup="dialog">
+    <span class="panel-command-palette__trigger-lead">
+      <%= helpers.cached_icon "search", class: "size-4 text-muted-foreground shrink-0" %>
+      <span class="panel-command-palette__trigger-label"><%= placeholder %></span>
+    </span>
+    <%= render PanelsUI::Kbd.new(
+          label: "⌘K",
+          size: :sm,
+          data: { panels_ui__command_palette_target: "shortcut" }
+        ) %>
+  </button>
+
+  <%# ─── Overlay dialog (native <dialog>, reuses panels-ui--dialog) ─── %>
+  <dialog id="<%= dialog_id %>"
+          class="panel-command-palette__dialog"
+          aria-label="Command palette"
+          data-controller="panels-ui--dialog"
+          data-panels-ui--command-palette-target="dialog"
+          data-action="close->panels-ui--dialog#onClose close->panels-ui--command-palette#reset cancel->panels-ui--dialog#onCancel click->panels-ui--dialog#backdropClose">
+    <div class="panel-command-palette__panel">
+      <div class="panel-command-palette__search">
+        <%= helpers.cached_icon "search", class: "size-4 text-muted-foreground shrink-0" %>
+        <input type="text"
+               id="<%= input_id %>"
+               class="panel-command-palette__input"
+               placeholder="<%= placeholder %>"
+               autocomplete="off"
+               autocapitalize="off"
+               spellcheck="false"
+               role="combobox"
+               aria-expanded="true"
+               aria-autocomplete="list"
+               aria-controls="<%= listbox_id %>"
+               data-panels-ui--command-palette-target="input"
+               data-action="input->panels-ui--command-palette#search keydown->panels-ui--command-palette#onKeydown">
+      </div>
+
+      <div class="panel-command-palette__results-scroll"
+           data-panels-ui--command-palette-target="scroll"
+           aria-busy="false">
+        <%# Skeleton shown while the first results for a query are in flight, so the
+            panel opens with stable content instead of flashing empty → populated. %>
+        <div class="panel-command-palette__skeleton"
+             hidden
+             aria-hidden="true"
+             data-panels-ui--command-palette-target="loading">
+          <% 5.times do %>
+            <div class="panel-command-palette__skeleton-row">
+              <%= render PanelsUI::Skeleton.new(variant: :line, class: "panel-command-palette__skeleton-title") %>
+              <%= render PanelsUI::Skeleton.new(variant: :line, class: "panel-command-palette__skeleton-subtitle") %>
+            </div>
+          <% end %>
+        </div>
+
+        <ul id="<%= listbox_id %>"
+            class="panel-command-palette__results"
+            role="listbox"
+            aria-label="Search results"
+            data-panels-ui--command-palette-target="results"></ul>
+
+        <div class="panel-command-palette__empty"
+             role="status"
+             hidden
+             data-panels-ui--command-palette-target="empty">
+          No matches found.
+        </div>
+      </div>
+    </div>
+  </dialog>
+</div>

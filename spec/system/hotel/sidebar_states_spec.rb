@@ -44,11 +44,10 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
     visit hotel_reports_path(hotel)
 
     within("#hotel-sidebar") do
-      expect(page).to have_css("details.sidebar-group-active[open]")
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Financial")
-      expect(page).to have_no_css("summary.sidebar-nav-link-active", visible: :all)
-      expect(page).to have_css("a.sidebar-child-link.sidebar-nav-link-active", text: "Summary")
-      expect(page).to have_no_css("details.sidebar-group details.sidebar-group", visible: :all)
+      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] .panel-sidebar__group[data-state='open']")
+      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger[aria-current='page']", visible: :all)
+      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Summary")
     end
   end
 
@@ -57,15 +56,15 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
 
     within("#hotel-sidebar") do
       expect(page).to have_link("Dashboard")
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Front Office")
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Planning & Inventory")
-      expect(page).to have_css(".sidebar-section-label", text: "Billing")
-      expect(page).to have_css(".sidebar-section-label", text: "Reports")
+      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Front Office")
+      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Planning & Inventory")
+      expect(page).to have_css(".panel-sidebar__section-label", text: "Billing")
+      expect(page).to have_css(".panel-sidebar__section-label", text: "Reports")
 
-      within(".sidebar-nav-group[data-section-label='']") do
+      within(".panel-sidebar__section[data-section-label='']") do
         expect(page).to have_link("Dashboard")
-        expect(page).to have_css("summary.sidebar-group-parent", text: "Front Office")
-        expect(page).to have_css("summary.sidebar-group-parent", text: "Planning & Inventory")
+        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Front Office")
+        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Planning & Inventory")
         expect(page).to have_link("Reservations", href: hotel_front_desk_path(hotel), visible: :all)
         expect(page).to have_link("Room Status", visible: :all)
         expect(page).to have_link("Requests", visible: :all)
@@ -75,24 +74,24 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
         expect(page).to have_link("Guest Records", visible: :all)
       end
 
-      within(".sidebar-nav-group[data-section-label='Billing']") do
+      within(".panel-sidebar__section[data-section-label='Billing']") do
         expect(page).to have_link("Folios")
-        expect(page).to have_css("summary.sidebar-group-parent", text: "Accounts Receivable")
+        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Accounts Receivable")
         expect(page).to have_link("Payouts")
       end
 
-      within(".sidebar-nav-group[data-section-label='Reports']") do
-        expect(page).to have_css("summary.sidebar-group-parent", text: "Financial")
-        expect(page).to have_css("summary.sidebar-group-parent", text: "Tax & Compliance")
-        expect(page).to have_css("summary.sidebar-group-parent", text: "Accounting")
+      within(".panel-sidebar__section[data-section-label='Reports']") do
+        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Financial")
+        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Tax & Compliance")
+        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Accounting")
         expect(page).to have_link("Notification Logs", visible: :all)
       end
 
       expect(page).to have_no_link("Room Categories")
       expect(page).to have_no_link("Transaction Codes")
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Guest Content")
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Team Access")
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "System Logs")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Guest Content")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Team Access")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "System Logs")
       expect(page).to have_no_link("Your Plan")
     end
   end
@@ -101,13 +100,13 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
     visit hotel_reports_path(hotel)
 
     within("#hotel-sidebar") do
-      within(".sidebar-nav-group[data-section-label='Reports']") do
-        expect(page).to have_css("summary.sidebar-group-parent", text: "Financial")
-        expect(page).to have_css("summary.sidebar-group-parent", text: "Tax & Compliance")
-        expect(page).to have_css("summary.sidebar-group-parent", text: "Accounting")
-        expect(page).to have_no_css("summary.sidebar-group-parent", text: "Reports")
+      within(".panel-sidebar__section[data-section-label='Reports']") do
+        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Financial")
+        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Tax & Compliance")
+        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Accounting")
+        expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Reports")
       end
-      expect(page).to have_css("a.sidebar-child-link.sidebar-nav-link-active", text: "Summary")
+      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Summary")
     end
   end
 
@@ -115,9 +114,8 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
     visit hotel_reports_path(hotel)
 
     within("#hotel-sidebar") do
-      expect(page).to have_css("details.sidebar-group-active[open] > summary.sidebar-group-parent", text: "Financial")
-      expect(page).to have_css("a.sidebar-child-link.sidebar-nav-link-active", text: "Summary")
-      expect(page).to have_no_css("details.sidebar-group details.sidebar-group", visible: :all)
+      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
+      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Summary")
     end
   end
 
@@ -126,11 +124,11 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
 
     sign_in_through_ui(user)
     visit hotel_dashboard_path(hotel)
-    find('button[aria-label="Collapse sidebar"]').click
+    find('button[aria-label="Collapse navigation"]').click
 
-    expect(page).to have_css("#hotel-sidebar.sidebar-collapsed")
+    expect(page).to have_css("#hotel-sidebar[data-collapsed='true']")
     within("#hotel-sidebar") do
-      expect(page).to have_no_css(".sidebar-section-label", visible: :visible)
+      expect(page).to have_no_css(".panel-sidebar__section-label", visible: :visible)
     end
   end
 
@@ -151,23 +149,23 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
       expect(page).to have_no_link("Homepage")
       expect(page).to have_link("Night Audit", href: hotel_night_audits_path(hotel), visible: :all)
 
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Front Office")
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Planning & Inventory")
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Accounts Receivable")
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Financial", visible: :all)
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Tax & Compliance", visible: :all)
-      expect(page).to have_css("summary.sidebar-group-parent", text: "Accounting", visible: :all)
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Billing", visible: :all)
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Reports", visible: :all)
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "System Logs", visible: :all)
+      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Front Office")
+      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Planning & Inventory")
+      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Accounts Receivable")
+      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Financial", visible: :all)
+      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Tax & Compliance", visible: :all)
+      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Accounting", visible: :all)
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Billing", visible: :all)
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Reports", visible: :all)
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "System Logs", visible: :all)
 
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Stay View")
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Rooms & Rates")
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Guest Content")
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Team Access")
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "System Logs")
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Cashiering")
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Audit")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Stay View")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Rooms & Rates")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Guest Content")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Team Access")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "System Logs")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Cashiering")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Audit")
       expect(page).to have_no_link("Hotel Details", href: edit_hotel_profile_path(hotel), visible: :all)
       expect(page).to have_no_link("Taxes & Fees", href: hotel_taxes_fees_path(hotel), visible: :all)
       expect(page).to have_no_link("Audit", href: hotel_night_audits_path(hotel), visible: :all, exact: true)
@@ -176,42 +174,42 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
       expect(page).to have_no_link("Your Plan", href: hotel_plan_path(hotel), visible: :all)
       expect(page).to have_no_text("#<struct")
 
-      expect(page).to have_css(".sidebar-section-label", text: "Billing")
-      expect(page).to have_css(".sidebar-section-label", text: "Reports")
+      expect(page).to have_css(".panel-sidebar__section-label", text: "Billing")
+      expect(page).to have_css(".panel-sidebar__section-label", text: "Reports")
     end
   end
 
 
-  it "shows settings navigation mode inside hotel settings" do
+  it "uses the separate settings sidebar inside hotel settings" do
     visit hotel_dashboard_path(hotel)
-    find("#hotel-profile-toggle").click
-    click_link "Settings", href: hotel_general_settings_path(hotel)
+    find("#hotel-profile-trigger").click
+    within("#hotel-profile-menu") { click_link "Settings", href: hotel_general_settings_path(hotel) }
 
-    within("#hotel-sidebar") do
-      expect(page).to have_link("Back to previous page", href: hotel_dashboard_path(hotel))
+    within("#hotel-settings-sidebar") do
+      expect(page).to have_no_link("Back to previous page")
       expect(page).to have_link("General", href: hotel_general_settings_path(hotel))
       expect(page).to have_link("Property", href: edit_hotel_profile_path(hotel))
       expect(page).to have_link("Finance", href: hotel_banking_details_settings_path(hotel))
       expect(page).to have_link("Guest Content", href: hotel_ai_concierge_settings_path(hotel))
       expect(page).to have_link("Team", href: hotel_users_path(hotel))
-      expect(page).to have_css("a.sidebar-nav-link-active", text: "General")
+      expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: "General")
       expect(page).to have_no_link("Dashboard", href: hotel_dashboard_path(hotel))
       expect(page).to have_no_link("Arrivals", href: hotel_arrivals_path(hotel))
     end
   end
 
-  it "keeps settings mode active for pages moved into Settings" do
+  it "uses the settings sidebar for pages moved into Settings" do
     visit edit_hotel_profile_path(hotel)
 
-    within("#hotel-sidebar") do
-      expect(page).to have_css("a.sidebar-nav-link-active", text: "Property")
+    within("#hotel-settings-sidebar") do
+      expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: "Property")
       expect(page).to have_link("Property", href: edit_hotel_profile_path(hotel))
     end
 
     visit hotel_taxes_fees_path(hotel)
 
-    within("#hotel-sidebar") do
-      expect(page).to have_css("a.sidebar-nav-link-active", text: "Finance")
+    within("#hotel-settings-sidebar") do
+      expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: "Finance")
       expect(page).to have_link("Finance", href: hotel_banking_details_settings_path(hotel))
     end
   end
@@ -223,9 +221,9 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
 
     within("#hotel-sidebar") do
       expect(page).to have_no_link("Settings", href: hotel_general_settings_path(hotel), visible: :all)
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Reports", visible: :all)
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Reports", visible: :all)
       expect(page).to have_no_link("Summary", href: hotel_reports_path(hotel), visible: :all)
-      expect(page).to have_no_css("summary.sidebar-group-parent", text: "Guest Content", visible: :all)
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Guest Content", visible: :all)
       expect(page).to have_no_link("Policy Management", href: hotel_knowledge_policies_path(hotel), visible: :all)
     end
   end

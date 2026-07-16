@@ -1,4 +1,4 @@
-<div class="flex h-full flex-col bg-white">
+<div class="flex h-full flex-col bg-card">
   <%= form_with url: @form_url, method: @form_method, local: true, class: "flex h-full flex-col" do |f| %>
     <%= hidden_field_tag "folio_origin", @folio_origin if @folio_origin.present? %>
     <%= hidden_field_tag "active_folio_id", @active_folio_id if @active_folio_id.present? %>
@@ -8,51 +8,51 @@
       subtitle: @booking.confirmation_token,
       icon: cached_icon("route", stroke_width: 2.5, class: "size-5") %>
 
-    <div class="flex-1 overflow-y-auto bg-white p-6">
+    <div class="flex-1 overflow-y-auto bg-card p-6">
       <div class="mx-auto max-w-[1000px] space-y-6">
         <div>
-          <p class="text-sm font-bold text-slate-900"><%= @sheet_description %></p>
-          <p class="mt-1 text-xs font-semibold text-slate-500">Rules affect future expected charges only. Posted transactions stay where they are.</p>
+          <p class="text-sm font-bold text-foreground"><%= @sheet_description %></p>
+          <p class="mt-1 text-xs font-semibold text-muted-foreground">Rules affect future expected charges only. Posted transactions stay where they are.</p>
         </div>
 
         <div class="space-y-4" data-controller="folio-routing-rule">
           <div>
-            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Charge Code</label>
+            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Charge Code</label>
             <%= select_tag "folio_routing_rule[transaction_code_id]",
               options_from_collection_for_select(@charge_codes, :id, ->(code) { "#{code.code} · #{code.name}" }, @routing_rule.transaction_code_id),
               include_blank: "Select a charge code",
               required: true,
-              class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0",
+              class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0",
               data: { folio_routing_rule_target: "chargeCode", action: "folio-routing-rule#sync" } %>
           </div>
 
           <div>
-            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Target Folio</label>
+            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Target Folio</label>
             <%= select_tag "folio_routing_rule[target_folio_id]",
               options_from_collection_for_select(@target_folios, :id, ->(folio) { folio.display_option_label }, @routing_rule.target_folio_id),
               include_blank: "Select a target folio",
               required: true,
-              class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0",
+              class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0",
               data: { folio_routing_rule_target: "targetFolio", action: "folio-routing-rule#sync" } %>
           </div>
 
           <% if @attached_tax_rule_groups.any? %>
             <div class="space-y-3" data-folio-routing-rule-target="taxGroups">
               <% @attached_tax_rule_groups.each do |charge_code_id, tax_rules| %>
-                <div class="hidden rounded-2xl border border-slate-200 bg-slate-50 p-4" data-folio-routing-rule-target="taxGroup" data-charge-code-id="<%= charge_code_id %>">
+                <div class="hidden rounded-2xl border border-border bg-muted p-4" data-folio-routing-rule-target="taxGroup" data-charge-code-id="<%= charge_code_id %>">
                   <div class="mb-3 flex items-start justify-between gap-3">
                     <div>
-                      <p class="text-sm font-black text-slate-900">Attached Taxes / Fees</p>
-                      <p class="mt-1 text-xs font-semibold text-slate-500">These follow the target folio unless a different folio is selected.</p>
+                      <p class="text-sm font-black text-foreground">Attached Taxes / Fees</p>
+                      <p class="mt-1 text-xs font-semibold text-muted-foreground">These follow the target folio unless a different folio is selected.</p>
                     </div>
                   </div>
 
                   <div class="space-y-3">
                     <% tax_rules.each do |tax_rule| %>
-                      <div class="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:grid-cols-[1fr_16rem] sm:items-center">
+                      <div class="grid gap-3 rounded-xl border border-border bg-card p-3 sm:grid-cols-[1fr_16rem] sm:items-center">
                         <div>
-                          <p class="font-mono text-xs font-black text-slate-900"><%= tax_rule[:display_code] %></p>
-                          <p class="mt-1 text-xs font-semibold text-slate-500"><%= tax_rule[:name] %></p>
+                          <p class="font-mono text-xs font-black text-foreground"><%= tax_rule[:display_code] %></p>
+                          <p class="mt-1 text-xs font-semibold text-muted-foreground"><%= tax_rule[:name] %></p>
                           <% unless tax_rule[:enabled] %>
                             <p class="mt-1 text-[11px] font-bold text-amber-700">Disabled for posting</p>
                           <% end %>
@@ -64,7 +64,7 @@
                             options_from_collection_for_select(@target_folios, :id, ->(folio) { folio.display_option_label }, tax_rule[:selected_folio_id]),
                             include_blank: "Follow target folio",
                             disabled: !tax_rule[:enabled],
-                            class: "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0",
+                            class: "w-full rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0",
                             data: { folio_routing_rule_target: "childFolio", action: "folio-routing-rule#markChildExplicit" } %>
                         </div>
                       </div>
@@ -76,13 +76,13 @@
           <% end %>
 
           <% if @routing_rule.persisted? %>
-            <label class="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <label class="flex items-center justify-between gap-4 rounded-2xl border border-border bg-muted p-4">
               <span>
-                <span class="block text-sm font-black text-slate-900">Active</span>
-                <span class="mt-1 block text-xs font-semibold text-slate-500">Inactive rules remain visible for audit context.</span>
+                <span class="block text-sm font-black text-foreground">Active</span>
+                <span class="mt-1 block text-xs font-semibold text-muted-foreground">Inactive rules remain visible for audit context.</span>
               </span>
               <%= hidden_field_tag "folio_routing_rule[active]", "0" %>
-              <%= check_box_tag "folio_routing_rule[active]", "1", @routing_rule.active?, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0" %>
+              <%= check_box_tag "folio_routing_rule[active]", "1", @routing_rule.active?, class: "size-4 rounded border-border-interactive text-foreground focus:ring-0" %>
             </label>
           <% end %>
         </div>
@@ -91,6 +91,6 @@
 
     <%= render "hotel_portal/bookings/board/partials/content_footer",
       show_full_page_link: false,
-      submit_button: f.submit(@submit_label, class: "rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-slate-700") %>
+      submit_button: f.submit(@submit_label, class: "rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover") %>
   <% end %>
 </div>

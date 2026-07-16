@@ -12,6 +12,19 @@ module HotelPortal
         nil
       end
 
+      # Parses a combined "start/end" range value (emitted by the reports
+      # date-range picker) into [start_date, end_date]. Returns [nil, nil] when
+      # the value is missing or malformed.
+      def self.parse_date_range_param(value)
+        endpoints = value.to_s.split("/", -1)
+        return [ nil, nil ] unless endpoints.length == 2
+
+        dates = endpoints.map { |endpoint| Date.iso8601(endpoint) }
+        dates.all? ? dates : [ nil, nil ]
+      rescue ArgumentError, TypeError
+        [ nil, nil ]
+      end
+
       def initialize(params, current_hotel = nil)
         @params = params
         @current_hotel = current_hotel
@@ -19,10 +32,21 @@ module HotelPortal
 
       def parse_range
         preset = @params[:date_preset].presence
-        preset ||= "custom" if @params[:start_date].present? || @params[:end_date].present?
+        preset ||= "custom" if @params[:date_range].present? || @params[:start_date].present? || @params[:end_date].present?
         preset ||= "legacy_date" if @params[:date].present?
         preset ||= "today"
         @date_preset = preset
+
+        # Export links carry the resolved dates alongside the preset. Prefer those
+        # explicit dates so relative presets cannot shift across a date boundary.
+        explicit_start = self.class.parse_date(@params[:start_date])
+        explicit_end = self.class.parse_date(@params[:end_date])
+        if explicit_start || explicit_end
+          start_date = explicit_start || explicit_end
+          end_date = explicit_end || start_date
+          end_date = start_date if end_date < start_date
+          return [ start_date, end_date ]
+        end
 
         if preset.present?
           case preset
@@ -38,8 +62,9 @@ module HotelPortal
           when "this_month"
             return [ Date.current.beginning_of_month, Date.current.end_of_month ]
           when "custom"
-            start = self.class.parse_date(@params[:start_date]) || Date.current.beginning_of_month
-            end_date = self.class.parse_date(@params[:end_date]) || Date.current.end_of_month
+            range_start, range_end = self.class.parse_date_range_param(@params[:date_range])
+            start = range_start || self.class.parse_date(@params[:start_date]) || Date.current.beginning_of_month
+            end_date = range_end || self.class.parse_date(@params[:end_date]) || Date.current.end_of_month
             end_date = start if end_date < start
             return [ start, end_date ]
           when "legacy_date"

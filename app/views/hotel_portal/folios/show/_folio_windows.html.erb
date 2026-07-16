@@ -6,13 +6,13 @@
 <section class="space-y-3">
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h2 class="text-lg font-bold tracking-tight text-slate-950">Manage Folio Windows</h2>
-      <p class="mt-0.5 text-sm font-medium text-slate-500"><%= pluralize(folio_show.folios.size, "billing window") %> for this booking</p>
+      <h2 class="text-lg font-bold tracking-tight text-foreground">Manage Folio Windows</h2>
+      <p class="mt-0.5 text-sm font-medium text-muted-foreground"><%= pluralize(folio_show.folios.size, "billing window") %> for this booking</p>
     </div>
 
     <% if folio_show.can_manage_folio_windows? %>
       <%= link_to new_window_hotel_folio_path(hotel, booking, origin: folio_origin, tab: "ledger", active_folio_id: folio_show.active_folio_id),
-          class: "inline-flex items-center justify-center rounded-md bg-slate-900 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-slate-700",
+          class: "inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary-hover",
           data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %>
         + Add Folio
       <% end %>
@@ -20,51 +20,51 @@
   </div>
 
   <%= turbo_frame_tag folio_windows_frame_id, class: "block space-y-3", data: { turbo_action: "advance" } do %>
-    <div class="rounded-md border border-slate-200 bg-white p-1.5">
+    <div class="rounded-md border border-border bg-card p-1.5">
       <nav class="flex items-center gap-1 overflow-x-auto" aria-label="Folio windows">
         <% folio_show.folio_window_rows.each do |row| %>
           <%= link_to hotel_folio_path(hotel, booking, active_folio_id: row[:id], origin: folio_origin, tab: "ledger"),
-              class: "inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-medium transition-all duration-150 #{row[:active] ? "bg-blue-600 text-white font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}",
+              class: "inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-medium transition-all duration-150 #{row[:active] ? "bg-blue-600 text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-muted hover:text-foreground"}",
               data: { turbo_frame: folio_windows_frame_id, turbo_action: "advance" },
               aria: { current: row[:active] ? "page" : nil } do %>
             <span><%= row[:name] %></span>
             <span class="font-mono text-[11px] opacity-80"><%= row[:reference] %></span>
             <% if row[:primary] %>
-              <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold <%= row[:active] ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500" %>">Primary</span>
+              <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold <%= row[:active] ? "bg-card/20 text-primary-foreground" : "bg-muted text-muted-foreground" %>">Primary</span>
             <% end %>
           <% end %>
         <% end %>
       </nav>
     </div>
 
-    <div class="rounded-md border border-slate-200 bg-white" data-testid="active-folio-window-panel">
+    <div class="rounded-md border border-border bg-card" data-testid="active-folio-window-panel">
       <% if active_row %>
         <div class="space-y-4 p-4">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-center gap-2">
-              <span class="inline-flex size-7 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+              <span class="inline-flex size-7 items-center justify-center rounded-md bg-muted text-foreground">
                 <%= cached_icon "book-open", class: "size-3.5" %>
               </span>
-              <h3 class="text-sm font-black uppercase tracking-[0.18em] text-slate-700"><%= active_row[:name] %></h3>
+              <h3 class="text-sm font-black uppercase tracking-[0.18em] text-foreground"><%= active_row[:name] %></h3>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
               <% if folio_show.can_manage_folio_windows? && active_folio&.open? %>
                 <%= link_to edit_window_hotel_folio_path(hotel, booking, active_folio, origin: folio_origin, tab: "ledger", active_folio_id: active_folio.id),
-                    class: "inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50",
+                    class: "inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs font-bold text-foreground shadow-sm transition hover:bg-muted",
                     data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %>
                   <%= cached_icon "pencil", class: "size-3" %>
                   Edit
                 <% end %>
                 <button type="button"
-                        class="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                        class="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs font-bold text-foreground shadow-sm transition hover:bg-muted"
                         onclick="document.getElementById('close-folio-window-<%= active_row[:id] %>').showModal()">
                   <%= cached_icon "x", class: "size-3" %>
                   Close
                 </button>
               <% elsif folio_show.can_manage_folio_windows? && active_folio&.closed? %>
                 <button type="button"
-                        class="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                        class="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs font-bold text-foreground shadow-sm transition hover:bg-muted"
                         onclick="document.getElementById('reopen-folio-window-<%= active_row[:id] %>').showModal()">
                   <%= cached_icon "rotate-ccw", class: "size-3" %>
                   Reopen
@@ -73,44 +73,44 @@
             </div>
           </div>
 
-          <div class="overflow-hidden rounded-md border border-slate-200 bg-white">
+          <div class="overflow-hidden rounded-md border border-border bg-card">
             <table class="w-full table-fixed text-sm">
-              <tbody class="divide-y divide-slate-200">
+              <tbody class="divide-y divide-border">
                 <tr>
-                  <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48">Folio Name</th>
-                  <td class="px-4 py-2 font-semibold tabular-nums text-slate-950"><%= active_row[:name] %></td>
-                  <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48">Folio Reference</th>
-                  <td class="px-4 py-2 font-semibold tabular-nums text-slate-950"><%= active_row[:reference] %></td>
+                  <th class="w-40 bg-muted px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-muted-foreground sm:w-48">Folio Name</th>
+                  <td class="px-4 py-2 font-semibold tabular-nums text-foreground"><%= active_row[:name] %></td>
+                  <th class="w-40 bg-muted px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-muted-foreground sm:w-48">Folio Reference</th>
+                  <td class="px-4 py-2 font-semibold tabular-nums text-foreground"><%= active_row[:reference] %></td>
                 </tr>
                 <tr>
-                  <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48">Type</th>
-                  <td class="px-4 py-2 font-semibold tabular-nums text-slate-950"><%= active_row[:type] %></td>
-                  <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48">Default</th>
-                  <td class="px-4 py-2 font-semibold tabular-nums text-slate-950">
+                  <th class="w-40 bg-muted px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-muted-foreground sm:w-48">Type</th>
+                  <td class="px-4 py-2 font-semibold tabular-nums text-foreground"><%= active_row[:type] %></td>
+                  <th class="w-40 bg-muted px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-muted-foreground sm:w-48">Default</th>
+                  <td class="px-4 py-2 font-semibold tabular-nums text-foreground">
                     <% if active_row[:primary] %>
                       <span class="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-blue-700">Primary</span>
                     <% else %>
-                      <span class="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600">Additional</span>
+                      <span class="rounded-md border border-border bg-card px-2 py-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground">Additional</span>
                     <% end %>
                   </td>
                 </tr>
                 <tr>
-                  <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48">Payer</th>
-                  <td class="px-4 py-2 font-semibold tabular-nums text-slate-950"><%= active_row[:payer] %></td>
-                  <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48">Folio Status</th>
-                  <td class="px-4 py-2 font-semibold tabular-nums text-slate-950"><%= active_row[:status] %></td>
+                  <th class="w-40 bg-muted px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-muted-foreground sm:w-48">Payer</th>
+                  <td class="px-4 py-2 font-semibold tabular-nums text-foreground"><%= active_row[:payer] %></td>
+                  <th class="w-40 bg-muted px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-muted-foreground sm:w-48">Folio Status</th>
+                  <td class="px-4 py-2 font-semibold tabular-nums text-foreground"><%= active_row[:status] %></td>
                 </tr>
                 <tr>
-                  <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48">Balance</th>
-                  <td class="px-4 py-2 font-semibold tabular-nums text-slate-950"><%= active_row[:balance] %></td>
-                  <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48">Account Reference</th>
-                  <td class="px-4 py-2 font-semibold tabular-nums text-slate-950"><%= folio_show.folio_account_reference %></td>
+                  <th class="w-40 bg-muted px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-muted-foreground sm:w-48">Balance</th>
+                  <td class="px-4 py-2 font-semibold tabular-nums text-foreground"><%= active_row[:balance] %></td>
+                  <th class="w-40 bg-muted px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-muted-foreground sm:w-48">Account Reference</th>
+                  <td class="px-4 py-2 font-semibold tabular-nums text-foreground"><%= folio_show.folio_account_reference %></td>
                 </tr>
                 <% if active_folio&.ar_invoice.present? %>
                   <tr>
-                    <th class="w-40 bg-slate-50 px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:w-48">AR Invoice</th>
-                    <td colspan="3" class="px-4 py-2 font-semibold tabular-nums text-slate-950">
-                      <%= link_to active_folio.ar_invoice.formatted_invoice_number, hotel_ar_invoice_path(hotel, active_folio.ar_invoice), class: "underline decoration-slate-300 underline-offset-2 hover:text-slate-600" %>
+                    <th class="w-40 bg-muted px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-muted-foreground sm:w-48">AR Invoice</th>
+                    <td colspan="3" class="px-4 py-2 font-semibold tabular-nums text-foreground">
+                      <%= link_to active_folio.ar_invoice.formatted_invoice_number, hotel_ar_invoice_path(hotel, active_folio.ar_invoice), class: "underline decoration-muted-foreground underline-offset-2 hover:text-muted-foreground" %>
                     </td>
                   </tr>
                 <% end %>
@@ -120,12 +120,12 @@
 
           <%= render "hotel_portal/folios/show/folio_actions", booking: booking, hotel: hotel, folio_show: folio_show, redirect_to_folio: true, folio_origin: folio_origin %>
 
-          <div class="border-t border-slate-200 pt-2">
+          <div class="border-t border-border pt-2">
             <%= render "hotel_portal/folios/show/page_ledger", folio_show: folio_show, booking: booking, hotel: hotel, folio_origin: folio_origin %>
           </div>
         </div>
       <% else %>
-        <div class="px-4 py-8 text-center text-sm font-medium text-slate-500">No folio windows available.</div>
+        <div class="px-4 py-8 text-center text-sm font-medium text-muted-foreground">No folio windows available.</div>
       <% end %>
     </div>
   <% end %>
@@ -136,16 +136,16 @@
     <% if folio.open? %>
       <% direct_bill_available = folio.payer_type == "company" && folio.hotel_corporate_account&.active? && folio.hotel_corporate_account&.direct_bill_enabled? && folio.outstanding_balance.to_d.positive? %>
       <% credit_exposure = ArInvoices::CreditExposure.call(hotel_corporate_account: folio.hotel_corporate_account, pending_amount: folio.outstanding_balance, pending_currency: folio.currency) if direct_bill_available %>
-      <dialog id="close-folio-window-<%= folio.id %>" class="fixed inset-0 m-auto w-[min(92vw,30rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
-        <div class="bg-white" onclick="event.stopPropagation()">
-          <div class="border-b border-slate-100 px-6 py-5">
-            <h3 class="text-lg font-bold text-slate-900">Close <%= folio.display_name %></h3>
+      <dialog id="close-folio-window-<%= folio.id %>" class="fixed inset-0 m-auto w-[min(92vw,30rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-primary/50" onclick="if(event.target===this){this.close()}">
+        <div class="bg-card" onclick="event.stopPropagation()">
+          <div class="border-b border-border px-6 py-5">
+            <h3 class="text-lg font-bold text-foreground">Close <%= folio.display_name %></h3>
             <% if direct_bill_available %>
-              <p class="mt-1 text-sm text-slate-500">Close this Company & Government folio as Direct Bill and create an AR invoice.</p>
+              <p class="mt-1 text-sm text-muted-foreground">Close this Company & Government folio as Direct Bill and create an AR invoice.</p>
             <% elsif folio.payer_type == "company" && folio.outstanding_balance.to_d.positive? %>
-              <p class="mt-1 text-sm text-slate-500">Direct Bill is not enabled for this account. Leave the folio open or settle before close.</p>
+              <p class="mt-1 text-sm text-muted-foreground">Direct Bill is not enabled for this account. Leave the folio open or settle before close.</p>
             <% else %>
-              <p class="mt-1 text-sm text-slate-500">Only zero-balance folios with no pending charges can be closed.</p>
+              <p class="mt-1 text-sm text-muted-foreground">Only zero-balance folios with no pending charges can be closed.</p>
             <% end %>
           </div>
           <%= form_with url: close_window_hotel_folio_path(hotel, booking, folio), method: :post, local: true, class: "space-y-4 p-6" do %>
@@ -162,31 +162,31 @@
               <% end %>
             <% end %>
             <div>
-              <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Reason</label>
-              <%= text_field_tag "booking_folio[reason]", nil, placeholder: "Optional internal reason", class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" %>
+              <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Reason</label>
+              <%= text_field_tag "booking_folio[reason]", nil, placeholder: "Optional internal reason", class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm" %>
             </div>
             <div class="flex justify-end gap-2 pt-2">
-              <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" onclick="this.closest('dialog').close()">Cancel</button>
-              <%= submit_tag(direct_bill_available ? "Close as Direct Bill" : "Close Folio", class: "rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700") %>
+              <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted" onclick="this.closest('dialog').close()">Cancel</button>
+              <%= submit_tag(direct_bill_available ? "Close as Direct Bill" : "Close Folio", class: "rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover") %>
             </div>
           <% end %>
         </div>
       </dialog>
     <% elsif folio.closed? %>
-      <dialog id="reopen-folio-window-<%= folio.id %>" class="fixed inset-0 m-auto w-[min(92vw,30rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
-        <div class="bg-white" onclick="event.stopPropagation()">
-          <div class="border-b border-slate-100 px-6 py-5">
-            <h3 class="text-lg font-bold text-slate-900">Reopen <%= folio.display_name %></h3>
+      <dialog id="reopen-folio-window-<%= folio.id %>" class="fixed inset-0 m-auto w-[min(92vw,30rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-primary/50" onclick="if(event.target===this){this.close()}">
+        <div class="bg-card" onclick="event.stopPropagation()">
+          <div class="border-b border-border px-6 py-5">
+            <h3 class="text-lg font-bold text-foreground">Reopen <%= folio.display_name %></h3>
           </div>
           <%= form_with url: reopen_window_hotel_folio_path(hotel, booking, folio), method: :post, local: true, class: "space-y-4 p-6" do %>
             <%= hidden_field_tag :folio_origin, folio_origin if folio_origin.present? %>
             <div>
-              <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Reason</label>
-              <%= text_field_tag "booking_folio[reason]", nil, placeholder: "Optional internal reason", class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" %>
+              <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Reason</label>
+              <%= text_field_tag "booking_folio[reason]", nil, placeholder: "Optional internal reason", class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm" %>
             </div>
             <div class="flex justify-end gap-2 pt-2">
-              <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" onclick="this.closest('dialog').close()">Cancel</button>
-              <%= submit_tag "Reopen Folio", class: "rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+              <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted" onclick="this.closest('dialog').close()">Cancel</button>
+              <%= submit_tag "Reopen Folio", class: "rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" %>
             </div>
           <% end %>
         </div>

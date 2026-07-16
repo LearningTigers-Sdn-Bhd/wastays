@@ -1,0 +1,64 @@
+<%# Shared direct-entry + scroll-column time control. `target` identifies the host
+    controller target; all interaction is delegated from the root to that controller. %>
+<% hour_cycle = local_assigns.fetch(:hour_cycle, 24).to_i == 12 ? 12 : 24 %>
+<% precision = local_assigns.fetch(:precision, :minutes).to_sym %>
+<% minute_step = [local_assigns.fetch(:minute_step, 1).to_i, 1].max %>
+<% second_step = [local_assigns.fetch(:second_step, 1).to_i, 1].max %>
+<% scope = local_assigns.fetch(:scope, "time") %>
+<% label = local_assigns.fetch(:label, "Time") %>
+<% columns = [
+     ["hours", "Hours", hour_cycle == 12 ? (1..12).to_a : (0..23).to_a, 2],
+     ["minutes", "Minutes", (0..59).step(minute_step).to_a, 2]
+   ] %>
+<% columns << ["seconds", "Seconds", (0..59).step(second_step).to_a, 2] if precision == :seconds %>
+<% columns << ["period", "AM/PM", %w[AM PM], nil] if hour_cycle == 12 %>
+
+<div class="panel-time-control"
+     tabindex="-1"
+     role="group"
+     aria-label="<%= label %>"
+     aria-describedby="<%= "#{scope}-time-error".parameterize %>"
+     data-time-scope="<%= scope %>"
+     data-hour-cycle="<%= hour_cycle %>"
+     data-precision="<%= precision %>"
+     data-<%= identifier %>-target="<%= target %>"
+     data-action="keydown-><%= identifier %>#onTimeKeydown click-><%= identifier %>#onTimeClick input-><%= identifier %>#onTimeInput focusin-><%= identifier %>#onTimeFocusIn focusout-><%= identifier %>#onTimeFocusOut">
+  <div class="panel-time-control__columns" style="--time-column-count: <%= columns.length %>">
+    <% columns.each do |part, part_label, values, width| %>
+      <div class="panel-time-control__column" data-time-column="<%= part %>" data-time-kind="<%= part == 'period' ? 'period' : 'numeric' %>">
+        <div class="panel-time-control__input-row">
+          <input type="text"
+                 class="panel-time-control__input"
+                 aria-label="<%= part_label %>"
+                 data-time-input="<%= part %>"
+                 value=""
+                 placeholder="--"
+                 <%= "inputmode=numeric maxlength=2 autocomplete=off spellcheck=false" unless part == "period" %>
+                 <%= "disabled tabindex=-1" if part == "period" %>>
+        </div>
+        <span class="panel-time-control__divider" aria-hidden="true"></span>
+        <%= render PanelsUI::ScrollArea.new(tabindex: -1, viewport_class: "panel-time-control__viewport") do %>
+          <div role="listbox"
+               aria-label="<%= part_label %>"
+               aria-activedescendant=""
+               class="panel-time-control__list"
+               data-time-listbox="<%= part %>">
+            <% values.each do |value| %>
+              <% shown = width ? value.to_s.rjust(width, "0") : value %>
+              <button type="button"
+                      tabindex="-1"
+                      role="option"
+                      aria-selected="false"
+                      id="<%= "#{scope}-#{part}-#{value}".parameterize %>"
+                      class="panel-time-control__option"
+                      data-time-option="<%= part %>"
+                      data-time-value="<%= value %>"><%= shown %></button>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+  <p class="panel-time-control__status sr-only" aria-live="polite" data-time-status></p>
+  <p id="<%= "#{scope}-time-error".parameterize %>" class="panel-time-control__error sr-only" data-time-error></p>
+</div>

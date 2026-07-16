@@ -115,4 +115,40 @@ RSpec.describe HotelPortal::BookingPresenter do
       expect(subject.formatted_held_security_deposit_total).to eq("MYR 0.00")
     end
   end
+
+  describe "front desk display" do
+    it "uses semantic status token classes" do
+      booking.update!(status: "confirmed")
+
+      expect(subject.status_variant_class).to include("border-info/30", "bg-info/10", "text-info")
+      expect(subject.status_variant_class).not_to match(/blue|green|amber|rose|red|orange|violet|emerald|yellow/)
+    end
+
+    it "formats reservation timestamps in hotel local time" do
+      hotel.update!(time_zone: "Kuala Lumpur")
+      booking.update!(created_at: Time.utc(2026, 7, 15, 18, 30))
+
+      expect(subject.created_at_date).to include("16 Jul 2026")
+    end
+
+    it "uses hotel local time for transaction form defaults" do
+      hotel.update!(time_zone: "Kuala Lumpur")
+
+      travel_to(Time.utc(2026, 7, 15, 18, 30)) do
+        expect(subject.checked_in_at_form_value).to eq("2026-07-16T02:30")
+        expect(subject.checked_out_at_form_value).to eq("2026-07-16T02:30")
+      end
+    end
+
+    it "uses hotel local date for late checkout rates" do
+      hotel.update!(time_zone: "Kuala Lumpur")
+      room_type = create(:room_type, hotel:, base_price: 100)
+      create(:booking_room, booking:, room_type:, subtotal: 100)
+      create(:room_rate, room_type:, date: Date.new(2026, 7, 16), price: 250)
+
+      travel_to(Time.utc(2026, 7, 15, 18, 30)) do
+        expect(subject.suggested_late_checkout_amount).to eq(250.to_d)
+      end
+    end
+  end
 end

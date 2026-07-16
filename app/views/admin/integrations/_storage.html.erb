@@ -17,46 +17,46 @@
           placeholder: "Enter R2 Secret Access Key" %>
 
       <div>
-        <%= label_tag :r2_bucket, "Bucket Name", class: "mb-1.5 block text-sm font-semibold text-slate-800" %>
+        <%= label_tag :r2_bucket, "Bucket Name", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
         <%= text_field_tag :r2_bucket, @r2_bucket,
             placeholder: "e.g. wastays-production",
-            class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10" %>
+            class: "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/10" %>
       </div>
 
       <div>
-        <%= label_tag :r2_region, "Region", class: "mb-1.5 block text-sm font-semibold text-slate-800" %>
+        <%= label_tag :r2_region, "Region", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
         <%= text_field_tag :r2_region, @r2_region,
             placeholder: "auto",
-            class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10" %>
+            class: "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/10" %>
       </div>
 
       <div class="md:col-span-2">
-        <%= label_tag :r2_endpoint, "Endpoint URL", class: "mb-1.5 block text-sm font-semibold text-slate-800" %>
+        <%= label_tag :r2_endpoint, "Endpoint URL", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
         <%= text_field_tag :r2_endpoint, @r2_endpoint,
             placeholder: "https://<account-id>.r2.cloudflarestorage.com",
-            class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10" %>
-        <p class="mt-1.5 text-xs text-slate-500">Example: https://0123456789abcdef.r2.cloudflarestorage.com</p>
+            class: "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/10" %>
+        <p class="mt-1.5 text-xs text-muted-foreground">Example: https://0123456789abcdef.r2.cloudflarestorage.com</p>
       </div>
 
       <div class="md:col-span-2">
-        <%= label_tag :r2_public_url, "Public URL / CDN", class: "mb-1.5 block text-sm font-semibold text-slate-800" %>
+        <%= label_tag :r2_public_url, "Public URL / CDN", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
         <%= text_field_tag :r2_public_url, @r2_public_url,
             placeholder: "https://pub-xyz.r2.dev or your custom domain",
-            class: "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10" %>
-        <p class="mt-1.5 text-xs text-slate-500">When set, file links use this public base URL instead of signed S3 URLs.</p>
+            class: "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/10" %>
+        <p class="mt-1.5 text-xs text-muted-foreground">When set, file links use this public base URL instead of signed S3 URLs.</p>
       </div>
     </div>
 
-    <div class="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
       <button
         type="button"
         onclick="testR2Connection()"
         id="test-connection-btn"
-        class="cursor-pointer rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+        class="cursor-pointer rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted"
       >
         Test Connection
       </button>
-      <%= submit_tag "Save Storage", class: "cursor-pointer rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-secondary" %>
+      <%= submit_tag "Save Storage", class: "cursor-pointer rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-brand-secondary" %>
     </div>
   <% end %>
 

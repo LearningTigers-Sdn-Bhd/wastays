@@ -5,14 +5,14 @@
 
 <section class="overflow-hidden" data-controller="folio-ledger">
   <div class="flex items-center justify-between py-3">
-    <h2 class="text-sm font-bold text-slate-950">Ledger</h2>
-    <span class="text-xs font-medium tabular-nums text-slate-500"><%= pluralize(folio_show.ledger_entry_count, "entry") %></span>
+    <h2 class="text-sm font-bold text-foreground">Ledger</h2>
+    <span class="text-xs font-medium tabular-nums text-muted-foreground"><%= pluralize(folio_show.ledger_entry_count, "entry") %></span>
   </div>
 
-  <div class="overflow-x-auto border border-slate-200">
+  <div class="overflow-x-auto border border-border">
     <table class="w-full min-w-[760px] table-fixed text-left text-xs">
-      <thead class="sticky top-0 z-[1] bg-slate-50 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-        <tr class="border-b border-slate-200">
+      <thead class="sticky top-0 z-[1] bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <tr class="border-b border-border">
           <th class="w-24 px-4 py-2">Date</th>
           <th class="w-20 px-4 py-2">Code</th>
           <th class="px-4 py-2">Description / Reference</th>
@@ -21,40 +21,40 @@
           <th class="w-28 px-4 py-2 text-right">Action</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-slate-100">
+      <tbody class="divide-y divide-border">
         <% folio_show.posted_rows.each do |row| %>
           <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, section: "posted", currency: folio_show.currency, booking: booking, hotel: hotel, folio_origin: folio_origin, folio_show: folio_show %>
         <% end %>
 
         <% if folio_show.posted_rows.empty? %>
           <tr data-folio-ledger-target="row" data-section="posted">
-            <td colspan="6" class="px-4 py-6 text-center text-xs text-slate-500">No posted transactions.</td>
+            <td colspan="6" class="px-4 py-6 text-center text-xs text-muted-foreground">No posted transactions.</td>
           </tr>
         <% end %>
 
         <% if folio_show.posted_rows.any? %>
-          <tr data-folio-ledger-target="row" data-section="posted" class="bg-slate-50/70">
-            <td colspan="4" class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-500">Posted balance</td>
-            <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-black tabular-nums text-slate-950"><%= folio_show.money(folio_show.posted_balance) %></td>
+          <tr data-folio-ledger-target="row" data-section="posted" class="bg-muted/70">
+            <td colspan="4" class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wider text-muted-foreground">Posted balance</td>
+            <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-black tabular-nums text-foreground"><%= folio_show.money(folio_show.posted_balance) %></td>
             <td class="px-4 py-3"></td>
           </tr>
         <% end %>
 
-        <tr class="border-y border-slate-200 bg-slate-50">
+        <tr class="border-y border-border bg-muted">
           <td colspan="6" class="p-0">
             <button type="button"
-                    class="flex w-full items-center justify-between gap-4 px-4 py-2.5 text-left transition hover:bg-slate-100"
+                    class="flex w-full items-center justify-between gap-4 px-4 py-2.5 text-left transition hover:bg-muted"
                     aria-expanded="false"
                     data-action="folio-ledger#toggle"
                     data-folio-ledger-section-param="forecasted">
               <span class="flex min-w-0 items-center gap-2">
-                <span class="w-3 text-slate-500" data-folio-ledger-target="chevron" data-section="forecasted">▸</span>
+                <span class="w-3 text-muted-foreground" data-folio-ledger-target="chevron" data-section="forecasted">▸</span>
                 <span class="inline-flex size-5 items-center justify-center rounded-md bg-amber-50 text-amber-700">
                   <%= cached_icon "calendar-clock", class: "size-3" %>
                 </span>
-                <span class="font-semibold text-slate-800">Upcoming Charges</span>
+                <span class="font-semibold text-foreground">Upcoming Charges</span>
               </span>
-              <span class="truncate text-[11px] font-medium tabular-nums text-slate-500"><%= folio_show.forecasted_section_summary %></span>
+              <span class="truncate text-[11px] font-medium tabular-nums text-muted-foreground"><%= folio_show.forecasted_section_summary %></span>
             </button>
           </td>
         </tr>
@@ -65,7 +65,7 @@
 
         <% if folio_show.forecasted_rows.empty? %>
           <tr class="hidden" data-folio-ledger-target="row" data-section="forecasted">
-            <td colspan="6" class="px-4 py-6 text-center text-xs text-slate-500">No upcoming charges.</td>
+            <td colspan="6" class="px-4 py-6 text-center text-xs text-muted-foreground">No upcoming charges.</td>
           </tr>
         <% end %>
       </tbody>

@@ -54,8 +54,8 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
       expect(response.body).to include("MYR 120.00")
       expect(response.body).to include("Balance Due")
-      expect(response.body).to include("rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-black text-white")
-      expect(response.body).to include("rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700")
+      expect(response.body).to include("rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-primary-foreground")
+      expect(response.body).to include("rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-black text-foreground")
       expect(response.body).to include("border-emerald-200 bg-emerald-50 text-emerald-700")
       expect(response.body).to include("text-red-700")
       expect(response.body).not_to include("Issue Refund")
@@ -63,7 +63,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).not_to include("Post Charge")
       expect(response.body).not_to include("Adjustment")
       expect(response.body).not_to include("Booking &rsaquo;")
-      expect(response.body).not_to include("type=\"submit\" class=\"inline-flex items-center justify-center rounded-lg bg-slate-900")
+      expect(response.body).not_to include("type=\"submit\" class=\"inline-flex items-center justify-center rounded-lg bg-primary")
     end
 
     it "links View Folio directly to the control-panel folio context" do

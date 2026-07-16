@@ -1,31 +1,28 @@
 # frozen_string_literal: true
 
 module Guest::NavigationHelper
-  NavSection = Struct.new(:label, :items, keyword_init: true)
-  NavItem = Struct.new(:label, :path, :search_text, :icon, :active, keyword_init: true)
-
   def guest_sidebar_sections
     return @_guest_sidebar_sections if defined?(@_guest_sidebar_sections)
 
     @_guest_sidebar_sections = [
-      NavSection.new(
+      PanelsUI::Navigation::Section.new(
         label: "My Account",
         items: [
-          NavItem.new(
+          PanelsUI::Navigation::Item.new(
             label: "Dashboard",
             path: guest_dashboard_path,
             search_text: "Dashboard Home Overview",
             active: controller_name == "dashboard",
             icon: "layout-dashboard"
           ),
-          NavItem.new(
+          PanelsUI::Navigation::Item.new(
             label: "My Bookings",
             path: guest_bookings_path,
             search_text: "My Bookings Stays Reservations History",
             active: controller_name == "bookings",
             icon: "calendar-days"
           ),
-          NavItem.new(
+          PanelsUI::Navigation::Item.new(
             label: "Refunds",
             path: guest_refund_requests_path,
             search_text: "Refund Requests Cancellations",
@@ -39,8 +36,8 @@ module Guest::NavigationHelper
 
   def guest_sidebar_footer_items
     @_guest_sidebar_footer_items ||= [
-      NavItem.new(label: "Homepage", path: root_path, search_text: "Homepage Website", icon: "house", active: false),
-      NavItem.new(label: "Help & support", path: help_center_path, search_text: "Help Support FAQ", icon: "circle-question-mark", active: false)
+      PanelsUI::Navigation::Item.new(label: "Homepage", path: root_path, search_text: "Homepage Website", icon: "house", active: false),
+      PanelsUI::Navigation::Item.new(label: "Help & support", path: help_center_path, search_text: "Help Support FAQ", icon: "circle-question-mark", active: false)
     ]
   end
 
@@ -75,7 +72,7 @@ module Guest::NavigationHelper
     parts = guest_breadcrumb_parts
     return if parts.blank?
 
-    render partial: "shared/navigation/breadcrumb_bar", locals: { parts: parts }
+    render PanelsUI::Breadcrumb.new(id: "guest-breadcrumb", parts:)
   end
 
   private

@@ -1,16 +1,16 @@
-<div class="bg-neutral-bg min-h-screen">
+<div class="bg-muted min-h-screen" data-controller="filter-sidebar">
   <!-- Sticky Search Summary (Desktop/Mobile) -->
-  <div class="sticky top-[61px] z-40 w-full bg-white border-b border-neutral-border py-3 shadow-sm">
+  <div class="sticky top-[61px] z-40 w-full bg-white border-b border-border py-3 shadow-sm">
     <div class="max-w-[85rem] mx-auto px-4 flex items-center justify-between">
       <div class="flex items-center gap-x-4 overflow-hidden">
-        <div class="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-brand-primary/10 text-brand-primary">
+        <div class="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary">
           <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </div>
         <div class="truncate">
-          <h2 class="text-sm font-bold text-neutral-text-primary truncate">
+          <h2 class="text-sm font-bold text-foreground truncate">
             <%= params[:city].present? ? params[:city] : "All Destinations" %>
           </h2>
-          <p class="text-xs text-neutral-text-secondary truncate">
+          <p class="text-xs text-muted-foreground truncate">
             <%= Date.parse(params[:check_in].presence || Date.current.to_s).strftime("%b %d") %> - 
             <%= Date.parse(params[:check_out].presence || Date.tomorrow.to_s).strftime("%b %d") %> • 
             <%= params[:rooms] || 1 %> Room, <%= params[:adults] || 2 %> Adults
@@ -19,7 +19,7 @@
       </div>
       
       <div class="flex items-center gap-x-2">
-        <button type="button" class="sm:hidden btn btn-secondary py-1.5 px-3 text-xs" data-hs-overlay="#filter-sidebar">
+        <button type="button" class="sm:hidden btn btn-secondary py-1.5 px-3 text-xs" data-action="click->filter-sidebar#open">
           Filters
         </button>
         <a href="<%= root_path %>" class="btn btn-secondary py-1.5 px-3 text-xs hidden sm:inline-flex">
@@ -32,33 +32,34 @@
   <div class="max-w-[85rem] mx-auto px-4 py-6 sm:px-6 lg:px-8">
     <div class="flex flex-col lg:flex-row gap-8">
       <!-- Sidebar Filters (Hidden on Mobile, Overlay on Mobile) -->
-      <aside id="filter-sidebar" class="hs-overlay hs-overlay-open:translate-x-0 -translate-x-full transition-all duration-300 transform hidden fixed top-0 start-0 bottom-0 z-[60] w-72 bg-white border-e border-neutral-border lg:static lg:block lg:translate-x-0 lg:z-0 lg:bg-transparent lg:border-none">
+      <div class="hidden lg:hidden fixed inset-0 z-[59] bg-slate-950/55 backdrop-blur-sm" data-filter-sidebar-target="backdrop" data-action="click->filter-sidebar#close"></div>
+      <aside id="filter-sidebar" class="-translate-x-full transition-all duration-300 transform fixed top-0 start-0 bottom-0 z-[60] w-72 bg-white border-e border-border lg:static lg:block lg:translate-x-0 lg:z-0 lg:bg-transparent lg:border-none" data-filter-sidebar-target="panel">
         <div class="p-6 lg:p-0 space-y-8">
           <div class="flex items-center justify-between lg:hidden mb-6">
-            <h2 class="text-xl font-bold text-neutral-text-primary">Filters</h2>
-            <button type="button" class="text-neutral-text-secondary" data-hs-overlay="#filter-sidebar">
+            <h2 class="text-xl font-bold text-foreground">Filters</h2>
+            <button type="button" class="text-muted-foreground" data-action="click->filter-sidebar#close">
               <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>
 
           <!-- Price Range -->
           <div>
-            <h3 class="text-sm font-bold text-neutral-text-primary uppercase tracking-wider mb-4">Price Range</h3>
+            <h3 class="text-sm font-bold text-foreground uppercase tracking-wider mb-4">Price Range</h3>
             <div class="space-y-2">
-              <label class="flex items-center gap-x-3 text-sm text-neutral-text-secondary">
-                <input type="checkbox" class="form-checkbox rounded text-brand-primary focus:ring-brand-primary">
+              <label class="flex items-center gap-x-3 text-sm text-muted-foreground">
+                <input type="checkbox" class="form-checkbox rounded text-primary focus:ring-primary">
                 RM 0 - RM 100
               </label>
-              <label class="flex items-center gap-x-3 text-sm text-neutral-text-secondary">
-                <input type="checkbox" class="form-checkbox rounded text-brand-primary focus:ring-brand-primary">
+              <label class="flex items-center gap-x-3 text-sm text-muted-foreground">
+                <input type="checkbox" class="form-checkbox rounded text-primary focus:ring-primary">
                 RM 100 - RM 200
               </label>
-              <label class="flex items-center gap-x-3 text-sm text-neutral-text-secondary">
-                <input type="checkbox" class="form-checkbox rounded text-brand-primary focus:ring-brand-primary">
+              <label class="flex items-center gap-x-3 text-sm text-muted-foreground">
+                <input type="checkbox" class="form-checkbox rounded text-primary focus:ring-primary">
                 RM 200 - RM 300
               </label>
-              <label class="flex items-center gap-x-3 text-sm text-neutral-text-secondary">
-                <input type="checkbox" class="form-checkbox rounded text-brand-primary focus:ring-brand-primary">
+              <label class="flex items-center gap-x-3 text-sm text-muted-foreground">
+                <input type="checkbox" class="form-checkbox rounded text-primary focus:ring-primary">
                 RM 300+
               </label>
             </div>
@@ -66,11 +67,11 @@
 
           <!-- Star Rating -->
           <div>
-            <h3 class="text-sm font-bold text-neutral-text-primary uppercase tracking-wider mb-4">Hotel Grade</h3>
+            <h3 class="text-sm font-bold text-foreground uppercase tracking-wider mb-4">Hotel Grade</h3>
             <div class="space-y-2">
               <% [5, 4, 3, 2, 1].each do |star| %>
-                <label class="flex items-center gap-x-3 text-sm text-neutral-text-secondary">
-                  <input type="checkbox" class="form-checkbox rounded text-brand-primary focus:ring-brand-primary">
+                <label class="flex items-center gap-x-3 text-sm text-muted-foreground">
+                  <input type="checkbox" class="form-checkbox rounded text-primary focus:ring-primary">
                   <div class="flex text-amber-400">
                     <% star.times do %>
                       <%= cached_icon "star", library: "phosphor", variant: "fill", class: "w-3.5 h-3.5 fill-current" %>
@@ -83,18 +84,18 @@
 
           <!-- Amenities -->
           <div>
-            <h3 class="text-sm font-bold text-neutral-text-primary uppercase tracking-wider mb-4">Amenities</h3>
+            <h3 class="text-sm font-bold text-foreground uppercase tracking-wider mb-4">Amenities</h3>
             <div class="space-y-2">
-              <label class="flex items-center gap-x-3 text-sm text-neutral-text-secondary">
-                <input type="checkbox" class="form-checkbox rounded text-brand-primary focus:ring-brand-primary">
+              <label class="flex items-center gap-x-3 text-sm text-muted-foreground">
+                <input type="checkbox" class="form-checkbox rounded text-primary focus:ring-primary">
                 Free WiFi
               </label>
-              <label class="flex items-center gap-x-3 text-sm text-neutral-text-secondary">
-                <input type="checkbox" class="form-checkbox rounded text-brand-primary focus:ring-brand-primary">
+              <label class="flex items-center gap-x-3 text-sm text-muted-foreground">
+                <input type="checkbox" class="form-checkbox rounded text-primary focus:ring-primary">
                 Parking
               </label>
-              <label class="flex items-center gap-x-3 text-sm text-neutral-text-secondary">
-                <input type="checkbox" class="form-checkbox rounded text-brand-primary focus:ring-brand-primary">
+              <label class="flex items-center gap-x-3 text-sm text-muted-foreground">
+                <input type="checkbox" class="form-checkbox rounded text-primary focus:ring-primary">
                 Air Conditioning
               </label>
             </div>
@@ -105,12 +106,12 @@
       <!-- Results Main -->
       <main class="flex-1">
         <div class="flex justify-between items-center mb-6">
-          <h1 class="text-xl font-bold text-neutral-text-primary">
+          <h1 class="text-xl font-bold text-foreground">
             <%= pluralize(@hotels.count, 'Hotel') %> in <%= params[:city].present? ? params[:city] : "Selected Area" %>
           </h1>
           
           <div class="flex items-center gap-x-3">
-            <span class="text-xs text-neutral-text-secondary hidden sm:inline">Sort by:</span>
+            <span class="text-xs text-muted-foreground hidden sm:inline">Sort by:</span>
             <select class="form-input py-1.5 px-3 text-xs w-auto">
               <option>Recommended</option>
               <option>Price (Low to High)</option>
@@ -134,12 +135,12 @@
                     <% elsif hotel.room_types.first&.photos&.attached? %>
                       <%= image_tag hotel.room_types.first.photos.first, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
                     <% else %>
-                      <div class="absolute inset-0 bg-neutral-bg flex items-center justify-center">
-                        <svg class="w-12 h-12 text-neutral-border" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13 2 2 4-4"/></svg>
+                      <div class="absolute inset-0 bg-muted flex items-center justify-center">
+                        <svg class="w-12 h-12 text-border" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13 2 2 4-4"/></svg>
                       </div>
                     <% end %>
                     <div class="absolute top-3 left-3">
-                      <span class="badge bg-white/90 text-brand-primary font-bold shadow-sm backdrop-blur-sm">Top Rated</span>
+                      <span class="badge bg-white/90 text-primary font-bold shadow-sm backdrop-blur-sm">Top Rated</span>
                     </div>
                   </div>
 
@@ -147,7 +148,7 @@
                   <div class="flex-1 p-5 flex flex-col justify-between">
                     <div>
                       <div class="flex justify-between items-start mb-1">
-                        <h3 class="text-xl font-bold text-neutral-text-primary group-hover:text-brand-primary transition-colors">
+                        <h3 class="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
                           <%= hotel.name %>
                         </h3>
                         <div class="flex text-amber-400">
@@ -156,20 +157,20 @@
                           <% end %>
                         </div>
                       </div>
-                      <p class="text-sm text-neutral-text-secondary flex items-center mb-6">
+                      <p class="text-sm text-muted-foreground flex items-center mb-6">
                         <svg class="w-3.5 h-3.5 me-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                         <%= hotel.city %>, <%= hotel.country %>
                       </p>
                     </div>
 
-                    <div class="flex justify-between items-end border-t border-neutral-border pt-6">
+                    <div class="flex justify-between items-end border-t border-border pt-6">
                       <div>
-                        <p class="text-[10px] text-neutral-text-secondary uppercase font-bold tracking-wider">
+                        <p class="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
                           Starts from<%= hotel.pax_pricing_only? ? " (Per Person)" : "" %>
                         </p>
                         <% lowest_room = hotel.room_types.first %>
                         <% if lowest_room %>
-                          <p class="text-2xl font-extrabold text-neutral-text-primary">
+                          <p class="text-2xl font-extrabold text-foreground">
                             <% if hotel.pax_pricing_only? %>
                               <% presenter = Public::RoomTypePresenter.new(lowest_room, hotel, @availability_service, self) %>
                               <%= presenter.display_pax_rate(@display_currency) %>
@@ -177,11 +178,11 @@
                               RM <%= number_with_precision(@availability_service.calculate_total_price(lowest_room), precision: 2) %>
                             <% end %>
                           </p>
-                          <p class="text-[10px] text-neutral-text-secondary italic">
+                          <p class="text-[10px] text-muted-foreground italic">
                             <%= hotel.pax_pricing_only? ? "Per Person" : "Excludes taxes & fees" %>
                           </p>
                         <% else %>
-                          <p class="text-sm font-medium text-neutral-text-secondary italic">Check availability</p>
+                          <p class="text-sm font-medium text-muted-foreground italic">Check availability</p>
                         <% end %>
                       </div>
                       
@@ -201,12 +202,12 @@
             <% end %>
           </div>
         <% else %>
-          <div class="card p-12 text-center bg-white border-2 border-dashed border-neutral-border">
-            <div class="inline-flex justify-center items-center w-16 h-16 rounded-full bg-neutral-bg text-neutral-text-secondary mb-4">
+          <div class="card p-12 text-center bg-white border-2 border-dashed border-border">
+            <div class="inline-flex justify-center items-center w-16 h-16 rounded-full bg-muted text-muted-foreground mb-4">
               <svg class="w-8 h-8" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             </div>
-            <h2 class="text-xl font-bold text-neutral-text-primary mb-2">No hotels found</h2>
-            <p class="text-neutral-text-secondary mb-8 max-w-sm mx-auto">We couldn't find any available hotels matching your criteria. Try adjusting your dates or destination.</p>
+            <h2 class="text-xl font-bold text-foreground mb-2">No hotels found</h2>
+            <p class="text-muted-foreground mb-8 max-w-sm mx-auto">We couldn't find any available hotels matching your criteria. Try adjusting your dates or destination.</p>
             <a href="<%= root_path %>" class="btn btn-primary px-8">Start New Search</a>
           </div>
         <% end %>

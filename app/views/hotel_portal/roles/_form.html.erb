@@ -11,15 +11,15 @@
   <% end %>
 
   <div>
-    <%= f.label :name, "Role Name", class: "mb-2 block text-sm font-medium text-slate-900" %>
-    <%= f.text_field :name, required: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm transition focus:border-slate-900 focus:ring-0", placeholder: "Night Manager" %>
-    <p class="mt-2 text-xs text-slate-500">The role slug is generated from the name when the role is created. You can manage this role's permissions in the matrix after saving.</p>
+    <%= f.label :name, "Role Name", class: "mb-2 block text-sm font-medium text-foreground" %>
+    <%= f.text_field :name, required: true, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm transition focus:border-border-interactive focus:ring-0", placeholder: "Night Manager" %>
+    <p class="mt-2 text-xs text-muted-foreground">The role slug is generated from the name when the role is created. You can manage this role's permissions in the matrix after saving.</p>
   </div>
 
-  <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
-    <button type="button" class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" data-action="click->popup-modal#close">
+  <div class="flex items-center justify-end gap-3 border-t border-border pt-4">
+    <button type="button" class="inline-flex items-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted" data-action="click->popup-modal#close">
       Cancel
     </button>
-    <%= f.submit @role.persisted? ? "Update Role" : "Create Role", class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+    <%= f.submit @role.persisted? ? "Update Role" : "Create Role", class: "inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" %>
   </div>
 <% end %>

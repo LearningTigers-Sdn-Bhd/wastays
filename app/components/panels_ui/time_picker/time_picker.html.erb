@@ -1,0 +1,39 @@
+<%= tag.div(**root_attributes) do %>
+  <%# Hidden field: "HH:MM" form source of truth the segments write back into. %>
+  <%= hidden_field %>
+
+  <%= render PanelsUI::Popover.new(
+        id: popover_id,
+        placement: :bottom_start,
+        arrow: false,
+        focus: true,
+        aria_haspopup: "dialog",
+        root_class: "#{anchor_class} #{popover_root_class}",
+        class: "panel-time-picker__popover") do |popover| %>
+    <% popover.with_trigger(
+         unstyled: true,
+         aria_label: placeholder_text,
+         class: "panel-input panel-time-picker__display",
+         disabled: field_disabled?,
+         aria: { labelledby: @labelled_by, describedby: @described_by, invalid: (@invalid ? "true" : nil), required: (@required ? "true" : nil) },
+         data: { "#{stimulus_identifier}-target" => "trigger" }) do %>
+      <span class="panel-time-picker__value"
+            data-<%= stimulus_identifier %>-target="display"
+            data-placeholder="<%= placeholder_text %>"></span>
+      <svg class="panel-time-picker__icon size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2" />
+      </svg>
+    <% end %>
+
+    <%= render "panels_ui/time_control",
+          identifier: stimulus_identifier,
+          target: "timeControl",
+          scope: root_id,
+          label: "Time",
+          hour_cycle: @hour_cycle,
+          precision: @precision,
+          minute_step: @minute_step,
+          second_step: @second_step %>
+  <% end %>
+<% end %>

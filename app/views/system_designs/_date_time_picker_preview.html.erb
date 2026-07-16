@@ -1,0 +1,76 @@
+<section aria-labelledby="date-time-picker-preview-heading" class="border-t border-border pt-8">
+  <h2 id="date-time-picker-preview-heading" class="text-lg font-semibold text-foreground">Date &amp; time (DateTimePicker)</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    The visible field is a themed button; a hidden input carries the <code>YYYY-MM-DDTHH:MM</code> value. Clicking the
+    field opens a Cally calendar with a separate left-aligned time surface — the two combine into one datetime. No native
+    datetime input, so there is one picker and it themes to match.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> pickers</h3>
+        <% scope = "date_time_picker_#{theme.tr('-', '_')}".to_sym %>
+        <%= form_with url: "#date-time-picker-preview", scope: scope, class: "mt-4 space-y-4" do |form| %>
+          <%= render PanelsUI::FieldGroup.new do %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :arrives_at,
+                  label: "Arrival",
+                  hint: "Empty — pick a day, then a time.") do |field| %>
+              <% field.with_date_time_picker %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :departs_at,
+                  label: "Departure",
+                  hint: "Pre-selected value.") do |field| %>
+              <% field.with_date_time_picker(value: "#{2.days.from_now.to_date.iso8601}T10:00") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :meeting_at,
+                  label: "Meeting (15-min steps)",
+                  size: :sm) do |field| %>
+              <% field.with_date_time_picker(hour_cycle: 12, precision: :seconds, minute_step: 15, second_step: 15, value: "#{1.day.from_now.to_date.iso8601}T14:30:15") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :stay_window,
+                  label: "Stay window",
+                  hint: "Single-field datetime range with two months.") do |field| %>
+              <% field.with_date_time_picker(
+                    range: true,
+                    months: 2,
+                    step: 15,
+                    value: "#{2.days.from_now.to_date.iso8601}T14:00/#{5.days.from_now.to_date.iso8601}T11:00") %>
+            <% end %>
+
+            <div class="grid grid-cols-2 gap-3">
+              <%= render PanelsUI::FormField.new(form: form, attribute: :range_arrival, label: "Range arrival") do |field| %>
+                <% field.with_date_time_picker(linked_to: :range_departure, value: "#{2.days.from_now.to_date.iso8601}T14:00") %>
+              <% end %>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :range_departure, label: "Range departure") do |field| %>
+                <% field.with_date_time_picker(value: "#{5.days.from_now.to_date.iso8601}T11:00") %>
+              <% end %>
+            </div>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :locked_at,
+                  label: "Locked datetime",
+                  hint: "Disabled — cannot open.",
+                  disabled: true) do |field| %>
+              <% field.with_date_time_picker(value: "#{Date.current.iso8601}T09:00") %>
+            <% end %>
+          <% end %>
+
+          <button type="reset" class="panel-button" data-variant="outline" data-size="sm">Reset pickers</button>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

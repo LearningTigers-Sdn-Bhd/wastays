@@ -37,7 +37,7 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
       get path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(%(class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">#{heading}))
+      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq(heading)
     end
   end
 
@@ -45,8 +45,8 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
     get admin_api_keys_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include('max-w-[1600px] mx-auto pb-20 space-y-8')
-    expect(response.body).to include('text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">API Access Management')
+    expect(response.body).to include('class="w-full space-y-8"')
+    expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("API Access Management")
     expect(response.body).to include('Manage programmatic access for chatbots and external integrations.')
   end
 
@@ -54,17 +54,17 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
     get new_admin_api_key_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include('max-w-[1600px] mx-auto pb-20 space-y-6')
+    expect(response.body).to include('class="w-full space-y-6"')
     expect(response.body).to include('Create API Access Key')
     expect(response.body).to include('Generate a credential for platform-wide or restricted integration access.')
-    expect(response.body).to include('mt-auto flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-end')
+    expect(response.body).to include('mt-auto flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-end')
   end
 
   it 'renders the developer guide with the shared admin documentation shell' do
     get docs_admin_api_keys_path(category: 'authentication')
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include('max-w-[1600px] mx-auto pb-20 space-y-8')
+    expect(response.body).to include('class="w-full space-y-8"')
     expect(response.body).to include('API Integration Guide')
     expect(response.body).to include('Build against WAStays endpoints with authentication, discovery, booking, and webhook references.')
     expect(response.body).to include('Copy Base URL')
@@ -130,8 +130,8 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
     get admin_analytics_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include('max-w-[1600px] mx-auto pb-20 space-y-8')
-    expect(response.body).to include('text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Revenue &amp; Margin Analytics')
+    expect(response.body).to include('class="w-full space-y-8"')
+    expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("Revenue & Margin Analytics")
   end
 
   it 'renders analytics filters inside the daily breakdown section' do

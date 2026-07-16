@@ -17,11 +17,11 @@ RSpec.describe "Admin::MarginRules", type: :request do
       get "/admin/margin_rules"
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Margin Settings')
+      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("Margin Settings")
       expect(response.body).to include("Margin Settings")
       expect(response.body).to include("Set the commission rules WAStays applies across the platform, hotels, and room types.")
-      expect(response.body).to include('class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Add New Rule')
-      expect(response.body).to include('class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Rule Registry')
+      expect(response.body).to include('class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Add New Rule')
+      expect(response.body).to include('class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Rule Registry')
       expect(response.body).to include("Total Rules")
       expect(response.body).to include("Active Rules")
       expect(response.body).to include("Global Defaults")

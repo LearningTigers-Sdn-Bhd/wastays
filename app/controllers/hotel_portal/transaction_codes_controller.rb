@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class TransactionCodesController < HotelPortal::BaseController
+  class TransactionCodesController < HotelPortal::SettingsBaseController
     include OffcanvasTransactionCompletion
 
     TABS = %w[default_codes additional_service_codes configuration].freeze
@@ -341,7 +341,7 @@ module HotelPortal
     end
 
     def append_transaction_codes_tab_breadcrumb
-      append_breadcrumb({ label: tab_label(@presenter.active_tab), tab_label: true })
+      append_breadcrumb({ label: tab_label(@presenter.active_tab), tab_label: true, tabs_id: "transaction-codes-tabs" })
     end
 
     def tab_label(tab)

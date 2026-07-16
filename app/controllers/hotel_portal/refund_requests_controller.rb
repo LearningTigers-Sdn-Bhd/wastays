@@ -8,7 +8,7 @@ class HotelPortal::RefundRequestsController < HotelPortal::BaseController
     @eligibility = Refunds::Eligibility.new(@booking).call
 
     unless @eligibility.success?
-      render turbo_stream: turbo_stream.append("toasts_container", partial: "shared/toast", locals: { key: "alert", value: @eligibility.error })
+      render turbo_stream: toast_stream(@eligibility.error, type: :error)
       return
     end
 

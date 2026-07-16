@@ -48,6 +48,40 @@ RSpec.describe HotelPortal::Reports::DateRangeParser do
       parser = described_class.new({ start_date: "2026-05-01", end_date: "2026-05-10" }, hotel)
       expect(parser.parse_range).to eq([ Date.new(2026, 5, 1), Date.new(2026, 5, 10) ])
     end
+
+    it "parses a combined date_range param" do
+      parser = described_class.new({ date_preset: "custom", date_range: "2026-03-01/2026-03-10" }, hotel)
+      expect(parser.parse_range).to eq([ Date.new(2026, 3, 1), Date.new(2026, 3, 10) ])
+    end
+
+    it "infers the custom preset from a bare date_range param" do
+      parser = described_class.new({ date_range: "2026-05-02/2026-05-09" }, hotel)
+      expect(parser.parse_range).to eq([ Date.new(2026, 5, 2), Date.new(2026, 5, 9) ])
+      expect(parser.date_preset).to eq("custom")
+    end
+
+    it "prefers explicit start_date/end_date over a relative preset" do
+      parser = described_class.new({ date_preset: "today", start_date: "2026-05-06", end_date: "2026-05-08" }, hotel)
+      expect(parser.parse_range).to eq([ Date.new(2026, 5, 6), Date.new(2026, 5, 8) ])
+    end
+
+    it "falls back to the default custom month for a malformed date_range" do
+      parser = described_class.new({ date_preset: "custom", date_range: "garbage" }, hotel)
+      expect(parser.parse_range).to eq([ Date.current.beginning_of_month, Date.current.end_of_month ])
+    end
+  end
+
+  describe ".parse_date_range_param" do
+    it "splits a valid ISO8601 range" do
+      expect(described_class.parse_date_range_param("2026-03-01/2026-03-10"))
+        .to eq([ Date.new(2026, 3, 1), Date.new(2026, 3, 10) ])
+    end
+
+    it "returns [nil, nil] for malformed or partial values" do
+      expect(described_class.parse_date_range_param("2026-03-01")).to eq([ nil, nil ])
+      expect(described_class.parse_date_range_param("a/b")).to eq([ nil, nil ])
+      expect(described_class.parse_date_range_param(nil)).to eq([ nil, nil ])
+    end
   end
 
   describe "#parse_as_of_date" do

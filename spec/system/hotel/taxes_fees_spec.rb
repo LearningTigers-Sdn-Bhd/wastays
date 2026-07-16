@@ -23,7 +23,7 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
     sign_in_through_ui(user)
   end
 
-  it "shows taxes and fees inside settings navigation mode" do
+  it "shows taxes and fees inside the settings layout" do
     visit hotel_taxes_fees_path(hotel)
 
     expect(page).to have_css("h1", text: "Taxes & Fees")
@@ -31,10 +31,10 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
       expect(page).to have_link('Taxes & Fees')
     end
 
-    within("#hotel-sidebar") do
-      expect(page).to have_link("Back to previous page")
+    within("#hotel-settings-sidebar") do
+      expect(page).to have_no_link("Back to previous page")
       expect(page).to have_link("Finance", href: hotel_taxes_fees_path(hotel))
-      expect(page).to have_css("a.sidebar-nav-link-active", text: "Finance")
+      expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: "Finance")
       expect(page).to have_no_link("Payouts", href: payouts_hotel_reports_path(hotel))
       expect(page).to have_no_css("summary.sidebar-group-parent", text: "Rooms & Rates")
     end

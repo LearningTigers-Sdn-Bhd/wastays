@@ -1,6 +1,5 @@
 class HotelPortal::ConciergeQrController < HotelPortal::BaseController
   before_action -> { require_feature!("ai_concierge_page") }
-  before_action :set_breadcrumbs, only: [ :show ]
 
   def show
     @concierge_url = ::Concierge::ConciergeUrl.for(
@@ -12,6 +11,7 @@ class HotelPortal::ConciergeQrController < HotelPortal::BaseController
     respond_to do |format|
       format.html do
         @qr_svg = ::Concierge::QrSvg.for(@concierge_url).html_safe
+        render layout: false
       end
       format.svg do
         svg = ::Concierge::QrSvg.for(@concierge_url)
@@ -24,15 +24,5 @@ class HotelPortal::ConciergeQrController < HotelPortal::BaseController
                        filename: "concierge-qr-#{current_hotel.slug}.png"
       end
     end
-  end
-
-  private
-
-  def set_breadcrumbs
-    override_breadcrumbs(
-      { label: "System" },
-      { label: "Settings", path: hotel_general_settings_path(current_hotel) },
-      { label: "Concierge QR", path: hotel_concierge_qr_path(current_hotel) }
-    )
   end
 end

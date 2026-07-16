@@ -1,6 +1,6 @@
 <div class="space-y-4">
   <% room = booking.booking_rooms.first %>
   <div class="rounded-lg border border-amber-200 bg-amber-50 p-4"><p class="text-xs font-black uppercase tracking-wider text-amber-700">Impact preview required</p><p class="mt-1 text-sm text-amber-900">The editor will compare estimated future value with already-posted room charges before saving.</p></div>
-  <dl class="space-y-3 text-sm"><div><dt class="text-slate-500">Current rate plan</dt><dd class="font-bold text-slate-950"><%= room&.rate_plan&.name || "Standard" %></dd></div><div><dt class="text-slate-500">Estimated room value</dt><dd class="font-bold text-slate-950"><%= presenter.money(room&.subtotal || 0) %></dd></div></dl>
-  <%= link_to "Open stay and rate editor", hotel_booking_transaction_amend_stay_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "block rounded-lg bg-slate-950 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-slate-700" %>
+  <dl class="space-y-3 text-sm"><div><dt class="text-muted-foreground">Current rate plan</dt><dd class="font-bold text-foreground"><%= room&.rate_plan&.name || "Standard" %></dd></div><div><dt class="text-muted-foreground">Estimated room value</dt><dd class="font-bold text-foreground"><%= presenter.money(room&.subtotal || 0) %></dd></div></dl>
+  <%= link_to "Open stay and rate editor", hotel_booking_transaction_amend_stay_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "block rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
 </div>

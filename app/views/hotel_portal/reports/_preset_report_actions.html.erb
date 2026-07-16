@@ -1,0 +1,42 @@
+<%= form_with url: form_url, method: :get, local: true,
+      class: local_assigns.fetch(:class_name, "flex flex-col gap-3 md:flex-row md:items-end"),
+      id: local_assigns[:form_id], data: { controller: "date-preset" } do |form| %>
+  <% local_assigns.fetch(:hidden_params, {}).each do |name, value| %>
+    <%= hidden_field_tag name, value %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :date_preset, label: "Time Period", class: "w-full md:w-44") do |field| %>
+    <% field.with_select_menu(
+          date_preset_options,
+          selected: date_preset,
+          data: { action: "change->date-preset#toggleCustom" }) %>
+  <% end %>
+
+  <div id="custom-date-range" class="<%= date_preset == 'custom' ? 'flex' : 'hidden' %> items-end gap-3">
+    <% if local_assigns.fetch(:single_date, false) %>
+      <%= render PanelsUI::FormField.new(form: form, attribute: :as_of_date, label: "As Of Date", label_hidden: true, class: "w-full md:w-44") do |field| %>
+        <% field.with_date_picker(
+             value: start_date.iso8601,
+             placeholder: "As of date",
+             data: { action: "change->date-preset#submitDate" }) %>
+      <% end %>
+    <% else %>
+      <%= render PanelsUI::FormField.new(form: form, attribute: :date_range, label: "Date Range", label_hidden: true, class: "w-full md:w-64") do |field| %>
+        <% field.with_date_picker(
+             range: true,
+             months: 2,
+             responsive_months: true,
+             value: "#{start_date.iso8601}/#{end_date.iso8601}",
+             placeholder: "Date range",
+             data: { action: "change->date-preset#submitDate" }) %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if local_assigns.fetch(:show_export, true) %>
+    <%= render "hotel_portal/reports/export_dropdown",
+      menu_id: export_menu_id,
+      items: export_items,
+      disabled: local_assigns.fetch(:export_disabled, false) %>
+  <% end %>
+<% end %>

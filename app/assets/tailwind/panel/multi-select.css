@@ -1,0 +1,150 @@
+@layer components {
+  /* MultiSelect reuses the entire .panel-combobox surface (trigger, menu, options,
+     search field, sizing) and only adjusts the control to hold several removable
+     item pills instead of a single truncated label. */
+
+  /* The trigger stays a single row: it shows up to maxVisibleItems pills, then the
+     controller appends a "+N more" badge (as the control's last child, after the
+     hidden input — see the controller for why) and hides the overflow pills. */
+  .panel-multi-select .ts-control {
+    flex-wrap: nowrap;
+    min-width: 0;
+    padding-block: 0.1875rem;
+  }
+
+  /* Each selected value renders as a pill. Override the single-select rule that
+     stretches the sole .item to fill the control and truncate. Pills may shrink and
+     truncate their own label so several fit on one line. */
+  .panel-multi-select .ts-control > .item {
+    flex: 0 1 auto;
+    min-width: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    max-width: 12rem;
+    border-radius: var(--radius-md);
+    background: var(--muted);
+    color: var(--foreground);
+    padding: 0.0625rem 0.375rem;
+    font-size: 0.75rem;
+    line-height: 1.125rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: default;
+  }
+
+  /* Pills past the cap are collapsed into the "+N more" badge. */
+  .panel-multi-select .ts-control > .item.is-overflow {
+    display: none;
+  }
+
+  /* Overflow summary badge. It's the control's last child, but flex-wrap:nowrap and
+     the hidden trailing input render it right after the last visible pill. */
+  .panel-multi-select .ts-control > .panel-multi-select__more {
+    flex: 0 0 auto;
+    align-self: center;
+    border-radius: var(--radius-md);
+    padding: 0.125rem 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  /* Empty-menu message shown when every option is already selected. Inherits the
+     .panel-combobox__empty look; toggled by the controller. */
+  .panel-multi-select .ts-dropdown .panel-multi-select__all-selected.is-hidden {
+    display: none;
+  }
+
+  /* ─── Selected-badges panel (in the dropdown, below the search input) ──────── */
+  .panel-multi-select .ts-dropdown .panel-multi-select__selected {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.375rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-multi-select .ts-dropdown .panel-multi-select__selected.is-empty {
+    display: none;
+  }
+
+  .panel-multi-select__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    max-width: 100%;
+    border-radius: var(--radius-md);
+    background: var(--muted);
+    color: var(--foreground);
+    padding: 0.125rem 0.25rem 0.125rem 0.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+  }
+
+  .panel-multi-select__badge-label {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .panel-multi-select__badge-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--muted-foreground);
+    font-size: 0.875rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-multi-select__badge-remove:hover {
+    background: color-mix(in oklab, var(--foreground) 12%, transparent);
+    color: var(--foreground);
+  }
+
+  /* The control's only input is the dropdown_input plugin's `items-placeholder`
+     stand-in (the real search lives in the menu). Inherit the combobox rules: it
+     fills to show the placeholder while empty, and `.has-items` hides it once pills
+     appear — so no separate width handling is needed here. */
+
+  /* remove_button plugin: the per-pill × affordance. */
+  .panel-multi-select .ts-control > .item .remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--muted-foreground);
+    font-size: 0.875rem;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-multi-select .ts-control > .item .remove:hover {
+    background: color-mix(in oklab, var(--foreground) 12%, transparent);
+    color: var(--foreground);
+  }
+
+  .panel-multi-select .ts-wrapper.disabled .ts-control > .item .remove {
+    display: none;
+  }
+}

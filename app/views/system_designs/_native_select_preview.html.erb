@@ -1,0 +1,69 @@
+<section aria-labelledby="native-select-preview-heading" class="border-t border-border pt-8">
+  <h2 id="native-select-preview-heading" class="text-lg font-semibold text-foreground">Native selects</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    Native <code>&lt;select&gt;</code> controls styled to match Input and TextArea. Rails' form builder still
+    owns the options and selection; standalone, inside a FormField (linked label, hint, and validation),
+    and as a multi-select list box.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> selects</h3>
+        <% scope = "select_#{theme.tr('-', '_')}".to_sym %>
+        <%= form_with url: "#native-select-preview", scope: scope, class: "mt-4 space-y-4" do |form| %>
+          <%= render PanelsUI::FieldGroup.new do %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :board,
+                  label: "Board basis",
+                  hint: "Choose what's included in the nightly rate.") do |field| %>
+              <% field.with_native_select(
+                   [ [ "Room only", "room_only" ], [ "Breakfast included", "bnb" ], [ "Full board", "full" ] ],
+                   prompt: "Select a board basis") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :room_type,
+                  label: "Room type",
+                  required: true,
+                  error: "Please pick a room type.") do |field| %>
+              <% field.with_native_select(
+                   [ [ "Standard King", "std_king" ], [ "Deluxe Twin", "dlx_twin" ], [ "Suite", "suite" ] ],
+                   include_blank: true) %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :currency,
+                  label: "Currency",
+                  size: :sm) do |field| %>
+              <% field.with_native_select([ [ "Malaysian Ringgit (MYR)", "MYR" ], [ "Singapore Dollar (SGD)", "SGD" ] ], selected: "MYR") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :channel,
+                  label: "Connected channel",
+                  hint: "Managed by the integration — not editable here.",
+                  disabled: true) do |field| %>
+              <% field.with_native_select([ [ "Agoda", "agoda" ] ], selected: "agoda") %>
+            <% end %>
+          <% end %>
+
+          <div class="mt-2">
+            <label for="<%= scope %>_amenities" class="panel-form-field__label">Amenities</label>
+            <%= render PanelsUI::NativeSelect.new(
+                  form: form,
+                  attribute: :amenities,
+                  choices: [ [ "Pool", "pool" ], [ "Gym", "gym" ], [ "Spa", "spa" ], [ "Parking", "parking" ] ],
+                  selected: %w[pool spa],
+                  multiple: true,
+                  size: :lg) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

@@ -22,7 +22,7 @@ RSpec.describe 'Room Setup', type: :system do
     visit hotel_room_types_path(hotel)
 
     expect(page).to have_content('No room categories found')
-    first(:link, 'Add Room Category').click
+    first(:link, 'Create Room Category').click
 
     fill_in 'Room Type Name', with: 'Deluxe Suite'
     fill_in 'Max Adults', with: 2

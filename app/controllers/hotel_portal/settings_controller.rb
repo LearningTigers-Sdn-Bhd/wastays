@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class SettingsController < HotelPortal::BaseController
+  class SettingsController < HotelPortal::SettingsBaseController
     SETTINGS_PAGES = %w[general rates ai notifications banking].freeze
 
     before_action :set_account
@@ -16,7 +16,6 @@ module HotelPortal
       return redirect_to(settings_page_path(active_settings_page)) if params[:settings_page] != active_settings_page
 
       prepare_settings_page
-      append_settings_page_breadcrumb
     end
 
     def update
@@ -59,7 +58,6 @@ module HotelPortal
         redirect_to settings_page_path(settings_page_for_form), notice: "Settings updated successfully."
       else
         prepare_settings_page
-        append_settings_page_breadcrumb
         render :index, status: :unprocessable_entity
       end
     end
@@ -116,7 +114,6 @@ module HotelPortal
       else
         @presenter = settings_presenter(page: "banking")
         @account.build_banking_detail unless @account.banking_detail
-        append_settings_page_breadcrumb
         render :index, status: :unprocessable_entity
       end
     end
@@ -131,7 +128,6 @@ module HotelPortal
       else
         @notification_config = form.config
         @presenter = settings_presenter(page: "notifications")
-        append_settings_page_breadcrumb
         render :index, status: :unprocessable_entity
       end
     end
@@ -172,20 +168,6 @@ module HotelPortal
       pages.concat(SETTINGS_PAGES - [ "banking" ]) if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel)
       pages << "banking" if current_user.has_permission?("manage_account")
       pages
-    end
-
-    def append_settings_page_breadcrumb
-      append_breadcrumb({ label: settings_page_label(@presenter.active_page), tab_label: true })
-    end
-
-    def settings_page_label(page)
-      {
-        "general" => "General",
-        "rates" => "Rate Settings",
-        "ai" => "AI Concierge",
-        "notifications" => "Notifications",
-        "banking" => "Banking"
-      }.fetch(page, "General")
     end
 
     def settings_page_for_form

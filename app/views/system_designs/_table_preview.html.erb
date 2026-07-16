@@ -1,0 +1,82 @@
+<section aria-labelledby="table-preview-heading" class="border-t border-border pt-8">
+  <h2 id="table-preview-heading" class="text-lg font-semibold text-foreground">Table</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    Block-driven tables keep their semantic row and cell markup under caller control.
+  </p>
+
+  <div class="mt-6 space-y-8">
+    <div class="overflow-hidden rounded-xl border border-border bg-card">
+      <%= render PanelsUI::Table.new(caption: "Current guests", hoverable: true) do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Guest</th>
+            <th scope="col">Stay</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <tr>
+            <th scope="row" class="font-semibold text-foreground">Aisyah Rahman</th>
+            <td>
+              <div>12–15 July</div>
+              <div class="text-xs text-muted-foreground">3 nights</div>
+            </td>
+            <td><%= render PanelsUI::Badge.new(label: "In house", variant: :success, indicator: true) %></td>
+            <td class="text-right"><%= render PanelsUI::Button.new(label: "View", variant: :ghost, size: :sm, href: "#guest-aisyah") %></td>
+          </tr>
+          <tr>
+            <th scope="row" class="font-semibold text-foreground">Daniel Lee</th>
+            <td>
+              <div>13–16 July</div>
+              <div class="text-xs text-muted-foreground">3 nights</div>
+            </td>
+            <td><%= render PanelsUI::Badge.new(label: "Arriving", variant: :info, indicator: true) %></td>
+            <td class="text-right"><%= render PanelsUI::Button.new(label: "View", variant: :ghost, size: :sm, href: "#guest-daniel") %></td>
+          </tr>
+        <% end %>
+        <% table.with_footer do %>
+          <tr><td colspan="4">2 current guests</td></tr>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="max-h-56 overflow-y-auto rounded-xl border border-border bg-card">
+      <%= render PanelsUI::Table.new(caption: "Recent transactions", density: :compact, striped: true, hoverable: true, sticky_header: true) do |table| %>
+        <% table.with_header do %>
+          <tr><th scope="col">Reference</th><th scope="col">Guest</th><th scope="col" class="text-right">Amount</th></tr>
+        <% end %>
+        <% table.with_body do %>
+          <% 8.times do |index| %>
+            <tr>
+              <th scope="row" class="font-medium">TXN-<%= 4821 - index %></th>
+              <td>Guest <%= index + 1 %></td>
+              <td class="text-right tabular-nums">RM <%= number_with_precision(125 + (index * 37.5), precision: 2) %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="overflow-hidden rounded-xl border border-border bg-card">
+      <%= render PanelsUI::Table.new(caption: "Checked-out guests") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Guest / Reference</th>
+            <th scope="col">Contact</th>
+            <th scope="col">Stay dates</th>
+            <th scope="col">Rooms</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <tr>
+            <td colspan="4" class="h-36 text-center">
+              <p class="font-medium text-foreground">No guests have checked out today.</p>
+              <p class="mt-1 text-muted-foreground">Completed departures recorded today will appear here.</p>
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</section>

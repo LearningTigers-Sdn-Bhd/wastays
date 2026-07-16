@@ -7,15 +7,15 @@
 %>
 <div class="grid gap-4 sm:grid-cols-2">
   <div>
-    <%= label_tag "#{prefix}_settlement_type", "Settlement type", class: "mb-1 block text-xs font-semibold text-slate-600" %>
-    <%= select_tag "#{prefix}[settlement_type]", options_for_select(settlement_type_options, object&.settlement_type || "cash_bank"), id: "#{prefix}_settlement_type", class: "w-full rounded-md border-slate-300 text-sm" %>
+    <%= label_tag "#{prefix}_settlement_type", "Settlement type", class: "mb-1 block text-xs font-semibold text-muted-foreground" %>
+    <%= select_tag "#{prefix}[settlement_type]", options_for_select(settlement_type_options, object&.settlement_type || "cash_bank"), id: "#{prefix}_settlement_type", class: "w-full rounded-md border-border-interactive text-sm" %>
   </div>
   <div>
-    <%= label_tag "#{prefix}_purchase_order_reference", "PO reference", class: "mb-1 block text-xs font-semibold text-slate-600" %>
-    <%= text_field_tag "#{prefix}[purchase_order_reference]", object&.purchase_order_reference, id: "#{prefix}_purchase_order_reference", class: "w-full rounded-md border-slate-300 text-sm" %>
+    <%= label_tag "#{prefix}_purchase_order_reference", "PO reference", class: "mb-1 block text-xs font-semibold text-muted-foreground" %>
+    <%= text_field_tag "#{prefix}[purchase_order_reference]", object&.purchase_order_reference, id: "#{prefix}_purchase_order_reference", class: "w-full rounded-md border-border-interactive text-sm" %>
   </div>
   <div class="sm:col-span-2">
-    <%= label_tag "#{prefix}_authorization_reference", "Authorization reference", class: "mb-1 block text-xs font-semibold text-slate-600" %>
-    <%= text_field_tag "#{prefix}[authorization_reference]", object&.authorization_reference, id: "#{prefix}_authorization_reference", class: "w-full rounded-md border-slate-300 text-sm" %>
+    <%= label_tag "#{prefix}_authorization_reference", "Authorization reference", class: "mb-1 block text-xs font-semibold text-muted-foreground" %>
+    <%= text_field_tag "#{prefix}[authorization_reference]", object&.authorization_reference, id: "#{prefix}_authorization_reference", class: "w-full rounded-md border-border-interactive text-sm" %>
   </div>
 </div>

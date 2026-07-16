@@ -210,7 +210,7 @@ RSpec.describe "HotelPortal::RoomStatusBoard", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Unknown Status")
-      expect(response.body).to include("bg-slate-400")
+      expect(response.body).to include("bg-muted")
     end
   end
 

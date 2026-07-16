@@ -1,0 +1,35 @@
+<%= tag.aside(**root_attributes) do %>
+  <div class="panel-banner__inner">
+    <% if @show_icon %>
+      <div class="panel-banner__icon" aria-hidden="true">
+        <% if custom_icon? %>
+          <%= custom_icon %>
+        <% else %>
+          <%= helpers.app_icon(default_icon, class: "size-5", aria: { hidden: "true" }) %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="panel-banner__content">
+      <% if @title.present? %>
+        <p class="panel-banner__title"><%= @title %></p>
+      <% end %>
+      <% if description? %>
+        <div class="panel-banner__description"><%= description %></div>
+      <% end %>
+    </div>
+
+    <% if actions? %>
+      <div class="panel-banner__actions"><%= actions %></div>
+    <% end %>
+
+    <% if @dismissible %>
+      <button type="button"
+              class="panel-banner__dismiss"
+              aria-label="Dismiss banner"
+              data-action="panels-ui--dismissible#dismiss">
+        <%= helpers.app_icon("x", class: "size-4", aria: { hidden: "true" }) %>
+      </button>
+    <% end %>
+  </div>
+<% end %>

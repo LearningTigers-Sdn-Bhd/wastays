@@ -1,65 +1,60 @@
-<div class="mx-auto max-w-[1600px] space-y-4 pb-10">
-  <header class="flex flex-col gap-4 px-4 pt-5 md:px-0 lg:flex-row lg:items-end lg:justify-between">
-    <div>
-      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">AR Statements</h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">Generate account statements for linked corporate customers.</p>
-    </div>
-  </header>
+<div class="w-full space-y-3.5">
+  <%= render PanelsUI::PageHeader.new(title: "AR Statements", description: "Generate account statements for linked corporate customers.") %>
 
   <%= form_with url: hotel_ar_statements_path(current_hotel),
                 method: :get,
-                class: "px-4 md:px-0",
+                class: "",
                 data: { controller: "auto-submit", turbo_frame: "ar_statements_results", turbo_action: "advance" } do |form| %>
     <div class="relative">
       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-        <%= cached_icon "search", stroke_width: 2, class: "size-4 text-slate-400" %>
+        <%= cached_icon "search", stroke_width: 2, class: "size-4 text-muted-foreground" %>
       </div>
       <%= form.text_field :query,
         value: @presenter.query,
         placeholder: "Search corporate account or contact email...",
-        class: "block w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm shadow-sm transition placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900/10",
+        class: "block w-full rounded-lg border border-border bg-card py-2.5 pl-10 pr-3 text-sm shadow-sm transition placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-1 focus:ring-ring/10",
         data: { action: "input->auto-submit#submit" } %>
     </div>
   <% end %>
 
   <%= turbo_frame_tag "ar_statements_results" do %>
-    <div class="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm lg:block">
+    <div class="hidden overflow-x-auto rounded-xl border border-border bg-card shadow-sm lg:block">
       <table class="min-w-[1100px] w-full">
-        <thead class="border-b border-slate-200 bg-slate-50/70">
+        <thead class="border-b border-border bg-muted/70">
           <tr>
-            <th class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Corporate Account</th>
-            <th class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</th>
-            <th class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Terms</th>
-            <th class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Last AR Activity</th>
-            <th class="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">Account Balance</th>
-            <th class="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">Unapplied Credit</th>
-            <th class="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">Action</th>
+            <th class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Corporate Account</th>
+            <th class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Contact</th>
+            <th class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Terms</th>
+            <th class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Last AR Activity</th>
+            <th class="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Account Balance</th>
+            <th class="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Unapplied Credit</th>
+            <th class="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Action</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody class="divide-y divide-border">
           <% if @presenter.rows.any? %>
             <% @presenter.rows.each do |row| %>
-              <tr class="transition hover:bg-slate-50/70" data-testid="ar-statement-row-<%= row.relationship.id %>">
-                <td class="px-6 py-4 text-sm font-bold text-slate-950"><%= row.corporate_account_name %></td>
-                <td class="px-6 py-4 text-sm text-slate-600"><%= row.contact_email %></td>
-                <td class="px-6 py-4 text-sm font-semibold text-slate-700"><%= row.payment_terms %></td>
-                <td class="px-6 py-4 text-sm text-slate-600"><%= row.last_activity %></td>
-                <td class="px-6 py-4 text-right text-sm font-bold tabular-nums text-slate-950">
+              <tr class="transition hover:bg-muted/70" data-testid="ar-statement-row-<%= row.relationship.id %>">
+                <td class="px-6 py-4 text-sm font-bold text-foreground"><%= row.corporate_account_name %></td>
+                <td class="px-6 py-4 text-sm text-muted-foreground"><%= row.contact_email %></td>
+                <td class="px-6 py-4 text-sm font-semibold text-foreground"><%= row.payment_terms %></td>
+                <td class="px-6 py-4 text-sm text-muted-foreground"><%= row.last_activity %></td>
+                <td class="px-6 py-4 text-right text-sm font-bold tabular-nums text-foreground">
                   <% row.balance_labels.each do |amount| %><div><%= amount %></div><% end %>
                 </td>
                 <td class="px-6 py-4 text-right text-sm font-semibold tabular-nums text-emerald-700">
                   <% row.unapplied_labels.each do |amount| %><div><%= amount %></div><% end %>
                 </td>
                 <td class="px-6 py-4 text-right">
-                  <%= link_to "View Statement", hotel_ar_statement_path(current_hotel, row.relationship), class: "inline-flex items-center rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-700", data: { turbo_frame: "_top" } %>
+                  <%= link_to "View Statement", hotel_ar_statement_path(current_hotel, row.relationship), class: "inline-flex items-center rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition hover:bg-primary-hover", data: { turbo_frame: "_top" } %>
                 </td>
               </tr>
             <% end %>
           <% else %>
             <tr>
               <td colspan="7" class="px-6 py-16 text-center">
-                <p class="text-sm font-semibold text-slate-700">No corporate accounts found</p>
-                <p class="mt-1 text-xs text-slate-500">Try another account name or contact email.</p>
+                <p class="text-sm font-semibold text-foreground">No corporate accounts found</p>
+                <p class="mt-1 text-xs text-muted-foreground">Try another account name or contact email.</p>
               </td>
             </tr>
           <% end %>
@@ -67,37 +62,37 @@
       </table>
     </div>
 
-    <div class="space-y-3 px-4 md:px-0 lg:hidden">
+    <div class="space-y-3  lg:hidden">
       <% if @presenter.rows.any? %>
         <% @presenter.rows.each do |row| %>
-          <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-testid="ar-statement-card-<%= row.relationship.id %>">
+          <article class="rounded-xl border border-border bg-card p-4 shadow-sm" data-testid="ar-statement-card-<%= row.relationship.id %>">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <p class="truncate text-sm font-black text-slate-950"><%= row.corporate_account_name %></p>
-                <p class="mt-1 truncate text-xs text-slate-500"><%= row.contact_email %></p>
+                <p class="truncate text-sm font-black text-foreground"><%= row.corporate_account_name %></p>
+                <p class="mt-1 truncate text-xs text-muted-foreground"><%= row.contact_email %></p>
               </div>
-              <%= link_to "View", hotel_ar_statement_path(current_hotel, row.relationship), class: "shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white", data: { turbo_frame: "_top" } %>
+              <%= link_to "View", hotel_ar_statement_path(current_hotel, row.relationship), class: "shrink-0 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground", data: { turbo_frame: "_top" } %>
             </div>
-            <div class="mt-4 grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+            <div class="mt-4 grid grid-cols-2 gap-4 border-t border-border pt-4">
               <div>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Balance</p>
-                <% row.balance_labels.each do |amount| %><p class="mt-1 text-xs font-bold tabular-nums text-slate-900"><%= amount %></p><% end %>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Balance</p>
+                <% row.balance_labels.each do |amount| %><p class="mt-1 text-xs font-bold tabular-nums text-foreground"><%= amount %></p><% end %>
               </div>
               <div class="text-right">
-                <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Unapplied</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Unapplied</p>
                 <% row.unapplied_labels.each do |amount| %><p class="mt-1 text-xs font-bold tabular-nums text-emerald-700"><%= amount %></p><% end %>
               </div>
             </div>
-            <div class="mt-4 flex items-center justify-between text-xs text-slate-500">
+            <div class="mt-4 flex items-center justify-between text-xs text-muted-foreground">
               <span><%= row.payment_terms %></span>
               <span><%= row.last_activity %></span>
             </div>
           </article>
         <% end %>
       <% else %>
-        <div class="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center">
-          <p class="text-sm font-semibold text-slate-700">No corporate accounts found</p>
-          <p class="mt-1 text-xs text-slate-500">Try another account name or contact email.</p>
+        <div class="rounded-xl border border-dashed border-border bg-card p-8 text-center">
+          <p class="text-sm font-semibold text-foreground">No corporate accounts found</p>
+          <p class="mt-1 text-xs text-muted-foreground">Try another account name or contact email.</p>
         </div>
       <% end %>
     </div>

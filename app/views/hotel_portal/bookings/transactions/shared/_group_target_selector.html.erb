@@ -6,38 +6,38 @@
 <% selected_booking_ids = Array(local_assigns[:selected_booking_ids]).reject(&:blank?).map(&:to_s) %>
 
 <% if target_presenter.render? %>
-  <div class="min-h-0 overflow-y-auto border-b border-slate-200 custom-scrollbar lg:col-start-1 lg:row-span-[99] lg:h-full lg:border-b-0 <%= 'lg:border-r' unless local_assigns[:embedded] %>" data-group-lifecycle-targets-target="rail">
+  <div class="min-h-0 overflow-y-auto border-b border-border custom-scrollbar lg:col-start-1 lg:row-span-[99] lg:h-full lg:border-b-0 <%= 'lg:border-r' unless local_assigns[:embedded] %>" data-group-lifecycle-targets-target="rail">
     <% unless radio_mode %>
       <div class="px-6 pt-6 pb-5">
-        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Perform <%= target_presenter.action_label %> on:</p>
-        <div class="mt-4 flex flex-wrap gap-4 text-sm font-medium text-slate-700">
+        <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Perform <%= target_presenter.action_label %> on:</p>
+        <div class="mt-4 flex flex-wrap gap-4 text-sm font-medium text-foreground">
           <label class="inline-flex items-center gap-2">
-            <%= radio_button_tag :target_scope, "group", false, data: { group_lifecycle_targets_target: "scope", action: "group-lifecycle-targets#scopeChanged" }, class: "size-4 border-slate-300 text-slate-900 focus:ring-slate-900" %>
+            <%= radio_button_tag :target_scope, "group", false, data: { group_lifecycle_targets_target: "scope", action: "group-lifecycle-targets#scopeChanged" }, class: "size-4 border-border-interactive text-foreground focus:ring-ring" %>
             <span>Group</span>
           </label>
           <label class="inline-flex items-center gap-2">
-            <%= radio_button_tag :target_scope, "individual", true, data: { group_lifecycle_targets_target: "scope", action: "group-lifecycle-targets#scopeChanged" }, class: "size-4 border-slate-300 text-slate-900 focus:ring-slate-900" %>
+            <%= radio_button_tag :target_scope, "individual", true, data: { group_lifecycle_targets_target: "scope", action: "group-lifecycle-targets#scopeChanged" }, class: "size-4 border-border-interactive text-foreground focus:ring-ring" %>
             <span>Individual Booking</span>
           </label>
         </div>
       </div>
     <% end %>
 
-    <div class="divide-y divide-slate-200 border-y border-slate-200 <%= 'border-t-0' if radio_mode %>">
+    <div class="divide-y divide-border border-y border-border <%= 'border-t-0' if radio_mode %>">
       <% target_presenter.groups.each do |group| %>
         <details class="group" open>
-          <summary class="flex cursor-pointer list-none items-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 transition hover:text-slate-950 [&::-webkit-details-marker]:hidden">
-            <%= cached_icon("chevron-right", class: "size-3 text-slate-400 transition-transform group-open:rotate-90", stroke_width: 2.25) %>
+          <summary class="flex cursor-pointer list-none items-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-wider text-foreground transition hover:text-foreground [&::-webkit-details-marker]:hidden">
+            <%= cached_icon("chevron-right", class: "size-3 text-muted-foreground transition-transform group-open:rotate-90", stroke_width: 2.25) %>
             <span><%= group.room_type %> (<%= group.rows.size %>)</span>
           </summary>
-          <div class="divide-y divide-slate-100">
+          <div class="divide-y divide-border">
             <% group.rows.each do |row| %>
               <% initially_active = if selected_booking_ids.any?
                 selected_booking_ids.include?(row.booking.id.to_s)
               else
                 master_detail && row.booking.id == target_presenter.booking.id
               end %>
-              <div class="flex items-center gap-2 px-6 py-2 text-sm transition <%= row.eligible ? 'text-slate-800' : 'text-slate-400' %> <%= 'font-semibold text-slate-950' if initially_active %>"
+              <div class="flex items-center gap-2 px-6 py-2 text-sm transition <%= row.eligible ? 'text-foreground' : 'text-muted-foreground' %> <%= 'font-semibold text-foreground' if initially_active %>"
                    data-group-lifecycle-targets-target="row"
                    data-booking-id="<%= row.booking.id %>"
                    aria-selected="<%= initially_active %>">
@@ -45,15 +45,15 @@
                   <%= radio_button_tag "booking_ids[]", row.booking.id, initially_active,
                     disabled: !row.eligible,
                     data: { booking_id: row.booking.id, group_lifecycle_targets_target: "checkbox", action: "group-lifecycle-targets#selectionChanged" },
-                    class: "size-4 border-slate-300 text-slate-900 focus:ring-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100" %>
+                    class: "size-4 border-border-interactive text-foreground focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground" %>
                 <% else %>
                   <%= check_box_tag "booking_ids[]", row.booking.id, initially_active,
                     disabled: !row.eligible,
                     data: { booking_id: row.booking.id, group_lifecycle_targets_target: "checkbox", action: "group-lifecycle-targets#selectionChanged" },
-                    class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100" %>
+                    class: "size-4 rounded border-border-interactive text-foreground focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground" %>
                 <% end %>
                 <% if master_detail && row.eligible %>
-                  <button type="button" class="min-w-0 flex-1 truncate text-left font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                  <button type="button" class="min-w-0 flex-1 truncate text-left font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                            data-booking-id="<%= row.booking.id %>"
                            data-action="group-lifecycle-targets#activatePanel"><%= row.room_number %> - <%= row.guest_name %></button>
                 <% else %>

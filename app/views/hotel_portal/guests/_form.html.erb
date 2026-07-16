@@ -23,69 +23,69 @@
     </div>
   <% end %>
 
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
-      <h2 class="text-lg font-bold tracking-tight text-slate-950">Basic Information</h2>
-      <p class="mt-1 text-sm font-medium text-slate-600">Primary identity and contact details.</p>
+  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div class="border-b border-border bg-muted/70 px-6 py-5 sm:px-8">
+      <h2 class="text-lg font-bold tracking-tight text-foreground">Basic Information</h2>
+      <p class="mt-1 text-sm font-medium text-muted-foreground">Primary identity and contact details.</p>
     </div>
     <div class="p-6 sm:p-8 space-y-6">
       <div>
-        <%= f.label :name, "Full Name", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-        <%= f.text_field :name, required: true, placeholder: "e.g. John Doe", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+        <%= f.label :name, "Full Name", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+        <%= f.text_field :name, required: true, placeholder: "e.g. John Doe", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
       </div>
 
       <div class="grid sm:grid-cols-2 gap-6">
         <div>
-          <%= f.label :email, "Email Address", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.email_field :email, placeholder: "e.g. john@example.com", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+          <%= f.label :email, "Email Address", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.email_field :email, placeholder: "e.g. john@example.com", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
         <div>
-          <%= f.label :phone, "Phone Number", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.telephone_field :phone, placeholder: "e.g. +60 12 345 6789", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+          <%= f.label :phone, "Phone Number", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.telephone_field :phone, placeholder: "e.g. +60 12 345 6789", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
       </div>
 
       <div class="grid sm:grid-cols-2 gap-6">
         <div>
-          <%= f.label :country, "Country", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.text_field :country, required: true, placeholder: "e.g. Malaysia", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "country", action: "input->guest-dob#autofill" } %>
+          <%= f.label :country, "Country", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.text_field :country, required: true, placeholder: "e.g. Malaysia", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "country", action: "input->guest-dob#autofill" } %>
         </div>
         <div>
-          <%= f.label :gender, "Gender", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.select :gender, Guest::GENDERS.map { |g| [g.capitalize, g] }, { include_blank: "Select Gender" }, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+          <%= f.label :gender, "Gender", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.select :gender, Guest::GENDERS.map { |g| [g.capitalize, g] }, { include_blank: "Select Gender" }, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
-      <h2 class="text-lg font-bold tracking-tight text-slate-950">Identity Verification</h2>
-      <p class="mt-1 text-sm font-medium text-slate-600">Legal identification details.</p>
+  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div class="border-b border-border bg-muted/70 px-6 py-5 sm:px-8">
+      <h2 class="text-lg font-bold tracking-tight text-foreground">Identity Verification</h2>
+      <p class="mt-1 text-sm font-medium text-muted-foreground">Legal identification details.</p>
     </div>
     <div class="p-6 sm:p-8 space-y-6">
       <div class="grid sm:grid-cols-2 gap-6">
         <div>
-          <%= f.label :document_type, "Document Type", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.select :document_type, Guest::DOCUMENT_TYPES.map { |dt| [dt.upcase, dt] }, { include_blank: "Select Document Type" }, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" } %>
+          <%= f.label :document_type, "Document Type", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.select :document_type, Guest::DOCUMENT_TYPES.map { |dt| [dt.upcase, dt] }, { include_blank: "Select Document Type" }, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" } %>
         </div>
         <div>
-          <%= f.label :government_id, "ID / Passport Number", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.text_field :government_id, placeholder: "Enter ID number", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
+          <%= f.label :government_id, "ID / Passport Number", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.text_field :government_id, placeholder: "Enter ID number", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
         </div>
       </div>
 
       <div class="grid sm:grid-cols-2 gap-6">
         <div>
-          <%= f.label :date_of_birth, "Date of Birth", class: "block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2" %>
-          <%= f.date_field :date_of_birth, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "dateOfBirth" } %>
+          <%= f.label :date_of_birth, "Date of Birth", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.date_field :date_of_birth, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "dateOfBirth" } %>
         </div>
       </div>
     </div>
   </div>
 
   <div class="flex items-center justify-end gap-x-4">
-    <%= link_to "Cancel", hotel_guests_path(current_hotel), class: "px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition" %>
-    <%= f.submit (guest.new_record? ? "Create Guest Profile" : "Save Changes"), class: "inline-flex items-center rounded-xl bg-slate-900 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+    <%= link_to "Cancel", hotel_guests_path(current_hotel), class: "px-6 py-3 text-sm font-bold text-muted-foreground hover:bg-muted rounded-xl transition" %>
+    <%= f.submit (guest.new_record? ? "Create Guest Profile" : "Save Changes"), class: "inline-flex items-center rounded-xl bg-primary px-8 py-3 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" %>
   </div>
 <% end %>

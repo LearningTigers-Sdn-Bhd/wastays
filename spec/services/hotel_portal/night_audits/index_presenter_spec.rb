@@ -229,7 +229,7 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
     )
 
     expect(presenter_without_record.business_date_status_label).to eq("Not initialized")
-    expect(presenter_without_record.business_date_status_badge_class).to include("bg-slate-50")
+    expect(presenter_without_record.business_date_status_badge_class).to include("bg-muted", "text-muted-foreground")
   end
 
   context "when force close is permitted and eligible" do

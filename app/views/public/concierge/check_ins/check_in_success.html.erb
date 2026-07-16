@@ -6,18 +6,18 @@
   </div>
 
   <div class="mb-4 flex items-center justify-center gap-x-3">
-    <span class="h-px w-6 bg-brand-primary/30"></span>
-    <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary">Checked In</span>
-    <span class="h-px w-6 bg-brand-primary/30"></span>
+    <span class="h-px w-6 bg-primary/30"></span>
+    <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Checked In</span>
+    <span class="h-px w-6 bg-primary/30"></span>
   </div>
 
-  <h2 class="mb-2 text-3xl font-serif text-neutral-text-primary">
-    Welcome, <span class="italic text-brand-primary"><%= @booking.guest_name.split.first %>!</span>
+  <h2 class="mb-2 text-3xl font-serif text-foreground">
+    Welcome, <span class="italic text-primary"><%= @booking.guest_name.split.first %>!</span>
   </h2>
-  <p class="mb-8 text-sm text-neutral-text-secondary">You're checked in. Please collect your room key from the front desk.</p>
+  <p class="mb-8 text-sm text-muted-foreground">You're checked in. Please collect your room key from the front desk.</p>
 
   <div class="mb-6 rounded-2xl bg-[#0a2e29] p-6 text-left shadow-lg">
-    <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.3em] text-brand-gold/60">Your Stay</p>
+    <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.3em] text-accent/60">Your Stay</p>
     <p class="text-lg font-black text-white"><%= @booking.guest_name %></p>
     <p class="mt-1 text-xs font-mono text-white/40"><%= @booking.confirmation_token %></p>
 
@@ -37,7 +37,7 @@
     </div>
   </div>
 
-  <%= link_to concierge_home_path(@hotel.slug), class: "inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-neutral-text-secondary transition-colors hover:text-brand-primary" do %>
+  <%= link_to concierge_home_path(@hotel.slug), class: "inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary" do %>
     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
     Back to Concierge
   <% end %>

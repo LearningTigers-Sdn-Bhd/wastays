@@ -1,0 +1,25 @@
+<nav class="panel-sidebar__nav" aria-label="<%= component.brand_name %> navigation">
+  <% component.sections.each_with_index do |section, section_index| %>
+    <% next unless section.items? %>
+    <div class="panel-sidebar__section"
+         data-panels-ui--sidebar-search-target="section"
+         data-section-label="<%= section.label %>">
+      <span class="panel-sidebar__section-label"><%= section.label %></span>
+      <div class="panel-sidebar__section-items">
+        <% section.items.each_with_index do |item, item_index| %>
+          <%= component.render_sidebar_partial(:item,
+            item: item,
+            surface: surface,
+            section_index: section_index,
+            item_index: item_index,
+            search_target: true
+          ) %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+  <% if component.searchable? %>
+    <div class="panel-sidebar__empty hidden"
+         data-panels-ui--sidebar-search-target="empty"><%= component.empty_message %></div>
+  <% end %>
+</nav>

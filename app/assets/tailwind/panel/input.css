@@ -1,0 +1,136 @@
+@layer components {
+  .panel-input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 2rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--card);
+    color: var(--card-foreground);
+    padding-inline: 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    outline: none;
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-input::placeholder {
+    color: var(--muted-foreground);
+    opacity: 1;
+  }
+
+  .panel-input:hover:not(:disabled):not([readonly]):not([aria-invalid="true"]) {
+    border-color: var(--border-interactive);
+  }
+
+  .panel-input:focus-visible {
+    border-color: var(--border-interactive);
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-input[aria-invalid="true"] {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-input[aria-invalid="true"]:focus-visible {
+    outline-color: var(--destructive-on-surface);
+  }
+
+  .panel-input:disabled {
+    cursor: not-allowed;
+    border-color: var(--border);
+    background: color-mix(in oklab, var(--muted) 82%, var(--background));
+    color: var(--muted-foreground);
+  }
+
+  .panel-input[readonly] {
+    background: color-mix(in oklab, var(--muted) 52%, var(--card));
+  }
+
+  .panel-input[type="file"] {
+    padding: 0.25rem;
+    color: var(--muted-foreground);
+    cursor: pointer;
+  }
+
+  .panel-input[type="file"]::file-selector-button {
+    min-height: 1.5rem;
+    margin-inline-end: 0.625rem;
+    border: 0;
+    border-radius: calc(var(--radius-md) - 0.125rem);
+    background: var(--muted);
+    color: var(--foreground);
+    padding-inline: 0.625rem;
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-input[type="file"]:hover:not(:disabled)::file-selector-button {
+    background: color-mix(in oklab, var(--muted) 78%, var(--foreground));
+  }
+
+  .panel-input[type="file"]:disabled,
+  .panel-input[type="file"]:disabled::file-selector-button {
+    cursor: not-allowed;
+  }
+
+  .panel-input[type="file"]:disabled::file-selector-button {
+    color: var(--muted-foreground);
+  }
+
+  .panel-input[data-size="sm"] {
+    min-height: 1.75rem;
+    padding-inline: 0.625rem;
+    @apply text-xs;
+  }
+
+  .panel-input[type="file"][data-size="sm"]::file-selector-button {
+    min-height: 1.25rem;
+    margin-inline-end: 0.5rem;
+    padding-inline: 0.5rem;
+  }
+
+  .panel-input[data-size="lg"] {
+    min-height: 2.25rem;
+    padding-inline: 0.875rem;
+    @apply text-sm;
+  }
+
+  .panel-input[type="file"][data-size="lg"]::file-selector-button {
+    min-height: 1.75rem;
+    margin-inline-end: 0.75rem;
+    padding-inline: 0.75rem;
+  }
+
+  .panel-control-group[data-layout="inline"] .panel-input {
+    grid-area: control;
+    min-height: 2rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    outline: 0;
+  }
+
+  .panel-control-group[data-layout="inline"] .panel-input:focus-visible {
+    outline: 0;
+  }
+
+  .panel-control-group[data-layout="inline"] .panel-input[data-size="sm"] {
+    min-height: 1.75rem;
+  }
+
+  .panel-control-group[data-layout="inline"] .panel-input[data-size="lg"] {
+    min-height: 2.25rem;
+  }
+
+  @media (pointer: coarse) {
+    .panel-input,
+    .panel-control-group[data-layout="inline"] .panel-input {
+      min-height: 2.5rem;
+    }
+  }
+}

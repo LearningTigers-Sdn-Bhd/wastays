@@ -1,0 +1,29 @@
+<section aria-labelledby="page-header-preview-heading" class="border-t border-border pt-8">
+  <h2 id="page-header-preview-heading" class="text-lg font-semibold text-foreground">Page header</h2>
+  <p class="mb-5 mt-1 text-sm text-muted-foreground">
+    A compact title, optional description popover, visible caption, and developer-supplied actions. Resize the viewport to see the content and actions stack on mobile.
+  </p>
+
+  <div class="space-y-6 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm sm:p-6">
+    <%= render PanelsUI::PageHeader.new(
+          title: "Reservations",
+          description: "Review arrivals, departures, and booking activity for your property.",
+          title_as: :h3) do |header| %>
+      <% header.with_caption do %>
+        Aurora Crown Resort Langkawi · Tuesday, 14 July 2026
+      <% end %>
+      <% header.with_actions do %>
+        <%= render PanelsUI::Button.new(variant: :secondary) do %>
+          Export
+        <% end %>
+        <%= render PanelsUI::Button.new do %>
+          New reservation
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::Separator.new %>
+
+    <%= render PanelsUI::PageHeader.new(title: "Guest profile", title_as: :h3) %>
+  </div>
+</section>

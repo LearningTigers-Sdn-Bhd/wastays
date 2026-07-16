@@ -1,7 +1,7 @@
 <% if page.current? %>
-  <span class="hidden sm:flex min-w-[38px] min-h-[38px] justify-center items-center bg-slate-900 text-white border border-slate-900 py-2 px-3 text-sm font-semibold z-10 shadow-sm" aria-current="page">
+  <span class="hidden sm:flex min-w-[38px] min-h-[38px] justify-center items-center bg-primary text-primary-foreground border border-border-interactive py-2 px-3 text-sm font-semibold z-10 shadow-sm" aria-current="page">
     <%= page %>
   </span>
 <% else %>
-  <%= link_to page, url, remote: remote, rel: page.rel, class: "hidden sm:flex min-w-[38px] min-h-[38px] justify-center items-center border border-neutral-border text-neutral-text-primary hover:bg-surface-hover py-2 px-3 text-sm font-medium transition-colors" %>
+  <%= link_to page, url, remote: remote, rel: page.rel, class: "hidden sm:flex min-w-[38px] min-h-[38px] justify-center items-center border border-border text-foreground hover:bg-muted-hover py-2 px-3 text-sm font-medium transition-colors" %>
 <% end %>

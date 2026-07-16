@@ -1,0 +1,20 @@
+<%= tag.div(**root_attributes) do %>
+  <% trigger_button = capture do %>
+    <%= tag.button(**trigger_attributes) do %>
+      <%= trigger %>
+    <% end %>
+  <% end %>
+
+  <% if heading_tag %>
+    <%= tag.public_send(heading_tag, trigger_button, class: "panel-collapsible__heading") %>
+  <% else %>
+    <%= trigger_button %>
+  <% end %>
+
+  <%= tag.div(**content_attributes) do %>
+    <div class="panel-collapsible__content-inner"
+         data-panels-ui--collapsible-target="contentInner">
+      <%= body %>
+    </div>
+  <% end %>
+<% end %>

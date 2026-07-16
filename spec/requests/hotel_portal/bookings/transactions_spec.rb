@@ -43,7 +43,7 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     expect(response.body).to include('type="datetime-local"')
     expect(response.body).to include("bg-stone-50")
     expect(response.body).to include("xl:sticky", "xl:max-h-[calc(100vh-9rem)]")
-    expect(response.body).to include('aside class="min-h-full border-l border-stone-200 bg-white"')
+    expect(response.body).to include('aside class="min-h-full border-l border-stone-200 bg-card"')
     expect(response.body).to include("overflow-x-auto border-x border-stone-200")
     expect(response.body).to include('main class="min-w-0"')
     expect(response.body).to include("Record payment now")

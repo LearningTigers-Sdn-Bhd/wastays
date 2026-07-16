@@ -44,9 +44,15 @@ RSpec.describe "Hotel payout tabs", type: :system, js: true do
     visit payouts_hotel_reports_path(hotel, tab: "paid")
     expect(page).to have_css("[data-testid='payouts-paid-panel']")
 
-    fill_in "paid_start_date", with: 1.month.ago.to_date
-    fill_in "paid_end_date", with: Date.current
-    click_button "Filter"
+    expect(page).to have_css('input[name="paid_date_range"]', visible: :all)
+    page.execute_script(<<~JS)
+      (() => {
+        const picker = document.querySelector('input[name="paid_date_range"]').closest('.panel-date-picker')
+        const calendar = picker.querySelector("[data-panels-ui--date-picker-target='calendar']")
+        calendar.value = '#{1.month.ago.to_date.iso8601}/#{Date.current.iso8601}'
+        calendar.dispatchEvent(new Event('change', { bubbles: true }))
+      })()
+    JS
 
     expect(page).to have_css("[data-testid='payouts-paid-panel']")
     expect(page).to have_css("[data-testid='payouts-upcoming-panel']", visible: :hidden)

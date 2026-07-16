@@ -1,16 +1,16 @@
-<header class="mt-5 flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
-  <div class="min-w-0">
-    <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">Accounts Receivable / Payment Record</p>
-    <div class="mt-1 flex flex-wrap items-center gap-3">
-      <h1 class="truncate text-2xl font-black tracking-tight text-slate-950 sm:text-3xl"><%= presenter.reference %></h1>
-      <span class="inline-flex rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wider <%= presenter.status_class %>"><%= presenter.status_label %></span>
-    </div>
-    <p class="mt-1 text-sm font-semibold text-slate-600"><%= presenter.company_name %></p>
-  </div>
-  <div>
-    <%= link_to hotel_ar_payments_path(current_hotel), class: "inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50" do %>
-      <%= cached_icon "arrow-left", class: "size-3.5", aria: { hidden: true } %>
-      Payment ledger
+<div class="border-b border-border pb-5">
+  <%= render PanelsUI::PageHeader.new(title: presenter.reference) do |header| %>
+    <% header.with_caption do %>
+      <%= presenter.company_name %>
     <% end %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(as: :a, href: hotel_ar_payments_path(current_hotel), variant: :secondary, size: :sm, class: "w-full lg:w-auto") do %>
+        <%= cached_icon "arrow-left", class: "size-3.5", aria: { hidden: true } %>
+        Payment ledger
+      <% end %>
+    <% end %>
+  <% end %>
+  <div class="mt-1 flex flex-wrap items-center gap-3">
+    <span class="inline-flex rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wider <%= presenter.status_class %>"><%= presenter.status_label %></span>
   </div>
-</header>
+</div>
