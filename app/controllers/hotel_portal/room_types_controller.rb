@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class HotelPortal::RoomTypesController < HotelPortal::BaseController
+class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
   before_action :set_hotel
   before_action :authorize_hotel
   before_action :set_room_type, only: [ :edit, :update, :destroy, :destroy_photo, :bulk_destroy_photos ]

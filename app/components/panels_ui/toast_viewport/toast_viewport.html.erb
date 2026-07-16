@@ -1,0 +1,28 @@
+<div id="<%= @id %>"
+     class="<%= tw_merge("toast-viewport", @class) %>"
+     data-controller="toast"
+     data-toast-position-value="<%= placement_value %>"
+     data-toast-layout-value="<%= layout_value %>"
+     data-toast-auto-dismiss-duration-value="<%= @auto_dismiss_duration %>"
+     data-toast-limit-value="<%= @limit %>"
+     data-toast-gap-value="<%= @gap %>"
+     role="region"
+     aria-label="Notifications">
+  <ul class="toast-viewport__container"
+      data-toast-target="container"
+      data-position="<%= placement_value %>"
+      data-action="mouseenter->toast#handleMouseEnter mouseleave->toast#handleMouseLeave">
+  </ul>
+
+  <% {
+    primary: "sparkles",
+    info: "info",
+    success: "check",
+    warning: "triangle-alert",
+    error: "circle-x",
+    danger: "circle-x",
+    loading: "clock"
+  }.each do |variant, icon_name| %>
+    <template data-toast-icon-template="<%= variant %>"><%= helpers.app_icon(icon_name, class: "size-5", stroke_width: 2) %></template>
+  <% end %>
+</div>

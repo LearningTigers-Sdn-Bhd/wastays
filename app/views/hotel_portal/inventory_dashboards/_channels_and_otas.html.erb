@@ -1,41 +1,13 @@
-<div data-controller="subtabs"
-     data-subtabs-default-tab-value="derived_settings"
-     data-subtabs-parameter-name-value="subtab">
+<% active_channel_subtab = @active_subtab.in?(%w[derived_settings availability_rules]) ? @active_subtab : "derived_settings" %>
+<%= render PanelsUI::Tabs.new(id: "channel-subtabs", active: active_channel_subtab, variant: :pill, url: { param: "subtab" }, list_class: "mb-6", aria_label: "Channels and OTAs sections") do |tabs| %>
+  <% tabs.with_tab(name: "derived_settings", label: "Derived Pricing & Allocations", icon: "percent", panel_id: "channels-derived-panel") %>
+  <% tabs.with_tab(name: "availability_rules", label: "Availability Rules", icon: "calendar-cog", panel_id: "channels-rules-panel") %>
 
-  <nav class="<%= dashboard_tab_container_classes %> mb-6">
-    <div class="flex min-w-max items-center gap-1" role="tablist" aria-label="Channels and OTAs sub-panels">
-      <button type="button"
-              data-subtabs-target="tab"
-              data-tab-name="derived_settings"
-              data-tab-label="Derived Pricing & Allocations"
-              data-action="click->subtabs#switch"
-              data-active="<%= @active_subtab == 'derived_settings' || @active_subtab.blank? %>"
-              class="<%= dashboard_tab_classes %>"
-              aria-controls="channels-derived-panel"
-              role="tab">
-        <%= cached_icon "percent", class: "size-4", aria: { hidden: true } %>
-        Derived Pricing & Allocations
-      </button>
-      <button type="button"
-              data-subtabs-target="tab"
-              data-tab-name="availability_rules"
-              data-tab-label="Availability Rules"
-              data-action="click->subtabs#switch"
-              data-active="<%= @active_subtab == 'availability_rules' %>"
-              class="<%= dashboard_tab_classes %>"
-              aria-controls="channels-rules-panel"
-              role="tab">
-        <%= cached_icon "calendar-cog", class: "size-4", aria: { hidden: true } %>
-        Availability Rules
-      </button>
-    </div>
-  </nav>
-
-  <div id="channels-derived-panel" data-subtabs-target="panel" data-tab-panel="derived_settings" class="<%= @active_subtab == 'derived_settings' || @active_subtab.blank? ? '' : 'hidden' %>" role="tabpanel">
+  <% tabs.with_panel(name: "derived_settings", id: "channels-derived-panel") do %>
     <%= render "channels_derived_pricing" %>
-  </div>
+  <% end %>
 
-  <div id="channels-rules-panel" data-subtabs-target="panel" data-tab-panel="availability_rules" class="<%= @active_subtab == 'availability_rules' ? '' : 'hidden' %>" role="tabpanel">
+  <% tabs.with_panel(name: "availability_rules", id: "channels-rules-panel") do %>
     <%= render "channels_availability_rules" %>
-  </div>
-</div>
+  <% end %>
+<% end %>

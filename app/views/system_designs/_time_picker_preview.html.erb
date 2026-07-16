@@ -1,0 +1,72 @@
+<section aria-labelledby="time-picker-preview-heading" class="border-t border-border pt-8">
+  <h2 id="time-picker-preview-heading" class="text-lg font-semibold text-foreground">Time (TimePicker)</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    The visible field is a themed button; a hidden input carries the <code>HH:MM</code> value. Clicking the field
+    opens direct entry above scrollable hour/minute columns. Optional seconds and 12-hour periods share the same
+    keyboard model and canonical hidden value. No native time input, so it
+    themes to match and behaves the same in every browser.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> pickers</h3>
+        <% scope = "time_picker_#{theme.tr('-', '_')}".to_sym %>
+        <%= form_with url: "#time-picker-preview", scope: scope, class: "mt-4 space-y-4" do |form| %>
+          <%= render PanelsUI::FieldGroup.new do %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :check_in_time,
+                  label: "Check-in time",
+                  hint: "Empty — any minute.") do |field| %>
+              <% field.with_time_picker %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :checkout_time,
+                  label: "Check-out time",
+                  hint: "Pre-selected value.") do |field| %>
+              <% field.with_time_picker(value: "11:00") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :slot_time,
+                  label: "Slot (15-min steps)",
+                  size: :sm) do |field| %>
+              <% field.with_time_picker(step: 15, value: "13:30") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :alarm_time,
+                  label: "Alarm (12-hour with seconds)",
+                  hint: "Four columns: hours, minutes, seconds, AM/PM.") do |field| %>
+              <% field.with_time_picker(hour_cycle: 12, precision: :seconds, minute_step: 5, second_step: 15, value: "21:30:15") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :office_hours,
+                  label: "Office hours",
+                  hint: "Bounded 09:00–17:00.") do |field| %>
+              <% field.with_time_picker(min: "09:00", max: "17:00") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :locked_time,
+                  label: "Locked time",
+                  hint: "Disabled — cannot open.",
+                  disabled: true) do |field| %>
+              <% field.with_time_picker(value: "08:30") %>
+            <% end %>
+          <% end %>
+
+          <button type="reset" class="panel-button" data-variant="outline" data-size="sm">Reset pickers</button>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

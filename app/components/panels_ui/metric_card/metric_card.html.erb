@@ -1,0 +1,23 @@
+<%= tag.public_send(root_tag, **root_attributes) do %>
+  <% if @loading %>
+    <span class="sr-only">Loading <%= @label %></span>
+    <div class="panel-metric-card__loading" aria-hidden="true">
+      <%= render PanelsUI::Skeleton.new(variant: :line, class: "panel-metric-card__skeleton-label") %>
+      <%= render PanelsUI::Skeleton.new(variant: :line, class: "panel-metric-card__skeleton-value") %>
+      <%= render PanelsUI::Skeleton.new(variant: :line, class: "panel-metric-card__skeleton-detail") %>
+    </div>
+  <% else %>
+    <div class="panel-metric-card__header">
+      <p class="panel-metric-card__label"><%= @label %></p>
+      <% if @icon.present? %>
+        <%= helpers.app_icon(@icon, class: "panel-metric-card__icon", aria: { hidden: "true" }) %>
+      <% end %>
+    </div>
+
+    <p class="panel-metric-card__value"><%= @value %></p>
+
+    <% if @detail.present? %>
+      <p class="panel-metric-card__detail" data-variant="<%= @detail_variant %>"><%= @detail %></p>
+    <% end %>
+  <% end %>
+<% end %>

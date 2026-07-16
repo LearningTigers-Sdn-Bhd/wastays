@@ -1,39 +1,39 @@
 <%# locals: (view_type:, room_types:, selected_room_type_id:, selected_room_status:, board_query_params:, start_date:, board_days:, board_layout:, current_hotel:, comfortable_mode:, nav_step_days:, rate_plan_names:, selected_rate_plan_name:, common_params:) %>
 
-<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-border bg-card p-2 shadow-sm">
   <div class="flex flex-wrap items-center gap-3">
     <%= form_with url: board_hotel_bookings_path(current_hotel), method: :get, data: { turbo_frame: "booking_timeline_board", controller: "auto-submit", action: "change->auto-submit#submit" }, class: "flex items-center gap-3" do %>
       <%= hidden_field_tag :days, board_days if view_type == "room" %>
       <%= hidden_field_tag :layout, board_layout %>
       <%= hidden_field_tag :room_type_id, selected_room_type_id %>
       <%= hidden_field_tag :view_type, view_type %>
-      
+
       <div class="flex items-center gap-2">
-        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Start</span>
-        <%= date_field_tag :start_date, start_date.to_s, class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
+        <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Start</span>
+        <%= date_field_tag :start_date, start_date.to_s, class: "rounded-lg border border-border-interactive bg-card px-2 py-1 text-sm font-medium text-foreground shadow-sm focus:border-border-interactive focus:outline-none" %>
       </div>
 
-      <div class="h-6 w-px bg-slate-200"></div>
+      <div class="h-6 w-px bg-muted"></div>
 
       <% if view_type == "stay" %>
         <div class="flex items-center gap-2">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Days</span>
-          <%= select_tag :days, options_for_select([7, 14, 21, 30], board_days), class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Days</span>
+          <%= select_tag :days, options_for_select([7, 14, 21, 30], board_days), class: "rounded-lg border border-border-interactive bg-card px-2 py-1 text-sm font-medium text-foreground shadow-sm focus:border-border-interactive focus:outline-none" %>
         </div>
 
-        <div class="h-6 w-px bg-slate-200"></div>
+        <div class="h-6 w-px bg-muted"></div>
       <% end %>
 
       <div class="flex items-center gap-2">
-        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Rates</span>
-        <%= select_tag "filters[rate_plan_name]", options_for_select(rate_plan_names, selected_rate_plan_name), class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
+        <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rates</span>
+        <%= select_tag "filters[rate_plan_name]", options_for_select(rate_plan_names, selected_rate_plan_name), class: "rounded-lg border border-border-interactive bg-card px-2 py-1 text-sm font-medium text-foreground shadow-sm focus:border-border-interactive focus:outline-none" %>
       </div>
 
       <% if view_type == "room" %>
-        <div class="h-6 w-px bg-slate-200"></div>
+        <div class="h-6 w-px bg-muted"></div>
 
         <div class="flex items-center gap-2">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</span>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</span>
           <%= select_tag :room_status, options_for_select([
             ["All Rooms", "all"],
             ["Available", "available"],
@@ -45,30 +45,30 @@
             ["Review Due Out", "review_due_out"],
             ["Checkout Required", "checkout_required"],
             ["No Show", "no_show"]
-          ], selected_room_status), class: "rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none" %>
+          ], selected_room_status), class: "rounded-lg border border-border-interactive bg-card px-2 py-1 text-sm font-medium text-foreground shadow-sm focus:border-border-interactive focus:outline-none" %>
         </div>
       <% end %>
     <% end %>
 
-    <div class="h-6 w-px bg-slate-200"></div>
+    <div class="h-6 w-px bg-muted"></div>
 
-    <div class="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5">
-      <%= link_to board_hotel_bookings_path(current_hotel, common_params.merge(start_date: (start_date - nav_step_days.days).to_s)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", data: { turbo_frame: "booking_timeline_board" } do %>
+    <div class="flex items-center rounded-lg border border-border bg-muted p-0.5">
+      <%= link_to board_hotel_bookings_path(current_hotel, common_params.merge(start_date: (start_date - nav_step_days.days).to_s)), class: "px-2.5 py-1 text-xs font-bold text-muted-foreground hover:text-foreground", data: { turbo_frame: "booking_timeline_board" } do %>
         &larr; Prev
       <% end %>
-      <%= link_to board_hotel_bookings_path(current_hotel, common_params.merge(start_date: Date.current.to_s)), class: "rounded bg-white px-2.5 py-1 text-xs font-black text-slate-900 shadow-sm transition hover:bg-slate-50", data: { turbo_frame: "booking_timeline_board" } do %>
+      <%= link_to board_hotel_bookings_path(current_hotel, common_params.merge(start_date: Date.current.to_s)), class: "rounded bg-card px-2.5 py-1 text-xs font-black text-foreground shadow-sm transition hover:bg-muted", data: { turbo_frame: "booking_timeline_board" } do %>
         Today
       <% end %>
-      <%= link_to board_hotel_bookings_path(current_hotel, common_params.merge(start_date: (start_date + nav_step_days.days).to_s)), class: "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900", data: { turbo_frame: "booking_timeline_board" } do %>
+      <%= link_to board_hotel_bookings_path(current_hotel, common_params.merge(start_date: (start_date + nav_step_days.days).to_s)), class: "px-2.5 py-1 text-xs font-bold text-muted-foreground hover:text-foreground", data: { turbo_frame: "booking_timeline_board" } do %>
         Next &rarr;
       <% end %>
     </div>
   </div>
 
   <div class="px-2">
-    <%= link_to board_hotel_bookings_path(current_hotel, common_params.merge(start_date: start_date.to_s, layout: comfortable_mode ? "compact" : "comfortable")), class: "flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors", data: { turbo_frame: "booking_timeline_board" } do %>
+    <%= link_to board_hotel_bookings_path(current_hotel, common_params.merge(start_date: start_date.to_s, layout: comfortable_mode ? "compact" : "comfortable")), class: "flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors", data: { turbo_frame: "booking_timeline_board" } do %>
       <div class="relative inline-flex h-4 w-7 items-center rounded-full <%= layout_toggle_bg_class(comfortable_mode) %> transition-colors">
-        <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform <%= layout_toggle_span_class(comfortable_mode) %>"></span>
+        <span class="inline-block h-3 w-3 transform rounded-full bg-card transition-transform <%= layout_toggle_span_class(comfortable_mode) %>"></span>
       </div>
       <%= layout_toggle_label(comfortable_mode) %>
     <% end %>

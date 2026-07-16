@@ -1,0 +1,158 @@
+<%= render PanelsUI::Sheet.new(
+      id: "hotel-photo-upload-sheet",
+      side: :right,
+      size: :md,
+      variant: :edge,
+      title: "Upload Photos",
+      description: "Add photos to the upload queue, then confirm when they’re ready.") do |sheet| %>
+  <% sheet.with_body do %>
+    <div class="space-y-5">
+      <%= form_with url: "#hotel-album",
+                    scope: :hotel_album,
+                    id: "hotel-album-upload-form",
+                    data: { hotel_photo_queue_target: "uploadForm" } do |upload_form| %>
+        <%= render PanelsUI::FormField.new(
+              form: upload_form,
+              attribute: :photos,
+              label: "Choose Photos",
+              hint: "Queue images in batches, then confirm when they are ready to publish.") do |field| %>
+          <% field.with_dropzone(
+               accept: "image/*",
+               multiple: true,
+               max_files: Hotel::MAX_PHOTOS,
+               existing_count: hotel.photos.count + queued_photo_items.count,
+               preview: :image,
+               description: "PNG, JPG, or WebP · maximum #{Hotel::MAX_PHOTOS} published and queued photos",
+               data: { hotel_photo_queue_target: "input" }) %>
+        <% end %>
+      <% end %>
+
+      <div class="space-y-2">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <p class="text-sm font-medium text-foreground">Upload Queue</p>
+          <p class="text-xs font-medium text-muted-foreground" data-hotel-photo-queue-target="counterText"></p>
+        </div>
+
+        <div class="hidden" data-hotel-photo-queue-target="warning">
+          <%= render PanelsUI::Alert.new(tone: :warning, role: :status) %>
+        </div>
+        <div class="hidden" data-hotel-photo-queue-target="error">
+          <%= render PanelsUI::Alert.new(tone: :destructive, role: :alert) %>
+        </div>
+
+        <%= render PanelsUI::AttachmentGroup.new(
+              layout: :list,
+              data: { hotel_photo_queue_target: "queueList" },
+              aria: { label: "Queued hotel photos" }) do %>
+          <% queued_photo_items.each do |item| %>
+            <%= render PanelsUI::Attachment.new(
+                  title: item[:filename],
+                  description: "Queued · #{item[:byte_size]}",
+                  state: :ready,
+                  size: :sm,
+                  role: "listitem",
+                  data: { signed_id: item[:signed_id] }) do |attachment| %>
+              <% attachment.with_media(variant: :image) do %>
+                <img src="<%= item[:preview_url] %>" alt="Preview of <%= item[:filename] %>">
+              <% end %>
+              <% attachment.with_actions do %>
+                <%= render PanelsUI::Button.new(
+                      variant: :ghost,
+                      size: :icon_xs,
+                      icon_only: true,
+                      aria_label: "Remove #{item[:filename]} from upload queue",
+                      data: { action: "hotel-photo-queue#removeQueuedPhoto" }) do %>
+                  <%= app_icon "x", class: "size-3.5", aria: { hidden: "true" } %>
+                <% end %>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+
+        <p class="<%= queued_photo_items.any? ? 'hidden ' : '' %>text-sm text-muted-foreground"
+           data-hotel-photo-queue-target="emptyState">
+          No photos queued yet.
+        </p>
+      </div>
+    </div>
+  <% end %>
+
+  <% sheet.with_footer do %>
+    <%= render PanelsUI::Button.new(
+          label: "Discard All",
+          as: :button,
+          type: :button,
+          variant: :secondary,
+          size: :sm,
+          data: {
+            hotel_photo_queue_target: "discardButton",
+            action: "hotel-photo-queue#discardQueue"
+          }) %>
+    <%= render PanelsUI::Button.new(
+          label: "Confirm Upload",
+          as: :button,
+          type: :button,
+          size: :sm,
+          data: {
+            hotel_photo_queue_target: "confirmButton",
+            action: "hotel-photo-queue#commitQueue"
+          }) %>
+  <% end %>
+<% end %>
+
+<template data-hotel-photo-queue-target="uploadTemplate">
+  <%= render PanelsUI::Attachment.new(
+        title: "Uploading photo",
+        description: "Uploading",
+        state: :uploading,
+        size: :sm,
+        role: "listitem") %>
+</template>
+
+<template data-hotel-photo-queue-target="errorTemplate">
+  <%= render PanelsUI::Attachment.new(
+        title: "Photo upload failed",
+        description: "Upload failed. Try again.",
+        state: :error,
+        size: :sm,
+        role: "listitem") do |attachment| %>
+    <% attachment.with_actions do %>
+      <%= render PanelsUI::Button.new(
+            label: "Retry",
+            variant: :ghost,
+            size: :xs,
+            data: { action: "hotel-photo-queue#retryUpload" }) %>
+      <%= render PanelsUI::Button.new(
+            variant: :ghost,
+            size: :icon_xs,
+            icon_only: true,
+            aria_label: "Remove failed upload",
+            data: { action: "hotel-photo-queue#removeQueuedPhoto" }) do %>
+        <%= app_icon "x", class: "size-3.5", aria: { hidden: "true" } %>
+      <% end %>
+    <% end %>
+  <% end %>
+</template>
+
+<template data-hotel-photo-queue-target="queuedTemplate">
+  <%= render PanelsUI::Attachment.new(
+        title: "Queued photo",
+        description: "Queued",
+        state: :ready,
+        size: :sm,
+        role: "listitem") do |attachment| %>
+    <% attachment.with_media(variant: :image) do %>
+      <img src="" alt="">
+    <% end %>
+    <% attachment.with_actions do %>
+      <%= render PanelsUI::Button.new(
+            variant: :ghost,
+            size: :icon_xs,
+            icon_only: true,
+            aria_label: "Remove queued photo",
+            data: { action: "hotel-photo-queue#removeQueuedPhoto" }) do %>
+        <%= app_icon "x", class: "size-3.5", aria: { hidden: "true" } %>
+      <% end %>
+    <% end %>
+  <% end %>
+</template>

@@ -1,0 +1,30 @@
+<%= tag.div(**root_attributes) do %>
+  <%# Source of truth. Visible (and used) until the controller enhances the field. %>
+  <%= render native_component %>
+
+  <%# Styled trigger — hidden until [data-enhanced], so no-JS users never see it. %>
+  <%= tag.button(**trigger_attributes) do %>
+    <span class="panel-select-menu__value"
+          data-panels-ui--select-menu-target="label"
+          data-placeholder="<%= (!selected_value?).to_s %>"><%= selected_value? ? selected_label : placeholder_text %></span>
+    <span class="panel-select-menu__chevron" aria-hidden="true"></span>
+  <% end %>
+
+  <%= tag.div(id: listbox_id,
+              role: "listbox",
+              tabindex: "-1",
+              popover: "manual",
+              class: "panel-select-menu__listbox",
+              aria: { labelledby: trigger_id },
+              data: {
+                panels_ui__select_menu_target: "listbox",
+                action: "keydown->panels-ui--select-menu#onListboxKeydown click->panels-ui--select-menu#onOptionClick toggle->panels-ui--select-menu#onPopoverToggle"
+              }) do %>
+    <% normalized_choices.each_with_index do |choice, index| %>
+      <%= tag.div(**option_attributes(choice, index)) do %>
+        <span class="panel-select-menu__option-label"><%= choice[:label] %></span>
+        <span class="panel-select-menu__check" aria-hidden="true"></span>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

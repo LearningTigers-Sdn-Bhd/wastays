@@ -145,7 +145,7 @@ RSpec.describe "Hotel in-house guests page", type: :system do
     end
 
     # Handle the Turbo confirm modal
-    if page.has_css?("#turbo-confirm-modal", wait: 2)
+    if page.has_css?("#turbo-confirm-dialog[open]", wait: 2)
       find("#turbo-confirm-button").click
     end
 

@@ -74,6 +74,10 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
     end
 
     context "room available" do
+      around do |example|
+        travel_to(Time.find_zone("Kuala Lumpur").parse("#{Date.today} 15:00")) { example.run }
+      end
+
       before do
         create(:room_inventory, room_type: room_type, date: Date.today,
                quantity: 1, status: "open", available_room_numbers: [ "101" ])
@@ -130,6 +134,10 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
     end
 
     context "with geolocation check enabled" do
+      around do |example|
+        travel_to(Time.find_zone("Kuala Lumpur").parse("#{Date.today} 15:00")) { example.run }
+      end
+
       before do
         hotel.update!(google_map_link: "https://www.google.com/maps/place/Sample+Hotel/@5.9771228,116.0622732,15z")
         create(:room_inventory, room_type: room_type, date: Date.today,

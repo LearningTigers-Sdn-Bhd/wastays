@@ -1,9 +1,9 @@
 <% active_folio = presenter.selected_folio %>
 <% if active_folio %>
   <section aria-labelledby="folio-operations-heading">
-    <header class="border-b border-slate-200 px-5 py-4">
+    <header class="border-b border-border px-5 py-4">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div><p class="text-xs font-semibold text-slate-500">Booking No. <%= presenter.booking_number %></p><h2 id="folio-operations-heading" class="mt-1 text-lg font-bold text-slate-950"><%= active_folio.display_name %></h2><p class="mt-1 text-sm text-slate-600"><%= active_folio.status.humanize %> · <%= active_folio.payer_display_label %> · <span class="font-semibold tabular-nums text-slate-950"><%= presenter.money(active_folio.projected_outstanding_balance) %></span></p></div>
+        <div><p class="text-xs font-semibold text-muted-foreground">Booking No. <%= presenter.booking_number %></p><h2 id="folio-operations-heading" class="mt-1 text-lg font-bold text-foreground"><%= active_folio.display_name %></h2><p class="mt-1 text-sm text-muted-foreground"><%= active_folio.status.humanize %> · <%= active_folio.payer_display_label %> · <span class="font-semibold tabular-nums text-foreground"><%= presenter.money(active_folio.projected_outstanding_balance) %></span></p></div>
         <%= render "hotel_portal/booking_control_panels/folio_operations/window_actions", booking: booking, folio: active_folio, folio_show: folio_show %>
       </div>
       <div class="mt-4"><%= render "hotel_portal/booking_control_panels/folio_operations/folio_actions", booking: booking, hotel: current_hotel, folio_show: folio_show, redirect_to_folio: true, folio_origin: "booking_control_panel" %></div>
@@ -15,5 +15,5 @@
   </section>
   <%= render "hotel_portal/booking_control_panels/folio_operations/window_dialogs", booking: booking, folio: active_folio, folio_show: folio_show %>
 <% else %>
-  <div class="px-5 py-12 text-center"><p class="font-semibold text-slate-900">No folios are available.</p><p class="mt-1 text-sm text-slate-500">Create a folio before posting charges or payments.</p></div>
+  <div class="px-5 py-12 text-center"><p class="font-semibold text-foreground">No folios are available.</p><p class="mt-1 text-sm text-muted-foreground">Create a folio before posting charges or payments.</p></div>
 <% end %>

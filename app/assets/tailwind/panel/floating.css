@@ -1,0 +1,15 @@
+@layer components {
+  /* Shared caret for floating surfaces (tooltip, popover). A rotated square that inherits
+     the surface fill; the JS (support/floating_arrow.js) positions it and colors only the
+     two outward edges so it continues the bubble border. The surface must set
+     `overflow: visible` so the caret can protrude. */
+  .floating-arrow {
+    position: absolute;
+    box-sizing: border-box;
+    width: 0.375rem;
+    height: 0.375rem;
+    background: inherit;
+    border: 1px solid transparent;
+    transform: rotate(45deg);
+  }
+}

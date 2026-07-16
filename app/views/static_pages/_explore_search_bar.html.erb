@@ -1,28 +1,28 @@
 <%= form_with url: hotels_path, method: :get, class: "bg-white/95 backdrop-blur-2xl rounded-[2rem] sm:rounded-full shadow-2xl shadow-black/60 p-2 sm:p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-1" do |f| %>
 
   <!-- Destination -->
-  <div class="flex flex-[1.2] items-center gap-x-4 px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-neutral-bg/90 transition-all duration-300 group">
-    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-brand-primary/60 flex-none group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
+  <div class="flex flex-[1.2] items-center gap-x-4 px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-muted/90 transition-all duration-300 group">
+    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-primary/60 flex-none group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
     <div class="flex-1 min-w-0 text-left">
-      <p class="text-[10px] sm:text-[11px] font-bold text-neutral-text-secondary uppercase tracking-[0.15em] mb-0.5 sm:mb-1">Destination</p>
+      <p class="text-[10px] sm:text-[11px] font-bold text-muted-foreground uppercase tracking-[0.15em] mb-0.5 sm:mb-1">Destination</p>
       <%= f.text_field :city,
           placeholder: "Where are you going?",
-          class: "w-full bg-transparent text-sm sm:text-base font-bold text-neutral-text-primary placeholder-neutral-text-secondary/40 focus:outline-none",
+          class: "w-full bg-transparent text-sm sm:text-base font-bold text-foreground placeholder-muted-foreground/40 focus:outline-none",
           value: city %>
     </div>
   </div>
 
-  <div class="hidden sm:block w-px h-10 bg-neutral-border/40"></div>
+  <div class="hidden sm:block w-px h-10 bg-border/40"></div>
 
   <!-- Check-in / Check-out combined -->
   <div data-controller="date-range-picker"
-       class="relative z-[60] flex flex-[1.8] items-center gap-x-4 px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-neutral-bg/90 transition-all duration-300 group cursor-pointer"
+       class="relative z-[60] flex flex-[1.8] items-center gap-x-4 px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-muted/90 transition-all duration-300 group cursor-pointer"
        data-action="click->date-range-picker#openPicker">
-    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-brand-primary/60 flex-none group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
+    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-primary/60 flex-none group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
     <div class="flex-1 min-w-0 text-left">
-      <p class="text-[10px] sm:text-[11px] font-bold text-neutral-text-secondary uppercase tracking-[0.15em] mb-0.5 sm:mb-1">Check-in / Check-out</p>
+      <p class="text-[10px] sm:text-[11px] font-bold text-muted-foreground uppercase tracking-[0.15em] mb-0.5 sm:mb-1">Check-in / Check-out</p>
       <p data-date-range-picker-target="dateDisplay"
-         class="text-sm sm:text-base font-bold text-neutral-text-primary whitespace-nowrap">
+         class="text-sm sm:text-base font-bold text-foreground whitespace-nowrap">
         <% display_check_in = check_in || Date.current
            display_check_out = check_out || Date.tomorrow %>
         <%= display_check_in.strftime("%a, %d %b") %> → <%= display_check_out.strftime("%a, %d %b") %>
@@ -36,17 +36,17 @@
         value: check_out || Date.tomorrow.to_s %>
   </div>
 
-  <div class="hidden sm:block w-px h-10 bg-neutral-border/40"></div>
+  <div class="hidden sm:block w-px h-10 bg-border/40"></div>
 
   <!-- Rooms -->
-  <div class="flex flex-1 items-center gap-x-4 px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-neutral-bg/90 transition-all duration-300 group">
-    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-brand-primary/60 flex-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75"/></svg>
+  <div class="flex flex-1 items-center gap-x-4 px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-muted/90 transition-all duration-300 group">
+    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-primary/60 flex-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75"/></svg>
     <div class="flex-1 min-w-0 text-left">
-      <p class="text-[10px] sm:text-[11px] font-bold text-neutral-text-secondary uppercase tracking-[0.15em] mb-0.5 sm:mb-1">Rooms</p>
+      <p class="text-[10px] sm:text-[11px] font-bold text-muted-foreground uppercase tracking-[0.15em] mb-0.5 sm:mb-1">Rooms</p>
       <%= f.select :rooms,
           options_for_select((1..5).map { |n| [n, n] }, rooms || 1),
           {},
-          class: "w-full bg-transparent text-sm sm:text-base font-bold text-neutral-text-primary focus:outline-none cursor-pointer" %>
+          class: "w-full bg-transparent text-sm sm:text-base font-bold text-foreground focus:outline-none cursor-pointer" %>
     </div>
   </div>
 

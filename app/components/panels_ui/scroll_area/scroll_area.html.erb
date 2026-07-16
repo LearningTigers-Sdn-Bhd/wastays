@@ -1,0 +1,17 @@
+<%= tag.div(**root_attributes) do %>
+  <%= tag.div(**viewport_attributes) do %>
+    <%= content %>
+  <% end %>
+
+  <% if vertical? %>
+    <%= tag.div(**scrollbar_attributes("vertical")) do %>
+      <%= tag.div(**thumb_attributes("vertical")) %>
+    <% end %>
+  <% end %>
+
+  <% if horizontal? %>
+    <%= tag.div(**scrollbar_attributes("horizontal")) do %>
+      <%= tag.div(**thumb_attributes("horizontal")) %>
+    <% end %>
+  <% end %>
+<% end %>

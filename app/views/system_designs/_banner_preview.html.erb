@@ -1,0 +1,76 @@
+<section aria-labelledby="banner-preview-heading"
+         class="border-t border-border pt-8"
+         data-controller="system-designs--banner-preview">
+  <h2 id="banner-preview-heading" class="text-lg font-semibold text-foreground">Banner</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Page-level announcements with semantic tones, full or floating appearance, and optional viewport placement.
+  </p>
+
+  <div class="space-y-5">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="space-y-4 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> banners</h3>
+        <% %i[default info success warning destructive].each do |tone| %>
+          <%= render PanelsUI::Banner.new(tone: tone, title: "#{tone.to_s.humanize} announcement") do |banner| %>
+            <% banner.with_description { "A full-width static banner using the #{tone} tone." } %>
+          <% end %>
+        <% end %>
+
+        <%= render PanelsUI::Banner.new(tone: :default, appearance: :floating, title: "Get 30% off your first purchase", dismissible: true) do |banner| %>
+          <% banner.with_description { "Join thousands of developers using our Rails components." } %>
+          <% banner.with_actions do %>
+            <%= render PanelsUI::Button.new(size: :sm) do %>
+              Claim offer
+            <% end %>
+            <%= render PanelsUI::Button.new(size: :sm, variant: :secondary) do %>
+              Maybe later
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="mt-5 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+    <h3 class="text-sm font-semibold">Fixed placement</h3>
+    <p class="mt-1 text-sm text-muted-foreground">Open a real viewport banner; dismiss it to remove it until reload.</p>
+    <div class="mt-4 flex flex-wrap gap-3">
+      <%= render PanelsUI::Button.new(
+            variant: :secondary,
+            data: { action: "system-designs--banner-preview#show", banner_template_id: "preview-fixed-top-template" }) do %>
+        Preview fixed top
+      <% end %>
+      <%= render PanelsUI::Button.new(
+            variant: :secondary,
+            data: { action: "system-designs--banner-preview#show", banner_template_id: "preview-fixed-bottom-template" }) do %>
+        Preview fixed bottom
+      <% end %>
+    </div>
+  </div>
+
+  <template id="preview-fixed-top-template" data-banner-id="preview-fixed-top-banner">
+    <%= render PanelsUI::Banner.new(
+          id: "preview-fixed-top-banner",
+          tone: :info,
+          appearance: :full,
+          strategy: :fixed,
+          position: :top,
+          title: "Fixed top banner",
+          dismissible: true) do |banner| %>
+      <% banner.with_description { "This full banner is attached to the top of the viewport." } %>
+    <% end %>
+  </template>
+
+  <template id="preview-fixed-bottom-template" data-banner-id="preview-fixed-bottom-banner">
+    <%= render PanelsUI::Banner.new(
+          id: "preview-fixed-bottom-banner",
+          tone: :default,
+          appearance: :floating,
+          strategy: :fixed,
+          position: :bottom,
+          title: "Floating bottom banner",
+          dismissible: true) do |banner| %>
+      <% banner.with_description { "This floating banner is inset from the bottom viewport edge." } %>
+    <% end %>
+  </template>
+</section>

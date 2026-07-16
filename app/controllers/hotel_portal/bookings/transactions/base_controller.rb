@@ -97,7 +97,7 @@ module HotelPortal
             format.turbo_stream do
               render turbo_stream: [
                 turbo_stream.update("offcanvas_drawer", partial: "hotel_portal/bookings/transactions/new_booking/form"),
-                turbo_stream.prepend("flash_toasts", partial: "shared/toast", locals: { key: "alert", value: alert })
+                toast_stream(alert, type: :error)
               ], status: :unprocessable_content
             end
             format.html { render "hotel_portal/bookings/transactions/new_booking/offcanvas", status: :unprocessable_content }

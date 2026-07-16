@@ -1,12 +1,12 @@
 <%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "compact-right" } do %>
   <% config = room_block_form_config(@room_block, current_hotel) %>
-  <div class="flex h-full flex-col bg-white">
+  <div class="flex h-full flex-col bg-card">
     <%= render "hotel_portal/bookings/board/partials/content_header",
       title: config[:title],
       subtitle: "Block #{@room_type.name} Room #{@room_block.room_number} for maintenance",
       icon: cached_icon("wrench", library: "phosphor", variant: "light", class: "size-5") %>
 
-    <%= form_with model: @room_block, 
+    <%= form_with model: @room_block,
         url: config[:url],
         method: config[:method],
         class: "flex flex-1 flex-col p-8" do |f| %>
@@ -20,37 +20,37 @@
       <div class="space-y-6">
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Start Date</label>
-            <%= f.date_field :start_date, 
-                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm transition-all" %>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Start Date</label>
+            <%= f.date_field :start_date,
+                class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm transition-all" %>
           </div>
           <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">End Date</label>
-            <%= f.date_field :end_date, 
-                class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm transition-all" %>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">End Date</label>
+            <%= f.date_field :end_date,
+                class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm transition-all" %>
           </div>
         </div>
 
         <div>
-          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Block Type</label>
-          <%= f.text_field :block_type, 
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Block Type</label>
+          <%= f.text_field :block_type,
               placeholder: "e.g. Maintenance, Deep Cleaning, Admin Hold",
-              class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm transition-all" %>
+              class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm transition-all" %>
         </div>
 
         <div>
-          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Reason</label>
-          <%= f.text_area :reason, 
-              rows: 4, 
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Reason</label>
+          <%= f.text_area :reason,
+              rows: 4,
               placeholder: "Describe the issue (e.g., Leaky faucet, AC repair, Deep cleaning)",
-              class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm transition-all" %>
+              class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm transition-all" %>
         </div>
       </div>
 
       <div class="mt-auto flex items-center justify-between gap-3 pt-6">
-        <button type="button" data-action="click->offcanvas#close" class="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all active:scale-95">Cancel</button>
-        <%= f.submit config[:submit_text], 
-            class: "rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 hover:bg-slate-800 transition-all active:scale-95" %>
+        <button type="button" data-action="click->offcanvas#close" class="rounded-xl border border-border bg-card px-6 py-3 text-sm font-bold text-foreground hover:bg-muted transition-all active:scale-95">Cancel</button>
+        <%= f.submit config[:submit_text],
+            class: "rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-lg shadow-foreground/10 hover:bg-primary-hover transition-all active:scale-95" %>
       </div>
     <% end %>
   </div>

@@ -2,27 +2,27 @@
   <% modal_id = "folio-reversal-modal-#{section.parameterize}-#{row.transaction_id}" if row.action_kind == :reverse %>
   <div class="flex items-start justify-between gap-3">
     <div class="min-w-0">
-      <p class="truncate text-sm font-bold text-slate-950"><span class="font-mono text-xs uppercase tracking-wide text-slate-600"><%= row.code %></span> · <%= row.description %></p>
-      <p class="mt-1 text-xs font-medium text-slate-500"><%= row.date_label %> · <%= row.reference_label %></p>
+      <p class="truncate text-sm font-bold text-foreground"><span class="font-mono text-xs uppercase tracking-wide text-muted-foreground"><%= row.code %></span> · <%= row.description %></p>
+      <p class="mt-1 text-xs font-medium text-muted-foreground"><%= row.date_label %> · <%= row.reference_label %></p>
     </div>
     <% if row.row_kind == :posted && row.movement_allowed && folio_show.can_manage_folio_movements? %>
       <%= link_to move_hotel_folio_transaction_path(hotel, booking, row.transaction_id, folio_origin: folio_origin),
-            class: "shrink-0 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 shadow-sm",
+            class: "shrink-0 rounded-md border border-border bg-card px-2 py-1 text-xs font-bold text-foreground shadow-sm",
             data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %>
         Move
       <% end %>
     <% elsif row.action_kind == :reverse %>
       <button type="button"
-              class="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 shadow-sm"
+              class="shrink-0 rounded-md border border-border bg-card px-2 py-1 text-xs font-bold text-foreground shadow-sm"
               onclick="document.getElementById('<%= modal_id %>').showModal()">
         <%= row.action_label %>
       </button>
     <% else %>
-      <span class="shrink-0 text-sm font-bold text-slate-500"><%= row.action_label %></span>
+      <span class="shrink-0 text-sm font-bold text-muted-foreground"><%= row.action_label %></span>
     <% end %>
   </div>
 
-  <div class="mt-2 space-y-1 text-xs font-semibold tabular-nums text-slate-700">
+  <div class="mt-2 space-y-1 text-xs font-semibold tabular-nums text-foreground">
     <% unless row.debit == "—" %>
       <p>Debit <%= currency %> <%= row.debit %></p>
     <% end %>
@@ -34,15 +34,15 @@
     <% else %>
       <p><%= row.balance_kind %> <%= row.balance %></p>
     <% end %>
-    <p class="font-medium text-slate-500"><%= row.source_label %></p>
+    <p class="font-medium text-muted-foreground"><%= row.source_label %></p>
   </div>
 
   <% if row.action_kind == :reverse %>
-    <dialog id="<%= modal_id %>" class="fixed inset-0 m-auto w-[min(92vw,30rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-slate-900/50" onclick="if(event.target===this){this.close()}">
-      <div class="bg-white" onclick="event.stopPropagation()">
-        <div class="border-b border-slate-100 px-6 py-5">
-          <h3 class="text-lg font-bold text-slate-900"><%= row.modal_title %></h3>
-          <p class="mt-1 text-sm text-slate-500">Post an immutable correction row with the opposite amount.</p>
+    <dialog id="<%= modal_id %>" class="fixed inset-0 m-auto w-[min(92vw,30rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-primary/50" onclick="if(event.target===this){this.close()}">
+      <div class="bg-card" onclick="event.stopPropagation()">
+        <div class="border-b border-border px-6 py-5">
+          <h3 class="text-lg font-bold text-foreground"><%= row.modal_title %></h3>
+          <p class="mt-1 text-sm text-muted-foreground">Post an immutable correction row with the opposite amount.</p>
         </div>
 
         <%= form_with url: reverse_hotel_folio_transaction_path(hotel, booking, row.transaction_id), method: :post, local: true, class: "space-y-4 p-6" do %>
@@ -52,18 +52,18 @@
           <% end %>
 
           <div>
-            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Reason</label>
-            <%= text_field_tag "folio_transaction[correction_reason]", nil, required: true, placeholder: "e.g., Posting error", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Reason</label>
+            <%= text_field_tag "folio_transaction[correction_reason]", nil, required: true, placeholder: "e.g., Posting error", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
           </div>
 
           <div>
-            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Note</label>
-            <%= text_area_tag "folio_transaction[correction_note]", nil, rows: 3, required: true, placeholder: "Explain why this correction is needed.", class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-0" %>
+            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Note</label>
+            <%= text_area_tag "folio_transaction[correction_note]", nil, rows: 3, required: true, placeholder: "Explain why this correction is needed.", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
           </div>
 
           <div class="flex items-center justify-end gap-x-3 pt-2">
-            <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" onclick="this.closest('dialog').close()">Cancel</button>
-            <%= submit_tag row.action_label, class: "rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+            <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted" onclick="this.closest('dialog').close()">Cancel</button>
+            <%= submit_tag row.action_label, class: "rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" %>
           </div>
         <% end %>
       </div>

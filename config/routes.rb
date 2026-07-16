@@ -16,6 +16,13 @@ Rails.application.routes.draw do
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # PanelsUI component library showcase (not exposed in production).
+  unless Rails.env.production?
+    get "system-design", to: "system_designs#index", as: :system_design
+    post "system-design/submit-form", to: "system_designs#submit_form", as: :system_design_submit_form
+    post "system-design/confirm-alert-dialog", to: "system_designs#confirm_alert_dialog", as: :system_design_confirm_alert_dialog
+  end
+
   # Defines the root path route ("/")
   root "static_pages#home"
   get "for-hotels", to: "static_pages#for_hotels", as: :for_hotels

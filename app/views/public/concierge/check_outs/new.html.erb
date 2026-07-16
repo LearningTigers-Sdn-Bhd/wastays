@@ -8,8 +8,8 @@
              title_accent: "Checkout" %>
   <%= render "public/concierge/shared/error_alert", message: @error %>
 
-  <div class="space-y-4 rounded-2xl border border-neutral-border bg-white p-4 shadow-sm sm:p-5">
-    <p class="text-xs text-neutral-text-secondary">Enter your booking details to continue.</p>
+  <div class="space-y-4 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5">
+    <p class="text-xs text-muted-foreground">Enter your booking details to continue.</p>
 
     <% if @booking.present? %>
       <%= render "public/concierge/shared/booking_summary",
@@ -22,14 +22,14 @@
       <% if @booking.present? %>
         <%= hidden_field_tag :confirmation_token, @booking.confirmation_token %>
         <%= hidden_field_tag :stage, "submit" %>
-        <div class="rounded-2xl border border-neutral-border bg-white p-4 shadow-sm sm:p-5">
-          <label class="mb-2 block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Message to front desk (optional)</label>
+        <div class="rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5">
+          <label class="mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground">Message to front desk (optional)</label>
           <%= text_area_tag :guest_notes, params[:guest_notes], rows: 3, class: "form-input px-4 py-3", placeholder: "e.g. Requesting late checkout until 2pm" %>
         </div>
         <%= submit_tag "Confirm Checkout Request →", class: "btn btn-primary w-full cursor-pointer py-3 text-sm font-black uppercase tracking-widest" %>
       <% else %>
         <div>
-          <label class="mb-2 block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary">Confirmation Code</label>
+          <label class="mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground">Confirmation Code</label>
           <%= text_field_tag :confirmation_token, params[:confirmation_token], class: "form-input px-4 py-3 uppercase", placeholder: "e.g. AKWS4A", autocapitalize: "characters", required: true %>
         </div>
         <%= hidden_field_tag :stage, "lookup" %>

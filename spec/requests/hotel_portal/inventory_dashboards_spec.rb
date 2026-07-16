@@ -19,8 +19,8 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(response).to have_http_status(:success)
 
       page = Capybara.string(response.body)
-      expect(page).to have_css('[data-tabs-default-tab-value="advanced"]')
-      expect(page).to have_css("[data-testid='inventory-calendar-panel']")
+      expect(page).to have_css('[data-panels-ui--tabs-active-value="advanced"]')
+      expect(page).to have_css("[data-testid='inventory-calendar-panel']", visible: :all)
       expect(page).to have_css("[data-testid='inventory-advanced-panel']")
       expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Advanced Pricing")
       expect(page).to have_css("[data-subtabs-breadcrumb-label]", text: "Availability Overrides")
@@ -32,7 +32,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(response).to have_http_status(:success)
 
       page = Capybara.string(response.body)
-      expect(page).to have_css('[data-tabs-default-tab-value="calendar"]')
+      expect(page).to have_css('[data-panels-ui--tabs-active-value="calendar"]')
       expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Rates & Availability")
       expect(page).to have_css("[data-subtabs-breadcrumb-label]", text: "Pricing Rules")
       expect(page).to have_css("[data-subtabs-breadcrumb-segment].hidden")
@@ -74,7 +74,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       page = Capybara.string(response.body)
       expect(page).to have_content("Rates & Availability")
       expect(page).to have_css("[data-testid='inventory-calendar-grid']")
-      expect(page).to have_button("Sync")
+      expect(page).to have_button("Confirm Update", disabled: true, visible: :all)
       expect(page).to have_content("Pricing Rules")
       expect(page).to have_content("Availability Overrides")
     end

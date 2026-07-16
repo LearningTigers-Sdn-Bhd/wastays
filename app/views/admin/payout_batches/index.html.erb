@@ -1,49 +1,46 @@
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
-  <div class="px-4 md:px-0">
-    <div class="mt-5 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Superadmin: Settlement Batches</h1>
-        <p class="mt-1 text-sm font-medium text-slate-600">Review and manage weekly payout batches for hotels.</p>
-      </div>
-
+<div class="w-full space-y-8">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Superadmin: Settlement Batches",
+        description: "Review and manage weekly payout batches for hotels.") do |header| %>
+    <% header.with_actions do %>
       <div class="inline-flex gap-x-2">
-        <%= link_to export_payouts_csv_admin_payout_batches_path(date_preset: @date_preset, start_date: @start_date, end_date: @end_date, tab: @active_tab), class: "py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-brand-primary text-white hover:bg-red-700 shadow-sm transition-all", data: { turbo: false } do %>
+        <%= render PanelsUI::Button.new(as: :a, href: export_payouts_csv_admin_payout_batches_path(date_preset: @date_preset, start_date: @start_date, end_date: @end_date, tab: @active_tab), data: { turbo: false }) do %>
           <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export Pending Batches (CSV)
         <% end %>
       </div>
-    </div>
-  </div>
+    <% end %>
+  <% end %>
 
   <%= turbo_frame_tag "payout_batches_results" do %>
     <!-- Filters & Search -->
-    <div class="bg-white border border-gray-200 rounded-xl p-4 md:p-6 mb-8 shadow-sm" data-controller="tab-field">
+    <div class="bg-card border border-border rounded-xl p-4 md:p-6 mb-8 shadow-sm" data-controller="tab-field">
       <%= form_with url: admin_payout_batches_path, method: :get, id: "payout-filter-form", class: "space-y-4", data: { controller: "auto-submit", turbo_frame: "payout_batches_results" } do |f| %>
         <%= hidden_field_tag :tab, @active_tab, id: "payout-active-tab-input", data: { "tab-field-target": "input" } %>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
           <div class="md:col-span-3">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Time Period</label>
+            <label class="block text-xs font-bold text-muted-foreground uppercase mb-1">Time Period</label>
             <%= f.select :date_preset, options_for_select(date_preset_options, @date_preset), {}, class: "form-select py-2 px-3 text-sm", data: { action: "change->auto-submit#submitNow" } %>
           </div>
 
           <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'grid' : 'hidden' %> md:col-span-4 grid-cols-2 gap-2">
             <div>
-              <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">From</label>
-              <%= f.date_field :start_date, value: @start_date, class: "form-input py-2 px-2 text-xs", data: { action: "change->auto-submit#submitNow" } %>
+              <label class="block text-[10px] font-bold text-muted-foreground uppercase mb-1">From</label>
+              <%= f.date_field :start_date, value: @start_date, class: "legacy-form-input py-2 px-2 text-xs", data: { action: "change->auto-submit#submitNow" } %>
             </div>
             <div>
-              <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">To</label>
-              <%= f.date_field :end_date, value: @end_date, class: "form-input py-2 px-2 text-xs", data: { action: "change->auto-submit#submitNow" } %>
+              <label class="block text-[10px] font-bold text-muted-foreground uppercase mb-1">To</label>
+              <%= f.date_field :end_date, value: @end_date, class: "legacy-form-input py-2 px-2 text-xs", data: { action: "change->auto-submit#submitNow" } %>
             </div>
           </div>
 
           <div class="md:col-span-5">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Search Hotels/Reference</label>
+            <label class="block text-xs font-bold text-muted-foreground uppercase mb-1">Search Hotels/Reference</label>
             <div class="relative">
-              <%= f.text_field :q, value: params[:q], placeholder: "Search as you type...", class: "form-input py-2 pl-9 pr-3 text-sm", data: { action: "input->auto-submit#submit" } %>
+              <%= f.text_field :q, value: params[:q], placeholder: "Search as you type...", class: "legacy-form-input py-2 pl-9 pr-3 text-sm", data: { action: "input->auto-submit#submit" } %>
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="size-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               </div>
             </div>
           </div>
@@ -52,31 +49,29 @@
     </div>
 
     <!-- Tabs Navigation -->
-    <div class="border-b border-gray-200 mb-6">
+    <div class="border-b border-border mb-6">
       <nav class="flex space-x-6" aria-label="Tabs" role="tablist">
-        <button type="button" 
-                class="hs-tab-active:font-bold hs-tab-active:border-brand-primary hs-tab-active:text-brand-primary py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-brand-primary focus:outline-none focus:text-brand-primary <%= 'active' if @active_tab == 'pending' %>" 
-                id="tabs-payout-item-1" 
-                data-hs-tab="#tabs-payout-1" 
-                aria-controls="tabs-payout-1" 
+        <button type="button"
+                class="py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-muted-foreground hover:text-brand-primary focus:outline-none focus:text-brand-primary <%= 'font-bold border-brand-primary text-brand-primary' if @active_tab == 'pending' %>"
+                id="tabs-payout-item-1"
+                aria-controls="tabs-payout-1"
                 role="tab"
                 data-action="click->tab-field#update"
                 data-tab-value="pending">
           Pending Settlements
-          <span class="ms-1 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">
+          <span class="ms-1 inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-foreground">
             <%= @pending_batches.total_count %>
           </span>
         </button>
-        <button type="button" 
-                class="hs-tab-active:font-bold hs-tab-active:border-brand-primary hs-tab-active:text-brand-primary py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-gray-500 hover:text-brand-primary focus:outline-none focus:text-brand-primary <%= 'active' if @active_tab == 'paid' %>" 
-                id="tabs-payout-item-2" 
-                data-hs-tab="#tabs-payout-2" 
-                aria-controls="tabs-payout-2" 
+        <button type="button"
+                class="py-4 px-1 inline-flex items-center gap-x-2 border-b-2 border-transparent text-sm whitespace-nowrap text-muted-foreground hover:text-brand-primary focus:outline-none focus:text-brand-primary <%= 'font-bold border-brand-primary text-brand-primary' if @active_tab == 'paid' %>"
+                id="tabs-payout-item-2"
+                aria-controls="tabs-payout-2"
                 role="tab"
                 data-action="click->tab-field#update"
                 data-tab-value="paid">
           Paid History
-          <span class="ms-1 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">
+          <span class="ms-1 inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-foreground">
             <%= @paid_batches.total_count %>
           </span>
         </button>
@@ -87,26 +82,26 @@
     <div class="mt-3">
       <div id="tabs-payout-1" class="<%= 'hidden' unless @active_tab == 'pending' %>" role="tabpanel" aria-labelledby="tabs-payout-item-1">
         <div class="mb-4">
-          <p class="text-sm font-medium text-gray-500">Total Pending: <span class="text-brand-primary font-bold">MYR <%= number_with_precision(@pending_batches.sum { |b| b.amount || 0 }, precision: 2) %></span></p>
+          <p class="text-sm font-medium text-muted-foreground">Total Pending: <span class="text-brand-primary font-bold">MYR <%= number_with_precision(@pending_batches.sum { |b| b.amount || 0 }, precision: 2) %></span></p>
         </div>
-        <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+        <div class="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+          <table class="min-w-full divide-y divide-border">
+            <thead class="bg-muted">
               <tr>
-                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">ID</th>
-                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Hotel</th>
-                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Period</th>
-                <th class="px-6 py-3 text-end text-xs font-semibold uppercase text-gray-800">Amount</th>
-                <th class="px-6 py-3 text-center text-xs font-semibold uppercase text-gray-800">Action</th>
+                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-foreground">ID</th>
+                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-foreground">Hotel</th>
+                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-foreground">Period</th>
+                <th class="px-6 py-3 text-end text-xs font-semibold uppercase text-foreground">Amount</th>
+                <th class="px-6 py-3 text-center text-xs font-semibold uppercase text-foreground">Action</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200">
+            <tbody class="divide-y divide-border">
               <% if @pending_batches.any? %>
                 <% @pending_batches.each do |batch| %>
                   <tr>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">#<%= batch.id %></td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900"><%= batch.hotel.name %></td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-foreground"><%= batch.hotel.name %></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       <%= batch.period_start.strftime("%d %b") %> - <%= batch.period_end.strftime("%d %b %Y") %>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-end font-bold text-brand-primary">MYR <%= number_with_precision(batch.amount, precision: 2) %></td>
@@ -117,36 +112,36 @@
                 <% end %>
               <% else %>
                 <tr>
-                  <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500 italic">No pending settlements found.</td>
+                  <td colspan="5" class="px-6 py-10 text-center text-sm text-muted-foreground italic">No pending settlements found.</td>
                 </tr>
               <% end %>
             </tbody>
           </table>
-          <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
+          <div class="px-6 py-5 border-t border-border bg-muted/50 flex justify-center sm:px-8">
             <%= paginate @pending_batches, param_name: :pending_page, params: { tab: 'pending' } %>
           </div>
         </div>
       </div>
 
       <div id="tabs-payout-2" class="<%= 'hidden' unless @active_tab == 'paid' %>" role="tabpanel" aria-labelledby="tabs-payout-item-2">
-        <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+        <div class="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+          <table class="min-w-full divide-y divide-border">
+            <thead class="bg-muted">
               <tr>
-                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Paid Date</th>
-                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Hotel</th>
-                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-gray-800">Reference</th>
-                <th class="px-6 py-3 text-end text-xs font-semibold uppercase text-gray-800">Amount</th>
-                <th class="px-6 py-3 text-center text-xs font-semibold uppercase text-gray-800">Receipt</th>
+                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-foreground">Paid Date</th>
+                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-foreground">Hotel</th>
+                <th class="px-6 py-3 text-start text-xs font-semibold uppercase text-foreground">Reference</th>
+                <th class="px-6 py-3 text-end text-xs font-semibold uppercase text-foreground">Amount</th>
+                <th class="px-6 py-3 text-center text-xs font-semibold uppercase text-foreground">Receipt</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200">
+            <tbody class="divide-y divide-border">
               <% if @paid_batches.any? %>
                 <% @paid_batches.each do |batch| %>
                   <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><%= batch.payout_at&.strftime("%d %b %Y") %></td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><%= batch.hotel.name %></td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono"><%= batch.payout_reference %></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-foreground"><%= batch.payout_at&.strftime("%d %b %Y") %></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground"><%= batch.hotel.name %></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground font-mono"><%= batch.payout_reference %></td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-end font-bold text-green-600">MYR <%= number_with_precision(batch.amount, precision: 2) %></td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
                       <% if batch.receipt.attached? %>
@@ -154,19 +149,19 @@
                           View
                         <% end %>
                       <% else %>
-                        <span class="text-gray-400">N/A</span>
+                        <span class="text-muted-foreground">N/A</span>
                       <% end %>
                     </td>
                   </tr>
                 <% end %>
               <% else %>
                 <tr>
-                  <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500 italic">No paid history found.</td>
+                  <td colspan="5" class="px-6 py-10 text-center text-sm text-muted-foreground italic">No paid history found.</td>
                 </tr>
               <% end %>
             </tbody>
           </table>
-          <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
+          <div class="px-6 py-5 border-t border-border bg-muted/50 flex justify-center sm:px-8">
             <%= paginate @paid_batches, param_name: :paid_page, params: { tab: 'paid' } %>
           </div>
         </div>

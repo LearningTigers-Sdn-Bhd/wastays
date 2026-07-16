@@ -1,0 +1,96 @@
+<section aria-labelledby="date-picker-preview-heading" class="border-t border-border pt-8">
+  <h2 id="date-picker-preview-heading" class="text-lg font-semibold text-foreground">Date (DatePicker)</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    The visible field is a themed button showing the value; a hidden input carries the ISO value submitted with the
+    form. Clicking the field opens a Cally calendar popover — with single, single-input range, and linked two-field
+    range variants. No native date input, so there is one picker and it themes to match.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> pickers</h3>
+        <% scope = "date_picker_#{theme.tr('-', '_')}".to_sym %>
+        <%= form_with url: "#date-picker-preview", scope: scope, class: "mt-4 space-y-4" do |form| %>
+          <%= render PanelsUI::FieldGroup.new do %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :stay_date,
+                  label: "Date",
+                  hint: "Empty — shows the placeholder.") do |field| %>
+              <% field.with_date_picker %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :arrival_date,
+                  label: "Arrival",
+                  hint: "Pre-selected value.") do |field| %>
+              <% field.with_date_picker(value: 3.days.from_now.to_date.iso8601) %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :report_window,
+                  label: "Report window",
+                  hint: "Single-input range.") do |field| %>
+              <% field.with_date_picker(range: true, value: "#{Date.current.iso8601}/#{5.days.from_now.to_date.iso8601}") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :booking_window,
+                  label: "Two-month booking window",
+                  hint: "Two months on desktop; one on narrow screens.") do |field| %>
+              <% field.with_date_picker(range: true, months: 2, value: "#{Date.current.iso8601}/#{20.days.from_now.to_date.iso8601}") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :date_of_birth,
+                  label: "Date of birth",
+                  hint: "Themed month and year navigation.") do |field| %>
+              <% field.with_date_picker(caption_layout: :dropdown, year_range: 1900..Date.current.year) %>
+            <% end %>
+
+            <%# Linked two-field range: check-out can never precede check-in. %>
+            <div class="grid grid-cols-2 gap-3">
+              <%= render PanelsUI::FormField.new(
+                    form: form,
+                    attribute: :check_in,
+                    label: "Check-in") do |field| %>
+                <% field.with_date_picker(linked_to: :check_out, value: 2.days.from_now.to_date.iso8601) %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(
+                    form: form,
+                    attribute: :check_out,
+                    label: "Check-out") do |field| %>
+                <% field.with_date_picker %>
+              <% end %>
+            </div>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :window_date,
+                  label: "Within 30 days",
+                  hint: "Bounded by min/max.") do |field| %>
+              <% field.with_date_picker(min: Date.current.iso8601, max: 30.days.from_now.to_date.iso8601) %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :locked_date,
+                  label: "Locked date",
+                  hint: "Disabled — cannot open.",
+                  disabled: true) do |field| %>
+              <% field.with_date_picker(value: 1.day.from_now.to_date.iso8601) %>
+            <% end %>
+          <% end %>
+
+          <button type="reset" class="panel-button" data-variant="outline" data-size="sm">Reset pickers</button>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

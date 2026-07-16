@@ -1,14 +1,9 @@
-<div class="max-w-[1600px] mx-auto pb-10 space-y-4">
-  <div class="mt-5 flex items-center justify-between px-4 md:px-0">
-    <div>
-      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Agent Accounts</h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">Manage corporate and travel agent accounts and their booking codes.</p>
-    </div>
-    
-    <div>
-      <%= link_to "Add Agent Account", new_hotel_portal_agent_account_path, class: "inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 active:scale-95" %>
-    </div>
-  </div>
+<div class="max-w-[1600px] mx-auto pb-10 space-y-3.5">
+  <%= render PanelsUI::PageHeader.new(title: "Agent Accounts", description: "Manage corporate and travel agent accounts and their booking codes.") do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(label: "Add Agent Account", as: :a, href: new_hotel_portal_agent_account_path, variant: :primary, size: :md, class: "w-full lg:w-auto") %>
+    <% end %>
+  <% end %>
 
   <div class="mt-8 flex flex-col">
   <div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">

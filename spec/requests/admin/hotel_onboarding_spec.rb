@@ -109,7 +109,7 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
       # After update, second_session (now Apr 23) should come before first_session (Apr 24)
       template_content = response.body.match(/<template>(.*)<\/template>/m)[1]
       doc = Nokogiri::HTML(template_content)
-      times = doc.css('p.text-xs.text-slate-500').map(&:text).map(&:strip)
+      times = doc.css('p.text-xs.text-muted-foreground').map(&:text).map(&:strip)
 
       # Filter for only strings that start with "Scheduled:"
       scheduled_times = times.select { |t| t.start_with?("Scheduled:") }

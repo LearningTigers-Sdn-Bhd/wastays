@@ -1,41 +1,37 @@
-<div id="top" class="mx-auto max-w-none space-y-6 pb-24 sm:pb-0" 
+<div id="top" class="w-full space-y-6"
      data-controller="inventory-calendar inventory-row inventory-highlight"
      data-inventory-calendar-hotel-id-value="<%= current_hotel.id %>"
      data-inventory-calendar-batch-url-value="<%= batch_save_ari_hotel_inventory_dashboards_path(current_hotel) %>"
      data-inventory-calendar-occupancy-details-url-value="<%= occupancy_details_hotel_inventory_dashboards_path(current_hotel) %>"
-     data-inventory-calendar-default-mode-value="<%= @view_mode %>" 
-     data-inventory-calendar-default-start-value="<%= @start_date %>" 
-     data-inventory-calendar-default-end-value="<%= @end_date %>" 
+     data-inventory-calendar-default-mode-value="<%= @view_mode %>"
+     data-inventory-calendar-default-start-value="<%= @start_date %>"
+     data-inventory-calendar-default-end-value="<%= @end_date %>"
      data-inventory-calendar-default-currency-value="<%= @display_currency %>"
      data-inventory-calendar-base-currency-value="<%= @hotel_base_currency %>"
      data-inventory-calendar-allow-pax-pricing-value="<%= current_hotel.allow_pax_pricing? %>">
 
   <% if current_hotel.status == 'inventory_incomplete' %>
-    <div class="px-4 md:px-0 mb-6">
+    <div class=" mb-6">
       <%= link_to hotel_dashboard_path(current_hotel), class: "inline-flex items-center gap-x-1.5 py-1.5 px-3 text-xs font-bold text-brand-primary border border-brand-primary/20 bg-brand-primary/5 rounded-lg hover:bg-brand-primary/10 transition-colors" do %>
         <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         Back to Onboarding
       <% end %>
     </div>
   <% end %>
-  
+
   <turbo-frame id="inventory_calendar_frame" data-turbo-action="advance">
-    <div data-controller="tabs"
-         data-tabs-default-tab-value="<%= @active_tab %>"
-         data-tabs-parameter-name-value="tab">
-      <%= render "index_content", active_tab: @active_tab, active_subtab: @active_subtab %>
-    </div>
+    <%= render "index_content", active_tab: @active_tab, active_subtab: @active_subtab %>
   </turbo-frame>
 
   <!-- Bulk Edit Dialog -->
-  <dialog data-inventory-calendar-target="dialog" class="fixed inset-0 m-auto max-h-[90vh] w-[min(94vw,42rem)] overflow-hidden rounded-2xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/60 transition-all">
-    <div class="flex h-full max-h-[90vh] flex-col bg-white">
-      <div class="flex-none flex items-start justify-between border-b border-slate-100 px-5 py-4">
+  <dialog data-inventory-calendar-target="dialog" class="fixed inset-0 m-auto max-h-[90vh] w-[min(94vw,42rem)] overflow-hidden rounded-2xl border border-border p-0 shadow-2xl backdrop:bg-primary/60 transition-all">
+    <div class="flex h-full max-h-[90vh] flex-col bg-card">
+      <div class="flex-none flex items-start justify-between border-b border-border px-5 py-4">
         <div>
-          <h2 data-inventory-calendar-target="title" class="text-lg font-bold tracking-tight text-slate-950">Update Values</h2>
-          <p data-inventory-calendar-target="subtitle" class="text-xs font-semibold text-slate-500">Updates will be detected automatically as you change fields.</p>
+          <h2 data-inventory-calendar-target="title" class="text-lg font-bold tracking-tight text-foreground">Update Values</h2>
+          <p data-inventory-calendar-target="subtitle" class="text-xs font-semibold text-muted-foreground">Updates will be detected automatically as you change fields.</p>
         </div>
-        <button type="button" data-action="inventory-calendar#close" class="rounded-lg p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-700" aria-label="Close bulk update">
+        <button type="button" data-action="inventory-calendar#close" class="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Close bulk update">
           <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </div>
@@ -59,12 +55,12 @@
           <div class="mb-6 space-y-4">
             <div class="grid gap-4 sm:grid-cols-2">
               <div>
-                <label class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Start Date</label>
-                <%= f.date_field :start_date, value: @start_date, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "startDate" } %>
+                <label class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">Start Date</label>
+                <%= f.date_field :start_date, value: @start_date, class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { inventory_calendar_target: "startDate" } %>
               </div>
               <div>
-                <label class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">End Date</label>
-                <%= f.date_field :end_date, value: @end_date, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "endDate" } %>
+                <label class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">End Date</label>
+                <%= f.date_field :end_date, value: @end_date, class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { inventory_calendar_target: "endDate" } %>
               </div>
             </div>
           </div>
@@ -72,18 +68,18 @@
           <div class="grid gap-4 sm:grid-cols-2">
             <div>
               <div class="mb-1.5 flex items-center justify-between gap-2">
-                <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Room Types</label>
+                <label class="block text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">Room Types</label>
                 <div class="inline-flex items-center gap-1">
-                  <button type="button" class="rounded-md border border-slate-200 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-600 hover:bg-slate-50" data-action="inventory-calendar#selectAllRoomTypes">All</button>
-                  <button type="button" class="rounded-md border border-slate-200 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-600 hover:bg-slate-50" data-action="inventory-calendar#clearRoomTypes">None</button>
+                  <button type="button" class="rounded-md border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground hover:bg-muted" data-action="inventory-calendar#selectAllRoomTypes">All</button>
+                  <button type="button" class="rounded-md border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground hover:bg-muted" data-action="inventory-calendar#clearRoomTypes">None</button>
                 </div>
               </div>
-              <input type="text" placeholder="Search room types..." class="mb-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0" data-inventory-calendar-target="roomTypeSearch" data-action="input->inventory-calendar#filterRoomTypes">
-              <div class="max-h-[140px] overflow-y-auto rounded-lg border border-slate-200 p-2 space-y-1 bg-slate-50/50">
+              <input type="text" placeholder="Search room types..." class="mb-2 w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" data-inventory-calendar-target="roomTypeSearch" data-action="input->inventory-calendar#filterRoomTypes">
+              <div class="max-h-[140px] overflow-y-auto rounded-lg border border-border p-2 space-y-1 bg-muted/50">
                 <% @calendar.room_type_options.each do |room_type| %>
-                  <label class="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-white transition-colors cursor-pointer shadow-sm border border-transparent hover:border-slate-200" data-inventory-calendar-target="roomTypeOption" data-search-text="<%= room_type.name.downcase %>">
-                    <%= check_box_tag "selection_update[room_type_ids][]", room_type.id, true, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0", data: { inventory_calendar_target: "roomTypeCheckbox", action: "change->inventory-calendar#syncRatePlans" } %>
-                    <span class="text-sm font-semibold text-slate-700"><%= room_type.name %></span>
+                  <label class="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-card transition-colors cursor-pointer shadow-sm border border-transparent hover:border-border-interactive" data-inventory-calendar-target="roomTypeOption" data-search-text="<%= room_type.name.downcase %>">
+                    <%= check_box_tag "selection_update[room_type_ids][]", room_type.id, true, class: "size-4 rounded border-border-interactive text-foreground focus:ring-0", data: { inventory_calendar_target: "roomTypeCheckbox", action: "change->inventory-calendar#syncRatePlans" } %>
+                    <span class="text-sm font-semibold text-foreground"><%= room_type.name %></span>
                   </label>
                 <% end %>
               </div>
@@ -91,55 +87,55 @@
 
             <div data-inventory-calendar-target="ratePlanFields">
               <div class="mb-1.5 flex items-center justify-between gap-2">
-                <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Rate Plans</label>
+                <label class="block text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">Rate Plans</label>
                 <div class="inline-flex items-center gap-1">
-                  <button type="button" class="rounded-md border border-slate-200 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-600 hover:bg-slate-50" data-action="inventory-calendar#selectAllRatePlans">All</button>
-                  <button type="button" class="rounded-md border border-slate-200 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-600 hover:bg-slate-50" data-action="inventory-calendar#clearRatePlans">None</button>
+                  <button type="button" class="rounded-md border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground hover:bg-muted" data-action="inventory-calendar#selectAllRatePlans">All</button>
+                  <button type="button" class="rounded-md border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground hover:bg-muted" data-action="inventory-calendar#clearRatePlans">None</button>
                 </div>
               </div>
-              <input type="text" placeholder="Search rate plans..." class="mb-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0" data-inventory-calendar-target="ratePlanSearch" data-action="input->inventory-calendar#filterRatePlans">
-              <div class="max-h-[140px] overflow-y-auto rounded-lg border border-slate-200 p-2 space-y-1 bg-slate-50/50">
+              <input type="text" placeholder="Search rate plans..." class="mb-2 w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" data-inventory-calendar-target="ratePlanSearch" data-action="input->inventory-calendar#filterRatePlans">
+              <div class="max-h-[140px] overflow-y-auto rounded-lg border border-border p-2 space-y-1 bg-muted/50">
                 <% @calendar.rate_plan_options_struct.each do |option| %>
-                  <label class="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-white transition-colors cursor-pointer shadow-sm border border-transparent hover:border-slate-200" 
-                         data-inventory-calendar-target="ratePlanOption" 
+                  <label class="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-card transition-colors cursor-pointer shadow-sm border border-transparent hover:border-border-interactive"
+                         data-inventory-calendar-target="ratePlanOption"
                          data-room-type-id="<%= option.room_type_id %>"
                          data-search-text="<%= option.label.downcase %>">
-                    <%= check_box_tag "selection_update[rate_plan_ids][]", option.id, true, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0", data: { inventory_calendar_target: "ratePlanCheckbox" } %>
-                    <span class="text-sm font-semibold text-slate-700"><%= option.label %></span>
+                    <%= check_box_tag "selection_update[rate_plan_ids][]", option.id, true, class: "size-4 rounded border-border-interactive text-foreground focus:ring-0", data: { inventory_calendar_target: "ratePlanCheckbox" } %>
+                    <span class="text-sm font-semibold text-foreground"><%= option.label %></span>
                   </label>
                 <% end %>
               </div>
             </div>
           </div>
 
-          <div data-inventory-calendar-target="inventoryFields" class="grid gap-4 sm:grid-cols-2 pt-2 border-t border-slate-50 pt-5">
+          <div data-inventory-calendar-target="inventoryFields" class="grid gap-4 sm:grid-cols-2 pt-2 border-t border-border pt-5">
             <div>
               <div class="mb-1.5 flex items-center justify-between">
                 <div class="flex items-center gap-1.5">
-                  <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Quantity</label>
-                  <button type="button" data-action="click->inventory-calendar#toggleInfo" data-info-id="quantity" class="text-slate-400 hover:text-slate-600 transition-colors">
+                  <label class="block text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">Quantity</label>
+                  <button type="button" data-action="click->inventory-calendar#toggleInfo" data-info-id="quantity" class="text-muted-foreground hover:text-muted-foreground transition-colors">
                     <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
                   </button>
                 </div>
                 <span data-inventory-calendar-target="currentQuantityHint" class="text-[10px] font-bold text-indigo-600"></span>
               </div>
-              <%= f.number_field :quantity, min: 0, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "quantityField", action: "input->inventory-calendar#markTouched" } %>
+              <%= f.number_field :quantity, min: 0, class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { inventory_calendar_target: "quantityField", action: "input->inventory-calendar#markTouched" } %>
             </div>
             <div>
               <div class="mb-1.5 flex items-center justify-between">
                 <div class="flex items-center gap-1.5">
-                  <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Status</label>
+                  <label class="block text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">Status</label>
                 </div>
                 <span data-inventory-calendar-target="currentStatusHint" class="text-[10px] font-bold text-indigo-600"></span>
               </div>
-              <%= f.select :status, [["No change", ""], ["Open", "open"], ["Closed", "closed"]], {}, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "statusField", action: "change->inventory-calendar#markTouched" } %>
+              <%= f.select :status, [["No change", ""], ["Open", "open"], ["Closed", "closed"]], {}, class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { inventory_calendar_target: "statusField", action: "change->inventory-calendar#markTouched" } %>
             </div>
           </div>
 
           <div data-inventory-calendar-target="rateFields" class="pt-2 space-y-4">
             <div>
-              <label data-inventory-calendar-target="priceLabel" class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Price (<%= @hotel_base_currency %>)</label>
-              <%= f.number_field :price, step: 0.01, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "priceField", action: "input->inventory-calendar#markTouched" } %>
+              <label data-inventory-calendar-target="priceLabel" class="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">Price (<%= @hotel_base_currency %>)</label>
+              <%= f.number_field :price, step: 0.01, class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { inventory_calendar_target: "priceField", action: "input->inventory-calendar#markTouched" } %>
               <%= f.hidden_field :currency, value: @hotel_base_currency, data: { inventory_calendar_target: "currencyField" } %>
             </div>
              <div data-inventory-calendar-target="paxFields" class="grid gap-4 <%= current_hotel.allow_pax_pricing? ? 'sm:grid-cols-3' : 'sm:grid-cols-2' %>">
@@ -208,28 +204,28 @@
             </div>
           </div>
 
-          <div data-inventory-calendar-target="restrictionFields" class="space-y-4 pt-2 border-t border-slate-50 pt-5">
+          <div data-inventory-calendar-target="restrictionFields" class="space-y-4 pt-2 border-t border-border pt-5">
             <div class="grid gap-4 sm:grid-cols-2">
               <div>
-                <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500 mb-1.5">Min Stay</label>
-                <%= f.number_field :min_stay, min: 1, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "minStayField", action: "input->inventory-calendar#markTouched" } %>
+                <label class="block text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground mb-1.5">Min Stay</label>
+                <%= f.number_field :min_stay, min: 1, class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { inventory_calendar_target: "minStayField", action: "input->inventory-calendar#markTouched" } %>
               </div>
               <div>
-                <label class="block text-xs font-bold uppercase tracking-[0.1em] text-slate-500 mb-1.5">Max Stay</label>
-                <%= f.number_field :max_stay, min: 1, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "maxStayField", action: "input->inventory-calendar#markTouched" } %>
+                <label class="block text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground mb-1.5">Max Stay</label>
+                <%= f.number_field :max_stay, min: 1, class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { inventory_calendar_target: "maxStayField", action: "input->inventory-calendar#markTouched" } %>
               </div>
             </div>
 
             <div class="grid gap-2">
-              <label class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors">
+              <label class="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-sm font-semibold text-foreground cursor-pointer hover:bg-muted transition-colors">
                 <div class="flex items-center gap-2.5">
-                  <%= f.check_box :closed_to_arrival, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0", data: { inventory_calendar_target: "ctaField", action: "change->inventory-calendar#markTouched" } %>
+                  <%= f.check_box :closed_to_arrival, class: "size-4 rounded border-border-interactive text-foreground focus:ring-0", data: { inventory_calendar_target: "ctaField", action: "change->inventory-calendar#markTouched" } %>
                   <span>Closed to Arrival</span>
                 </div>
               </label>
-              <label class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors">
+              <label class="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-sm font-semibold text-foreground cursor-pointer hover:bg-muted transition-colors">
                 <div class="flex items-center gap-2.5">
-                  <%= f.check_box :closed_to_departure, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-0", data: { inventory_calendar_target: "ctdField", action: "change->inventory-calendar#markTouched" } %>
+                  <%= f.check_box :closed_to_departure, class: "size-4 rounded border-border-interactive text-foreground focus:ring-0", data: { inventory_calendar_target: "ctdField", action: "change->inventory-calendar#markTouched" } %>
                   <span>Closed to Departure</span>
                 </div>
               </label>
@@ -239,42 +235,42 @@
           </div>
         </div>
 
-        <div class="flex-none flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50/50 px-5 py-4 sm:flex-row sm:justify-end">
-          <button type="button" data-action="inventory-calendar#close" class="inline-flex justify-center rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button>
-          <%= f.submit "Apply Updates", class: "inline-flex justify-center rounded-lg bg-slate-900 px-6 py-2.5 text-sm font-bold text-white hover:bg-slate-700", data: { inventory_calendar_target: "submitButton" } %>
+        <div class="flex-none flex flex-col-reverse gap-2 border-t border-border bg-muted/50 px-5 py-4 sm:flex-row sm:justify-end">
+          <button type="button" data-action="inventory-calendar#close" class="inline-flex justify-center rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground hover:bg-muted">Cancel</button>
+          <%= f.submit "Apply Updates", class: "inline-flex justify-center rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover", data: { inventory_calendar_target: "submitButton" } %>
         </div>
       <% end %>
     </div>
   </dialog>
 
   <!-- Confirm Dialog -->
-  <dialog data-inventory-calendar-target="confirmDialog" class="fixed inset-0 m-auto w-[min(94vw,30rem)] overflow-hidden rounded-xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/50">
-    <div class="bg-white">
-      <div class="border-b border-slate-200 bg-slate-50/50 px-5 py-4">
-        <h3 class="text-base sm:text-lg font-bold tracking-tight text-slate-950">Confirm Updates</h3>
-        <p class="text-[10px] sm:text-xs font-semibold text-slate-500">Please review the changes before applying.</p>
+  <dialog data-inventory-calendar-target="confirmDialog" class="fixed inset-0 m-auto w-[min(94vw,30rem)] overflow-hidden rounded-xl border border-border p-0 shadow-2xl backdrop:bg-primary/50">
+    <div class="bg-card">
+      <div class="border-b border-border bg-muted/50 px-5 py-4">
+        <h3 class="text-base sm:text-lg font-bold tracking-tight text-foreground">Confirm Updates</h3>
+        <p class="text-[10px] sm:text-xs font-semibold text-muted-foreground">Please review the changes before applying.</p>
       </div>
       <div class="px-5 py-5 sm:py-6">
-        <p data-inventory-calendar-target="confirmMessage" class="text-sm font-medium leading-relaxed text-slate-700"></p>
+        <p data-inventory-calendar-target="confirmMessage" class="text-sm font-medium leading-relaxed text-foreground"></p>
       </div>
-      <div class="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
-        <button type="button" data-action="inventory-calendar#cancelConfirm" class="inline-flex h-11 sm:h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button>
-        <button type="button" class="inline-flex h-11 sm:h-10 items-center justify-center rounded-lg bg-slate-900 px-5 text-sm font-bold text-white hover:bg-slate-700" data-action="inventory-calendar#submitConfirmed">Apply Updates</button>
+      <div class="flex flex-col-reverse gap-2 border-t border-border px-5 py-4 sm:flex-row sm:justify-end">
+        <button type="button" data-action="inventory-calendar#cancelConfirm" class="inline-flex h-11 sm:h-10 items-center justify-center rounded-lg border border-border bg-card px-5 text-sm font-bold text-foreground hover:bg-muted">Cancel</button>
+        <button type="button" class="inline-flex h-11 sm:h-10 items-center justify-center rounded-lg bg-primary px-5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" data-action="inventory-calendar#submitConfirmed">Apply Updates</button>
       </div>
     </div>
   </dialog>
 
   <!-- Review Dialog -->
-  <dialog data-inventory-calendar-target="reviewDialog" class="fixed inset-0 m-auto max-h-[80vh] w-[min(94vw,36rem)] overflow-hidden rounded-xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/50">
-    <div class="flex h-full max-h-[80vh] flex-col bg-white">
-      <div class="flex-none flex items-start justify-between border-b border-slate-100 px-5 py-4">
+  <dialog data-inventory-calendar-target="reviewDialog" class="fixed inset-0 m-auto max-h-[80vh] w-[min(94vw,36rem)] overflow-hidden rounded-xl border border-border p-0 shadow-2xl backdrop:bg-primary/50">
+    <div class="flex h-full max-h-[80vh] flex-col bg-card">
+      <div class="flex-none flex items-start justify-between border-b border-border px-5 py-4">
         <div>
-          <h2 class="text-lg font-bold tracking-tight text-slate-950">Review Changes</h2>
-          <p class="text-xs font-semibold text-slate-500">
+          <h2 class="text-lg font-bold tracking-tight text-foreground">Review Changes</h2>
+          <p class="text-xs font-semibold text-muted-foreground">
             <%= current_hotel.preferred_channel_manager.present? ? "Confirm the staged updates before syncing with the Channel Manager." : "Confirm the staged updates before saving." %>
           </p>
         </div>
-        <button type="button" data-action="inventory-calendar#closeReview" class="rounded-lg p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-700">
+        <button type="button" data-action="inventory-calendar#closeReview" class="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
           <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </div>
@@ -283,14 +279,14 @@
         <div data-inventory-calendar-target="reviewList" class="space-y-3"></div>
       </div>
 
-      <div class="flex-none flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50/50 px-5 py-4 sm:flex-row sm:justify-end">
-        <button type="button" data-action="inventory-calendar#clearStaged" class="inline-flex justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50">Clear All</button>
-        <button type="button" data-action="inventory-calendar#closeReview" class="inline-flex justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50">Continue Editing</button>
-        <button type="button" 
+      <div class="flex-none flex flex-col-reverse gap-2 border-t border-border bg-muted/50 px-5 py-4 sm:flex-row sm:justify-end">
+        <button type="button" data-action="inventory-calendar#clearStaged" class="inline-flex justify-center rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50">Clear All</button>
+        <button type="button" data-action="inventory-calendar#closeReview" class="inline-flex justify-center rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground hover:bg-muted">Continue Editing</button>
+        <button type="button"
                 data-inventory-calendar-target="finalSyncButton"
-                data-action="inventory-calendar#submitStaged" 
+                data-action="inventory-calendar#submitStaged"
                 data-sync-text="<%= current_hotel.preferred_channel_manager.present? ? "Confirm & Sync" : "Confirm & Save" %>"
-                class="inline-flex justify-center rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 shadow-sm">
+                class="inline-flex justify-center rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-bold text-primary-foreground hover:bg-indigo-700 shadow-sm">
           <%= current_hotel.preferred_channel_manager.present? ? "Confirm & Sync" : "Confirm & Save" %>
         </button>
       </div>
@@ -298,15 +294,15 @@
   </dialog>
 
   <!-- Success Dialog -->
-  <dialog data-inventory-calendar-target="successDialog" class="fixed inset-0 m-auto w-[min(94vw,26rem)] overflow-hidden rounded-xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-900/60">
-    <div class="bg-white p-6 sm:p-8 text-center">
+  <dialog data-inventory-calendar-target="successDialog" class="fixed inset-0 m-auto w-[min(94vw,26rem)] overflow-hidden rounded-xl border border-border p-0 shadow-2xl backdrop:bg-primary/60">
+    <div class="bg-card p-6 sm:p-8 text-center">
       <div class="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
         <svg class="size-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
       </div>
-      <h3 class="text-lg font-bold tracking-tight text-slate-950">Sync Successful</h3>
-      <p class="mt-2 text-sm font-medium text-slate-500 leading-relaxed">Your changes have been applied successfully.</p>
+      <h3 class="text-lg font-bold tracking-tight text-foreground">Sync Successful</h3>
+      <p class="mt-2 text-sm font-medium text-muted-foreground leading-relaxed">Your changes have been applied successfully.</p>
       <div class="mt-8">
-        <button type="button" data-action="inventory-calendar#closeSuccess" class="inline-flex h-11 w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-700 transition-all">Dismiss</button>
+        <button type="button" data-action="inventory-calendar#closeSuccess" class="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover transition-all">Dismiss</button>
       </div>
     </div>
   </dialog>

@@ -1,0 +1,231 @@
+@layer components {
+  .panel-select-menu {
+    position: relative;
+    display: block;
+    width: 100%;
+  }
+
+  /* ── Progressive-enhancement switch ──────────────────────────────────────────
+     Until the Stimulus controller sets data-enhanced, the native <select> is the
+     visible control and the styled trigger is hidden. After enhancement they swap:
+     the native select is visually hidden (but still submits) and the trigger takes
+     over. */
+  .panel-select-menu__trigger {
+    display: none;
+  }
+
+  .panel-select-menu[data-enhanced="true"] .panel-select-menu__native {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .panel-select-menu[data-enhanced="true"] .panel-select-menu__trigger {
+    display: inline-flex;
+  }
+
+  /* ── Trigger (mirrors .panel-native-select) ──────────────────────────────────*/
+  .panel-select-menu__trigger {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 2rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--card);
+    color: var(--card-foreground);
+    padding-inline: 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    text-align: start;
+    outline: none;
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-select-menu:not([data-invalid="true"]) .panel-select-menu__trigger:hover:not(:disabled) {
+    border-color: var(--border-interactive);
+  }
+
+  .panel-select-menu__trigger:focus-visible {
+    border-color: var(--border-interactive);
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Open state — a <button> never rings on pointer click, so the trigger instead
+     reads as "active" while its listbox is shown, giving mouse users the feedback
+     a focus ring would. */
+  .panel-select-menu__trigger[aria-expanded="true"] {
+    border-color: var(--border-interactive);
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-select-menu[data-invalid="true"] .panel-select-menu__trigger {
+    border-color: var(--destructive-on-surface);
+  }
+
+  .panel-select-menu[data-invalid="true"] .panel-select-menu__trigger:focus-visible,
+  .panel-select-menu[data-invalid="true"] .panel-select-menu__trigger[aria-expanded="true"] {
+    outline-color: var(--destructive-on-surface);
+  }
+
+  .panel-select-menu__trigger:disabled {
+    cursor: not-allowed;
+    border-color: var(--border);
+    background-color: color-mix(in oklab, var(--muted) 82%, var(--background));
+    color: var(--muted-foreground);
+  }
+
+  .panel-select-menu__value {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .panel-select-menu__value[data-placeholder="true"] {
+    color: var(--muted-foreground);
+  }
+
+  .panel-select-menu__chevron {
+    flex-shrink: 0;
+    width: 1.15rem;
+    height: 1.15rem;
+    background-color: currentColor;
+    opacity: 0.6;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E") no-repeat center / contain;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E") no-repeat center / contain;
+    transition: transform var(--duration-fast) var(--ease-standard);
+  }
+
+  /* Flip the chevron up while the listbox is open. */
+  .panel-select-menu__trigger[aria-expanded="true"] .panel-select-menu__chevron {
+    transform: rotate(180deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel-select-menu__chevron {
+      transition: none;
+    }
+  }
+
+  .panel-select-menu[data-size="sm"] .panel-select-menu__trigger {
+    min-height: 1.75rem;
+    padding-inline: 0.625rem;
+    @apply text-xs;
+  }
+
+  .panel-select-menu[data-size="lg"] .panel-select-menu__trigger {
+    min-height: 2.25rem;
+    padding-inline: 0.875rem;
+    @apply text-sm;
+  }
+
+  /* ── Listbox popup ───────────────────────────────────────────────────────────*/
+  .panel-select-menu__listbox {
+    inset: auto;
+    margin: 0;
+    min-width: 10rem;
+    max-height: min(20rem, calc(100vh - 1rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+    color: var(--card-foreground);
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-dropdown);
+  }
+
+  .panel-select-menu__listbox:focus {
+    outline: none;
+  }
+
+  .panel-select-menu__option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    border-radius: var(--radius-md);
+    min-height: 1.75rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: var(--card-foreground);
+    cursor: default;
+    user-select: none;
+  }
+
+  .panel-select-menu__option:hover,
+  .panel-select-menu__option:focus-visible {
+    background: var(--muted);
+    outline: none;
+  }
+
+  .panel-select-menu__option[aria-disabled="true"] {
+    color: var(--muted-foreground);
+    opacity: 0.55;
+  }
+
+  .panel-select-menu__option[aria-disabled="true"]:hover,
+  .panel-select-menu__option[aria-disabled="true"]:focus-visible {
+    background: transparent;
+  }
+
+  .panel-select-menu__option-label {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .panel-select-menu__check {
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .panel-select-menu__option[aria-selected="true"] .panel-select-menu__check::before {
+    content: "✓";
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--primary);
+  }
+
+  @media (min-width: 640px) {
+    .panel-select-menu__trigger {
+      @apply text-sm;
+    }
+  }
+
+  @media (pointer: coarse) {
+    .panel-select-menu__trigger,
+    .panel-select-menu__option {
+      min-height: 2.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .panel-select-menu__listbox:popover-open {
+      animation: select-menu-enter var(--duration-fast) var(--ease-standard);
+      transform-origin: top center;
+    }
+  }
+
+  @keyframes select-menu-enter {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}

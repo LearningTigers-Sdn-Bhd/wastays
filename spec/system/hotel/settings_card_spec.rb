@@ -24,9 +24,11 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   it 'allows the hotel admin to update the editable settings card fields' do
     visit hotel_general_settings_path(hotel)
 
-    within('section', text: 'Hotel Settings') do
-      expect(page).to have_field('Hotel Status', type: 'text', disabled: true, with: 'Registered')
-      expect(page).to have_field('Onboarding Stage', type: 'text', disabled: true, with: 'Building profile')
+    within("form[action='#{hotel_general_settings_path(hotel)}']") do
+      expect(page).to have_css('.panel-metric-card__label', text: 'Hotel Status')
+      expect(page).to have_css('.panel-metric-card__value', text: 'Registered')
+      expect(page).to have_css('.panel-metric-card__label', text: 'Onboarding Stage')
+      expect(page).to have_css('.panel-metric-card__value', text: 'Building profile')
       expect(page).to have_select('Default Currency', selected: 'MYR - Malaysian Ringgit')
       expect(page).to have_button('Save Settings')
     end
@@ -45,12 +47,16 @@ RSpec.describe 'Hotel Settings Card', type: :system do
     expect(hotel.reload.default_currency).to eq('USD')
   end
 
-  it 'shows hotel status and onboarding stage as disabled text inputs' do
+  it 'shows hotel status and onboarding stage as metric cards' do
     visit hotel_general_settings_path(hotel)
 
-    within('section', text: 'Hotel Settings') do
-      expect(page).to have_field('Hotel Status', type: 'text', disabled: true, with: 'Registered')
-      expect(page).to have_field('Onboarding Stage', type: 'text', disabled: true, with: 'Building profile')
+    within('section', text: 'General Setup') do
+      expect(page).to have_css('.panel-metric-card__label', text: 'Hotel Status')
+      expect(page).to have_css('.panel-metric-card__value', text: 'Registered')
+      expect(page).to have_css('.panel-metric-card__label', text: 'Onboarding Stage')
+      expect(page).to have_css('.panel-metric-card__value', text: 'Building profile')
+      expect(page).to have_no_field('Hotel Status', type: 'text')
+      expect(page).to have_no_field('Onboarding Stage', type: 'text')
     end
   end
 
@@ -74,8 +80,8 @@ RSpec.describe 'Hotel Settings Card', type: :system do
 
     click_button 'Save Settings'
 
-    within('section', text: 'Hotel Settings') do
-      expect(page).to have_content('prohibited these settings from being saved')
+    within("form[action='#{hotel_general_settings_path(hotel)}']") do
+      expect(page).to have_content('prevented these settings from being saved')
       expect(page).to have_content("Check out time can't be blank")
       expect(find('#hotel_property_policy_attributes_check_in_time', visible: false).value).to eq('15:00')
       expect(find('#hotel_property_policy_attributes_check_out_time', visible: false).value).to eq('')

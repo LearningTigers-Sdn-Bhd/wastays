@@ -24,20 +24,20 @@
   </div>
 
   <%# Hover Card %>
-  <div data-floating-target="floating" class="hidden z-[100] w-64 p-3 bg-white border border-slate-200 rounded-xl shadow-xl pointer-events-none text-left">
+  <div data-floating-target="floating" class="hidden z-[100] w-64 p-3 bg-card border border-border rounded-xl shadow-xl pointer-events-none text-left">
     <div class="flex items-center gap-2 mb-2">
       <div class="size-2 rounded-full bg-red-500 animate-pulse"></div>
       <span class="text-[10px] font-bold uppercase tracking-wider text-red-600">Room Not Ready</span>
     </div>
     <div class="mt-2 space-y-2">
-      <div class="flex items-start gap-2 text-[11px] text-slate-600">
+      <div class="flex items-start gap-2 text-[11px] text-muted-foreground">
         <%= cached_icon "triangle-alert", stroke_width: 2.5, class: "size-3.5 mt-0.5 shrink-0 text-red-400" %>
         <div>
-          <p class="font-black text-slate-900 uppercase tracking-tight">Current Status</p>
+          <p class="font-black text-foreground uppercase tracking-tight">Current Status</p>
           <p><%= block[:status_name] %></p>
         </div>
       </div>
-      <p class="text-[10px] text-slate-500 italic leading-relaxed">This room cannot be assigned to new guests until it is marked as Ready by Housekeeping.</p>
+      <p class="text-[10px] text-muted-foreground italic leading-relaxed">This room cannot be assigned to new guests until it is marked as Ready by Housekeeping.</p>
     </div>
   </div>
 </div>

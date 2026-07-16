@@ -1,14 +1,10 @@
-<header class="flex flex-col gap-4 px-4 pt-5 md:px-0 lg:flex-row lg:items-end lg:justify-between">
-  <div>
-    <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">AR Invoices</h1>
-    <p class="mt-1 text-sm font-medium text-slate-600">Track Direct Bill invoices, due dates, and outstanding corporate balances.</p>
-  </div>
-
+<%= render PanelsUI::PageHeader.new(title: "AR Invoices", description: "Track Direct Bill invoices, due dates, and outstanding corporate balances.") do |header| %>
   <% if current_user.has_permission?("manage_ar_payments", hotel: current_hotel) %>
-  <%= link_to new_hotel_ar_payment_path(current_hotel),
-              class: "inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2" do %>
-    <%= cached_icon "circle-dollar-sign", class: "size-4", aria: { hidden: true } %>
-    Record Received Payment
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(as: :a, href: new_hotel_ar_payment_path(current_hotel), variant: :primary, size: :md, class: "w-full lg:w-auto") do %>
+        <%= cached_icon "circle-dollar-sign", class: "size-4", aria: { hidden: true } %>
+        Record Received Payment
+      <% end %>
+    <% end %>
   <% end %>
-  <% end %>
-</header>
+<% end %>

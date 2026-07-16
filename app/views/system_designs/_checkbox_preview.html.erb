@@ -1,0 +1,40 @@
+<section aria-labelledby="checkbox-preview-heading" class="border-t border-border pt-8">
+  <h2 id="checkbox-preview-heading" class="text-lg font-semibold text-foreground">Checkboxes</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    Native checkbox controls with whole-card selection, descriptions, validation feedback, and mixed state support.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> checkboxes</h3>
+        <% scope = "checkbox_#{theme.tr('-', '_')}".to_sym %>
+        <%= form_with url: "#checkbox-preview", scope: scope, class: "mt-4 space-y-4" do |form| %>
+          <%= render PanelsUI::Checkbox.new(
+                form: form, attribute: :confirmation_copy, label: "Send booking confirmation", checked: true) %>
+
+          <%= render PanelsUI::Checkbox.new(
+                form: form, attribute: :terms, label: "I confirm the stay details",
+                description: "Required before the reservation can be finalized.", required: true) %>
+
+          <%= render PanelsUI::Checkbox.new(
+                form: form, attribute: :housekeeping, label: "Request daily housekeeping",
+                description: "The entire card toggles this request.", variant: :card, checked: true) %>
+
+          <%= render PanelsUI::Checkbox.new(
+                form: form, attribute: :rate_notice, label: "Rate change notice",
+                description: "This example shows a validation message.", variant: :card,
+                error: "Choose whether the guest should receive this notice.") %>
+
+          <%= render PanelsUI::Checkbox.new(
+                name: "#{scope}[select_all]", label: "Select all eligible folios",
+                description: "Mixed state is available for select-all interfaces.", indeterminate: true, size: :sm) %>
+
+          <%= render PanelsUI::Checkbox.new(
+                name: "#{scope}[archived]", label: "Keep archived records", variant: :card,
+                disabled: true, checked: true, size: :lg) %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

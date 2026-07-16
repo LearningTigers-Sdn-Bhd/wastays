@@ -1,0 +1,86 @@
+<%= tag.div(**root_attributes) do %>
+  <%# Hidden field: "YYYY-MM-DDTHH:MM" form source of truth. %>
+  <%= hidden_field %>
+
+  <%= render PanelsUI::Popover.new(
+        id: popover_id,
+        placement: :bottom_start,
+        arrow: false,
+        focus: true,
+        aria_haspopup: "dialog",
+        root_class: "#{anchor_class} #{popover_root_class}",
+        class: "panel-date-time-picker__popover") do |popover| %>
+    <% popover.with_trigger(
+         unstyled: true,
+         aria_label: placeholder_text,
+         class: "panel-input panel-date-time-picker__display",
+         disabled: field_disabled?,
+         aria: { labelledby: @labelled_by, describedby: @described_by, invalid: (@invalid ? "true" : nil), required: (@required ? "true" : nil) },
+         data: { "#{stimulus_identifier}-target" => "trigger" }) do %>
+      <span class="panel-date-time-picker__value"
+            data-<%= stimulus_identifier %>-target="display"
+            data-placeholder="<%= placeholder_text %>"></span>
+      <svg class="panel-date-time-picker__icon size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8 2v4M16 2v4M3 9h18M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+      </svg>
+    <% end %>
+
+    <div class="panel-date-time-picker__body">
+      <%= content_tag(calendar_element,
+            class: "panel-date-picker__calendar panel-date-time-picker__calendar #{'panel-date-picker__calendar--dropdown' if dropdown_caption?}",
+            min: calendar_min,
+            max: calendar_max,
+            months: calendar_months,
+            data: {
+              "#{stimulus_identifier}-target" => "calendar",
+              action: "change->#{stimulus_identifier}#onCalendarChange focusday->#{stimulus_identifier}#onCalendarFocusday"
+            }) do %>
+        <svg slot="previous" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-label="Previous">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6" />
+        </svg>
+        <svg slot="next" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-label="Next">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6" />
+        </svg>
+        <% if dropdown_caption? %>
+          <%= render "panels_ui/calendar_caption", identifier: stimulus_identifier,
+                month_choices: month_choices, year_choices: year_choices %>
+        <% end %>
+        <div class="panel-date-picker__months" data-<%= stimulus_identifier %>-target="months">
+          <calendar-month></calendar-month>
+          <% if render_second_month? %><calendar-month offset="1"></calendar-month><% end %>
+        </div>
+      <% end %>
+
+      <div class="panel-date-time-picker__time" data-range="<%= single_input_range? %>">
+        <% time_scopes = single_input_range? ? [["Start time", "start", "startTimeControl", "startTimeDisplay"], ["End time", "end", "endTimeControl", "endTimeDisplay"]] : [["Time", "time", "timeControl", "timeDisplay"]] %>
+        <% time_scopes.each do |label, scope, control_target, display_target| %>
+          <%= render PanelsUI::Popover.new(
+                id: time_popover_id(scope),
+                placement: :bottom_start,
+                arrow: false,
+                focus: true,
+                owner: main_panel_id,
+                root_class: "panel-date-time-picker__time-group",
+                class: "panel-date-time-picker__time-popover") do |time_popover| %>
+            <% time_popover.with_trigger(
+                 unstyled: true,
+                 aria_label: "Choose #{label.downcase}",
+                 class: "panel-date-time-picker__time-trigger") do %>
+              <span class="panel-date-time-picker__time-label"><%= label %></span>
+              <span class="panel-date-time-picker__time-value" data-<%= stimulus_identifier %>-target="<%= display_target %>">--:--</span>
+            <% end %>
+            <%= render "panels_ui/time_control",
+                  identifier: stimulus_identifier,
+                  target: control_target,
+                  scope: "#{root_id}-#{scope}",
+                  label: label,
+                  hour_cycle: @hour_cycle,
+                  precision: @precision,
+                  minute_step: @minute_step,
+                  second_step: @second_step %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+<% end %>

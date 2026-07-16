@@ -3,10 +3,10 @@
 module HotelPortal
   class SettingsPresenter
     PAGE_HEADINGS = {
-      "general" => [ "General Settings", "Configure core hotel policies and operational defaults." ],
-      "rates" => [ "Rate Settings", "Configure how guest rates are calculated based on occupancy, extra guests, children, and infants." ],
+      "general" => [ "General Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
+      "rates" => [ "General Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
       "ai" => [ "AI Concierge", "Configure AI concierge behavior and provider settings." ],
-      "notifications" => [ "Notifications", "Configure guest notification automations and channels." ],
+      "notifications" => [ "General Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
       "banking" => [ "Banking Details", "Manage the bank account used for hotel payouts." ]
     }.freeze
 
@@ -136,13 +136,13 @@ module HotelPortal
       hotel.errors.full_messages + property_policy.errors.full_messages
     end
 
-    def time_picker_hours
-      @time_picker_hours ||= (0..23).map do |h|
-        {
-          value: h,
-          label: Time.current.change(hour: h).strftime("%I %p")
-        }
-      end
+    def time_picker_value(value)
+      raw_value = value.to_s.strip
+      return raw_value if raw_value.blank? || /\A(?:[01]\d|2[0-3]):[0-5]\d\z/.match?(raw_value)
+
+      Time.zone.parse(raw_value)&.strftime("%H:%M") || raw_value
+    rescue ArgumentError
+      raw_value
     end
 
     private

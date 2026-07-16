@@ -5,28 +5,28 @@
 <% hidden = local_assigns.fetch(:hidden, false) %>
 
 <div class="<%= hidden ? 'hidden' : '' %> relative inline-flex w-full" data-controller="dropdown" data-dropdown-floating="true" data-salesperson-inline-edit-target="hotelSelector">
-  <button type="button" data-action="click->dropdown#toggle" <%= "disabled" if disabled %> class="flex w-full items-center justify-between gap-3 rounded-lg border border-layer-line bg-layer px-3 py-3 text-left text-sm text-neutral-text-primary shadow-sm hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-70">
+  <button type="button" data-action="click->dropdown#toggle" <%= "disabled" if disabled %> class="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-3 text-left text-sm text-foreground shadow-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-70">
     <span class="truncate">
       <%= selected_ids.any? ? "#{selected_ids.size} hotel#{selected_ids.size == 1 ? '' : 's'} selected" : "Select hotels..." %>
     </span>
-    <svg class="size-4 shrink-0 text-neutral-text-secondary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    <svg class="size-4 shrink-0 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
   </button>
 
-  <div data-dropdown-target="menu" class="hidden absolute left-0 top-full z-50 mt-2 w-[320px] max-h-72 overflow-hidden rounded-xl border border-layer-line bg-layer shadow-2xl">
-    <div class="border-b border-layer-line px-4 py-3">
-      <p class="text-sm font-semibold text-neutral-text-primary">Select hotels</p>
-      <p class="text-xs text-neutral-text-secondary">Choose one or more hotels for this salesperson.</p>
+  <div data-dropdown-target="menu" class="hidden absolute left-0 top-full z-50 mt-2 w-[320px] max-h-72 overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+    <div class="border-b border-border px-4 py-3">
+      <p class="text-sm font-semibold text-foreground">Select hotels</p>
+      <p class="text-xs text-muted-foreground">Choose one or more hotels for this salesperson.</p>
     </div>
 
     <div class="max-h-60 overflow-y-auto p-2">
       <%= hidden_field_tag "#{field_name}[]", "", form: form_id %>
       <% hotels.each do |hotel| %>
         <% checked = selected_ids.include?(hotel.id) %>
-        <label class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-neutral-text-primary hover:bg-surface-hover">
-          <%= check_box_tag "#{field_name}[]", hotel.id, checked, class: "size-4 rounded border-layer-line text-primary focus:ring-primary", form: form_id %>
+        <label class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted">
+          <%= check_box_tag "#{field_name}[]", hotel.id, checked, class: "size-4 rounded border-border text-primary focus:ring-primary", form: form_id %>
           <span class="min-w-0 flex-1">
             <span class="block truncate font-medium"><%= hotel.name %></span>
-            <span class="block truncate text-xs text-neutral-text-secondary"><%= [hotel.city, hotel.country].compact.join(", ") %></span>
+            <span class="block truncate text-xs text-muted-foreground"><%= [hotel.city, hotel.country].compact.join(", ") %></span>
           </span>
         </label>
       <% end %>

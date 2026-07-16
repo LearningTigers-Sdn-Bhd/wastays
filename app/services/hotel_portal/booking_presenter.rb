@@ -29,7 +29,7 @@ module HotelPortal
       when "completed" then "border-emerald-800 text-emerald-800"
       when "cancelled" then "border-red-800 text-red-800"
       when "pending" then "border-yellow-800 text-yellow-800"
-      else "border-gray-800 text-gray-800"
+      else "border-border-interactive text-foreground"
       end
     end
 
@@ -209,7 +209,7 @@ module HotelPortal
       when "captured", "completed" then "border-emerald-800 text-emerald-800"
       when "pending", "authorized" then "border-yellow-800 text-yellow-800"
       when "failed", "cancelled", "refunded" then "border-red-800 text-red-800"
-      else "border-gray-800 text-gray-800"
+      else "border-border-interactive text-foreground"
       end
     end
 
@@ -223,7 +223,7 @@ module HotelPortal
       when "in_progress" then "border-blue-800 text-blue-800"
       when "failed" then "border-red-800 text-red-800"
       when "pending" then "border-yellow-800 text-yellow-800"
-      else "border-gray-800 text-gray-800"
+      else "border-border-interactive text-foreground"
       end
     end
 
@@ -463,7 +463,7 @@ module HotelPortal
       case status
       when "confirmed" then "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
       when "cancelled" then "bg-red-50 text-red-700 ring-red-600/20"
-      else "bg-slate-100 text-slate-700 ring-slate-500/20"
+      else "bg-muted text-foreground ring-ring/20"
       end
     end
 
@@ -484,12 +484,12 @@ module HotelPortal
         "review_due_out" => "peer-checked:border-orange-400 peer-checked:bg-orange-50 peer-checked:text-orange-700 peer-checked:hover:bg-orange-100",
         "checkout_required" => "peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700 peer-checked:hover:bg-rose-100",
         "completed" => "peer-checked:border-emerald-400 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 peer-checked:hover:bg-emerald-100",
-        "cancelled" => "peer-checked:border-slate-500 peer-checked:bg-slate-100 peer-checked:text-slate-700 peer-checked:hover:bg-slate-200",
+        "cancelled" => "peer-checked:border-border-interactive peer-checked:bg-muted peer-checked:text-foreground peer-checked:hover:bg-muted",
         "no_show" => "peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700 peer-checked:hover:bg-rose-100",
         "overbooked" => "peer-checked:border-red-400 peer-checked:bg-red-50 peer-checked:text-red-700 peer-checked:hover:bg-red-100",
         "not_ready" => "peer-checked:border-red-400 peer-checked:bg-red-50 peer-checked:text-red-700 peer-checked:hover:bg-red-100"
       }
-      booking_pill_styles[status] || "peer-checked:bg-slate-900 peer-checked:text-white peer-checked:border-slate-900"
+      booking_pill_styles[status] || "peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-border-interactive"
     end
 
     def created_at_date
@@ -505,12 +505,12 @@ module HotelPortal
         "review_due_out" => "border-orange-200 bg-orange-50 text-orange-700",
         "checkout_required" => "border-rose-200 bg-rose-50 text-rose-700",
         "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700",
-        "cancelled" => "border-slate-300 bg-slate-100 text-slate-600",
+        "cancelled" => "border-border-interactive bg-muted text-muted-foreground",
         "no_show" => "border-rose-200 bg-rose-50 text-rose-700",
         "overbooked" => "border-red-200 bg-red-50 text-red-700",
         "not_ready" => "border-red-200 bg-red-50 text-red-700"
       }
-      booking_styles[status] || "border-slate-200 bg-slate-50 text-slate-600"
+      booking_styles[status] || "border-border bg-muted text-muted-foreground"
     end
 
     def status_label_humanized

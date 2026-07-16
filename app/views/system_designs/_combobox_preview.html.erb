@@ -1,0 +1,91 @@
+<section aria-labelledby="combobox-preview-heading" class="border-t border-border pt-8">
+  <h2 id="combobox-preview-heading" class="text-lg font-semibold text-foreground">Searchable select (Combobox)</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    A searchable single-select enhanced from a native <code>&lt;select&gt;</code>. Type to filter, use arrow keys to
+    move, Enter to select, and Escape to close. Without JavaScript, the native select remains available.
+  </p>
+
+  <%# A deliberately long, real dataset (~150 entries) — proves the combobox shows
+      every option by default rather than silently capping at Tom Select's default 50. %>
+  <% time_zones = ActiveSupport::TimeZone.all.map { |tz| [ tz.to_s, tz.name ] } %>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> comboboxes</h3>
+        <% scope = "combobox_#{theme.tr('-', '_')}".to_sym %>
+        <%= form_with url: "#combobox-preview", scope: scope, class: "mt-4 space-y-4" do |form| %>
+          <%= render PanelsUI::FieldGroup.new do %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :destination,
+                  label: "Destination",
+                  hint: "Search the available destinations.") do |field| %>
+              <% field.with_combobox(
+                   [
+                     [ "Bangkok, Thailand", "bangkok" ],
+                     [ "Berlin, Germany", "berlin" ],
+                     [ "Kuala Lumpur, Malaysia", "kuala_lumpur" ],
+                     { label: "Kuching, Malaysia (temporarily unavailable)", value: "kuching", disabled: true },
+                     [ "London, United Kingdom", "london" ],
+                     [ "Singapore", "singapore" ],
+                     [ "Tokyo, Japan", "tokyo" ]
+                   ],
+                   prompt: "Search destinations") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :currency,
+                  label: "Currency",
+                  size: :sm) do |field| %>
+              <% field.with_combobox(
+                   [ [ "Malaysian Ringgit (MYR)", "MYR" ], [ "Singapore Dollar (SGD)", "SGD" ], [ "Thai Baht (THB)", "THB" ] ],
+                   selected: "MYR",
+                   prompt: "Search currencies") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :required_destination,
+                  label: "Required destination",
+                  required: true,
+                  error: "Please select a destination.",
+                  size: :lg) do |field| %>
+              <% field.with_combobox(
+                   [ [ "Langkawi, Malaysia", "langkawi" ], [ "Penang, Malaysia", "penang" ] ],
+                   prompt: "Search destinations") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :channel,
+                  label: "Connected channel",
+                  hint: "Managed by the integration — not editable here.",
+                  disabled: true) do |field| %>
+              <% field.with_combobox([ [ "Agoda", "agoda" ] ], selected: "agoda") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :time_zone,
+                  label: "Time zone",
+                  hint: "Long list (#{time_zones.size} options) — every one is reachable without filtering first.") do |field| %>
+              <% field.with_combobox(time_zones, prompt: "Search time zones") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :time_zone_capped,
+                  label: "Time zone (capped)",
+                  hint: "Same list, but max_options: 5 — only the first five show until you narrow the search.") do |field| %>
+              <% field.with_combobox(time_zones, max_options: 5, prompt: "Search time zones") %>
+            <% end %>
+          <% end %>
+
+          <button type="reset" class="panel-button" data-variant="outline" data-size="sm">Reset comboboxes</button>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

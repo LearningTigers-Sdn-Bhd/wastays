@@ -1,4 +1,4 @@
-<div class="flex h-full flex-col bg-white">
+<div class="flex h-full flex-col bg-card">
   <% target_presenter = HotelPortal::BookingLifecycleTargetPresenter.new(booking: @booking, action: :mark_no_show) %>
   <% eligible_rows = target_presenter.render? ? target_presenter.rows.select(&:eligible) : [] %>
   <%= render "hotel_portal/bookings/board/partials/content_header",
@@ -19,10 +19,10 @@
       <% end %>
 
       <% if @booking.group_booking_id? %>
-        <div class="border-b border-slate-200 px-8 py-4 text-sm text-slate-700">
-          <p class="font-bold text-slate-950">Group no-show action</p>
+        <div class="border-b border-border px-8 py-4 text-sm text-foreground">
+          <p class="font-bold text-foreground">Group no-show action</p>
           <p class="mt-1">Use the group selector to choose exactly which room stays should be finalized as no-show. Unselected bookings in the group are not changed.</p>
-          <p class="mt-2 text-xs font-semibold uppercase tracking-wider text-slate-500"><%= eligible_rows.size %> eligible group <%= 'booking'.pluralize(eligible_rows.size) %></p>
+          <p class="mt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground"><%= eligible_rows.size %> eligible group <%= 'booking'.pluralize(eligible_rows.size) %></p>
         </div>
       <% end %>
 
@@ -31,15 +31,15 @@
       </div>
 
       <div class="<%= @booking.group_booking_id? ? 'px-8 py-5' : 'mt-5' %>">
-        <%= label_tag :no_show_reason, "No-show Reason", class: "mb-2 block text-[11px] font-black uppercase tracking-[0.15em] text-slate-500" %>
+        <%= label_tag :no_show_reason, "No-show Reason", class: "mb-2 block text-[11px] font-black uppercase tracking-[0.15em] text-muted-foreground" %>
         <%= text_area_tag :no_show_reason, params[:no_show_reason], rows: 4, required: true,
           placeholder: @booking.group_booking_id? ? "Explain why the selected group bookings are being finalized as no-show." : "Explain why this booking is being finalized as no-show.",
-          class: "w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0" %>
+          class: "w-full resize-y rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
       </div>
       <% if @booking.group_booking_id? %></div></div><% end %>
     </div>
     <%= render "hotel_portal/bookings/board/partials/content_footer",
       show_full_page_link: false,
-      submit_button: f.submit("Confirm No-show", class: "rounded-xl bg-rose-600 px-6 py-2.5 text-sm font-bold text-white") %>
+      submit_button: f.submit("Confirm No-show", class: "rounded-xl bg-rose-600 px-6 py-2.5 text-sm font-bold text-primary-foreground") %>
   <% end %>
 </div>

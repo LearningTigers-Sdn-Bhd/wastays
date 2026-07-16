@@ -27,11 +27,7 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
               partial: "admin/hotels/onboarding_sessions_list",
               locals: { sessions: @sessions, hotel: @hotel }
             ),
-            turbo_stream.prepend(
-              "flash_toasts",
-              partial: "shared/toast",
-              locals: { key: "notice", value: "Training session scheduled successfully." }
-            )
+            toast_stream("Training session scheduled successfully.", type: :success)
           ]
         end
       end
@@ -46,11 +42,7 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
               partial: "admin/hotels/onboarding_session_form",
               locals: { session: @session }
             ),
-            turbo_stream.prepend(
-              "flash_toasts",
-              partial: "shared/toast",
-              locals: { key: "alert", value: "Failed to schedule session: #{@session.errors.full_messages.to_sentence}" }
-            )
+            toast_stream("Failed to schedule session: #{@session.errors.full_messages.to_sentence}", type: :error)
           ], status: :unprocessable_content
         end
       end
@@ -171,11 +163,7 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
         partial: "admin/hotels/onboarding_sessions_list",
         locals: { sessions: @sessions, hotel: @hotel }
       ),
-      turbo_stream.prepend(
-        "flash_toasts",
-        partial: "shared/toast",
-        locals: { key: key.to_s, value: message }
-      )
+      toast_stream_for_flash(message, key)
     ], status: status
   end
 end

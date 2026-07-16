@@ -1,384 +1,213 @@
-<section class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-  <h2 class="sr-only">Hotel Settings</h2>
+<%= form_with model: @hotel,
+              url: hotel_general_settings_path(@hotel),
+              method: :patch,
+              local: true,
+              class: "grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2" do |f| %>
+  <%= hidden_field_tag :form_id, "hotel_settings" %>
 
-  <%= form_with model: @hotel, url: hotel_general_settings_path(@hotel), method: :patch, local: true do |f| %>
-    <%= hidden_field_tag :form_id, "hotel_settings" %>
-
-    <% if @presenter.settings_errors.any? && params[:form_id] == "hotel_settings" %>
-      <div class="rounded-2xl border border-rose-200 bg-rose-50/50 p-5 m-8 text-sm text-rose-800 shadow-sm flex gap-3.5">
-        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
-          <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        </div>
-        <div>
-          <p class="font-bold text-rose-900"><%= pluralize(@presenter.settings_errors.count, "error") %> prohibited these settings from being saved:</p>
-          <ul class="mt-2 list-disc space-y-1.5 ps-5 font-semibold text-rose-700">
+  <% if @presenter.settings_errors.any? && params[:form_id] == "hotel_settings" %>
+    <div class="lg:col-span-2">
+      <%= render PanelsUI::Alert.new(
+            tone: :destructive,
+            title: pluralize(@presenter.settings_errors.count, "error") + " prevented these settings from being saved",
+            role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 ps-5">
             <% @presenter.settings_errors.each do |message| %>
               <li><%= message %></li>
             <% end %>
           </ul>
-        </div>
-      </div>
-    <% end %>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-slate-200">
-
-      <!-- Left Panel: Summary & Status Hub -->
-      <div class="bg-slate-50/50 p-8 flex flex-col space-y-6">
-        <div class="space-y-6">
-          <div>
-            <h3 class="text-base font-extrabold text-slate-900">General Setup</h3>
-            <p class="text-sm text-slate-500 font-medium mt-1.5 leading-relaxed">Review verification status, onboarding progress, and adjust base operational policies.</p>
-          </div>
-
-          <!-- Status Card -->
-          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <%= f.label :hotel_status_display, "Hotel Status", class: "text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1" %>
-            <% status = @presenter.settings_summary[:hotel_status] %>
-            <div class="flex items-center gap-2">
-              <span class="size-1.5 rounded-full shrink-0 <%= status&.downcase == "approved" ? "bg-emerald-500" : "bg-slate-400" %>"></span>
-              <%= f.text_field :hotel_status_display, value: status, disabled: true, class: "border-0 bg-transparent p-0 text-sm font-bold text-slate-800 focus:ring-0 focus:outline-none cursor-not-allowed w-full shadow-none" %>
-            </div>
-          </div>
-
-          <!-- Onboarding Stage Card -->
-          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <%= f.label :onboarding_stage_display, "Onboarding Stage", class: "text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1" %>
-            <% onboarding = @presenter.settings_summary[:onboarding_stage] %>
-            <div class="flex items-center gap-2">
-              <span class="size-1.5 rounded-full shrink-0 bg-blue-500"></span>
-              <%= f.text_field :onboarding_stage_display, value: onboarding, disabled: true, class: "border-0 bg-transparent p-0 text-sm font-bold text-slate-800 focus:ring-0 focus:outline-none cursor-not-allowed w-full shadow-none" %>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right Panel: Configurator Form -->
-      <div class="lg:col-span-2 p-8 space-y-8">
-
-        <!-- Section 1: Operation Times -->
-        <div class="space-y-5">
-          <div class="border-b border-slate-100 pb-3">
-            <h4 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Operation Times</h4>
-            <p class="text-xs text-slate-500 font-medium mt-1 leading-normal">Configure standard check-in/out hours, business day starts, and arrival grace periods.</p>
-          </div>
-
-          <div class="grid gap-5 sm:grid-cols-2">
-            <%= f.fields_for :property_policy_attributes, @presenter.property_policy do |property_policy_fields| %>
-              <!-- Check-in Time -->
-              <div data-controller="time-picker" data-time-picker-next-field-selector-value="#index-check-out-dropdown" class="relative">
-                <%= property_policy_fields.label :check_in_time, "Standard Check-in Time", class: "mb-2 block text-sm font-semibold text-slate-700" %>
-                <div class="relative rounded-xl border border-slate-200 bg-white shadow-sm focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-50 transition-all duration-200">
-                  <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <input type="text"
-                         data-time-picker-target="input"
-                         data-action="click->time-picker#toggle"
-                         class="w-full rounded-xl border-0 bg-transparent pl-10 pr-4 py-2.5 text-sm font-bold text-slate-900 focus:ring-0 cursor-pointer"
-                         readonly
-                         value="<%= @presenter.property_policy.check_in_time %>">
-                  <%= property_policy_fields.hidden_field :check_in_time, data: { time_picker_target: "hiddenInput" } %>
-
-                  <!-- Dropdown -->
-                  <div data-time-picker-target="dropdown"
-                       class="absolute z-[100] hidden w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 backdrop-blur-md shadow-2xl mt-2">
-                    <div class="flex h-[200px]">
-                      <div class="flex-1 overflow-y-auto custom-scrollbar border-r border-slate-100 p-1">
-                        <% @presenter.time_picker_hours.each do |hour| %>
-                          <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= hour[:value] %>" class="w-full rounded-lg px-3 py-1.5 text-left text-xs font-bold transition-colors bg-white text-slate-700 hover:bg-slate-50 focus:outline-none">
-                            <%= hour[:label] %>
-                          </button>
-                        <% end %>
-                      </div>
-                      <div class="w-[75px] overflow-y-auto custom-scrollbar p-1 bg-slate-50/40">
-                        <% [0, 15, 30, 45].each do |m| %>
-                          <button type="button" data-time-picker-target="minute" data-action="click->time-picker#selectMinute" data-value="<%= m %>" class="w-full rounded-lg px-3 py-1.5 text-center text-xs font-bold transition-colors bg-white text-slate-700 hover:bg-slate-50 focus:outline-none">
-                            :<%= m.to_s.rjust(2, '0') %>
-                          </button>
-                        <% end %>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Check-out Time -->
-              <div id="index-check-out-dropdown" data-controller="time-picker" class="relative">
-                <%= property_policy_fields.label :check_out_time, "Standard Check-out Time", class: "mb-2 block text-sm font-semibold text-slate-700" %>
-                <div class="relative rounded-xl border border-slate-200 bg-white shadow-sm focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-50 transition-all duration-200">
-                  <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <input type="text"
-                         data-time-picker-target="input"
-                         data-action="click->time-picker#toggle"
-                         class="w-full rounded-xl border-0 bg-transparent pl-10 pr-4 py-2.5 text-sm font-bold text-slate-900 focus:ring-0 cursor-pointer"
-                         readonly
-                         value="<%= @presenter.property_policy.check_out_time %>">
-                  <%= property_policy_fields.hidden_field :check_out_time, data: { time_picker_target: "hiddenInput" } %>
-
-                  <!-- Dropdown -->
-                  <div data-time-picker-target="dropdown"
-                       class="absolute z-[100] hidden w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 backdrop-blur-md shadow-2xl mt-2">
-                    <div class="flex h-[200px]">
-                      <div class="flex-1 overflow-y-auto custom-scrollbar border-r border-slate-100 p-1">
-                        <% @presenter.time_picker_hours.each do |hour| %>
-                          <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= hour[:value] %>" class="w-full rounded-lg px-3 py-1.5 text-left text-xs font-bold transition-colors bg-white text-slate-700 hover:bg-slate-50 focus:outline-none">
-                            <%= hour[:label] %>
-                          </button>
-                        <% end %>
-                      </div>
-                      <div class="w-[75px] overflow-y-auto custom-scrollbar p-1 bg-slate-50/40">
-                        <% [0, 15, 30, 45].each do |m| %>
-                          <button type="button" data-time-picker-target="minute" data-action="click->time-picker#selectMinute" data-value="<%= m %>" class="w-full rounded-lg px-3 py-1.5 text-center text-xs font-bold transition-colors bg-white text-slate-700 hover:bg-slate-50 focus:outline-none">
-                            :<%= m.to_s.rjust(2, '0') %>
-                          </button>
-                        <% end %>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            <% end %>
-
-            <!-- Day Starts At -->
-            <div data-controller="time-picker" class="relative">
-              <%= f.label :business_starts_at, "Business Day Starts At", class: "mb-2 block text-sm font-semibold text-slate-700" %>
-              <div class="relative rounded-xl border border-slate-200 bg-white shadow-sm focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-50 transition-all duration-200">
-                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                  <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <input type="text"
-                       data-time-picker-target="input"
-                       data-action="click->time-picker#toggle"
-                       class="w-full rounded-xl border-0 bg-transparent pl-10 pr-4 py-2.5 text-sm font-bold text-slate-900 focus:ring-0 cursor-pointer"
-                       readonly
-                       value="<%= @hotel.business_starts_at&.strftime("%I:%M %p") %>">
-                <%= f.hidden_field :business_starts_at, value: @hotel.business_starts_at&.strftime("%H:%M"), data: { time_picker_target: "hiddenInput" } %>
-
-                <!-- Dropdown -->
-                <div data-time-picker-target="dropdown" class="absolute z-[100] hidden w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 backdrop-blur-md shadow-2xl mt-2">
-                  <div class="flex h-[200px]">
-                    <div class="w-20 overflow-y-auto custom-scrollbar border-r border-slate-100 p-1">
-                      <% (1..12).each do |h| %>
-                        <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= h %>" class="w-full rounded-lg px-2 py-1.5 text-center text-xs font-bold transition-colors bg-white text-slate-700 hover:bg-slate-50 focus:outline-none">
-                          <%= h %>
-                        </button>
-                      <% end %>
-                    </div>
-                    <div class="w-20 overflow-y-auto custom-scrollbar border-r border-slate-100 p-1 bg-slate-50/20">
-                      <% (0..59).each do |m| %>
-                        <button type="button" data-time-picker-target="minute" data-action="click->time-picker#selectMinute" data-value="<%= m %>" class="w-full rounded-lg px-2 py-1.5 text-center text-xs font-bold transition-colors bg-white text-slate-700 hover:bg-slate-50 focus:outline-none">
-                          <%= m.to_s.rjust(2, '0') %>
-                        </button>
-                      <% end %>
-                    </div>
-                    <div class="flex-1 p-1 bg-slate-50/40 flex flex-col justify-center gap-1">
-                      <% ["AM", "PM"].each do |p| %>
-                        <button type="button" data-time-picker-target="period" data-action="click->time-picker#selectPeriod" data-value="<%= p %>" class="w-full rounded-lg py-2.5 text-center text-xs font-bold transition-colors bg-white text-slate-700 hover:bg-slate-50 focus:outline-none">
-                          <%= p %>
-                        </button>
-                      <% end %>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Day Ends At -->
-            <div data-controller="time-picker" class="relative">
-              <%= f.label :business_ends_at, "Business Day Ends At", class: "mb-2 block text-sm font-semibold text-slate-700" %>
-              <div class="relative rounded-xl border border-slate-200 bg-white shadow-sm focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-50 transition-all duration-200">
-                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                  <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <input type="text"
-                       data-time-picker-target="input"
-                       data-action="click->time-picker#toggle"
-                       class="w-full rounded-xl border-0 bg-transparent pl-10 pr-4 py-2.5 text-sm font-bold text-slate-900 focus:ring-0 cursor-pointer"
-                       readonly
-                       value="<%= @hotel.business_ends_at&.strftime("%I:%M %p") %>">
-                <%= f.hidden_field :business_ends_at, value: @hotel.business_ends_at&.strftime("%H:%M"), data: { time_picker_target: "hiddenInput" } %>
-
-                <!-- Dropdown -->
-                <div data-time-picker-target="dropdown" class="absolute z-[100] hidden w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 backdrop-blur-md shadow-2xl mt-2">
-                  <div class="flex h-[200px]">
-                    <div class="w-20 overflow-y-auto custom-scrollbar border-r border-slate-100 p-1">
-                      <% (1..12).each do |h| %>
-                        <button type="button" data-time-picker-target="hour" data-action="click->time-picker#selectHour" data-value="<%= h %>" class="w-full rounded-lg px-2 py-1.5 text-center text-xs font-bold transition-colors bg-white text-slate-700 hover:bg-slate-50 focus:outline-none">
-                          <%= h %>
-                        </button>
-                      <% end %>
-                    </div>
-                    <div class="w-20 overflow-y-auto custom-scrollbar border-r border-slate-100 p-1 bg-slate-50/20">
-                      <% (0..59).each do |m| %>
-                        <button type="button" data-time-picker-target="minute" data-action="click->time-picker#selectMinute" data-value="<%= m %>" class="w-full rounded-lg px-2 py-1.5 text-center text-xs font-bold transition-colors bg-white text-slate-700 hover:bg-slate-50 focus:outline-none">
-                          <%= m.to_s.rjust(2, '0') %>
-                        </button>
-                      <% end %>
-                    </div>
-                    <div class="flex-1 p-1 bg-slate-50/40 flex flex-col justify-center gap-1">
-                      <% ["AM", "PM"].each do |p| %>
-                        <button type="button" data-time-picker-target="period" data-action="click->time-picker#selectPeriod" data-value="<%= p %>" class="w-full rounded-lg py-2.5 text-center text-xs font-bold transition-colors bg-white text-slate-700 hover:bg-slate-50 focus:outline-none">
-                          <%= p %>
-                        </button>
-                      <% end %>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Arrival Grace Period -->
-            <div class="sm:col-span-2">
-              <%= f.label :arrival_grace_period_hours, "Arrival Grace (Hours)", class: "mb-2 block text-sm font-semibold text-slate-700" %>
-              <div class="relative rounded-xl border border-slate-200 bg-white shadow-sm focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-50 transition-all duration-200">
-                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                  <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <%= f.number_field :arrival_grace_period_hours, min: 0, step: 1, class: "w-full rounded-xl border-0 bg-transparent pl-10 pr-4 py-2.5 text-sm font-bold text-slate-900 focus:ring-0 shadow-none" %>
-              </div>
-              <p class="text-xs font-medium text-slate-500 mt-2 italic">No-Show grace buffers check-ins relative to standard operations.</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Section 1b: Guest Registration Card -->
-        <section id="guest-registration-card" class="scroll-mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:col-span-2 sm:p-6">
-          <h3 class="text-lg font-bold text-slate-950">Guest Registration Card</h3>
-          <p class="mt-1 text-sm text-slate-500">Choose optional guest and stay details shown on draft and future cards.</p>
-          <% selected_fields = @hotel.guest_registration_card_fields || GuestRegistrationCard::DISPLAY_FIELDS.keys %>
-          <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <% GuestRegistrationCard::DISPLAY_FIELDS.each do |key, label| %>
-              <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700">
-                <%= check_box_tag "hotel[guest_registration_card_fields][]", key, key.in?(selected_fields), class: "rounded border-slate-300 text-slate-900 focus:ring-slate-500" %>
-                <%= label %>
-              </label>
-            <% end %>
-            <%= hidden_field_tag "hotel[guest_registration_card_fields][]", "" %>
-          </div>
-        </section>
-
-        <!-- Section 2: Localization & Security -->
-        <div class="space-y-5">
-          <div class="border-b border-slate-100 pb-3">
-            <h4 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Localization & Security</h4>
-            <p class="text-xs text-slate-500 font-medium mt-1 leading-normal">Configure timezone defaults, base transacting currencies, and on-site geolocation boundaries.</p>
-          </div>
-
-          <div class="grid gap-5 sm:grid-cols-2">
-            <!-- Timezone -->
-            <div data-controller="searchable-select">
-              <%= f.label :time_zone, "Property Timezone", class: "mb-2 block text-sm font-semibold text-slate-700" %>
-              <div class="relative rounded-xl border border-slate-200 bg-white shadow-sm focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-50 transition-all duration-200">
-                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                  <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                  </svg>
-                </div>
-                <input type="text"
-                       data-searchable-select-target="input"
-                       data-action="input->searchable-select#filter click->searchable-select#open"
-                       class="w-full rounded-xl border-0 bg-transparent pl-10 pr-4 py-2.5 text-sm font-semibold text-slate-700 focus:ring-0"
-                       placeholder="Search timezone..."
-                       autocomplete="off"
-                       value="<%= @hotel.time_zone %>">
-                <%= f.hidden_field :time_zone, data: { searchable_select_target: "hiddenInput" } %>
-
-                <!-- Options -->
-                <div data-searchable-select-target="options" class="absolute z-[100] hidden w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 backdrop-blur-md shadow-2xl mt-2 max-h-[240px]">
-                  <div class="overflow-y-auto p-1 custom-scrollbar max-h-[240px]">
-                    <% ActiveSupport::TimeZone.all.each do |tz| %>
-                      <button type="button" data-searchable-select-target="option" data-action="click->searchable-select#select" data-value="<%= tz.name %>" data-label="<%= tz.to_s %>" class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none">
-                        <span class="truncate text-xs"><%= tz.to_s %></span>
-                      </button>
-                    <% end %>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Currency -->
-            <div>
-              <%= f.label :default_currency, "Default Currency", class: "mb-2 block text-sm font-semibold text-slate-700" %>
-              <%= f.select :default_currency,
-                           options_for_select(CurrencyCatalog.options, @presenter.settings_summary[:default_currency] || "MYR"),
-                           {},
-                           class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-900 #{@presenter.can_edit_currency? ? 'bg-white focus:border-slate-300 focus:outline-none focus:ring-0' : 'bg-slate-50 cursor-not-allowed text-slate-500'}",
-                           disabled: !@presenter.can_edit_currency? %>
-              <% if @presenter.can_edit_currency? %>
-                <p class="mt-1.5 text-xs font-semibold text-slate-400 italic">Changing this affects check-in transaction logs.</p>
-              <% else %>
-                <p class="mt-1.5 text-xs font-semibold text-rose-500 italic">Locked. Contact superadmin to change.</p>
-              <% end %>
-            </div>
-
-            <!-- Geolocation switch -->
-            <label class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-4 sm:col-span-2 cursor-pointer hover:bg-slate-50 transition-all duration-200">
-              <div>
-                <span class="text-sm font-bold text-slate-900 block">Enforce Geolocation Check</span>
-                <span class="text-xs text-slate-500 font-medium mt-1 leading-normal">Restricts guests from self-checking-in unless physically present on-site.</span>
-              </div>
-              <span class="relative inline-flex items-center shrink-0">
-                <%= f.check_box :geolocation_enabled, class: "sr-only peer" %>
-                <span class="peer h-6 w-11 rounded-full bg-slate-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full"></span>
-              </span>
-            </label>
-
-            <% if @hotel.allow_pax_pricing? %>
-              <label class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-4 sm:col-span-2 cursor-pointer hover:bg-slate-50 transition-all duration-200">
-                <div>
-                  <span class="text-sm font-bold text-slate-900 block">Pax Pricing Only</span>
-                  <span class="text-xs text-slate-500 font-medium mt-1 leading-normal">If enabled, guests can only book via per-person rates on the public booking page.</span>
-                </div>
-                <span class="relative inline-flex items-center shrink-0">
-                  <%= f.check_box :pax_pricing_only, class: "sr-only peer" %>
-                  <span class="peer h-6 w-11 rounded-full bg-slate-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full"></span>
-                </span>
-              </label>
-            <% end %>
-          </div>
-        </div>
-
-        <!-- Section 3: Guest Portals -->
-        <% if feature_enabled_for_hotel?("ai_concierge_page", current_hotel) %>
-          <div class="space-y-5">
-            <div class="border-b border-slate-100 pb-3">
-              <h4 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Guest Portals</h4>
-              <p class="text-xs text-slate-500 font-medium mt-1 leading-normal">Printable sheets embedded with guest portal links for the front desk.</p>
-            </div>
-
-            <div class="flex items-center justify-between rounded-xl border border-slate-200 p-4 gap-4 bg-slate-50/50">
-              <div>
-                <span class="text-sm font-bold text-slate-900 block">Front Desk Booking Concierge</span>
-                <span class="text-xs text-slate-500 font-medium mt-1 block leading-normal">Download printable PDF sheets for guest portal access.</span>
-              </div>
-              <%= link_to hotel_concierge_qr_path(current_hotel), class: "inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-slate-700 active:scale-[0.98] transition-all duration-200 shrink-0" do %>
-                <%= cached_icon "qr-code", class: "h-3.5 w-3.5" %>
-                View QR
-              <% end %>
-            </div>
-          </div>
         <% end %>
-
-        <!-- Save Button -->
-        <div class="flex justify-end pt-4 border-t border-slate-100">
-          <%= f.submit "Save Settings", class: "inline-flex items-center justify-center rounded-xl bg-blue-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/10 hover:bg-blue-700 hover:shadow-xl active:scale-[0.98] transition-all duration-200 cursor-pointer" %>
-        </div>
-
-      </div>
+      <% end %>
     </div>
   <% end %>
-</section>
+
+  <section aria-labelledby="general-setup-heading">
+    <div>
+      <h2 id="general-setup-heading" class="text-base font-semibold text-foreground">General Setup</h2>
+      <p class="mt-2 text-sm text-muted-foreground">Review the hotel’s operating status, onboarding progress, and guest portal access.</p>
+    </div>
+
+    <% status = @presenter.settings_summary[:hotel_status] %>
+    <% onboarding = @presenter.settings_summary[:onboarding_stage] %>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      <%= render PanelsUI::MetricCard.new(
+            label: "Hotel Status",
+            value: status,
+            detail: status.to_s.downcase.in?(%w[live approved]) ? "Ready for guests" : "Setup in progress",
+            detail_variant: status.to_s.downcase.in?(%w[live approved]) ? :success : :neutral,
+            icon: "building-2",
+            density: :compact) %>
+      <%= render PanelsUI::MetricCard.new(
+            label: "Onboarding Stage",
+            value: onboarding,
+            detail: onboarding.to_s.downcase == "live" ? "Onboarding complete" : "Profile preparation",
+            detail_variant: onboarding.to_s.downcase == "live" ? :success : :neutral,
+            icon: "circle-check",
+            density: :compact) %>
+    </div>
+
+    <% if feature_enabled_for_hotel?("ai_concierge_page", current_hotel) %>
+      <div class="mt-4">
+        <%= render PanelsUI::Card.new(
+              width: :full,
+              density: :compact,
+              variant: :outlined,
+              as: :article,
+              data: { testid: "guest-portal-card" }) do |card| %>
+          <% card.with_header(
+               title: "Front Desk Booking Concierge",
+               description: "Open the printable QR sheet guests can scan at the front desk.",
+               title_as: :h3) do |header| %>
+            <% header.with_actions do %>
+              <%= render PanelsUI::Button.new(
+                    href: hotel_concierge_qr_path(current_hotel),
+                    variant: :secondary,
+                    size: :sm,
+                    data: { turbo_frame: "concierge_qr_dialog" }) do %>
+                <%= app_icon "qr-code", class: "size-4", aria: { hidden: "true" } %>
+                <span>View QR</span>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <% content_for :body_end do %>
+        <%= turbo_frame_tag "concierge_qr_dialog" %>
+      <% end %>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="operation-times-heading">
+    <div>
+      <h2 id="operation-times-heading" class="text-base font-semibold text-foreground">Operation Times</h2>
+      <p class="mt-2 text-sm text-muted-foreground">Set standard arrival times, business-day boundaries, and the no-show grace period.</p>
+    </div>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      <%= f.fields_for :property_policy_attributes, @presenter.property_policy do |property_policy_fields| %>
+        <%= render PanelsUI::FormField.new(
+              form: property_policy_fields,
+              attribute: :check_in_time,
+              label: "Standard Check-in Time") do |field| %>
+          <% field.with_time_picker(value: @presenter.time_picker_value(@presenter.property_policy.check_in_time), minute_step: 15) %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(
+              form: property_policy_fields,
+              attribute: :check_out_time,
+              label: "Standard Check-out Time") do |field| %>
+          <% field.with_time_picker(value: @presenter.time_picker_value(@presenter.property_policy.check_out_time), minute_step: 15) %>
+        <% end %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :business_starts_at,
+            label: "Business Day Starts At") do |field| %>
+        <% field.with_time_picker(value: @hotel.business_starts_at&.strftime("%H:%M"), minute_step: 15) %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :business_ends_at,
+            label: "Business Day Ends At") do |field| %>
+        <% field.with_time_picker(value: @hotel.business_ends_at&.strftime("%H:%M"), minute_step: 15) %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :arrival_grace_period_hours,
+            label: "Arrival Grace (Hours)",
+            hint: "Buffers no-show handling relative to standard check-in operations.",
+            class: "sm:col-span-2") do |field| %>
+        <% field.with_input(type: :number, min: 0, step: 1) %>
+      <% end %>
+    </div>
+  </section>
+
+  <section id="guest-registration-card" aria-labelledby="guest-registration-heading" class="scroll-mt-6">
+    <div>
+      <h2 id="guest-registration-heading" class="text-base font-semibold text-foreground">Guest Registration Card</h2>
+      <p class="mt-2 text-sm text-muted-foreground">Choose the optional guest and stay details shown on draft and future cards.</p>
+    </div>
+
+    <% selected_fields = @hotel.guest_registration_card_fields || GuestRegistrationCard::DISPLAY_FIELDS.keys %>
+    <%= hidden_field_tag "hotel[guest_registration_card_fields][]", "" %>
+    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+      <% GuestRegistrationCard::DISPLAY_FIELDS.each do |key, label| %>
+        <%= render PanelsUI::Checkbox.new(
+              name: "hotel[guest_registration_card_fields][]",
+              id: "hotel_guest_registration_card_field_#{key}",
+              value: key,
+              checked: key.in?(selected_fields),
+              label: label,
+              variant: :card,
+              size: :sm,
+              include_hidden: false) %>
+      <% end %>
+    </div>
+  </section>
+
+  <section aria-labelledby="localization-security-heading">
+    <div>
+      <h2 id="localization-security-heading" class="text-base font-semibold text-foreground">Localization &amp; Security</h2>
+      <p class="mt-2 text-sm text-muted-foreground">Set the property timezone, transaction currency, and location-based booking rules.</p>
+    </div>
+
+    <div class="mt-4 grid items-start gap-4 sm:grid-cols-2" data-testid="localization-fields-grid">
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :time_zone,
+            label: "Property Timezone",
+            hint: "Used for local check-in times, reports, and automated guest messages.") do |field| %>
+        <% field.with_combobox(
+             ActiveSupport::TimeZone.all.map { |time_zone| [time_zone.to_s, time_zone.name] },
+             prompt: "Search and select a timezone",
+             selected: @hotel.time_zone,
+             max_options: 50,
+             empty_text: "No timezones found") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :default_currency,
+            label: "Default Currency",
+            hint: @presenter.can_edit_currency? ? "Changing this affects check-in transaction logs." : "Locked. Contact a superadmin to change it.",
+            disabled: !@presenter.can_edit_currency?) do |field| %>
+        <% field.with_combobox(
+             CurrencyCatalog.options,
+             selected: @presenter.settings_summary[:default_currency] || "MYR",
+             prompt: "Search and select a currency",
+             empty_text: "No currencies found") %>
+      <% end %>
+
+      <div class="sm:col-span-2">
+        <%= render PanelsUI::Switch.new(
+              form: f,
+              attribute: :geolocation_enabled,
+              label: "Enforce Geolocation Check",
+              description: "Require guests to be physically on-site before they can self-check in.",
+              variant: :card) %>
+      </div>
+
+      <% if @hotel.allow_pax_pricing? %>
+        <div class="sm:col-span-2">
+          <%= render PanelsUI::Switch.new(
+                form: f,
+                attribute: :pax_pricing_only,
+                label: "Pax Pricing Only",
+                description: "Allow public bookings only through per-person rates.",
+                variant: :card) %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <div class="flex justify-end pt-1 lg:col-span-2">
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :md) do %>
+      Save Settings
+    <% end %>
+  </div>
+<% end %>

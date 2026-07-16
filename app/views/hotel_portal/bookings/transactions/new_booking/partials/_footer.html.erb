@@ -1,9 +1,9 @@
-<div class="border-t border-slate-200 bg-white px-4 py-4 sm:px-6 sticky bottom-0 z-50">
+<div class="border-t border-border bg-card px-4 py-4 sm:px-6 sticky bottom-0 z-50">
   <div class="mx-auto flex max-w-[1500px] items-center justify-end gap-x-4">
-    <button type="button" class="px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition" data-action="click->offcanvas#close">
+    <button type="button" class="px-6 py-3 text-sm font-bold text-muted-foreground hover:bg-muted rounded-xl transition" data-action="click->offcanvas#close">
       Cancel
     </button>
-    <button type="submit" class="inline-flex items-center rounded-xl bg-slate-900 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer" data-turbo-submits-with="Processing...">
+    <button type="submit" class="inline-flex items-center rounded-xl bg-primary px-8 py-3 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer" data-turbo-submits-with="Processing...">
       <%= @transaction == :new_booking ? "Confirm & Create Booking" : @transaction.to_s.humanize %>
     </button>
   </div>

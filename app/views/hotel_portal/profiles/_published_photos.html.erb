@@ -1,0 +1,61 @@
+<div id="hotel-published-photos" class="min-h-40">
+  <% if hotel.photos.attached? %>
+    <%= render PanelsUI::AttachmentGroup.new(
+          layout: :grid,
+          size: :lg,
+          aria: { label: "Published hotel photos" }) do %>
+      <% hotel.photos.attachments.includes(:blob).each do |photo| %>
+        <% featured = hotel.featured_photo_attachment_id.to_i == photo.id %>
+        <%= render PanelsUI::Attachment.new(
+              title: photo.filename.to_s,
+              description: featured ? "Featured photo" : "Published photo",
+              state: :uploaded,
+              orientation: :vertical,
+              role: "listitem") do |attachment| %>
+          <% attachment.with_media(variant: :image) do %>
+            <%= image_tag photo, alt: "Hotel photo #{photo.filename}" %>
+          <% end %>
+          <% attachment.with_actions do %>
+            <% if featured %>
+              <%= render PanelsUI::Badge.new(label: "Featured", variant: :primary, size: :sm) %>
+            <% end %>
+            <%= render PanelsUI::DropdownMenu.new(
+                  id: "hotel-photo-#{photo.id}-actions",
+                  placement: :bottom_end,
+                  class: "w-44") do |menu| %>
+              <% menu.with_trigger(
+                   variant: :ghost,
+                   size: :icon_sm,
+                   aria_label: "Actions for #{photo.filename}") do %>
+                <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: "true" } %>
+              <% end %>
+              <% unless featured %>
+                <% menu.with_item(
+                     href: hotel_profile_photo_feature_path(hotel, photo.id),
+                     method: :patch) do %>
+                  <%= app_icon "star", class: "size-4", aria: { hidden: "true" } %>
+                  <span>Set as featured</span>
+                <% end %>
+              <% end %>
+              <% menu.with_item(
+                   href: hotel_profile_photo_path(hotel, photo.id),
+                   method: :delete,
+                   variant: :danger,
+                   data: {
+                     turbo_confirm: "Remove this hotel photo?",
+                     turbo_confirm_tone: "destructive"
+                   }) do %>
+                <%= app_icon "trash-2", class: "size-4", aria: { hidden: "true" } %>
+                <span>Remove photo</span>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% else %>
+    <p class="flex min-h-40 items-center border-t border-border text-sm text-muted-foreground">
+      No published photos yet. Queue photos and confirm the upload to add them to the album.
+    </p>
+  <% end %>
+</div>

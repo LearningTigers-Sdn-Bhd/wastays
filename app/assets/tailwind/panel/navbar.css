@@ -1,0 +1,70 @@
+@layer components {
+  .panel-navbar {
+    width: 100%;
+    border-bottom: 1px solid var(--sidebar-border);
+    background: var(--sidebar);
+    color: var(--sidebar-foreground);
+    z-index: var(--z-sticky);
+  }
+
+  .panel-navbar[data-sticky="true"] {
+    position: sticky;
+    top: 0;
+  }
+
+  .panel-navbar__inner {
+    @apply flex h-12 items-center gap-2 px-3;
+  }
+
+  .panel-navbar__navigation-trigger {
+    @apply size-8 shrink-0 items-center justify-center rounded-md transition-colors;
+    color: var(--sidebar-muted-foreground);
+  }
+
+  .panel-navbar__navigation-trigger:hover {
+    background: var(--sidebar-accent);
+    color: var(--sidebar-accent-foreground);
+  }
+
+  .panel-navbar__navigation-trigger:focus-visible,
+  .panel-navbar__action:focus-visible {
+    outline: 2px solid var(--sidebar-ring);
+    outline-offset: 2px;
+  }
+
+  .panel-navbar__icon {
+    @apply size-4;
+  }
+
+  .panel-navbar__brand {
+    @apply flex shrink-0 items-center;
+  }
+
+  .panel-navbar__end {
+    @apply ml-auto flex min-w-0 items-center gap-1;
+  }
+
+  .panel-navbar__actions {
+    @apply flex min-w-0 items-center gap-1;
+  }
+
+  .panel-navbar__action {
+    @apply hidden min-h-8 items-center gap-1.5 rounded-md px-2 py-1 text-sm transition-colors sm:flex;
+    color: var(--sidebar-muted-foreground);
+  }
+
+  .panel-navbar__action:hover {
+    background: var(--sidebar-accent);
+    color: var(--sidebar-accent-foreground);
+  }
+
+  .panel-navbar__profile {
+    @apply ml-1 border-l pl-2;
+    border-color: var(--sidebar-border);
+  }
+
+  @media (pointer: coarse) {
+    .panel-navbar__navigation-trigger,
+    .panel-navbar__action { min-width: 2.5rem; min-height: 2.5rem; }
+  }
+}

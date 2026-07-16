@@ -1,0 +1,26 @@
+<%= tag.dialog(**root_attributes) do %>
+  <div class="panel-alert-dialog__panel"
+       tabindex="-1"
+       data-panels-ui--dialog-target="panel">
+    <header class="panel-alert-dialog__header" data-slot="alert-dialog-header">
+      <% if icon? %>
+        <div class="panel-alert-dialog__icon" data-slot="alert-dialog-icon" aria-hidden="true">
+          <%= icon %>
+        </div>
+      <% end %>
+
+      <h2 id="<%= title_id %>"
+          class="panel-alert-dialog__title"
+          data-slot="alert-dialog-title"><%= @title %></h2>
+
+      <p id="<%= desc_id %>"
+         class="panel-alert-dialog__description"
+         data-slot="alert-dialog-description"><%= @description %></p>
+    </header>
+
+    <footer class="panel-alert-dialog__footer" data-slot="alert-dialog-footer">
+      <%= cancel %>
+      <%= action %>
+    </footer>
+  </div>
+<% end %>

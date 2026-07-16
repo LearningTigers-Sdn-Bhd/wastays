@@ -1,24 +1,24 @@
-<% tone_text = { "danger" => "text-red-700", "warning" => "text-amber-700", "success" => "text-emerald-700", "info" => "text-blue-700", "neutral" => "text-slate-950", nil => "text-slate-950" } %>
+<% tone_text = { "danger" => "text-red-700", "warning" => "text-amber-700", "success" => "text-emerald-700", "info" => "text-blue-700", "neutral" => "text-foreground", nil => "text-foreground" } %>
 
 <section class="space-y-3" data-testid="night-audit-summary">
   <header>
-    <h2 class="text-sm font-bold text-slate-950">Summary</h2>
-    <p class="mt-0.5 text-xs text-slate-500">Run identity, operational counts, and payment state for this business date.</p>
+    <h2 class="text-sm font-bold text-foreground">Summary</h2>
+    <p class="mt-0.5 text-xs text-muted-foreground">Run identity, operational counts, and payment state for this business date.</p>
   </header>
 
-  <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" data-testid="audit-details-card">
-    <header class="border-b border-slate-200 bg-slate-50/60 px-4 py-2.5">
-      <h3 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+  <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" data-testid="audit-details-card">
+    <header class="border-b border-border bg-muted/60 px-4 py-2.5">
+      <h3 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
         <span class="inline-flex size-6 items-center justify-center rounded-md bg-blue-50 text-blue-700"><%= cached_icon "clipboard-list", class: "size-3.5", aria: { hidden: true } %></span>
         Audit Details
       </h3>
     </header>
-    <div class="grid gap-px bg-slate-200 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-px bg-muted sm:grid-cols-2 lg:grid-cols-4">
       <% presenter.audit_details.each do |detail| %>
-        <div class="bg-white px-4 py-2.5 <%= 'sm:col-span-2 lg:col-span-4' if detail.wide? %>">
-          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= detail.label %></p>
+        <div class="bg-card px-4 py-2.5 <%= 'sm:col-span-2 lg:col-span-4' if detail.wide? %>">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><%= detail.label %></p>
           <% if detail.label == "Status" %>
-            <% badge_class = { "success" => "border-emerald-200 bg-emerald-50 text-emerald-700", "warning" => "border-amber-200 bg-amber-50 text-amber-700", "danger" => "border-red-200 bg-red-50 text-red-700", "info" => "border-blue-200 bg-blue-50 text-blue-700", "neutral" => "border-slate-200 bg-slate-50 text-slate-700" }.fetch(detail.tone) %>
+            <% badge_class = { "success" => "border-emerald-200 bg-emerald-50 text-emerald-700", "warning" => "border-amber-200 bg-amber-50 text-amber-700", "danger" => "border-red-200 bg-red-50 text-red-700", "info" => "border-blue-200 bg-blue-50 text-blue-700", "neutral" => "border-border bg-muted text-foreground" }.fetch(detail.tone) %>
             <span class="mt-1 inline-flex rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= badge_class %>"><%= detail.value %></span>
           <% else %>
             <p class="mt-0.5 text-sm font-semibold <%= tone_text.fetch(detail.tone, tone_text[nil]) %>"><%= detail.value %></p>
@@ -30,20 +30,20 @@
 
   <div class="grid gap-3 lg:grid-cols-2">
     <% [["Audit Snapshot", presenter.audit_snapshot, "activity", "bg-indigo-50 text-indigo-700", "audit-snapshot-card"], ["Payment Status Counts", presenter.payment_status_counts, "credit-card", "bg-emerald-50 text-emerald-700", "payment-status-counts-card"]].each do |heading, rows, icon, icon_class, testid| %>
-      <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" data-testid="<%= testid %>">
-        <header class="border-b border-slate-200 bg-slate-50/60 px-4 py-2.5">
-          <h3 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+      <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" data-testid="<%= testid %>">
+        <header class="border-b border-border bg-muted/60 px-4 py-2.5">
+          <h3 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
             <span class="inline-flex size-6 items-center justify-center rounded-md <%= icon_class %>"><%= cached_icon icon, class: "size-3.5", aria: { hidden: true } %></span>
             <%= heading %>
           </h3>
         </header>
-        <div class="grid grid-cols-2 gap-px bg-slate-200 sm:grid-cols-3">
+        <div class="grid grid-cols-2 gap-px bg-muted sm:grid-cols-3">
           <% rows.each do |counter| %>
-            <div class="bg-white px-4 py-2.5">
+            <div class="bg-card px-4 py-2.5">
               <div class="flex items-center justify-between gap-2">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500"><%= counter.label %></p>
+                <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><%= counter.label %></p>
                 <% if counter.icon.present? %>
-                  <% chip_class = counter.tone == "danger" ? "bg-red-50 text-red-700" : (counter.tone == "warning" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600") %>
+                  <% chip_class = counter.tone == "danger" ? "bg-red-50 text-red-700" : (counter.tone == "warning" ? "bg-amber-50 text-amber-700" : "bg-muted text-muted-foreground") %>
                   <span class="inline-flex size-5 items-center justify-center rounded <%= chip_class %>"><%= cached_icon counter.icon, class: "size-3", aria: { hidden: true } %></span>
                 <% end %>
               </div>

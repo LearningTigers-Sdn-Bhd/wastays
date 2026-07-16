@@ -1,0 +1,103 @@
+<section aria-labelledby="card-preview-heading" class="border-t border-border pt-8">
+  <h2 id="card-preview-heading" class="text-lg font-semibold text-foreground">Card</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    Composable surfaces with responsive widths, structured sections, media, and semantic card links.
+  </p>
+
+  <div class="mt-6 space-y-8">
+    <div class="grid items-stretch gap-6 lg:grid-cols-2" data-testid="card-simple-patterns">
+      <%= render PanelsUI::Card.new(width: :narrow, class: "h-full") do |card| %>
+        <% card.with_card_content do %>
+          <h3 class="font-semibold text-foreground">Narrow body-only card</h3>
+          <p class="mt-2 text-sm text-muted-foreground">A focused surface for confirmations, short forms, and compact details.</p>
+        <% end %>
+      <% end %>
+
+      <%= render PanelsUI::Card.new(width: :narrow, density: :compact, as: :section, class: "h-full") do |card| %>
+        <% card.with_card_content do %>
+          <dl>
+            <dt class="text-sm font-medium text-muted-foreground">Occupancy</dt>
+            <dd class="mt-1 text-3xl font-semibold text-foreground">84%</dd>
+            <dd class="mt-2 text-sm font-medium text-success">↑ 6.2% from last week</dd>
+          </dl>
+        <% end %>
+      <% end %>
+    </div>
+
+    <%= render PanelsUI::Card.new(width: :expanded, variant: :elevated, as: :article) do |card| %>
+      <% card.with_header(title: "Complete reservation panel", description: "Header, content, and footer own their spacing and dividers.") do |header| %>
+        <% header.with_badges { render PanelsUI::Badge.new(label: "Confirmed", variant: :success) } %>
+        <% header.with_actions do %>
+          <%= render PanelsUI::Button.new(size: :sm, variant: :ghost) do %>Edit<% end %>
+        <% end %>
+      <% end %>
+      <% card.with_card_content do %>
+        <dl class="grid gap-4 text-sm sm:grid-cols-3">
+          <div><dt class="text-muted-foreground">Guest</dt><dd class="mt-1 font-medium">Amina Rahman</dd></div>
+          <div><dt class="text-muted-foreground">Room</dt><dd class="mt-1 font-medium">Deluxe King · 302</dd></div>
+          <div><dt class="text-muted-foreground">Stay</dt><dd class="mt-1 font-medium">12–15 July</dd></div>
+        </dl>
+      <% end %>
+      <% card.with_footer(align: :between) do %>
+        <span class="text-sm text-muted-foreground">Updated moments ago</span>
+        <%= render PanelsUI::Button.new(size: :sm) do %>Open reservation<% end %>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::Card.new(width: :full) do |card| %>
+      <% card.with_media(position: :top, ratio: :wide) do %>
+        <%= image_tag "landing/bg-4.webp", alt: "Tropical resort villas beside the water", width: 1280, height: 720, loading: "lazy" %>
+      <% end %>
+      <% card.with_header(title: "Full-width top media", description: "The image clips to the upper corners while card content can host floating controls.") %>
+      <% card.with_card_content { tag.p("Media remains flexible through a slot that accepts image or picture markup.", class: "text-sm text-muted-foreground") } %>
+    <% end %>
+
+    <%= render PanelsUI::Card.new(width: :expanded, orientation: :horizontal) do |card| %>
+      <% card.with_media(position: :leading, ratio: :square) do %>
+        <%= image_tag "landing/bg-2.webp", alt: "Bright hotel suite with a large bed", width: 1280, height: 720, loading: "lazy" %>
+      <% end %>
+      <% card.with_header(title: "Responsive horizontal card", description: "Leading media stacks above the details on smaller screens.") %>
+      <% card.with_card_content { tag.p("Useful for rooms, properties, guests, and request records.", class: "text-sm text-muted-foreground") } %>
+      <% card.with_footer do %>
+        <%= render PanelsUI::Button.new(size: :sm, variant: :secondary) do %>View room<% end %>
+      <% end %>
+    <% end %>
+
+    <div class="grid gap-6 lg:grid-cols-2">
+      <%= render PanelsUI::Card.new(width: :full, interactive: :clickable, data: { testid: "clickable-record-card" }) do |card| %>
+        <% card.with_header(title: "Booking #1042", description: "Amina Rahman · Room 302", primary_href: "#card-booking-1042") do |header| %>
+          <% header.with_badges { render PanelsUI::Badge.new(label: "In house", variant: :success) } %>
+          <% header.with_actions do %>
+            <button id="card-secondary-action" type="button" class="rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted">More</button>
+          <% end %>
+        <% end %>
+        <% card.with_card_content { tag.p("The title link owns navigation; nested controls remain independent.", class: "text-sm text-muted-foreground") } %>
+      <% end %>
+
+      <%= render PanelsUI::Card.new(width: :full, interactive: :clickable, data: { testid: "background-card" }) do |card| %>
+        <% card.with_media(position: :background, ratio: :auto) do %>
+          <%= image_tag "landing/bg-1.webp", alt: "", width: 1600, height: 1067, loading: "lazy" %>
+        <% end %>
+        <% card.with_header(title: "Explore waterfront stays", description: "Background media always receives a protective contrast gradient.", primary_href: "#card-waterfront") do |header| %>
+          <% header.with_badges { render PanelsUI::Badge.new(label: "Featured", inverse: true) } %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="grid gap-5 lg:grid-cols-2">
+      <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, label| %>
+        <div data-theme="<%= theme %>" class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+          <h3 class="mb-4 text-sm font-semibold text-foreground"><%= label %> densities</h3>
+          <div class="space-y-4">
+            <% %i[compact default spacious].each do |density| %>
+              <%= render PanelsUI::Card.new(width: :full, density: density, variant: :outlined) do |card| %>
+                <% card.with_header(title: density.to_s.humanize, description: "Coordinated section spacing") %>
+                <% card.with_card_content { tag.p("Card content", class: "text-sm text-muted-foreground") } %>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</section>

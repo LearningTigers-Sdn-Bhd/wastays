@@ -1,0 +1,40 @@
+<section aria-labelledby="switch-preview-heading" class="border-t border-border pt-8">
+  <h2 id="switch-preview-heading" class="text-lg font-semibold text-foreground">Switches</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    Toggle switches — a checkbox under the hood (hidden companion field, on/off value) with a track/thumb
+    presentation and <code>role="switch"</code> semantics.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> switches</h3>
+        <% scope = "switch_#{theme.tr('-', '_')}".to_sym %>
+        <%= form_with url: "#switch-preview", scope: scope, class: "mt-4 space-y-4" do |form| %>
+          <%= render PanelsUI::Switch.new(
+                form: form, attribute: :marketing, label: "Marketing emails", checked: true) %>
+
+          <%= render PanelsUI::Switch.new(
+                form: form, attribute: :sms, label: "SMS alerts",
+                description: "Standard message rates may apply.", required: true) %>
+
+          <%= render PanelsUI::Switch.new(
+                form: form, attribute: :auto_checkout, label: "Automatic checkout",
+                description: "The entire card toggles this setting.", variant: :card, checked: true) %>
+
+          <%= render PanelsUI::Switch.new(
+                form: form, attribute: :maintenance, label: "Maintenance mode",
+                description: "This example shows a validation message.", variant: :card,
+                error: "Confirm before enabling maintenance mode.") %>
+
+          <%= render PanelsUI::Switch.new(
+                name: "#{scope}[compact]", label: "Compact layout", size: :sm) %>
+
+          <%= render PanelsUI::Switch.new(
+                name: "#{scope}[legacy]", label: "Legacy billing", variant: :card,
+                disabled: true, checked: true, size: :lg) %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

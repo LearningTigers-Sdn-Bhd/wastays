@@ -50,7 +50,7 @@ module HotelPortal
                  room_number: req.metadata&.dig("room_number").presence || booking.booking_rooms.first&.room_number,
                  title: req.guest_notes.presence || "Checkout requested",
                  requested_at: req.requested_at,
-            status: req.metadata&.dig("workflow_status").presence || HotelPortal::HousekeepingTasksController.checkout_workflow_status_for(req.status),
+                 status: req.metadata&.dig("workflow_status").presence || HousekeepingTasks.checkout_workflow_status_for(req.status),
                  complete_url: hotel_complete_checkout_request_path(hotel, req.id),
                  booking_url: hotel_booking_control_panel_path(hotel, booking, tab: "housekeeping_requests")
                }

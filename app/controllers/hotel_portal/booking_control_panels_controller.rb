@@ -53,7 +53,7 @@ module HotelPortal
         { label: "Operations" },
         { label: "Bookings", path: hotel_bookings_path(current_hotel) },
         { label: booking.confirmation_token, path: hotel_booking_control_panel_path(current_hotel, booking) },
-        { label: "Booking Control Panel", tab_label: true }
+        { label: "Booking Control Panel" }
       )
     end
 

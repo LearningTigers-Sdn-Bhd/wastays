@@ -1,0 +1,13 @@
+<% if component.footer_items.any? %>
+  <div class="panel-sidebar__footer">
+    <% component.footer_items.each_with_index do |item, item_index| %>
+      <%= component.render_sidebar_partial(:item,
+        item: item,
+        surface: surface,
+        section_index: :footer,
+        item_index: item_index,
+        search_target: false
+      ) %>
+    <% end %>
+  </div>
+<% end %>

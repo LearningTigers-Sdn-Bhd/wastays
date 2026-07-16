@@ -79,7 +79,7 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
       expect(response.body).to include("TAX_SC")
       expect(response.body).to include("Service Charge")
       expect(response.body).to include("Inactive Levy")
-      expect(response.body).to include("bg-slate-100 text-slate-600 ring-slate-200")
+      expect(response.body).to include("bg-muted text-muted-foreground ring-ring")
       expect(response.body).to include("REBATE")
       expect(response.body).to include("GATEWAY")
       expect(response.body).to include("OTA")

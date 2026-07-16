@@ -1,0 +1,46 @@
+<section aria-labelledby="scroll-area-preview-heading" class="border-t border-border pt-8">
+  <h2 id="scroll-area-preview-heading" class="text-lg font-semibold text-foreground">Scroll area</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    A custom overlay scrollbar that hides the native bar while preserving native scrolling.
+    The thumb sizes to the content ratio, is draggable, and auto-hides. Supports vertical,
+    horizontal, and both orientations, plus optional edge fades.
+  </p>
+
+  <div class="grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm"
+           data-theme="<%= theme %>"
+           data-scroll-area-preview-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= label %> scroll areas</h3>
+
+        <div class="mt-4 space-y-4">
+          <%= render PanelsUI::ScrollArea.new(
+                id: "sd-scroll-area-vertical-#{theme}",
+                height: "h-40",
+                scroll_fade: :y,
+                class: "rounded-xl border border-border bg-background") do %>
+            <ul class="divide-y divide-border text-sm">
+              <% 12.times do |i| %>
+                <li class="px-4 py-2.5">Reservation row #<%= i + 1 %></li>
+              <% end %>
+            </ul>
+          <% end %>
+
+          <%= render PanelsUI::ScrollArea.new(
+                id: "sd-scroll-area-horizontal-#{theme}",
+                orientation: :horizontal,
+                scroll_fade: :x,
+                class: "rounded-xl border border-border bg-background") do %>
+            <div class="flex gap-3 p-4">
+              <% 10.times do |i| %>
+                <div class="flex h-20 w-40 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-sm">
+                  Room <%= i + 101 %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</section>

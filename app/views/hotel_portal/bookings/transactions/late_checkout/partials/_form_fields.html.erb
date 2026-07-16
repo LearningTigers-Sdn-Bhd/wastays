@@ -1,96 +1,96 @@
 <% carded = local_assigns.fetch(:carded, false) %>
-<% approval_class = carded ? "space-y-3 pb-4 border-b border-slate-100 bg-white rounded-xl p-5 shadow-sm" : "space-y-3 pb-4 border-b border-slate-100" %>
-<% charge_class = carded ? "space-y-6 bg-white rounded-xl p-5 shadow-sm" : "space-y-6" %>
-<% checkout_class = carded ? "space-y-3 pb-4 bg-white rounded-xl p-5 shadow-sm" : "space-y-3 pb-4 border-b border-slate-100" %>
+<% approval_class = carded ? "space-y-3 pb-4 border-b border-border bg-card rounded-xl p-5 shadow-sm" : "space-y-3 pb-4 border-b border-border" %>
+<% charge_class = carded ? "space-y-6 bg-card rounded-xl p-5 shadow-sm" : "space-y-6" %>
+<% checkout_class = carded ? "space-y-3 pb-4 bg-card rounded-xl p-5 shadow-sm" : "space-y-3 pb-4 border-b border-border" %>
 
 <div class="<%= approval_class %>">
-  <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Do you approve this booking late checkout?</label>
+  <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Do you approve this booking late checkout?</label>
   <div class="flex flex-col gap-4">
     <label class="flex items-center gap-3 cursor-pointer group">
       <%= form.radio_button :charge_type, "charge", checked: true,
           class: "sr-only",
           data: { action: "change->late-checkout#updateUI", late_checkout_target: "toggleRadio" } %>
-      <div class="flex-shrink-0 size-4 rounded-full border border-slate-300 group-has-[input:checked]:border-amber-600 group-has-[input:checked]:bg-amber-600 flex items-center justify-center transition-colors">
-        <div class="size-1.5 rounded-full bg-white opacity-0 group-has-[input:checked]:opacity-100 transition-opacity"></div>
+      <div class="flex-shrink-0 size-4 rounded-full border border-border-interactive group-has-[input:checked]:border-amber-600 group-has-[input:checked]:bg-amber-600 flex items-center justify-center transition-colors">
+        <div class="size-1.5 rounded-full bg-card opacity-0 group-has-[input:checked]:opacity-100 transition-opacity"></div>
       </div>
-      <span class="text-sm font-bold text-slate-700">Yes, approve with charges.</span>
+      <span class="text-sm font-bold text-foreground">Yes, approve with charges.</span>
     </label>
     <label class="flex items-center gap-3 cursor-pointer group">
       <%= form.radio_button :charge_type, "none",
           class: "sr-only",
           data: { action: "change->late-checkout#updateUI", late_checkout_target: "toggleRadio" } %>
-      <div class="flex-shrink-0 size-4 rounded-full border border-slate-300 group-has-[input:checked]:border-amber-600 group-has-[input:checked]:bg-amber-600 flex items-center justify-center transition-colors">
-        <div class="size-1.5 rounded-full bg-white opacity-0 group-has-[input:checked]:opacity-100 transition-opacity"></div>
+      <div class="flex-shrink-0 size-4 rounded-full border border-border-interactive group-has-[input:checked]:border-amber-600 group-has-[input:checked]:bg-amber-600 flex items-center justify-center transition-colors">
+        <div class="size-1.5 rounded-full bg-card opacity-0 group-has-[input:checked]:opacity-100 transition-opacity"></div>
       </div>
-      <span class="text-sm font-bold text-slate-500">No, reject it</span>
+      <span class="text-sm font-bold text-muted-foreground">No, reject it</span>
     </label>
   </div>
 </div>
 
 <div data-late-checkout-target="chargeSection" class="<%= charge_class %>">
   <div class="space-y-4">
-    <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Charge Calculation</label>
+    <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Charge Calculation</label>
     <div class="grid grid-cols-1 gap-4">
-      <label class="relative flex flex-col cursor-pointer rounded-2xl border border-slate-200 bg-white shadow-sm focus:outline-none has-[input:checked]:border-amber-600 has-[input:checked]:ring-1 has-[input:checked]:ring-amber-600 overflow-hidden group">
+      <label class="relative flex flex-col cursor-pointer rounded-2xl border border-border bg-card shadow-sm focus:outline-none has-[input:checked]:border-amber-600 has-[input:checked]:ring-1 has-[input:checked]:ring-amber-600 overflow-hidden group">
         <%= form.radio_button :charge_calculation, "standard", checked: true,
             class: "sr-only peer",
             data: { action: "change->late-checkout#updateUI", late_checkout_target: "typeRadio" } %>
 
         <div class="p-4 flex items-start gap-3">
-          <div class="mt-1 flex-shrink-0 size-4 rounded-full border border-slate-300 group-has-[input:checked]:border-amber-600 group-has-[input:checked]:bg-amber-600 flex items-center justify-center transition-colors">
-            <div class="size-1.5 rounded-full bg-white opacity-0 group-has-[input:checked]:opacity-100 transition-opacity"></div>
+          <div class="mt-1 flex-shrink-0 size-4 rounded-full border border-border-interactive group-has-[input:checked]:border-amber-600 group-has-[input:checked]:bg-amber-600 flex items-center justify-center transition-colors">
+            <div class="size-1.5 rounded-full bg-card opacity-0 group-has-[input:checked]:opacity-100 transition-opacity"></div>
           </div>
           <div class="flex-1">
-            <span class="block text-sm font-bold text-slate-900">Current Rate Charge</span>
-            <p class="mt-1 text-xs text-slate-500 leading-relaxed">Current booking property rate for extended date including the taxes.</p>
+            <span class="block text-sm font-bold text-foreground">Current Rate Charge</span>
+            <p class="mt-1 text-xs text-muted-foreground leading-relaxed">Current booking property rate for extended date including the taxes.</p>
           </div>
         </div>
 
-        <div class="hidden peer-checked:block border-t border-slate-100 bg-slate-50/50 p-4">
+        <div class="hidden peer-checked:block border-t border-border bg-muted/50 p-4">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold text-slate-500">Total Charge</span>
-            <span class="text-sm font-bold text-slate-900"><%= presenter.currency %> <%= number_with_precision(presenter.suggested_late_checkout_amount, precision: 2) %></span>
+            <span class="text-xs font-semibold text-muted-foreground">Total Charge</span>
+            <span class="text-sm font-bold text-foreground"><%= presenter.currency %> <%= number_with_precision(presenter.suggested_late_checkout_amount, precision: 2) %></span>
           </div>
         </div>
       </label>
 
-      <label class="relative flex flex-col cursor-pointer rounded-2xl border border-slate-200 bg-white shadow-sm focus:outline-none has-[input:checked]:border-amber-600 has-[input:checked]:ring-1 has-[input:checked]:ring-amber-600 overflow-hidden group">
+      <label class="relative flex flex-col cursor-pointer rounded-2xl border border-border bg-card shadow-sm focus:outline-none has-[input:checked]:border-amber-600 has-[input:checked]:ring-1 has-[input:checked]:ring-amber-600 overflow-hidden group">
         <%= form.radio_button :charge_calculation, "custom",
             class: "sr-only peer",
             data: { action: "change->late-checkout#updateUI", late_checkout_target: "typeRadio" } %>
 
         <div class="p-4 flex items-start gap-3">
-          <div class="mt-1 flex-shrink-0 size-4 rounded-full border border-slate-300 group-has-[input:checked]:border-amber-600 group-has-[input:checked]:bg-amber-600 flex items-center justify-center transition-colors">
-            <div class="size-1.5 rounded-full bg-white opacity-0 group-has-[input:checked]:opacity-100 transition-opacity"></div>
+          <div class="mt-1 flex-shrink-0 size-4 rounded-full border border-border-interactive group-has-[input:checked]:border-amber-600 group-has-[input:checked]:bg-amber-600 flex items-center justify-center transition-colors">
+            <div class="size-1.5 rounded-full bg-card opacity-0 group-has-[input:checked]:opacity-100 transition-opacity"></div>
           </div>
           <div class="flex-1">
-            <span class="block text-sm font-bold text-slate-900">Additional Charge</span>
-            <p class="mt-1 text-xs text-slate-500 leading-relaxed">Impose additional charges on the current booking property rate for extended date including taxes.</p>
+            <span class="block text-sm font-bold text-foreground">Additional Charge</span>
+            <p class="mt-1 text-xs text-muted-foreground leading-relaxed">Impose additional charges on the current booking property rate for extended date including taxes.</p>
           </div>
         </div>
 
-        <div class="hidden peer-checked:block border-t border-slate-100 bg-slate-50/50 p-4 space-y-4" data-late-checkout-target="customSection">
+        <div class="hidden peer-checked:block border-t border-border bg-muted/50 p-4 space-y-4" data-late-checkout-target="customSection">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Adjustment Type</label>
+              <label class="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Adjustment Type</label>
               <%= form.select :custom_type, [["Fixed Amount", "amount"], ["Percentage (%)", "percentage"]], {},
-                  class: "w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                  class: "w-full rounded-xl border border-border bg-card py-2 px-3 text-xs font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm",
                   data: { action: "change->late-checkout#updateCalculation", late_checkout_target: "customType" } %>
             </div>
             <div>
-              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Amount / %</label>
+              <label class="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Amount / %</label>
               <%= form.number_field :custom_value, step: 0.01, placeholder: "0.00",
-                  class: "w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                  class: "w-full rounded-xl border border-border bg-card py-2 px-3 text-xs font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm",
                   data: { action: "input->late-checkout#updateCalculation", late_checkout_target: "customValue" } %>
             </div>
           </div>
 
-          <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+          <div class="pt-2 border-t border-border flex items-center justify-between">
             <div class="flex flex-col">
-              <span class="text-[10px] font-bold text-slate-400 uppercase">Calculated Total</span>
-              <span class="text-[10px] text-slate-400 font-medium">Rate + Taxes + Adjustment</span>
+              <span class="text-[10px] font-bold text-muted-foreground uppercase">Calculated Total</span>
+              <span class="text-[10px] text-muted-foreground font-medium">Rate + Taxes + Adjustment</span>
             </div>
-            <span class="text-sm font-bold text-slate-900" data-late-checkout-target="displayAmount"><%= presenter.currency %> 0.00</span>
+            <span class="text-sm font-bold text-foreground" data-late-checkout-target="displayAmount"><%= presenter.currency %> 0.00</span>
           </div>
         </div>
       </label>
@@ -101,8 +101,8 @@
 <%= form.hidden_field :amount, data: { late_checkout_target: "amountInput" } %>
 
 <div data-late-checkout-target="checkoutSection" class="<%= checkout_class %>">
-  <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Checkout Period</label>
+  <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Checkout Period</label>
   <%= form.datetime_local_field :check_out, value: booking.check_out.in_time_zone(booking.hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M"),
-      class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
-  <p class="text-[10px] text-slate-500">Updating this will change the booking's scheduled checkout date and time.</p>
+      class: "w-full rounded-xl border border-border bg-card py-2.5 px-4 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
+  <p class="text-[10px] text-muted-foreground">Updating this will change the booking's scheduled checkout date and time.</p>
 </div>

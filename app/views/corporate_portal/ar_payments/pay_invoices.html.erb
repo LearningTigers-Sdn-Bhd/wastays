@@ -1,22 +1,21 @@
-<div class="mx-auto max-w-5xl space-y-6 pb-20">
-  <div class="flex flex-col gap-2 px-4 md:px-0">
-    <h1 class="text-3xl font-bold tracking-tight text-slate-950">Pay Invoices</h1>
-    <p class="text-sm text-slate-600">Select unpaid invoices from one active hotel relationship and one currency to proceed with online payment.</p>
-  </div>
+<div class="w-full space-y-3.5">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Pay Invoices",
+        description: "Select unpaid invoices from one active hotel relationship and one currency to proceed with online payment.") %>
 
   <% if @presenter.relationships.empty? %>
-    <section class="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-      <div class="inline-flex size-12 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+    <section class="rounded-2xl border border-border bg-card p-12 text-center shadow-sm">
+      <div class="inline-flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
         <%= cached_icon "building-2", class: "size-6" %>
       </div>
-      <h3 class="mt-4 text-sm font-bold text-slate-950">No Relationships Found</h3>
-      <p class="mt-1 text-xs text-slate-500 max-w-sm mx-auto">There are no active corporate hotel relationships available for payment under this account.</p>
+      <h3 class="mt-4 text-sm font-bold text-foreground">No Relationships Found</h3>
+      <p class="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">There are no active corporate hotel relationships available for payment under this account.</p>
     </section>
   <% else %>
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <header class="border-b border-slate-200 bg-slate-50/60 px-4 py-3 sm:px-5">
-        <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
-          <span class="inline-flex size-6 items-center justify-center rounded bg-slate-900 text-white">
+    <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <header class="border-b border-border bg-muted/60 px-4 py-3 sm:px-5">
+        <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
+          <span class="inline-flex size-6 items-center justify-center rounded bg-primary text-primary-foreground">
             <%= cached_icon "list-filter", class: "size-3.5", aria: { hidden: true } %>
           </span>
           Selection & filters
@@ -25,47 +24,47 @@
       <div class="p-5">
         <%= form_with url: pay_invoices_corporate_ar_payments_path, method: :get, class: "flex flex-col gap-4 md:flex-row md:items-end" do %>
           <div class="flex-1">
-            <label for="hotel_corporate_account_id" class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Hotel Relationship</label>
+            <label for="hotel_corporate_account_id" class="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Hotel Relationship</label>
             <div class="relative mt-2">
               <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <%= cached_icon "hotel", class: "size-4 text-slate-400" %>
+                <%= cached_icon "hotel", class: "size-4 text-muted-foreground" %>
               </div>
-              <%= select_tag :hotel_corporate_account_id, 
-                options_from_collection_for_select(@presenter.relationships, :id, ->(relationship) { relationship.hotel.name }, @presenter.selected_relationship&.id), 
+              <%= select_tag :hotel_corporate_account_id,
+                options_from_collection_for_select(@presenter.relationships, :id, ->(relationship) { relationship.hotel.name }, @presenter.selected_relationship&.id),
                 id: "hotel_corporate_account_id",
-                class: "block w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-9 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900/10 transition-all shadow-sm" %>
+                class: "block w-full appearance-none rounded-xl border border-border bg-card py-2.5 pl-10 pr-9 text-sm focus:border-border-interactive focus:outline-none focus:ring-1 focus:ring-ring/10 transition-all shadow-sm" %>
             </div>
           </div>
 
           <div class="w-full md:w-52">
-            <label for="currency" class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Currency</label>
+            <label for="currency" class="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Currency</label>
             <div class="relative mt-2">
               <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <%= cached_icon "circle-dollar-sign", class: "size-4 text-slate-400" %>
+                <%= cached_icon "circle-dollar-sign", class: "size-4 text-muted-foreground" %>
               </div>
-              <%= select_tag :currency, 
-                options_for_select(@presenter.available_currencies, @presenter.selected_currency), 
+              <%= select_tag :currency,
+                options_for_select(@presenter.available_currencies, @presenter.selected_currency),
                 id: "currency",
-                class: "block w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-9 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900/10 transition-all shadow-sm" %>
+                class: "block w-full appearance-none rounded-xl border border-border bg-card py-2.5 pl-10 pr-9 text-sm focus:border-border-interactive focus:outline-none focus:ring-1 focus:ring-ring/10 transition-all shadow-sm" %>
             </div>
           </div>
 
-          <button type="submit" class="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 text-sm font-bold text-slate-800 shadow-sm transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900">
-            <%= cached_icon "loader-2", class: "size-4 text-slate-500" %>
+          <button type="submit" class="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl border border-border bg-muted px-5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <%= cached_icon "loader-2", class: "size-4 text-muted-foreground" %>
             Load Invoices
           </button>
         <% end %>
       </div>
     </section>
 
-    <%= form_with url: review_corporate_ar_payments_path, method: :post, scope: :corporate_ar_payment, class: "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" do %>
+    <%= form_with url: review_corporate_ar_payments_path, method: :post, scope: :corporate_ar_payment, class: "overflow-hidden rounded-2xl border border-border bg-card shadow-sm" do %>
       <%= hidden_field_tag "corporate_ar_payment[hotel_corporate_account_id]", @presenter.selected_relationship&.id %>
       <%= hidden_field_tag "corporate_ar_payment[currency]", @presenter.selected_currency %>
       <%= hidden_field_tag "corporate_ar_payment[gateway]", "razorpay" %>
-      
-      <header class="border-b border-slate-200 bg-slate-50/60 px-4 py-3 sm:px-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
-          <span class="inline-flex size-6 items-center justify-center rounded bg-slate-900 text-white">
+
+      <header class="border-b border-border bg-muted/60 px-4 py-3 sm:px-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
+          <span class="inline-flex size-6 items-center justify-center rounded bg-primary text-primary-foreground">
             <%= cached_icon "receipt-text", class: "size-3.5", aria: { hidden: true } %>
           </span>
           Open invoices
@@ -85,74 +84,74 @@
           currency_label = @presenter.selected_currency
           money = ->(val) { "#{currency_label} #{format('%.2f', val)}" }
         %>
-        <section class="grid divide-y divide-slate-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0" aria-label="Open invoice metrics summary">
+        <section class="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0" aria-label="Open invoice metrics summary">
           <% [
-            [ "Outstanding balance", money.call(@presenter.default_amount), "text-slate-950", "Total unpaid invoices" ],
-            [ "Unpaid Invoices", pluralize(@presenter.invoices.size, "invoice"), "text-slate-900", "Matching selected filters" ],
+            [ "Outstanding balance", money.call(@presenter.default_amount), "text-foreground", "Total unpaid invoices" ],
+            [ "Unpaid Invoices", pluralize(@presenter.invoices.size, "invoice"), "text-foreground", "Matching selected filters" ],
             [ "Gateway", (@presenter.gateway_ready? ? "Razorpay" : "Not configured"), (@presenter.gateway_ready? ? "text-emerald-700" : "text-red-700"), "Configured payment channel" ]
           ].each do |label, amount, amount_class, desc| %>
             <div class="relative px-4 py-4 sm:px-5">
-              <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500"><%= label %></p>
+              <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"><%= label %></p>
               <p class="mt-1.5 text-xl font-black tabular-nums <%= amount_class %>"><%= amount %></p>
-              <p class="mt-1 text-[11px] font-medium text-slate-500"><%= desc %></p>
+              <p class="mt-1 text-[11px] font-medium text-muted-foreground"><%= desc %></p>
             </div>
           <% end %>
         </section>
 
-        <div class="overflow-x-auto border-t border-slate-200">
-          <table class="w-full min-w-[850px] text-left text-sm divide-y divide-slate-200">
-            <thead class="bg-slate-50/50">
+        <div class="overflow-x-auto border-t border-border">
+          <table class="w-full min-w-[850px] text-left text-sm divide-y divide-border">
+            <thead class="bg-muted/50">
               <tr>
-                <th scope="col" class="w-16 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">Pay</th>
-                <th scope="col" class="w-32 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">Invoice</th>
-                <th scope="col" class="w-48 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">Booking Reference</th>
-                <th scope="col" class="w-36 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">Due Date</th>
-                <th scope="col" class="w-48 px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">Outstanding Balance</th>
+                <th scope="col" class="w-16 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pay</th>
+                <th scope="col" class="w-32 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Invoice</th>
+                <th scope="col" class="w-48 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Booking Reference</th>
+                <th scope="col" class="w-36 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Due Date</th>
+                <th scope="col" class="w-48 px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Outstanding Balance</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 bg-white">
+            <tbody class="divide-y divide-border bg-card">
               <% @presenter.invoices.each do |invoice| %>
-                <tr class="transition-colors hover:bg-slate-50/50">
+                <tr class="transition-colors hover:bg-muted/50">
                   <td class="px-6 py-3.5">
-                    <%= check_box_tag "corporate_ar_payment[invoice_ids][]", invoice.id, true, class: "size-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 focus:ring-offset-2 cursor-pointer" %>
+                    <%= check_box_tag "corporate_ar_payment[invoice_ids][]", invoice.id, true, class: "size-4 rounded border-border-interactive text-foreground focus:ring-ring focus:ring-offset-2 cursor-pointer" %>
                   </td>
-                  <td class="px-6 py-3.5 font-bold text-slate-900"><%= invoice.formatted_invoice_number %></td>
-                  <td class="px-6 py-3.5 text-sm font-semibold text-slate-700"><%= invoice.booking.confirmation_token %></td>
-                  <td class="px-6 py-3.5 text-sm text-slate-600"><%= invoice.due_on.strftime("%d %b %Y") %></td>
-                  <td class="px-6 py-3.5 text-right text-sm font-bold tabular-nums text-slate-950"><%= money.call(invoice.outstanding_amount) %></td>
+                  <td class="px-6 py-3.5 font-bold text-foreground"><%= invoice.formatted_invoice_number %></td>
+                  <td class="px-6 py-3.5 text-sm font-semibold text-foreground"><%= invoice.booking.confirmation_token %></td>
+                  <td class="px-6 py-3.5 text-sm text-muted-foreground"><%= invoice.due_on.strftime("%d %b %Y") %></td>
+                  <td class="px-6 py-3.5 text-right text-sm font-bold tabular-nums text-foreground"><%= money.call(invoice.outstanding_amount) %></td>
                 </tr>
               <% end %>
             </tbody>
           </table>
         </div>
 
-        <div class="flex flex-col gap-6 border-t border-slate-200 p-6 sm:flex-row sm:items-end sm:justify-between bg-slate-50/40">
+        <div class="flex flex-col gap-6 border-t border-border p-6 sm:flex-row sm:items-end sm:justify-between bg-muted/40">
           <div class="w-full sm:max-w-xs">
-            <label for="corporate_ar_payment_amount" class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Payment Amount</label>
+            <label for="corporate_ar_payment_amount" class="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Payment Amount</label>
             <div class="relative mt-2 rounded-xl shadow-sm">
               <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-                <span class="text-sm font-bold text-slate-400"><%= currency_label %></span>
+                <span class="text-sm font-bold text-muted-foreground"><%= currency_label %></span>
               </div>
-              <%= number_field_tag "corporate_ar_payment[amount]", 
-                number_with_precision(@presenter.default_amount, precision: 2), 
-                step: "0.01", 
-                min: "0.01", 
+              <%= number_field_tag "corporate_ar_payment[amount]",
+                number_with_precision(@presenter.default_amount, precision: 2),
+                step: "0.01",
+                min: "0.01",
                 id: "corporate_ar_payment_amount",
-                class: "block w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-14 pr-3 text-sm font-bold tabular-nums text-slate-950 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900/10 transition-all shadow-sm" %>
+                class: "block w-full rounded-xl border border-border bg-card py-2.5 pl-14 pr-3 text-sm font-bold tabular-nums text-foreground focus:border-border-interactive focus:outline-none focus:ring-1 focus:ring-ring/10 transition-all shadow-sm" %>
             </div>
-            <p class="mt-1.5 text-[10px] text-slate-400 font-medium">Specify details. Defaults to the total outstanding balance.</p>
+            <p class="mt-1.5 text-[10px] text-muted-foreground font-medium">Specify details. Defaults to the total outstanding balance.</p>
           </div>
 
           <div class="flex items-center gap-3">
-            <%= submit_tag "Review Payment", 
-              disabled: !@presenter.gateway_ready?, 
-              class: "rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" %>
+            <%= submit_tag "Review Payment",
+              disabled: !@presenter.gateway_ready?,
+              class: "rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" %>
           </div>
         </div>
       <% else %>
-        <div class="px-6 py-12 text-center border-t border-slate-200">
-          <p class="text-sm font-semibold text-slate-700">No Invoices Available</p>
-          <p class="mt-1 text-xs text-slate-500">No unpaid invoices are available for this hotel and currency.</p>
+        <div class="px-6 py-12 text-center border-t border-border">
+          <p class="text-sm font-semibold text-foreground">No Invoices Available</p>
+          <p class="mt-1 text-xs text-muted-foreground">No unpaid invoices are available for this hotel and currency.</p>
         </div>
       <% end %>
     <% end %>

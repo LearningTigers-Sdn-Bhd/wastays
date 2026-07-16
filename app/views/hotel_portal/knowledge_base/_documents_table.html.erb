@@ -6,33 +6,26 @@
   <%= turbo_stream_from document %>
 <% end %>
 
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
-  <div class="px-4 md:px-0">
-    <div class="mt-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl"><%= title %></h1>
-        <p class="mt-1 text-sm font-medium text-slate-600"><%= subtitle %></p>
-      </div>
-
-      <%= link_to kb_new_path, class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>
+<div class="w-full space-y-3.5">
+  <%= render PanelsUI::PageHeader.new(title: title, description: subtitle) do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(as: :a, href: kb_new_path, variant: :primary, size: :md, class: "w-full lg:w-auto") do %>
         <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
         <%= add_button_text %>
       <% end %>
-    </div>
-  </div>
+    <% end %>
+  <% end %>
 
-  <div class="px-4 md:px-0">
-    <%= render "hotel_portal/settings/group_tabs" %>
-  </div>
+  <%= render "hotel_portal/settings/group_tabs" %>
 
-  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="flex items-center justify-end border-b border-slate-200 px-6 py-3 sm:px-8">
-      <span class="text-sm text-slate-500"><%= pluralize(documents.count, "document") %></span>
+  <div class="rounded-2xl border border-border bg-card shadow-sm">
+    <div class="flex items-center justify-end border-b border-border px-6 py-3 sm:px-8">
+      <span class="text-sm text-muted-foreground"><%= pluralize(documents.count, "document") %></span>
     </div>
 
     <div class="hidden lg:block">
       <% if documents.any? %>
-        <div class="grid grid-cols-[40px_minmax(0,1fr)_110px_180px_130px_120px_150px_120px] border-b border-slate-200 bg-slate-100 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">
+        <div class="grid grid-cols-[40px_minmax(0,1fr)_110px_180px_130px_120px_150px_120px] border-b border-border bg-muted text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
           <div class="px-3 py-2.5 pl-8"></div>
           <div class="px-3 py-2.5">Title</div>
           <div class="px-3 py-2.5">Source</div>
@@ -44,14 +37,14 @@
         </div>
 
         <% documents.each do |doc| %>
-          <div data-controller="knowledge-row-expand" class="border-b border-slate-200 last:border-b-0">
-            <div data-action="click->knowledge-row-expand#toggle" class="grid grid-cols-[40px_minmax(0,1fr)_110px_180px_130px_120px_150px_120px] items-center cursor-pointer transition-colors hover:bg-slate-50">
+          <div data-controller="knowledge-row-expand" class="border-b border-border last:border-b-0">
+            <div data-action="click->knowledge-row-expand#toggle" class="grid grid-cols-[40px_minmax(0,1fr)_110px_180px_130px_120px_150px_120px] items-center cursor-pointer transition-colors hover:bg-muted">
               <div class="px-3 py-3 pl-8">
-                <svg data-knowledge-row-expand-target="chevron" class="size-4 text-slate-400 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                <svg data-knowledge-row-expand-target="chevron" class="size-4 text-muted-foreground transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
               </div>
               <div class="px-3 py-3 min-w-0">
                 <div class="flex items-center gap-3">
-                  <div class="flex-none size-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+                  <div class="flex-none size-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
                     <% if doc.source_type == "pdf" %>
                       <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
                     <% else %>
@@ -59,12 +52,12 @@
                     <% end %>
                   </div>
                   <div class="min-w-0">
-                    <p class="text-sm font-semibold text-slate-900 truncate"><%= doc.title %></p>
+                    <p class="text-sm font-semibold text-foreground truncate"><%= doc.title %></p>
                   </div>
                 </div>
               </div>
               <div class="px-3 py-3">
-                <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 capitalize"><%= doc.source_type %></span>
+                <span class="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground capitalize"><%= doc.source_type %></span>
               </div>
               <div class="px-3 py-3">
                 <% if doc.tags.any? %>
@@ -73,17 +66,17 @@
                       <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700"><%= tag %></span>
                     <% end %>
                     <% if doc.tags.length > 3 %>
-                      <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">+<%= doc.tags.length - 3 %></span>
+                      <span class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">+<%= doc.tags.length - 3 %></span>
                     <% end %>
                   </div>
                 <% else %>
-                  <span class="text-xs text-slate-400">&mdash;</span>
+                  <span class="text-xs text-muted-foreground">&mdash;</span>
                 <% end %>
               </div>
               <div class="px-3 py-3">
                 <% if doc.effective_date.present? %>
                   <% if doc.effective_date <= Date.current %>
-                    <span class="text-sm text-slate-700"><%= doc.effective_date.to_fs(:short) %></span>
+                    <span class="text-sm text-foreground"><%= doc.effective_date.to_fs(:short) %></span>
                   <% else %>
                     <span class="inline-flex items-center gap-1 text-sm text-amber-700">
                       <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -91,7 +84,7 @@
                     </span>
                   <% end %>
                 <% else %>
-                  <span class="text-sm text-slate-400">Forever</span>
+                  <span class="text-sm text-muted-foreground">Forever</span>
                 <% end %>
               </div>
               <div class="px-3 py-3">
@@ -112,27 +105,29 @@
                 </span>
               </div>
               <div class="px-3 py-3">
-                <span class="text-sm text-slate-600" title="<%= doc.updated_at.to_fs(:long) %>"><%= time_ago_in_words(doc.updated_at) %> ago</span>
+                <span class="text-sm text-muted-foreground" title="<%= doc.updated_at.to_fs(:long) %>"><%= time_ago_in_words(doc.updated_at) %> ago</span>
               </div>
               <div class="px-3 py-3 pr-8 text-right relative">
                 <div class="inline-flex" data-controller="dropdown">
-                  <button type="button" data-action="click->dropdown#toggle" class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50">
+                  <button type="button" data-action="click->dropdown#toggle" class="inline-flex items-center rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted">
                     Manage
                     <svg class="ms-1 size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                   </button>
-                  <div data-dropdown-target="menu" class="hidden absolute right-0 top-full z-[100] mt-2 min-w-[14rem] overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in duration-200">
-                    <%= link_to kb_show_path(doc), class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors" do %>
-                      <svg class="size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M22 12c0 5.52-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2s10 4.48 10 10z"/></svg>
+                  <div data-dropdown-target="menu" class="hidden absolute right-0 top-full z-[100] mt-2 min-w-[14rem] overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xl animate-in fade-in zoom-in duration-200">
+                    <%= link_to kb_show_path(doc), class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-foreground hover:bg-muted hover:text-foreground transition-colors" do %>
+                      <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M22 12c0 5.52-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2s10 4.48 10 10z"/></svg>
                       View Details
                     <% end %>
-                    <%= link_to kb_edit_path(doc), class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors" do %>
-                      <svg class="size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                    <%= link_to kb_edit_path(doc), class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-foreground hover:bg-muted hover:text-foreground transition-colors" do %>
+                      <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                       Edit Details
                     <% end %>
                     <% if doc.hotel.ai_concierge_enabled? && %w[pending failed].include?(doc.embedding_status) %>
-                      <%= button_to kb_reindex_path(doc), method: :post, class: "flex w-full items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors" do %>
-                        <svg class="size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-                        <%= doc.embedding_status == "failed" ? "Retry Embeddings" : "Generate Embeddings" %>
+                      <%= form_with url: kb_reindex_path(doc), method: :post do %>
+                        <%= render PanelsUI::Button.new(as: :button, type: "submit", variant: :ghost, size: :sm, class: "w-full justify-start") do %>
+                          <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                          <%= doc.embedding_status == "failed" ? "Retry Embeddings" : "Generate Embeddings" %>
+                        <% end %>
                       <% end %>
                     <% end %>
                     <%= link_to kb_show_path(doc), data: { turbo_method: :delete, turbo_confirm: "Delete this document and its chunks? This cannot be undone." }, class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors" do %>
@@ -144,19 +139,19 @@
               </div>
             </div>
 
-            <div data-knowledge-row-expand-target="expandable" class="hidden border-t border-slate-100 bg-slate-50/80 px-8 py-5">
+            <div data-knowledge-row-expand-target="expandable" class="hidden border-t border-border bg-muted/80 px-8 py-5">
               <% if doc.source_type == "pdf" && doc.file.attached? %>
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-3">
-                    <div class="size-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 shadow-sm">
+                    <div class="size-10 rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground shadow-sm">
                       <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
                     </div>
                     <div>
-                      <p class="text-sm font-semibold text-slate-900"><%= doc.file.filename %></p>
-                      <p class="text-xs text-slate-500">PDF document</p>
+                      <p class="text-sm font-semibold text-foreground"><%= doc.file.filename %></p>
+                      <p class="text-xs text-muted-foreground">PDF document</p>
                     </div>
                   </div>
-                  <%= link_to url_for(doc.file), target: "_blank", rel: "noopener", class: "inline-flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50" do %>
+                  <%= link_to url_for(doc.file), target: "_blank", rel: "noopener", class: "inline-flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" do %>
                     <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     Open PDF
                   <% end %>
@@ -167,36 +162,36 @@
                 <div class="space-y-4 max-w-3xl">
                   <% Array(qa_list).each_with_index do |pair, idx| %>
                     <% next unless pair.is_a?(Hash) %>
-                    <div class="rounded-xl bg-white border border-slate-200 p-4 shadow-sm">
+                    <div class="rounded-xl bg-card border border-border p-4 shadow-sm">
                       <div class="flex gap-3">
                         <span class="flex-none flex items-center justify-center size-6 rounded-full bg-blue-100 text-xs font-bold text-blue-700 mt-0.5">Q<%= idx + 1 %></span>
                         <div>
-                          <p class="text-sm font-semibold text-slate-900"><%= pair["question"] %></p>
-                          <p class="mt-2 text-sm text-slate-700 whitespace-pre-wrap"><%= pair["answer"] %></p>
+                          <p class="text-sm font-semibold text-foreground"><%= pair["question"] %></p>
+                          <p class="mt-2 text-sm text-foreground whitespace-pre-wrap"><%= pair["answer"] %></p>
                         </div>
                       </div>
                     </div>
                   <% end %>
                 </div>
               <% elsif doc.content.present? %>
-                <div class="max-h-80 overflow-y-auto rounded-xl bg-white border border-slate-200 p-4 shadow-sm">
-                  <pre class="whitespace-pre-wrap text-sm text-slate-700 font-mono leading-relaxed"><%= doc.content %></pre>
+                <div class="max-h-80 overflow-y-auto rounded-xl bg-card border border-border p-4 shadow-sm">
+                  <pre class="whitespace-pre-wrap text-sm text-foreground font-mono leading-relaxed"><%= doc.content %></pre>
                 </div>
               <% else %>
-                <p class="text-sm text-slate-500 italic">No content available.</p>
+                <p class="text-sm text-muted-foreground italic">No content available.</p>
               <% end %>
             </div>
           </div>
         <% end %>
       <% else %>
         <div class="flex flex-col items-center px-6 py-20 text-center sm:px-8">
-          <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
+          <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
             <svg class="size-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
           </div>
-          <h3 class="mt-4 text-sm font-bold text-slate-900"><%= empty_title %></h3>
-          <p class="mt-1 text-sm text-slate-500"><%= empty_description %></p>
+          <h3 class="mt-4 text-sm font-bold text-foreground"><%= empty_title %></h3>
+          <p class="mt-1 text-sm text-muted-foreground"><%= empty_description %></p>
           <div class="mt-6">
-            <%= link_to add_button_text, kb_new_path, class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+            <%= link_to add_button_text, kb_new_path, class: "inline-flex items-center rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" %>
           </div>
         </div>
       <% end %>
@@ -205,9 +200,9 @@
     <div class="space-y-3 p-4 sm:p-6 lg:hidden">
       <% if documents.any? %>
         <% documents.each do |doc| %>
-          <div data-controller="knowledge-row-expand" data-action="click->knowledge-row-expand#toggle" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer transition-colors hover:border-slate-300">
+          <div data-controller="knowledge-row-expand" data-action="click->knowledge-row-expand#toggle" class="rounded-2xl border border-border bg-card p-4 shadow-sm cursor-pointer transition-colors hover:border-border-interactive">
             <div class="flex items-start gap-3">
-              <div class="flex-none size-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 shadow-sm">
+              <div class="flex-none size-10 rounded-xl bg-muted border border-border flex items-center justify-center text-muted-foreground shadow-sm">
                 <% if doc.source_type == "pdf" %>
                   <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
                 <% else %>
@@ -215,19 +210,19 @@
                 <% end %>
               </div>
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-bold text-slate-900"><%= doc.title %></p>
+                <p class="text-sm font-bold text-foreground"><%= doc.title %></p>
               </div>
-              <svg data-knowledge-row-expand-target="chevron" class="flex-none size-5 text-slate-400 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <svg data-knowledge-row-expand-target="chevron" class="flex-none size-5 text-muted-foreground transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
             </div>
 
             <div data-knowledge-row-expand-target="expandable" class="hidden mt-4">
-              <dl class="space-y-2 text-sm border-t border-slate-100 pt-4">
+              <dl class="space-y-2 text-sm border-t border-border pt-4">
                 <div class="flex items-center justify-between gap-4">
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Source</dt>
-                  <dd><span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 capitalize"><%= doc.source_type %></span></dd>
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Source</dt>
+                  <dd><span class="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground capitalize"><%= doc.source_type %></span></dd>
                 </div>
                 <div class="flex items-center justify-between gap-4">
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Tags</dt>
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Tags</dt>
                   <dd>
                     <% if doc.tags.any? %>
                       <div class="flex flex-wrap gap-1 justify-end">
@@ -236,33 +231,33 @@
                         <% end %>
                       </div>
                     <% else %>
-                      <span class="text-xs text-slate-400">&mdash;</span>
+                      <span class="text-xs text-muted-foreground">&mdash;</span>
                     <% end %>
                   </dd>
                 </div>
                 <div class="flex items-center justify-between gap-4">
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Effective</dt>
-                  <dd class="text-sm text-slate-700">
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Effective</dt>
+                  <dd class="text-sm text-foreground">
                     <% if doc.effective_date.present? %>
                       <%= doc.effective_date.to_fs(:short) %>
                     <% else %>
-                      <span class="text-slate-400">Forever</span>
+                      <span class="text-muted-foreground">Forever</span>
                     <% end %>
                   </dd>
                 </div>
                 <div class="flex items-center justify-between gap-4">
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Status</dt>
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Status</dt>
                   <dd><span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize"><%= doc.embedding_status %></span></dd>
                 </div>
                 <div class="flex items-center justify-between gap-4">
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Updated</dt>
-                  <dd class="text-sm text-slate-600"><%= time_ago_in_words(doc.updated_at) %> ago</dd>
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Updated</dt>
+                  <dd class="text-sm text-muted-foreground"><%= time_ago_in_words(doc.updated_at) %> ago</dd>
                 </div>
               </dl>
 
               <% if doc.source_type == "pdf" && doc.file.attached? %>
-                <div class="mt-4 border-t border-slate-100 pt-4">
-                  <%= link_to url_for(doc.file), target: "_blank", rel: "noopener", class: "inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700" do %>
+                <div class="mt-4 border-t border-border pt-4">
+                  <%= link_to url_for(doc.file), target: "_blank", rel: "noopener", class: "inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary-hover" do %>
                     <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     Open PDF
                   <% end %>
@@ -270,19 +265,19 @@
               <% elsif doc.category == "faq" && doc.metadata&.dig("qa_pairs").present? %>
                 <% qa_list = doc.metadata["qa_pairs"] %>
                 <% qa_list = qa_list.values if qa_list.is_a?(Hash) %>
-                <div class="mt-4 border-t border-slate-100 pt-4 space-y-3">
+                <div class="mt-4 border-t border-border pt-4 space-y-3">
                   <% Array(qa_list).each_with_index do |pair, idx| %>
                     <% next unless pair.is_a?(Hash) %>
-                    <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                      <p class="text-xs font-bold text-blue-700">Q<%= idx + 1 %>: <span class="font-semibold text-slate-900"><%= pair["question"] %></span></p>
-                      <p class="mt-1 text-xs text-slate-700"><%= pair["answer"] %></p>
+                    <div class="rounded-xl bg-muted border border-border p-3">
+                      <p class="text-xs font-bold text-blue-700">Q<%= idx + 1 %>: <span class="font-semibold text-foreground"><%= pair["question"] %></span></p>
+                      <p class="mt-1 text-xs text-foreground"><%= pair["answer"] %></p>
                     </div>
                   <% end %>
                 </div>
               <% elsif doc.content.present? %>
-                <div class="mt-4 border-t border-slate-100 pt-4">
-                  <div class="max-h-60 overflow-y-auto rounded-xl bg-slate-50 border border-slate-200 p-3">
-                    <pre class="whitespace-pre-wrap text-sm text-slate-700 font-mono leading-relaxed"><%= doc.content %></pre>
+                <div class="mt-4 border-t border-border pt-4">
+                  <div class="max-h-60 overflow-y-auto rounded-xl bg-muted border border-border p-3">
+                    <pre class="whitespace-pre-wrap text-sm text-foreground font-mono leading-relaxed"><%= doc.content %></pre>
                   </div>
                 </div>
               <% end %>
@@ -290,8 +285,8 @@
           </div>
         <% end %>
       <% else %>
-        <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center shadow-sm">
-          <p class="text-sm font-medium text-slate-500"><%= empty_title %></p>
+        <div class="rounded-2xl border border-dashed border-border-interactive bg-card px-5 py-10 text-center shadow-sm">
+          <p class="text-sm font-medium text-muted-foreground"><%= empty_title %></p>
         </div>
       <% end %>
     </div>

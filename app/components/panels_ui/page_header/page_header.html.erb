@@ -1,0 +1,29 @@
+<%= tag.header(**root_attributes) do %>
+  <div class="panel-page-header__content">
+    <div class="panel-page-header__heading">
+      <%= tag.public_send(@title_as, @title, class: "panel-page-header__title") %>
+      <% if @description.present? %>
+        <%= render PanelsUI::Popover.new(
+              id: description_popover_id,
+              placement: :bottom_start,
+              class: "panel-page-header__description-popover") do |popover| %>
+          <% popover.with_trigger(
+               unstyled: true,
+               aria_label: "About #{@title}",
+               class: "panel-page-header__description-trigger") do %>
+            <%= helpers.app_icon("info", class: "size-3.5", aria: { hidden: "true" }) %>
+          <% end %>
+          <p class="panel-page-header__description"><%= @description %></p>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% if caption? %>
+      <div class="panel-page-header__caption"><%= caption %></div>
+    <% end %>
+  </div>
+
+  <% if actions? %>
+    <div class="panel-page-header__actions"><%= actions %></div>
+  <% end %>
+<% end %>

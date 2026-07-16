@@ -1,0 +1,92 @@
+@layer components {
+  /* PanelsUI::ScrollArea — custom overlay scrollbar over native scrolling. */
+  .panel-scroll-area {
+    @apply relative;
+    --panel-scroll-fade-size: 40px;
+    --panel-scroll-fade-top-offset: 0px;
+    --panel-scroll-fade-left-offset: 0px;
+  }
+
+  .panel-scroll-area__viewport {
+    @apply h-full w-full overflow-auto;
+    /* Hide the native scrollbar; the overlay thumb stands in for it.
+       Not a Tailwind v4 built-in — defined here on purpose. */
+    scrollbar-width: none;
+  }
+
+  .panel-scroll-area__viewport::-webkit-scrollbar {
+    display: none;
+  }
+
+  .panel-scroll-area__viewport:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-inset;
+  }
+
+  /* --- Scrollbar track ---------------------------------------------------- */
+  .panel-scroll-area__scrollbar {
+    @apply absolute rounded-full bg-black/5 opacity-0 transition-opacity duration-150 dark:bg-white/10;
+    z-index: 1;
+  }
+
+  .panel-scroll-area__scrollbar[data-orientation="vertical"] {
+    @apply right-1 top-1 bottom-1 w-1.5;
+  }
+
+  .panel-scroll-area__scrollbar[data-orientation="horizontal"] {
+    @apply left-1 right-1 bottom-1 h-1.5;
+  }
+
+  /* Hide the track entirely when the axis does not overflow. */
+  .panel-scroll-area__scrollbar[data-visible="false"] {
+    @apply pointer-events-none opacity-0;
+  }
+
+  /* Reveal while hovering the root or actively scrolling/dragging. */
+  .panel-scroll-area[data-hovering] .panel-scroll-area__scrollbar[data-visible="true"],
+  .panel-scroll-area[data-scrolling] .panel-scroll-area__scrollbar[data-visible="true"] {
+    @apply opacity-100;
+  }
+
+  /* --- Thumb -------------------------------------------------------------- */
+  .panel-scroll-area__thumb {
+    @apply absolute left-0 top-0 rounded-full bg-neutral-500 dark:bg-neutral-400;
+  }
+
+  .panel-scroll-area__scrollbar[data-orientation="vertical"] .panel-scroll-area__thumb {
+    @apply w-full;
+  }
+
+  .panel-scroll-area__scrollbar[data-orientation="horizontal"] .panel-scroll-area__thumb {
+    @apply h-full;
+  }
+
+  /* --- Edge fades --------------------------------------------------------- */
+  .panel-scroll-area[data-scroll-fade="y"] .panel-scroll-area__viewport[data-overflow-y-start="true"],
+  .panel-scroll-area[data-scroll-fade="both"] .panel-scroll-area__viewport[data-overflow-y-start="true"] {
+    mask-image: linear-gradient(
+      to bottom,
+      transparent var(--panel-scroll-fade-top-offset),
+      black var(--panel-scroll-fade-size)
+    );
+  }
+
+  .panel-scroll-area[data-scroll-fade="y"] .panel-scroll-area__viewport[data-overflow-y-end="true"],
+  .panel-scroll-area[data-scroll-fade="both"] .panel-scroll-area__viewport[data-overflow-y-end="true"] {
+    mask-image: linear-gradient(to top, transparent 0, black var(--panel-scroll-fade-size));
+  }
+
+  .panel-scroll-area[data-scroll-fade="x"] .panel-scroll-area__viewport[data-overflow-x-start="true"],
+  .panel-scroll-area[data-scroll-fade="both"] .panel-scroll-area__viewport[data-overflow-x-start="true"] {
+    mask-image: linear-gradient(
+      to right,
+      transparent var(--panel-scroll-fade-left-offset),
+      black var(--panel-scroll-fade-size)
+    );
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel-scroll-area__scrollbar {
+      transition: none;
+    }
+  }
+}

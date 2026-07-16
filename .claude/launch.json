@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "rails-dev",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "PIDFILE=tmp/pids/preview_server.pid bin/rails server"],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}

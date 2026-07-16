@@ -1,0 +1,89 @@
+<section aria-labelledby="accordion-preview-heading" class="border-t border-border pt-8">
+  <h2 id="accordion-preview-heading" class="text-lg font-semibold text-foreground">Accordion</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Compact WAI-ARIA accordions compose the Collapsible primitive with single, multiple,
+    disabled, bordered, and nested behavior.
+  </p>
+
+  <div class="grid gap-8 lg:grid-cols-2">
+    <div class="space-y-3">
+      <h3 class="text-sm font-semibold text-foreground">Default · single and collapsible</h3>
+      <%= render PanelsUI::Accordion.new(
+            id: "sd-accordion-single",
+            heading_level: 4,
+            collapsible: true,
+            default_open: ["arrival"]
+          ) do |accordion| %>
+        <% accordion.with_item(value: "arrival", region: true) do |item| %>
+          <% item.with_trigger { "Arrival details" } %>
+          <% item.with_body do %>
+            <p>Check-in begins at 3:00 PM.</p>
+            <a href="#accordion-preview-heading" class="mt-2 inline-flex font-medium text-primary hover:underline">Review arrival policy</a>
+          <% end %>
+        <% end %>
+        <% accordion.with_item(value: "departure") do |item| %>
+          <% item.with_trigger { "Departure details" } %>
+          <% item.with_body { "Check-out is before 11:00 AM." } %>
+        <% end %>
+        <% accordion.with_item(value: "premium", disabled: true) do |item| %>
+          <% item.with_trigger { "Premium benefits" } %>
+          <% item.with_body { "Premium benefits are unavailable." } %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="space-y-3">
+      <h3 class="text-sm font-semibold text-foreground">Bordered · multiple and nested</h3>
+      <%= render PanelsUI::Accordion.new(
+            id: "sd-accordion-multiple",
+            heading_level: 4,
+            type: :multiple,
+            variant: :bordered,
+            default_open: ["notifications", "security"]
+          ) do |accordion| %>
+        <% accordion.with_item(value: "notifications") do |item| %>
+          <% item.with_trigger { "Notifications" } %>
+          <% item.with_body { "Email and push notifications are enabled." } %>
+        <% end %>
+        <% accordion.with_item(value: "security", region: true) do |item| %>
+          <% item.with_trigger { "Security" } %>
+          <% item.with_body do %>
+            <%= render PanelsUI::Accordion.new(
+                  id: "sd-accordion-nested",
+                  heading_level: 5,
+                  collapsible: true,
+                  variant: :bordered
+                ) do |nested| %>
+              <% nested.with_item(value: "password", region: true) do |nested_item| %>
+                <% nested_item.with_trigger { "Password" } %>
+                <% nested_item.with_body { "Password was updated recently." } %>
+              <% end %>
+              <% nested.with_item(value: "sessions") do |nested_item| %>
+                <% nested_item.with_trigger { "Active sessions" } %>
+                <% nested_item.with_body { "Two sessions are active." } %>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+        <% accordion.with_item(value: "billing") do |item| %>
+          <% item.with_trigger { "Billing" } %>
+          <% item.with_body { "Monthly invoices are sent by email." } %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="space-y-3 lg:col-span-2">
+      <h3 class="text-sm font-semibold text-foreground">Single · one item always open</h3>
+      <%= render PanelsUI::Accordion.new(id: "sd-accordion-required", heading_level: 4) do |accordion| %>
+        <% accordion.with_item(value: "first") do |item| %>
+          <% item.with_trigger { "Required open section" } %>
+          <% item.with_body { "At least one section remains open." } %>
+        <% end %>
+        <% accordion.with_item(value: "second") do |item| %>
+          <% item.with_trigger { "Alternative section" } %>
+          <% item.with_body { "Opening this section closes the first." } %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</section>

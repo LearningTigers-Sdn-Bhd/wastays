@@ -1,0 +1,28 @@
+<div id="<%= @id %>"
+     class="<%= tw_merge("tabs-root", "tabs-root--#{variant}", @class) %>"
+     data-slot="tabs-root"
+     <% unless navigation? %>
+       data-controller="panels-ui--tabs"
+       data-panels-ui--tabs-active-value="<%= active_name %>"
+       <% if url_param %>data-panels-ui--tabs-param-value="<%= url_param %>"<% end %>
+     <% end %>>
+  <% if navigation? %>
+    <nav class="<%= tw_merge("tabs-list", "tabs-list--#{variant}", @list_class) %>"
+         aria-label="<%= aria_label %>"
+         data-slot="tabs-list">
+      <%= safe_join(tabs) %>
+    </nav>
+  <% else %>
+    <div class="<%= tw_merge("tabs-list", "tabs-list--#{variant}", @list_class) %>"
+         role="tablist"
+         aria-label="<%= aria_label %>"
+         data-slot="tabs-list"
+         data-action="keydown->panels-ui--tabs#onKeydown">
+      <%= safe_join(tabs) %>
+    </div>
+
+    <div class="<%= tw_merge("tabs-panels", @panels_class) %>" data-slot="tabs-panels">
+      <%= safe_join(panels) %>
+    </div>
+  <% end %>
+</div>

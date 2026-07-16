@@ -1,5 +1,5 @@
 <%= turbo_frame_tag "offcanvas_drawer" do %>
-  <div class="flex h-full flex-col bg-white">
+  <div class="flex h-full flex-col bg-card">
     <%= render "hotel_portal/bookings/board/partials/content_header",
       title: @action_type == "remove_guest" ? "Remove Guest" : "Delete Internal Note",
       subtitle: @booking.guest_name,

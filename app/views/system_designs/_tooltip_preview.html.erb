@@ -1,0 +1,32 @@
+<section aria-labelledby="tooltip-preview-heading" class="border-t border-border pt-8">
+  <h2 id="tooltip-preview-heading" class="text-lg font-semibold text-foreground">Tooltip</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Text-only labels revealed on hover and keyboard focus. Collision-aware positioning,
+    open delay, and Escape-to-dismiss, wired to the trigger via <code>aria-describedby</code>.
+  </p>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <%= render PanelsUI::Tooltip.new(text: "Copy to clipboard") do %>
+      <%= render PanelsUI::Button.new(variant: :primary) do %>Hover or focus me<% end %>
+    <% end %>
+
+    <% {
+      top: "Top",
+      right: "Right",
+      bottom: "Bottom",
+      left: "Left"
+    }.each do |placement, label| %>
+      <%= render PanelsUI::Tooltip.new(text: "Placed on #{label.downcase}", placement: placement) do %>
+        <%= render PanelsUI::Button.new(variant: :secondary) do %><%= label %><% end %>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::Tooltip.new(text: "Tooltips work on any focusable trigger, not just buttons.") do %>
+      <a href="#" class="text-sm font-medium text-primary underline underline-offset-4">Link trigger</a>
+    <% end %>
+
+    <%= render PanelsUI::Tooltip.new(text: "No arrow variant", arrow: false) do %>
+      <%= render PanelsUI::Button.new(variant: :secondary) do %>No arrow<% end %>
+    <% end %>
+  </div>
+</section>

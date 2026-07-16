@@ -62,6 +62,25 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     expect(page).to have_content("Noisy hallway")
   end
 
+  it "re-renders the active tab with Turbo frame navigation", js: true do
+    visit hotel_booking_control_panel_path(hotel, booking, tab: "room_and_rate")
+
+    within("#booking-control-tabs") do
+      expect(page).to have_css("a[aria-current='page']", text: "Room & Rate")
+      click_link "Guest Details"
+    end
+
+    within("#booking-control-tabs") do
+      expect(page).to have_css("a[aria-current='page']", text: "Guest Details")
+      expect(page).to have_no_css("a[aria-current='page']", text: "Room & Rate")
+    end
+
+    expect(page).to have_current_path(hotel_booking_control_panel_path(hotel, booking, tab: "guest_details"))
+    expect(page).to have_content("Primary guest for this room")
+    expect(page).to have_css("#hotel-breadcrumb", text: "Booking Control Panel")
+    expect(page).to have_no_css("#hotel-breadcrumb [data-tabs-breadcrumb-label]")
+  end
+
   xit "protects unsaved snapshot changes with the control-panel alert", js: true do
     visit hotel_booking_control_panel_path(hotel, booking, tab: "guest_details")
 

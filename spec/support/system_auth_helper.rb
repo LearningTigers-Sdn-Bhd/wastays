@@ -18,18 +18,6 @@ module SystemAuthHelper
     Capybara.current_driver != :rack_test
   end
 
-  def wait_for_stimulus_controller(selector, identifier)
-    page.document.synchronize do
-      connected = page.evaluate_script(<<~JS)
-        (() => {
-          const element = document.querySelector(#{selector.to_json})
-          return Boolean(element && window.Stimulus?.getControllerForElementAndIdentifier(element, #{identifier.to_json}))
-        })()
-      JS
-      raise Capybara::ElementNotFound, "#{identifier} Stimulus controller is not connected" unless connected
-    end
-  end
-
   def visit_when_loaded(path)
     visit(path)
   rescue Ferrum::PendingConnectionsError

@@ -1,14 +1,14 @@
 <%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "fullscreen-bottom" } do %>
-  <div class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+  <div class="fixed inset-0 z-[120] flex items-center justify-center bg-primary/60 p-4 backdrop-blur-sm"
        role="alertdialog"
        aria-modal="true"
        aria-labelledby="hotel-tax-rules-confirmation-title"
        aria-describedby="hotel-tax-rules-confirmation-description">
-    <div class="relative z-[130] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+    <div class="relative z-[130] w-full max-w-2xl overflow-hidden rounded-2xl bg-card shadow-2xl">
       <header class="border-b border-amber-200 bg-amber-50 px-6 py-5">
         <p class="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">Hotel-wide configuration</p>
-        <h2 id="hotel-tax-rules-confirmation-title" class="mt-1 text-xl font-black text-slate-950">Change hotel default?</h2>
-        <p id="hotel-tax-rules-confirmation-description" class="mt-2 text-sm font-medium text-slate-700">
+        <h2 id="hotel-tax-rules-confirmation-title" class="mt-1 text-xl font-black text-foreground">Change hotel default?</h2>
+        <p id="hotel-tax-rules-confirmation-description" class="mt-2 text-sm font-medium text-foreground">
           This changes tax and charge inclusions for <strong><%= @transaction_code.code %> · <%= @transaction_code.name %></strong> across this hotel.
         </p>
       </header>
@@ -40,27 +40,27 @@
             </section>
           </div>
 
-          <section class="rounded-xl border border-slate-200 p-4">
-            <h3 class="text-sm font-bold text-slate-950">Impact</h3>
+          <section class="rounded-xl border border-border p-4">
+            <h3 class="text-sm font-bold text-foreground">Impact</h3>
             <% if @tax_rule_change.forecast_policy == "open_folio_forecasts" %>
-              <p class="mt-2 text-sm text-slate-700"><strong><%= @tax_rule_change.forecast_count %> upcoming transactions</strong> totalling <strong><%= number_to_currency(@tax_rule_change.forecast_amount, unit: "#{current_hotel.default_currency} ") %></strong> on eligible open folios will be recalculated.</p>
+              <p class="mt-2 text-sm text-foreground"><strong><%= @tax_rule_change.forecast_count %> upcoming transactions</strong> totalling <strong><%= number_to_currency(@tax_rule_change.forecast_amount, unit: "#{current_hotel.default_currency} ") %></strong> on eligible open folios will be recalculated.</p>
             <% elsif @tax_rule_change.forecast_policy == "new_bookings_only" %>
-              <p class="mt-2 text-sm text-slate-700">New bookings will use these ROOM defaults. Existing open-folio forecasts remain unchanged.</p>
+              <p class="mt-2 text-sm text-foreground">New bookings will use these ROOM defaults. Existing open-folio forecasts remain unchanged.</p>
             <% else %>
-              <p class="mt-2 text-sm text-slate-700">Future manual postings of this code will use these defaults. Existing forecasts remain unchanged.</p>
+              <p class="mt-2 text-sm text-foreground">Future manual postings of this code will use these defaults. Existing forecasts remain unchanged.</p>
             <% end %>
-            <p class="mt-3 rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-800">Posted transactions will not change.</p>
+            <p class="mt-3 rounded-lg bg-muted px-3 py-2 text-sm font-semibold text-foreground">Posted transactions will not change.</p>
           </section>
 
           <div>
-            <%= label_tag :reason, "Reason", class: "mb-1.5 block text-sm font-bold text-slate-900" %>
-            <%= text_field_tag :reason, nil, required: true, autofocus: true, class: "w-full rounded-xl border-slate-300 text-sm", placeholder: "Why is this hotel-wide default changing?" %>
+            <%= label_tag :reason, "Reason", class: "mb-1.5 block text-sm font-bold text-foreground" %>
+            <%= text_field_tag :reason, nil, required: true, autofocus: true, class: "w-full rounded-xl border-border-interactive text-sm", placeholder: "Why is this hotel-wide default changing?" %>
           </div>
         </div>
 
-        <footer class="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-          <%= link_to "Go back", hotel_edit_transaction_code_path(current_hotel, @transaction_code, transaction_code: @reviewed_attributes), data: { turbo_frame: "offcanvas_drawer" }, class: "rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700" %>
-          <%= f.submit "Apply hotel-wide", class: "rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700", data: { turbo_submits_with: "Applying..." } %>
+        <footer class="flex justify-end gap-3 border-t border-border bg-muted px-6 py-4">
+          <%= link_to "Go back", hotel_edit_transaction_code_path(current_hotel, @transaction_code, transaction_code: @reviewed_attributes), data: { turbo_frame: "offcanvas_drawer" }, class: "rounded-lg border border-border-interactive bg-card px-4 py-2 text-sm font-bold text-foreground" %>
+          <%= f.submit "Apply hotel-wide", class: "rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-amber-700", data: { turbo_submits_with: "Applying..." } %>
         </footer>
       <% end %>
     </div>

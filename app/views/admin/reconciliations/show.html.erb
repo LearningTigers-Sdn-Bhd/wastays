@@ -1,20 +1,21 @@
-<div class="max-w-[1600px] mx-auto pb-20 space-y-6">
-  <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-    <div>
-      <%= link_to admin_reconciliations_path, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-900" do %>
+<div class="w-full space-y-6">
+  <div>
+    <%= link_to admin_reconciliations_path, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground" do %>
         <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         Back to Payment Issues
-      <% end %>
-
-      <h1 class="mt-4 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Payment callback <span class="font-mono text-xl text-slate-700 sm:text-2xl"><%= @event.external_id %></span></h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">Review the callback details, investigate the issue, and decide whether to retry or resolve it manually.</p>
-    </div>
-
-    <div class="inline-flex items-center gap-2 rounded-xl border <%= @event.status == 'failed' ? 'border-red-200 bg-red-50 text-red-700' : @event.status == 'processed' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700' %> px-4 py-2.5 text-sm font-semibold">
-      <span class="size-2.5 rounded-full <%= @event.status == 'failed' ? 'bg-red-500' : @event.status == 'processed' ? 'bg-emerald-500' : 'bg-amber-500' %>"></span>
-      <%= @event.status.titleize %>
-    </div>
+    <% end %>
   </div>
+
+  <%= render PanelsUI::PageHeader.new(
+        title: safe_join(["Payment callback ", tag.span(@event.external_id, class: "font-mono")]),
+        description: "Review the callback details, investigate the issue, and decide whether to retry or resolve it manually.") do |header| %>
+    <% header.with_caption do %>
+      <div class="inline-flex items-center gap-2 rounded-xl border <%= @event.status == 'failed' ? 'border-red-200 bg-red-50 text-red-700' : @event.status == 'processed' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700' %> px-4 py-2.5 text-sm font-semibold">
+        <span class="size-2.5 rounded-full <%= @event.status == 'failed' ? 'bg-red-500' : @event.status == 'processed' ? 'bg-emerald-500' : 'bg-amber-500' %>"></span>
+        <%= @event.status.titleize %>
+      </div>
+    <% end %>
+  <% end %>
 
   <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
     <div class="space-y-6 xl:col-span-8">
@@ -29,52 +30,52 @@
         </section>
       <% end %>
 
-      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5 sm:px-8">
+      <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div class="flex items-center justify-between border-b border-border px-6 py-5 sm:px-8">
           <div>
-            <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Callback Payload</h2>
-            <p class="mt-1 text-sm font-medium text-slate-600">Raw callback data captured from the payment provider.</p>
+            <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Callback Payload</h2>
+            <p class="mt-1 text-sm font-medium text-muted-foreground">Raw callback data captured from the payment provider.</p>
           </div>
-          <span class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-mono text-slate-500"><%= @event.gateway.titleize %></span>
+          <span class="rounded-lg border border-border bg-muted px-3 py-1.5 text-xs font-mono text-muted-foreground"><%= @event.gateway.titleize %></span>
         </div>
         <div class="px-6 py-6 sm:px-8">
-          <pre class="overflow-x-auto rounded-2xl bg-slate-950 p-5 text-xs leading-6 text-emerald-300"><%= JSON.pretty_generate(@event.payload) %></pre>
+          <pre class="overflow-x-auto rounded-2xl bg-primary p-5 text-xs leading-6 text-emerald-300"><%= JSON.pretty_generate(@event.payload) %></pre>
         </div>
       </section>
     </div>
 
     <aside class="space-y-6 xl:col-span-4">
-      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="mb-4 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Issue Status</h2>
+      <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <h2 class="mb-4 text-lg font-bold tracking-tight text-foreground sm:text-xl">Issue Status</h2>
         <div class="space-y-4">
           <div class="flex items-center justify-between gap-4">
-            <span class="text-sm font-medium text-slate-500">Current Status</span>
+            <span class="text-sm font-medium text-muted-foreground">Current Status</span>
             <span class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold <%= @event.status == 'failed' ? 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200' : @event.status == 'processed' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200' %>">
               <span class="size-2 rounded-full <%= @event.status == 'failed' ? 'bg-red-500' : @event.status == 'processed' ? 'bg-emerald-500' : 'bg-amber-500' %>"></span>
               <%= @event.status.titleize %>
             </span>
           </div>
           <div class="flex items-center justify-between gap-4">
-            <span class="text-sm font-medium text-slate-500">Gateway</span>
-            <span class="text-sm font-semibold text-slate-900"><%= @event.gateway.titleize %></span>
+            <span class="text-sm font-medium text-muted-foreground">Gateway</span>
+            <span class="text-sm font-semibold text-foreground"><%= @event.gateway.titleize %></span>
           </div>
           <div class="flex items-center justify-between gap-4">
-            <span class="text-sm font-medium text-slate-500">Received At</span>
-            <span class="text-sm font-medium text-slate-700"><%= @event.created_at.strftime("%d %b %Y, %H:%M:%S") %></span>
+            <span class="text-sm font-medium text-muted-foreground">Received At</span>
+            <span class="text-sm font-medium text-foreground"><%= @event.created_at.strftime("%d %b %Y, %H:%M:%S") %></span>
           </div>
           <% if @event.processed_at.present? %>
             <div class="flex items-center justify-between gap-4">
-              <span class="text-sm font-medium text-slate-500">Processed At</span>
-              <span class="text-sm font-medium text-slate-700"><%= @event.processed_at.strftime("%d %b %Y, %H:%M:%S") %></span>
+              <span class="text-sm font-medium text-muted-foreground">Processed At</span>
+              <span class="text-sm font-medium text-foreground"><%= @event.processed_at.strftime("%d %b %Y, %H:%M:%S") %></span>
             </div>
           <% end %>
         </div>
 
         <% if @event.status == 'failed' %>
-          <div class="mt-6 space-y-3 border-t border-slate-200 pt-6">
-            <%= button_to "Retry Booking", retry_admin_reconciliation_path(@event), method: :post, class: "w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700" %>
-            <%= button_to "Mark as Resolved", resolve_admin_reconciliation_path(@event), method: :post, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
-            <p class="text-xs leading-relaxed text-slate-500">Retry when the callback should attempt booking creation again. Resolve manually when operations have already handled the case outside the system.</p>
+          <div class="mt-6 space-y-3 border-t border-border pt-6">
+            <%= button_to "Retry Booking", retry_admin_reconciliation_path(@event), method: :post, class: "w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-red-700" %>
+            <%= button_to "Mark as Resolved", resolve_admin_reconciliation_path(@event), method: :post, class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" %>
+            <p class="text-xs leading-relaxed text-muted-foreground">Retry when the callback should attempt booking creation again. Resolve manually when operations have already handled the case outside the system.</p>
           </div>
         <% end %>
       </section>

@@ -1,6 +1,6 @@
-<div class="max-w-[1600px] mx-auto pb-20 space-y-6">
+<div class="w-full space-y-6">
   <div>
-    <%= link_to onboarding_admin_hotels_path, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-900" do %>
+    <%= link_to onboarding_admin_hotels_path, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground" do %>
       <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
       Back to Onboarding Tracker
     <% end %>
@@ -10,24 +10,26 @@
     <!-- Main Column: Training Sessions -->
     <div class="space-y-6 xl:col-span-12">
       <!-- Hotel Header -->
-      <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section class="rounded-2xl border border-border bg-card shadow-sm">
         <div class="px-6 py-6 sm:px-8">
-          <div class="flex items-center gap-3">
-            <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl"><%= @hotel.name %></h1>
-            <span class="inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200">
-              <%= @hotel.status.titleize %>
-            </span>
-          </div>
-          <p class="mt-2 text-sm font-medium text-slate-600"><%= @hotel.city %>, <%= @hotel.country %></p>
+          <%= render PanelsUI::PageHeader.new(
+                title: safe_join([
+                  @hotel.name,
+                  tag.span(@hotel.status.titleize, class: "inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200")
+                ], " ")) do |header| %>
+            <% header.with_caption do %>
+              <%= @hotel.city %>, <%= @hotel.country %>
+            <% end %>
+          <% end %>
         </div>
       </section>
 
       <!-- Training Sessions -->
-      <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-6 py-5 sm:px-8 flex items-center justify-between">
+      <section class="rounded-2xl border border-border bg-card shadow-sm">
+        <div class="border-b border-border px-6 py-5 sm:px-8 flex items-center justify-between">
           <div>
-            <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Onboarding & Training</h2>
-            <p class="mt-1 text-sm text-slate-500">Assign a team member, set a meeting link, and track the completion of the training session.</p>
+            <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Onboarding & Training</h2>
+            <p class="mt-1 text-sm text-muted-foreground">Assign a team member, set a meeting link, and track the completion of the training session.</p>
           </div>
         </div>
 

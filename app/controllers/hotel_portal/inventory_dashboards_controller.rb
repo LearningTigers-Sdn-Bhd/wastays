@@ -508,10 +508,11 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   end
 
   def append_inventory_breadcrumbs
-    append_breadcrumb({ label: inventory_tab_label, tab_label: true })
+    append_breadcrumb({ label: inventory_tab_label, tab_label: true, tabs_id: "inventory-tabs" })
     append_breadcrumb({
       label: inventory_subtab_label,
       subtab_label: true,
+      tabs_ids: [ "inventory-subtabs", "channel-subtabs" ],
       hidden: !@active_tab.in?([ "advanced", "channels" ])
     })
   end

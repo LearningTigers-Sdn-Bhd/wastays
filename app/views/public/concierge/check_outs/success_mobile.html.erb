@@ -2,7 +2,7 @@
 
 <div data-mobile-view 
      data-controller="scroll-reveal"
-     class="h-screen bg-brand-primary flex flex-col font-sans overflow-hidden">
+     class="h-screen bg-primary flex flex-col font-sans overflow-hidden">
 
   <div class="flex-1 flex flex-col items-center justify-center px-6 text-center">
     
@@ -29,7 +29,7 @@
 
     <%# Check-out Time Display (Simulating the OYO style) %>
     <div class="w-full max-w-[280px] mx-auto mb-8 pt-6 border-t border-white/20" data-animate style="transition-delay: 0.2s">
-      <p class="text-[10px] font-black uppercase tracking-[0.2em] text-brand-gold/80 mb-2">Your check-out time</p>
+      <p class="text-[10px] font-black uppercase tracking-[0.2em] text-accent/80 mb-2">Your check-out time</p>
       <p class="text-5xl font-serif text-white tracking-tighter [text-shadow:0_4px_12px_rgba(0,0,0,0.3)]">
         <%= Time.current.strftime("%I:%M %p") %>
       </p>
@@ -44,7 +44,7 @@
         </div>
         <div class="text-right">
           <p class="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 mb-1">Reservation</p>
-          <p class="text-[11px] font-mono font-bold text-brand-gold"><%= @booking.confirmation_token %></p>
+          <p class="text-[11px] font-mono font-bold text-accent"><%= @booking.confirmation_token %></p>
         </div>
       </div>
       
@@ -67,7 +67,7 @@
   <%# Fixed Bottom Button %>
   <div class="p-6 pb-12" data-animate style="transition-delay: 0.4s">
     <%= link_to concierge_home_path(@hotel.slug), 
-          class: "block w-full bg-white text-brand-primary font-black py-4.5 rounded-xl shadow-2xl active:scale-[0.98] transition-all text-center tracking-[0.2em] text-sm uppercase" do %>
+          class: "block w-full bg-white text-primary font-black py-4.5 rounded-xl shadow-2xl active:scale-[0.98] transition-all text-center tracking-[0.2em] text-sm uppercase" do %>
       Done
     <% end %>
   </div>

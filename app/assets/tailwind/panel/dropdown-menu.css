@@ -1,0 +1,132 @@
+@layer components {
+  .dropdown-menu-root {
+    @apply relative inline-flex;
+  }
+
+  .dropdown-menu__trigger {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+
+  .dropdown-menu {
+    inset: auto;
+    margin: 0;
+    min-width: 12rem;
+    max-width: min(22rem, calc(100vw - 1rem));
+    max-height: min(20rem, calc(100vh - 1rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--card);
+    color: var(--card-foreground);
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-dropdown);
+  }
+
+  .dropdown-menu:focus {
+    outline: none;
+  }
+
+  .dropdown-menu--submenu {
+    min-width: 11rem;
+  }
+
+  .dropdown-menu__header {
+    margin: -0.25rem -0.25rem 0.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dropdown-menu__item {
+    @apply flex min-h-7 w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-sm font-medium;
+    color: var(--card-foreground);
+    cursor: default;
+    user-select: none;
+  }
+
+  .dropdown-menu__item:hover,
+  .dropdown-menu__item:focus-visible {
+    background: var(--muted);
+    outline: none;
+  }
+
+  .dropdown-menu__item[aria-disabled="true"] {
+    color: var(--muted-foreground);
+    opacity: 0.55;
+  }
+
+  .dropdown-menu__item[aria-disabled="true"]:hover,
+  .dropdown-menu__item[aria-disabled="true"]:focus-visible {
+    background: transparent;
+  }
+
+  .dropdown-menu__item[data-variant="primary"] { color: var(--primary); }
+  .dropdown-menu__item[data-variant="info"] { color: var(--info-on-surface); }
+  .dropdown-menu__item[data-variant="success"] { color: var(--success-on-surface); }
+  .dropdown-menu__item[data-variant="warning"] { color: var(--warning-on-surface); }
+  .dropdown-menu__item[data-variant="danger"] { color: var(--destructive-on-surface); }
+
+  .dropdown-menu__item[data-variant="primary"]:is(:hover, :focus-visible) { background: color-mix(in oklab, var(--primary) 14%, transparent); }
+  .dropdown-menu__item[data-variant="info"]:is(:hover, :focus-visible) { background: color-mix(in oklab, var(--info) 14%, transparent); }
+  .dropdown-menu__item[data-variant="success"]:is(:hover, :focus-visible) { background: color-mix(in oklab, var(--success) 14%, transparent); }
+  .dropdown-menu__item[data-variant="warning"]:is(:hover, :focus-visible) { background: color-mix(in oklab, var(--warning) 14%, transparent); }
+  .dropdown-menu__item[data-variant="danger"]:is(:hover, :focus-visible) { background: color-mix(in oklab, var(--destructive) 14%, transparent); }
+
+  .dropdown-menu__item-label {
+    @apply min-w-0 flex-1;
+  }
+
+  .dropdown-menu__indicator {
+    @apply inline-flex size-4 shrink-0 items-center justify-center;
+  }
+
+  .dropdown-menu__selection[aria-checked="true"] .dropdown-menu__indicator[data-selection-type="checkbox"]::before {
+    content: "✓";
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+
+  .dropdown-menu__selection[aria-checked="true"] .dropdown-menu__indicator[data-selection-type="radio"]::before {
+    content: "";
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 9999px;
+    background: currentColor;
+  }
+
+  .dropdown-menu__separator {
+    height: 1px;
+    margin: 0.25rem -0.25rem;
+    background: var(--border);
+  }
+
+  .dropdown-menu__group + .dropdown-menu__group {
+    margin-top: 0.25rem;
+  }
+
+  .dropdown-menu__group-label {
+    @apply px-2 pb-1 pt-1.5 text-xs font-semibold;
+    color: var(--muted-foreground);
+  }
+
+  .dropdown-menu__submenu-arrow {
+    @apply ml-auto text-base leading-none;
+    color: var(--muted-foreground);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .dropdown-menu:popover-open {
+      animation: dropdown-menu-enter var(--duration-fast) var(--ease-standard);
+      transform-origin: top left;
+    }
+  }
+
+  @media (pointer: coarse) {
+    .dropdown-menu__item { min-height: 2.5rem; }
+  }
+
+  @keyframes dropdown-menu-enter {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}

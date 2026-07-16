@@ -1,0 +1,75 @@
+@layer components {
+  .panel-table__wrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .panel-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    color: var(--foreground);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  .panel-table thead {
+    background: var(--muted);
+    color: var(--muted-foreground);
+  }
+
+  .panel-table th,
+  .panel-table td {
+    padding-inline: 0.75rem;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .panel-table thead th {
+    padding-block: 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .panel-table tbody th,
+  .panel-table tbody td,
+  .panel-table tfoot th,
+  .panel-table tfoot td {
+    padding-block: 0.625rem;
+  }
+
+  .panel-table[data-density="compact"] thead th { padding-block: 0.375rem; }
+  .panel-table[data-density="compact"] :is(tbody, tfoot) :is(th, td) { padding-block: 0.375rem; }
+
+  .panel-table[data-bordered="true"] thead th,
+  .panel-table[data-bordered="true"] tbody tr:not(:last-child) > *,
+  .panel-table[data-bordered="true"] tfoot > tr:first-child > * {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-table[data-striped="true"] tbody tr:nth-child(even) {
+    background: color-mix(in oklab, var(--muted) 55%, transparent);
+  }
+
+  .panel-table[data-hoverable="true"] tbody tr {
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-table[data-hoverable="true"] tbody tr:hover {
+    background: var(--muted);
+  }
+
+  .panel-table[data-sticky-header="true"] thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--muted);
+  }
+
+  .panel-table tfoot {
+    background: color-mix(in oklab, var(--muted) 55%, transparent);
+    font-weight: 600;
+  }
+}

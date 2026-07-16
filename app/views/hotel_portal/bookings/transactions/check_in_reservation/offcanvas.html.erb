@@ -28,28 +28,28 @@
         <% end %>
 
         <div>
-          <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Check-in Date & Time</label>
+          <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Check-in Date & Time</label>
           <%= f.datetime_local_field :checked_in_at,
               value: @presenter.checked_in_at_form_value,
-              class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+              class: "w-full rounded-xl border border-border bg-card py-2.5 px-4 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
 
         <% if @booking.checked_in? %>
           <div>
-            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Reason to change</label>
+            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Reason to change</label>
             <%= text_field_tag :retroactive_reason, params[:retroactive_reason],
                 placeholder: "Provide a reason for updating the check-in details",
                 required: true,
-                class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                class: "w-full rounded-xl border border-border bg-card py-2.5 px-4 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
           </div>
         <% end %>
 
         <% unless @booking.checked_in? %>
-          <div class="space-y-4 border-t border-slate-100 py-4" data-controller="payment-toggle">
+          <div class="space-y-4 border-t border-border py-4" data-controller="payment-toggle">
             <div class="flex items-start justify-between gap-4">
               <div>
-                <h3 class="text-sm font-bold text-slate-900">Security Deposit</h3>
-                <p class="mt-1 text-xs font-medium text-slate-500">Record a refundable deposit separately from the guest folio.</p>
+                <h3 class="text-sm font-bold text-foreground">Security Deposit</h3>
+                <p class="mt-1 text-xs font-medium text-muted-foreground">Record a refundable deposit separately from the guest folio.</p>
               </div>
               <label class="relative mt-0.5 inline-flex shrink-0 cursor-pointer items-center">
                 <%= check_box_tag :collect_security_deposit,
@@ -58,65 +58,65 @@
                                   class: "peer sr-only",
                                   aria: { label: "I have collected the guest's security deposit" },
                                   data: { payment_toggle_target: "checkbox", action: "change->payment-toggle#toggle" } %>
-                <span class="block h-6 w-11 rounded-full bg-slate-200 transition peer-checked:bg-slate-900 peer-focus-visible:ring-2 peer-focus-visible:ring-slate-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></span>
+                <span class="block h-6 w-11 rounded-full bg-muted transition peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-border-interactive after:bg-card after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-border"></span>
               </label>
             </div>
 
             <div class="flex items-center justify-between gap-4" data-payment-toggle-target="container">
-              <%= label_tag :security_deposit_amount, "Security Deposit Amount", class: "text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
-              <div class="flex w-44 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-sm font-black text-slate-900 shadow-sm">
-                <span class="flex items-center border-r border-slate-200 px-3 text-xs font-bold text-slate-500"><%= currency %></span>
+              <%= label_tag :security_deposit_amount, "Security Deposit Amount", class: "text-[11px] font-bold uppercase tracking-wider text-muted-foreground" %>
+              <div class="flex w-44 overflow-hidden rounded-xl border border-border bg-muted text-sm font-black text-foreground shadow-sm">
+                <span class="flex items-center border-r border-border px-3 text-xs font-bold text-muted-foreground"><%= currency %></span>
                 <%= number_field_tag :security_deposit_amount,
                                      "0.00",
                                      step: 0.01,
                                      min: 0,
                                      disabled: true,
-                                     class: "min-w-0 flex-1 border-0 bg-slate-50 px-3 py-2 text-right font-black text-slate-900 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:text-slate-400",
+                                     class: "min-w-0 flex-1 border-0 bg-muted px-3 py-2 text-right font-black text-foreground focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:text-muted-foreground",
                                      data: { payment_toggle_target: "field" } %>
               </div>
             </div>
 
             <div class="grid gap-3 sm:grid-cols-2" data-payment-toggle-target="container">
               <div>
-                <%= label_tag :security_deposit_payment_method, "Method", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
-                <%= select_tag :security_deposit_payment_method, options_for_select([["Cash", "cash"], ["Credit Card", "credit_card"], ["Bank Transfer", "bank_transfer"], ["Manual", "manual"]], "cash"), disabled: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400", data: { payment_toggle_target: "field" } %>
+                <%= label_tag :security_deposit_payment_method, "Method", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground" %>
+                <%= select_tag :security_deposit_payment_method, options_for_select([["Cash", "cash"], ["Credit Card", "credit_card"], ["Bank Transfer", "bank_transfer"], ["Manual", "manual"]], "cash"), disabled: true, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground", data: { payment_toggle_target: "field" } %>
               </div>
               <div>
-                <%= label_tag :security_deposit_reference, "Reference", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500" %>
-                <%= text_field_tag :security_deposit_reference, nil, placeholder: "Optional receipt/reference", disabled: true, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400", data: { payment_toggle_target: "field" } %>
+                <%= label_tag :security_deposit_reference, "Reference", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground" %>
+                <%= text_field_tag :security_deposit_reference, nil, placeholder: "Optional receipt/reference", disabled: true, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground", data: { payment_toggle_target: "field" } %>
               </div>
             </div>
           </div>
 
           <% tourism_tax_total = @booking.tourism_tax_total %>
           <% if tourism_tax_total.positive? %>
-            <div class="space-y-4 border-t border-slate-100 py-4">
+            <div class="space-y-4 border-t border-border py-4">
               <div>
-                <h3 class="text-sm font-bold text-slate-900">Tourism Tax</h3>
-                <p class="mt-1 text-xs font-medium text-slate-500">Record collection of mandatory tourism tax.</p>
+                <h3 class="text-sm font-bold text-foreground">Tourism Tax</h3>
+                <p class="mt-1 text-xs font-medium text-muted-foreground">Record collection of mandatory tourism tax.</p>
               </div>
 
               <div class="flex items-center justify-between gap-4">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Tourism Tax</span>
-                <div class="flex w-36 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-sm font-black text-slate-900 shadow-sm">
-                  <span class="flex items-center border-r border-slate-200 px-3 text-xs font-bold text-slate-500"><%= currency %></span>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Total Tourism Tax</span>
+                <div class="flex w-36 overflow-hidden rounded-xl border border-border bg-muted text-sm font-black text-foreground shadow-sm">
+                  <span class="flex items-center border-r border-border px-3 text-xs font-bold text-muted-foreground"><%= currency %></span>
                   <%= text_field_tag :tourism_tax_amount,
                                      number_with_precision(tourism_tax_total, precision: 2),
                                      disabled: true,
-                                     class: "min-w-0 flex-1 border-0 bg-slate-50 px-3 py-2 text-right font-black text-slate-900 focus:outline-none focus:ring-0 disabled:cursor-not-allowed" %>
+                                     class: "min-w-0 flex-1 border-0 bg-muted px-3 py-2 text-right font-black text-foreground focus:outline-none focus:ring-0 disabled:cursor-not-allowed" %>
                 </div>
               </div>
 
               <div class="flex items-start justify-between gap-4">
                 <div>
-                  <p class="text-sm font-bold text-slate-900">I have collected the guest's total tourism tax</p>
-                  <p class="mt-1 text-xs font-medium leading-5 text-slate-500">If this is off, tourism tax will remain unpaid on the guest folio and may appear as an outstanding balance after tax charges are posted.</p>
+                  <p class="text-sm font-bold text-foreground">I have collected the guest's total tourism tax</p>
+                  <p class="mt-1 text-xs font-medium leading-5 text-muted-foreground">If this is off, tourism tax will remain unpaid on the guest folio and may appear as an outstanding balance after tax charges are posted.</p>
                 </div>
                 <label class="relative mt-0.5 inline-flex shrink-0 cursor-pointer items-center">
                   <%= f.check_box :tourism_tax_collected,
                                   class: "peer sr-only",
                                   aria: { label: "I have collected the guest's total tourism tax" } %>
-                  <span class="block h-6 w-11 rounded-full bg-slate-200 transition peer-checked:bg-slate-900 peer-focus-visible:ring-2 peer-focus-visible:ring-slate-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></span>
+                  <span class="block h-6 w-11 rounded-full bg-muted transition peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-border-interactive after:bg-card after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-border"></span>
                 </label>
               </div>
             </div>
@@ -124,7 +124,7 @@
         <% end %>
 
         <div class="space-y-3">
-          <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Room Assignments</label>
+          <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Room Assignments</label>
           <%= f.fields_for :booking_rooms do |rf| %>
             <div class="flex items-center gap-3"
                  data-controller="room-lock room-selection"
@@ -138,37 +138,37 @@
                  data-room-selection-booking-id-value="<%= @booking.id %>"
                  data-room-selection-current-room-value="<%= rf.object.room_number %>">
               <div class="flex-1">
-                <p class="text-[10px] font-medium text-slate-400 uppercase mb-1"><%= rf.object.room_type.name %></p>
+                <p class="text-[10px] font-medium text-muted-foreground uppercase mb-1"><%= rf.object.room_type.name %></p>
                 <%= rf.select :room_number, [[rf.object.room_number, rf.object.room_number]], { selected: rf.object.room_number },
-                    class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm",
+                    class: "w-full rounded-xl border border-border bg-card py-2.5 px-4 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm",
                     data: {
                       room_selection_target: "select",
                       action: "change->room-lock#lock"
                     } %>
-                <p class="text-[10px] text-slate-400 mt-1.5 italic">Only available rooms for the stay dates are shown.</p>
+                <p class="text-[10px] text-muted-foreground mt-1.5 italic">Only available rooms for the stay dates are shown.</p>
               </div>
             </div>
           <% end %>
         </div>
 
         <% if @presenter.requires_backdated_checkin_reason? && !@booking.checked_in? %>
-          <div class="mt-4 pt-4 border-t border-slate-100">
+          <div class="mt-4 pt-4 border-t border-border">
             <div class="flex gap-3">
               <div class="flex-shrink-0 mt-0.5">
                 <%= cached_icon "triangle-alert", stroke_width: 2, class: "size-4 text-orange-500" %>
               </div>
               <div class="flex-1">
-                <h4 class="text-xs font-bold text-slate-900">Backdated Check-in</h4>
-                <p class="text-[11px] text-slate-500 mt-1 mb-3">Night audit has already run for this check-in date. This operation is for unexpected arrivals after the audit.</p>
+                <h4 class="text-xs font-bold text-foreground">Backdated Check-in</h4>
+                <p class="text-[11px] text-muted-foreground mt-1 mb-3">Night audit has already run for this check-in date. This operation is for unexpected arrivals after the audit.</p>
 
                 <div class="space-y-3">
                   <label class="flex items-center gap-2">
-                    <%= check_box_tag :override_night_audit, "1", false, class: "rounded text-slate-900 focus:ring-slate-900 border-slate-300" %>
-                    <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Override Night Audit</span>
+                    <%= check_box_tag :override_night_audit, "1", false, class: "rounded text-foreground focus:ring-ring border-border-interactive" %>
+                    <span class="text-[11px] font-bold text-foreground uppercase tracking-wider">Override Night Audit</span>
                   </label>
 
                   <div>
-                    <%= text_field_tag :retroactive_reason, nil, placeholder: "Provide a reason (e.g. system offline, missed check-in)", class: "w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
+                    <%= text_field_tag :retroactive_reason, nil, placeholder: "Provide a reason (e.g. system offline, missed check-in)", class: "w-full rounded-xl border border-border bg-card py-2.5 px-4 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
                   </div>
                 </div>
               </div>
@@ -185,7 +185,7 @@
       <%# Modal Footer %>
       <%= render "hotel_portal/bookings/board/partials/content_footer",
                  show_full_page_link: false,
-                 submit_button: f.submit((@booking.checked_in? ? "Save Changes" : "Confirm Check In"), class: "px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors shadow-sm") %>
+                 submit_button: f.submit((@booking.checked_in? ? "Save Changes" : "Confirm Check In"), class: "px-6 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-sm") %>
     <% end %>
   </div>
 <% end %>

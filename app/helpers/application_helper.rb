@@ -1,4 +1,27 @@
 module ApplicationHelper
+  def toast_flash_messages(flash)
+    messages = []
+    toast_data = flash[:toast]
+
+    if toast_data.present?
+      toast_data = toast_data.with_indifferent_access if toast_data.respond_to?(:with_indifferent_access)
+      if toast_data.is_a?(Hash) && toast_data[:message].present?
+        messages << {
+          message: toast_data[:message].to_s,
+          options: { type: toast_data[:type].presence || "default", description: toast_data[:description].presence }.compact
+        }
+      end
+    end
+
+    flash.each do |key, value|
+      next if key.to_sym == :toast || value.blank?
+
+      messages << { message: value.to_s, options: { type: Toast.type_for_flash(key) } }
+    end
+
+    messages
+  end
+
   def cached_icon(name, library: RailsIcons.configuration.default_library, from: library, variant: nil, **arguments)
     @_cached_icons ||= {}
     key = [ name.to_s, library.to_s, from.to_s, variant&.to_s, arguments ]
@@ -11,6 +34,13 @@ module ApplicationHelper
       ""
     end
     @_cached_icons[key].dup.html_safe
+  end
+
+  # ViewComponent-backed replacement for `cached_icon`, in progress. Not called
+  # from any view yet — migrate call sites to this one at a time, then retire
+  # `cached_icon` once nothing references it. See AppIconComponent.
+  def app_icon(name, **arguments)
+    render(AppIconComponent.new(name, **arguments))
   end
 
   def booking_status_class(status)

@@ -122,9 +122,12 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
 
   describe "additional taxes and fees" do
     it "renders the add fee offcanvas" do
+      hotel.update!(status: "approved")
       get new_hotel_hotel_tax_path(hotel)
 
       expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.at_css("#hotel-settings-sidebar")).to be_present
+      expect(response.parsed_body.at_css("#hotel-sidebar")).to be_nil
       expect(response.body).to include("turbo-frame id=\"offcanvas_drawer\"")
       expect(response.body).to include("Add Fee")
       expect(response.body).to include("Transaction Code")

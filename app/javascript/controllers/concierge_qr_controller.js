@@ -3,6 +3,15 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = ["url", "copyButton"]
 
+  connect() {
+    const dialog = this.element.querySelector("dialog")
+    if (dialog && !dialog.open) dialog.showModal()
+  }
+
+  disconnect() {
+    if (this.resetTimer) clearTimeout(this.resetTimer)
+  }
+
   print(event) {
     event.preventDefault()
     window.print()
@@ -26,7 +35,7 @@ export default class extends Controller {
       Copied
     `
 
-    setTimeout(() => {
+    this.resetTimer = setTimeout(() => {
       this.copyButtonTarget.innerHTML = originalContent
     }, 2000)
   }

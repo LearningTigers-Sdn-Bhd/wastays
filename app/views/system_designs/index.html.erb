@@ -1,0 +1,116 @@
+<% content_for :title, "System Design — PanelsUI" %>
+
+<%
+  previews = [
+    { name: "Accordion", partial: "accordion_preview" },
+    { name: "Alert", partial: "alert_preview" },
+    { name: "Alert dialog", partial: "alert_dialog_preview" },
+    { name: "Avatar", partial: "avatar_preview" },
+    { name: "Badge", partial: "badge_preview" },
+    { name: "Banner", partial: "banner_preview" },
+    { name: "Breadcrumb", partial: "breadcrumb_preview" },
+    { name: "Button", partial: "button_preview" },
+    { name: "Button group", partial: "button_group_preview" },
+    { name: "Card", partial: "card_preview" },
+    { name: "Checkbox", partial: "checkbox_preview" },
+    { name: "Collapsible", partial: "collapsible_preview" },
+    { name: "Combobox", partial: "combobox_preview" },
+    { name: "Date picker", partial: "date_picker_preview" },
+    { name: "Date time picker", partial: "date_time_picker_preview" },
+    { name: "Dialog", partial: "dialog_preview" },
+    { name: "Dropdown menu", partial: "dropdown_menu_preview" },
+    { name: "File upload", partial: "file_upload_preview" },
+    { name: "Form fields", partial: "form_fields_preview" },
+    { name: "Form submission", partial: "form_submission_preview" },
+    { name: "Keyboard shortcut", partial: "kbd_preview" },
+    { name: "Loading states", partial: "loading_preview" },
+    { name: "Metric card", partial: "metric_card_preview" },
+    { name: "Multi-select", partial: "multi_select_preview" },
+    { name: "Native select", partial: "native_select_preview" },
+    { name: "Navbar", partial: "navbar_preview" },
+    { name: "Page header", partial: "page_header_preview" },
+    { name: "Popover", partial: "popover_preview" },
+    { name: "Radio", partial: "radio_preview" },
+    { name: "Scroll area", partial: "scroll_area_preview" },
+    { name: "Select menu", partial: "select_menu_preview" },
+    { name: "Separator", partial: "separator_preview" },
+    { name: "Sheet", partial: "sheet_preview" },
+    { name: "Sidebar", partial: "sidebar_preview" },
+    { name: "Switch", partial: "switch_preview" },
+    { name: "Table", partial: "table_preview" },
+    { name: "Tabs", partial: "tabs_preview" },
+    { name: "Time picker", partial: "time_picker_preview" },
+    { name: "Toast", partial: "toast_preview" },
+    { name: "Tooltip", partial: "tooltip_preview" }
+  ].map { |preview| preview.merge(anchor: preview[:partial].tr("_", "-")) }
+%>
+
+<div class="mx-auto grid max-w-[90rem] grid-cols-1 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[14rem_minmax(0,56rem)] lg:justify-center lg:gap-x-10 xl:gap-x-14"
+     data-controller="system-designs--preview-navigation">
+  <header class="mb-10 lg:col-start-2 lg:row-start-1">
+    <h1 class="text-2xl font-bold text-foreground">PanelsUI</h1>
+    <p class="mt-1 text-sm text-muted-foreground">
+      Accessible, reactive, variant-based primitives. Each section below is a live component.
+    </p>
+  </header>
+
+  <aside class="hidden lg:col-start-1 lg:row-start-2 lg:block">
+    <nav class="sticky top-6 max-h-[calc(100dvh-3rem)] overflow-y-auto pe-3"
+         aria-label="Component previews"
+         data-system-designs--preview-navigation-target="navigation">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Components</p>
+      <ol class="space-y-0.5 border-s border-border ps-3">
+        <% previews.each do |preview| %>
+          <li>
+            <a href="#<%= preview[:anchor] %>"
+               class="block rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring aria-[current=location]:bg-muted aria-[current=location]:font-semibold aria-[current=location]:text-foreground"
+               data-action="click->system-designs--preview-navigation#navigate"
+               data-preview-anchor="<%= preview[:anchor] %>"
+               data-system-designs--preview-navigation-target="link">
+              <%= preview[:name] %>
+            </a>
+          </li>
+        <% end %>
+      </ol>
+    </nav>
+  </aside>
+
+  <details class="sticky top-3 z-20 mb-8 rounded-xl border border-border bg-card text-card-foreground shadow-sm lg:hidden"
+           data-action="toggle->system-designs--preview-navigation#revealActive"
+           data-system-designs--preview-navigation-target="mobileMenu">
+    <summary class="cursor-pointer rounded-xl px-4 py-3 text-sm font-semibold marker:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+      Components
+    </summary>
+    <nav class="max-h-[min(70dvh,32rem)] overflow-y-auto border-t border-border p-2"
+         aria-label="Component previews"
+         data-system-designs--preview-navigation-target="navigation">
+      <ol class="grid grid-cols-2 gap-1 sm:grid-cols-3">
+        <% previews.each do |preview| %>
+          <li>
+            <a href="#<%= preview[:anchor] %>"
+               data-action="click->system-designs--preview-navigation#navigate"
+               data-preview-anchor="<%= preview[:anchor] %>"
+               data-system-designs--preview-navigation-target="link"
+               class="block rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring aria-[current=location]:bg-muted aria-[current=location]:font-semibold aria-[current=location]:text-foreground">
+              <%= preview[:name] %>
+            </a>
+          </li>
+        <% end %>
+      </ol>
+    </nav>
+  </details>
+
+  <div class="min-w-0 space-y-12 lg:col-start-2 lg:row-start-2">
+    <% previews.each do |preview| %>
+      <div id="<%= preview[:anchor] %>"
+           class="relative scroll-mt-20 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring lg:scroll-mt-6"
+           data-preview-anchor="<%= preview[:anchor] %>"
+           data-preview-partial="<%= preview[:partial] %>"
+           data-system-designs--preview-navigation-target="section"
+           tabindex="-1">
+        <code class="absolute right-0 top-0 z-10 -translate-y-1/2 bg-background px-2 py-0.5 text-[10px] text-muted-foreground sm:text-xs">_<%= preview[:partial] %>.html.erb</code>
+        <%= render preview[:partial] %>
+      </div>
+    <% end %>
+  </div>
+</div>
