@@ -222,39 +222,58 @@ def find_or_create_corporate_account(name:, slug:)
   account
 end
 
+# Each corporate account gets exactly one login user (User#account_id must be
+# unique for corporate-role users), so the corporate portal is reachable.
+def find_or_create_corporate_user(account:, name:, email:)
+  account.users.first || User.create!(
+    name: name,
+    email: email,
+    account: account,
+    role: "corporate",
+    password: "12345678",
+    password_confirmation: "12345678"
+  )
+end
+
 corporates = {}
 
 corp_account = find_or_create_corporate_account(name: "Borneo Techlink Sdn Bhd", slug: "borneo-techlink")
 hca = HotelCorporateAccount.find_or_initialize_by(hotel: hotel, corporate_account: corp_account)
 hca.assign_attributes(account_type: "company", relationship_type: "direct_bill", direct_bill_enabled: true, credit_limit: 25_000, credit_currency: "MYR", payment_terms_days: 30, status: "active", contact_email: "ap@borneotechlink.example")
 hca.save!
+find_or_create_corporate_user(account: corp_account, name: "Techlink Accounts", email: hca.contact_email)
 corporates[:company_direct_bill] = hca
 
 corp_account = find_or_create_corporate_account(name: "Pantai Resort Supplies Sdn Bhd", slug: "pantai-resort-supplies")
 hca = HotelCorporateAccount.find_or_initialize_by(hotel: hotel, corporate_account: corp_account)
 hca.assign_attributes(account_type: "company", relationship_type: "standard", direct_bill_enabled: false, credit_currency: "MYR", status: "active", contact_email: "finance@pantairesortsupplies.example")
 hca.save!
+find_or_create_corporate_user(account: corp_account, name: "Pantai Resort Supplies Accounts", email: hca.contact_email)
 corporates[:company_standard] = hca
 
 corp_account = find_or_create_corporate_account(name: "Kota Kinabalu City Council", slug: "kk-city-council")
 hca = HotelCorporateAccount.find_or_initialize_by(hotel: hotel, corporate_account: corp_account)
 hca.assign_attributes(account_type: "government", relationship_type: "direct_bill", direct_bill_enabled: true, credit_limit: 60_000, credit_currency: "MYR", payment_terms_days: 45, status: "active", contact_email: "treasury@kkcouncil.example")
 hca.save!
+find_or_create_corporate_user(account: corp_account, name: "KK City Council Treasury", email: hca.contact_email)
 corporates[:government] = hca
 
 corp_account = find_or_create_corporate_account(name: "Borneo Wanderlust Travel Agency", slug: "borneo-wanderlust")
 hca = HotelCorporateAccount.find_or_initialize_by(hotel: hotel, corporate_account: corp_account)
 hca.assign_attributes(account_type: "travel_agent", relationship_type: "direct_bill", direct_bill_enabled: true, credit_limit: 18_000, credit_currency: "MYR", payment_terms_days: 14, status: "active", contact_email: "accounts@borneowanderlust.example")
 hca.save!
+find_or_create_corporate_user(account: corp_account, name: "Wanderlust Accounts", email: hca.contact_email)
 corporates[:travel_agent] = hca
 
 corp_account = find_or_create_corporate_account(name: "SkyBorneo Airlines Crew Desk", slug: "skyborneo-crew")
 hca = HotelCorporateAccount.find_or_initialize_by(hotel: hotel, corporate_account: corp_account)
 hca.assign_attributes(account_type: "airline", relationship_type: "direct_bill", direct_bill_enabled: true, credit_limit: 35_000, credit_currency: "MYR", payment_terms_days: 30, status: "active", contact_email: "crewaccommodation@skyborneo.example")
 hca.save!
+find_or_create_corporate_user(account: corp_account, name: "SkyBorneo Crew Desk Accounts", email: hca.contact_email)
 corporates[:airline] = hca
 
 puts "5 corporate accounts ready: #{corporates.values.map { |c| c.corporate_account.name }.join(', ')}"
+puts "5 corporate logins ready (password: 12345678): #{corporates.values.map { |c| c.contact_email }.join(', ')}"
 
 # 7. Helpers (adapted from db/seeds/per_pax_hotel_seeder.rb)
 
@@ -668,14 +687,7 @@ travel_agent_hca = corporates[:travel_agent]
 travel_agent_outstanding_invoices = travel_agent_hca&.ar_invoices&.select { |inv| inv.outstanding_amount.to_d.positive? } || []
 
 if travel_agent_hca && travel_agent_outstanding_invoices.any? && File.exist?(Rails.root.join("spec/fixtures/files/sample_image.jpg"))
-  agent_user = travel_agent_hca.corporate_account.users.first || User.create!(
-    name: "Wanderlust Accounts",
-    email: "accounts@borneowanderlust.example",
-    account: travel_agent_hca.corporate_account,
-    role: "corporate",
-    password: "12345678",
-    password_confirmation: "12345678"
-  )
+  agent_user = travel_agent_hca.corporate_account.users.first
 
   pending_invoice = travel_agent_outstanding_invoices.first
   pending_amount = [ 850.0, pending_invoice.outstanding_amount.to_d ].min
