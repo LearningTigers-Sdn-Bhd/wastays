@@ -9,7 +9,7 @@ module HotelPortal
     before_action :set_tab
 
     def index
-      @view = VIEWS.include?(params[:view]) ? params[:view] : "list"
+      @view = VIEWS.include?(params[:view]) ? params[:view] : "rooms"
       @state = front_desk_state
       load_metrics
 

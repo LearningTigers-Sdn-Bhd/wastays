@@ -106,8 +106,33 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       }
 
       expect(response.body).to include("active-tab:in_house")
-      expect(response.body).to include("active-view:list")
+      expect(response.body).to include("active-view:rooms")
       expect(response.body).to include("page:1")
+    end
+
+    it "defaults to the rooms view" do
+      get hotel_front_desk_path(hotel)
+
+      expect(response.body).to include("active-view:rooms")
+      expect(response.parsed_body.at_css("[aria-label='Reservation view'] a[aria-current='page']")&.text).to include("Rooms")
+    end
+
+    it "hides today reset until arrivals or departures use another date" do
+      grant_arrival_permission
+      today = Time.current.in_time_zone(hotel.hotel_time_zone).to_date.iso8601
+
+      %w[arrivals departures].each do |tab|
+        get hotel_front_desk_path(hotel), params: { tab: }
+        expect(response.parsed_body.at_css("a[aria-label='Reset to today']")).to be_nil
+
+        prefix = tab == "arrivals" ? "arrival" : "departure"
+        get hotel_front_desk_path(hotel), params: {
+          tab:, "#{prefix}_start_date" => "2026-07-14", "#{prefix}_end_date" => "2026-07-15"
+        }
+        expect(response.parsed_body.at_css("a[aria-label='Reset to today']")&.[]("href")).to include(
+          "#{prefix}_start_date=#{today}", "#{prefix}_end_date=#{today}"
+        )
+      end
     end
 
     it "rejects structured state inputs with canonical defaults" do
@@ -121,7 +146,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("active-tab:arrivals")
-      expect(response.body).to include("active-view:list")
+      expect(response.body).to include("active-view:rooms")
       expect(response.body).to include("page:1")
     end
 
@@ -233,12 +258,25 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       end
     end
 
-    it "hides Clear dates without date controls and uses line view tabs" do
+    it "hides Clear dates without date controls and uses button view controls" do
       get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list" }
 
       document = response.parsed_body
       expect(document.at_css("a[aria-label='Clear dates'], a[aria-label='Reset to today']")).to be_nil
-      expect(document.at_css("#reservation-view.tabs-root--line [aria-label='Reservation view']")).to be_present
+      view_group = document.at_css(".panel-button-group[aria-label='Reservation view']")
+      expect(view_group).to be_present
+      expect(view_group.css("a.panel-button").map { |link| link.text.squish }).to eq(%w[Rooms List])
+      active_links = view_group.css("a.panel-button[aria-current='page']")
+      expect(active_links.one?).to be(true)
+      expect(active_links.first.text).to include("List")
+      expect(active_links.first["data-variant"]).to eq("secondary")
+      expect(active_links.first["data-size"]).to eq("lg")
+      inactive_link = view_group.at_css("a.panel-button[href*='view=rooms']")
+      expect(inactive_link["data-variant"]).to eq("neutral")
+      expect(inactive_link["data-size"]).to eq("lg")
+      expect(inactive_link["aria-current"]).to be_nil
+      expect(view_group.css("svg[aria-hidden='true']").size).to eq(2)
+      expect(document.at_css("#reservation-view.tabs-root")).to be_nil
     end
 
     it "does not preserve structured date parameters in tab links" do
@@ -263,12 +301,12 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
         )
       end
 
-      get hotel_front_desk_path(hotel), params: { tab: "arrivals", arrival_page: 1 }
+      get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "list", arrival_page: 1 }
 
       page_one = response.body.scan(/booking:(ARRIVAL-ORDER-\d+)/).flatten
       expect(page_one).to eq((0...25).map { |index| format("ARRIVAL-ORDER-%02d", index) })
 
-      get hotel_front_desk_path(hotel), params: { tab: "arrivals", arrival_page: 2 }
+      get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "list", arrival_page: 2 }
 
       expect(response.body.scan(/booking:(ARRIVAL-ORDER-\d+)/).flatten).to eq(%w[ARRIVAL-ORDER-25 ARRIVAL-ORDER-26])
     end
@@ -285,10 +323,10 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
         )
       end
 
-      get hotel_front_desk_path(hotel), params: { tab: "arrivals", arrival_page: 1 }
+      get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "list", arrival_page: 1 }
       expect(response.body.scan(/booking:(ARRIVAL-TIE-\d+)/).flatten).to eq((0...25).map { |index| format("ARRIVAL-TIE-%02d", index) })
 
-      get hotel_front_desk_path(hotel), params: { tab: "arrivals", arrival_page: 2 }
+      get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "list", arrival_page: 2 }
       expect(response.body.scan(/booking:(ARRIVAL-TIE-\d+)/).flatten).to eq(%w[ARRIVAL-TIE-25 ARRIVAL-TIE-26])
     end
 
@@ -308,7 +346,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       earlier = booking(status: "checked_in", confirmation_token: "INHOUSE-ORDER-EARLIER", checked_in_at: Time.zone.local(2026, 7, 15, 9, 0), created_at: Time.zone.local(2026, 7, 15, 9, 0))
       later = booking(status: "checked_in", confirmation_token: "INHOUSE-ORDER-LATER", checked_in_at: Time.zone.local(2026, 7, 15, 9, 0), created_at: Time.zone.local(2026, 7, 15, 10, 0))
 
-      get hotel_front_desk_path(hotel), params: { tab: "in_house" }
+      get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list" }
 
       expect(response.body.scan(/booking:(INHOUSE-ORDER-[A-Z]+)/).flatten).to eq([ later, earlier, oldest ].map(&:confirmation_token))
     end
@@ -316,7 +354,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
     it "paginates in-house records at 25 per page" do
       26.times { |index| booking(status: "checked_in", confirmation_token: "INHOUSE-PAGE-#{index}", checked_in_at: index.minutes.ago) }
 
-      get hotel_front_desk_path(hotel), params: { tab: "in_house", in_house_page: 2 }
+      get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list", in_house_page: 2 }
 
       expect(response.body).to include("page:2")
       expect(response.body.scan(/booking:INHOUSE-PAGE-/).size).to eq(1)
@@ -334,7 +372,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
     it "paginates departure records at 25 per page" do
       26.times { |index| booking(status: "completed", confirmation_token: "DEPARTURE-PAGE-#{index}", checked_out_at: index.minutes.ago) }
 
-      get hotel_front_desk_path(hotel), params: { tab: "departures", departure_page: 2 }
+      get hotel_front_desk_path(hotel), params: { tab: "departures", view: "list", departure_page: 2 }
 
       expect(response.body).to include("page:2")
       expect(response.body.scan(/booking:DEPARTURE-PAGE-/).size).to eq(1)
@@ -352,6 +390,46 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body).to include(stay.confirmation_token)
     end
 
+    it "renders compact accessible room cards without guest contact details", :room_cards do
+      grant_arrival_permission
+      grant_booking_permission
+      hotel.update!(time_zone: "Kuala Lumpur")
+      created_at = Time.utc(2026, 7, 15, 18, 30)
+      records = {
+        bookings: booking(status: "confirmed", confirmation_token: "ROOM-BOOKING", created_at:, adults: 2, children: 0),
+        arrivals: booking(status: "confirmed", confirmation_token: "ROOM-ARRIVAL", check_in: Date.current, created_at:, adults: 2, children: 0),
+        in_house: booking(status: "checked_in", confirmation_token: "ROOM-IN-HOUSE", checked_in_at: Time.current, created_at:, adults: 2, children: 0),
+        departures: booking(status: "completed", confirmation_token: "ROOM-DEPARTURE", checked_out_at: Time.current, created_at:, adults: 2, children: 0)
+      }
+      queries = {
+        bookings: { booking_query: "ROOM-BOOKING" }, arrivals: { arrival_q: "ROOM-ARRIVAL" },
+        in_house: { in_house_query: "ROOM-IN-HOUSE" }, departures: { departure_query: "ROOM-DEPARTURE" }
+      }
+
+      records.each do |tab, record|
+        get hotel_front_desk_path(hotel), params: { tab:, view: "rooms", **queries.fetch(tab) }
+
+        card = response.parsed_body.at_css("article.front-desk-stay-card")
+        grid = card.parent
+        expect(grid["class"]).to include("grid-cols-1", "md:grid-cols-2", "xl:grid-cols-4")
+        expect(grid["class"]).not_to include("2xl:grid-cols-3")
+        booking_date = card.css("dt").find { |label| label.text.strip == "Booking date" }
+        expect(booking_date).to be_present
+        expect(booking_date.at_xpath("following-sibling::dd")&.text&.strip).to eq(
+          record.created_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y")
+        )
+        expect(card.at_css("[aria-label='2 adults'] svg[aria-hidden='true']")).to be_present
+        expect(card.at_css("[aria-label='0 children'] svg[aria-hidden='true']")).to be_present
+        expect(card.at_css("[aria-label='2 adults'] span[aria-hidden='true']")&.text).to eq("2")
+        expect(card.at_css("[aria-label='0 children'] span[aria-hidden='true']")&.text).to eq("0")
+        expect(card.text).not_to include(record.guest_email, record.guest_phone)
+        expect(card.css("dt").map { |label| label.text.strip }).not_to include("Email", "Phone", "Contact")
+        expect(card.css("dt").map { |label| label.text.strip }).to include("Total", "Paid", "Balance")
+        expect(card.at_css("button[aria-label='Booking actions']")).to be_present
+        expect(card.css("header > span > span").map { |line| line.text.strip }).to eq(%w[Unassigned Room])
+      end
+    end
+
     it "renders accessible arrivals workspace controls and list actions" do
       grant_arrival_permission
       grant_booking_permission
@@ -359,7 +437,8 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
 
       get hotel_front_desk_path(hotel), params: {
         tab: "arrivals", view: "list", arrival_q: "Aisha", in_house_query: "Stay",
-        departure_query: "Departure", room_assignment: "unassigned", in_house_page: 2, departure_page: 3
+        departure_query: "Departure", room_assignment: "unassigned", in_house_page: 2, departure_page: 3,
+        arrival_start_date: "2026-07-15", arrival_end_date: "2026-07-16"
       }
 
       document = Nokogiri::HTML(response.body)
@@ -367,11 +446,23 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(document.at_css("[data-front-desk-metrics]")).to be_present
       expect(document.css("[data-front-desk-metrics] a, [data-front-desk-metrics] button")).to be_empty
       expect(document.at_css("[aria-label='Reservation sections'] a[aria-current='page']")&.text).to include("Arrivals")
-      expect(document.at_css("[aria-label='Reservation view'] a[href*='view=rooms']")&.[]("href")).to include("in_house_query=Stay", "departure_query=Departure", "in_house_page=2", "departure_page=3")
+      view_group = document.at_css(".panel-button-group[aria-label='Reservation view']")
+      expect(view_group).to be_present
+      expect(view_group.at_css("a.panel-button[aria-current='page']")&.text).to include("List")
+      expect(view_group.at_css("a[href*='view=rooms']")&.[]("href")).to include(
+        "arrival_start_date=2026-07-15", "arrival_end_date=2026-07-16",
+        "in_house_query=Stay", "departure_query=Departure", "in_house_page=2", "departure_page=3"
+      )
+      expect(document.at_css("#reservation-view.tabs-root")).to be_nil
       expect(document.at_css("input[name='arrival_q'][aria-label='Search reservations']")).to be_present
-      expect(document.at_css("[data-controller~='panels-ui--date-picker'] input[name='arrival_start_date']")).to be_present
-      expect(document.at_css("[data-controller~='panels-ui--date-picker'] input[name='arrival_end_date']")).to be_present
-      expect(document.at_css("[data-controller~='front-desk-date-range']")).to be_nil
+      range_root = document.at_css("[data-controller~='front-desk-date-range']")
+      expect(range_root).to be_present
+      expect(range_root.at_css("[data-front-desk-date-range-target='picker'] calendar-range[months='2']")).to be_present
+      expect(range_root.at_css(".panel-form-field[data-size='lg']")).to be_present
+      expect(range_root.at_css("input[name='front_desk_date_range']")&.[]("value")).to eq("2026-07-15/2026-07-16")
+      expect(range_root.at_css("input[name='arrival_start_date'][data-front-desk-date-range-target='start']")&.[]("value")).to eq("2026-07-15")
+      expect(range_root.at_css("input[name='arrival_end_date'][data-front-desk-date-range-target='end']")&.[]("value")).to eq("2026-07-16")
+      expect(document.css(".panel-form-field").count { |field| field.text.include?("Start date") || field.text.include?("End date") }).to eq(0)
       expect(document.css("th").map(&:text).map(&:strip)).to include("Guest / Reference", "Pre-Checkin", "Guarantee", "Docs / Notes")
       expect(response.body).to include("Not Started")
       expect(response.body).to include("Check In")
@@ -379,10 +470,12 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
     end
 
     it "limits arrival date controls and list headers to arrivals" do
-      get hotel_front_desk_path(hotel), params: { tab: "in_house" }
+      get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list" }
 
       document = Nokogiri::HTML(response.body)
       expect(document.at_css("input[name='arrival_start_date'], input[name='arrival_end_date']")).to be_nil
+      expect(document.at_css("[data-controller~='front-desk-date-range']")).to be_nil
+      expect(document.at_css("input[name='front_desk_date_range']")).to be_nil
       expect(document.css("th").map(&:text).map(&:strip)).to include("Contact", "Stay Dates", "Checked In", "Rooms")
       expect(response.body).not_to include("Pre-Checkin")
     end
@@ -398,8 +491,8 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       document = Nokogiri::HTML(response.body)
       rooms_link = document.at_css("[aria-label='Reservation view'] a[href*='view=rooms']")
       expect(rooms_link["href"]).to include("arrival_page=2", "in_house_page=3", "departure_page=4")
-      expect(document.at_css("[data-controller~='panels-ui--date-picker'] input[name='arrival_start_date']")).to be_present
-      expect(document.at_css("[data-controller~='panels-ui--date-picker'] input[name='arrival_end_date']")).to be_present
+      expect(document.at_css("[data-controller~='front-desk-date-range'] input[name='arrival_start_date']")).to be_present
+      expect(document.at_css("[data-controller~='front-desk-date-range'] input[name='arrival_end_date']")).to be_present
       expect(document.at_css("form[action*='front-desk'] input[name='arrival_q']")).to be_present
       expect(document.css("form input[name='arrival_page']")).to be_empty
       expect(document.css("form input[name='in_house_page']").length).to be >= 1
@@ -411,7 +504,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       confirmed = booking(status: "confirmed", confirmation_token: "MOBILE-CONFIRMED", check_in: Date.current)
       checked_in = booking(status: "checked_in", confirmation_token: "MOBILE-CHECKED-IN", check_in: Date.current)
 
-      get hotel_front_desk_path(hotel), params: { tab: "arrivals", arrival_q: "MOBILE" }
+      get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "list", arrival_q: "MOBILE" }
 
       document = Nokogiri::HTML(response.body)
       mobile = document.at_css("#front-desk-results section > .lg\\:hidden")
@@ -431,7 +524,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       checkout = booking(status: "checkout_required", confirmation_token: "MOBILE-CHECKOUT", checked_in_at: Time.current)
       departed = booking(status: "completed", confirmation_token: "MOBILE-DEPARTED", checked_in_at: Time.current, checked_out_at: Time.current)
 
-      get hotel_front_desk_path(hotel), params: { tab: "in_house", in_house_query: "MOBILE" }
+      get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list", in_house_query: "MOBILE" }
       mobile = Nokogiri::HTML(response.body).at_css("#front-desk-results section > .lg\\:hidden")
       late_link = mobile.css("a").find { |link| link.text.strip == "Review late checkout" }
       checkout_link = mobile.css("a").find { |link| link.text.strip == "Complete checkout" }
@@ -440,7 +533,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(checkout_link["href"]).to include(checkout.id.to_s, "return_to=")
       expect(checkout_link["data-offcanvas-variant"]).to eq("fullscreen-bottom")
 
-      get hotel_front_desk_path(hotel), params: { tab: "departures", departure_query: "MOBILE" }
+      get hotel_front_desk_path(hotel), params: { tab: "departures", view: "list", departure_query: "MOBILE" }
       mobile = Nokogiri::HTML(response.body).at_css("#front-desk-results section > .lg\\:hidden")
       expect(mobile.text).to include("Contact", "Stay Dates", "Checked In", "Checked Out", "Rooms", "View booking", departed.confirmation_token)
     end
@@ -456,12 +549,12 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       create(:booking_guest, booking: stay, guest: stay_guest, is_primary: true)
       create(:booking_guest, booking: booking(status: "completed", confirmation_token: "MARKED-STAY-HISTORY", checked_out_at: 1.day.ago), guest: stay_guest, is_primary: true)
 
-      get hotel_front_desk_path(hotel), params: { tab: "arrivals", arrival_q: "MARKED" }
+      get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "list", arrival_q: "MARKED" }
       document = Nokogiri::HTML(response.body)
       expect(document.text).to include(arrival.confirmation_token, "VIP", "Blacklisted", "Repeat guest")
       expect(document.at_css("#front-desk-results .lg\\:hidden").text).to include("VIP", "Blacklisted", "Repeat guest")
 
-      get hotel_front_desk_path(hotel), params: { tab: "in_house", in_house_query: "MARKED" }
+      get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list", in_house_query: "MARKED" }
       document = Nokogiri::HTML(response.body)
       expect(document.text).to include(stay.confirmation_token, "VIP", "Blacklisted", "Repeat guest")
       expect(document.at_css("#front-desk-results .lg\\:hidden").text).to include("VIP", "Blacklisted", "Repeat guest")
@@ -488,7 +581,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       booking(status: "completed", confirmation_token: "ROW-DEPARTURE", checked_out_at: Time.current)
 
       %w[arrivals in_house departures].each do |tab|
-        get hotel_front_desk_path(hotel), params: { tab: }
+        get hotel_front_desk_path(hotel), params: { tab:, view: "list" }
         expect(Nokogiri::HTML(response.body).at_css("#front-desk-results .lg\\:block tbody th[scope='row']")).to be_present
       end
     end
@@ -496,7 +589,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
     it "renders checked out text status in mobile departures" do
       booking(status: "completed", confirmation_token: "STATUS-DEPARTURE", checked_out_at: Time.current)
 
-      get hotel_front_desk_path(hotel), params: { tab: "departures", departure_query: "STATUS" }
+      get hotel_front_desk_path(hotel), params: { tab: "departures", view: "list", departure_query: "STATUS" }
 
       expect(Nokogiri::HTML(response.body).at_css("#front-desk-results .lg\\:hidden").text).to include("Checked out")
     end
@@ -505,7 +598,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       booking(status: "review_due_out", confirmation_token: "STATUS-LATE", checked_in_at: Time.current)
       booking(status: "checkout_required", confirmation_token: "STATUS-CHECKOUT", checked_in_at: Time.current)
 
-      get hotel_front_desk_path(hotel), params: { tab: "in_house", in_house_query: "STATUS" }
+      get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list", in_house_query: "STATUS" }
 
       document = Nokogiri::HTML(response.body)
       desktop = document.at_css("#front-desk-results .lg\\:block")
@@ -522,7 +615,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       booking(status: "confirmed", confirmation_token: "PRECHECK-PENDING", check_in: Date.current, pre_checkin_status: "pending")
       booking(status: "confirmed", confirmation_token: "PRECHECK-FAILED", check_in: Date.current, pre_checkin_status: "failed")
 
-      get hotel_front_desk_path(hotel), params: { tab: "arrivals", arrival_q: "PRECHECK" }
+      get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "list", arrival_q: "PRECHECK" }
 
       document = Nokogiri::HTML(response.body)
       desktop = document.at_css("#front-desk-results .lg\\:block")
