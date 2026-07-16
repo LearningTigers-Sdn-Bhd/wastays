@@ -18,6 +18,8 @@ RSpec.describe StayView::LoadInventory do
     booking = create(
       :booking,
       hotel:,
+      group_booking: create(:group_booking, hotel:, name: "Sensitive Group"),
+      group_position: 1,
       check_in: start_date,
       check_out: start_date + 2.days,
       guest_name: "Sensitive Name"
@@ -36,9 +38,41 @@ RSpec.describe StayView::LoadInventory do
 
     expect(inventory.room_types.map(&:id)).to eq([ room_type.id ])
     expect(inventory.bookings.map(&:guest_name)).to eq([ nil ])
+    expect(inventory.bookings.first).to have_attributes(
+      group_booking_id: booking.group_booking_id,
+      group_reference: nil,
+      group_name: nil,
+      group_position: 1
+    )
     expect(inventory.room_statuses.map(&:status)).to eq([ :dirty ])
     expect(inventory.room_blocks.size).to eq(1)
     expect(inventory).to be_frozen
     expect(inventory.bookings).to be_frozen
+  end
+
+  it "loads display-ready group identity as scalar values with booking permission" do
+    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    group = create(:group_booking, hotel:, name: "Conference Group")
+    booking = create(
+      :booking,
+      hotel:,
+      group_booking: group,
+      group_position: 2,
+      check_in: start_date,
+      check_out: start_date + 2.days
+    )
+    create(:booking_room, booking:, room_type:, room_number: "101")
+    visible_capabilities = capabilities.with(view_booking: true)
+
+    record = described_class.call(hotel:, date_window: window, capabilities: visible_capabilities).bookings.first
+
+    expect(record).to have_attributes(
+      group_booking_id: group.id,
+      group_reference: group.formatted_reservation_number,
+      group_name: "Conference Group",
+      group_position: 2
+    )
+    expect(record.group_reference).to be_frozen
+    expect(record.group_name).to be_frozen
   end
 end

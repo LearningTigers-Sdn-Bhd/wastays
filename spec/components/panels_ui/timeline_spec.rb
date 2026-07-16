@@ -105,6 +105,15 @@ RSpec.describe PanelsUI::Timeline::Table, type: :component do
     expect(stylesheet).to match(/\.panel-timeline__segment\s*\{[^}]*grid-row:\s*1\b/m)
   end
 
+  it "keeps half-day geometry without drawing a decorative middle divider" do
+    stylesheet = Rails.root.join("app/assets/tailwind/panel/timeline.css").read
+
+    expect(stylesheet).to include(
+      "grid-template-columns: repeat(var(--panel-timeline-track-count), var(--panel-timeline-half-day-size))"
+    )
+    expect(stylesheet).not_to match(/\.panel-timeline__cell::before/)
+  end
+
   it "owns row groups through a presentational body so the table structure is unbroken" do
     render_inline(build_timeline)
 
@@ -140,6 +149,15 @@ RSpec.describe PanelsUI::Timeline::Table, type: :component do
     expect(page.find(".panel-timeline__segment")[:style]).to eq("grid-column: 1 / 5")
     expect(page).to have_css(".panel-timeline__segment-content[role='img'][aria-label='Maintenance continues beyond the visible range']", text: "Maintenance")
     expect(page).to have_no_link
+  end
+
+  it "uses continuation arrows without a left-clipped start border or dashed clipped borders" do
+    stylesheet = Rails.root.join("app/assets/tailwind/panel/timeline.css").read
+
+    expect(stylesheet).not_to include("border-inline-start-style: dashed", "border-inline-end-style: dashed")
+    expect(stylesheet).to match(/\[data-clipped-left="true"\]\s*\{[^}]*border-inline-start:\s*0/m)
+    expect(stylesheet).to match(/\[data-clipped-left="true"\]::before/)
+    expect(stylesheet).to match(/\[data-clipped-right="true"\]::after/)
   end
 
   it "gives actionable segments their complete accessible label and focus class" do

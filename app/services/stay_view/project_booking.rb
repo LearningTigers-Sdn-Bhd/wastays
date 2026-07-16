@@ -5,8 +5,13 @@ module StayView
     def self.call(booking:, room_type_name:, date_window:, capabilities:)
       tracks = date_window.booking_tracks(booking.check_in, booking.check_out)
       guest_label = capabilities.view_booking? ? booking.guest_name.presence || "Guest" : "Reserved"
+      group_reference = booking.group_reference if capabilities.view_booking?
+      group_name = booking.group_name if capabilities.view_booking?
       room_label = booking.room_number
       dates_label = "#{booking.check_in.to_fs(:long)} to #{booking.check_out.to_fs(:long)}"
+      group_label = [ group_name, group_reference ].compact_blank.join(", ")
+      accessible_parts = [ guest_label, booking.status.to_s.humanize, "room #{room_label}", room_type_name, dates_label ]
+      accessible_parts << "group #{group_label}" if group_label.present?
 
       BookingSegment.new(
         dom_id: "stay_view_booking_room_#{booking.booking_room_id}",
@@ -20,8 +25,12 @@ module StayView
         end_track: tracks.end_track,
         clipped_left: tracks.clipped_left?,
         clipped_right: tracks.clipped_right?,
-        accessible_label: "#{guest_label}, #{booking.status.to_s.humanize}, room #{room_label}, #{room_type_name}, #{dates_label}",
-        capabilities: capabilities
+        accessible_label: accessible_parts.join(", "),
+        capabilities: capabilities,
+        group_booking_id: booking.group_booking_id,
+        group_reference:,
+        group_name:,
+        group_position: booking.group_position
       )
     end
   end

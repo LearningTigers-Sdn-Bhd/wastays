@@ -88,6 +88,14 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page.find("#stay-view-booking-1 a")[:"aria-label"]).to eq(booking_segment.accessible_label)
   end
 
+  it "shows group identity on a grouped booking segment" do
+    grouped = booking_segment.with(group_booking_id: 7, group_reference: "0000001-1", group_name: "Tour Group", group_position: 2)
+
+    render_inline(HotelPortal::StayView::BookingBar.new(segment: grouped))
+
+    expect(page).to have_text("#{booking_segment.guest_label} · 0000001-1")
+  end
+
   it "allows a composition to namespace booking and operational segment ids" do
     render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment, id: "light-booking-1"))
     expect(page).to have_css("#light-booking-1.panel-timeline__segment")

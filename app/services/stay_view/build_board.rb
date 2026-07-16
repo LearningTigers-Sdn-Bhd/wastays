@@ -4,11 +4,11 @@ module StayView
   class BuildBoard
     EVENT_NAME = "stay_view.build_board"
 
-    def self.call(hotel:, user:, start_date: nil, days: nil, view_mode: :timeline, filters: {}, now: Time.current)
-      new(hotel:, user:, start_date:, days:, view_mode:, filters:, now:).call
+    def self.call(hotel:, user:, start_date: nil, days: nil, view_mode: :timeline, filters: {}, now: Time.current, capabilities: nil)
+      new(hotel:, user:, start_date:, days:, view_mode:, filters:, now:, capabilities:).call
     end
 
-    def initialize(hotel:, user:, start_date:, days:, view_mode:, filters:, now:)
+    def initialize(hotel:, user:, start_date:, days:, view_mode:, filters:, now:, capabilities:)
       @hotel = hotel
       @user = user
       @start_date = start_date
@@ -16,24 +16,34 @@ module StayView
       @view_mode = view_mode
       @filters = filters
       @now = now
+      @capabilities = capabilities
     end
 
     def call
       started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      capabilities = BuildCapabilities.call(user:, hotel:)
+      resolved_capabilities = capabilities || BuildCapabilities.call(user:, hotel:)
       date_window = DateWindow.new(hotel:, start_date:, days:, view_mode:, now:)
-      inventory = LoadInventory.call(hotel:, date_window:, capabilities:)
+      inventory = LoadInventory.call(hotel:, date_window:, capabilities: resolved_capabilities)
       normalized_filters = FilterState.build(filters)
-      groups = ApplyFilters.call(room_groups: project_groups(inventory, date_window, capabilities), filters: normalized_filters)
+      groups = ApplyFilters.call(room_groups: project_groups(inventory, date_window, resolved_capabilities), filters: normalized_filters)
       counts = CalculateCounts.call(room_groups: groups)
-      board = Board.new(view_mode: date_window.view_mode, date_window:, room_groups: groups, status_counts: counts, filters: normalized_filters, capabilities:)
+      room_type_options = inventory.room_types.map { |room_type| RoomTypeOption.new(id: room_type.id, name: room_type.name) }
+      board = Board.new(
+        view_mode: date_window.view_mode,
+        date_window:,
+        room_groups: groups,
+        room_type_options:,
+        status_counts: counts,
+        filters: normalized_filters,
+        capabilities: resolved_capabilities
+      )
       instrument(board, started_at)
       board
     end
 
     private
 
-    attr_reader :hotel, :user, :start_date, :days, :view_mode, :filters, :now
+    attr_reader :hotel, :user, :start_date, :days, :view_mode, :filters, :now, :capabilities
 
     def project_groups(inventory, date_window, capabilities)
       bookings = inventory.bookings.group_by { |record| [ record.room_type_id, record.room_number ] }

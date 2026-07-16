@@ -14,16 +14,24 @@ RSpec.describe StayView::BuildBoard do
     create(:user_hotel_access, user:, hotel:, role:)
   end
 
-  it "builds immutable scalar view models for sequential, completed, and multi-room stays" do
+  it "builds immutable scalar view models for sequential, completed, and grouped one-room stays" do
     deluxe = create(:room_type, hotel:, name: "Deluxe", room_numbers: %w[101 102])
     suite = create(:room_type, hotel:, name: "Suite", room_numbers: [ "201" ])
     first = create(:booking, hotel:, check_in: start_date, check_out: start_date + 1.day, guest_name: "First Guest")
     completed = create(:booking, hotel:, status: "completed", check_in: start_date - 2.days, check_out: start_date + 1.day, guest_name: "Past Guest")
-    multi = create(:booking, hotel:, check_in: start_date + 1.day, check_out: start_date + 3.days, guest_name: "Group Guest")
+    group = create(:group_booking, hotel:, name: "Tour Group")
+    grouped_deluxe = create(
+      :booking, hotel:, group_booking: group, group_position: 1,
+      check_in: start_date + 1.day, check_out: start_date + 3.days, guest_name: "First Group Guest"
+    )
+    grouped_suite = create(
+      :booking, hotel:, group_booking: group, group_position: 2,
+      check_in: start_date + 1.day, check_out: start_date + 3.days, guest_name: "Second Group Guest"
+    )
     create(:booking_room, booking: first, room_type: deluxe, room_number: "101")
     create(:booking_room, booking: completed, room_type: deluxe, room_number: "102")
-    create(:booking_room, booking: multi, room_type: deluxe, room_number: "101")
-    create(:booking_room, booking: multi, room_type: suite, room_number: "201")
+    create(:booking_room, booking: grouped_deluxe, room_type: deluxe, room_number: "101")
+    create(:booking_room, booking: grouped_suite, room_type: suite, room_number: "201")
 
     board = described_class.call(hotel:, user:, start_date:, days: 7)
     rows = board.room_groups.flat_map(&:rooms)
@@ -31,7 +39,15 @@ RSpec.describe StayView::BuildBoard do
     expect(rows.size).to eq(3)
     expect(rows.find { |row| row.room_number == "101" }.occupancy_for(start_date + 1.day).map(&:state)).to contain_exactly(:departure, :arrival)
     expect(rows.find { |row| row.room_number == "102" }.booking_segments.map(&:status)).to eq([ :completed ])
-    expect(rows.count { |row| row.booking_segments.any? { |segment| segment.booking_id == multi.id } }).to eq(2)
+    grouped_segments = rows.flat_map(&:booking_segments).select { |segment| segment.group_booking_id == group.id }
+    expect(grouped_segments.map(&:booking_id)).to contain_exactly(grouped_deluxe.id, grouped_suite.id)
+    expect(grouped_segments.map(&:booking_room_id)).to contain_exactly(
+      grouped_deluxe.booking_rooms.sole.id,
+      grouped_suite.booking_rooms.sole.id
+    )
+    expect(grouped_segments.map(&:group_reference).uniq).to eq([ group.formatted_reservation_number ])
+    expect(grouped_segments.map(&:group_name).uniq).to eq([ "Tour Group" ])
+    expect(grouped_segments.map(&:group_position)).to contain_exactly(1, 2)
     expect(board).to be_frozen
     expect(board.room_groups).to be_frozen
     expect(rows.first.day_cells).to be_frozen

@@ -1,0 +1,98 @@
+<div class="space-y-4 rounded-lg border border-border bg-card p-4">
+  <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <%= render PanelsUI::Tabs.new(id: "stay-view-modes", active: board.view_mode, variant: :line, aria_label: "Stay View mode") do |tabs| %>
+      <% tabs.with_tab(
+        name: "timeline",
+        label: "Timeline",
+        icon: "timeline",
+        data: { turbo_action: "advance", turbo_frame: "_top" },
+        href: stay_view_path_for(state, view: :timeline, start_date: state.date_window.start_date, days: (state.date_window.days == 1 ? 14 : state.date_window.days), date: nil)
+      ) %>
+      <% tabs.with_tab(
+        name: "rooms",
+        label: "Rooms",
+        icon: "bed-double",
+        data: { turbo_action: "advance", turbo_frame: "_top" },
+        href: stay_view_path_for(state, view: :rooms, date: state.date_window.start_date, start_date: nil, days: nil)
+      ) %>
+    <% end %>
+
+    <div class="flex flex-wrap items-center gap-2" aria-label="Date navigation">
+      <% previous_date = state.date_window.previous.start_date %>
+      <% next_date = state.date_window.next.start_date %>
+      <% date_key = board.view_mode == :rooms ? :date : :start_date %>
+      <%= render PanelsUI::Button.new(href: stay_view_path_for(state, date_key => previous_date), variant: :ghost, size: :icon_sm, aria_label: "Previous date range") do %>
+        <%= app_icon "chevron-left", class: "size-4", aria: { hidden: true } %>
+      <% end %>
+      <p class="min-w-40 text-center text-sm font-medium text-foreground">
+        <% if board.view_mode == :rooms %>
+          <%= l(state.date_window.start_date, format: :long) %>
+        <% else %>
+          <%= l(state.date_window.start_date, format: :long) %> – <%= l(state.date_window.end_date - 1.day, format: :long) %>
+        <% end %>
+      </p>
+      <%= render PanelsUI::Button.new(href: stay_view_path_for(state, date_key => next_date), variant: :ghost, size: :icon_sm, aria_label: "Next date range") do %>
+        <%= app_icon "chevron-right", class: "size-4", aria: { hidden: true } %>
+      <% end %>
+      <%= render PanelsUI::Button.new(href: stay_view_path_for(state, date_key => state.date_window.operational_date), variant: :secondary, size: :sm) do %>
+        Today
+      <% end %>
+    </div>
+  </div>
+
+  <%= form_with url: hotel_stay_view_path(current_hotel), method: :get, class: "grid gap-3 sm:grid-cols-2 xl:grid-cols-6" do |form| %>
+    <%= hidden_field_tag :view, board.view_mode %>
+    <% if board.view_mode == :rooms %>
+      <%= hidden_field_tag :date, state.date_window.start_date %>
+    <% else %>
+      <%= hidden_field_tag :start_date, state.date_window.start_date %>
+      <%= hidden_field_tag :days, state.date_window.days %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(form:, attribute: :room_type_id, label: "Room type", size: :sm) do |field| %>
+      <% field.with_select_menu(
+        board.room_type_options.map { |option| { label: option.name, value: option.id } },
+        prompt: "All room types",
+        selected: board.filters.room_type_id
+      ) %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form:, attribute: :booking_status, label: "Booking status", size: :sm) do |field| %>
+      <% field.with_select_menu(
+        Booking::OCCUPYING_STATUSES.map { |status| { label: status.humanize, value: status } },
+        prompt: "All booking statuses",
+        selected: board.filters.booking_status
+      ) %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form:, attribute: :occupancy, label: "Occupancy", size: :sm) do |field| %>
+      <% field.with_select_menu(
+        HotelPortal::StayViewHelper::OCCUPANCY_LABELS.map { |value, label| { label:, value: } },
+        prompt: "All occupancy states",
+        selected: board.filters.occupancy
+      ) %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form:, attribute: :physical_status, label: "Physical status", size: :sm) do |field| %>
+      <% field.with_select_menu(
+        (RoomStatus::STATUSES - [ "late_checkout_detected" ]).map { |status| { label: status.humanize, value: status } },
+        prompt: "All physical statuses",
+        selected: board.filters.physical_status
+      ) %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form:, attribute: :density, label: "Density", size: :sm) do |field| %>
+      <% field.with_select_menu(
+        [ { label: "Compact", value: "compact" }, { label: "Comfortable", value: "comfortable" } ],
+        selected: state.density
+      ) %>
+    <% end %>
+    <div class="flex items-end gap-2">
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :sm, class: "flex-1") do %>Apply<% end %>
+      <%= render PanelsUI::Button.new(href: stay_view_path_for(state, room_type_id: nil, booking_status: nil, occupancy: nil, physical_status: nil), variant: :ghost, size: :sm) do %>Clear<% end %>
+    </div>
+  <% end %>
+
+  <div class="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground" aria-label="Stay View summary">
+    <span><strong class="font-medium text-foreground"><%= board.status_counts.rooms %></strong> rooms</span>
+    <% board.status_counts.occupancies.each do |status, count| %>
+      <span><strong class="font-medium text-foreground"><%= count %></strong> <%= status.to_s.humanize.downcase %></span>
+    <% end %>
+  </div>
+</div>

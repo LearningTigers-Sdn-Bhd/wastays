@@ -46,7 +46,8 @@ module HotelPortal
           id: @id.presence || @segment.dom_id,
           **@attributes
         ) do
-          tag.span(@segment.guest_label, class: "truncate")
+          label = [ @segment.guest_label, @segment.group_reference ].compact_blank.join(" · ")
+          tag.span(label, class: "truncate")
         end
       end
 

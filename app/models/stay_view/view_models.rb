@@ -22,26 +22,30 @@ module StayView
 
   BookingSegment = Data.define(
     :dom_id, :booking_id, :booking_room_id, :guest_label, :status, :check_in, :check_out,
-    :start_track, :end_track, :clipped_left, :clipped_right, :accessible_label, :capabilities
+    :start_track, :end_track, :clipped_left, :clipped_right, :accessible_label, :capabilities,
+    :group_booking_id, :group_reference, :group_name, :group_position
   ) do
     alias_method :clipped_left?, :clipped_left
     alias_method :clipped_right?, :clipped_right
 
     def initialize(**attributes)
+      %i[group_booking_id group_reference group_name group_position].each { |key| attributes[key] ||= nil }
       attributes[:status] = attributes.fetch(:status).to_sym
       %i[dom_id guest_label accessible_label].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
+      %i[group_reference group_name].each { |key| attributes[key] = attributes[key]&.to_s&.freeze }
       super(**attributes)
     end
   end
 
   OperationalSegment = Data.define(
-    :dom_id, :kind, :label, :start_date, :end_date, :start_track, :end_track,
+    :dom_id, :room_block_id, :kind, :label, :start_date, :end_date, :start_track, :end_track,
     :clipped_left, :clipped_right, :accessible_label, :capabilities
   ) do
     alias_method :clipped_left?, :clipped_left
     alias_method :clipped_right?, :clipped_right
 
     def initialize(**attributes)
+      attributes[:room_block_id] ||= nil
       attributes[:kind] = attributes.fetch(:kind).to_sym
       %i[dom_id label accessible_label].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
       super(**attributes)
@@ -73,6 +77,12 @@ module StayView
   RoomGroup = Data.define(:room_type_id, :name, :rooms) do
     def initialize(room_type_id:, name:, rooms:)
       super(room_type_id: room_type_id, name: name.to_s.freeze, rooms: Immutable.array(rooms))
+    end
+  end
+
+  RoomTypeOption = Data.define(:id, :name) do
+    def initialize(id:, name:)
+      super(id:, name: name.to_s.freeze)
     end
   end
 
@@ -115,12 +125,13 @@ module StayView
     members.each { |name| alias_method "#{name}?", name }
   end
 
-  Board = Data.define(:view_mode, :date_window, :room_groups, :status_counts, :filters, :capabilities) do
-    def initialize(view_mode:, date_window:, room_groups:, status_counts:, filters:, capabilities:)
+  Board = Data.define(:view_mode, :date_window, :room_groups, :room_type_options, :status_counts, :filters, :capabilities) do
+    def initialize(view_mode:, date_window:, room_groups:, room_type_options:, status_counts:, filters:, capabilities:)
       super(
         view_mode: view_mode.to_sym,
         date_window: date_window,
         room_groups: Immutable.array(room_groups),
+        room_type_options: Immutable.array(room_type_options),
         status_counts: status_counts,
         filters: filters,
         capabilities: capabilities

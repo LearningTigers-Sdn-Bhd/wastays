@@ -297,6 +297,18 @@ Rails.application.routes.draw do
       post :resend, on: :member
     end
     resources :room_groups, except: [ :show ]
+    get "stay-view", to: "stay_view/board#index", as: :stay_view
+    scope "stay-view", module: :stay_view, as: :stay_view do
+      resources :bookings, only: [] do
+        resource :move, only: [ :edit, :update ], controller: "booking_moves"
+        resource :dates, only: [ :edit, :update ], controller: "booking_dates"
+      end
+      get "rooms/:room_type_id/:room_number/status", to: "room_operations#edit", as: :room_status
+      patch "rooms/:room_type_id/:room_number/status", to: "room_operations#update"
+      resources :room_blocks, only: [ :new, :edit, :create, :update, :destroy ] do
+        post :finish, on: :member
+      end
+    end
     resources :bookings, only: [ :index, :show, :update ] do
       collection do
         post :sync, to: "bookings/syncs#create"

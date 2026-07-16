@@ -36,6 +36,8 @@ The implementation must reuse authoritative domain models, authorization rules, 
 11. Turbo navigates and refreshes meaningful board regions without thousands of nested frames.
 12. Every drag or resize workflow has an explicit keyboard- and touch-friendly action alternative.
 13. Every action is authorized by the server even when its control is omitted from the UI.
+14. A non-pending booking represents exactly one room; multi-room reservations are `GroupBooking` records with one child booking per room.
+15. Group identity is primary for the shared reservation, while child booking identity remains visible for room-level operations.
 
 ## Legacy boundary
 
@@ -253,12 +255,19 @@ Loads all records required for the selected hotel and date window in a bounded n
 
 - Room types and configured room numbers
 - Overlapping bookings and booking rooms
+- Group identity for grouped one-room child bookings
 - Current room statuses
 - Active room blocks
 - Relevant housekeeping flags
 - Rates only when enabled and permitted
 
 It must prevent N+1 queries and avoid loading folios, full histories, notes, or guest records that the board does not render.
+
+The Stay View inventory contract is one booking per room. A multi-room stay is represented by grouped child bookings, each with one booking room, rather than one booking with multiple booking rooms. Grouped records carry the group booking ID, display-ready group reservation reference, group name, and child position as scalar values. Display identity is redacted when booking visibility is not permitted.
+
+Legacy multi-room bookings are split before the database uniqueness constraint is enabled. The original booking remains the anchor child so posted transactions, payments, invoices, payouts, signed documents, and audit history retain their original owner. Remaining rooms become child bookings under a new group. Ambiguous historical attribution remains on the anchor and is recorded for review; it is not rewritten or duplicated.
+
+Channel-managed multi-room reservations use the same group-first representation. External and channel reservation identity belongs to the group, revisions reconcile its children, and each child continues to own exactly one room. Version 2 of the booking API exposes this group-first identity while preserving child references for operational consumers.
 
 ### `StayView::BuildBoard`
 
@@ -340,6 +349,11 @@ StayView::RoomRow
 StayView::BookingSegment
   .dom_id
   .booking_id
+  .booking_room_id
+  .group_booking_id
+  .group_reference
+  .group_name
+  .group_position
   .guest_label
   .status
   .check_in
@@ -894,7 +908,7 @@ Database migrations should only be added when verified query plans demonstrate t
 - Booking spanning the complete window
 - Hotel timezone boundary
 - Hotel business date boundary
-- Multi-room booking
+- Multi-room stay represented by grouped one-room child bookings
 - Multiple sequential bookings in one room
 - Maintenance overlap
 - Current physical status shown only as current state

@@ -1,0 +1,67 @@
+<div class="space-y-3">
+  <p class="text-xs text-muted-foreground">Booking bars run from the middle of check-in day to the middle of checkout day. Hatched bars mark room blocks.</p>
+
+  <%= render PanelsUI::Timeline::Table.new(
+    caption: "Room stays from #{state.date_window.start_date.to_fs(:long)} to #{(state.date_window.end_date - 1.day).to_fs(:long)}",
+    track_count: state.date_window.days * 2,
+    density: state.density,
+    id: "stay-view-timeline"
+  ) do |timeline| %>
+    <% timeline.with_header(
+      room_label: "Room",
+      dates: state.date_window.dates.map do |date|
+        {
+          label: l(date, format: "%a"),
+          metadata: l(date, format: "%-d %b"),
+          accessible_label: l(date, format: :long),
+          current: date == state.date_window.operational_date
+        }
+      end
+    ) %>
+
+    <% board.room_groups.each do |room_group| %>
+      <% timeline.with_group(label: room_group.name, count: room_group.rooms.size) do |group| %>
+        <% room_group.rooms.each do |room| %>
+          <% group.with_row(accessible_label: "Room #{room.room_number}, #{room.room_type_name}", id: room.dom_id) do |row| %>
+            <% row.with_summary do %>
+              <%= render HotelPortal::StayView::RoomSummary.new(room:, actions: stay_view_room_menu_actions(room, state)) %>
+            <% end %>
+
+            <% room.day_cells.each_with_index do |cell, index| %>
+              <% cell_label = "Room #{room.room_number}, #{stay_view_date_label(cell.date)}, #{cell.occupancies.map { |occupancy| stay_view_occupancy_label(occupancy) }.to_sentence}" %>
+              <% row.with_cell(position: index + 1, accessible_label: cell_label, current: cell.date == state.date_window.operational_date) do %>
+                <% if room.capabilities.create_booking? && cell.occupancies.one? && cell.occupancies.first.state == :available && cell.operational_kinds.empty? %>
+                  <%= link_to hotel_booking_transaction_new_booking_path(
+                    current_hotel,
+                    check_in: cell.date,
+                    check_out: cell.date + 1.day,
+                    room_type_id: room.room_type_id,
+                    room_number: room.room_number,
+                    return_to: state.return_path(current_hotel)
+                  ), class: "panel-timeline__cell-action", aria: { label: "Add booking for room #{room.room_number} on #{cell.date.to_fs(:long)}" }, data: stay_view_action_data do %>
+                    <%= app_icon "plus", class: "size-3", aria: { hidden: true } %>
+                  <% end %>
+                <% end %>
+              <% end %>
+            <% end %>
+
+            <% room.booking_segments.each do |segment| %>
+              <% row.with_segment do %>
+                <%= render HotelPortal::StayView::BookingBar.new(
+                  segment:,
+                  href: stay_view_booking_path(segment.booking_id, return_to: state.return_path(current_hotel)),
+                  link_attributes: { data: stay_view_action_data }
+                ) %>
+              <% end %>
+            <% end %>
+            <% room.operational_segments.each do |segment| %>
+              <% row.with_segment do %>
+                <%= render HotelPortal::StayView::OperationalBar.new(segment:) %>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

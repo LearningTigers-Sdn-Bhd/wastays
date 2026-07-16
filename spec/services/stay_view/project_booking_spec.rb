@@ -23,7 +23,11 @@ RSpec.describe StayView::ProjectBooking do
       status: :confirmed,
       guest_name: "Ada Lovelace",
       check_in: Date.new(2026, 7, 14),
-      check_out: Date.new(2026, 7, 24)
+      check_out: Date.new(2026, 7, 24),
+      group_booking_id: 5,
+      group_reference: "HTL-10000005",
+      group_name: "Lovelace Conference",
+      group_position: 2
     )
 
     segment = described_class.call(booking:, room_type_name: "Deluxe", date_window: window, capabilities:)
@@ -34,5 +38,45 @@ RSpec.describe StayView::ProjectBooking do
     expect(segment).to be_clipped_right
     expect(segment.guest_label).to eq("Reserved")
     expect(segment.accessible_label).not_to include("Ada Lovelace")
+    expect(segment).to have_attributes(
+      group_booking_id: 5,
+      group_reference: nil,
+      group_name: nil,
+      group_position: 2
+    )
+  end
+
+  it "projects immutable group display identity with booking permission" do
+    booking = StayView::BookingRecord.new(
+      booking_room_id: 11,
+      booking_id: 7,
+      room_type_id: 3,
+      room_number: "101",
+      status: :confirmed,
+      guest_name: "Ada Lovelace",
+      check_in: Date.new(2026, 7, 16),
+      check_out: Date.new(2026, 7, 18),
+      group_booking_id: 5,
+      group_reference: "HTL-10000005",
+      group_name: "Lovelace Conference",
+      group_position: 2
+    )
+
+    segment = described_class.call(
+      booking:,
+      room_type_name: "Deluxe",
+      date_window: window,
+      capabilities: capabilities.with(view_booking: true)
+    )
+
+    expect(segment).to have_attributes(
+      group_booking_id: 5,
+      group_reference: "HTL-10000005",
+      group_name: "Lovelace Conference",
+      group_position: 2
+    )
+    expect(segment).to be_frozen
+    expect(segment.group_reference).to be_frozen
+    expect(segment.group_name).to be_frozen
   end
 end

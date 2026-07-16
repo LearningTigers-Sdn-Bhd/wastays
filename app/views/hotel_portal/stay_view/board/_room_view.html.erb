@@ -1,0 +1,70 @@
+<div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3" data-testid="stay-view-room-cards">
+  <% board.room_groups.each do |room_group| %>
+    <% room_group.rooms.each do |room| %>
+      <% cell = room.day_cells.first %>
+      <article id="<%= room.dom_id %>" class="flex min-h-56 flex-col rounded-lg border border-border bg-card p-4 shadow-sm" aria-labelledby="<%= room.dom_id %>-title">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h3 id="<%= room.dom_id %>-title" class="truncate text-base font-semibold text-foreground">Room <%= room.room_number %></h3>
+            <p class="truncate text-xs text-muted-foreground"><%= room.room_type_name %></p>
+          </div>
+          <%= render HotelPortal::StayView::RoomSummary.new(room:, actions: stay_view_room_menu_actions(room, state), show_identity: false, class: "h-auto p-0") %>
+        </div>
+
+        <div class="mt-4 flex flex-wrap gap-2">
+          <% cell.occupancies.each do |occupancy| %>
+            <%= render PanelsUI::Badge.new(label: stay_view_occupancy_label(occupancy), variant: occupancy.state == :available ? :neutral : :info, size: :sm, indicator: true) %>
+          <% end %>
+          <% room.operational_segments.each do |segment| %>
+            <%= render PanelsUI::Badge.new(label: segment.label, variant: :warning, size: :sm) %>
+          <% end %>
+        </div>
+
+        <div class="mt-4 space-y-3">
+          <% room.booking_segments.each do |segment| %>
+            <div class="rounded-md border border-border bg-muted p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                   <p class="truncate text-sm font-medium text-foreground"><%= segment.guest_label %></p>
+                  <% if segment.group_reference.present? %>
+                    <p class="mt-1 truncate text-xs text-muted-foreground"><%= [segment.group_name, segment.group_reference].compact_blank.join(" · ") %></p>
+                  <% end %>
+                  <p class="mt-1 text-xs text-muted-foreground"><%= segment.status.to_s.humanize %> · <%= segment.check_in.to_fs(:medium) %> – <%= segment.check_out.to_fs(:medium) %></p>
+                </div>
+                <% if segment.capabilities.view_booking? %>
+                  <%= link_to "Open", stay_view_booking_path(segment.booking_id, return_to: state.return_path(current_hotel)), class: "text-xs font-medium text-primary hover:underline", data: stay_view_action_data %>
+                <% end %>
+              </div>
+              <% actions = stay_view_booking_actions(segment, state).reject { |action| action[:label] == "Open booking" } %>
+              <% if actions.any? %>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <% actions.each do |action| %>
+                    <%= link_to action[:label], action[:href], class: "text-xs font-medium text-foreground underline-offset-4 hover:underline", data: stay_view_action_data %>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+
+          <% if room.booking_segments.empty? && room.operational_segments.empty? %>
+            <p class="text-sm text-muted-foreground">No stay or room block is scheduled for this date.</p>
+          <% end %>
+        </div>
+
+        <div class="mt-auto flex flex-wrap items-center gap-2 border-t border-border pt-4">
+          <% if room.smoking_allowed %><span class="inline-flex items-center gap-1 text-xs text-muted-foreground"><%= app_icon "cigarette", class: "size-3", aria: { hidden: true } %> Smoking</span><% end %>
+          <% if room.pets_allowed %><span class="inline-flex items-center gap-1 text-xs text-muted-foreground"><%= app_icon "paw-print", class: "size-3", aria: { hidden: true } %> Pets</span><% end %>
+          <% if room.capabilities.create_booking? && cell.occupancies.one? && cell.occupancies.first.state == :available && room.operational_segments.empty? %>
+            <%= render PanelsUI::Button.new(
+              href: hotel_booking_transaction_new_booking_path(current_hotel, check_in: cell.date, check_out: cell.date + 1.day, room_type_id: room.room_type_id, room_number: room.room_number, return_to: state.return_path(current_hotel)),
+              variant: :secondary,
+              size: :xs,
+              class: "ml-auto",
+              data: stay_view_action_data
+            ) do %>Add booking<% end %>
+          <% end %>
+        </div>
+      </article>
+    <% end %>
+  <% end %>
+</div>

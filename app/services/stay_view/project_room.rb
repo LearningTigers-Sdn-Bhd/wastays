@@ -59,6 +59,7 @@ module StayView
       label = block.block_type.to_s.humanize
       OperationalSegment.new(
         dom_id: "stay_view_room_block_#{block.id}",
+        room_block_id: block.id,
         kind: block.block_type,
         label: label,
         start_date: block.start_date,
