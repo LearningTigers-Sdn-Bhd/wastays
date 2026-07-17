@@ -29,6 +29,12 @@
 
     <% board.room_groups.each do |room_group| %>
       <% timeline.with_group(label: room_group.name, count: room_group.rooms.size) do |group| %>
+        <% room_group.inventory_summaries.each do |summary| %>
+          <% group.with_summary do %>
+            <%= render HotelPortal::StayView::InventoryBadge.new(summary:, room_type_name: room_group.name) %>
+          <% end %>
+        <% end %>
+
         <% room_group.rooms.each do |room| %>
           <% group.with_custom_row(component: HotelPortal::StayView::TimelineRow.new(room:, state:)) %>
         <% end %>

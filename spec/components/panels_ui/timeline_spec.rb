@@ -121,6 +121,64 @@ RSpec.describe PanelsUI::Timeline::Table, type: :component do
     expect(page).to have_css(".panel-timeline__body[role='presentation'] > .panel-timeline__group[role='rowgroup']")
   end
 
+  it "renders optional generic group summaries on the shared date geometry" do
+    timeline = described_class.new(id: "stay-timeline", caption: "Hotel stays", track_count: 4)
+    timeline.with_header(room_label: "Room", dates: dates)
+    group = timeline.with_group(label: "Deluxe", count: 2)
+    group.with_summary { "First arbitrary summary" }
+    group.with_summary { "Arbitrary summary content" }
+
+    render_inline(timeline)
+
+    expect(page).to have_css(".panel-timeline__group-heading[role='row'] > .panel-timeline__group-label[role='rowheader']", text: "Deluxe")
+    expect(page).to have_css(".panel-timeline__summary-track[role='presentation'] > [role='cell']", count: 2)
+    expect(page.find("[data-slot='timeline-group-summary'][data-position='1']")[:style]).to eq("grid-column: 1 / span 2")
+    expect(page.find("[data-slot='timeline-group-summary'][data-position='2']")[:style]).to eq("grid-column: 3 / span 2")
+    expect(page).to have_css("[data-slot='timeline-group-summary']", text: "First arbitrary summary")
+    expect(page).to have_text("Arbitrary summary content")
+  end
+
+  it "renders an optional generic footer with aligned summary slots" do
+    timeline = build_timeline
+    footer = timeline.with_footer(label: "Daily summary", data: { testid: "timeline-footer" })
+    footer.with_summary { "4 available" }
+    footer.with_summary { "75% occupied" }
+
+    render_inline(timeline)
+
+    expect(page).to have_css("[data-testid='timeline-footer'][role='rowgroup'][data-slot='timeline-footer']")
+    expect(page).to have_css(".panel-timeline__footer-row[role='row'] > .panel-timeline__footer-label[role='rowheader']", text: "Daily summary")
+    expect(page).to have_css("[data-slot='timeline-footer-summary'][role='cell']", count: 2)
+    expect(page.find("[data-slot='timeline-footer-summary'][data-position='2']")[:style]).to eq("grid-column: 3 / span 2")
+    expect(page).to have_css(".panel-timeline__footer", text: "75% occupied")
+  end
+
+  it "requires supplied group and footer summaries to match the timeline day count" do
+    timeline = described_class.new(caption: "Stays", track_count: 4)
+    timeline.with_header(room_label: "Room", dates: dates)
+    timeline.with_group(label: "Deluxe").with_summary { "Only one day" }
+
+    expect { render_inline(timeline) }.to raise_error(ArgumentError, /group summaries must match/)
+
+    timeline = described_class.new(caption: "Stays", track_count: 4)
+    timeline.with_header(room_label: "Room", dates: dates)
+    timeline.with_footer(label: "Summary").with_summary { "Only one day" }
+
+    expect { render_inline(timeline) }.to raise_error(ArgumentError, /footer summaries must match/)
+  end
+
+  it "requires the footer label and permits timelines without a footer" do
+    render_inline(build_timeline)
+    expect(page).to have_no_css(".panel-timeline__footer")
+
+    timeline = described_class.new(caption: "Stays", track_count: 4)
+    timeline.with_header(room_label: "Room", dates: dates)
+    footer = timeline.with_footer(label: "")
+    2.times { footer.with_summary { "Summary" } }
+
+    expect { render_inline(timeline) }.to raise_error(ArgumentError, /footer label is required/)
+  end
+
   it "derives a stable dom id and scroll-hint id from the caption when no id is supplied" do
     timeline = described_class.new(caption: "Front desk stays", track_count: 4)
     timeline.with_header(room_label: "Room", dates: dates)
@@ -227,6 +285,18 @@ RSpec.describe PanelsUI::Timeline::Table, type: :component do
 
     expect(stylesheet).not_to match(/\b(?:slate|gray|stone|indigo|blue|red|green|purple)-\d/)
     expect(stylesheet).to include("var(--card)", "var(--border)", "var(--status-warning-background)", "var(--ring)")
+  end
+
+  it "defines sticky group and footer layers on the shared timeline geometry" do
+    stylesheet = Rails.root.join("app/assets/tailwind/panel/timeline.css").read
+
+    expect(stylesheet).to match(/\.panel-timeline__group-heading\s*\{[^}]*position:\s*sticky[^}]*top:\s*var\(--panel-timeline-header-size\)/m)
+    expect(stylesheet).to match(/\.panel-timeline__footer\s*\{[^}]*position:\s*sticky[^}]*bottom:\s*0/m)
+    expect(stylesheet).to match(/\.panel-timeline__footer-label[^}]*position:\s*sticky/m)
+    expect(stylesheet).to include(
+      ".panel-timeline__summary-track",
+      "grid-template-columns: repeat(var(--panel-timeline-track-count), var(--panel-timeline-half-day-size))"
+    )
   end
 
   it "provides semantic proposal, drop-target, reduced-motion, and minimum pointer-target styles" do

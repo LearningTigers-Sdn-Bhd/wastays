@@ -7,6 +7,7 @@ module PanelsUI
 
       renders_one :header, ->(**args) { Header.new(track_count: @track_count, **args) }
       renders_many :groups, ->(**args) { Group.new(track_count: @track_count, **args) }
+      renders_one :footer, ->(**args) { Footer.new(track_count: @track_count, **args) }
 
       style base: "panel-timeline"
 

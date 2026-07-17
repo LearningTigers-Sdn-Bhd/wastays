@@ -75,6 +75,37 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     )
   end
 
+  let(:inventory_summary) do
+    ::StayView::InventoryDateSummary.new(
+      date: Date.new(2026, 7, 16),
+      sellable: 4,
+      sold: 1,
+      available: 3,
+      occupancy: 0.25
+    )
+  end
+
+  it "renders a number-only inventory badge with its complete accessible meaning" do
+    render_inline(HotelPortal::StayView::InventoryBadge.new(
+      summary: inventory_summary,
+      room_type_name: "Deluxe King"
+    ))
+
+    label = "3 available rooms for Deluxe King on #{I18n.l(inventory_summary.date, format: :long)}"
+    expect(page).to have_css(
+      ".panel-badge-rounded[data-slot='stay-view-inventory-badge'][data-variant='outline']" \
+      "[role='img'][aria-label='#{label}']",
+      text: "3"
+    )
+    expect(page.find("[data-slot='stay-view-inventory-badge']").text).to eq("3")
+  end
+
+  it "rejects inventory badge inputs outside the immutable projection contract" do
+    expect do
+      render_inline(HotelPortal::StayView::InventoryBadge.new(summary: Object.new, room_type_name: "Deluxe"))
+    end.to raise_error(ArgumentError, /requires an inventory summary/)
+  end
+
   it "renders a compact room summary from the immutable row projection" do
     render_inline(HotelPortal::StayView::RoomSummary.new(room: room, data: { room: "101" }))
 

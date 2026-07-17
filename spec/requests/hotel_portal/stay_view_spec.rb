@@ -60,6 +60,15 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).to include('id="start_date-date-picker"', 'id="days-select-menu"')
       expect(response.body).to include("All room types", "All booking statuses", "All occupancy states", "All physical statuses")
       expect(response.body).to include("Confirmed")
+
+      document = Nokogiri::HTML(response.body)
+      badges = document.css("[data-slot='stay-view-inventory-badge']")
+      expect(badges.size).to eq(7)
+      expect(badges.first.text).to eq("1")
+      expect(badges.first["aria-label"]).to eq(
+        "1 available room for #{room_type.name} on #{I18n.l(Date.current, format: :long)}"
+      )
+      expect(badges[2].text).to eq("2")
     end
 
     it "renders Room View from the shared projection" do

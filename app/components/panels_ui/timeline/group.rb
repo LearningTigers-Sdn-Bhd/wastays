@@ -7,6 +7,7 @@ module PanelsUI
         standard: ->(**args) { Row.new(track_count: @track_count, **args) },
         component: ->(component:) { component }
       }
+      renders_many :summaries
 
       def with_row(...) = with_row_standard(...)
       def with_custom_row(...) = with_row_component(...)
@@ -21,18 +22,24 @@ module PanelsUI
 
       def before_render
         raise ArgumentError, "Timeline group label is required" if @label.blank?
+        return if summaries.empty? || summaries.size == @track_count / 2
+
+        raise ArgumentError, "Timeline group summaries must match the timeline day count"
       end
 
       def call
         tag.section(**group_attributes) do
           safe_join([
             tag.div(class: "panel-timeline__group-heading", role: "row") do
-              tag.div(class: "panel-timeline__group-label", role: "columnheader") do
-                safe_join([
-                  tag.span(@label),
-                  (tag.span(@count, class: "panel-timeline__group-count", aria: { label: "#{@count} rooms" }) unless @count.nil?)
-                ].compact)
-              end
+              safe_join([
+                tag.div(class: "panel-timeline__group-label", role: "rowheader") do
+                  safe_join([
+                    tag.span(@label),
+                    (tag.span(@count, class: "panel-timeline__group-count", aria: { label: "#{@count} rooms" }) unless @count.nil?)
+                  ].compact)
+                end,
+                (summary_track if summaries.any?)
+              ].compact)
             end,
             safe_join(rows)
           ])
@@ -40,6 +47,20 @@ module PanelsUI
       end
 
       private
+
+      def summary_track
+        tag.div(class: "panel-timeline__summary-track", role: "presentation") do
+          safe_join(summaries.each_with_index.map do |summary, index|
+            tag.div(
+              summary,
+              class: "panel-timeline__summary-cell",
+              role: "cell",
+              style: "grid-column: #{(index * 2) + 1} / span 2",
+              data: { slot: "timeline-group-summary", position: index + 1 }
+            )
+          end)
+        end
+      end
 
       def group_attributes
         attributes = @attributes.deep_dup

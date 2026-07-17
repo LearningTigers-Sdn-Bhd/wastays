@@ -337,10 +337,77 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_no_css("##{trigger_id}:focus")
   end
 
+  it "keeps room-type summaries aligned while sticky group headings enter and leave the viewport" do
+    room_type.update!(room_numbers: (101..114).map(&:to_s))
+    create(
+      :room_type,
+      hotel:,
+      name: "Suites",
+      room_number_mode: "custom",
+      room_numbers: (201..220).map(&:to_s)
+    )
+
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 14)
+    expect(page).to have_css(".panel-timeline__group-heading", count: 2)
+
+    sticky_geometry = page.evaluate_script(<<~JS)
+      (() => {
+        const timeline = document.getElementById("stay-view-timeline")
+        timeline.scrollLeft = 240
+        timeline.scrollTop = 120
+
+        const header = timeline.querySelector(".panel-timeline__header")
+        const heading = timeline.querySelector(".panel-timeline__group-heading")
+        const date = timeline.querySelector(".panel-timeline__date")
+        const summary = timeline.querySelector("[data-slot='timeline-group-summary']")
+        const headerRect = header.getBoundingClientRect()
+        const headingRect = heading.getBoundingClientRect()
+
+        return {
+          headingTop: headingRect.top,
+          headerBottom: headerRect.bottom,
+          dateLeft: date.getBoundingClientRect().left,
+          summaryLeft: summary.getBoundingClientRect().left
+        }
+      })()
+    JS
+
+    expect(sticky_geometry.fetch("headingTop")).to be_within(2).of(sticky_geometry.fetch("headerBottom"))
+    expect(sticky_geometry.fetch("summaryLeft")).to be_within(1).of(sticky_geometry.fetch("dateLeft"))
+
+    release_geometry = page.evaluate_script(<<~JS)
+      (() => {
+        const timeline = document.getElementById("stay-view-timeline")
+        const header = timeline.querySelector(".panel-timeline__header")
+        const headings = timeline.querySelectorAll(".panel-timeline__group-heading")
+        const timelineTop = timeline.getBoundingClientRect().top
+        const secondNaturalTop = timeline.scrollTop + headings[1].getBoundingClientRect().top - timelineTop
+        timeline.scrollTop = secondNaturalTop
+
+        const first = headings[0].getBoundingClientRect()
+        const second = headings[1].getBoundingClientRect()
+        return {
+          firstBottom: first.bottom,
+          secondTop: second.top,
+          headerBottom: header.getBoundingClientRect().bottom
+        }
+      })()
+    JS
+
+    expect(release_geometry.fetch("firstBottom")).to be <= release_geometry.fetch("secondTop") + 1
+    expect(release_geometry.fetch("secondTop")).to be_within(2).of(release_geometry.fetch("headerBottom"))
+  end
+
   it "auto-applies filters, start date, and duration through the board frame" do
     create(:room_status, hotel:, room_type:, room_number: "101", status: "dirty")
     create(:room_status, hotel:, room_type:, room_number: "102", status: "ready")
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 14)
+
+    expect(page).to have_css(
+      "[data-slot='stay-view-inventory-badge']" \
+      "[aria-label='1 available room for #{room_type.name} on #{I18n.l(Date.current, format: :long)}']",
+      text: "1"
+    )
 
     find("#physical_status-trigger").click
     find("#physical_status-option-2", text: "Dirty").click
@@ -348,10 +415,19 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_css("#stay_view_room_#{room_type.id}_101")
     expect(page).to have_no_css("#stay_view_room_#{room_type.id}_102")
     expect(URI.parse(page.current_url).query).to include("physical_status=dirty")
+    expect(page).to have_css(
+      "[data-slot='stay-view-inventory-badge']" \
+      "[aria-label='0 available rooms for #{room_type.name} on #{I18n.l(Date.current, format: :long)}']",
+      text: "0"
+    )
 
     find("#physical_status-trigger").click
     find("#physical_status-option-0", text: "All physical statuses").click
     expect(page).to have_css("#stay_view_room_#{room_type.id}_102")
+    expect(page).to have_css(
+      "[data-slot='stay-view-inventory-badge']" \
+      "[aria-label='1 available room for #{room_type.name} on #{I18n.l(Date.current, format: :long)}']"
+    )
 
     find("#days-trigger").click
     find("#days-option-0", text: "7 days").click
