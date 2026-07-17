@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe ArInvoices::CreditExposure do
   it "does not warn below 90 percent of the credit limit" do
-    relationship = create(:hotel_corporate_account, credit_limit: 1000, direct_bill_enabled: true)
+    relationship = create(:hotel_corporate_account, :direct_bill, credit_limit: 1000)
     create_invoice(relationship: relationship, amount: 700)
 
     result = described_class.call(hotel_corporate_account: relationship, pending_amount: 199)
@@ -15,7 +15,7 @@ RSpec.describe ArInvoices::CreditExposure do
   end
 
   it "warns at 90 percent of the credit limit without blocking" do
-    relationship = create(:hotel_corporate_account, credit_limit: 1000, direct_bill_enabled: true)
+    relationship = create(:hotel_corporate_account, :direct_bill, credit_limit: 1000)
     create_invoice(relationship: relationship, amount: 800)
 
     result = described_class.call(hotel_corporate_account: relationship, pending_amount: 100)
@@ -26,7 +26,7 @@ RSpec.describe ArInvoices::CreditExposure do
   end
 
   it "warns when projected exposure exceeds the credit limit" do
-    relationship = create(:hotel_corporate_account, credit_limit: 1000, direct_bill_enabled: true)
+    relationship = create(:hotel_corporate_account, :direct_bill, credit_limit: 1000)
     create_invoice(relationship: relationship, amount: 900)
 
     result = described_class.call(hotel_corporate_account: relationship, pending_amount: 101)
@@ -37,7 +37,7 @@ RSpec.describe ArInvoices::CreditExposure do
   end
 
   it "warns when no credit limit is set" do
-    relationship = create(:hotel_corporate_account, credit_limit: nil, direct_bill_enabled: true)
+    relationship = create(:hotel_corporate_account, :direct_bill, credit_limit: nil)
 
     result = described_class.call(hotel_corporate_account: relationship, pending_amount: 100)
 

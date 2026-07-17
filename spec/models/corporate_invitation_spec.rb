@@ -34,7 +34,7 @@ RSpec.describe CorporateInvitation, type: :model do
   it "stores and type-casts corporate proposal attributes in metadata" do
     invitation = build(
       :corporate_invitation,
-      direct_bill_enabled: "1",
+      relationship_type: "direct_bill",
       credit_limit: "5000.25",
       payment_terms_days: "30"
     )
@@ -44,7 +44,7 @@ RSpec.describe CorporateInvitation, type: :model do
     expect(invitation.credit_limit).to eq(5000.25.to_d)
     expect(invitation.payment_terms_days).to eq(30)
     expect(invitation.metadata).to include(
-      "relationship_type" => "standard",
+      "relationship_type" => "direct_bill",
       "direct_bill_enabled" => true,
       "credit_limit" => "5000.25",
       "payment_terms_days" => 30

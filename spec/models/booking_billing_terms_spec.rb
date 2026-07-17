@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe BookingBillingTerms, type: :model do
   it "allows City Ledger for an active Direct Bill company party" do
-    account = create(:hotel_corporate_account, direct_bill_enabled: true)
+    account = create(:hotel_corporate_account, :direct_bill)
     party = create(:booking_billing_party, hotel: account.hotel, booking: create(:booking, hotel: account.hotel), hotel_corporate_account: account)
 
     terms = described_class.new(booking_billing_party: party, settlement_type: "city_ledger", purchase_order_reference: "PO-1")
@@ -21,7 +21,7 @@ RSpec.describe BookingBillingTerms, type: :model do
   end
 
   it "requires a purchase order reference for City Ledger settlement" do
-    account = create(:hotel_corporate_account, direct_bill_enabled: true)
+    account = create(:hotel_corporate_account, :direct_bill)
     party = create(:booking_billing_party, hotel: account.hotel, booking: create(:booking, hotel: account.hotel), hotel_corporate_account: account)
 
     terms = described_class.new(booking_billing_party: party, settlement_type: "city_ledger")

@@ -323,7 +323,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       booking.update!(check_out: Date.current)
       booking.transition_status_to!("checked_in", event: "check_in")
       guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
-      relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+      relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
       company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", hotel_corporate_account: relationship)
       create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 604.80)
 
@@ -606,7 +606,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       booking.update!(check_out: Date.current)
       booking.transition_status_to!("checked_in", event: "check_in")
       guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
-      relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true, payment_terms_days: 21)
+      relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel, payment_terms_days: 21)
       company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", hotel_corporate_account: relationship)
       create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 604.80)
 
@@ -795,7 +795,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       grant_permission("post_folio_payments")
       booking.transition_status_to!("checked_in", event: "check_in")
       guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
-      company_relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+      company_relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
       company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", name: "ABC Sdn Bhd - Room", hotel_corporate_account: company_relationship)
       create(:folio_transaction, booking_folio: guest_folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
       create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 270.0)
@@ -864,7 +864,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     it "requires a reason before keeping a company folio open" do
       booking.transition_status_to!("checked_in", event: "check_in")
       guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
-      company_relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+      company_relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
       company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", hotel_corporate_account: company_relationship)
       create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 270.0)
 

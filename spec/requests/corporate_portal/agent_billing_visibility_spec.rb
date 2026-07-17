@@ -8,9 +8,9 @@ RSpec.describe "CorporatePortal Agent Billing Visibility", type: :request do
   let(:agent_account) do
     create(
       :hotel_corporate_account,
+      :direct_bill,
       hotel: hotel,
       account_type: "travel_agent",
-      direct_bill_enabled: true,
       payment_terms_days: 30,
       credit_currency: "MYR",
       corporate_account: create(:account, :corporate, name: "Sunset Travel Agency")

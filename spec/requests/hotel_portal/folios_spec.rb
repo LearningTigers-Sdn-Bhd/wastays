@@ -631,7 +631,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
     it "renders the add folio window form in the right offcanvas" do
       grant_permission("manage_folio_windows")
       booking = create_booking_with_folio(guest_name: "Window Sheet", confirmation_token: "BK-SHEET", folio_number: 622)
-      relationship = create(:hotel_corporate_account, hotel: hotel, corporate_account: create(:account, :corporate, name: "Ministry of Tourism"), direct_bill_enabled: true)
+      relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel, corporate_account: create(:account, :corporate, name: "Ministry of Tourism"))
       suspended = create(:hotel_corporate_account, hotel: hotel, corporate_account: create(:account, :corporate, name: "Suspended Agency"), status: "suspended")
 
       get new_window_hotel_folio_path(hotel, booking, origin: "folios")
@@ -741,7 +741,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
     it "closes an eligible company folio as Direct Bill from the window close action" do
       grant_permission("manage_folio_windows")
       booking = create_booking_with_folio(guest_name: "Direct Bill", confirmation_token: "BK-DBILL", folio_number: 627)
-      relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true, payment_terms_days: 14)
+      relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel, payment_terms_days: 14)
       folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 628, hotel_corporate_account: relationship)
       create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 250)
 

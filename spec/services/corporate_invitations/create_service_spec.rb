@@ -10,7 +10,6 @@ RSpec.describe CorporateInvitations::CreateService do
     {
       email: "billing@acme.test",
       relationship_type: "direct_bill",
-      direct_bill_enabled: true,
       credit_limit: "5000",
       payment_terms_days: "30"
     }

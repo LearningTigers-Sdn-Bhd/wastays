@@ -29,7 +29,7 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
   end
 
   it "shows warning-only credit exposure for near-limit accounts" do
-    relationship = create(:hotel_corporate_account, hotel: hotel, credit_limit: 100, direct_bill_enabled: true)
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel, credit_limit: 100)
     booking = create(:booking, hotel: hotel)
     folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, hotel_corporate_account: relationship)
     create(:ar_invoice, hotel: hotel, booking_folio: folio, hotel_corporate_account: relationship, amount: 90, outstanding_amount: 90)

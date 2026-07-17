@@ -187,7 +187,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       guest = create(:guest, name: "Aina Rahman")
       create(:booking_guest, booking: booking, guest: guest, is_primary: true)
       corporate_account = create(:account, :corporate, name: "Acme Engineering")
-      hotel_corporate_account = create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_account, direct_bill_enabled: true)
+      hotel_corporate_account = create(:hotel_corporate_account, :direct_bill, hotel: hotel, corporate_account: corporate_account)
       company_party = create(:booking_billing_party, :company, booking: booking, hotel: hotel, hotel_corporate_account: hotel_corporate_account)
       create(:booking_folio, :secondary, booking: booking, hotel: hotel, booking_billing_party: company_party, hotel_corporate_account: hotel_corporate_account, name: "Corporate Folio")
 
@@ -210,7 +210,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
 
       guest = create(:guest, name: "Child Booking Guest")
       create(:booking_guest, booking: booking, guest: guest, is_primary: true)
-      account = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+      account = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
       company_party = create(:booking_billing_party, :company, booking: booking, hotel: hotel, hotel_corporate_account: account)
       create(:booking_folio, :secondary, booking: booking, hotel: hotel, booking_billing_party: company_party,
         hotel_corporate_account: account, name: "Child Corporate Folio")
