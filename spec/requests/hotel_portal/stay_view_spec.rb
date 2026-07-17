@@ -125,6 +125,9 @@ RSpec.describe "HotelPortal Stay View", type: :request do
         "source" => "stay_view"
       )
       expect(add_booking["data-turbo-frame"]).to eq("offcanvas_drawer")
+
+      today_trigger = document.at_css("##{room_id}-#{Date.current.iso8601}-cell-actions-trigger")
+      expect(today_trigger["data-alignment"]).to eq("center")
     end
 
     it "keeps a checkout-only cell actionable and counts a due-out room at the left edge" do
@@ -142,6 +145,8 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       document = Nokogiri::HTML(response.body)
       expect(document.at_css("#stay_view_room_#{room_type.id}_101-#{Date.current.iso8601}-cell-actions")).to be_present
+      checkout_trigger = document.at_css("#stay_view_room_#{room_type.id}_101-#{Date.current.iso8601}-cell-actions-trigger")
+      expect(checkout_trigger["data-alignment"]).to eq("end")
       expect(document.at_css("[data-state='due_out']").css("span").map(&:text)).to eq([ "Due out", "1" ])
       expect(document.at_css("[data-state='vacant']").css("span").map(&:text)).to eq([ "Vacant", "1" ])
     end

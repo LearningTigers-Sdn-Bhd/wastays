@@ -17,12 +17,13 @@ module HotelPortal
       def call
         return if actions.empty?
 
-        render PanelsUI::DropdownMenu.new(id:, placement: :bottom_start, class: "w-52") do |menu|
+        render PanelsUI::DropdownMenu.new(id:, placement: :bottom, class: "w-52") do |menu|
           menu.with_trigger(
             variant: :ghost,
             size: :icon_sm,
             aria_label: "Actions for room #{@room.room_number} on #{@cell.date.to_fs(:long)}",
-            class: "panel-timeline__cell-action"
+            class: "panel-timeline__cell-action",
+            data: { alignment: }
           ) do
             tag.span(class: "panel-timeline__cell-action-indicator", aria: { hidden: true }) do
               helpers.app_icon("plus", class: "size-3")
@@ -43,6 +44,12 @@ module HotelPortal
 
       def actions
         @actions ||= helpers.stay_view_cell_actions(@room, @cell, @state)
+      end
+
+      # A departure bar occupies the left half of the cell, so the trigger
+      # stays in the free right half; a fully free cell centers it.
+      def alignment
+        @cell.occupancies.any? { |occupancy| occupancy.state == :departure } ? :end : :center
       end
 
       def id
