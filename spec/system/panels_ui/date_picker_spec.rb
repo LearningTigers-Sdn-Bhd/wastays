@@ -114,6 +114,58 @@ RSpec.describe "PanelsUI::DatePicker", type: :system do
     expect(min).to eq("2026-07-20")
   end
 
+  it "clears a linked end field when the start moves beyond it" do
+    expect(page).to have_css("#{picker_css('panel-light', 'check_in')}[data-panels-ui--date-picker-target='input']", visible: :all, wait: 10)
+
+    result = page.evaluate_script(<<~JS)
+      (() => {
+        const section = document.querySelector('[aria-labelledby="date-picker-preview-heading"]')
+        const card = [...section.querySelectorAll(':scope > div > [data-theme]')]
+          .find((el) => el.dataset.theme === 'panel-light')
+        const startCalendar = card.querySelector('input[name$="[check_in]"]')
+          .closest('.panel-date-picker').querySelector('calendar-date')
+        const endPicker = card.querySelector('input[name$="[check_out]"]').closest('.panel-date-picker')
+        const endInput = endPicker.querySelector('input[name$="[check_out]"]')
+        const endCalendar = endPicker.querySelector('calendar-date')
+
+        endCalendar.value = '2026-07-20'
+        endCalendar.dispatchEvent(new Event('change', { bubbles: true }))
+        startCalendar.value = '2026-07-21'
+        startCalendar.dispatchEvent(new Event('change', { bubbles: true }))
+
+        return {
+          input: endInput.value,
+          display: endPicker.querySelector('.panel-date-picker__value').textContent,
+          calendar: endCalendar.value
+        }
+      })()
+    JS
+
+    expect(result).to eq("input" => "", "display" => "", "calendar" => "")
+  end
+
+  it "removes the linked end minimum when the start is cleared" do
+    expect(page).to have_css("#{picker_css('panel-light', 'check_in')}[data-panels-ui--date-picker-target='input']", visible: :all, wait: 10)
+
+    min = page.evaluate_script(<<~JS)
+      (() => {
+        const section = document.querySelector('[aria-labelledby="date-picker-preview-heading"]')
+        const card = [...section.querySelectorAll(':scope > div > [data-theme]')]
+          .find((el) => el.dataset.theme === 'panel-light')
+        const startCalendar = card.querySelector('input[name$="[check_in]"]')
+          .closest('.panel-date-picker').querySelector('calendar-date')
+        const endCalendar = card.querySelector('input[name$="[check_out]"]')
+          .closest('.panel-date-picker').querySelector('calendar-date')
+
+        startCalendar.value = ''
+        startCalendar.dispatchEvent(new Event('change', { bubbles: true }))
+        return endCalendar.min
+      })()
+    JS
+
+    expect(min).to be_blank
+  end
+
   it "keeps the field within a narrow viewport" do
     expect(page).to have_css("#{picker_css('panel-light', 'stay_date')}", visible: :all, wait: 10)
 

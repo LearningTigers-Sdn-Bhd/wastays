@@ -114,7 +114,7 @@
               <p class="text-sm font-semibold leading-snug text-amber-950">
                 <%= @dashboard_presenter.pending_actions_label %>
               </p>
-              <%= link_to "Review Arrivals", hotel_arrivals_path(@current_hotel), class: "mt-3 flex items-center justify-center w-full py-2 bg-amber-600 text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-amber-700 transition-colors shadow-sm" %>
+              <%= link_to "Review Arrivals", hotel_front_desk_path(@current_hotel, tab: "arrivals", view: "list"), class: "mt-3 flex items-center justify-center w-full py-2 bg-amber-600 text-primary-foreground text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-amber-700 transition-colors shadow-sm" %>
             </div>
           <% else %>
             <div class="flex items-center gap-x-2 text-emerald-600">
@@ -147,7 +147,7 @@
               <h3 class="text-xl font-bold tracking-tight text-foreground">Arrival Board</h3>
               <p class="mt-1 text-sm font-medium text-muted-foreground">Guests checking in today and tomorrow.</p>
             </div>
-            <%= link_to "View full list", hotel_arrivals_path(@current_hotel), class: "text-sm font-semibold text-brand-primary hover:underline" %>
+            <%= link_to "View full list", hotel_front_desk_path(@current_hotel, tab: "arrivals", view: "list"), class: "text-sm font-semibold text-brand-primary hover:underline" %>
           </div>
 
           <%= render PanelsUI::Tabs.new(id: "tabs-arrivals", active: "today", variant: :pill, class: "p-6 sm:p-8", list_class: "mb-6", aria_label: "Arrivals") do |tabs| %>
@@ -249,7 +249,7 @@
               <h3 class="text-xl font-bold tracking-tight text-foreground">Recent Bookings</h3>
               <p class="mt-1 text-sm font-medium text-muted-foreground">The latest reservations made at your property.</p>
             </div>
-            <%= link_to "View all bookings", hotel_bookings_path(@current_hotel), class: "text-sm font-semibold text-brand-primary hover:underline" %>
+            <%= link_to "View all bookings", hotel_front_desk_path(@current_hotel, tab: "bookings", view: "list"), class: "text-sm font-semibold text-brand-primary hover:underline" %>
           </div>
 
           <%# Desktop Table view %>

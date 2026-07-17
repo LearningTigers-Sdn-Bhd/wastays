@@ -20,6 +20,18 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
     JS
   end
 
+  def computed_color(selector, property)
+    page.evaluate_script(<<~JS)
+      (() => {
+        const canvas = document.createElement("canvas")
+        const context = canvas.getContext("2d")
+        context.fillStyle = getComputedStyle(document.querySelector(#{selector.to_json}))[#{property.to_json}]
+        context.fillRect(0, 0, 1, 1)
+        return Array.from(context.getImageData(0, 0, 1, 1).data)
+      })()
+    JS
+  end
+
   it "marks the item whose path matches the current page as active" do
     within("#sd-nav-sidebar") do
       expect(page).to have_css("a[href='/system-design'][aria-current='page']", count: 2, visible: :all)
@@ -81,23 +93,23 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
     link = "#sd-nav-sidebar [data-sidebar-presentation='collapsed'] a[href='#arrivals']"
     group = "#sd-nav-sidebar-desktop-section-1-item-2-popover-trigger"
 
-    expect(computed_style(group, "backgroundColor")).to eq(computed_style(link, "backgroundColor"))
-    expect(computed_style(group, "color")).to eq(computed_style(link, "color"))
+    expect(computed_color(group, "backgroundColor")).to eq(computed_color(link, "backgroundColor"))
+    expect(computed_color(group, "color")).to eq(computed_color(link, "color"))
 
     find(link).hover
     sleep 0.2
-    link_hover = [ computed_style(link, "backgroundColor"), computed_style(link, "color") ]
+    link_hover = [ computed_color(link, "backgroundColor"), computed_color(link, "color") ]
     find("#sidebar-preview-heading").hover
     find(group).hover
     sleep 0.2
-    group_hover = [ computed_style(group, "backgroundColor"), computed_style(group, "color") ]
+    group_hover = [ computed_color(group, "backgroundColor"), computed_color(group, "color") ]
     expect(group_hover).to eq(link_hover)
 
     page.execute_script("document.querySelector(#{group.to_json}).closest('[data-sidebar-group-item]').setAttribute('data-sidebar-active', '')")
     sleep 0.2
     active_link = "#sd-nav-sidebar [data-sidebar-presentation='collapsed'] a[href='/system-design']"
-    expect(computed_style(group, "backgroundColor")).to eq(computed_style(active_link, "backgroundColor"))
-    expect(computed_style(group, "color")).to eq(computed_style(active_link, "color"))
+    expect(computed_color(group, "backgroundColor")).to eq(computed_color(active_link, "backgroundColor"))
+    expect(computed_color(group, "color")).to eq(computed_color(active_link, "color"))
   end
 
   it "persists the collapsed state across a reload" do

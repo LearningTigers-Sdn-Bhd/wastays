@@ -322,12 +322,14 @@ Rails.application.routes.draw do
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
       resource :guest_registration_card, only: [ :show, :update, :destroy ], module: :bookings
       resources :guest_registration_note_templates, only: [ :index, :new, :create, :edit, :update, :destroy ], module: :bookings
+      resource :reservation_voucher, only: [ :show ], module: :bookings
       resource :tourism_tax_voucher, only: [ :show ], module: :bookings do
         post :issue
       end
     end
     resources :booking_control_panels, only: :show, param: :booking_id, path: "booking-control-panels" do
       member do
+        get :audit_trail
         patch :set_primary_guest, controller: :booking_control_panel_actions
         patch :update_room_rate, controller: :booking_control_panel_actions
         get :new_folio_window, controller: :booking_control_panel_actions
@@ -425,6 +427,7 @@ Rails.application.routes.draw do
       end
     end
 
+    get "front-desk", to: "front_desk#index", as: :front_desk
     resources :arrivals, only: [ :index ]
     resources :checked_out_guests, only: [ :index ]
     resources :audit_logs, only: [ :index ]

@@ -6,6 +6,7 @@ module HotelPortal
 
     before_action :authorize_view_bookings!
     before_action :redirect_legacy_tab!
+    before_action :require_audit_feature!, if: :audit_requested?
 
     def show
       @booking = current_hotel.bookings
@@ -40,18 +41,32 @@ module HotelPortal
         active_tab: folio_show_tab
       )
       @presenter = BookingControlPanelPresenter.new(@booking, params: params, hotel: current_hotel, booking_presenter: @booking_presenter, folio_show: @folio_show)
-      set_audit_logs(@booking, group_booking: (@booking.group_booking if @presenter.group_overview?))
+      set_audit_logs(@booking, group_booking: (@booking.group_booking if @presenter.group_overview?)) if @presenter.active_tab == "audit_trails"
       set_breadcrumbs(@booking)
 
       render partial: "hotel_portal/booking_control_panels/work_area", locals: workspace_locals if turbo_frame_request?
     end
 
+    def audit_trail
+      @booking = current_hotel.bookings.find(params[:booking_id])
+      @presenter = BookingControlPanelPresenter.new(@booking, params: params, hotel: current_hotel)
+      set_audit_logs(@booking)
+    end
+
     private
+
+    def audit_requested?
+      action_name == "audit_trail" || params[:tab].to_s == "audit_trails"
+    end
+
+    def require_audit_feature!
+      require_feature!("full_audit_trail")
+    end
 
     def set_breadcrumbs(booking)
       override_breadcrumbs(
         { label: "Operations" },
-        { label: "Bookings", path: hotel_bookings_path(current_hotel) },
+        { label: "Reservations", path: hotel_front_desk_path(current_hotel, tab: "bookings", view: "list") },
         { label: booking.confirmation_token, path: hotel_booking_control_panel_path(current_hotel, booking) },
         { label: "Booking Control Panel" }
       )

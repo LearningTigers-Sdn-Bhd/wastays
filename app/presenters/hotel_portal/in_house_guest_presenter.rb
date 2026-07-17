@@ -10,21 +10,21 @@ module HotelPortal
       "review_due_out" => {
         desktop_label: "Late",
         mobile_label: "Late Checkout",
-        desktop_badge: "inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 uppercase tracking-wider",
-        mobile_badge: "inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700"
+        desktop_badge: "inline-flex items-center rounded-full bg-warning/10 px-1.5 py-0.5 text-xs font-medium text-warning",
+        mobile_badge: "inline-flex items-center rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning"
       },
       "checkout_required" => {
         desktop_label: "Checkout required",
         mobile_label: "Checkout Required",
-        desktop_badge: "inline-flex items-center rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 uppercase tracking-wider",
-        mobile_badge: "inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700"
+        desktop_badge: "inline-flex items-center rounded-full bg-destructive/10 px-1.5 py-0.5 text-xs font-medium text-destructive",
+        mobile_badge: "inline-flex items-center rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive"
       }
     }.tap do |h|
       h.default = {
         desktop_label: "Checked in",
         mobile_label: "Checked in",
-        desktop_badge: "inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider",
-        mobile_badge: "inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+        desktop_badge: "inline-flex items-center rounded-full bg-success/10 px-1.5 py-0.5 text-xs font-medium text-success",
+        mobile_badge: "inline-flex items-center rounded-full border border-success/30 bg-success/10 px-2.5 py-1 text-xs font-medium text-success"
       }
     end.freeze
 

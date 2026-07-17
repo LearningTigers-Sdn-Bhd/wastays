@@ -11,6 +11,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
   let(:manage_bookings) { Permission.find_or_create_by!(slug: "manage_bookings") { |permission| permission.name = "Manage Bookings" } }
   let(:manage_folio_windows) { Permission.find_or_create_by!(slug: "manage_folio_windows") { |permission| permission.name = "Manage Folio Windows" } }
   let(:manage_folio_movements) { Permission.find_or_create_by!(slug: "manage_folio_movements") { |permission| permission.name = "Manage Folio Movements" } }
+  let(:audit_feature) { create(:feature, feature_group: create(:feature_group), slug: "full_audit_trail") }
   let(:booking) do
     create(
       :booking,
@@ -345,6 +346,8 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
     end
 
     it "renders every control panel tab with its declared layout" do
+      hotel.update!(plan: create(:plan))
+      create(:plan_feature, plan: hotel.plan, feature: audit_feature, enabled: true)
       guest = create(:guest, name: "Aina Rahman")
       room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
       room = create(:booking_room, booking: booking, room_type: room_type, room_number: "208")
@@ -362,6 +365,28 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       get hotel_booking_control_panel_path(hotel, booking, tab: "housekeeping_requests")
       expect(response.body).to include("Requests")
       expect(response.body).to include("Room requests and complaints for this booking")
+    end
+
+    it "hides and blocks the audit tab when the feature is disabled" do
+      get hotel_booking_control_panel_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).not_to include("Audit Trails")
+
+      get hotel_booking_control_panel_path(hotel, booking, tab: "audit_trails")
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:alert]).to eq("This feature isn't included in your plan. Upgrade to access it.")
+    end
+
+    it "shows the audit tab when the feature is enabled" do
+      hotel.update!(plan: create(:plan))
+      create(:plan_feature, plan: hotel.plan, feature: audit_feature, enabled: true)
+
+      get hotel_booking_control_panel_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Audit Trails")
     end
 
     it "renders the complete lifecycle action set with control-panel return context" do
@@ -641,6 +666,8 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
     end
 
     it "renders functional group overviews across every tab" do
+      hotel.update!(plan: create(:plan))
+      create(:plan_feature, plan: hotel.plan, feature: audit_feature, enabled: true)
       group = create(:group_booking, hotel: hotel, name: "Conference Group")
       booking.update!(group_booking: group, group_position: 1)
       sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, confirmation_token: "GROUP-CHILD-2", reservation_number: 45)
@@ -813,6 +840,62 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       get hotel_booking_control_panel_path(hotel, booking)
 
       expect(response).to have_http_status(:redirect)
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/booking-control-panels/:booking_id/audit_trail" do
+    before do
+      hotel.update!(plan: create(:plan))
+      create(:plan_feature, plan: hotel.plan, feature: audit_feature, enabled: true)
+    end
+
+    it "renders the booking audit timeline in the right offcanvas sheet" do
+      create(:booking_audit_log, hotel: hotel, auditable: booking, user: user,
+        old_value: { "status" => "pending" }, new_value: { "status" => "confirmed" })
+
+      get audit_trail_hotel_booking_control_panel_path(hotel, booking),
+        headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      frame = document.at_css('turbo-frame#offcanvas_drawer[data-offcanvas-variant="right"]')
+      expect(frame).to be_present
+      expect(frame["data-offcanvas-label"]).to eq("Audit Trail")
+      expect(frame.text).to include("Audit Trail", "View Changes", "Pending", "Confirmed")
+      expect(frame.at_css('[data-action="click->offcanvas#close"]')).to be_present
+    end
+
+    it "renders the existing empty audit state" do
+      get audit_trail_hotel_booking_control_panel_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("No audit history recorded.", "Important booking activity will appear here.")
+    end
+
+    it "blocks access when the feature is disabled" do
+      hotel.plan.plan_features.find_by!(feature: audit_feature).update!(enabled: false)
+
+      get audit_trail_hotel_booking_control_panel_path(hotel, booking)
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:alert]).to eq("This feature isn't included in your plan. Upgrade to access it.")
+    end
+
+    it "blocks access without view_bookings permission" do
+      role.permissions.delete(view_bookings)
+
+      get audit_trail_hotel_booking_control_panel_path(hotel, booking)
+
+      expect(response).to have_http_status(:redirect)
+      expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+    end
+
+    it "does not expose another hotel's booking" do
+      other_booking = create(:booking, hotel: other_hotel)
+
+      get audit_trail_hotel_booking_control_panel_path(hotel, other_booking)
+
+      expect(response).to have_http_status(:not_found)
     end
   end
 end

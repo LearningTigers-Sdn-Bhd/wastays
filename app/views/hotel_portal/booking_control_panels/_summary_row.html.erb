@@ -1,7 +1,7 @@
 <section class="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-sm" aria-label="Booking summary">
   <div class="flex flex-col gap-4 border-b border-border px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
     <div class="flex min-w-0 items-center gap-3">
-      <%= link_to hotel_bookings_path(current_hotel), class: "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted", aria: { label: "Back to bookings" } do %>
+      <%= link_to hotel_front_desk_path(current_hotel, tab: "bookings", view: "list"), class: "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted", aria: { label: "Back to Reservations" } do %>
         <%= cached_icon "arrow-left", class: "size-4" %>
       <% end %>
       <div class="min-w-0">

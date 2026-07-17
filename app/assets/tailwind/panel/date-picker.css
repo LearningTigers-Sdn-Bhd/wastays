@@ -34,6 +34,18 @@
     opacity: 0.5;
   }
 
+  .panel-date-picker[data-size="sm"] .panel-date-picker__display {
+    min-height: 1.75rem;
+    padding-inline: 0.625rem;
+    @apply text-xs;
+  }
+
+  .panel-date-picker[data-size="lg"] .panel-date-picker__display {
+    min-height: 2.25rem;
+    padding-inline: 0.875rem;
+    @apply text-sm;
+  }
+
   .panel-date-picker__value {
     flex: 1 1 auto;
     overflow: hidden;
@@ -248,6 +260,10 @@
   }
 
   @media (pointer: coarse) {
+    .panel-date-picker__display {
+      min-height: 2.5rem;
+    }
+
     .panel-date-picker__calendar calendar-month::part(button),
     .panel-calendar-caption__trigger,
     .panel-calendar-caption__option {

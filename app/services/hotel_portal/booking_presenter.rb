@@ -66,13 +66,13 @@ module HotelPortal
     end
 
     def checked_in_at_form_value
-      (booking.checked_in_at || Time.current).strftime("%Y-%m-%dT%H:%M")
+      (booking.checked_in_at || Time.current).in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")
     end
 
     def checked_out_at_form_value
       return booking.check_out.in_time_zone(booking.hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M") if booking.checkout_required?
 
-      Time.current.strftime("%Y-%m-%dT%H:%M")
+      Time.current.in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")
     end
 
     def check_in_title
@@ -349,7 +349,7 @@ module HotelPortal
       room_type = primary_room.room_type
       quantity = booking.booking_rooms.count
 
-      today = Time.current.to_date
+      today = Time.current.in_time_zone(hotel.hotel_time_zone).to_date
       rate = room_type.room_rates.find_by(date: today)&.price || room_type.base_price
 
       base_amount = (rate.to_d * quantity).round(2)
@@ -493,22 +493,22 @@ module HotelPortal
     end
 
     def created_at_date
-      format_date(booking.created_at, :long)
+      format_date(booking.created_at.in_time_zone(hotel.hotel_time_zone), :long)
     end
 
     def status_variant_class
       booking_styles = {
-        "pending" => "border-amber-200 bg-amber-50 text-amber-700",
-        "confirmed" => "border-blue-200 bg-blue-50 text-blue-700",
-        "review_no_show" => "border-amber-300 bg-amber-50 text-amber-800",
-        "checked_in" => "border-violet-200 bg-violet-50 text-violet-700",
-        "review_due_out" => "border-orange-200 bg-orange-50 text-orange-700",
-        "checkout_required" => "border-rose-200 bg-rose-50 text-rose-700",
-        "completed" => "border-emerald-200 bg-emerald-50 text-emerald-700",
+        "pending" => "border-warning/30 bg-warning/10 text-warning",
+        "confirmed" => "border-info/30 bg-info/10 text-info",
+        "review_no_show" => "border-warning/30 bg-warning/10 text-warning",
+        "checked_in" => "border-success/30 bg-success/10 text-success",
+        "review_due_out" => "border-warning/30 bg-warning/10 text-warning",
+        "checkout_required" => "border-destructive/30 bg-destructive/10 text-destructive",
+        "completed" => "border-success/30 bg-success/10 text-success",
         "cancelled" => "border-border-interactive bg-muted text-muted-foreground",
-        "no_show" => "border-rose-200 bg-rose-50 text-rose-700",
-        "overbooked" => "border-red-200 bg-red-50 text-red-700",
-        "not_ready" => "border-red-200 bg-red-50 text-red-700"
+        "no_show" => "border-destructive/30 bg-destructive/10 text-destructive",
+        "overbooked" => "border-destructive/30 bg-destructive/10 text-destructive",
+        "not_ready" => "border-destructive/30 bg-destructive/10 text-destructive"
       }
       booking_styles[status] || "border-border bg-muted text-muted-foreground"
     end

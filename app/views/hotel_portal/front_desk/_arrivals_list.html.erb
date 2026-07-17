@@ -1,0 +1,88 @@
+<section aria-label="Reservation view" class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+  <div class="hidden overflow-x-auto lg:block">
+    <table class="min-w-full table-fixed">
+      <colgroup>
+        <col class="w-[28%]">
+        <col class="w-[17%]">
+        <col class="w-[12%]">
+        <col class="w-[13%]">
+        <col class="w-[12%]">
+        <col class="w-[18%]">
+      </colgroup>
+      <thead class="border-b border-border bg-muted">
+        <tr>
+          <% ["Guest / Reference", "Room Details", "Pre-Checkin", "Guarantee", "Docs / Notes", "Action"].each do |header| %>
+            <th class="px-4 py-3 text-xs font-medium text-muted-foreground <%= header == 'Action' ? 'text-right' : 'text-left' %>"><%= header %></th>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        <% if @bookings.any? %>
+          <% @bookings.each do |booking| %>
+            <% presenter = HotelPortal::ArrivalPresenter.new(booking, current_hotel) %>
+            <tr class="align-top transition-colors hover:bg-muted <%= "bg-muted" if presenter.blacklisted? %>">
+              <th scope="row" class="px-4 py-4 text-left">
+                <div class="flex items-center gap-1.5">
+                  <span><%= presenter.guest_name %></span>
+                  <% if presenter.vip? %><%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 shrink-0 text-warning" %><span class="text-xs text-warning">VIP</span><% end %>
+                  <% if presenter.blacklisted? %><%= cached_icon "ban", class: "size-4 shrink-0 text-destructive" %><span class="text-xs text-destructive">Blacklisted</span><% end %>
+                  <% if presenter.repeat? %><%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 shrink-0 text-info" %><span class="text-xs text-info">Repeat guest</span><% end %>
+                </div>
+                <span class="font-mono text-xs font-normal text-muted-foreground">booking:<%= presenter.confirmation_token %></span>
+              </th>
+              <td class="px-4 py-4 text-sm"><%= presenter.rooms_summary.join(", ") %><br><span class="text-muted-foreground"><%= presenter.adults %> adults, <%= presenter.children %> children</span></td>
+              <td class="px-4 py-4">
+                <span class="inline-flex rounded-md border px-2 py-1 text-xs font-semibold <%= presenter.pre_checkin_badge_class %>">
+                  <%= presenter.pre_checkin_status_label %>
+                </span>
+              </td>
+              <td class="px-4 py-4 text-sm"><%= presenter.guarantee_method_display %><br><span class="text-xs text-muted-foreground"><%= presenter.deposit_status_label %></span></td>
+              <td class="px-4 py-4 text-sm"><%= presenter.document_uploaded? ? "Documents uploaded" : "No documents" %><%= "; #{presenter.notes_count_label}" if presenter.has_notes? %></td>
+              <td class="whitespace-nowrap px-4 py-4 text-right"><%= render "arrival_actions", booking:, presenter: %></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr><td colspan="6" class="px-4 py-12 text-center text-sm text-muted-foreground">No arrivals scheduled for this date.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <div class="space-y-3 p-4 lg:hidden">
+    <% if @bookings.any? %>
+      <% @bookings.each do |booking| %>
+        <% presenter = HotelPortal::ArrivalPresenter.new(booking, current_hotel) %>
+        <article class="rounded-xl border border-border bg-card p-4 shadow-sm <%= "border-l-4 border-l-destructive" if presenter.blacklisted? %>">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <strong><%= presenter.guest_name %></strong>
+            <% if presenter.vip? %>
+              <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-warning" %>
+              <span class="text-xs text-warning">VIP</span>
+            <% end %>
+            <% if presenter.blacklisted? %>
+              <%= cached_icon "ban", class: "size-4 text-destructive" %>
+              <span class="text-xs text-destructive">Blacklisted</span>
+            <% end %>
+            <% if presenter.repeat? %>
+              <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-info" %>
+              <span class="text-xs text-info">Repeat guest</span>
+            <% end %>
+          </div>
+          <p class="font-mono text-xs"><%= presenter.confirmation_token %></p>
+          <p class="text-sm"><%= presenter.rooms_summary.join(", ") %></p>
+          <p class="text-sm text-muted-foreground"><%= presenter.adults %> adults, <%= presenter.children %> children</p>
+          <p class="text-sm">
+              <span class="inline-flex rounded-md border px-2 py-1 text-xs font-semibold <%= presenter.pre_checkin_badge_class %>">
+              <%= presenter.pre_checkin_status_label %>
+            </span>
+            · <%= presenter.guarantee_method_display %> · <%= presenter.deposit_status_label %>
+          </p>
+          <p class="text-sm"><%= presenter.document_uploaded? ? "Documents uploaded" : "No documents" %><%= "; #{presenter.notes_count_label}" if presenter.has_notes? %></p>
+          <div class="mt-2 text-sm"><%= render "arrival_actions", booking:, presenter: %></div>
+        </article>
+      <% end %>
+    <% else %>
+      <p class="py-8 text-center text-sm text-muted-foreground">No arrivals scheduled for this date.</p>
+    <% end %>
+  </div>
+  <div class="flex justify-center border-t border-border bg-muted p-4"><%= paginate @bookings, param_name: @page_param %></div>
+</section>

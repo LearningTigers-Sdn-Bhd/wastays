@@ -70,10 +70,8 @@ RSpec.describe "Platform Smoke Tests", type: :request do
 
     [
       "dashboard",
-      "bookings",
-      "arrivals",
+      "front-desk",
       "guests",
-      "in_house_guests",
       "reports",
       "reports/payouts",
       "inventory",

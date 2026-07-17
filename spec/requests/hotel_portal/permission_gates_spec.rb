@@ -20,7 +20,7 @@ RSpec.describe "HotelPortal::PermissionGates", type: :request do
   end
 
   it "allows booking and guest read pages with view_bookings" do
-    get hotel_bookings_path(hotel)
+    get hotel_front_desk_path(hotel, tab: "bookings", view: "list")
     expect(response).to have_http_status(:ok)
 
     get hotel_guests_path(hotel)

@@ -1,0 +1,53 @@
+<section aria-label="Reservation view" class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+  <div class="hidden overflow-x-auto lg:block">
+    <table class="min-w-full table-fixed">
+      <thead class="border-b border-border bg-muted">
+        <tr>
+          <% [ "Guest / Reference", "Contact", "Stay Dates", "Status", "Rooms", "Actions" ].each do |header| %>
+            <th class="px-4 py-3 text-xs font-medium text-muted-foreground <%= header == 'Actions' ? 'text-right' : 'text-left' %>"><%= header %></th>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        <% if @bookings.any? %>
+          <% @bookings.each do |booking| %>
+            <% presenter = HotelPortal::BookingPresenter.new(booking, current_hotel) %>
+            <% rooms_summary = booking.booking_rooms.group_by { |room| room.room_type_snapshot["name"].presence || room.room_type.name }.map { |name, rooms| "#{rooms.size}x #{name}" }.join(", ").presence || "No rooms assigned" %>
+            <tr class="transition-colors hover:bg-muted">
+              <th scope="row" class="px-4 py-4 text-left"><%= booking.guest_name %><br><span class="font-mono text-xs font-normal">booking:<%= booking.confirmation_token %></span></th>
+              <td class="px-4 py-4 text-sm"><%= booking.guest_email %><br><%= booking.guest_phone %></td>
+              <td class="px-4 py-4 text-sm"><%= booking.check_in.strftime("%d %b %Y") %> to <%= booking.check_out.strftime("%d %b %Y") %></td>
+              <td class="px-4 py-4 text-sm"><span class="inline-flex rounded-md border px-2 py-0.5 text-xs font-medium <%= presenter.status_variant_class %>"><%= presenter.status_label_humanized %></span></td>
+              <td class="px-4 py-4 text-sm"><%= rooms_summary %></td>
+              <td class="px-4 py-4 text-right"><%= link_to "View booking", hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"), class: "inline-flex min-h-9 items-center rounded-lg border border-border-interactive px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" %></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr><td colspan="6" class="px-4 py-12 text-center text-sm text-muted-foreground">No guests are due to check out today.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="space-y-3 p-4 lg:hidden">
+    <% if @bookings.any? %>
+      <% @bookings.each do |booking| %>
+        <% presenter = HotelPortal::BookingPresenter.new(booking, current_hotel) %>
+        <% rooms_summary = booking.booking_rooms.group_by { |room| room.room_type_snapshot["name"].presence || room.room_type.name }.map { |name, rooms| "#{rooms.size}x #{name}" }.join(", ").presence || "No rooms assigned" %>
+        <article class="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <strong><%= booking.guest_name %></strong>
+          <span class="ml-2 inline-flex rounded-md border px-2 py-0.5 text-xs font-medium <%= presenter.status_variant_class %>"><%= presenter.status_label_humanized %></span>
+          <p class="font-mono text-xs"><%= booking.confirmation_token %></p>
+          <p class="text-sm">Contact: <%= booking.guest_email %> · <%= booking.guest_phone %></p>
+          <p class="text-sm">Stay Dates: <%= booking.check_in.strftime("%d %b %Y") %> to <%= booking.check_out.strftime("%d %b %Y") %></p>
+          <p class="text-sm">Rooms: <%= rooms_summary %></p>
+          <%= link_to "View booking", hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"), class: "mt-2 inline-flex min-h-9 items-center rounded-lg border border-border-interactive px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" %>
+        </article>
+      <% end %>
+    <% else %>
+      <p class="py-8 text-center text-sm text-muted-foreground">No guests are due to check out today.</p>
+    <% end %>
+  </div>
+
+  <div class="flex justify-center border-t border-border bg-muted p-4"><%= paginate @bookings, param_name: @page_param %></div>
+</section>

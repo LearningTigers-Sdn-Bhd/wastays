@@ -774,7 +774,7 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
       retroactive_reason: ""
     }
 
-    expect(response).to redirect_to(hotel_bookings_path(hotel))
+    expect(response).to redirect_to(hotel_front_desk_path(hotel, tab: "bookings", view: "list"))
     expect(flash[:alert]).to include("Please provide details for the backdated check-in reason")
     expect(booking.reload.status).to eq("review_no_show")
   end

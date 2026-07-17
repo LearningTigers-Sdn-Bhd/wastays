@@ -35,14 +35,13 @@ module HotelPortal
       pre_checkin_status.titleize
     end
 
-    def pre_checkin_badge_class(mobile: false)
-      variant = case pre_checkin_status
-      when "completed" then "border-emerald-200 bg-emerald-50 text-emerald-700"
-      when "pending" then "border-amber-200 bg-amber-50 text-amber-700"
-      when "failed" then "border-red-200 bg-red-50 text-red-700"
+    def pre_checkin_badge_class
+      case pre_checkin_status
+      when "completed" then "border-success/30 bg-success/10 text-success"
+      when "pending" then "border-warning/30 bg-warning/10 text-warning"
+      when "failed" then "border-destructive/30 bg-destructive/10 text-destructive"
       else "border-border bg-muted text-foreground"
       end
-      mobile ? variant.gsub("border-", "dummy-").gsub(" ", " border ") : variant
     end
 
     def guarantee_method_display
@@ -53,12 +52,17 @@ module HotelPortal
       (booking.deposit_status || "not_required").titleize
     end
 
+    def guarantee_attention_required?
+      (booking.guarantee_method.presence || "none") != "none" ||
+        (booking.deposit_status.presence || "not_required") != "not_required"
+    end
+
     def document_uploaded?
       booking.pre_checkin&.document_status == "uploaded"
     end
 
     def notes_count_label
-      ActionController::Base.helpers.pluralize(booking_notes.count, "note")
+      ActionController::Base.helpers.pluralize(booking_notes.size, "note")
     end
 
     def has_notes?

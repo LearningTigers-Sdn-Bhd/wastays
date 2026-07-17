@@ -1,0 +1,9 @@
+<%= render PanelsUI::DropdownMenu.new(id: "booking-actions-#{actions.first[:path].hash.abs}", placement: :bottom_end, class: "w-52") do |menu| %>
+  <% menu.with_trigger(variant: :ghost, size: :icon_sm, aria_label: "Booking actions") do %><%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %><% end %>
+  <% menu.with_group(label: "Actions") do |group| %>
+    <% group.with_separator %>
+    <% actions.each do |action| %>
+      <% group.with_item(href: action[:path], method: action[:method], data: action[:data] || {}, target: action[:target]) do %><span><%= action[:label] %></span><% end %>
+    <% end %>
+  <% end %>
+<% end %>
