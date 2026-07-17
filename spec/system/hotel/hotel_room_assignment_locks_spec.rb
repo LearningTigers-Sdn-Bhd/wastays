@@ -49,7 +49,7 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
       max_wait = 10
       start_time = Time.current
       until RoomLock.where(hotel: hotel, room_type: room_type, room_number: "206", user: user1).exists? || (Time.current - start_time) > max_wait
-        sleep 0.5
+        sleep 0.1
       end
 
       expect(RoomLock.where(hotel: hotel, room_type: room_type, room_number: "206", user: user1).exists?).to be true
@@ -101,10 +101,10 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
       execute_script("document.querySelector('[data-action=\"click->offcanvas#close\"]').click()")
     end
 
-    max_retries = 10
+    max_retries = 50
     retries = 0
     while retries < max_retries && RoomLock.count > 0
-      sleep 0.5
+      sleep 0.1
       retries += 1
     end
 

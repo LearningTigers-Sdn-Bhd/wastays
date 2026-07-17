@@ -20,6 +20,10 @@ module SystemInteractionHelper
     end
   end
 
+  def wait_until(message = "condition was not met in time", &block)
+    synchronize_browser_state(message, &block)
+  end
+
   def click_via_javascript(selector)
     page.execute_script(<<~JS)
       (() => {

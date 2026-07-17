@@ -76,7 +76,7 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
 
   it "uses the compact Shadcn-like rail and item geometry" do
     click_button "Toggle collapse"
-    sleep 0.2
+    wait_until("sidebar did not finish collapsing") { computed_style("#sd-nav-sidebar", "width") == "48px" }
     link = "#sd-nav-sidebar [data-sidebar-presentation='collapsed'] a[href='#arrivals']"
     group = "#sd-nav-sidebar-desktop-section-1-item-2-popover-trigger"
 
@@ -106,8 +106,11 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
     expect(group_hover).to eq(link_hover)
 
     page.execute_script("document.querySelector(#{group.to_json}).closest('[data-sidebar-group-item]').setAttribute('data-sidebar-active', '')")
-    sleep 0.2
     active_link = "#sd-nav-sidebar [data-sidebar-presentation='collapsed'] a[href='/system-design']"
+    wait_until("active group trigger did not finish transitioning") do
+      computed_color(group, "backgroundColor") == computed_color(active_link, "backgroundColor") &&
+        computed_color(group, "color") == computed_color(active_link, "color")
+    end
     expect(computed_color(group, "backgroundColor")).to eq(computed_color(active_link, "backgroundColor"))
     expect(computed_color(group, "color")).to eq(computed_color(active_link, "color"))
   end
