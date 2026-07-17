@@ -35,11 +35,11 @@
 
         <div class="text-sm">
           <div class="border-b border-border p-5">
-            <h2 class="mb-4 text-sm font-bold uppercase text-muted-foreground">Guest</h2>
-            <dl class="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+            <h2 class="mb-4 text-sm font-bold uppercase font-semibold text-foreground">Guest</h2>
+            <dl class="grid gap-x-8 sm:grid-cols-2">
               <div class="grid grid-cols-[3rem_1fr] gap-x-2">
-                <dt class="text-muted-foreground font-semibold">Name</dt>
-                <dd class="font-semibold text-foreground">: <%= @presenter.guest_name %></dd>
+                <dt class="text-muted-foreground">Name</dt>
+                <dd class="text-foreground">: <%= @presenter.guest_name %></dd>
               </div>
               <% if @card.field_visible?(:phone) %>
                 <div class="grid grid-cols-[4rem_1fr] gap-x-2 ml-4">
@@ -63,16 +63,20 @@
                   <dd class="text-foreground">: <%= @presenter.guest_count_display %></dd>
                 </div>
               <% end %>
+              <div class="grid grid-cols-[4rem_1fr] gap-x-2 ml-4">
+                <dt class="text-muted-foreground">Identity</dt>
+                <dd class="text-foreground">: <%= @presenter.guest_identity %></dd>
+              </div>
             </dl>
           </div>
 
           <div class="p-5">
-            <h2 class="mb-4 text-sm font-bold uppercase text-muted-foreground">Stay</h2>
-            <dl class="grid gap-x-12 gap-y-3 sm:grid-cols-2">
+            <h2 class="mb-4 text-sm font-bold uppercase font-semibold text-foreground">Stay</h2>
+            <dl class="grid gap-x-12 sm:grid-cols-2">
               <% if @card.field_visible?(:booking_number) %>
                 <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
                   <dt class="text-muted-foreground">Booking</dt>
-                  <dd class="font-semibold text-foreground">: <%= @booking.confirmation_token %></dd>
+                  <dd class="text-foreground">: <%= @booking.confirmation_token %></dd>
                 </div>
               <% end %>
               <div class="grid grid-cols-[6.4rem_1fr] gap-x-2">
@@ -88,7 +92,7 @@
               <% if @card.field_visible?(:room_number) %>
                 <div class="grid grid-cols-[6.4rem_1fr] gap-x-2">
                   <dt class="text-muted-foreground">Room(s)</dt>
-                  <dd class="font-semibold text-foreground">: <%= @presenter.room_numbers_display %></dd>
+                  <dd class="text-foreground">: <%= @presenter.room_numbers_display %></dd>
                 </div>
               <% end %>
                <% if @card.field_visible?(:check_in) %>
@@ -129,7 +133,7 @@
               </div>
               <div class="grid grid-cols-[6.4rem_1fr] gap-x-2">
                 <dt class="text-muted-foreground">Total charges</dt>
-                <dd class="font-semibold text-foreground">: <%= @presenter.format_money(@presenter.total_charges) %></dd>
+                <dd class="text-foreground">: <%= @presenter.format_money(@presenter.total_charges) %></dd>
               </div>
               <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
                 <dt class="text-muted-foreground">Tax</dt>
@@ -137,21 +141,14 @@
               </div>
               <div class="grid grid-cols-[6.4rem_1fr] gap-x-2">
                 <dt class="text-muted-foreground">Due amount</dt>
-                <dd class="font-semibold text-rose-600">: <%= @presenter.format_money(@presenter.due_amount) %></dd>
+                <dd class="text-rose-600">: <%= @presenter.format_money(@presenter.due_amount) %></dd>
               </div>
             </dl>
           </div>
         </div>
       </section>
 
-      <section class="rounded-lg border border-border bg-card p-5 shadow-sm">
-        <div class="mb-4 flex items-center justify-between gap-4">
-          <div>
-            <h2 class="text-lg font-bold text-foreground">Terms and Conditions</h2>
-            <p class="text-sm text-muted-foreground">Shown before guest signs; saved as snapshot on signature.</p>
-          </div>
-        </div>
-
+      <section>
         <% if @presenter.terms.present? %>
           <div class="grid gap-3 md:grid-cols-2">
             <% if @presenter.terms["cancellation_policy"].present? %>
@@ -166,6 +163,26 @@
         <% end %>
       </section>
 
+      <div class="space-y-2">
+          <label for="guest_registration_card_internal_notes" class="text-xs font-bold uppercase text-muted-foreground">Please Note</label>
+          <% if @presenter.note_templates.any? %>
+            <div class="flex flex-wrap gap-1.5 py-1">
+              <% @presenter.note_templates.each do |template| %>
+                <%= content_tag :button, template.title, type: "button",
+                                class: "inline-flex items-center rounded-md border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/80 transition-colors cursor-pointer",
+                                data: {
+                                  action: "click->registration-card#applyTag",
+                                  registration_card_text_param: template.content
+                                } %>
+              <% end %>
+            </div>
+          <% end %>
+          <textarea id="guest_registration_card_internal_notes" 
+                    class="w-full rounded-md border border-border bg-card p-4 min-h-[6rem] text-sm font-medium text-foreground focus:border-border-interactive focus:ring-0 resize-y" 
+                    data-registration-card-target="notesInput" 
+                    data-action="input->registration-card#onInput"><%= @booking.internal_notes %></textarea>
+        </div>
+
       <div class="space-y-4">
         <div class="space-y-2">
           <label for="guest_registration_card_special_requests" class="text-xs font-bold uppercase text-muted-foreground">Remark</label>
@@ -173,14 +190,6 @@
                     class="w-full rounded-md border border-border bg-card p-4 min-h-[4rem] text-sm font-medium text-foreground focus:border-border-interactive focus:ring-0 resize-y" 
                     data-registration-card-target="remarkInput" 
                     data-action="input->registration-card#onInput"><%= @booking.special_requests %></textarea>
-        </div>
-
-        <div class="space-y-2">
-          <label for="guest_registration_card_internal_notes" class="text-xs font-bold uppercase text-muted-foreground">Notes</label>
-          <textarea id="guest_registration_card_internal_notes" 
-                    class="w-full rounded-md border border-border bg-card p-4 min-h-[6rem] text-sm font-medium text-foreground focus:border-border-interactive focus:ring-0 resize-y" 
-                    data-registration-card-target="notesInput" 
-                    data-action="input->registration-card#onInput"><%= @booking.internal_notes %></textarea>
         </div>
 
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between min-h-[2.5rem]">
@@ -196,6 +205,9 @@
         <button type="button" onclick="window.print()" class="mt-4 w-full rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">Print official form</button>
         <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) %>
           <%= link_to "Configure displayed details", "#{hotel_settings_path(current_hotel, tab: "general")}#guest-registration-card", class: "mt-2 inline-flex w-full items-center justify-center rounded-md border border-border-interactive bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm hover:bg-muted" %>
+        <% end %>
+        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+          <%= link_to "Manage note templates", hotel_booking_guest_registration_note_templates_path(current_hotel, @booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "mt-2 inline-flex w-full items-center justify-center rounded-md border border-border-interactive bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm hover:bg-muted" %>
         <% end %>
       </section>
 
@@ -236,39 +248,40 @@
   </section>
 
   <article class="grc-print grc-print-page hidden overflow-hidden print:overflow-visible rounded-lg border border-border-interactive bg-card shadow-sm print:block print:rounded-none print:border-0 print:shadow-none">
-    <header class="border-b-2 border-border-interactive px-6 py-3">
+    <header class="border-b-2 border-border-interactive px-6 py-3 print:px-0 print:pt-0 print:pb-2">
       <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div class="flex flex-col print:gap-1">
           <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "h-8 w-auto" %>
-          <h2 class="mt-2 text-md font-black text-foreground"><%= current_hotel.name %></h2>
-          <p class="mt-1 text-sm text-muted-foreground"><%= [current_hotel.city, current_hotel.country].compact_blank.join(", ") %></p>
+          <h2 class="mt-2 text-md font-black text-foreground print:mt-0.5 print:text-sm print:leading-tight"><%= current_hotel.name %></h2>
+          <p class="mt-1 text-sm text-muted-foreground print:mt-0 print:text-xs print:leading-tight"><%= @presenter.hotel_address_display %></p>
         </div>
         <div class="min-w-64 overflow-hidden rounded-md border border-border-interactive bg-card">
           <div class="border-b border-border-interactive bg-muted px-4 py-2 text-center text-xs font-bold uppercase text-muted-foreground">Guest Registration Card No.</div>
-          <div class="px-4 py-4 text-center text-md font-black text-foreground"><%= @booking.guest_registration_card_number_display %></div>
+          <div class="px-4 py-2 text-center text-md font-black text-foreground"><%= @booking.guest_registration_card_number_display %></div>
         </div>
       </div>
     </header>
  
     <section class="border-b border-border-interactive text-sm">
       <div class="border-b border-border-interactive p-2.5">
-        <p class="mb-2 text-xs font-bold uppercase text-muted-foreground">Guest details</p>
-        <dl class="grid grid-cols-2 gap-x-12 gap-y-1.5">
-          <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Name</dt><dd class="font-semibold text-foreground">: <%= @presenter.guest_name %></dd></div>
+        <p class="text-xs font-bold uppercase font-semibold text-foreground">Guest details</p>
+        <dl class="grid grid-cols-2 gap-x-12">
+          <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Name</dt><dd class="text-foreground">: <%= @presenter.guest_name %></dd></div>
           <% if @card.field_visible?(:phone) %><div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Phone</dt><dd class="text-foreground">: <%= @presenter.guest_phone %></dd></div><% end %>
           <% if @card.field_visible?(:email) %><div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Email</dt><dd class="break-all text-foreground">: <%= @presenter.guest_email %></dd></div><% end %>
           <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Country</dt><dd class="text-foreground">: <%= @presenter.guest_country_display %></dd></div>
           <% if @card.field_visible?(:guest_count) %><div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Guests</dt><dd class="text-foreground">: <%= @presenter.guest_count_display %></dd></div><% end %>
+          <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Identity</dt><dd class="text-foreground">: <%= @presenter.guest_identity %></dd></div>
         </dl>
       </div>
  
       <div class="p-2.5">
-        <p class="mb-2 text-xs font-bold uppercase text-muted-foreground">Stay details</p>
+        <p class="text-xs font-bold uppercase font-semibold text-foreground">Stay details</p>
         <dl class="grid grid-cols-2 gap-x-6">
-          <% if @card.field_visible?(:booking_number) %><div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Booking</dt><dd class="font-semibold text-foreground">: <%= @booking.confirmation_token %></dd></div><% end %>
+          <% if @card.field_visible?(:booking_number) %><div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Booking</dt><dd class="text-foreground">: <%= @booking.confirmation_token %></dd></div><% end %>
           <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Room price</dt><dd class="text-foreground">: <%= @presenter.room_price_display %></dd></div>
           <% if @card.field_visible?(:room_type) %><div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Room type</dt><dd class="text-foreground">: <%= @presenter.room_type_summary %></dd></div><% end %>
-          <% if @card.field_visible?(:room_number) %><div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Room(s)</dt><dd class="font-semibold text-foreground">: <%= @presenter.room_numbers_display %></dd></div><% end %>
+          <% if @card.field_visible?(:room_number) %><div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Room(s)</dt><dd class="text-foreground">: <%= @presenter.room_numbers_display %></dd></div><% end %>
           <% if @card.field_visible?(:check_in) %><div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Check-in</dt><dd class="text-foreground">: <%= l(@booking.check_in.to_date) %></dd></div><% end %>
           <% if @presenter.terms&.dig("check_in_time").present? %><div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Check-in time</dt><dd class="text-foreground">: <%= @presenter.terms["check_in_time"] %></dd></div><% end %>
           <% if @card.field_visible?(:check_out) %><div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Check-out</dt><dd class="text-foreground">: <%= l(@booking.check_out.to_date) %></dd></div><% end %>
@@ -276,22 +289,14 @@
           <div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Rate type</dt><dd class="text-foreground">: <%= @presenter.rate_type_display %></dd></div>
           <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Amount paid</dt><dd class="text-foreground">: <%= @presenter.format_money(@presenter.amount_paid) %></dd></div>
           <div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Night(s)</dt><dd class="text-foreground">: <%= @booking.duration_in_nights %></dd></div>
-          <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Total charges</dt><dd class="font-semibold text-foreground">: <%= @presenter.format_money(@presenter.total_charges) %></dd></div>
+          <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Total charges</dt><dd class="text-foreground">: <%= @presenter.format_money(@presenter.total_charges) %></dd></div>
           <div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Tax</dt><dd class="text-foreground">: <%= @presenter.format_money(@booking.tax_total) %></dd></div>
           <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Due amount</dt><dd class="font-semibold text-rose-600">: <%= @presenter.format_money(@presenter.due_amount) %></dd></div>
         </dl>
       </div>
     </section>
  
-    <section class="border-b border-border-interactive p-2.5">
-      <div class="mb-2 flex items-center justify-between gap-4 border-b border-border pb-1">
-        <h3 class="text-base font-black uppercase text-foreground">Terms and Conditions</h3>
-      </div>
- 
-      <p class="mb-2 rounded-md border border-border-interactive bg-muted px-3 py-1.5 text-xs leading-5 text-foreground">
-        Please read the terms and conditions carefully before signing. Your signature confirms the guest has reviewed the check-in, check-out, and hotel policy terms shown on this card.
-      </p>
- 
+    <section>
       <% if @presenter.terms.present? %>
         <div class="grid gap-2 text-xs sm:grid-cols-2">
           <% if @presenter.terms["cancellation_policy"].present? %>
@@ -305,15 +310,15 @@
         <p class="text-xs text-muted-foreground">Hotel terms are not configured.</p>
       <% end %>
     </section>
+
+    <section class="border-b border-border-interactive p-2.5">
+      <p class="mb-1 text-xs font-bold uppercase text-muted-foreground">Please Note</p>
+      <div class="min-h-[5.75rem] w-full bg-card text-sm whitespace-pre-wrap text-foreground" data-registration-card-target="notesPrint"><%= @booking.internal_notes %></div>
+    </section>
  
     <section class="border-b border-border-interactive p-2.5">
       <p class="mb-1 text-xs font-bold uppercase text-muted-foreground">Remark</p>
       <div class="min-h-[5rem] w-full bg-card text-sm whitespace-pre-wrap text-foreground" data-registration-card-target="remarkPrint"><%= @booking.special_requests %></div>
-    </section>
- 
-    <section class="border-b border-border-interactive p-2.5">
-      <p class="mb-1 text-xs font-bold uppercase text-muted-foreground">Notes</p>
-      <div class="min-h-[5.75rem] w-full bg-card text-sm whitespace-pre-wrap text-foreground" data-registration-card-target="notesPrint"><%= @booking.internal_notes %></div>
     </section>
   
     <section class="flex justify-end p-2.5">

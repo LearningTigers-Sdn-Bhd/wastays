@@ -1,0 +1,42 @@
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+
+  <div class="flex h-full flex-col bg-card overflow-hidden">
+    <div class="flex items-center gap-x-4 border-b border-border px-6 py-5 min-w-0">
+      <div class="shrink-0">
+        <%= link_to hotel_booking_guest_registration_note_templates_path(current_hotel, @booking), 
+                    class: "rounded-xl border border-border bg-card p-2.5 text-muted-foreground shadow-sm transition hover:bg-muted flex items-center justify-center" do %>
+          <%= cached_icon "chevron-left", class: "size-4.5" %>
+        <% end %>
+      </div>
+      <div class="min-w-0 flex-1">
+        <h3 class="text-lg font-bold text-foreground">Edit Note Template</h3>
+        <p class="mt-1 text-xs text-muted-foreground break-words">Update the title or applied text for this note template tag.</p>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+      <%= form_with model: @template, url: hotel_booking_guest_registration_note_template_path(current_hotel, @booking, @template), method: :patch, local: true, class: "space-y-6" do |f| %>
+        <% if @template.errors.any? %>
+          <div class="p-3 text-xs text-red-600 bg-red-50 rounded-xl border border-red-100 font-medium">
+            <%= @template.errors.full_messages.to_sentence %>
+          </div>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(form: f, attribute: :title, label: "Tag Title", required: true) do |field| %>
+          <% field.with_input placeholder: "e.g. Late Checkout", autofocus: true %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(form: f, attribute: :content, required: true) do |field| %>
+          <% field.with_text_area rows: 10, placeholder: "e.g. Guest requested late checkout at 2 PM." %>
+        <% end %>
+
+        <div class="flex gap-x-3 pt-4">
+          <%= f.submit "Update Tag", class: "flex-1 inline-flex items-center justify-center rounded-2xl bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover cursor-pointer" %>
+          <%= link_to "Cancel", hotel_booking_guest_registration_note_templates_path(current_hotel, @booking), 
+                      class: "flex-1 inline-flex items-center justify-center rounded-2xl border border-border bg-card px-5 py-3.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

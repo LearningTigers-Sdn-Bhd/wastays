@@ -29,6 +29,30 @@ export default class extends Controller {
     }
   }
 
+  applyTag(event) {
+    event.preventDefault()
+    const text = event.params.text
+    if (this.hasNotesInputTarget) {
+      const tempDiv = document.createElement("div")
+      tempDiv.innerHTML = text
+      const plainText = (tempDiv.textContent || tempDiv.innerText || "").trim()
+
+      const currentVal = this.notesInputTarget.value.trim()
+      const newVal = currentVal ? `${currentVal} ${plainText}` : plainText
+      this.notesInputTarget.value = newVal
+      this.updateNotes()
+
+      if (this.hasStatusTarget) {
+        this.statusTarget.className = "text-xs font-bold text-emerald-600 flex items-center gap-1.5 opacity-0 transition-opacity duration-200"
+      }
+
+      clearTimeout(this.debounceTimeout)
+      this.debounceTimeout = setTimeout(() => {
+        this.save()
+      }, 500)
+    }
+  }
+
   onInput(event) {
     if (event.target === this.remarkInputTarget) {
       this.updateRemark()

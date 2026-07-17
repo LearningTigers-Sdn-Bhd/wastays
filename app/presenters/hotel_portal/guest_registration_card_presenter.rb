@@ -66,6 +66,12 @@ module HotelPortal
       guest_country.presence || "-"
     end
 
+    def guest_identity
+      primary_booking_guest&.government_id_snapshot.presence ||
+        @booking.guest_government_id.presence ||
+        "-"
+    end
+
     def guest_count_display
       "#{booking.adults.to_i} adult(s), #{booking.children.to_i} child(ren)"
     end
@@ -84,6 +90,14 @@ module HotelPortal
 
     def rate_type_display
       booking.booking_rooms.first&.rate_plan&.name || "Standard"
+    end
+
+    def note_templates
+      @note_templates ||= hotel.guest_registration_note_templates.order(created_at: :desc)
+    end
+
+    def hotel_address_display
+      [ hotel.city, hotel.country ].compact_blank.join(", ")
     end
   end
 end

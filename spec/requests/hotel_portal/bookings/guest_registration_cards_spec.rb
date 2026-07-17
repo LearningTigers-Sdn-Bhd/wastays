@@ -132,7 +132,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Remark")
       expect(response.body).to include("Please provide a quiet room.")
-      expect(response.body).to include("Notes")
+      expect(response.body).to include("Please Note")
       expect(response.body).to include("VIP guest, prioritize service.")
       expect(response.body).to include("Check-in time")
       expect(response.body).to include("3:00 PM")
