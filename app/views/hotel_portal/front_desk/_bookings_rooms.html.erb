@@ -12,6 +12,7 @@
         <% paid = [total - balance, 0].max %>
         <% actions = [{ label: "Open booking", path: hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details") }] %>
         <% if current_user.has_permission?("view_bookings", hotel: current_hotel) && current_hotel.feature_enabled?("full_audit_trail") %><% actions << { label: "Audit trail", path: audit_trail_hotel_booking_control_panel_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } } %><% end %>
+        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %><% actions << { label: "Print reservation voucher", path: hotel_booking_reservation_voucher_path(current_hotel, booking), data: { turbo: false }, target: "_blank" } %><% end %>
         <article class="front-desk-stay-card min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm <%= 'border-destructive bg-muted' if presenter.blacklisted? %>">
           <header class="flex min-w-0 items-stretch gap-2 border-b border-border p-3">
             <span class="flex max-w-[35%] shrink-0 items-center border-r border-border pr-3 <%= room_numbers == 'Unassigned' ? 'flex-col justify-center text-xs font-medium leading-tight text-muted-foreground' : 'truncate text-lg font-semibold tracking-tight text-primary' %>"><span><%= room_numbers %></span><% if room_numbers == "Unassigned" %><span class="mt-0.5">Room</span><% end %></span>
@@ -30,11 +31,11 @@
           </section>
           <section class="px-3 py-3">
             <div class="flex min-w-0 items-center justify-between gap-3">
-              <span class="inline-flex shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium <%= presenter.status_variant_class %>"><%= presenter.status_label_humanized %></span>
-              <div class="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                <span class="inline-flex items-center gap-1" aria-label="<%= pluralize(booking.adults, "adult") %>"><%= cached_icon "user", class: "size-4", aria: { hidden: true } %><span aria-hidden="true"><%= booking.adults %></span></span>
-                <span class="inline-flex items-center gap-1" aria-label="<%= pluralize(booking.children, "child") %>"><%= cached_icon "baby", class: "size-4", aria: { hidden: true } %><span aria-hidden="true"><%= booking.children %></span></span>
+              <div class="flex min-w-0 items-center gap-1.5">
+                <span class="inline-flex shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium <%= presenter.status_variant_class %>"><%= presenter.status_label_humanized %></span>
+                <%= render "booking_source_icon", source: booking.source %>
               </div>
+              <%= render "occupancy", adults: booking.adults, children: booking.children %>
             </div>
             <dl class="mt-3 grid grid-cols-2 gap-3 text-sm">
               <div class="min-w-0"><dt class="text-xs font-medium text-muted-foreground">Room type</dt><dd class="mt-1 break-words text-muted-foreground"><%= room_details %></dd></div>

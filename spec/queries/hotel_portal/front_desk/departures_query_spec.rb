@@ -15,15 +15,28 @@ RSpec.describe HotelPortal::FrontDesk::DeparturesQuery do
   end
 
   describe "#call" do
-    it "returns only completed bookings checked out today for current hotel" do
-      matching_booking = create(:booking, hotel:, status: "completed", checked_out_at: 1.hour.ago)
-      create(:booking, hotel:, status: "checked_in", checked_out_at: 1.hour.ago)
-      create(:booking, hotel:, status: "completed", checked_out_at: 1.day.ago)
-      create(:booking, hotel: create(:hotel, status: "approved"), status: "completed", checked_out_at: 1.hour.ago)
+    it "returns pending-departure bookings checking out today for current hotel" do
+      matching_booking = create(:booking, hotel:, status: "checked_in", check_out: hotel_time("2026-07-15"))
+      create(:booking, hotel:, status: "completed", check_out: hotel_time("2026-07-15"))
+      create(:booking, hotel:, status: "cancelled", check_out: hotel_time("2026-07-15"))
+      create(:booking, hotel:, status: "no_show", check_out: hotel_time("2026-07-15"))
+      create(:booking, hotel:, status: "checked_in", check_out: hotel_time("2026-07-16"))
+      create(:booking, hotel: create(:hotel, status: "approved"), status: "checked_in", check_out: hotel_time("2026-07-15"))
 
       query = described_class.new(hotel:, params: {})
 
       expect(query.call).to contain_exactly(matching_booking)
+    end
+
+    %w[confirmed review_no_show checked_in checkout_required].each do |status|
+      it "includes #{status} bookings checking out today" do
+        extra_attrs = status == "review_no_show" ? { no_show_review_business_date: Date.new(2026, 7, 15) } : {}
+        matching_booking = create(:booking, hotel:, status:, check_out: hotel_time("2026-07-15"), **extra_attrs)
+
+        query = described_class.new(hotel:, params: {})
+
+        expect(query.call).to contain_exactly(matching_booking)
+      end
     end
 
     {
@@ -36,15 +49,15 @@ RSpec.describe HotelPortal::FrontDesk::DeparturesQuery do
         matching_booking = create(
           :booking,
           hotel:,
-          status: "completed",
-          checked_out_at: 1.hour.ago,
+          status: "checked_in",
+          check_out: hotel_time("2026-07-15"),
           field => "A%_B"
         )
         create(
           :booking,
           hotel:,
-          status: "completed",
-          checked_out_at: 1.hour.ago,
+          status: "checked_in",
+          check_out: hotel_time("2026-07-15"),
           field => "AxxB"
         )
 
@@ -54,36 +67,25 @@ RSpec.describe HotelPortal::FrontDesk::DeparturesQuery do
       end
     end
 
-    it "orders by checkout time then creation time descending" do
-      earlier_booking = create(:booking, hotel:, status: "completed", checked_out_at: 2.hours.ago, created_at: 3.hours.ago)
-      latest_booking = create(:booking, hotel:, status: "completed", checked_out_at: 1.hour.ago, created_at: 2.hours.ago)
+    it "orders by scheduled checkout date then creation time" do
+      later_checkout = create(:booking, hotel:, status: "checked_in", check_out: hotel_time("2026-07-16"), created_at: 1.hour.ago)
+      earlier_checkout = create(:booking, hotel:, status: "checked_in", check_out: hotel_time("2026-07-15"), created_at: 2.hours.ago)
 
-      query = described_class.new(hotel:, params: {})
+      query = described_class.new(hotel:, params: { departure_end_date: "2026-07-16" })
 
-      expect(query.call).to eq([ latest_booking, earlier_booking ])
-    end
-
-    it "uses creation time descending when checkout times match" do
-      checked_out_at = 1.hour.ago
-      earlier_booking = create(:booking, hotel:, status: "completed", checked_out_at:, created_at: 3.hours.ago)
-      later_booking = create(:booking, hotel:, status: "completed", checked_out_at:, created_at: 2.hours.ago)
-
-      query = described_class.new(hotel:, params: {})
-
-      expect(query.call).to eq([ later_booking, earlier_booking ])
+      expect(query.call).to eq([ earlier_checkout, later_checkout ])
     end
   end
 
   it "prefers scoped dates over legacy dates" do
-    legacy_booking = create(:booking, hotel:, status: "completed", checked_out_at: hotel_time("2026-07-15"))
-    scoped_booking = create(:booking, hotel:, status: "completed", checked_out_at: hotel_time("2026-07-16"))
+    legacy_booking = create(:booking, hotel:, status: "checked_in", check_out: hotel_time("2026-07-15"))
+    scoped_booking = create(:booking, hotel:, status: "checked_in", check_out: hotel_time("2026-07-16"))
 
     query = described_class.new(hotel:, params: { start_date: "2026-07-15", departure_start_date: "2026-07-16" })
 
     expect(query.call).to contain_exactly(scoped_booking)
     expect(query.call).not_to include(legacy_booking)
   end
-
 
   it "uses the hotel-local day for invalid and missing dates", :hotel_midnight do
     hotel.update!(time_zone: "Kuala Lumpur")
@@ -96,8 +98,8 @@ RSpec.describe HotelPortal::FrontDesk::DeparturesQuery do
 
   describe "#total_count" do
     it "keeps count unfiltered" do
-      create(:booking, hotel:, status: "completed", checked_out_at: 2.hours.ago, guest_name: "Aisha")
-      create(:booking, hotel:, status: "completed", checked_out_at: 1.hour.ago, guest_name: "Noor")
+      create(:booking, hotel:, status: "checked_in", check_out: hotel_time("2026-07-15"), guest_name: "Aisha")
+      create(:booking, hotel:, status: "checked_in", check_out: hotel_time("2026-07-15"), guest_name: "Noor")
 
       query = described_class.new(hotel:, params: { departure_query: "Aisha" })
 

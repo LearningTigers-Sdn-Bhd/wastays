@@ -10,6 +10,7 @@
         <% total = booking.total_amount.to_d %>
         <% paid = [total - balance, 0].max %>
         <% actions = [{ label: "View booking", path: hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details") }] %>
+        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %><% actions << { label: "Print reservation voucher", path: hotel_booking_reservation_voucher_path(current_hotel, booking), data: { turbo: false }, target: "_blank" } %><% end %>
         <% if current_user.has_permission?("view_bookings", hotel: current_hotel) && current_hotel.feature_enabled?("full_audit_trail") %><% actions << { label: "Audit trail", path: audit_trail_hotel_booking_control_panel_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } } %><% end %>
         <% if presenter.status == "confirmed" && current_user.has_permission?("manage_bookings", hotel: current_hotel) %><% actions << { label: "Check in", path: hotel_booking_transaction_check_in_reservation_path(current_hotel, booking, return_to: request.fullpath), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } } %><% elsif presenter.status == "checked_in" && current_user.has_permission?("manage_bookings", hotel: current_hotel) %><% actions << { label: "Edit check-in time", path: hotel_booking_transaction_check_in_reservation_path(current_hotel, booking, return_to: request.fullpath), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } } %><% end %>
         <article class="front-desk-stay-card min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
@@ -28,13 +29,19 @@
             <span class="-my-2 self-stretch border-l border-border" aria-hidden="true"></span>
             <div class="min-w-0 flex-1 text-right"><p class="text-xs font-medium text-muted-foreground">Departure</p><p class="mt-1 truncate"><%= booking.check_out&.strftime("%d %b") || "—" %></p></div>
           </section>
-          <section class="px-3 py-3 text-sm text-muted-foreground"><span class="font-semibold text-foreground">Pre-check-in:</span> <%= presenter.pre_checkin_status_label %></section>
+          <div class="flex items-center justify-between gap-2 px-3 py-3">
+            <div class="flex min-w-0 items-center gap-1.5">
+              <span class="text-sm text-muted-foreground"><span class="font-semibold text-foreground">Pre-check-in:</span> <%= presenter.pre_checkin_status_label %></span>
+              <%= render "booking_source_icon", source: booking.source %>
+            </div>
+            <%= render "occupancy", adults: presenter.adults, children: presenter.children %>
+          </div>
+          <% show_guarantee = presenter.guarantee_attention_required? %>
           <dl class="grid grid-cols-2 gap-3 px-3 pb-3 text-sm">
             <div class="min-w-0"><dt class="text-xs font-medium text-muted-foreground">Rooms</dt><dd class="mt-1 break-words text-foreground"><%= presenter.rooms_summary.join(", ").presence || "No rooms assigned" %></dd></div>
-            <div class="min-w-0"><dt class="text-xs font-medium text-muted-foreground">Occupancy</dt><dd class="mt-1 flex items-center gap-2 text-foreground"><span class="inline-flex items-center gap-1" aria-label="<%= pluralize(presenter.adults, "adult") %>"><%= cached_icon "user", class: "size-4", aria: { hidden: true } %><span aria-hidden="true"><%= presenter.adults %></span></span><span class="inline-flex items-center gap-1" aria-label="<%= pluralize(presenter.children, "child") %>"><%= cached_icon "baby", class: "size-4", aria: { hidden: true } %><span aria-hidden="true"><%= presenter.children %></span></span></dd></div>
-            <div class="min-w-0"><dt class="text-xs font-medium text-muted-foreground">Guarantee</dt><dd class="mt-1 break-words text-foreground"><%= presenter.guarantee_method_display %> · <%= presenter.deposit_status_label %></dd></div>
-            <div class="min-w-0"><dt class="text-xs font-medium text-muted-foreground">Docs / Notes</dt><dd class="mt-1 break-words text-foreground"><%= presenter.document_uploaded? ? "Documents uploaded" : "No documents" %><%= "; #{presenter.notes_count_label}" if presenter.has_notes? %></dd></div>
-            <div class="col-span-2 min-w-0"><dt class="text-xs font-medium text-muted-foreground">Booking date</dt><dd class="mt-1 text-foreground"><%= booking.created_at.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y") %></dd></div>
+            <div class="min-w-0"><dt class="text-xs font-medium text-muted-foreground">Booking date</dt><dd class="mt-1 text-foreground"><%= booking.created_at.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y") %></dd></div>
+            <% if show_guarantee %><div class="min-w-0"><dt class="text-xs font-medium text-muted-foreground">Guarantee</dt><dd class="mt-1 break-words text-foreground"><%= presenter.guarantee_method_display %> · <%= presenter.deposit_status_label %></dd></div><% end %>
+            <div class="min-w-0 <%= "col-span-2" unless show_guarantee %>"><dt class="text-xs font-medium text-muted-foreground">Docs / Notes</dt><dd class="mt-1 break-words text-foreground"><%= presenter.document_uploaded? ? "Documents uploaded" : "No documents" %><%= "; #{presenter.notes_count_label}" if presenter.has_notes? %></dd></div>
           </dl>
           <dl class="mx-3 mb-3 grid grid-cols-3 gap-2 rounded-lg bg-muted px-3 py-2 text-sm tabular-nums">
             <div class="min-w-0"><dt class="text-xs font-medium text-muted-foreground">Total</dt><dd class="mt-1 whitespace-nowrap text-xs font-semibold text-foreground"><%= number_to_currency(total, unit: "RM ") %></dd></div>

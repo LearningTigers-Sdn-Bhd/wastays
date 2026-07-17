@@ -1,0 +1,21 @@
+<%# locals: (adults:, children:) %>
+<%# Font Awesome Free 6.7.2 — Icons: CC BY 4.0, Code: MIT — https://fontawesome.com %>
+<div class="flex items-center gap-2 text-sm text-muted-foreground">
+  <%= render PanelsUI::Tooltip.new(text: pluralize(adults, "Adult"), delay: 150) do %>
+    <span class="inline-flex cursor-help items-center gap-1 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="<%= pluralize(adults, "Adult") %>">
+      <svg class="size-4 fill-current" viewBox="0 0 320 512" aria-hidden="true" focusable="false">
+        <path d="M112 48a48 48 0 1 1 96 0 48 48 0 1 1-96 0zm40 304v128c0 17.7-14.3 32-32 32s-32-14.3-32-32V256.9l-28.6 47.6c-9.1 15.1-28.8 20-43.9 10.9s-20-28.8-10.9-43.9l58.3-97c17.4-28.9 48.6-46.6 82.3-46.6h29.7c33.7 0 64.9 17.7 82.3 46.6l58.3 97c9.1 15.1 4.2 34.8-10.9 43.9s-34.8 4.2-43.9-10.9L232 256.9V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V352h-16z" />
+      </svg>
+      <span aria-hidden="true"><%= adults %></span>
+    </span>
+  <% end %>
+
+  <%= render PanelsUI::Tooltip.new(text: pluralize(children, "Child"), delay: 150) do %>
+    <span class="inline-flex cursor-help items-center gap-1 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="<%= pluralize(children, "Child") %>">
+      <svg class="size-3 fill-current" viewBox="0 0 320 512" aria-hidden="true" focusable="false">
+        <path d="M96 64a64 64 0 1 1 128 0A64 64 0 1 1 96 64zm48 320v96c0 17.7-14.3 32-32 32s-32-14.3-32-32V287.8L59.1 321c-9.4 15-29.2 19.4-44.1 10S-4.5 301.9 4.9 287l39.9-63.3C69.7 184 113.2 160 160 160s90.3 24 115.2 63.6l39.9 63.4c9.4 15 4.9 34.7-10 44.1s-34.7 4.9-44.1-10L240 287.8V480c0 17.7-14.3 32-32 32s-32-14.3-32-32v-96z" />
+      </svg>
+      <span aria-hidden="true"><%= children %></span>
+    </span>
+  <% end %>
+</div>
