@@ -515,12 +515,14 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
     it "renders accessible arrivals workspace controls and list actions" do
       grant_arrival_permission
       grant_booking_permission
-      booking(status: "confirmed", confirmation_token: "ARRIVAL-WORKSPACE", check_in: Date.new(2026, 7, 15))
+      booking(status: "confirmed", confirmation_token: "ARRIVAL-WORKSPACE", check_in: Date.current)
+      arrival_start_date = Date.current
+      arrival_end_date = Date.current + 1.day
 
       get hotel_front_desk_path(hotel), params: {
         tab: "arrivals", view: "list", arrival_q: "Aisha", in_house_query: "Stay",
         departure_query: "Departure", room_assignment: "unassigned", in_house_page: 2, departure_page: 3,
-        arrival_start_date: "2026-07-15", arrival_end_date: "2026-07-16"
+        arrival_start_date: arrival_start_date.iso8601, arrival_end_date: arrival_end_date.iso8601
       }
 
       document = Nokogiri::HTML(response.body)
@@ -532,7 +534,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(view_group).to be_present
       expect(view_group.at_css("a.panel-button[aria-current='page']")&.text).to include("List")
       expect(view_group.at_css("a[href*='view=rooms']")&.[]("href")).to include(
-        "arrival_start_date=2026-07-15", "arrival_end_date=2026-07-16",
+        "arrival_start_date=#{arrival_start_date.iso8601}", "arrival_end_date=#{arrival_end_date.iso8601}",
         "in_house_query=Stay", "departure_query=Departure", "in_house_page=2", "departure_page=3"
       )
       expect(document.at_css("#reservation-view.tabs-root")).to be_nil
@@ -541,9 +543,9 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(range_root).to be_present
       expect(range_root.at_css("[data-front-desk-date-range-target='picker'] calendar-range[months='2']")).to be_present
       expect(range_root.at_css(".panel-form-field[data-size='lg']")).to be_present
-      expect(range_root.at_css("input[name='front_desk_date_range']")&.[]("value")).to eq("2026-07-15/2026-07-16")
-      expect(range_root.at_css("input[name='arrival_start_date'][data-front-desk-date-range-target='start']")&.[]("value")).to eq("2026-07-15")
-      expect(range_root.at_css("input[name='arrival_end_date'][data-front-desk-date-range-target='end']")&.[]("value")).to eq("2026-07-16")
+      expect(range_root.at_css("input[name='front_desk_date_range']")&.[]("value")).to eq("#{arrival_start_date.iso8601}/#{arrival_end_date.iso8601}")
+      expect(range_root.at_css("input[name='arrival_start_date'][data-front-desk-date-range-target='start']")&.[]("value")).to eq(arrival_start_date.iso8601)
+      expect(range_root.at_css("input[name='arrival_end_date'][data-front-desk-date-range-target='end']")&.[]("value")).to eq(arrival_end_date.iso8601)
       expect(document.css(".panel-form-field").count { |field| field.text.include?("Start date") || field.text.include?("End date") }).to eq(0)
       expect(document.css("th").map(&:text).map(&:strip)).to include("Guest / Reference", "Pre-Checkin", "Guarantee", "Docs / Notes")
       expect(response.body).to include("Not Started")
