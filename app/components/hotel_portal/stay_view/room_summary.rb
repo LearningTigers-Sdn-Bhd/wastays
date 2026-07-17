@@ -77,6 +77,8 @@ module HotelPortal
         render PanelsUI::Popover.new(
           id: "#{@room.dom_id}-status",
           placement: :bottom_end,
+          trigger_on: :hover,
+          close_delay: 120,
           class: "w-44 p-3"
         ) do |popover|
           popover.with_trigger(

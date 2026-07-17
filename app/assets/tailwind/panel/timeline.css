@@ -235,6 +235,7 @@
   }
 
   .panel-timeline__cell {
+    position: relative;
     z-index: 0;
     grid-row: 1;
     min-width: 0;
@@ -247,11 +248,28 @@
     background: color-mix(in oklab, var(--primary) 5%, var(--card));
   }
 
-  .panel-timeline__cell-action {
+  .panel-timeline__cell-action.panel-button {
     position: absolute;
-    inset-inline-end: 0.25rem;
-    inset-block-start: 0.25rem;
+    inset: 0;
     z-index: 2;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+    aspect-ratio: auto;
+    align-items: center;
+    justify-content: flex-end;
+    border: 0;
+    border-radius: 0;
+    padding: 0.25rem;
+    background: transparent;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    transition: background-color 120ms ease;
+  }
+
+  .panel-timeline__cell-action-indicator {
     display: inline-flex;
     width: 1.5rem;
     height: 1.5rem;
@@ -260,24 +278,64 @@
     border: 1px solid var(--border-interactive);
     border-radius: var(--radius-sm);
     background: var(--card);
-    color: var(--muted-foreground);
     opacity: 0;
     transition: opacity 120ms ease, color 120ms ease, background-color 120ms ease;
   }
 
-  .panel-timeline__cell:hover .panel-timeline__cell-action,
-  .panel-timeline__cell-action:focus-visible {
+  .panel-timeline__cell:hover .panel-timeline__cell-action-indicator,
+  .panel-timeline__cell-action:focus-visible .panel-timeline__cell-action-indicator,
+  .panel-timeline__cell-action[aria-expanded="true"] .panel-timeline__cell-action-indicator {
     opacity: 1;
   }
 
-  .panel-timeline__cell-action:hover {
+  .panel-timeline__cell-action.panel-button:hover {
+    background: transparent;
+  }
+
+  .panel-timeline__cell-action:hover .panel-timeline__cell-action-indicator {
     background: var(--muted);
     color: var(--foreground);
   }
 
   .panel-timeline__cell-action:focus-visible {
     outline: 2px solid var(--ring);
-    outline-offset: 2px;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+
+  @media (pointer: coarse) {
+    .panel-timeline__cell-action-indicator {
+      opacity: 1;
+    }
+  }
+
+  .panel-timeline__legend-swatch {
+    --panel-timeline-segment-background: var(--muted);
+    --panel-timeline-segment-foreground: var(--foreground);
+    --panel-timeline-segment-border: var(--border-interactive);
+    display: inline-flex;
+    width: 1.5rem;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--panel-timeline-segment-border);
+    border-radius: var(--radius-sm);
+    background: var(--panel-timeline-segment-background);
+    color: var(--panel-timeline-segment-foreground);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .panel-timeline__legend-swatch.panel-badge {
+    width: 1.5rem;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    border-color: var(--panel-badge-border);
+    border-radius: var(--radius-sm);
+    padding: 0;
+    background: var(--panel-badge-background);
+    color: var(--panel-badge-foreground);
+    box-shadow: none;
   }
 
   .panel-timeline__segment {
@@ -386,31 +444,31 @@
     outline-color: var(--status-destructive-border);
   }
 
-  .panel-timeline__segment[data-tone="primary"] {
+  :is(.panel-timeline__segment, .panel-timeline__legend-swatch[data-presentation="segment"])[data-tone="primary"] {
     --panel-timeline-segment-background: color-mix(in oklab, var(--primary) 18%, var(--card));
     --panel-timeline-segment-foreground: var(--foreground);
     --panel-timeline-segment-border: color-mix(in oklab, var(--primary) 55%, var(--border));
   }
 
-  .panel-timeline__segment[data-tone="info"] {
+  :is(.panel-timeline__segment, .panel-timeline__legend-swatch[data-presentation="segment"])[data-tone="info"] {
     --panel-timeline-segment-background: var(--status-info-background);
     --panel-timeline-segment-foreground: var(--status-info-foreground);
     --panel-timeline-segment-border: var(--status-info-border);
   }
 
-  .panel-timeline__segment[data-tone="success"] {
+  :is(.panel-timeline__segment, .panel-timeline__legend-swatch[data-presentation="segment"])[data-tone="success"] {
     --panel-timeline-segment-background: var(--status-success-background);
     --panel-timeline-segment-foreground: var(--status-success-foreground);
     --panel-timeline-segment-border: var(--status-success-border);
   }
 
-  .panel-timeline__segment[data-tone="warning"] {
+  :is(.panel-timeline__segment, .panel-timeline__legend-swatch[data-presentation="segment"])[data-tone="warning"] {
     --panel-timeline-segment-background: var(--status-warning-background);
     --panel-timeline-segment-foreground: var(--status-warning-foreground);
     --panel-timeline-segment-border: var(--status-warning-border);
   }
 
-  .panel-timeline__segment[data-tone="destructive"] {
+  :is(.panel-timeline__segment, .panel-timeline__legend-swatch[data-presentation="segment"])[data-tone="destructive"] {
     --panel-timeline-segment-background: var(--status-destructive-background);
     --panel-timeline-segment-foreground: var(--status-destructive-foreground);
     --panel-timeline-segment-border: var(--status-destructive-border);
@@ -425,7 +483,7 @@
     box-shadow: none;
   }
 
-  .panel-timeline__segment[data-emphasis="hatched"] {
+  :is(.panel-timeline__segment, .panel-timeline__legend-swatch[data-presentation="segment"])[data-emphasis="hatched"] {
     background-color: var(--panel-timeline-segment-background);
     background-image: repeating-linear-gradient(
       135deg,

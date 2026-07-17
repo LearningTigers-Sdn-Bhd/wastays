@@ -2,21 +2,61 @@
 
 module StayView
   class CalculateCounts
-    def self.call(room_groups:)
+    RESERVED_STATUSES = %i[confirmed review_no_show].freeze
+    OCCUPIED_STATUSES = %i[checked_in review_due_out checkout_required].freeze
+    DUE_OUT_STATUSES = %i[review_due_out checkout_required].freeze
+
+    def self.call(room_groups:, reference_date:, operational_date:)
       rows = room_groups.flat_map(&:rooms)
+      states = {
+        all: rows.size,
+        occupied: count(rows) { |room| occupied?(room, reference_date) },
+        reserved: count(rows) { |room| reserved?(room, reference_date) },
+        blocked: count(rows) { |room| blocked?(room, reference_date) },
+        due_out: count(rows) { |room| due_out?(room, reference_date, operational_date) },
+        dirty: count(rows) { |room| room.current_physical_status == :dirty }
+      }
+      states[:vacant] = count(rows) do |room|
+        !occupied?(room, reference_date) && !reserved?(room, reference_date) &&
+          !blocked?(room, reference_date) && !due_out?(room, reference_date, operational_date)
+      end
+
       StatusCounts.new(
-        rooms: rows.size,
-        physical_statuses: tally(rows.filter_map(&:current_physical_status)),
-        occupancies: tally(rows.flat_map(&:day_cells).flat_map(&:occupancies).map(&:state)),
-        booking_statuses: tally(rows.flat_map(&:booking_segments).map(&:status)),
-        operational_segments: tally(rows.flat_map(&:operational_segments).map(&:kind))
+        reference_date:,
+        room_states: states
       )
     end
 
-    def self.tally(values)
-      values.tally.sort.to_h
+    def self.count(rows, &block)
+      rows.count(&block)
     end
 
-    private_class_method :tally
+    def self.occupied?(room, date)
+      active_booking_with_status?(room, date, OCCUPIED_STATUSES)
+    end
+
+    def self.reserved?(room, date)
+      active_booking_with_status?(room, date, RESERVED_STATUSES)
+    end
+
+    def self.active_booking_with_status?(room, date, statuses)
+      room.booking_segments.any? do |segment|
+        statuses.include?(segment.status) && segment.check_in <= date && date < segment.check_out
+      end
+    end
+
+    def self.blocked?(room, date)
+      room.operational_segments.any? { |segment| segment.start_date <= date && date < segment.end_date }
+    end
+
+    def self.due_out?(room, date, operational_date)
+      status_due_out = room.booking_segments.any? do |segment|
+        DUE_OUT_STATUSES.include?(segment.status) && segment.check_out <= date
+      end
+      current_late_checkout = date == operational_date && room.operational_flags[:late_checkout]
+      status_due_out || current_late_checkout
+    end
+
+    private_class_method :count, :occupied?, :reserved?, :active_booking_with_status?, :blocked?, :due_out?
   end
 end

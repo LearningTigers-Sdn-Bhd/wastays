@@ -49,7 +49,7 @@ module HotelPortal
               date: cell.date.iso8601
             }
           ) do
-            add_booking_link(cell)
+            add_cell_actions(cell)
           end
         end
       end
@@ -73,26 +73,11 @@ module HotelPortal
         end
       end
 
-      def add_booking_link(cell)
-        return unless @room.capabilities.create_booking?
-        return unless cell.occupancies.one? && cell.occupancies.first.state == :available
+      def add_cell_actions(cell)
+        return unless cell.occupancies.none? { |occupancy| occupancy.state.in?(%i[arrival occupied]) }
         return unless cell.operational_kinds.empty?
 
-        helpers.link_to(
-          helpers.hotel_booking_transaction_new_booking_path(
-            helpers.current_hotel,
-            check_in: cell.date,
-            check_out: cell.date + 1.day,
-            room_type_id: @room.room_type_id,
-            room_number: @room.room_number,
-            return_to:
-          ),
-          class: "panel-timeline__cell-action",
-          aria: { label: "Add booking for room #{@room.room_number} on #{cell.date.to_fs(:long)}" },
-          data: helpers.stay_view_action_data
-        ) do
-          helpers.app_icon "plus", class: "size-3", aria: { hidden: true }
-        end
+        render CellActions.new(room: @room, cell:, state: @state)
       end
 
       def interaction_for(segment)

@@ -28,6 +28,62 @@ module HotelPortal::StayViewHelper
     hotel_booking_transaction_show_booking_path(current_hotel, booking_id, return_to:)
   end
 
+  def stay_view_cell_actions(room, cell, state)
+    return_to = state.return_path(current_hotel)
+    common = {
+      check_in: cell.date,
+      check_out: cell.date + 1.day,
+      room_type_id: room.room_type_id,
+      room_number: room.room_number,
+      source: "stay_view",
+      return_to:
+    }
+    actions = []
+
+    if room.capabilities.create_booking?
+      if cell.date < state.date_window.operational_date
+        actions << {
+          label: "Backdated check-in",
+          href: hotel_booking_transaction_backdated_check_in_path(current_hotel, common),
+          icon: "history"
+        }
+      elsif cell.date == state.date_window.operational_date
+        actions << {
+          label: "Walk-in check-in",
+          href: hotel_booking_transaction_walk_in_check_in_path(current_hotel, common),
+          icon: "log-in"
+        }
+        actions << {
+          label: "Add booking",
+          href: hotel_booking_transaction_new_booking_path(current_hotel, common),
+          icon: "calendar-plus"
+        }
+      else
+        actions << {
+          label: "Add booking",
+          href: hotel_booking_transaction_new_booking_path(current_hotel, common),
+          icon: "calendar-plus"
+        }
+      end
+    end
+
+    if room.capabilities.manage_room_blocks?
+      actions << {
+        label: "Maintenance block",
+        href: new_hotel_stay_view_room_block_path(
+          current_hotel,
+          room_type_id: room.room_type_id,
+          room_number: room.room_number,
+          start_date: cell.date,
+          return_to:
+        ),
+        icon: "wrench"
+      }
+    end
+
+    actions.map { |action| action.merge(data: stay_view_action_data) }
+  end
+
   def stay_view_booking_actions(segment, state)
     return_to = state.return_path(current_hotel)
     common = { return_to:, source: "stay_view" }

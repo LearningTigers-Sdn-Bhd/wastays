@@ -95,6 +95,66 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     )
   end
 
+  let(:status_counts) do
+    ::StayView::StatusCounts.new(
+      reference_date: Date.new(2026, 7, 16),
+      room_states: { all: 4, vacant: 0, occupied: 2, reserved: 1, blocked: 1, due_out: 0, dirty: 1 }
+    )
+  end
+
+  it "renders every operational count badge, including zero values, in a fixed order" do
+    render_inline(HotelPortal::StayView::OperationalCounts.new(counts: status_counts))
+
+    badges = page.all("[data-slot='stay-view-operational-count']")
+    expect(badges.map { |badge| badge["data-state"] }).to eq(
+      %w[all vacant occupied reserved blocked due_out dirty]
+    )
+    expect(badges.map { |badge| badge.all("span").map(&:text) }).to eq(
+      [ [ "All", "4" ], [ "Vacant", "0" ], [ "Occupied", "2" ], [ "Reserved", "1" ],
+       [ "Blocked", "1" ], [ "Due out", "0" ], [ "Dirty", "1" ] ]
+    )
+    expect(page).to have_css("[data-state='vacant'][data-variant='success'][aria-label='Vacant: 0 rooms']")
+    expect(page).to have_css("[data-state='blocked'][data-variant='destructive']")
+  end
+
+  it "renders only Stay View statuses and permission-gates financial guide entries" do
+    render_inline(HotelPortal::StayView::StatusGuide.new(view_financial_status: false))
+
+    expect(page).to have_css("button[aria-label='Stay View status guide']")
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "No-show review", visible: :all)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Do not disturb", visible: :all)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Cleaning priority", visible: :all)
+    expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Timeline events", visible: :all)
+    expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Arrival", visible: :all)
+    expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Departure", visible: :all)
+    expect(page).to have_css("div[data-slot='stay-view-status-swatch']", count: 20)
+    expect(page).to have_css("div[data-slot='stay-view-status-swatch'] svg.size-3", count: 20)
+    expect(page).to have_no_css("#stay-view-status-guide-panel .panel-badge-rounded", visible: :all)
+    expect(page).to have_css(
+      "[data-slot='stay-view-status-swatch'][data-state='confirmed']" \
+      "[data-presentation='segment'][data-tone='primary'][data-emphasis='solid'] svg"
+    )
+    expect(page).to have_css(
+      ".panel-badge.panel-timeline__legend-swatch[data-state='dirty']" \
+      "[data-presentation='badge'][data-variant='warning'] svg"
+    )
+    expect(page).to have_css(
+      "[data-slot='stay-view-status-swatch'][data-state='maintenance']" \
+      "[data-presentation='segment'][data-tone='warning'][data-emphasis='hatched'] svg"
+    )
+    expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Financial attention", visible: :all)
+    expect(page).to have_no_text("Single Lady")
+
+    render_inline(HotelPortal::StayView::StatusGuide.new(view_financial_status: true))
+
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Financial attention", visible: :all)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Direct Bill", visible: :all)
+    expect(page).to have_css(
+      ".panel-badge.panel-timeline__legend-swatch[data-state='financial_attention']" \
+      "[data-presentation='badge'][data-variant='warning'] svg"
+    )
+  end
+
   it "renders a number-only footer value and rounded occupancy with complete accessible labels" do
     render_inline(HotelPortal::StayView::TimelineFooterMetric.new(summary: footer_summary, metric: :available))
 
@@ -209,6 +269,8 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_css("[data-slot='stay-view-room-summary'][data-room='101']", text: "101")
     expect(page).to have_no_css("[data-slot='stay-view-room-summary']", text: room.room_type_name)
     expect(page).to have_css("button[aria-label='Room status: Inspection failed'] .panel-badge-rounded[data-variant='destructive']")
+    expect(page).to have_css("##{room.dom_id}-status[data-action*='mouseenter->panels-ui--popover#show']")
+    expect(page).to have_css("##{room.dom_id}-status[data-action*='focusin->panels-ui--popover#show']")
     expect(page).to have_css("##{room.dom_id}-status-panel", text: "Inspection failed", visible: :all)
   end
 
@@ -223,7 +285,7 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
 
     expect(page).to have_css("[data-slot='stay-view-operational-indicators'][aria-label='Current operational indicators for room 101']")
     expect(page).to have_css("[role='img'][aria-label='Do not disturb'][tabindex='0']")
-    expect(page).to have_css("[role='img'][aria-label='Priority room'][tabindex='0']")
+    expect(page).to have_css("[role='img'][aria-label='Cleaning priority'][tabindex='0']")
     expect(page).to have_css("button[aria-label='2 active housekeeping requests']")
     expect(page).to have_css("##{room.dom_id}-housekeeping-panel[role='dialog']", text: housekeeping_alert.details, visible: :all)
     expect(page).to have_css("##{room.dom_id}-housekeeping-panel", text: "Assigned · Sam Lee", visible: :all)

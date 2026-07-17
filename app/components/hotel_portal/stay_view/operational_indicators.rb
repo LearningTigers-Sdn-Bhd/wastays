@@ -3,6 +3,12 @@
 module HotelPortal
   module StayView
     class OperationalIndicators < PanelsUI::BaseComponent
+      PRESENTATIONS = {
+        dnd: { label: "Do not disturb", icon: "door-closed", variant: :warning }.freeze,
+        priority: { label: "Cleaning priority", icon: "flag", variant: :destructive }.freeze,
+        housekeeping: { label: "Housekeeping request", icon: "brush-cleaning", variant: :info }.freeze
+      }.freeze
+
       def initialize(room:, class: nil, **attributes)
         @room = room
         @class = binding.local_variable_get(:class)
@@ -33,23 +39,24 @@ module HotelPortal
 
       def indicators
         @indicators ||= [
-          (flag_badge(:dnd, "Do not disturb", "door-closed", :warning) if @room.operational_flags[:dnd]),
-          (flag_badge(:priority, "Priority room", "flag", :destructive) if @room.operational_flags[:priority]),
+          (flag_badge(:dnd) if @room.operational_flags[:dnd]),
+          (flag_badge(:priority) if @room.operational_flags[:priority]),
           housekeeping_popover
         ].compact
       end
 
-      def flag_badge(key, label, icon, variant)
-        render PanelsUI::Tooltip.new(text: label, id: "#{@room.dom_id}-#{key}-tooltip") do
+      def flag_badge(key)
+        presentation = PRESENTATIONS.fetch(key)
+        render PanelsUI::Tooltip.new(text: presentation.fetch(:label), id: "#{@room.dom_id}-#{key}-tooltip") do
           render PanelsUI::Badge.new(
-            variant:,
+            variant: presentation.fetch(:variant),
             size: :sm,
             shape: :rounded,
             role: "img",
             tabindex: 0,
-            aria: { label: label }
+            aria: { label: presentation.fetch(:label) }
           ) do
-            helpers.app_icon(icon, class: "size-3", aria: { hidden: true })
+            helpers.app_icon(presentation.fetch(:icon), class: "size-3", aria: { hidden: true })
           end
         end
       end
@@ -57,6 +64,7 @@ module HotelPortal
       def housekeeping_popover
         return if @room.housekeeping_alerts.empty?
 
+        presentation = PRESENTATIONS.fetch(:housekeeping)
         count = @room.housekeeping_alerts.size
         label = helpers.pluralize(count, "active housekeeping request")
         render PanelsUI::Popover.new(
@@ -66,9 +74,15 @@ module HotelPortal
           focus: true
         ) do |popover|
           popover.with_trigger(unstyled: true, aria_label: label, class: "inline-flex rounded-full") do
-            render PanelsUI::Badge.new(variant: :info, size: :sm, shape: :rounded, class: "gap-1", aria: { hidden: true }) do
+            render PanelsUI::Badge.new(
+              variant: presentation.fetch(:variant),
+              size: :sm,
+              shape: :rounded,
+              class: "gap-1",
+              aria: { hidden: true }
+            ) do
               safe_join([
-                helpers.app_icon("brush-cleaning", class: "size-3", aria: { hidden: true }),
+                helpers.app_icon(presentation.fetch(:icon), class: "size-3", aria: { hidden: true }),
                 tag.span(count)
               ])
             end

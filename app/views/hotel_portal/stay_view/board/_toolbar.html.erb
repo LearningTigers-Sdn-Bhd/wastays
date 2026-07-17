@@ -53,6 +53,7 @@
         <%= render PanelsUI::Button.new(href: stay_view_path_for(state, date_key => state.date_window.operational_date), variant: :secondary, size: :sm) do %>
           Today
         <% end %>
+        <%= render HotelPortal::StayView::StatusGuide.new(view_financial_status: board.capabilities.view_financial_status?) %>
       </div>
     </div>
 
@@ -88,10 +89,5 @@
     </div>
   <% end %>
 
-  <div class="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground" aria-label="Stay View summary">
-    <span><strong class="font-medium text-foreground"><%= board.status_counts.rooms %></strong> rooms</span>
-    <% board.status_counts.occupancies.each do |status, count| %>
-      <span><strong class="font-medium text-foreground"><%= count %></strong> <%= status.to_s.humanize.downcase %></span>
-    <% end %>
-  </div>
+  <%= render HotelPortal::StayView::OperationalCounts.new(counts: board.status_counts) %>
 </div>

@@ -62,6 +62,17 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).to include("Confirmed")
 
       document = Nokogiri::HTML(response.body)
+      operational_counts = document.css("[data-slot='stay-view-operational-count']")
+      expect(operational_counts.map { |badge| badge["data-state"] }).to eq(
+        %w[all vacant occupied reserved blocked due_out dirty]
+      )
+      expect(operational_counts.map { |badge| badge.css("span").map(&:text) }).to eq(
+        [ [ "All", "2" ], [ "Vacant", "1" ], [ "Occupied", "0" ], [ "Reserved", "1" ],
+         [ "Blocked", "0" ], [ "Due out", "0" ], [ "Dirty", "0" ] ]
+      )
+      expect(document.at_css("button[aria-label='Stay View status guide']")).to be_present
+      expect(document.at_css("#stay-view-status-guide-panel").text).to include("No-show review", "Do not disturb")
+      expect(document.at_css("#stay-view-status-guide-panel").text).not_to include("Financial attention", "Direct Bill")
       badges = document.css("[data-slot='stay-view-inventory-badge']")
       expect(badges.size).to eq(7)
       expect(badges.first.text).to eq("1")
@@ -79,6 +90,91 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(footer_rows.map { |row| row["role"] }).to eq([ "row", "row" ])
       expect(document.css("[data-slot='stay-view-footer-available']").map(&:text)).to eq([ "1", "1", "2", "2", "2", "2", "2" ])
       expect(document.css("[data-slot='stay-view-footer-occupancy']").map(&:text)).to eq([ "50%", "50%", "0%", "0%", "0%", "0%", "0%" ])
+    end
+
+    it "renders date-aware action menus for every available Timeline cell" do
+      room_type
+      start_date = Date.current - 1.day
+
+      get hotel_stay_view_path(hotel, view: "timeline", start_date:, days: 7)
+
+      document = Nokogiri::HTML(response.body)
+      room_id = "stay_view_room_#{room_type.id}_101"
+      past_menu = document.at_css("##{room_id}-#{start_date.iso8601}-cell-actions-menu")
+      today_menu = document.at_css("##{room_id}-#{Date.current.iso8601}-cell-actions-menu")
+      future_menu = document.at_css("##{room_id}-#{(Date.current + 1.day).iso8601}-cell-actions-menu")
+
+      expect(past_menu.css("[role='menuitem']").map { |item| item.text.squish }).to eq(
+        [ "Backdated check-in", "Maintenance block" ]
+      )
+      expect(today_menu.css("[role='menuitem']").map { |item| item.text.squish }).to eq(
+        [ "Walk-in check-in", "Add booking", "Maintenance block" ]
+      )
+      expect(future_menu.css("[role='menuitem']").map { |item| item.text.squish }).to eq(
+        [ "Add booking", "Maintenance block" ]
+      )
+
+      add_booking = today_menu.css("[role='menuitem']").find { |item| item.text.squish == "Add booking" }
+      add_booking_uri = URI.parse(add_booking["href"])
+      expect(add_booking_uri.path).to eq(hotel_booking_transaction_new_booking_path(hotel))
+      expect(Rack::Utils.parse_nested_query(add_booking_uri.query)).to include(
+        "check_in" => Date.current.iso8601,
+        "check_out" => (Date.current + 1.day).iso8601,
+        "room_type_id" => room_type.id.to_s,
+        "room_number" => "101",
+        "source" => "stay_view"
+      )
+      expect(add_booking["data-turbo-frame"]).to eq("offcanvas_drawer")
+    end
+
+    it "keeps a checkout-only cell actionable and counts a due-out room at the left edge" do
+      departing = create(
+        :booking,
+        hotel:,
+        status: "review_due_out",
+        check_in: Date.current - 1.day,
+        check_out: Date.current,
+        guest_name: "Departing Guest"
+      )
+      create(:booking_room, booking: departing, room_type:, room_number: "101")
+
+      get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("#stay_view_room_#{room_type.id}_101-#{Date.current.iso8601}-cell-actions")).to be_present
+      expect(document.at_css("[data-state='due_out']").css("span").map(&:text)).to eq([ "Due out", "1" ])
+      expect(document.at_css("[data-state='vacant']").css("span").map(&:text)).to eq([ "Vacant", "1" ])
+    end
+
+    it "omits cell action triggers for sold and blocked dates" do
+      booking = create(:booking, hotel:, check_in: Date.current, check_out: Date.current + 1.day)
+      create(:booking_room, booking:, room_type:, room_number: "101")
+      create(
+        :room_block,
+        hotel:,
+        room_type:,
+        room_number: "102",
+        start_date: Date.current,
+        end_date: Date.current
+      )
+
+      get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("#stay_view_room_#{room_type.id}_101-#{Date.current.iso8601}-cell-actions")).to be_nil
+      expect(document.at_css("#stay_view_room_#{room_type.id}_102-#{Date.current.iso8601}-cell-actions")).to be_nil
+    end
+
+    it "renders all operational count badges as zero when filters remove every room" do
+      room_type
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current, physical_status: "dirty")
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.css("[data-slot='stay-view-operational-count']").map { |badge| badge.css("span").map(&:text) }).to eq(
+        [ [ "All", "0" ], [ "Vacant", "0" ], [ "Occupied", "0" ], [ "Reserved", "0" ],
+         [ "Blocked", "0" ], [ "Due out", "0" ], [ "Dirty", "0" ] ]
+      )
     end
 
     it "renders checkout-day availability after active blocks reduce footer capacity" do
@@ -258,13 +354,13 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Do not disturb", "Priority room", "Replace towels", "Sam Lee")
+      expect(response.body).to include("Do not disturb", "Cleaning priority", "Replace towels", "Sam Lee")
       expect(response.body).not_to include("Assign room tasks", "Update task status")
 
       get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Do not disturb", "Priority room", "Replace towels", "Sam Lee")
+      expect(response.body).to include("Do not disturb", "Cleaning priority", "Replace towels", "Sam Lee")
     end
 
     it "falls back safely for invalid URL state" do
@@ -311,6 +407,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).to include("Reserved")
       expect(response.body).not_to include("Sensitive Guest", "Move or reassign", "Change dates")
       expect(response.body).not_to include("#{room_type.id}_101-booking-actions")
+      expect(response.body).not_to include("cell-actions-trigger")
     end
 
     it "rejects users without board access before loading the board" do

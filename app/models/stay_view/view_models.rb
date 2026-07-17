@@ -186,16 +186,15 @@ module StayView
     private_class_method :normalize_symbol
   end
 
-  StatusCounts = Data.define(:rooms, :physical_statuses, :occupancies, :booking_statuses, :operational_segments) do
-    def initialize(rooms:, physical_statuses:, occupancies:, booking_statuses:, operational_segments:)
-      super(
-        rooms: rooms,
-        physical_statuses: Immutable.hash(physical_statuses),
-        occupancies: Immutable.hash(occupancies),
-        booking_statuses: Immutable.hash(booking_statuses),
-        operational_segments: Immutable.hash(operational_segments)
-      )
+  STATUS_COUNT_STATES = %i[all vacant occupied reserved blocked due_out dirty].freeze
+
+  StatusCounts = Data.define(:reference_date, :room_states) do
+    def initialize(reference_date:, room_states:)
+      normalized_states = STATUS_COUNT_STATES.index_with { |state| Integer(room_states.fetch(state, 0)) }
+      super(reference_date: reference_date.to_date, room_states: Immutable.hash(normalized_states))
     end
+
+    STATUS_COUNT_STATES.each { |state| define_method(state) { room_states.fetch(state) } }
   end
 
   Capabilities = Data.define(

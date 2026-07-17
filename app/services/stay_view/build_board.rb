@@ -40,7 +40,11 @@ module StayView
         )
       )
       footer_summaries = CalculateFooterSummaries.call(room_groups: groups, dates: date_window.dates)
-      counts = CalculateCounts.call(room_groups: groups)
+      counts = CalculateCounts.call(
+        room_groups: groups,
+        reference_date: date_window.start_date,
+        operational_date: date_window.operational_date
+      )
       room_type_options = inventory.room_types.map { |room_type| RoomTypeOption.new(id: room_type.id, name: room_type.name) }
       board = Board.new(
         view_mode: date_window.view_mode,

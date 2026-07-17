@@ -81,10 +81,10 @@ RSpec.describe StayView::BuildBoard do
     )
 
     expect(board.room_groups.map(&:room_type_id)).to eq([ deluxe.id ])
-    expect(board.status_counts.rooms).to eq(1)
-    expect(board.status_counts.physical_statuses).to eq(dirty: 1)
-    expect(board.status_counts.booking_statuses).to eq(confirmed: 1)
-    expect(board.status_counts.occupancies[:arrival]).to eq(1)
+    expect(board.status_counts.reference_date).to eq(start_date)
+    expect(board.status_counts.room_states).to eq(
+      all: 1, vacant: 0, occupied: 0, reserved: 1, blocked: 0, due_out: 0, dirty: 1
+    )
     expect(board.room_groups.sole.inventory_summary_for(start_date)).to have_attributes(
       sellable: 1,
       sold: 1,
@@ -135,7 +135,7 @@ RSpec.describe StayView::BuildBoard do
     board = described_class.call(hotel:, user:, start_date:, days: 7, filters: { booking_status: "cancelled" })
 
     expect(board.filters.booking_status).to be_nil
-    expect(board.status_counts.rooms).to eq(1)
+    expect(board.status_counts.all).to eq(1)
     expect(board.room_groups.first.rooms.first.booking_segments.map(&:status)).to eq([ :confirmed ])
   end
 

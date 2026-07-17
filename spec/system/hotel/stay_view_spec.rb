@@ -101,6 +101,45 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_css("##{segment[:id]}-panel", text: "Confirmed", visible: :visible)
   end
 
+  it "opens date-aware available-cell actions by keyboard and launches the existing booking sheet" do
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+
+    trigger_id = "stay_view_room_#{room_type.id}_102-#{Date.current.iso8601}-cell-actions-trigger"
+    page.execute_script("document.getElementById('#{trigger_id}').focus()")
+    find("##{trigger_id}").send_keys(:down)
+
+    menu_id = "stay_view_room_#{room_type.id}_102-#{Date.current.iso8601}-cell-actions-menu"
+    expect(page).to have_css("##{menu_id}", text: "Walk-in check-in", visible: :visible)
+    within("##{menu_id}") { click_link "Add booking" }
+
+    within("#offcanvas_drawer") do
+      expect(find("#booking_check_in").value).to start_with(Date.current.iso8601)
+      expect(find("#booking_check_out").value).to start_with((Date.current + 1.day).iso8601)
+    end
+  end
+
+  it "opens the status guide by click and room status details by hover, focus, and tap" do
+    create(:room_status, hotel:, room_type:, room_number: "102", status: "dirty")
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+
+    find("button[aria-label='Stay View status guide']").click
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "No-show review", visible: :visible)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Do not disturb", visible: :visible)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Cleaning priority", visible: :visible)
+    expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Timeline events", visible: :all)
+    find("button[aria-label='Stay View status guide']").click
+
+    status_trigger = find("#stay_view_room_#{room_type.id}_102-status-trigger")
+    status_trigger.hover
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_102-status-panel", text: "Dirty", visible: :visible)
+
+    page.execute_script("document.getElementById('stay_view_room_#{room_type.id}_102-status-trigger').focus()")
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_102-status-panel", text: "Dirty", visible: :visible)
+
+    status_trigger.click
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_102-status-panel", text: "Dirty", visible: :visible)
+  end
+
   it "shows authorized projected financial signals in Timeline and Room views" do
     permission = Permission.find_or_create_by!(slug: "view_financial_status") do |record|
       record.name = "View Financial Status"
@@ -158,7 +197,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     within("#stay_view_room_#{room_type.id}_101") do
       expect(page).to have_css("[role='img'][aria-label='Do not disturb']")
-      expect(page).to have_css("[role='img'][aria-label='Priority room']")
+      expect(page).to have_css("[role='img'][aria-label='Cleaning priority']")
       find("button[aria-label='1 active housekeeping request']").click
       expect(page).to have_css("#stay_view_room_#{room_type.id}_101-housekeeping-panel", text: "Fresh towels", visible: :visible)
     end

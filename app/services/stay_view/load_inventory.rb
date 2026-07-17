@@ -94,7 +94,7 @@ module StayView
         .left_joins(booking: :group_booking)
         .where(bookings: { hotel_id: hotel.id, status: visible_booking_statuses })
         .where.not(room_number: [ nil, "" ])
-        .where("bookings.check_in < ? AND bookings.check_out > ?", date_window.window_end_at, date_window.window_start_at)
+        .where("bookings.check_in < ? AND bookings.check_out >= ?", date_window.window_end_at, date_window.window_start_at)
         .pluck(*columns)
         .map do |booking_room_id, booking_id, room_type_id, room_number, status, guest_name, primary_guest_name, check_in, check_out,
                  group_booking_id, group_reservation_number, group_name, group_position|
