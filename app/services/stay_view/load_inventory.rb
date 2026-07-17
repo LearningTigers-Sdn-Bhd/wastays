@@ -22,7 +22,8 @@ module StayView
         room_blocks: load_room_blocks,
         housekeeping_alerts: load_housekeeping_alerts,
         room_inventories: load_room_inventories,
-        standard_rates: load_standard_rates
+        standard_rates: load_standard_rates,
+        financial_signals: load_financial_signals(bookings)
       )
     end
 
@@ -70,6 +71,12 @@ module StayView
         .map do |values|
           StandardRateRecord.new(**%i[room_type_id rate_plan_id date price currency].zip(values).to_h)
         end
+    end
+
+    def load_financial_signals(bookings)
+      return {} unless capabilities.view_financial_status?
+
+      ResolveFinancialSignals.call(hotel:, bookings:)
     end
 
     def load_bookings

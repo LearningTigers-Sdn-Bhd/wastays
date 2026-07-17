@@ -2,11 +2,20 @@
 
 module StayView
   class ProjectRoom
-    def self.call(room_type:, room_number:, bookings:, room_status:, room_blocks:, housekeeping_alerts: [], group_rooms: {}, date_window:, capabilities:)
-      new(room_type:, room_number:, bookings:, room_status:, room_blocks:, housekeeping_alerts:, group_rooms:, date_window:, capabilities:).call
+    def self.call(
+      room_type:, room_number:, bookings:, room_status:, room_blocks:, housekeeping_alerts: [], group_rooms: {},
+      financial_signals: {}, date_window:, capabilities:
+    )
+      new(
+        room_type:, room_number:, bookings:, room_status:, room_blocks:, housekeeping_alerts:, group_rooms:,
+        financial_signals:, date_window:, capabilities:
+      ).call
     end
 
-    def initialize(room_type:, room_number:, bookings:, room_status:, room_blocks:, housekeeping_alerts:, group_rooms:, date_window:, capabilities:)
+    def initialize(
+      room_type:, room_number:, bookings:, room_status:, room_blocks:, housekeeping_alerts:, group_rooms:,
+      financial_signals:, date_window:, capabilities:
+    )
       @room_type = room_type
       @room_number = room_number
       @bookings = bookings
@@ -14,6 +23,7 @@ module StayView
       @room_blocks = room_blocks
       @housekeeping_alerts = housekeeping_alerts
       @group_rooms = group_rooms
+      @financial_signals = financial_signals
       @date_window = date_window
       @capabilities = capabilities
     end
@@ -25,6 +35,7 @@ module StayView
           booking:,
           room_type_name: room_type.name,
           group_rooms: group_rooms.fetch(booking.group_booking_id, []),
+          financial_signals: financial_signals.fetch(booking.booking_id, []),
           date_window:,
           capabilities:
         )
@@ -51,7 +62,8 @@ module StayView
 
     private
 
-    attr_reader :room_type, :room_number, :bookings, :room_status, :room_blocks, :housekeeping_alerts, :group_rooms, :date_window, :capabilities
+    attr_reader :room_type, :room_number, :bookings, :room_status, :room_blocks, :housekeeping_alerts, :group_rooms,
+      :financial_signals, :date_window, :capabilities
 
     def project_housekeeping_alert(alert)
       HousekeepingAlert.new(

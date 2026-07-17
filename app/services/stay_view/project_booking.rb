@@ -2,7 +2,8 @@
 
 module StayView
   class ProjectBooking
-    def self.call(booking:, room_type_name:, group_rooms: [], date_window:, capabilities:)
+    def self.call(booking:, room_type_name:, group_rooms: [], financial_signals: [], date_window:, capabilities:)
+      financial_signals = [] unless capabilities.view_financial_status?
       tracks = date_window.booking_tracks(booking.check_in, booking.check_out)
       guest_label = capabilities.view_booking? ? booking.guest_name.presence || "Guest" : "Reserved"
       primary_guest_name = capabilities.view_booking? ? booking.primary_guest_name.presence || guest_label : "Reserved"
@@ -14,6 +15,7 @@ module StayView
       group_label = [ group_name, group_reference ].compact_blank.join(", ")
       accessible_parts = [ guest_label, booking.status.to_s.humanize, "room #{room_label}", room_type_name, dates_label ]
       accessible_parts << "group #{group_label}" if group_label.present?
+      accessible_parts.concat(financial_signals.map(&:label))
 
       BookingSegment.new(
         dom_id: "stay_view_booking_room_#{booking.booking_room_id}",
@@ -35,7 +37,8 @@ module StayView
         group_reference:,
         group_name:,
         group_position: booking.group_position,
-        group_rooms: project_group_rooms(group_rooms, booking, capabilities)
+        group_rooms: project_group_rooms(group_rooms, booking, capabilities),
+        financial_signals:
       )
     end
 

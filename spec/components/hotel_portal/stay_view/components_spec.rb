@@ -85,6 +85,57 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     )
   end
 
+  let(:footer_summary) do
+    ::StayView::FooterDateSummary.new(
+      date: Date.new(2026, 7, 16),
+      sellable: 3,
+      sold: 2,
+      available: 1,
+      occupancy: 2.0 / 3
+    )
+  end
+
+  it "renders a number-only footer value and rounded occupancy with complete accessible labels" do
+    render_inline(HotelPortal::StayView::TimelineFooterMetric.new(summary: footer_summary, metric: :available))
+
+    formatted_date = I18n.l(footer_summary.date, format: :long)
+    expect(page).to have_css(
+      "[data-slot='stay-view-footer-available'].font-semibold.tabular-nums" \
+      "[aria-label='1 available room on #{formatted_date}']",
+      text: "1"
+    )
+    expect(page).to have_no_css("[data-slot='stay-view-footer-occupancy']")
+
+    render_inline(HotelPortal::StayView::TimelineFooterMetric.new(summary: footer_summary, metric: :occupancy))
+
+    expect(page).to have_css(
+      "[data-slot='stay-view-footer-occupancy'][aria-label='67 percent occupied on #{formatted_date}']",
+      text: "67%"
+    )
+    expect(page).to have_no_css("[data-slot='stay-view-footer-available']")
+  end
+
+  it "renders an accessible unavailable occupancy state for zero sellable inventory" do
+    summary = footer_summary.with(sellable: 0, sold: 0, available: 0, occupancy: nil)
+
+    render_inline(HotelPortal::StayView::TimelineFooterMetric.new(summary:, metric: :occupancy))
+
+    expect(page).to have_css(
+      "[data-slot='stay-view-footer-occupancy'][aria-label*='because sellable inventory is zero']",
+      text: "N/A"
+    )
+  end
+
+  it "rejects footer metric inputs outside the immutable projection contract" do
+    expect do
+      render_inline(HotelPortal::StayView::TimelineFooterMetric.new(summary: Object.new, metric: :available))
+    end.to raise_error(ArgumentError, /requires a footer summary/)
+
+    expect do
+      render_inline(HotelPortal::StayView::TimelineFooterMetric.new(summary: footer_summary, metric: :revenue))
+    end.to raise_error(ArgumentError, /metric must be one of/)
+  end
+
   it "renders a number-only inventory badge with its complete accessible meaning" do
     render_inline(HotelPortal::StayView::InventoryBadge.new(
       summary: inventory_summary,
@@ -205,6 +256,47 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page.find("#stay-view-booking-1-trigger")).to have_text("Checked in")
     expect(page).to have_css("#stay-view-booking-1[data-action*='mouseenter->panels-ui--popover#show']")
     expect(page).to have_css("#stay-view-booking-1-panel", text: "Single booking", visible: :all)
+  end
+
+  it "renders financial attention on the bar and full details in the popover" do
+    credit = StayView::FinancialSignal.new(
+      state: :credit,
+      label: "Guest: Ada Lovelace · Credit · MYR 20.00"
+    )
+    balance = StayView::FinancialSignal.new(
+      state: :balance_due,
+      label: "Company: Acme · Payment due · MYR 240.00"
+    )
+    segment = booking_segment.with(
+      financial_signals: [ credit, balance ],
+      accessible_label: "#{booking_segment.accessible_label}, #{credit.label}, #{balance.label}"
+    )
+
+    render_inline(HotelPortal::StayView::BookingBar.new(segment:))
+
+    expect(page).to have_css(
+      "[data-slot='stay-view-financial-attention'][role='img']" \
+      "[aria-label='Guest: Ada Lovelace · Credit · MYR 20.00; Company: Acme · Payment due · MYR 240.00']"
+    )
+    expect(page).to have_css("#stay-view-booking-1-panel", text: credit.label, visible: :all)
+    expect(page).to have_css("#stay-view-booking-1-panel", text: balance.label, visible: :all)
+    expect(page.find("#stay-view-booking-1-trigger")[:"aria-label"]).to include(credit.label, balance.label)
+  end
+
+  it "shows settled and Direct Bill details without adding timeline attention" do
+    settled = StayView::FinancialSignal.new(state: :settled, label: "Projected settled")
+    direct_bill = StayView::FinancialSignal.new(
+      state: :direct_bill_planned,
+      label: "Direct bill planned: Acme · MYR 240.00"
+    )
+
+    render_inline(
+      HotelPortal::StayView::BookingBar.new(segment: booking_segment.with(financial_signals: [ settled, direct_bill ]))
+    )
+
+    expect(page).to have_no_css("[data-slot='stay-view-financial-attention']")
+    expect(page).to have_css("#stay-view-booking-1-panel", text: "Projected settled", visible: :all)
+    expect(page).to have_css("#stay-view-booking-1-panel", text: direct_bill.label, visible: :all)
   end
 
   it "renders capability-gated pointer metadata and only visible resize handles" do

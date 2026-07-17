@@ -30,6 +30,19 @@
                     <p class="mt-1 truncate text-xs text-muted-foreground"><%= [segment.group_name, segment.group_reference].compact_blank.join(" · ") %></p>
                   <% end %>
                   <p class="mt-1 text-xs text-muted-foreground"><%= segment.status.to_s.humanize %> · <%= segment.check_in.to_fs(:medium) %> – <%= segment.check_out.to_fs(:medium) %></p>
+                  <% if segment.financial_signals.any? %>
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                      <% segment.financial_signals.each do |signal| %>
+                      <%= render PanelsUI::Badge.new(
+                        label: signal.label,
+                        variant: stay_view_financial_badge_variant(signal),
+                        size: :sm,
+                        class: "max-w-full whitespace-normal break-words text-left",
+                        data: { slot: "stay-view-financial-signal" }
+                      ) %>
+                      <% end %>
+                    </div>
+                  <% end %>
                 </div>
                 <% if segment.capabilities.view_booking? %>
                   <%= link_to "Open", stay_view_booking_path(segment.booking_id, return_to: state.return_path(current_hotel)), class: "text-xs font-medium text-primary hover:underline", data: stay_view_action_data %>

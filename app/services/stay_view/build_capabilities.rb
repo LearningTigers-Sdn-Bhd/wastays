@@ -21,6 +21,7 @@ module StayView
         .to_set
 
       view_bookings = permission_slugs.include?("view_bookings")
+      view_financial_status = view_bookings && permission_slugs.include?("view_financial_status")
       manage_bookings = permission_slugs.include?("manage_bookings")
       manage_arrivals = permission_slugs.include?("manage_guest_arrival")
       manage_room_status = permission_slugs.include?("manage_room_status")
@@ -37,7 +38,7 @@ module StayView
         check_in: manage_arrivals,
         check_out: manage_arrivals,
         view_rates: permission_slugs.include?("manage_rates"),
-        view_financial_status: false,
+        view_financial_status:,
         view_room_readiness: view_readiness,
         manage_room_status: manage_room_status,
         manage_housekeeping: housekeeping_enabled && permission_slugs.include?("manage_housekeeping_tasks"),
@@ -52,7 +53,6 @@ module StayView
 
     def all_capabilities
       attributes = Capabilities.members.index_with { true }
-      attributes[:view_financial_status] = false
       Capabilities.new(**attributes)
     end
   end

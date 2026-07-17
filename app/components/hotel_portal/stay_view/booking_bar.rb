@@ -48,6 +48,7 @@ module HotelPortal
             safe_join([
               resize_handle(:start),
               tag.span(segment_label, class: "min-w-0 flex-1 truncate"),
+              financial_attention,
               tag.span(@segment.status.to_s.humanize, class: "shrink-0 text-xs font-medium"),
               resize_handle(:end)
             ].compact)
@@ -148,9 +149,25 @@ module HotelPortal
             [ "Status", @segment.status.to_s.humanize ],
             [ "Stay", "#{@segment.check_in.to_fs(:medium)} – #{@segment.check_out.to_fs(:medium)}" ]
           ]
+          @segment.financial_signals.each { |signal| rows << [ "Financial", signal.label ] }
           rows << [ "Group", [ @segment.group_name, @segment.group_reference ].compact_blank.join(" · ") ] if @segment.group_reference.present?
           safe_join(rows.flat_map { |label, value| [ tag.dt(label, class: "text-muted-foreground"), tag.dd(value, class: "text-foreground") ] })
         end
+      end
+
+      def financial_attention
+        signals = @segment.financial_signals.select(&:attention?)
+        return if signals.empty?
+
+        warning = signals.any? { |signal| signal.state.in?(%i[balance_due review]) }
+        icon = warning ? "triangle-alert" : "rotate-ccw"
+        tag.span(
+          helpers.app_icon(icon, class: "size-3.5", aria: { hidden: true }),
+          class: "shrink-0 text-warning",
+          role: "img",
+          aria: { label: signals.map(&:label).join("; ") },
+          data: { slot: "stay-view-financial-attention" }
+        )
       end
 
       def group_rooms

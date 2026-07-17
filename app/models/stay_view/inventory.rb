@@ -82,9 +82,12 @@ module StayView
 
   Inventory = Data.define(
     :room_types, :bookings, :group_rooms, :room_statuses, :room_blocks,
-    :housekeeping_alerts, :room_inventories, :standard_rates
+    :housekeeping_alerts, :room_inventories, :standard_rates, :financial_signals
   ) do
-    def initialize(room_types:, bookings:, group_rooms:, room_statuses:, room_blocks:, housekeeping_alerts: [], room_inventories: [], standard_rates: [])
+    def initialize(
+      room_types:, bookings:, group_rooms:, room_statuses:, room_blocks:, housekeeping_alerts: [], room_inventories: [],
+      standard_rates: [], financial_signals: {}
+    )
       super(
         room_types: Immutable.array(room_types),
         bookings: Immutable.array(bookings),
@@ -93,7 +96,8 @@ module StayView
         room_blocks: Immutable.array(room_blocks),
         housekeeping_alerts: Immutable.array(housekeeping_alerts),
         room_inventories: Immutable.array(room_inventories),
-        standard_rates: Immutable.array(standard_rates)
+        standard_rates: Immutable.array(standard_rates),
+        financial_signals: Immutable.hash(financial_signals)
       )
     end
   end

@@ -88,4 +88,61 @@ RSpec.describe StayView::ProjectBooking do
     expect(segment.group_reference).to be_frozen
     expect(segment.group_name).to be_frozen
   end
+
+  it "projects immutable display-ready financial signals into accessible booking text" do
+    booking = StayView::BookingRecord.new(
+      booking_room_id: 11,
+      booking_id: 7,
+      room_type_id: 3,
+      room_number: "101",
+      status: :confirmed,
+      guest_name: "Ada Lovelace",
+      check_in: Date.new(2026, 7, 16),
+      check_out: Date.new(2026, 7, 18)
+    )
+    signal = StayView::FinancialSignal.new(
+      state: :balance_due,
+      label: "Projected balance due · MYR 240.00"
+    )
+
+    segment = described_class.call(
+      booking:,
+      room_type_name: "Deluxe",
+      financial_signals: [ signal ],
+      date_window: window,
+      capabilities: capabilities.with(view_booking: true, view_financial_status: true)
+    )
+
+    expect(segment.financial_signals).to eq([ signal ])
+    expect(segment.financial_signals).to be_frozen
+    expect(segment.accessible_label).to include(signal.label)
+  end
+
+  it "discards supplied financial signals when capability is absent" do
+    booking = StayView::BookingRecord.new(
+      booking_room_id: 11,
+      booking_id: 7,
+      room_type_id: 3,
+      room_number: "101",
+      status: :confirmed,
+      guest_name: "Ada Lovelace",
+      check_in: Date.new(2026, 7, 16),
+      check_out: Date.new(2026, 7, 18)
+    )
+    signal = StayView::FinancialSignal.new(
+      state: :balance_due,
+      label: "Projected balance due · MYR 240.00"
+    )
+
+    segment = described_class.call(
+      booking:,
+      room_type_name: "Deluxe",
+      financial_signals: [ signal ],
+      date_window: window,
+      capabilities:
+    )
+
+    expect(segment.financial_signals).to be_empty
+    expect(segment.accessible_label).not_to include("MYR 240.00")
+  end
 end

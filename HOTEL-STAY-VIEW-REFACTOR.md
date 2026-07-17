@@ -1110,10 +1110,12 @@ Deliver Phase 6 in ordered slices. Each slice must keep the server-rendered proj
 
 #### Slice 6.6 — Financial signals
 
-- Define the exact financial signals that are operationally useful on Stay View before loading or rendering financial data.
-- Map each signal to an existing explicit permission, or introduce an approved capability contract before enabling `view_financial_status?`.
-- Project only the minimum display-ready values required by the board.
-- Omit all financial values and related HTML/data attributes when permission is absent.
+- Use billing-party ownership and the projected end-of-stay folio position as the authoritative signal. Guest and cash/bank company balances require attention; valid City Ledger balances are informational Direct Bill states.
+- Calculate each child booking independently from posted charges, payments, adjustments, remaining forecasts, and transferred AR invoice snapshots; do not aggregate an entire group reservation or different billing parties into one signal.
+- Require both `view_bookings` and the explicit `view_financial_status` permission. Grant the permission by default to Hotel Owner, General Manager, and Front Desk roles.
+- Project only immutable signal states and final display labels. Timeline bars show one icon when any party requires attention, popovers list every party signal, and Room View cards show one badge per signal. Valid Direct Bill never creates a Timeline warning.
+- Do not infer responsibility from legacy `payer_type`, mutate billing-party records, or expose amounts for unlinked or unsupported folios; render those cases as financial review required.
+- Omit financial queries, values, accessible text, and related HTML/data attributes when permission is absent.
 
 #### Slice 6.7 — Parity validation and hardening
 

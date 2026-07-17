@@ -27,7 +27,7 @@ RSpec.describe StayView::BuildCapabilities do
     enable_housekeeping
     grant(
       "view_bookings", "manage_bookings", "manage_guest_arrival", "manage_rates",
-      "manage_room_status", "manage_housekeeping_tasks", "manage_requests"
+      "view_financial_status", "manage_room_status", "manage_housekeeping_tasks", "manage_requests"
     )
 
     capabilities = described_class.call(user:, hotel:)
@@ -46,6 +46,16 @@ RSpec.describe StayView::BuildCapabilities do
     expect(capabilities).to be_manage_housekeeping
     expect(capabilities).to be_update_housekeeping_status
     expect(capabilities).to be_manage_room_blocks
+    expect(capabilities).to be_view_financial_status
+  end
+
+  it "requires booking visibility in addition to the financial permission" do
+    grant("view_financial_status")
+
+    capabilities = described_class.call(user:, hotel:)
+
+    expect(capabilities).not_to be_view_board
+    expect(capabilities).not_to be_view_booking
     expect(capabilities).not_to be_view_financial_status
   end
 
@@ -75,7 +85,6 @@ RSpec.describe StayView::BuildCapabilities do
 
     capabilities = described_class.call(user: superadmin, hotel:)
 
-    expect(capabilities.to_h.except(:view_financial_status).values).to all(be(true))
-    expect(capabilities).not_to be_view_financial_status
+    expect(capabilities.to_h.values).to all(be(true))
   end
 end

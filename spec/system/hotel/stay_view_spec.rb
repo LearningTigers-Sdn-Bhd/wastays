@@ -101,6 +101,36 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_css("##{segment[:id]}-panel", text: "Confirmed", visible: :visible)
   end
 
+  it "shows authorized projected financial signals in Timeline and Room views" do
+    permission = Permission.find_or_create_by!(slug: "view_financial_status") do |record|
+      record.name = "View Financial Status"
+    end
+    RolePermission.find_or_create_by!(role:, permission:)
+    folio = create(:booking_folio, booking:, hotel:)
+    create(:booking_guest, booking:, guest: create(:guest, name: "Ada Lovelace"), is_primary: true)
+    create(:folio_transaction, booking_folio: folio, amount: 240)
+
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+
+    segment = find("#stay_view_booking_room_#{booking.booking_rooms.sole.id}")
+    expect(segment).to have_css(
+      "[data-slot='stay-view-financial-attention']" \
+      "[aria-label='Guest: Ada Lovelace · Balance due · MYR 240.00']"
+    )
+    page.execute_script("document.querySelector('##{segment[:id]}-trigger').focus()")
+    expect(page).to have_css(
+      "##{segment[:id]}-panel",
+      text: "Guest: Ada Lovelace · Balance due · MYR 240.00",
+      visible: :visible
+    )
+
+    click_link "Rooms"
+    expect(page).to have_css(
+      "[data-slot='stay-view-financial-signal'][data-variant='warning']",
+      text: "Guest: Ada Lovelace · Balance due · MYR 240.00"
+    )
+  end
+
   it "shows operational indicators and completes housekeeping workflows from Room View" do
     plan = create(:plan)
     hotel.update!(plan:)

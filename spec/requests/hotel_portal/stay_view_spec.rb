@@ -71,6 +71,44 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(badges[2].text).to eq("2")
       expect(document.css("[data-slot='stay-view-standard-rate']")).to be_empty
       expect(response.body).not_to include(room_type.base_price.to_s, "Standard nightly rate")
+      footer_rows = document.css("[data-slot='timeline-footer-row']")
+      expect(footer_rows.size).to eq(2)
+      expect(footer_rows.map { |row| row.at_css(".panel-timeline__footer-label").text }).to eq(
+        [ "Available inventory", "Occupancy" ]
+      )
+      expect(footer_rows.map { |row| row["role"] }).to eq([ "row", "row" ])
+      expect(document.css("[data-slot='stay-view-footer-available']").map(&:text)).to eq([ "1", "1", "2", "2", "2", "2", "2" ])
+      expect(document.css("[data-slot='stay-view-footer-occupancy']").map(&:text)).to eq([ "50%", "50%", "0%", "0%", "0%", "0%", "0%" ])
+    end
+
+    it "renders checkout-day availability after active blocks reduce footer capacity" do
+      departing = create(
+        :booking,
+        hotel:,
+        check_in: Date.current - 1.day,
+        check_out: Date.current,
+        guest_name: "Departing Guest"
+      )
+      create(:booking_room, booking: departing, room_type:, room_number: "101")
+      create(
+        :room_block,
+        hotel:,
+        room_type:,
+        room_number: "102",
+        start_date: Date.current,
+        end_date: Date.current
+      )
+
+      get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
+
+      document = Nokogiri::HTML(response.body)
+      available = document.css("[data-slot='stay-view-footer-available']").first
+      occupancy = document.css("[data-slot='stay-view-footer-occupancy']").first
+      expect(response).to have_http_status(:success)
+      expect(available.text).to eq("1")
+      expect(available["aria-label"]).to eq("1 available room on #{I18n.l(Date.current, format: :long)}")
+      expect(occupancy.text).to eq("0%")
+      expect(occupancy["aria-label"]).to eq("0 percent occupied on #{I18n.l(Date.current, format: :long)}")
     end
 
     it "renders master-plan dated rates and base-price fallbacks with rate permission" do
@@ -107,6 +145,101 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-testid="stay-view-room-cards"', "Room 101", "Room 102")
       expect(response.body).not_to include("stay-view-timeline")
+    end
+
+    it "renders authorized financial attention in Timeline View and a full badge in Room View" do
+      grant("view_financial_status")
+      booking = create(:booking, hotel:, guest_name: "Financial Guest", check_in: Date.current, check_out: Date.current + 2.days)
+      create(:booking_room, booking:, room_type:, room_number: "101")
+      folio = create(:booking_folio, booking:, hotel:)
+      create(:booking_guest, booking:, guest: create(:guest, name: "Financial Guest"), is_primary: true)
+      create(:folio_transaction, booking_folio: folio, amount: 240)
+
+      get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
+
+      timeline = Nokogiri::HTML(response.body)
+      expect(response).to have_http_status(:success)
+      expect(timeline.at_css("[data-slot='stay-view-financial-attention']")["aria-label"]).to eq(
+        "Guest: Financial Guest · Balance due · MYR 240.00"
+      )
+      expect(response.body).to include("Guest: Financial Guest · Balance due · MYR 240.00")
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+      room_view = Nokogiri::HTML(response.body)
+      badge = room_view.at_css("[data-slot='stay-view-financial-signal']")
+      expect(badge.text).to eq("Guest: Financial Guest · Balance due · MYR 240.00")
+      expect(badge["data-variant"]).to eq("warning")
+    end
+
+    it "renders valid Direct Bill as information without a Timeline warning" do
+      grant("view_financial_status")
+      booking = create(:booking, hotel:, guest_name: "Corporate Guest", check_in: Date.current, check_out: Date.current + 2.days)
+      create(:booking_room, booking:, room_type:, room_number: "101")
+      relationship = create(
+        :hotel_corporate_account,
+        hotel:,
+        corporate_account: create(:account, :corporate, name: "Acme Sdn Bhd"),
+        direct_bill_enabled: true
+      )
+      party = create(:booking_billing_party, booking:, hotel:, hotel_corporate_account: relationship)
+      create(
+        :booking_billing_terms,
+        booking_billing_party: party,
+        settlement_type: "city_ledger",
+        purchase_order_reference: "PO-42"
+      )
+      folio = create(
+        :booking_folio,
+        booking:,
+        hotel:,
+        name: "Acme Folio",
+        folio_type: "external",
+        payer_type: "company",
+        is_primary: false,
+        booking_billing_party: party,
+        hotel_corporate_account: relationship
+      )
+      create(:folio_transaction, booking_folio: folio, amount: 240)
+
+      get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Direct bill planned: Acme Sdn Bhd · MYR 240.00")
+      expect(Nokogiri::HTML(response.body).css("[data-slot='stay-view-financial-attention']")).to be_empty
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+      badge = Nokogiri::HTML(response.body).at_css("[data-slot='stay-view-financial-signal']")
+      expect(badge.text).to eq("Direct bill planned: Acme Sdn Bhd · MYR 240.00")
+      expect(badge["data-variant"]).to eq("info")
+    end
+
+    it "does not query or emit financial data without permission" do
+      booking = create(:booking, hotel:, guest_name: "Protected Financial Guest", check_in: Date.current, check_out: Date.current + 2.days)
+      create(:booking_room, booking:, room_type:, room_number: "101")
+      folio = create(:booking_folio, booking:, hotel:)
+      create(:folio_transaction, booking_folio: folio, amount: 987.65)
+      sql = []
+      callback = lambda do |_name, _start, _finish, _id, payload|
+        next if payload[:cached] || %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+        sql << payload[:sql]
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
+      end
+
+      expect(response).to have_http_status(:success)
+      expect(sql.join(" ")).not_to include(
+        "booking_folios", "booking_billing_parties", "booking_billing_terms", "hotel_corporate_accounts",
+        "folio_transactions", "folio_forecasted_charges", "ar_invoices"
+      )
+      expect(response.body).not_to include(
+        "987.65", "Balance due", "Payment due", "Credit", "Direct bill", "Projected settled",
+        "Financial review required", "stay-view-financial"
+      )
     end
 
     it "renders DND, priority, and full read-only housekeeping details in both views" do

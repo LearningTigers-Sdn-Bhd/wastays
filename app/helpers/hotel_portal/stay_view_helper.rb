@@ -7,6 +7,14 @@ module HotelPortal::StayViewHelper
     occupied: "Occupied",
     departure: "Departure"
   }.freeze
+  FINANCIAL_BADGE_VARIANTS = {
+    balance_due: :warning,
+    credit: :warning,
+    direct_bill_planned: :info,
+    direct_billed: :info,
+    settled: :success,
+    review: :warning
+  }.freeze
 
   def stay_view_path_for(state, overrides = {})
     hotel_stay_view_path(current_hotel, state.query(overrides))
@@ -133,6 +141,10 @@ module HotelPortal::StayViewHelper
 
   def stay_view_occupancy_label(occupancy)
     OCCUPANCY_LABELS.fetch(occupancy.state, occupancy.state.to_s.humanize)
+  end
+
+  def stay_view_financial_badge_variant(signal)
+    FINANCIAL_BADGE_VARIANTS.fetch(signal.state)
   end
 
   def stay_view_date_label(date)
