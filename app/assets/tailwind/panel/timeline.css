@@ -1,10 +1,10 @@
 @layer components {
   .panel-timeline {
     --panel-timeline-room-size: 18rem;
-    --panel-timeline-half-day-size: 2.5rem;
+    --panel-timeline-half-day-size: 3rem;
     --panel-timeline-row-size: 3.75rem;
     --panel-timeline-header-size: 3rem;
-    --panel-timeline-group-summary-size: 2rem;
+    --panel-timeline-group-summary-size: 3.25rem;
     --panel-timeline-footer-size: 2.5rem;
     position: relative;
     width: 100%;
@@ -24,7 +24,7 @@
 
   .panel-timeline[data-density="comfortable"] {
     --panel-timeline-room-size: 20rem;
-    --panel-timeline-half-day-size: 3rem;
+    --panel-timeline-half-day-size: 3.5rem;
     --panel-timeline-row-size: 4.5rem;
   }
 
@@ -170,6 +170,13 @@
     background: color-mix(in oklab, var(--muted) 65%, var(--card));
     color: var(--foreground);
     font-size: 0.75rem;
+  }
+
+  .panel-timeline__summary-metadata {
+    color: var(--muted-foreground);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    white-space: nowrap;
   }
 
   .panel-timeline__footer {

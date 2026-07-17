@@ -1,14 +1,20 @@
 # frozen_string_literal: true
 
 module StayView
-  RoomTypeRecord = Data.define(:id, :name, :room_numbers, :smoking_allowed, :pets_allowed) do
-    def initialize(id:, name:, room_numbers:, smoking_allowed:, pets_allowed:)
+  RoomTypeRecord = Data.define(
+    :id, :name, :room_numbers, :smoking_allowed, :pets_allowed,
+    :base_price, :master_rate_plan_id, :rate_currency
+  ) do
+    def initialize(id:, name:, room_numbers:, smoking_allowed:, pets_allowed:, base_price: nil, master_rate_plan_id: nil, rate_currency: nil)
       super(
         id: id,
         name: name.to_s.freeze,
         room_numbers: Immutable.array(Array(room_numbers).flatten.compact.map(&:to_s).reject(&:blank?)),
         smoking_allowed: smoking_allowed,
-        pets_allowed: pets_allowed
+        pets_allowed: pets_allowed,
+        base_price: base_price&.to_d,
+        master_rate_plan_id: master_rate_plan_id,
+        rate_currency: rate_currency&.to_s&.freeze
       )
     end
   end
@@ -62,8 +68,23 @@ module StayView
     end
   end
 
-  Inventory = Data.define(:room_types, :bookings, :group_rooms, :room_statuses, :room_blocks, :housekeeping_alerts, :room_inventories) do
-    def initialize(room_types:, bookings:, group_rooms:, room_statuses:, room_blocks:, housekeeping_alerts: [], room_inventories: [])
+  StandardRateRecord = Data.define(:room_type_id, :rate_plan_id, :date, :price, :currency) do
+    def initialize(room_type_id:, rate_plan_id:, date:, price:, currency:)
+      super(
+        room_type_id:,
+        rate_plan_id:,
+        date: date.to_date,
+        price: price.to_d,
+        currency: currency.to_s.freeze
+      )
+    end
+  end
+
+  Inventory = Data.define(
+    :room_types, :bookings, :group_rooms, :room_statuses, :room_blocks,
+    :housekeeping_alerts, :room_inventories, :standard_rates
+  ) do
+    def initialize(room_types:, bookings:, group_rooms:, room_statuses:, room_blocks:, housekeeping_alerts: [], room_inventories: [], standard_rates: [])
       super(
         room_types: Immutable.array(room_types),
         bookings: Immutable.array(bookings),
@@ -71,7 +92,8 @@ module StayView
         room_statuses: Immutable.array(room_statuses),
         room_blocks: Immutable.array(room_blocks),
         housekeeping_alerts: Immutable.array(housekeeping_alerts),
-        room_inventories: Immutable.array(room_inventories)
+        room_inventories: Immutable.array(room_inventories),
+        standard_rates: Immutable.array(standard_rates)
       )
     end
   end

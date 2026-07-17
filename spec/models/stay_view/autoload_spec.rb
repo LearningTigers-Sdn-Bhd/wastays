@@ -9,9 +9,9 @@ require "rails_helper"
 RSpec.describe "StayView namespace loading" do
   it "resolves every co-located view model and inventory record struct" do
     constants = %i[
-      TrackRange Occupancy DayCell BookingSegment OperationalSegment RoomRow RoomGroup RoomTypeOption
+      TrackRange Occupancy DayCell BookingSegment OperationalSegment RoomRow StandardRate RoomGroup RoomTypeOption
       FilterState StatusCounts Capabilities Board
-      Inventory RoomTypeRecord BookingRecord RoomStatusRecord RoomBlockRecord
+      Inventory RoomTypeRecord BookingRecord RoomStatusRecord RoomBlockRecord StandardRateRecord
     ]
 
     expect { constants.each { |name| StayView.const_get(name) } }.not_to raise_error

@@ -4,18 +4,23 @@ module StayView
   class CalculateInventorySummaries
     SOLD_STATES = %i[arrival occupied].freeze
 
-    def self.call(room_groups:, room_inventories:, dates:)
+    def self.call(room_groups:, room_inventories:, dates:, standard_rates: {})
       inventories_by_key = room_inventories.index_by { |record| [ record.room_type_id, record.date ] }
 
       room_groups.map do |group|
         summaries = dates.map do |date|
-          calculate_date(group:, date: date.to_date, inventory: inventories_by_key[[ group.room_type_id, date.to_date ]])
+          normalized_date = date.to_date
+          calculate_date(
+            group:, date: normalized_date,
+            inventory: inventories_by_key[[ group.room_type_id, normalized_date ]],
+            standard_rate: standard_rates[[ group.room_type_id, normalized_date ]]
+          )
         end
         group.with(inventory_summaries: Immutable.array(summaries))
       end.freeze
     end
 
-    def self.calculate_date(group:, date:, inventory:)
+    def self.calculate_date(group:, date:, inventory:, standard_rate:)
       sold_rooms = group.rooms.select { |room| sold_on?(room, date) }
       unblocked_rooms = group.rooms.reject { |room| blocked_on?(room, date) }
       candidates = unblocked_rooms.reject { |room| sold_rooms.include?(room) }
@@ -27,7 +32,8 @@ module StayView
         sellable:,
         sold: sold_rooms.size,
         available:,
-        occupancy: sellable.zero? ? nil : sold_rooms.size.fdiv(sellable)
+        occupancy: sellable.zero? ? nil : sold_rooms.size.fdiv(sellable),
+        standard_rate:
       )
     end
 

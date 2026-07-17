@@ -106,6 +106,52 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     end.to raise_error(ArgumentError, /requires an inventory summary/)
   end
 
+  it "renders a formatted standard rate beneath the inventory badge when authorized" do
+    summary = inventory_summary.with(
+      standard_rate: ::StayView::StandardRate.new(amount: 145, currency: "MYR", source: :room_rate)
+    )
+    render_inline(HotelPortal::StayView::RoomTypeDateSummary.new(
+      summary:, room_type_name: "Deluxe King", view_rates: true
+    ))
+
+    expect(page.find("[data-slot='stay-view-inventory-badge']").text).to eq("3")
+    expect(page).to have_css(
+      "[data-slot='stay-view-standard-rate']" \
+      "[aria-label='Standard nightly rate for Deluxe King on #{I18n.l(summary.date, format: :long)}: 145.00 MYR']",
+      text: "145.00"
+    )
+    expect(page).to have_css(".panel-timeline__summary-metadata[data-slot='stay-view-standard-rate']")
+  end
+
+  it "renders N/A only for an authorized missing-rate state" do
+    render_inline(HotelPortal::StayView::RoomTypeDateSummary.new(
+      summary: inventory_summary, room_type_name: "Deluxe King", view_rates: true
+    ))
+
+    expect(page).to have_css("[data-slot='stay-view-standard-rate']", text: "N/A")
+  end
+
+  it "omits the complete rate node when unauthorized" do
+    summary = inventory_summary.with(
+      standard_rate: ::StayView::StandardRate.new(amount: 987.65, currency: "MYR", source: :room_rate)
+    )
+    render_inline(HotelPortal::StayView::RoomTypeDateSummary.new(
+      summary:, room_type_name: "Deluxe King", view_rates: false
+    ))
+
+    expect(page).to have_css("[data-slot='stay-view-inventory-badge']", text: "3")
+    expect(page).to have_no_css("[data-slot='stay-view-standard-rate']")
+    expect(page.text).not_to include("987.65", "N/A", "MYR")
+  end
+
+  it "rejects room-type date summary inputs outside the immutable projection contract" do
+    expect do
+      render_inline(HotelPortal::StayView::RoomTypeDateSummary.new(
+        summary: Object.new, room_type_name: "Deluxe", view_rates: true
+      ))
+    end.to raise_error(ArgumentError, /requires an inventory summary/)
+  end
+
   it "renders a compact room summary from the immutable row projection" do
     render_inline(HotelPortal::StayView::RoomSummary.new(room: room, data: { room: "101" }))
 

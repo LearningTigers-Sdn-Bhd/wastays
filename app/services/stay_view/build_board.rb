@@ -32,7 +32,12 @@ module StayView
       groups = CalculateInventorySummaries.call(
         room_groups: filtered_groups,
         room_inventories: inventory.room_inventories,
-        dates: date_window.dates
+        dates: date_window.dates,
+        standard_rates: ResolveStandardRates.call(
+          room_types: inventory.room_types,
+          standard_rates: inventory.standard_rates,
+          dates: date_window.dates
+        )
       )
       counts = CalculateCounts.call(room_groups: groups)
       room_type_options = inventory.room_types.map { |room_type| RoomTypeOption.new(id: room_type.id, name: room_type.name) }

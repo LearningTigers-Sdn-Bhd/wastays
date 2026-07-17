@@ -12,6 +12,42 @@ RSpec.describe StayView::LoadInventory do
     )
   end
 
+  it "does not select pricing scalars or query pricing tables without rate permission" do
+    create(:room_type, hotel:, room_numbers: [ "101" ], base_price: 987.65)
+    sql = capture_sql { @inventory = described_class.call(hotel:, date_window: window, capabilities:) }
+
+    expect(@inventory.room_types.sole).to have_attributes(
+      base_price: nil, master_rate_plan_id: nil, rate_currency: nil
+    )
+    expect(@inventory.standard_rates).to be_empty
+    expect(sql.join(" ")).not_to include("room_type_rate_plans", "room_rates", "base_price")
+  end
+
+  it "loads scoped immutable standard-rate records in a bounded pricing query set" do
+    visible = capabilities.with(view_rates: true)
+    room_type = create(:room_type, hotel:, room_numbers: [ "101" ], base_price: 100)
+    master_plan = room_type.rate_plans.order(:id).first
+    included = create(:room_rate, room_type:, rate_plan: master_plan, date: start_date, price: 145, currency: master_plan.currency)
+    create(:room_rate, room_type:, rate_plan: nil, date: start_date + 1.day, price: 120, currency: master_plan.currency)
+    create(:room_rate, room_type:, rate_plan: master_plan, date: window.end_date, price: 999, currency: master_plan.currency)
+    other_room_type = create(:room_type, hotel: create(:hotel), base_price: 500)
+    create(:room_rate, room_type: other_room_type, rate_plan: other_room_type.rate_plans.first, date: start_date, price: 777)
+
+    sql = capture_sql { @inventory = described_class.call(hotel:, date_window: window, capabilities: visible) }
+    pricing_queries = sql.grep(/(?:room_type_rate_plans|FROM "room_rates")/)
+
+    expect(@inventory.room_types.sole).to have_attributes(
+      base_price: 100.to_d, master_rate_plan_id: master_plan.id, rate_currency: master_plan.currency
+    )
+    expect(@inventory.standard_rates.map(&:price)).to contain_exactly(145.to_d, 120.to_d)
+    expect(@inventory.standard_rates.map(&:room_type_id).uniq).to eq([ room_type.id ])
+    expect(@inventory.standard_rates.find { |record| record.price == 145 }).to have_attributes(
+      date: start_date, rate_plan_id: master_plan.id, currency: included.currency
+    )
+    expect(@inventory.standard_rates).to be_frozen
+    expect(pricing_queries.size).to eq(2)
+  end
+
   it "loads bounded scalar inventory and redacts booking identity without permission" do
     room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
     create(:room_status, hotel:, room_type:, room_number: "101", status: "dirty")
@@ -48,6 +84,17 @@ RSpec.describe StayView::LoadInventory do
     expect(inventory.room_blocks.size).to eq(1)
     expect(inventory).to be_frozen
     expect(inventory.bookings).to be_frozen
+  end
+
+  def capture_sql
+    queries = []
+    callback = lambda do |_name, _start, _finish, _id, payload|
+      next if payload[:cached] || %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+      queries << payload[:sql]
+    end
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { yield }
+    queries
   end
 
   it "loads immutable room inventory records only for the hotel room types and visible dates" do

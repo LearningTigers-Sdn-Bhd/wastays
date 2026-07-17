@@ -441,4 +441,41 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_css("#stay-view-timeline[aria-label*='July 23, 2026']", wait: 10)
     expect(URI.parse(page.current_url).query).to include("start_date=#{(Date.current + 7.days).iso8601}")
   end
+
+  it "keeps authorized standard rates aligned through Turbo filter updates" do
+    permission = Permission.find_or_create_by!(slug: "manage_rates") { |record| record.name = "Manage Rates" }
+    RolePermission.find_or_create_by!(role:, permission:)
+    create(:room_status, hotel:, room_type:, room_number: "101", status: "dirty")
+    create(:room_status, hotel:, room_type:, room_number: "102", status: "ready")
+    master_plan = room_type.rate_plans.order(:id).first
+    create(:room_rate, room_type:, rate_plan: master_plan, date: Date.current, price: 145, currency: master_plan.currency)
+
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 14)
+
+    expect(page).to have_css("[data-slot='stay-view-standard-rate']", text: "145.00")
+    find("#physical_status-trigger").click
+    find("#physical_status-option-2", text: "Dirty").click
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_101")
+    expect(page).to have_no_css("#stay_view_room_#{room_type.id}_102")
+    expect(page).to have_css("[data-slot='stay-view-standard-rate']", text: "145.00")
+
+    alignment = page.evaluate_script(<<~JS)
+      (() => {
+        const timeline = document.getElementById("stay-view-timeline")
+        timeline.scrollLeft = 240
+        const rate = timeline.querySelector("[data-slot='stay-view-standard-rate']")
+        const summary = rate.closest("[data-slot='timeline-group-summary']")
+        const date = timeline.querySelector(".panel-timeline__date")
+        return {
+          summaryLeft: summary.getBoundingClientRect().left,
+          dateLeft: date.getBoundingClientRect().left,
+          rateInside: rate.getBoundingClientRect().left >= summary.getBoundingClientRect().left &&
+            rate.getBoundingClientRect().right <= summary.getBoundingClientRect().right
+        }
+      })()
+    JS
+
+    expect(alignment.fetch("summaryLeft")).to be_within(1).of(alignment.fetch("dateLeft"))
+    expect(alignment.fetch("rateInside")).to be(true)
+  end
 end

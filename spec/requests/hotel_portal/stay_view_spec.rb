@@ -69,6 +69,34 @@ RSpec.describe "HotelPortal Stay View", type: :request do
         "1 available room for #{room_type.name} on #{I18n.l(Date.current, format: :long)}"
       )
       expect(badges[2].text).to eq("2")
+      expect(document.css("[data-slot='stay-view-standard-rate']")).to be_empty
+      expect(response.body).not_to include(room_type.base_price.to_s, "Standard nightly rate")
+    end
+
+    it "renders master-plan dated rates and base-price fallbacks with rate permission" do
+      grant("manage_rates")
+      master_plan = room_type.rate_plans.order(:id).first
+      create(:room_rate, room_type:, rate_plan: master_plan, date: Date.current, price: 145, currency: master_plan.currency)
+
+      get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
+
+      document = Nokogiri::HTML(response.body)
+      rates = document.css("[data-slot='stay-view-standard-rate']")
+      expect(response).to have_http_status(:success)
+      expect(rates.size).to eq(7)
+      expect(rates.first.text).to eq("145.00")
+      expect(rates.first["aria-label"]).to end_with("145.00 #{master_plan.currency}")
+      expect(rates[1].text).to eq(CurrencyFormatter.format(room_type.base_price, currency: master_plan.currency, symbol: false))
+    end
+
+    it "renders N/A for an authorized genuinely missing standard rate" do
+      grant("manage_rates")
+      room_type.update_column(:base_price, nil)
+
+      get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
+
+      expect(response).to have_http_status(:success)
+      expect(Nokogiri::HTML(response.body).css("[data-slot='stay-view-standard-rate']").map(&:text)).to eq([ "N/A" ] * 7)
     end
 
     it "renders Room View from the shared projection" do

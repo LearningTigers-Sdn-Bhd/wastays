@@ -99,14 +99,21 @@ module StayView
     EMPTY_OCCUPANCIES = [].freeze
   end
 
-  InventoryDateSummary = Data.define(:date, :sellable, :sold, :available, :occupancy) do
-    def initialize(date:, sellable:, sold:, available:, occupancy:)
+  StandardRate = Data.define(:amount, :currency, :source) do
+    def initialize(amount:, currency:, source:)
+      super(amount: amount.to_d, currency: currency.to_s.freeze, source: source.to_sym)
+    end
+  end
+
+  InventoryDateSummary = Data.define(:date, :sellable, :sold, :available, :occupancy, :standard_rate) do
+    def initialize(date:, sellable:, sold:, available:, occupancy:, standard_rate: nil)
       super(
         date: date.to_date,
         sellable: Integer(sellable),
         sold: Integer(sold),
         available: Integer(available),
-        occupancy:
+        occupancy:,
+        standard_rate:
       )
     end
   end

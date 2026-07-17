@@ -21,7 +21,8 @@ module StayView
         room_statuses: load_room_statuses,
         room_blocks: load_room_blocks,
         housekeeping_alerts: load_housekeeping_alerts,
-        room_inventories: load_room_inventories
+        room_inventories: load_room_inventories,
+        standard_rates: load_standard_rates
       )
     end
 
@@ -30,9 +31,45 @@ module StayView
     attr_reader :hotel, :date_window, :capabilities
 
     def load_room_types
-      @room_types ||= hotel.room_types.order(:name, :id).pluck(:id, :name, :room_numbers, :smoking_allowed, :pets_allowed).map do |values|
-        RoomTypeRecord.new(**%i[id name room_numbers smoking_allowed pets_allowed].zip(values).to_h)
-      end
+      base_price_column = capabilities.view_rates? ? :base_price : Arel.sql("NULL")
+      @room_types ||= hotel.room_types.order(:name, :id)
+        .pluck(:id, :name, :room_numbers, :smoking_allowed, :pets_allowed, base_price_column)
+        .map do |id, name, room_numbers, smoking_allowed, pets_allowed, base_price|
+          master_plan_id, rate_currency = load_master_plans[id]
+          rate_currency = rate_currency.presence || hotel.default_currency.presence || "MYR" if capabilities.view_rates?
+          RoomTypeRecord.new(
+            id:, name:, room_numbers:, smoking_allowed:, pets_allowed:, base_price:,
+            master_rate_plan_id: master_plan_id, rate_currency:
+          )
+        end
+    end
+
+    def load_master_plans
+      return {} unless capabilities.view_rates?
+
+      @master_plans ||= RoomTypeRatePlan.joins(:rate_plan)
+        .where(room_type_id: hotel.room_types.select(:id))
+        .order(:room_type_id, :rate_plan_id)
+        .pluck(:room_type_id, :rate_plan_id, "rate_plans.currency")
+        .each_with_object({}) do |(room_type_id, rate_plan_id, currency), result|
+          result[room_type_id] ||= [ rate_plan_id, currency ]
+        end
+    end
+
+    def load_standard_rates
+      return [] unless capabilities.view_rates?
+
+      room_type_ids = load_room_types.map(&:id)
+      master_plan_ids = load_room_types.filter_map(&:master_rate_plan_id)
+      RoomRate.where(
+        room_type_id: room_type_ids,
+        rate_plan_id: [ nil, *master_plan_ids ],
+        date: date_window.start_date...date_window.end_date
+      ).order(:room_type_id, :date, :rate_plan_id, :currency)
+        .pluck(:room_type_id, :rate_plan_id, :date, :price, :currency)
+        .map do |values|
+          StandardRateRecord.new(**%i[room_type_id rate_plan_id date price currency].zip(values).to_h)
+        end
     end
 
     def load_bookings

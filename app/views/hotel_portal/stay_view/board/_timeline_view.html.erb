@@ -31,7 +31,11 @@
       <% timeline.with_group(label: room_group.name, count: room_group.rooms.size) do |group| %>
         <% room_group.inventory_summaries.each do |summary| %>
           <% group.with_summary do %>
-            <%= render HotelPortal::StayView::InventoryBadge.new(summary:, room_type_name: room_group.name) %>
+            <%= render HotelPortal::StayView::RoomTypeDateSummary.new(
+              summary:,
+              room_type_name: room_group.name,
+              view_rates: board.capabilities.view_rates?
+            ) %>
           <% end %>
         <% end %>
 
