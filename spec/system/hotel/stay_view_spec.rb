@@ -337,7 +337,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_no_css("##{trigger_id}:focus")
   end
 
-  it "keeps room-type summaries aligned while sticky group headings enter and leave the viewport" do
+  it "keeps room-type and footer summaries aligned while sticky headings and footer hold their positions" do
     room_type.update!(room_numbers: (101..114).map(&:to_s))
     create(
       :room_type,
@@ -360,20 +360,28 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
         const heading = timeline.querySelector(".panel-timeline__group-heading")
         const date = timeline.querySelector(".panel-timeline__date")
         const summary = timeline.querySelector("[data-slot='timeline-group-summary']")
+        const footer = timeline.querySelector("[data-slot='timeline-footer']")
+        const footerSummary = timeline.querySelector("[data-slot='timeline-footer-summary']")
         const headerRect = header.getBoundingClientRect()
         const headingRect = heading.getBoundingClientRect()
+        const timelineRect = timeline.getBoundingClientRect()
 
         return {
           headingTop: headingRect.top,
           headerBottom: headerRect.bottom,
           dateLeft: date.getBoundingClientRect().left,
-          summaryLeft: summary.getBoundingClientRect().left
+          summaryLeft: summary.getBoundingClientRect().left,
+          footerSummaryLeft: footerSummary.getBoundingClientRect().left,
+          footerBottom: footer.getBoundingClientRect().bottom,
+          timelineBottom: timelineRect.bottom
         }
       })()
     JS
 
     expect(sticky_geometry.fetch("headingTop")).to be_within(2).of(sticky_geometry.fetch("headerBottom"))
     expect(sticky_geometry.fetch("summaryLeft")).to be_within(1).of(sticky_geometry.fetch("dateLeft"))
+    expect(sticky_geometry.fetch("footerSummaryLeft")).to be_within(1).of(sticky_geometry.fetch("dateLeft"))
+    expect(sticky_geometry.fetch("footerBottom")).to be_within(2).of(sticky_geometry.fetch("timelineBottom"))
 
     release_geometry = page.evaluate_script(<<~JS)
       (() => {
@@ -408,6 +416,12 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
       "[aria-label='1 available room for #{room_type.name} on #{I18n.l(Date.current, format: :long)}']",
       text: "1"
     )
+    expect(page).to have_css(
+      "[data-slot='stay-view-footer-available']" \
+      "[aria-label='1 available room on #{I18n.l(Date.current, format: :long)}']",
+      text: "1"
+    )
+    expect(page).to have_css("[data-slot='stay-view-footer-occupancy']", text: "50%")
 
     find("#physical_status-trigger").click
     find("#physical_status-option-2", text: "Dirty").click
@@ -420,6 +434,12 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
       "[aria-label='0 available rooms for #{room_type.name} on #{I18n.l(Date.current, format: :long)}']",
       text: "0"
     )
+    expect(page).to have_css(
+      "[data-slot='stay-view-footer-available']" \
+      "[aria-label='0 available rooms on #{I18n.l(Date.current, format: :long)}']",
+      text: "0"
+    )
+    expect(page).to have_css("[data-slot='stay-view-footer-occupancy']", text: "100%")
 
     find("#physical_status-trigger").click
     find("#physical_status-option-0", text: "All physical statuses").click
@@ -428,6 +448,8 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
       "[data-slot='stay-view-inventory-badge']" \
       "[aria-label='1 available room for #{room_type.name} on #{I18n.l(Date.current, format: :long)}']"
     )
+    expect(page).to have_css("[data-slot='stay-view-footer-available']", text: "1")
+    expect(page).to have_css("[data-slot='stay-view-footer-occupancy']", text: "50%")
 
     find("#days-trigger").click
     find("#days-option-0", text: "7 days").click

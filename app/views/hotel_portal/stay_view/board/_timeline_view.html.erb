@@ -44,5 +44,21 @@
         <% end %>
       <% end %>
     <% end %>
+
+    <% timeline.with_footer do |footer| %>
+      <% available_row = footer.with_row(label: "Available inventory") %>
+      <% board.footer_summaries.each do |summary| %>
+        <% available_row.with_summary do %>
+          <%= render HotelPortal::StayView::TimelineFooterMetric.new(summary:, metric: :available) %>
+        <% end %>
+      <% end %>
+
+      <% occupancy_row = footer.with_row(label: "Occupancy") %>
+      <% board.footer_summaries.each do |summary| %>
+        <% occupancy_row.with_summary do %>
+          <%= render HotelPortal::StayView::TimelineFooterMetric.new(summary:, metric: :occupancy) %>
+        <% end %>
+      <% end %>
+    <% end %>
   <% end %>
 </div>

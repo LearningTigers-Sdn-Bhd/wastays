@@ -118,6 +118,18 @@ module StayView
     end
   end
 
+  FooterDateSummary = Data.define(:date, :sellable, :sold, :available, :occupancy) do
+    def initialize(date:, sellable:, sold:, available:, occupancy:)
+      super(
+        date: date.to_date,
+        sellable: Integer(sellable),
+        sold: Integer(sold),
+        available: Integer(available),
+        occupancy:
+      )
+    end
+  end
+
   RoomGroup = Data.define(:room_type_id, :name, :rooms, :inventory_summaries) do
     def initialize(room_type_id:, name:, rooms:, inventory_summaries: [])
       super(
@@ -178,12 +190,17 @@ module StayView
     members.each { |name| alias_method "#{name}?", name }
   end
 
-  Board = Data.define(:view_mode, :date_window, :room_groups, :room_type_options, :status_counts, :filters, :capabilities) do
-    def initialize(view_mode:, date_window:, room_groups:, room_type_options:, status_counts:, filters:, capabilities:)
+  Board = Data.define(
+    :view_mode, :date_window, :room_groups, :footer_summaries, :room_type_options, :status_counts, :filters, :capabilities
+  ) do
+    def initialize(
+      view_mode:, date_window:, room_groups:, footer_summaries:, room_type_options:, status_counts:, filters:, capabilities:
+    )
       super(
         view_mode: view_mode.to_sym,
         date_window: date_window,
         room_groups: Immutable.array(room_groups),
+        footer_summaries: Immutable.array(footer_summaries),
         room_type_options: Immutable.array(room_type_options),
         status_counts: status_counts,
         filters: filters,

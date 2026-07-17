@@ -138,19 +138,27 @@ RSpec.describe PanelsUI::Timeline::Table, type: :component do
     expect(page).to have_text("Arbitrary summary content")
   end
 
-  it "renders an optional generic footer with aligned summary slots" do
+  it "renders an optional generic footer with multiple semantic rows and aligned summary slots" do
     timeline = build_timeline
-    footer = timeline.with_footer(label: "Daily summary", data: { testid: "timeline-footer" })
-    footer.with_summary { "4 available" }
-    footer.with_summary { "75% occupied" }
+    footer = timeline.with_footer(data: { testid: "timeline-footer" })
+    available_row = footer.with_row(label: "Available inventory", data: { metric: "available" })
+    available_row.with_summary { "4" }
+    available_row.with_summary { "7" }
+    occupancy_row = footer.with_row(label: "Occupancy", data: { metric: "occupancy" })
+    occupancy_row.with_summary { "75%" }
+    occupancy_row.with_summary { "42%" }
 
     render_inline(timeline)
 
     expect(page).to have_css("[data-testid='timeline-footer'][role='rowgroup'][data-slot='timeline-footer']")
-    expect(page).to have_css(".panel-timeline__footer-row[role='row'] > .panel-timeline__footer-label[role='rowheader']", text: "Daily summary")
-    expect(page).to have_css("[data-slot='timeline-footer-summary'][role='cell']", count: 2)
-    expect(page.find("[data-slot='timeline-footer-summary'][data-position='2']")[:style]).to eq("grid-column: 3 / span 2")
-    expect(page).to have_css(".panel-timeline__footer", text: "75% occupied")
+    expect(page).to have_css("[data-slot='timeline-footer-row'][role='row']", count: 2)
+    expect(page).to have_css("[data-metric='available'] > .panel-timeline__footer-label[role='rowheader']", text: "Available inventory")
+    expect(page).to have_css("[data-metric='occupancy'] > .panel-timeline__footer-label[role='rowheader']", text: "Occupancy")
+    expect(page).to have_css("[data-slot='timeline-footer-summary'][role='cell']", count: 4)
+    expect(page.all("[data-slot='timeline-footer-summary'][data-position='2']").map { |cell| cell[:style] }).to all(
+      eq("grid-column: 3 / span 2")
+    )
+    expect(page).to have_css(".panel-timeline__footer", text: "75%")
   end
 
   it "requires supplied group and footer summaries to match the timeline day count" do
@@ -162,21 +170,27 @@ RSpec.describe PanelsUI::Timeline::Table, type: :component do
 
     timeline = described_class.new(caption: "Stays", track_count: 4)
     timeline.with_header(room_label: "Room", dates: dates)
-    timeline.with_footer(label: "Summary").with_summary { "Only one day" }
+    timeline.with_footer.with_row(label: "Summary").with_summary { "Only one day" }
 
-    expect { render_inline(timeline) }.to raise_error(ArgumentError, /footer summaries must match/)
+    expect { render_inline(timeline) }.to raise_error(ArgumentError, /footer row summaries must match/)
   end
 
-  it "requires the footer label and permits timelines without a footer" do
+  it "requires footer rows and row labels and permits timelines without a footer" do
     render_inline(build_timeline)
     expect(page).to have_no_css(".panel-timeline__footer")
 
     timeline = described_class.new(caption: "Stays", track_count: 4)
     timeline.with_header(room_label: "Room", dates: dates)
-    footer = timeline.with_footer(label: "")
-    2.times { footer.with_summary { "Summary" } }
+    timeline.with_footer
 
-    expect { render_inline(timeline) }.to raise_error(ArgumentError, /footer label is required/)
+    expect { render_inline(timeline) }.to raise_error(ArgumentError, /footer requires at least one row/)
+
+    timeline = described_class.new(caption: "Stays", track_count: 4)
+    timeline.with_header(room_label: "Room", dates: dates)
+    row = timeline.with_footer.with_row(label: "")
+    2.times { row.with_summary { "Summary" } }
+
+    expect { render_inline(timeline) }.to raise_error(ArgumentError, /footer row label is required/)
   end
 
   it "derives a stable dom id and scroll-hint id from the caption when no id is supplied" do

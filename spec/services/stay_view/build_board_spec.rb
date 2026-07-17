@@ -115,6 +115,15 @@ RSpec.describe StayView::BuildBoard do
       available: 2,
       occupancy: 0.0
     )
+    expect(board.footer_summaries.size).to eq(7)
+    expect(board.footer_summaries.first).to have_attributes(
+      date: start_date,
+      sellable: 2,
+      sold: 1,
+      available: 1,
+      occupancy: 0.5
+    )
+    expect(board.footer_summaries).to be_frozen
     expect(active_record_values(board)).to be_empty
   end
 

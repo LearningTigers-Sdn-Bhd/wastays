@@ -189,6 +189,10 @@
     background: var(--muted);
   }
 
+  .panel-timeline__footer-row:not(:last-child) {
+    border-bottom: 1px solid var(--border);
+  }
+
   .panel-timeline__footer-label {
     z-index: 32;
     display: flex;
