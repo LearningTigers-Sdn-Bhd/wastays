@@ -1,33 +1,11 @@
 class HotelPortal::ArrivalsController < HotelPortal::BaseController
-  before_action :authorize_manage_arrivals!
-
   def index
-    @date = params[:date].present? ? Date.parse(params[:date]) : Date.today
-    @query = params[:q].to_s.strip
-
-    arrivals_scope = current_hotel.bookings
-                                  .active
-                                  .checking_in_on(@date, current_hotel.hotel_time_zone)
-                                  .includes(:booking_rooms, :pre_checkin, :booking_guests, :guests)
-
-    if @query.present?
-      search_term = "%#{ActiveRecord::Base.sanitize_sql_like(@query)}%"
-      arrivals_scope = arrivals_scope.where(
-        "guest_name ILIKE :search OR guest_email ILIKE :search OR guest_phone ILIKE :search OR confirmation_token ILIKE :search",
-        search: search_term
-      )
-    end
-
-    @all_arrivals = arrivals_scope.order(created_at: :asc)
-    @arrivals = @all_arrivals.page(params[:page]).per(25)
-
-    @today_count = current_hotel.bookings.active.checking_in_on(Date.today, current_hotel.hotel_time_zone).count
-    @tomorrow_count = current_hotel.bookings.active.checking_in_on(Date.tomorrow, current_hotel.hotel_time_zone).count
+    redirect_to hotel_front_desk_path(current_hotel, arrivals_params), status: :moved_permanently
   end
 
   private
 
-  def authorize_manage_arrivals!
-    raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_guest_arrival", hotel: current_hotel)
+  def arrivals_params
+    { tab: "arrivals", view: "list", arrival_date: params[:date], arrival_q: params[:q], arrival_page: params[:page] }.compact
   end
 end

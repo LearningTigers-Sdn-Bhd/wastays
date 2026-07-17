@@ -58,7 +58,15 @@ export default class extends Controller {
 
   onCalendarChange(event) {
     const value = event.target.value
-    if (!value) return
+    if (!value) {
+      if (!this.isRange && this.hasLinkedToValue) {
+        this.inputTarget.value = ""
+        this.renderDisplay("")
+        this.syncLinkedMin("")
+        this.emitInput()
+      }
+      return
+    }
 
     this.inputTarget.value = value // Cally emits ISO ("YYYY-MM-DD" or "start/end").
     this.renderDisplay(value)
@@ -95,13 +103,22 @@ export default class extends Controller {
   }
 
   syncLinkedMin(startDate) {
-    if (!startDate || !this.hasLinkedToValue) return
+    if (!this.hasLinkedToValue) return
 
     const endEl = document.getElementById(this.linkedToValue)
-    const endCalendar = endEl
-      ?.closest(".panel-date-picker")
-      ?.querySelector("[data-panels-ui--date-picker-target='calendar']")
-    if (endCalendar) endCalendar.min = startDate
+    const endPicker = endEl?.closest(".panel-date-picker")
+    const endCalendar = endPicker?.querySelector("[data-panels-ui--date-picker-target='calendar']")
+    if (!endCalendar) return
+
+    endCalendar.min = startDate || ""
+    if (!startDate || !endEl.value || endEl.value >= startDate) return
+
+    endEl.value = ""
+    endCalendar.value = ""
+    const display = endPicker.querySelector("[data-panels-ui--date-picker-target='display']")
+    if (display) display.textContent = ""
+    endEl.dispatchEvent(new Event("input", { bubbles: true }))
+    endEl.dispatchEvent(new Event("change", { bubbles: true }))
   }
 
   closePopover() {

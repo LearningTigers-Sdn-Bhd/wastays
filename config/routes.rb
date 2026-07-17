@@ -327,6 +327,7 @@ Rails.application.routes.draw do
     end
     resources :booking_control_panels, only: :show, param: :booking_id, path: "booking-control-panels" do
       member do
+        get :audit_trail
         patch :set_primary_guest, controller: :booking_control_panel_actions
         patch :update_room_rate, controller: :booking_control_panel_actions
         get :new_folio_window, controller: :booking_control_panel_actions
@@ -424,6 +425,7 @@ Rails.application.routes.draw do
       end
     end
 
+    get "front-desk", to: "front_desk#index", as: :front_desk
     resources :arrivals, only: [ :index ]
     resources :checked_out_guests, only: [ :index ]
     resources :audit_logs, only: [ :index ]

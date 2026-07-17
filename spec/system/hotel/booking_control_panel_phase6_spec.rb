@@ -81,6 +81,34 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     expect(page).to have_no_css("#hotel-breadcrumb [data-tabs-breadcrumb-label]")
   end
 
+  it "opens and keyboard-closes a room-card audit trail sheet while restoring trigger focus", js: true do
+    plan = create(:plan)
+    hotel.update!(plan: plan)
+    feature = create(:feature, feature_group: create(:feature_group), slug: "full_audit_trail")
+    create(:plan_feature, plan: plan, feature: feature, enabled: true)
+    create(:booking_audit_log, hotel: hotel, auditable: booking, user: user,
+      old_value: { "status" => "pending" }, new_value: { "status" => "confirmed" })
+
+    visit hotel_front_desk_path(hotel, tab: "bookings", view: "rooms", booking_query: booking.confirmation_token)
+    trigger = find("button[aria-label='Booking actions']")
+    trigger.click
+    click_link "Audit trail"
+
+    expect(page).to have_css("#offcanvas_drawer_container.block", visible: :all)
+    expect(page.evaluate_script("document.querySelector('#offcanvas_drawer_container').contains(document.activeElement)")).to be(true)
+    within("#offcanvas_drawer") do
+      expect(page).to have_content("Audit Trail")
+      find("summary", text: "View Changes").click
+      expect(page).to have_content("Pending")
+      expect(page).to have_content("Confirmed")
+    end
+    page.send_keys(:escape)
+
+    expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 3)
+    expect(page.evaluate_script("document.activeElement === document.querySelector(\"button[aria-label='Booking actions']\")")).to be(true)
+    expect(page).to have_content(booking.confirmation_token)
+  end
+
   xit "protects unsaved snapshot changes with the control-panel alert", js: true do
     visit hotel_booking_control_panel_path(hotel, booking, tab: "guest_details")
 

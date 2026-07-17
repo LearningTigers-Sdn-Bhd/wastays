@@ -23,9 +23,9 @@ module HotelPortal
 
         def submit
           if params[:backdate_reason] == "Other" && params[:retroactive_reason].blank?
-            return redirect_back fallback_location: hotel_bookings_path(current_hotel), alert: "Please provide details for the backdated check-in reason."
+            return redirect_back fallback_location: hotel_front_desk_path(current_hotel, tab: "bookings", view: "list"), alert: "Please provide details for the backdated check-in reason."
           elsif params[:backdate_reason].blank? && params[:retroactive_reason].blank?
-            return redirect_back fallback_location: hotel_bookings_path(current_hotel), alert: "Backdated check-in reason is required."
+            return redirect_back fallback_location: hotel_front_desk_path(current_hotel, tab: "bookings", view: "list"), alert: "Backdated check-in reason is required."
           end
 
           unless params[:booking_id].present?

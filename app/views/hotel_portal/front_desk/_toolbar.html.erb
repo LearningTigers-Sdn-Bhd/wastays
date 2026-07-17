@@ -1,0 +1,71 @@
+<% view_state = state.merge(tab: @tab) %>
+<div class="rounded-xl border border-border bg-card p-4 shadow-sm">
+  <%= form_with url: hotel_front_desk_path(current_hotel), method: :get, class: "flex flex-col gap-3 lg:flex-row lg:items-center", data: { controller: "auto-submit" } do |form| %>
+    <% search_key = @tab == "bookings" ? :booking_query : @tab == "arrivals" ? :arrival_q : @tab == "in_house" ? :in_house_query : :departure_query %>
+    <% date_keys = @tab == "bookings" ? %i[booking_start_date booking_end_date] : @tab == "arrivals" ? %i[arrival_start_date arrival_end_date] : @tab == "departures" ? %i[departure_start_date departure_end_date] : [] %>
+    <% excluded = [search_key, @page_param] + date_keys %>
+    <% state.except(*excluded).merge(tab: @tab, view: @view).each { |key, value| concat hidden_field_tag(key, value) } %>
+    <div class="relative min-w-72 flex-1">
+      <%= cached_icon "magnifying-glass", class: "pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" %>
+      <%= form.search_field search_key, value: @query, aria: { label: "Search reservations" }, placeholder: "Search guest, contact, or booking reference", class: "w-full rounded-lg border border-border-interactive bg-card py-2 pl-7 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/20", data: { action: "input->auto-submit#submit" } %>
+    </div>
+    <%= render PanelsUI::ButtonGroup.new(aria: { label: "Reservation view" }) do %>
+      <% { "rooms" => [ "Rooms", "bed" ], "list" => [ "List", "list" ] }.each do |view, (label, icon)| %>
+        <%= render PanelsUI::Button.new(
+              as: :a,
+              href: hotel_front_desk_path(current_hotel, view_state.merge(view:)),
+              variant: view == @view ? :secondary : :neutral,
+              size: :lg,
+              aria: { current: ("page" if view == @view) }) do %>
+          <%= app_icon icon, class: "size-4", aria: { hidden: "true" } %>
+          <%= label %>
+        <% end %>
+      <% end %>
+    <% end %>
+    <% if @tab.in?(["bookings", "arrivals", "departures"]) %>
+      <% range_value = [ @start_date, @end_date ].all? ? "#{@start_date.iso8601}/#{@end_date.iso8601}" : nil %>
+      <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center"
+           data-controller="front-desk-date-range">
+        <%= form.hidden_field date_keys.first, value: @start_date&.iso8601,
+              data: { front_desk_date_range_target: "start" } %>
+        <%= form.hidden_field date_keys.second, value: @end_date&.iso8601,
+              data: { front_desk_date_range_target: "end" } %>
+        <%= render PanelsUI::FormField.new(
+              form:, attribute: :front_desk_date_range,
+              label: "Stay date range", label_hidden: true,
+              size: :lg,
+              class: "w-full sm:w-auto") do |field| %>
+          <% field.with_date_picker(
+               range: true,
+               months: 2,
+               responsive_months: true,
+               value: range_value,
+               placeholder: "All stay dates",
+               data: {
+                 front_desk_date_range_target: "picker",
+                 action: "input->front-desk-date-range#rangeChanged"
+               }) %>
+        <% end %>
+        <% hotel_today = Time.current.in_time_zone(current_hotel.hotel_time_zone).to_date %>
+        <% show_date_reset = @tab == "bookings" ? (@start_date || @end_date) : (@start_date != hotel_today || @end_date != hotel_today) %>
+        <% if show_date_reset %>
+          <% reset_state = state.except(*date_keys, @page_param).merge(tab: @tab, view: @view) %>
+          <% unless @tab == "bookings" %>
+            <% reset_state = reset_state.merge(date_keys.first => hotel_today.iso8601, date_keys.second => hotel_today.iso8601) %>
+          <% end %>
+          <% reset_label = @tab == "bookings" ? "Clear dates" : "Reset to today" %>
+          <%= link_to reset_label, hotel_front_desk_path(current_hotel, reset_state), class: "inline-flex min-h-10 items-center justify-center text-sm font-medium text-muted-foreground hover:text-foreground", aria: { label: reset_label } %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+  <% if @tab == "bookings" %>
+    <div class="mt-4 flex items-center gap-2 overflow-x-auto py-1">
+      <% [[nil, "All"]].concat(HotelPortal::FrontDesk::BookingsQuery::STATUSES.map { |status| [status, status.humanize] }).each do |status, label| %>
+        <%= link_to hotel_front_desk_path(current_hotel, state.except(:booking_status, :booking_page).merge(tab: "bookings", view: "list", booking_status: status).compact), class: "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-medium shadow-sm #{status == @booking_status ? 'border-border-interactive bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground hover:bg-muted'}" do %>
+          <%= cached_icon(status ? booking_status_icon(status) : "filter", class: "size-3.5") %><%= label %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

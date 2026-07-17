@@ -8,8 +8,10 @@ export default class extends Controller {
   connect() {
     this.pendingVariant = this.variantValue
     this.handleTriggerClick = this.handleTriggerClick.bind(this)
+    this.handleKeydown = this.handleKeydown.bind(this)
 
     document.addEventListener("click", this.handleTriggerClick)
+    document.addEventListener("keydown", this.handleKeydown)
 
     // Listen synchronously for clicks on close triggers to bypass Stimulus race conditions
     this.element.addEventListener("click", (event) => {
@@ -24,6 +26,7 @@ export default class extends Controller {
     this.element.addEventListener("turbo:frame-load", (event) => {
       if (event.target.id === this.frameTarget.id) {
         const variant = event.target.dataset.offcanvasVariant || this.pendingVariant || this.variantValue
+        this.panelTarget.setAttribute("aria-label", event.target.dataset.offcanvasLabel || "Booking details")
         this.applyVariant(variant)
         this.open()
       }
@@ -32,6 +35,7 @@ export default class extends Controller {
 
   disconnect() {
     document.removeEventListener("click", this.handleTriggerClick)
+    document.removeEventListener("keydown", this.handleKeydown)
     clearTimeout(this.closeTimeout)
     clearTimeout(this.completeTimeout)
     clearTimeout(this.openTimeout)
@@ -41,6 +45,8 @@ export default class extends Controller {
     const trigger = event.target.closest(`[data-turbo-frame="${this.frameTarget.id}"]`)
     if (!trigger) return
 
+    this.trigger = trigger.closest("[data-controller~='panels-ui--dropdown-menu']")
+      ?.querySelector("[data-panels-ui--dropdown-menu-target='trigger']") || trigger
     this.pendingVariant = trigger.dataset.offcanvasVariant || this.variantValue
     setTimeout(() => window.dispatchEvent(new CustomEvent("dropdown:close-all")), 0)
   }
@@ -58,6 +64,8 @@ export default class extends Controller {
       this.panelTarget.classList.remove(this.closedTransformClass)
       this.panelTarget.classList.add(this.openTransformClass)
     })
+    const initialFocus = this.focusableElements[0] || this.panelTarget
+    initialFocus.focus()
     this.openTimeout = setTimeout(() => {
       this.panelTarget.classList.remove("pointer-events-none")
     }, 300)
@@ -78,7 +86,37 @@ export default class extends Controller {
         </div>
       `
       document.body.classList.remove("overflow-hidden")
+      this.trigger?.focus()
     }, 300)
+  }
+
+  handleKeydown(event) {
+    if (!this.element.classList.contains(this.openClass) || !this.topmostOpen) return
+
+    if (event.key === "Escape") {
+      event.preventDefault()
+      this.close()
+      return
+    }
+
+    if (event.key !== "Tab") return
+
+    const elements = this.focusableElements
+    if (elements.length === 0) {
+      event.preventDefault()
+      this.panelTarget.focus()
+      return
+    }
+
+    const first = elements[0]
+    const last = elements[elements.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
   }
 
   complete(url) {
@@ -117,5 +155,17 @@ export default class extends Controller {
 
   get openTransformClass() {
     return this.currentVariant === "fullscreen-bottom" ? "translate-y-0" : "translate-x-0"
+  }
+
+  get focusableElements() {
+    return [...this.panelTarget.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )].filter((element) => element.getClientRects().length > 0)
+  }
+
+  get topmostOpen() {
+    const openDrawers = [...document.querySelectorAll('[data-controller~="offcanvas"]')]
+      .filter((element) => !element.classList.contains(this.closedClass))
+    return openDrawers.at(-1) === this.element
   }
 }

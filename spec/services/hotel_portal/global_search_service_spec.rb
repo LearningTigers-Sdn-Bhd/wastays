@@ -13,12 +13,12 @@ RSpec.describe HotelPortal::GlobalSearchService do
 
   it "includes pages for empty query" do
     results = described_class.new(hotel, "").perform
-    expect(results).to include(hash_including(title: "Arrival Board", group: "Pages"))
+    expect(results).to include(hash_including(title: "Front Desk", group: "Pages", url: Rails.application.routes.url_helpers.hotel_front_desk_path(hotel)))
     expect(results).to include(hash_including(title: "Folios", group: "Pages"))
   end
 
   it "returns renamed and settings-hub navigation destinations" do
-    expect(described_class.new(hotel, "departures").perform).to include(hash_including(title: "Departures", group: "Pages"))
+    expect(described_class.new(hotel, "departures").perform).to include(hash_including(title: "Front Desk", group: "Pages", url: Rails.application.routes.url_helpers.hotel_front_desk_path(hotel)))
     expect(described_class.new(hotel, "timeline board").perform).to include(hash_including(title: "Timeline Board", group: "Pages"))
     expect(described_class.new(hotel, "plan billing").perform).to include(hash_including(title: "Plan & Billing", group: "Pages"))
     expect(described_class.new(hotel, "transaction codes").perform).to include(hash_including(title: "Transaction Codes", group: "Pages"))

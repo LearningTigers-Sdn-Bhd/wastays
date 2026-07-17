@@ -9,14 +9,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   before_action :authorize_manage_bookings!, only: %i[update]
 
   def index
-    @bookings = current_hotel.bookings.recent_first.includes(:booking_folio, booking_guests: :guest)
-
-    @bookings = @bookings.search(params[:query]) if params[:query].present?
-    @bookings = @bookings.where(status: params[:status]) if params[:status].present?
-    @bookings = @bookings.checking_in_on(params[:check_in_date], current_hotel.hotel_time_zone) if params[:check_in_date].present?
-
-    @bookings = @bookings.page(params[:page]).per(25)
-    render "hotel_portal/bookings/index/index"
+    redirect_to hotel_front_desk_path(current_hotel, legacy_index_params), status: :moved_permanently
   end
 
   def show
@@ -50,6 +43,17 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   end
 
   private
+
+  def legacy_index_params
+    {
+      tab: "bookings",
+      view: "list",
+      booking_query: params[:query],
+      booking_status: params[:status],
+      booking_check_in_date: params[:check_in_date],
+      booking_page: params[:page]
+    }.compact
+  end
 
   def release_room_locks(booking)
     room_number = booking.hotel_snapshot.is_a?(Hash) ? (booking.hotel_snapshot["room_number"] || booking.hotel_snapshot.dig("assignment", "room_number")) : nil

@@ -19,38 +19,48 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
     create(:room_rate, room_type: room_type, date: Date.current + 1.day, price: 100, currency: hotel.default_currency.presence || "MYR")
   end
 
-  describe "GET /index" do
+  describe "Reservations bookings tab" do
     let!(:booking1) { create(:booking, hotel: hotel, guest_name: "Alice Smith", status: "confirmed", confirmation_token: "WS-ALICE") }
     let!(:booking2) { create(:booking, hotel: hotel, guest_name: "Bob Jones", status: "cancelled", confirmation_token: "WS-BOB") }
 
     it "returns all bookings by default" do
-      get "/hotel/#{hotel.id}/bookings"
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list" }
       expect(response.body).to include("Alice Smith")
       expect(response.body).to include("Bob Jones")
     end
 
     it "filters by query (name)" do
-      get "/hotel/#{hotel.id}/bookings", params: { query: "Alice" }
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list", booking_query: "Alice" }
       expect(response.body).to include("Alice Smith")
       expect(response.body).not_to include("Bob Jones")
     end
 
     it "filters by query (reference)" do
-      get "/hotel/#{hotel.id}/bookings", params: { query: "WS-BOB" }
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list", booking_query: "WS-BOB" }
       expect(response.body).not_to include("Alice Smith")
       expect(response.body).to include("Bob Jones")
     end
 
     it "filters by status" do
-      get "/hotel/#{hotel.id}/bookings", params: { status: "cancelled" }
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list", booking_status: "cancelled" }
       expect(response.body).not_to include("Alice Smith")
       expect(response.body).to include("Bob Jones")
     end
 
     it "combines query and status" do
-      get "/hotel/#{hotel.id}/bookings", params: { query: "Alice", status: "cancelled" }
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list", booking_query: "Alice", booking_status: "cancelled" }
       expect(response.body).not_to include("Alice Smith")
       expect(response.body).not_to include("Bob Jones")
+    end
+
+    it "resets date-filtered empty results in both views" do
+      params = { tab: "bookings", booking_start_date: "2099-01-01", booking_end_date: "2099-01-01" }
+
+      get hotel_front_desk_path(hotel), params: params.merge(view: "list")
+      expect(Nokogiri::HTML(response.body).at_css("a[aria-label='Reset booking filters']")&.[]("href")).to eq(hotel_front_desk_path(hotel, tab: "bookings", view: "list"))
+
+      get hotel_front_desk_path(hotel), params: params.merge(view: "rooms")
+      expect(Nokogiri::HTML(response.body).at_css("a[aria-label='Reset booking filters']")&.[]("href")).to eq(hotel_front_desk_path(hotel, tab: "bookings", view: "rooms"))
     end
   end
 
@@ -89,7 +99,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
     let(:rate_plan) { create(:rate_plan, room_type: room_type) }
 
     it "launches new booking through the quick booking drawer" do
-      get hotel_bookings_path(hotel)
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list" }
 
       document = Nokogiri::HTML(response.body)
       new_booking_link = document.at_css("a[href='#{hotel_booking_transaction_quick_booking_path(hotel)}']")

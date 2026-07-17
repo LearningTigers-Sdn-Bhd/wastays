@@ -17,6 +17,12 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
     )
   end
 
+  def enable_audit_feature
+    hotel.update!(plan: create(:plan))
+    feature = create(:feature, feature_group: create(:feature_group), slug: "full_audit_trail")
+    create(:plan_feature, plan: hotel.plan, feature: feature, enabled: true)
+  end
+
   describe "booking details" do
     it "exposes references, established status labels, stay dates, and source" do
       booking.update_column(:status, "completed")
@@ -243,6 +249,7 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
     end
 
     it "uses tab-specific titles for grouped booking rails" do
+      enable_audit_feature
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
       expected_titles = {
@@ -261,6 +268,7 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
     end
 
     it "uses singular tab-specific titles for standalone booking rails" do
+      enable_audit_feature
       expected_titles = {
         "booking_details" => "Booking / Details",
         "security_deposits" => "Booking / Deposits",
@@ -311,6 +319,7 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
     end
 
     it "registers the adjusted tab order and Requests label" do
+      enable_audit_feature
       expect(presenter.tabs.map { |tab| [ tab.key, tab.label ] }).to eq([
         [ "booking_details", "Booking Details" ],
         [ "folio_operations", "Folio Operations" ],
@@ -509,6 +518,7 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
     end
 
     it "keeps audit filters out of the context rail" do
+      enable_audit_feature
       expect(described_class.new(booking, params: { tab: "audit_trails" })).to have_attributes(
         left_rail_mode: "booking_context",
         left_rail_title: "Booking / Audit Trails"

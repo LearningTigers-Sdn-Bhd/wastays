@@ -46,6 +46,15 @@ module HotelPortal
       confirmation_token guest_registration_number event
     ].freeze
 
+    SENSITIVE_FIELDS = %w[
+      email guest_email email_snapshot guest_email_snapshot
+      phone guest_phone phone_snapshot guest_phone_snapshot
+      government_id government_id_snapshot guest_government_id
+      date_of_birth date_of_birth_snapshot guest_date_of_birth
+      home_address guest_home_address body
+    ].freeze
+    SENSITIVE_FIELD_PATTERN = /(api[_-]?key|(?:^|[_-])key(?:$|[_-])|secret|token|password|credential|authorization|private[_-]?key)/i
+
     attr_reader :log, :hotel
 
     delegate :id, :action_type, :category, :source, :metadata, to: :log
@@ -257,6 +266,7 @@ module HotelPortal
 
     def format_value(field, value)
       return "Not provided" if value.blank?
+      return "Redacted" if field.in?(SENSITIVE_FIELDS) || field.match?(SENSITIVE_FIELD_PATTERN)
       return status_label(value) if field == "status"
       return value ? "Yes" : "No" if value.in?([ true, false ])
       return format_time(value) if field.in?(%w[check_in check_out checked_in_at checked_out_at])
