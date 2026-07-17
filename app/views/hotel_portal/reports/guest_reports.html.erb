@@ -30,19 +30,21 @@
   </div>
 
   <div class="print:hidden">
-    <div class="flex flex-wrap items-center gap-2">
+    <%= render PanelsUI::Tabs.new(
+          id: "guest-reports-tabs",
+          active: @active_guest_report_tab,
+          variant: :line,
+          aria_label: "Guest reports"
+        ) do |tabs| %>
       <% guest_report_tabs_data(@report, @bibo_report, @active_guest_report_tab, @grc_total_count, current_hotel, @date_preset).each do |tab| %>
-        <%= link_to tab[:path],
-            class: "inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition #{tab[:active] ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-border bg-card text-foreground hover:border-border-interactive hover:bg-muted'}" do %>
-          <span><%= tab[:label] %></span>
-          <% if tab[:count].present? %>
-            <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold <%= tab[:active] ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground' %>">
-              <%= tab[:count] %>
-            </span>
-          <% end %>
-        <% end %>
+        <% tabs.with_tab(
+             name: tab[:value],
+             label: tab[:label],
+             count: tab[:count],
+             href: tab[:path]
+           ) %>
       <% end %>
-    </div>
+    <% end %>
   </div>
 
   <% if show_metrics_cards?(@active_guest_report_tab) %>
@@ -114,6 +116,7 @@
             <% tabs.with_tab(
                  name: m_type,
                  label: m_type.titleize,
+                 count: @meal_prep_counts[m_type],
                  href: guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: "meal_prep", meal_type: m_type)
                ) %>
           <% end %>

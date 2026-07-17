@@ -1,70 +1,74 @@
-<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm print:rounded-none print:shadow-none print:break-inside-avoid">
-  <div class="border-b border-border bg-muted/70 px-6 py-5 sm:px-8 print:bg-card print:px-3 print:py-2">
-    <h2 class="text-lg font-bold tracking-tight text-foreground print:text-base"><%= title %></h2>
+<div class="space-y-4 print:space-y-3 print:break-inside-avoid">
+  <div class="px-4 md:px-0">
+    <h2 class="text-base font-semibold text-foreground"><%= title %></h2>
   </div>
 
-  <div class="overflow-x-auto">
-    <table class="min-w-full table-fixed print:table-auto">
-      <thead class="bg-muted print:bg-card">
-        <tr>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8 print:px-2 print:py-2">Guest / Ref</th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground print:px-2 print:py-2">Rooms</th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground print:px-2 print:py-2">Stay</th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground print:px-2 print:py-2"><%= type == :arrival ? "Readiness" : "Departure" %></th>
-          <% if local_assigns[:show_boat_departure] %>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground print:px-2 print:py-2">
-              <%= type == :arrival ? "Boat Arrival" : "Boat Departure" %>
+  <%= render PanelsUI::Table.new(
+        caption: title,
+        hoverable: true,
+        wrapper_class: "rounded-lg border border-border bg-card"
+      ) do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <th scope="col">Guest / Ref</th>
+        <th scope="col">Rooms</th>
+        <th scope="col">Stay</th>
+        <th scope="col"><%= type == :arrival ? "Readiness" : "Departure" %></th>
+        <% if local_assigns[:show_boat_departure] %>
+          <th scope="col">
+            <%= type == :arrival ? "Boat Arrival" : "Boat Departure" %>
+          </th>
+        <% end %>
+        <th scope="col">Notes</th>
+      </tr>
+    <% end %>
+    <% table.with_body do %>
+      <% if rows.any? %>
+        <% rows.each do |row| %>
+          <tr>
+            <th scope="row">
+              <div class="min-w-0">
+                <p class="font-semibold text-foreground"><%= row[:guest_name] %></p>
+                <p class="mt-1 font-mono text-xs text-muted-foreground"><%= row[:confirmation_token] %></p>
+                <p class="mt-1 text-xs font-medium text-muted-foreground"><%= row[:guest_count] %></p>
+              </div>
             </th>
-          <% end %>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8 print:px-2 print:py-2">Notes</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-border bg-card">
-        <% if rows.any? %>
-          <% rows.each_with_index do |row, index| %>
-            <tr class="align-top transition-colors <%= index.even? ? 'bg-card' : 'bg-muted/55' %> print:bg-card">
-              <td class="px-6 py-4 sm:px-8 print:px-2 print:py-2">
-                <p class="text-sm font-bold text-foreground print:text-xs"><%= row[:guest_name] %></p>
-                <p class="mt-1 text-xs font-mono text-muted-foreground print:text-[10px]"><%= row[:confirmation_token] %></p>
-                <p class="mt-1 text-xs font-medium text-muted-foreground print:text-[10px]"><%= row[:guest_count] %></p>
-              </td>
-              <td class="px-6 py-4 print:px-2 print:py-2">
-                <p class="text-sm font-semibold text-foreground print:text-xs"><%= row[:room_details] %></p>
-                <p class="mt-1 text-xs font-medium text-muted-foreground print:text-[10px]">Room: <%= row[:room_numbers] %></p>
-              </td>
-              <td class="px-6 py-4 text-sm font-medium text-foreground print:px-2 print:py-2 print:text-xs"><%= row[:stay_dates] %></td>
-              <td class="px-6 py-4 print:px-2 print:py-2">
-                <% if type == :arrival %>
-                  <p class="text-sm font-semibold text-foreground print:text-xs"><%= row[:pre_checkin_status] %></p>
-                  <p class="mt-1 text-xs font-medium text-muted-foreground print:text-[10px]"><%= row[:guarantee_status] %></p>
+            <td>
+              <p class="font-semibold text-foreground"><%= row[:room_details] %></p>
+              <p class="mt-1 text-xs text-muted-foreground">Room: <%= row[:room_numbers] %></p>
+            </td>
+            <td><%= row[:stay_dates] %></td>
+            <td>
+              <% if type == :arrival %>
+                <p class="font-semibold text-foreground"><%= row[:pre_checkin_status] %></p>
+                <p class="mt-1 text-xs text-muted-foreground"><%= row[:guarantee_status] %></p>
+              <% else %>
+                <p class="font-semibold text-foreground"><%= row[:departure_status] %></p>
+              <% end %>
+            </td>
+            <% if local_assigns[:show_boat_departure] %>
+              <td>
+                <% formatted = arrivals_departures_boat_time(row, type, current_hotel) %>
+                <% if formatted %>
+                  <p class="font-semibold text-foreground"><%= formatted[:date] %></p>
+                  <p class="mt-1 text-xs text-muted-foreground"><%= formatted[:time] %></p>
                 <% else %>
-                  <p class="text-sm font-semibold text-foreground print:text-xs"><%= row[:departure_status] %></p>
+                  <p class="font-semibold text-foreground">—</p>
                 <% end %>
               </td>
-              <% if local_assigns[:show_boat_departure] %>
-                <td class="px-6 py-4 print:px-2 print:py-2">
-                  <% formatted = arrivals_departures_boat_time(row, type, current_hotel) %>
-                  <% if formatted %>
-                    <p class="text-sm font-semibold text-foreground print:text-xs"><%= formatted[:date] %></p>
-                    <p class="mt-1 text-xs font-medium text-muted-foreground print:text-[10px]"><%= formatted[:time] %></p>
-                  <% else %>
-                    <p class="text-sm font-semibold text-foreground print:text-xs">—</p>
-                  <% end %>
-                </td>
-              <% end %>
-              <td class="px-6 py-4 sm:px-8 print:px-2 print:py-2">
-                <p class="text-sm text-foreground print:text-xs"><%= row[:latest_note].presence || "-" %></p>
-              </td>
-            </tr>
-          <% end %>
-        <% else %>
-          <tr>
-            <td colspan="<%= local_assigns[:show_boat_departure] ? 6 : 5 %>" class="px-6 py-16 text-center text-sm font-medium text-muted-foreground sm:px-8 print:px-2 print:py-6 print:text-xs">
-              <%= empty_message %>
+            <% end %>
+            <td>
+              <p class="text-foreground"><%= row[:latest_note].presence || "-" %></p>
             </td>
           </tr>
         <% end %>
-      </tbody>
-    </table>
-  </div>
+      <% else %>
+        <tr>
+          <td colspan="<%= local_assigns[:show_boat_departure] ? 6 : 5 %>" class="h-32 text-center text-sm text-muted-foreground">
+            <%= empty_message %>
+          </td>
+        </tr>
+      <% end %>
+    <% end %>
+  <% end %>
 </div>

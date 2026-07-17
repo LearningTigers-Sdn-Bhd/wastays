@@ -345,9 +345,9 @@ module HotelPortal
         ).call
 
         @meal_prep_counts = {
-          "breakfast" => full_report.records.count { |r| r[:meal_type].downcase.include?("breakfast") },
-          "lunch"     => full_report.records.count { |r| r[:meal_type].downcase.include?("lunch") },
-          "dinner"    => full_report.records.count { |r| r[:meal_type].downcase.include?("dinner") }
+          "breakfast" => full_report.records.select { |r| r[:meal_type].downcase.include?("breakfast") }.sum { |r| r[:pax] },
+          "lunch"     => full_report.records.select { |r| r[:meal_type].downcase.include?("lunch") }.sum { |r| r[:pax] },
+          "dinner"    => full_report.records.select { |r| r[:meal_type].downcase.include?("dinner") }.sum { |r| r[:pax] }
         }
       end
 

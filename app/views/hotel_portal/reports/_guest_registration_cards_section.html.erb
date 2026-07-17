@@ -31,47 +31,57 @@
   </div>
 
   <%= turbo_frame_tag "grc_results" do %>
-    <div class="overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="bg-muted">
-          <tr>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">GRC No.</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Guest</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Stay</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
-            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Action</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border bg-card">
-          <% if @grc_cards.any? %>
-            <% @grc_cards.each do |card| %>
-              <% booking = card.booking %>
-              <tr class="hover:bg-muted">
-                <td class="px-6 py-4 text-sm font-black text-foreground"><%= booking.guest_registration_card_number_display %></td>
-                <td class="px-6 py-4">
-                  <p class="text-sm font-semibold text-foreground"><%= booking.guest_name %></p>
-                  <p class="text-xs text-muted-foreground"><%= booking.confirmation_token %></p>
-                </td>
-                <td class="px-6 py-4 text-sm text-foreground">
-                  <%= l(booking.check_in.to_date) %> -> <%= l(booking.check_out.to_date) %>
-                </td>
-                <td class="px-6 py-4">
-                  <span class="rounded-full px-2 py-1 text-xs font-bold <%= card.signed? ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' %>"><%= card.status.titleize %></span>
-                </td>
-                <td class="px-6 py-4 text-right">
-                  <%= link_to "View", hotel_booking_guest_registration_card_path(current_hotel, booking), class: "inline-flex rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted", data: { turbo: false } %>
-                  <%= link_to "Print / Save as PDF", hotel_booking_guest_registration_card_path(current_hotel, booking), class: "ml-2 inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover", data: { turbo: false } %>
-                </td>
-              </tr>
-            <% end %>
-          <% else %>
+    <%= render PanelsUI::Table.new(
+          caption: "Guest Registration Cards",
+          hoverable: true,
+          wrapper_class: "border-0 bg-transparent rounded-none"
+        ) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">GRC No.</th>
+          <th scope="col">Guest</th>
+          <th scope="col">Stay</th>
+          <th scope="col">Status</th>
+          <th scope="col" class="text-right"><span class="sr-only">Action</span></th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% if @grc_cards.any? %>
+          <% @grc_cards.each do |card| %>
+            <% booking = card.booking %>
             <tr>
-              <td colspan="5" class="px-6 py-14 text-center text-sm font-medium text-muted-foreground">No guest registration cards found.</td>
+              <th scope="row" class="font-black text-foreground">
+                <%= booking.guest_registration_card_number_display %>
+              </th>
+              <td>
+                <p class="font-semibold text-foreground"><%= booking.guest_name %></p>
+                <p class="text-xs text-muted-foreground"><%= booking.confirmation_token %></p>
+              </td>
+              <td class="whitespace-nowrap text-foreground">
+                <%= l(booking.check_in.to_date) %> -> <%= l(booking.check_out.to_date) %>
+              </td>
+              <td>
+                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold <%= card.signed? ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' %>">
+                  <%= card.status.titleize %>
+                </span>
+              </td>
+              <td class="text-right">
+                <div class="inline-flex items-center gap-2">
+                  <%= link_to "View", hotel_booking_guest_registration_card_path(current_hotel, booking), class: "inline-flex rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted", data: { turbo: false } %>
+                  <%= link_to "Print / Save as PDF", hotel_booking_guest_registration_card_path(current_hotel, booking), class: "inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover", data: { turbo: false } %>
+                </div>
+              </td>
             </tr>
           <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% else %>
+          <tr>
+            <td colspan="5" class="h-32 text-center text-sm text-muted-foreground">
+              No guest registration cards found.
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
 
     <div class="flex justify-center border-t border-border bg-muted/50 px-6 py-4 sm:px-8">
       <%= paginate @grc_cards if @grc_cards.respond_to?(:total_pages) %>
