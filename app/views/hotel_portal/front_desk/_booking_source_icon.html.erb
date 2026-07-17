@@ -1,0 +1,6 @@
+<% source_presenter = HotelPortal::BookingSourcePresenter.new(source) %>
+<%= render PanelsUI::Tooltip.new(text: "Booking source: #{source_presenter.label}", delay: 75) do %>
+  <span class="inline-flex size-6 shrink-0 cursor-help items-center justify-center rounded-md border border-border bg-muted text-muted-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="Booking source: <%= source_presenter.label %>">
+    <%= cached_icon source_presenter.icon, class: "size-3.5", aria: { hidden: true } %>
+  </span>
+<% end %>

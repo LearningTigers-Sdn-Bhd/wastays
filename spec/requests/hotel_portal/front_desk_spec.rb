@@ -360,17 +360,37 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body.scan(/booking:INHOUSE-PAGE-/).size).to eq(1)
     end
 
-    it "uses departure search, ordering, and pagination" do
-      older = booking(status: "completed", confirmation_token: "DEPARTURE-OLDER", checked_out_at: Time.current - 2.hours)
-      newer = booking(status: "completed", confirmation_token: "DEPARTURE-NEWER", checked_out_at: Time.current - 1.hour)
+    it "uses checkout search, ordering, and pagination" do
+      older = booking(status: "completed", confirmation_token: "CHECKOUT-OLDER", checked_out_at: Time.current - 2.hours)
+      newer = booking(status: "completed", confirmation_token: "CHECKOUT-NEWER", checked_out_at: Time.current - 1.hour)
 
-      get hotel_front_desk_path(hotel), params: { tab: "departures", departure_query: "DEPARTURE" }
+      get hotel_front_desk_path(hotel), params: { tab: "checkout", checkout_query: "CHECKOUT" }
 
       expect(response.body.index(newer.confirmation_token)).to be < response.body.index(older.confirmation_token)
     end
 
+    it "paginates checkout records at 25 per page" do
+      26.times { |index| booking(status: "completed", confirmation_token: "CHECKOUT-PAGE-#{index}", checked_out_at: index.minutes.ago) }
+
+      get hotel_front_desk_path(hotel), params: { tab: "checkout", view: "list", checkout_page: 2 }
+
+      expect(response.body).to include("page:2")
+      expect(response.body.scan(/booking:CHECKOUT-PAGE-/).size).to eq(1)
+    end
+
+    it "uses departure search, ordering, and pagination for pending checkouts" do
+      later = booking(status: "checked_in", confirmation_token: "DEPARTURE-LATER", check_out: Date.current + 1.day, created_at: 1.hour.ago)
+      earlier = booking(status: "checked_in", confirmation_token: "DEPARTURE-EARLIER", check_out: Date.current, created_at: 2.hours.ago)
+
+      get hotel_front_desk_path(hotel), params: {
+        tab: "departures", departure_query: "DEPARTURE", departure_start_date: Date.current.iso8601, departure_end_date: (Date.current + 1.day).iso8601
+      }
+
+      expect(response.body.index(earlier.confirmation_token)).to be < response.body.index(later.confirmation_token)
+    end
+
     it "paginates departure records at 25 per page" do
-      26.times { |index| booking(status: "completed", confirmation_token: "DEPARTURE-PAGE-#{index}", checked_out_at: index.minutes.ago) }
+      26.times { |index| booking(status: "checked_in", confirmation_token: "DEPARTURE-PAGE-#{index}", check_out: Date.current) }
 
       get hotel_front_desk_path(hotel), params: { tab: "departures", view: "list", departure_page: 2 }
 
@@ -399,11 +419,13 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
         bookings: booking(status: "confirmed", confirmation_token: "ROOM-BOOKING", guest_name: "AReallyLongGuestNameWithoutSpacesThatMustRemainFullyVisible", created_at:, adults: 2, children: 0),
         arrivals: booking(status: "confirmed", confirmation_token: "ROOM-ARRIVAL", guest_name: "AReallyLongGuestNameWithoutSpacesThatMustRemainFullyVisible", check_in: Date.current, created_at:, adults: 2, children: 0),
         in_house: booking(status: "checked_in", confirmation_token: "ROOM-IN-HOUSE", guest_name: "AReallyLongGuestNameWithoutSpacesThatMustRemainFullyVisible", checked_in_at: Time.current, created_at:, adults: 2, children: 0),
-        departures: booking(status: "completed", confirmation_token: "ROOM-DEPARTURE", guest_name: "AReallyLongGuestNameWithoutSpacesThatMustRemainFullyVisible", checked_out_at: Time.current, created_at:, adults: 2, children: 0)
+        departures: booking(status: "checked_in", confirmation_token: "ROOM-DEPARTURE", guest_name: "AReallyLongGuestNameWithoutSpacesThatMustRemainFullyVisible", check_out: Date.current, created_at:, adults: 2, children: 0),
+        checkout: booking(status: "completed", confirmation_token: "ROOM-CHECKOUT", guest_name: "AReallyLongGuestNameWithoutSpacesThatMustRemainFullyVisible", checked_out_at: Time.current, created_at:, adults: 2, children: 0)
       }
       queries = {
         bookings: { booking_query: "ROOM-BOOKING" }, arrivals: { arrival_q: "ROOM-ARRIVAL" },
-        in_house: { in_house_query: "ROOM-IN-HOUSE" }, departures: { departure_query: "ROOM-DEPARTURE" }
+        in_house: { in_house_query: "ROOM-IN-HOUSE" }, departures: { departure_query: "ROOM-DEPARTURE" },
+        checkout: { checkout_query: "ROOM-CHECKOUT" }
       }
 
       records.each do |tab, record|
@@ -418,10 +440,10 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
         expect(booking_date.at_xpath("following-sibling::dd")&.text&.strip).to eq(
           record.created_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y")
         )
-        expect(card.at_css("[aria-label='2 adults'] svg[aria-hidden='true']")).to be_present
-        expect(card.at_css("[aria-label='0 children'] svg[aria-hidden='true']")).to be_present
-        expect(card.at_css("[aria-label='2 adults'] span[aria-hidden='true']")&.text).to eq("2")
-        expect(card.at_css("[aria-label='0 children'] span[aria-hidden='true']")&.text).to eq("0")
+        expect(card.at_css("[aria-label='2 Adults'] svg[aria-hidden='true']")).to be_present
+        expect(card.at_css("[aria-label='0 Children'] svg[aria-hidden='true']")).to be_present
+        expect(card.at_css("[aria-label='2 Adults'] span[aria-hidden='true']")&.text).to eq("2")
+        expect(card.at_css("[aria-label='0 Children'] span[aria-hidden='true']")&.text).to eq("0")
         expect(card.text).not_to include(record.guest_email, record.guest_phone)
         expect(card.css("dt").map { |label| label.text.strip }).not_to include("Email", "Phone", "Contact")
         expect(card.css("dt").map { |label| label.text.strip }).to include("Total", "Paid", "Balance")
@@ -444,11 +466,13 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
         bookings: booking(status: "confirmed", confirmation_token: "AUDIT-BOOKING"),
         arrivals: booking(status: "confirmed", confirmation_token: "AUDIT-ARRIVAL", check_in: Date.current),
         in_house: booking(status: "checked_in", confirmation_token: "AUDIT-IN-HOUSE", checked_in_at: Time.current),
-        departures: booking(status: "completed", confirmation_token: "AUDIT-DEPARTURE", checked_out_at: Time.current)
+        departures: booking(status: "checked_in", confirmation_token: "AUDIT-DEPARTURE", check_out: Date.current),
+        checkout: booking(status: "completed", confirmation_token: "AUDIT-CHECKOUT", checked_out_at: Time.current)
       }
       queries = {
         bookings: { booking_query: "AUDIT-BOOKING" }, arrivals: { arrival_q: "AUDIT-ARRIVAL" },
-        in_house: { in_house_query: "AUDIT-IN-HOUSE" }, departures: { departure_query: "AUDIT-DEPARTURE" }
+        in_house: { in_house_query: "AUDIT-IN-HOUSE" }, departures: { departure_query: "AUDIT-DEPARTURE" },
+        checkout: { checkout_query: "AUDIT-CHECKOUT" }
       }
 
       records.each do |tab, record|
@@ -491,7 +515,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
     it "renders accessible arrivals workspace controls and list actions" do
       grant_arrival_permission
       grant_booking_permission
-      booking(status: "confirmed", confirmation_token: "ARRIVAL-WORKSPACE", check_in: Date.current)
+      booking(status: "confirmed", confirmation_token: "ARRIVAL-WORKSPACE", check_in: Date.new(2026, 7, 15))
 
       get hotel_front_desk_path(hotel), params: {
         tab: "arrivals", view: "list", arrival_q: "Aisha", in_house_query: "Stay",
@@ -577,7 +601,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body).to include(confirmed.confirmation_token)
     end
 
-    it "keeps mobile lifecycle drawer paths, variants, and departure fields" do
+    it "keeps mobile lifecycle drawer paths, variants, and checkout fields" do
       late = booking(status: "review_due_out", confirmation_token: "MOBILE-LATE", checked_in_at: Time.current)
       checkout = booking(status: "checkout_required", confirmation_token: "MOBILE-CHECKOUT", checked_in_at: Time.current)
       departed = booking(status: "completed", confirmation_token: "MOBILE-DEPARTED", checked_in_at: Time.current, checked_out_at: Time.current)
@@ -591,7 +615,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(checkout_link["href"]).to include(checkout.id.to_s, "return_to=")
       expect(checkout_link["data-offcanvas-variant"]).to eq("fullscreen-bottom")
 
-      get hotel_front_desk_path(hotel), params: { tab: "departures", view: "list", departure_query: "MOBILE" }
+      get hotel_front_desk_path(hotel), params: { tab: "checkout", view: "list", checkout_query: "MOBILE" }
       mobile = Nokogiri::HTML(response.body).at_css("#front-desk-results section > .lg\\:hidden")
       expect(mobile.text).to include("Contact", "Stay Dates", "Checked In", "Checked Out", "Rooms", "View booking", departed.confirmation_token)
     end
@@ -631,23 +655,28 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
 
       get hotel_front_desk_path(hotel), params: { tab: "departures" }
       document = Nokogiri::HTML(response.body)
+      expect(document.text).to include("No guests are due to check out today.")
+
+      get hotel_front_desk_path(hotel), params: { tab: "checkout" }
+      document = Nokogiri::HTML(response.body)
       expect(document.text).to include("No guests have checked out today.")
 
       grant_arrival_permission
       booking(status: "confirmed", confirmation_token: "ROW-ARRIVAL", check_in: Date.current)
       booking(status: "checked_in", confirmation_token: "ROW-STAY", checked_in_at: Time.current)
-      booking(status: "completed", confirmation_token: "ROW-DEPARTURE", checked_out_at: Time.current)
+      booking(status: "checked_in", confirmation_token: "ROW-DEPARTURE", check_out: Date.current)
+      booking(status: "completed", confirmation_token: "ROW-CHECKOUT", checked_out_at: Time.current)
 
-      %w[arrivals in_house departures].each do |tab|
+      %w[arrivals in_house departures checkout].each do |tab|
         get hotel_front_desk_path(hotel), params: { tab:, view: "list" }
         expect(Nokogiri::HTML(response.body).at_css("#front-desk-results .lg\\:block tbody th[scope='row']")).to be_present
       end
     end
 
-    it "renders checked out text status in mobile departures" do
-      booking(status: "completed", confirmation_token: "STATUS-DEPARTURE", checked_out_at: Time.current)
+    it "renders checked out text status in mobile checkout" do
+      booking(status: "completed", confirmation_token: "STATUS-CHECKOUT", checked_out_at: Time.current)
 
-      get hotel_front_desk_path(hotel), params: { tab: "departures", view: "list", departure_query: "STATUS" }
+      get hotel_front_desk_path(hotel), params: { tab: "checkout", view: "list", checkout_query: "STATUS" }
 
       expect(Nokogiri::HTML(response.body).at_css("#front-desk-results .lg\\:hidden").text).to include("Checked out")
     end
@@ -702,10 +731,10 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response).to have_http_status(:moved_permanently)
     end
 
-    it "maps only supported departure parameters" do
+    it "maps only supported checkout parameters" do
       get hotel_checked_out_guests_path(hotel), params: { query: "Aisha", page: 2, ignored: "x" }
 
-      expect(response).to redirect_to(hotel_front_desk_path(hotel, tab: "departures", view: "list", departure_query: "Aisha", departure_page: 2))
+      expect(response).to redirect_to(hotel_front_desk_path(hotel, tab: "checkout", view: "list", checkout_query: "Aisha", checkout_page: 2))
       expect(response).to have_http_status(:moved_permanently)
     end
   end

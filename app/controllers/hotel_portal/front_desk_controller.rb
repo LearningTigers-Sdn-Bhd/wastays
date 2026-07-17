@@ -2,7 +2,7 @@
 
 module HotelPortal
   class FrontDeskController < HotelPortal::BaseController
-    TABS = %w[bookings arrivals in_house departures].freeze
+    TABS = %w[bookings arrivals in_house departures checkout].freeze
     VIEWS = %w[list rooms].freeze
 
     before_action :set_allowed_tabs
@@ -18,13 +18,14 @@ module HotelPortal
       when "arrivals" then load_arrivals
       when "in_house" then load_in_house
       when "departures" then load_departures
+      when "checkout" then load_checkout
       end
     end
 
     private
 
     def set_allowed_tabs
-      @allowed_tabs = %w[in_house departures]
+      @allowed_tabs = %w[in_house departures checkout]
       @allowed_tabs.unshift("arrivals") if current_user.has_permission?("manage_guest_arrival", hotel: current_hotel)
       @allowed_tabs.unshift("bookings") if current_user.has_permission?("view_bookings", hotel: current_hotel)
     end
@@ -40,6 +41,7 @@ module HotelPortal
       in_house_query = HotelPortal::InHouseGuestsQuery.new(hotel: current_hotel, params: in_house_params)
       @metrics["in_house"] = in_house_query.in_house_count
       @metrics["departures"] = HotelPortal::FrontDesk::DeparturesQuery.new(hotel: current_hotel, params: query_params).total_count
+      @metrics["checkout"] = HotelPortal::FrontDesk::CheckoutQuery.new(hotel: current_hotel, params: query_params).total_count
     end
 
     def load_bookings
@@ -78,6 +80,15 @@ module HotelPortal
       @bookings = query.call.page(page_param(:departure_page)).per(25)
     end
 
+    def load_checkout
+      query = HotelPortal::FrontDesk::CheckoutQuery.new(hotel: current_hotel, params: query_params)
+      @start_date = query.start_date
+      @end_date = query.end_date
+      @query = query.query
+      @page_param = :checkout_page
+      @bookings = query.call.page(page_param(:checkout_page)).per(25)
+    end
+
     def in_house_params
       room_assignment = params[:room_assignment].to_s
       { query: scalar_param(:in_house_query), room_assignment: %w[assigned unassigned].include?(room_assignment) ? room_assignment : nil }
@@ -88,7 +99,7 @@ module HotelPortal
     end
 
     def query_params
-      %i[arrival_date arrival_start_date arrival_end_date arrival_q departure_start_date departure_end_date departure_query start_date end_date].index_with { |key| scalar_param(key) }
+      %i[arrival_date arrival_start_date arrival_end_date arrival_q departure_start_date departure_end_date departure_query checkout_start_date checkout_end_date checkout_query start_date end_date].index_with { |key| scalar_param(key) }
     end
 
     def scalar_param(key)
@@ -107,6 +118,7 @@ module HotelPortal
         arrival_start_date arrival_end_date arrival_q arrival_page
         in_house_query room_assignment in_house_page
         departure_start_date departure_end_date departure_query departure_page
+        checkout_start_date checkout_end_date checkout_query checkout_page
       ].index_with { |key| scalar_param(key) }.compact
     end
   end

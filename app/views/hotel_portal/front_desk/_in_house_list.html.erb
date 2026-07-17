@@ -35,7 +35,7 @@
               <td class="px-4 py-4 text-sm"><%= presenter.guest_email %><br><%= presenter.guest_phone %></td>
               <td class="px-4 py-4 text-sm"><%= presenter.check_in_formatted %> to <%= presenter.check_out_formatted %></td>
               <td class="px-4 py-4 text-sm"><%= presenter.checked_in_at_formatted %></td>
-              <td class="px-4 py-4 text-sm"><%= presenter.rooms_summary.presence || "No rooms assigned" %></td>
+              <td class="px-4 py-4 text-sm"><%= presenter.rooms_summary.join(", ").presence || "No rooms assigned" %></td>
               <td class="px-4 py-4 text-right"><%= render "in_house_actions", booking:, presenter: %></td>
             </tr>
           <% end %>
@@ -73,7 +73,7 @@
           <p class="text-sm">Contact: <%= presenter.guest_email %> · <%= presenter.guest_phone %></p>
           <p class="text-sm">Stay Dates: <%= presenter.check_in_formatted %> to <%= presenter.check_out_formatted %></p>
           <p class="text-sm">Checked In: <%= presenter.checked_in_at_formatted %></p>
-          <p class="text-sm">Rooms: <%= presenter.rooms_summary.presence || "No rooms assigned" %></p>
+          <p class="text-sm">Rooms: <%= presenter.rooms_summary.join(", ").presence || "No rooms assigned" %></p>
           <div class="mt-2"><%= render "in_house_actions", booking:, presenter: %></div>
         </article>
       <% end %>

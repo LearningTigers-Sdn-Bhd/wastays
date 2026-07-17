@@ -2,23 +2,21 @@
 
 module HotelPortal
   module FrontDesk
-    class DeparturesQuery
-      DEPARTURE_STATUSES = %w[confirmed review_no_show checked_in checkout_required].freeze
-
+    class CheckoutQuery
       attr_reader :start_date, :end_date, :query
 
       def initialize(hotel:, params:)
         @hotel = hotel
-        @start_date = parse_date(params[:departure_start_date].presence || params[:start_date])
-        @end_date = parse_date(params[:departure_end_date].presence || params[:end_date].presence || @start_date)
+        @start_date = parse_date(params[:checkout_start_date].presence || params[:start_date])
+        @end_date = parse_date(params[:checkout_end_date].presence || params[:end_date].presence || @start_date)
         @start_date, @end_date = @end_date, @start_date if @end_date < @start_date
-        @query = params[:departure_query].to_s.strip
+        @query = params[:checkout_query].to_s.strip
       end
 
       def call
         scope = base_scope.includes(booking_rooms: :room_type, booking_folios: :folio_transactions).includes(:guests, :booking_guests)
         scope = apply_search(scope)
-        scope.order(:check_out, :created_at, :id)
+        scope.order(checked_out_at: :desc, created_at: :desc)
       end
 
       def total_count = base_scope.count
@@ -26,9 +24,8 @@ module HotelPortal
       private
 
       def base_scope
-        @hotel.bookings
-              .where(status: DEPARTURE_STATUSES)
-              .checking_out_between(start_date, end_date, @hotel.hotel_time_zone)
+        range = start_date.in_time_zone(@hotel.hotel_time_zone).beginning_of_day..end_date.in_time_zone(@hotel.hotel_time_zone).end_of_day
+        @hotel.bookings.completed.where(checked_out_at: range)
       end
 
       def parse_date(value)

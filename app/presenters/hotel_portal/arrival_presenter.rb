@@ -52,6 +52,11 @@ module HotelPortal
       (booking.deposit_status || "not_required").titleize
     end
 
+    def guarantee_attention_required?
+      (booking.guarantee_method.presence || "none") != "none" ||
+        (booking.deposit_status.presence || "not_required") != "not_required"
+    end
+
     def document_uploaded?
       booking.pre_checkin&.document_status == "uploaded"
     end
