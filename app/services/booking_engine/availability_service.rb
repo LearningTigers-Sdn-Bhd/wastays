@@ -641,7 +641,7 @@ module BookingEngine
     def room_type_rate_plan_for(room_type, rate_plan)
       @room_type_rate_plans_by_pair ||= {}
       @room_type_rate_plans_by_pair[[ room_type.id, rate_plan.id ]] ||=
-        room_type.room_type_rate_plans.find { |rtrp| rtrp.rate_plan_id == rate_plan.id }
+        room_type.room_type_rate_plans.includes(:rate_plan).find { |rtrp| rtrp.rate_plan_id == rate_plan.id }
     end
 
     def standard_rate_for(date, room_type)
