@@ -2,7 +2,8 @@
   <div class="border-b border-border px-6 py-5">
     <h2 class="text-lg font-bold text-foreground">Payment Details</h2>
     <% if @ar_payment_submission.present? %>
-      <p class="mt-1 text-xs font-semibold text-muted-foreground">These details come from the agent's submission and can't be edited here — reject the submission below if they're wrong.</p>
+      <% invoice_numbers = @ar_payment_submission.ar_invoices.map(&:formatted_invoice_number) %>
+      <p class="mt-1 text-xs font-semibold text-muted-foreground">These details come from a submitted payment slip, targeting <%= invoice_numbers.one? ? "invoice" : "invoices" %> <%= invoice_numbers.to_sentence %>, and can't be edited here — reject the submission below if they're wrong.</p>
     <% end %>
   </div>
   <div class="grid gap-4 p-6 sm:grid-cols-2">

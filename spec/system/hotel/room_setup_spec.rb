@@ -7,8 +7,6 @@ RSpec.describe 'Room Setup', type: :system do
   let(:role) { create(:role, account: account, slug: 'hotel_owner') }
 
   before do
-    driven_by(:rack_test)
-
     # Setup permissions and role
     Permission.find_or_create_by!(slug: 'manage_hotel_profile') { |p| p.name = 'Manage Hotel Profile' }
     RolePermission.find_or_create_by!(role: role, permission: Permission.find_by(slug: 'manage_hotel_profile'))
@@ -25,6 +23,7 @@ RSpec.describe 'Room Setup', type: :system do
     first(:link, 'Create Room Category').click
 
     fill_in 'Room Type Name', with: 'Deluxe Suite'
+    click_button 'Capacity & Rate'
     fill_in 'Max Adults', with: 2
     fill_in 'Max Children', with: 1
     fill_in 'Total Number of Rooms', with: 5

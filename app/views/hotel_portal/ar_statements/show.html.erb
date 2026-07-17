@@ -16,7 +16,7 @@
                 method: :get,
                 class: "rounded-xl border border-border bg-card p-4 shadow-sm",
                 data: { controller: "auto-submit", turbo_frame: "ar_statement_results", turbo_action: "advance" } do |form| %>
-    <div class="grid gap-3 sm:grid-cols-2">
+    <div class="grid gap-3 sm:grid-cols-3">
       <div>
         <%= form.label :start_date, "Start Date", class: "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground" %>
         <%= form.date_field :start_date, value: start_date, max: end_date, class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground", data: { action: "change->auto-submit#submitNow" } %>
@@ -25,6 +25,12 @@
         <%= form.label :end_date, "End Date", class: "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground" %>
         <%= form.date_field :end_date, value: end_date, min: start_date, max: (current_hotel.current_business_date || current_hotel.business_date_for(Time.current)), class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground", data: { action: "change->auto-submit#submitNow" } %>
       </div>
+      <% if @presenter.present? && @presenter.available_currencies.size > 1 %>
+        <div>
+          <%= form.label :currency, "Currency", class: "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground" %>
+          <%= form.select :currency, @presenter.available_currencies, { selected: @presenter.currency }, class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground", data: { action: "change->auto-submit#submitNow" } %>
+        </div>
+      <% end %>
     </div>
   <% end %>
 
