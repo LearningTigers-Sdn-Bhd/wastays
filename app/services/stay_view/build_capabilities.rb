@@ -31,6 +31,7 @@ module StayView
       Capabilities.new(
         view_board: view_bookings || manage_bookings || view_readiness,
         view_booking: view_bookings,
+        manage_bookings: manage_bookings,
         create_booking: manage_bookings,
         move_booking: manage_bookings,
         change_dates: manage_bookings,

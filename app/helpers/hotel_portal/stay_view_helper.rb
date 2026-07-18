@@ -15,6 +15,32 @@ module HotelPortal::StayViewHelper
     settled: :success,
     review: :warning
   }.freeze
+  # Translate authoritative lifecycle events into user-facing workflows. Undo
+  # also anchors Edit Check-In, while the late-checkout drawer owns both review outcomes.
+  LIFECYCLE_ACTIONS = {
+    "check_in" => [
+      { key: :check_in, label: "Check-in", icon: "log-in" }.freeze
+    ].freeze,
+    "cancel" => [
+      { key: :cancel, label: "Cancel", icon: "circle-x", variant: :danger }.freeze
+    ].freeze,
+    "backdated_check_in" => [
+      { key: :backdated_check_in, label: "Backdated Check-in", icon: "calendar-clock" }.freeze
+    ].freeze,
+    "mark_no_show" => [
+      { key: :mark_no_show, label: "Mark No-show", icon: "user-x" }.freeze
+    ].freeze,
+    "check_out" => [
+      { key: :check_out, label: "Check-out", icon: "log-out" }.freeze
+    ].freeze,
+    "undo_check_in" => [
+      { key: :edit_check_in, label: "Edit Check-In", icon: "pencil" }.freeze,
+      { key: :undo_check_in, label: "Undo Check-in", icon: "rotate-ccw", variant: :warning }.freeze
+    ].freeze,
+    "resolve_late_checkout" => [
+      { key: :late_checkout, label: "Review Late Checkout", icon: "clock", variant: :warning }.freeze
+    ].freeze
+  }.freeze
 
   def stay_view_path_for(state, overrides = {})
     hotel_stay_view_path(current_hotel, state.query(overrides))
@@ -95,17 +121,44 @@ module HotelPortal::StayViewHelper
     if segment.capabilities.change_dates?
       actions << { label: "Change dates", href: edit_hotel_stay_view_booking_dates_path(current_hotel, segment.booking_id, common), icon: "calendar-range" }
     end
-    if segment.capabilities.check_in? && segment.status.in?(%i[pending confirmed])
-      actions << { label: "Check in", href: hotel_booking_transaction_check_in_reservation_path(current_hotel, segment.booking_id, common), icon: "log-in" }
+    actions.concat(stay_view_lifecycle_booking_actions(segment, common))
+    actions.map { |action| action.merge(data: stay_view_action_data) }
+  end
+
+  def stay_view_lifecycle_booking_actions(segment, common)
+    return [] unless segment.capabilities.manage_bookings?
+    return [] unless segment.status.to_s.in?(Booking::OCCUPYING_STATUSES)
+
+    Bookings::StatusLifecycle::EVENTS.fetch(segment.status.to_s, {}).keys.flat_map do |event|
+      LIFECYCLE_ACTIONS.fetch(event, []).map do |presentation|
+        lifecycle_booking_action(presentation, segment, common)
+      end
     end
-    if segment.capabilities.check_out? && segment.status.in?(%i[checked_in review_due_out checkout_required])
-      actions << { label: "Check out", href: hotel_booking_transaction_check_out_path(current_hotel, segment.booking_id, common), icon: "log-out" }
+  end
+
+  def lifecycle_booking_action(presentation, segment, common)
+    key = presentation.fetch(:key)
+    label = segment.status == :checkout_required && key == :check_out ? "Complete Checkout" : presentation.fetch(:label)
+    href = case key
+    when :check_in, :edit_check_in
+      hotel_booking_transaction_check_in_reservation_path(current_hotel, segment.booking_id, common)
+    when :cancel
+      hotel_booking_transaction_cancel_booking_path(current_hotel, segment.booking_id, common)
+    when :backdated_check_in
+      hotel_booking_transaction_booking_backdated_check_in_path(current_hotel, segment.booking_id, common)
+    when :mark_no_show
+      hotel_booking_transaction_mark_no_show_path(current_hotel, segment.booking_id, common)
+    when :check_out
+      hotel_booking_transaction_check_out_path(current_hotel, segment.booking_id, common)
+    when :undo_check_in
+      hotel_booking_transaction_undo_check_in_path(current_hotel, segment.booking_id, common)
+    when :late_checkout
+      hotel_booking_transaction_late_checkout_path(current_hotel, segment.booking_id, common)
+    else
+      raise ArgumentError, "Unsupported Stay View lifecycle action: #{key}"
     end
-    if segment.capabilities.change_dates? && segment.status.in?(%i[pending confirmed])
-      actions << { label: "Mark no-show", href: hotel_booking_transaction_mark_no_show_path(current_hotel, segment.booking_id, common), icon: "user-x" }
-      actions << { label: "Cancel booking", href: hotel_booking_transaction_cancel_booking_path(current_hotel, segment.booking_id, common), icon: "circle-x", variant: :danger }
-    end
-    actions
+
+    presentation.except(:key).merge(label:, href:)
   end
 
   # Room-block operations only. Room status moves to the status badge dropdown

@@ -118,6 +118,22 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     end
   end
 
+  it "opens a lifecycle drawer from Room View with Stay View return state" do
+    return_to = hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
+    visit return_to
+
+    within("#stay_view_room_#{room_type.id}_101") do
+      find("button[aria-label='Actions for room 101']").click
+    end
+    click_link "Check-in"
+
+    within("#offcanvas_drawer") do
+      expect(page).to have_content("CONFIRM CHECK-IN")
+      expect(find("input[name='source']", visible: :all).value).to eq("stay_view")
+      expect(find("input[name='return_to']", visible: :all).value).to eq(return_to)
+    end
+  end
+
   it "opens the status guide and changes room status from the timeline badge menu" do
     create(:room_status, hotel:, room_type:, room_number: "102", status: "dirty")
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)

@@ -34,6 +34,7 @@ RSpec.describe StayView::BuildCapabilities do
 
     expect(capabilities).to be_view_board
     expect(capabilities).to be_view_booking
+    expect(capabilities).to be_manage_bookings
     expect(capabilities).to be_create_booking
     expect(capabilities).to be_move_booking
     expect(capabilities).to be_change_dates
@@ -57,6 +58,24 @@ RSpec.describe StayView::BuildCapabilities do
     expect(capabilities).not_to be_view_board
     expect(capabilities).not_to be_view_booking
     expect(capabilities).not_to be_view_financial_status
+  end
+
+  it "keeps lifecycle mutations aligned with the manage bookings permission" do
+    grant("manage_guest_arrival")
+
+    capabilities = described_class.call(user:, hotel:)
+
+    expect(capabilities).to be_check_in
+    expect(capabilities).to be_check_out
+    expect(capabilities).not_to be_manage_bookings
+  end
+
+  it "enables lifecycle mutations for booking managers" do
+    grant("manage_bookings")
+
+    capabilities = described_class.call(user:, hotel:)
+
+    expect(capabilities).to be_manage_bookings
   end
 
 

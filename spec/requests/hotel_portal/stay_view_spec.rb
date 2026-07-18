@@ -435,6 +435,52 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).not_to include("cell-actions-trigger")
     end
 
+    it "renders the lifecycle-derived Room View action matrix for projected bookings" do
+      booking = create(
+        :booking,
+        hotel:,
+        guest_name: "Lifecycle Guest",
+        check_in: Date.current - 1.day,
+        check_out: Date.current + 1.day
+      )
+      create(:booking_room, booking:, room_type:, room_number: "101")
+      lifecycle_labels = [
+        "Check-in", "Cancel", "Backdated Check-in", "Mark No-show", "Check-out",
+        "Edit Check-In", "Undo Check-in", "Review Late Checkout", "Complete Checkout"
+      ]
+      expected = {
+        "confirmed" => [ "Check-in", "Cancel" ],
+        "review_no_show" => [ "Backdated Check-in", "Mark No-show", "Cancel" ],
+        "checked_in" => [ "Check-out", "Edit Check-In", "Undo Check-in" ],
+        "review_due_out" => [ "Review Late Checkout" ],
+        "checkout_required" => [ "Complete Checkout" ],
+        "completed" => []
+      }
+
+      expected.each do |status, labels|
+        booking.update_column(:status, status)
+        get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+        document = Nokogiri::HTML(response.body)
+        menu = document.at_css("#stay_view_room_#{room_type.id}_101-actions-menu")
+        rendered = menu.css("a[role='menuitem']").map { |item| item.text.squish } & lifecycle_labels
+        expect(rendered).to eq(labels), "unexpected rendered actions for #{status}"
+      end
+    end
+
+    it "does not expose lifecycle actions when arrival access lacks manage bookings" do
+      role.role_permissions.joins(:permission).where(permissions: { slug: "manage_bookings" }).delete_all
+      booking = create(:booking, hotel:, status: "confirmed", check_in: Date.current, check_out: Date.current + 1.day)
+      create(:booking_room, booking:, room_type:, room_number: "101")
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+      document = Nokogiri::HTML(response.body)
+      menu = document.at_css("#stay_view_room_#{room_type.id}_101-actions-menu")
+      expect(menu.text).to include("Open booking")
+      expect(menu.text).not_to include("Check-in", "Cancel", "Mark No-show", "Check-out")
+    end
+
     it "rejects users without board access before loading the board" do
       role.role_permissions.delete_all
 
