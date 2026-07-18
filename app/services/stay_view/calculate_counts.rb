@@ -27,6 +27,18 @@ module StayView
       )
     end
 
+    # Single dominant operational status for one room on a date, using the same
+    # predicates as the legend counts so the two never drift. Dirty is a physical
+    # condition and is intentionally excluded here.
+    def self.operational_status(room, reference_date, operational_date)
+      return :blocked if blocked?(room, reference_date)
+      return :due_out if due_out?(room, reference_date, operational_date)
+      return :occupied if occupied?(room, reference_date)
+      return :reserved if reserved?(room, reference_date)
+
+      :vacant
+    end
+
     def self.count(rows, &block)
       rows.count(&block)
     end

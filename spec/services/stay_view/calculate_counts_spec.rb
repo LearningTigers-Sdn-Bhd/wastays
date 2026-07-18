@@ -87,6 +87,35 @@ RSpec.describe StayView::CalculateCounts do
     expect(counts.vacant).to eq(1)
   end
 
+  describe ".operational_status" do
+    it "collapses overlaps to a single dominant status by precedence" do
+      blocked = room_row(
+        room_number: "101",
+        booking_segments: [ booking_segment(id: 1, status: :checked_in, check_out: reference_date + 1.day) ],
+        operational_segments: [ operational_segment ]
+      )
+      due_out = room_row(
+        room_number: "102",
+        booking_segments: [ booking_segment(id: 2, status: :checkout_required, check_out: reference_date) ]
+      )
+      occupied = room_row(
+        room_number: "103",
+        booking_segments: [ booking_segment(id: 3, status: :checked_in, check_out: reference_date + 1.day) ]
+      )
+      reserved = room_row(
+        room_number: "104",
+        booking_segments: [ booking_segment(id: 4, status: :confirmed, check_out: reference_date + 1.day) ]
+      )
+      vacant = room_row(room_number: "105")
+
+      expect(described_class.operational_status(blocked, reference_date, reference_date)).to eq(:blocked)
+      expect(described_class.operational_status(due_out, reference_date, reference_date)).to eq(:due_out)
+      expect(described_class.operational_status(occupied, reference_date, reference_date)).to eq(:occupied)
+      expect(described_class.operational_status(reserved, reference_date, reference_date)).to eq(:reserved)
+      expect(described_class.operational_status(vacant, reference_date, reference_date)).to eq(:vacant)
+    end
+  end
+
   private
 
   def room_row(room_number:, physical_status: :ready, operational_flags: {}, booking_segments: [], operational_segments: [])

@@ -89,6 +89,36 @@ RSpec.describe StayView::ProjectBooking do
     expect(segment.group_name).to be_frozen
   end
 
+  it "projects a humanized booking source only with booking permission" do
+    booking = StayView::BookingRecord.new(
+      booking_room_id: 11, booking_id: 7, room_type_id: 3, room_number: "101",
+      status: :confirmed, guest_name: "Ada Lovelace",
+      check_in: Date.new(2026, 7, 16), check_out: Date.new(2026, 7, 18),
+      source: "walk_in"
+    )
+
+    permitted = described_class.call(booking:, room_type_name: "Deluxe", date_window: window, capabilities: capabilities.with(view_booking: true))
+    expect(permitted.source_label).to eq("Walk-in")
+    expect(permitted.accessible_label).to include("source Walk-in")
+
+    redacted = described_class.call(booking:, room_type_name: "Deluxe", date_window: window, capabilities:)
+    expect(redacted.source_label).to be_nil
+    expect(redacted.accessible_label).not_to include("Walk-in")
+  end
+
+  it "maps a channel booking source to a concise label" do
+    booking = StayView::BookingRecord.new(
+      booking_room_id: 11, booking_id: 7, room_type_id: 3, room_number: "101",
+      status: :confirmed, guest_name: "Ada Lovelace",
+      check_in: Date.new(2026, 7, 16), check_out: Date.new(2026, 7, 18),
+      source: "channel_manager"
+    )
+
+    segment = described_class.call(booking:, room_type_name: "Deluxe", date_window: window, capabilities: capabilities.with(view_booking: true))
+
+    expect(segment.source_label).to eq("Channel")
+  end
+
   it "projects immutable display-ready financial signals into accessible booking text" do
     booking = StayView::BookingRecord.new(
       booking_room_id: 11,

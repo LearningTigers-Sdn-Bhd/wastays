@@ -2,6 +2,8 @@
 
 module StayView
   class ProjectBooking
+    SOURCE_LABELS = { "walk_in" => "Walk-in", "channel_manager" => "Channel" }.freeze
+
     def self.call(booking:, room_type_name:, group_rooms: [], financial_signals: [], date_window:, capabilities:)
       financial_signals = [] unless capabilities.view_financial_status?
       tracks = date_window.booking_tracks(booking.check_in, booking.check_out)
@@ -10,11 +12,13 @@ module StayView
       booking_type = booking.group_booking_id.present? ? :group : :single
       group_reference = booking.group_reference if capabilities.view_booking?
       group_name = booking.group_name if capabilities.view_booking?
+      source_label = source_label_for(booking.source) if capabilities.view_booking?
       room_label = booking.room_number
       dates_label = "#{booking.check_in.to_fs(:long)} to #{booking.check_out.to_fs(:long)}"
       group_label = [ group_name, group_reference ].compact_blank.join(", ")
       accessible_parts = [ guest_label, booking.status.to_s.humanize, "room #{room_label}", room_type_name, dates_label ]
       accessible_parts << "group #{group_label}" if group_label.present?
+      accessible_parts << "source #{source_label}" if source_label.present?
       accessible_parts.concat(financial_signals.map(&:label))
 
       BookingSegment.new(
@@ -38,8 +42,15 @@ module StayView
         group_name:,
         group_position: booking.group_position,
         group_rooms: project_group_rooms(group_rooms, booking, capabilities),
-        financial_signals:
+        financial_signals:,
+        source_label:
       )
+    end
+
+    def self.source_label_for(source)
+      return if source.blank?
+
+      SOURCE_LABELS.fetch(source.to_s, source.to_s.humanize)
     end
 
     def self.project_group_rooms(group_rooms, booking, capabilities)
@@ -58,6 +69,6 @@ module StayView
       end
     end
 
-    private_class_method :project_group_rooms
+    private_class_method :project_group_rooms, :source_label_for
   end
 end

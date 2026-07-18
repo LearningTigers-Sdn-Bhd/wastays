@@ -47,9 +47,9 @@ module HotelPortal
           popover.with_trigger(**trigger_attributes) do
             safe_join([
               resize_handle(:start),
-              tag.span(segment_label, class: "min-w-0 flex-1 truncate"),
+              tag.span(segment_label, class: "min-w-0 truncate"),
               financial_attention,
-              tag.span(@segment.status.to_s.humanize, class: "shrink-0 text-xs font-medium"),
+              tag.span(@segment.status.to_s.humanize, class: "min-w-0 shrink-[3] truncate text-xs font-medium"),
               resize_handle(:end)
             ].compact)
           end
@@ -149,6 +149,7 @@ module HotelPortal
             [ "Status", @segment.status.to_s.humanize ],
             [ "Stay", "#{@segment.check_in.to_fs(:medium)} – #{@segment.check_out.to_fs(:medium)}" ]
           ]
+          rows << [ "Source", @segment.source_label ] if @segment.source_label.present?
           @segment.financial_signals.each { |signal| rows << [ "Financial", signal.label ] }
           rows << [ "Group", [ @segment.group_name, @segment.group_reference ].compact_blank.join(" · ") ] if @segment.group_reference.present?
           safe_join(rows.flat_map { |label, value| [ tag.dt(label, class: "text-muted-foreground"), tag.dd(value, class: "text-foreground") ] })

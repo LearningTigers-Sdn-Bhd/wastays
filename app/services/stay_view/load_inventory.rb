@@ -87,7 +87,7 @@ module StayView
       columns = [
         "booking_rooms.id", "bookings.id", "booking_rooms.room_type_id", "booking_rooms.room_number",
         "bookings.status", guest_column, primary_guest_column, "bookings.check_in", "bookings.check_out", "bookings.group_booking_id",
-        group_reference_column, group_name_column, "bookings.group_position"
+        group_reference_column, group_name_column, "bookings.group_position", "bookings.source"
       ]
 
       BookingRoom.joins(:booking)
@@ -97,7 +97,7 @@ module StayView
         .where("bookings.check_in < ? AND bookings.check_out >= ?", date_window.window_end_at, date_window.window_start_at)
         .pluck(*columns)
         .map do |booking_room_id, booking_id, room_type_id, room_number, status, guest_name, primary_guest_name, check_in, check_out,
-                 group_booking_id, group_reservation_number, group_name, group_position|
+                 group_booking_id, group_reservation_number, group_name, group_position, source|
           BookingRecord.new(
             booking_room_id: booking_room_id,
             booking_id: booking_id,
@@ -111,7 +111,8 @@ module StayView
             group_booking_id:,
             group_reference: group_reference(group_reservation_number),
             group_name:,
-            group_position:
+            group_position:,
+            source:
           )
         end
     end
