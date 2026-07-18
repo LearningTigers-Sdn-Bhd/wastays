@@ -68,7 +68,7 @@ module HotelPortal
     private
 
     def find_pending_submission
-      current_hotel.ar_payment_submissions.pending.includes(ar_payment_submission_allocations: { ar_invoice: { booking_folio: :booking } }).find_by(id: params[:ar_payment_submission_id])
+      current_hotel.ar_payment_submissions.pending.includes(ar_payment_submission_allocations: { ar_invoice: [ :hotel, { booking_folio: :booking } ] }).find_by(id: params[:ar_payment_submission_id])
     end
 
     def apply_submission_context
