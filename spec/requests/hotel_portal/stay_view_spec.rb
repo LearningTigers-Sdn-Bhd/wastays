@@ -62,6 +62,10 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).to include("Confirmed")
 
       document = Nokogiri::HTML(response.body)
+      global_actions = document.at_css("[data-slot='stay-view-global-actions']")
+      expect(global_actions.ancestors("#stay_view_toolbar")).to be_present
+      expect(global_actions.at_css("a[href^='#{hotel_booking_transaction_walk_in_check_in_path(hotel)}']").text.squish).to eq("Walk-in")
+      expect(global_actions.at_css("a[href^='#{hotel_booking_transaction_new_booking_path(hotel)}']").text.squish).to eq("Add booking")
       operational_counts = document.css("[data-slot='stay-view-operational-count']")
       expect(operational_counts.map { |badge| badge["data-state"] }).to eq(
         %w[all vacant occupied reserved blocked due_out dirty]
@@ -248,6 +252,21 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).not_to include("stay-view-timeline")
     end
 
+    it "groups Room View by room type by default and flattens it on request" do
+      create(:room_type, hotel:, name: "Suite", room_numbers: [ "201" ])
+      room_type
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+      grouped = Nokogiri::HTML(response.body)
+      expect(grouped.css("[data-testid='stay-view-room-cards'] section")).not_to be_empty
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current, group_by: "none")
+      flat = Nokogiri::HTML(response.body)
+      expect(flat.css("[data-testid='stay-view-room-cards'] section")).to be_empty
+      expect(flat.css("[data-testid='stay-view-room-cards'] article h3").map(&:text)).to contain_exactly("101", "102", "201")
+      expect(response.body).to include("Room 101", "Room 201")
+    end
+
     it "renders authorized financial attention in Timeline View and a full badge in Room View" do
       grant("view_financial_status")
       booking = create(:booking, hotel:, guest_name: "Financial Guest", check_in: Date.current, check_out: Date.current + 2.days)
@@ -385,7 +404,8 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to match(/<turbo-frame[^>]+id="stay_view_board"/)
-      expect(response.body).not_to include("Plan stays and manage room operations")
+      # Frame requests render the board partial without the portal layout chrome.
+      expect(response.body).not_to include("<html")
     end
 
     it "applies filters while retaining all room-type filter options" do
@@ -677,13 +697,16 @@ RSpec.describe "HotelPortal Stay View", type: :request do
     end
 
     it "renders assignment and status actions according to their independent permissions" do
+      assign_path = edit_hotel_stay_view_housekeeping_request_assignment_path(hotel, housekeeping_request)
+      status_path = edit_hotel_stay_view_housekeeping_request_status_path(hotel, housekeeping_request)
+
       manage_requests = Permission.find_by!(slug: "manage_requests")
       role.role_permissions.find_by!(permission: manage_requests).destroy!
 
       get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
 
-      expect(response.body).to include("Assign room tasks")
-      expect(response.body).not_to include("Update task status")
+      expect(response.body).to include(assign_path)
+      expect(response.body).not_to include(status_path)
 
       manage_housekeeping = Permission.find_by!(slug: "manage_housekeeping_tasks")
       role.role_permissions.find_by!(permission: manage_housekeeping).destroy!
@@ -691,8 +714,8 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
 
-      expect(response.body).not_to include("Assign room tasks")
-      expect(response.body).to include("Update task status")
+      expect(response.body).not_to include(assign_path)
+      expect(response.body).to include(status_path)
     end
 
     it "assigns room tasks through the authoritative service and selectively refreshes the room" do

@@ -21,8 +21,9 @@ module HotelPortal
         unknown: "circle-question-mark"
       }.freeze
 
-      def initialize(room:, actions: [], show_identity: true, show_amenities: true, class: nil, **attributes)
+      def initialize(room:, state: nil, actions: [], show_identity: true, show_amenities: true, class: nil, **attributes)
         @room = room
+        @state = state
         @actions = actions
         @show_identity = show_identity
         @show_amenities = show_amenities
@@ -53,8 +54,9 @@ module HotelPortal
       end
 
       def controls
-        tag.div(class: "flex shrink-0 items-center gap-1") do
-          safe_join([ amenity_badges, operational_indicators, status_popover, actions_menu ].compact)
+        width = @show_identity ? "shrink-0" : "w-full"
+        tag.div(class: tw_merge("flex min-w-0 flex-wrap items-center justify-end gap-1", width)) do
+          safe_join([ operational_indicators, status_control, amenity_badges, actions_menu ].compact)
         end
       end
 
@@ -65,13 +67,41 @@ module HotelPortal
         data = attributes.delete(:data) || attributes.delete("data") || {}
 
         attributes.merge(
-          class: tw_merge("flex h-full min-w-0 items-center px-3 py-1.5", @class, attributes.delete(:class)),
+          class: tw_merge("flex h-full min-w-0 items-center px-3 py-1", @class, attributes.delete(:class)),
           data: data.merge(slot: "stay-view-room-summary")
         )
       end
 
-      def status_popover
+      def status_control
         status = @room.current_physical_status || :unknown
+        items = @state ? helpers.stay_view_status_menu_actions(@room, @state) : []
+
+        items.any? ? status_menu(status, items) : status_popover(status)
+      end
+
+      def status_menu(status, items)
+        label = status.to_s.humanize
+        render PanelsUI::DropdownMenu.new(
+          id: "#{@room.dom_id}-status",
+          placement: :bottom_end,
+          class: "max-h-64 w-52 overflow-y-auto"
+        ) do |menu|
+          menu.with_trigger(variant: :ghost, size: :icon_xs, aria_label: "Room status: #{label} — change") do
+            status_badge(status)
+          end
+          items.each do |item|
+            menu.with_item(href: item.fetch(:href), data: item.fetch(:data, {})) do
+              safe_join([
+                helpers.app_icon(STATUS_ICONS.fetch(item.fetch(:value).to_sym, STATUS_ICONS[:unknown]), class: "size-4", aria: { hidden: true }),
+                tag.span(item.fetch(:label)),
+                (tag.span("Current", class: "ml-auto text-xs text-muted-foreground") if item[:current])
+              ].compact)
+            end
+          end
+        end
+      end
+
+      def status_popover(status)
         label = status.to_s.humanize
 
         render PanelsUI::Popover.new(
@@ -86,14 +116,7 @@ module HotelPortal
             aria_label: "Room status: #{label}",
             class: "inline-flex rounded-full"
           ) do
-            render PanelsUI::Badge.new(
-              variant: STATUS_VARIANTS.fetch(status, :neutral),
-              size: :sm,
-              shape: :rounded,
-              aria: { hidden: true }
-            ) do
-              helpers.app_icon(STATUS_ICONS.fetch(status, STATUS_ICONS[:unknown]), class: "size-3", aria: { hidden: true })
-            end
+            status_badge(status)
           end
           tag.div(class: "text-left") do
             safe_join([
@@ -104,27 +127,33 @@ module HotelPortal
         end
       end
 
-      def operational_indicators
-        render OperationalIndicators.new(room: @room)
+      def status_badge(status)
+        render PanelsUI::Badge.new(
+          variant: STATUS_VARIANTS.fetch(status, :neutral),
+          size: :sm,
+          shape: :circular,
+          aria: { hidden: true }
+        ) do
+          helpers.app_icon(STATUS_ICONS.fetch(status, STATUS_ICONS[:unknown]), class: "size-3", aria: { hidden: true })
+        end
       end
 
+      def operational_indicators
+        render OperationalIndicators.new(room: @room, state: @state)
+      end
+
+      # Restriction-only amenities: flag the rooms that do not allow smoking or
+      # pets and stay quiet when they are permitted.
       def amenity_badges
         return unless @show_amenities
 
-        tag.div(class: "flex min-w-0 items-center gap-1", aria: { label: "Room amenities" }) do
-          safe_join([
-            amenity_badge(
-              label: @room.smoking_allowed ? "Smoking" : "No smoking",
-              icon: @room.smoking_allowed ? "cigarette" : "cigarette-off",
-              key: :smoking
-            ),
-            amenity_badge(
-              label: @room.pets_allowed ? "Pets" : "No pets",
-              icon: @room.pets_allowed ? "paw-print" : "ban",
-              key: :pets
-            )
-          ])
-        end
+        badges = [
+          (amenity_badge(label: "No smoking", icon: "cigarette-off", key: :smoking) unless @room.smoking_allowed),
+          (amenity_badge(label: "No pets", icon: "ban", key: :pets) unless @room.pets_allowed)
+        ].compact
+        return if badges.empty?
+
+        tag.div(safe_join(badges), class: "flex min-w-0 items-center gap-1", aria: { label: "Room amenities" })
       end
 
       def amenity_badge(label:, icon:, key:)
@@ -132,7 +161,7 @@ module HotelPortal
           render PanelsUI::Badge.new(
             variant: :outline,
             size: :sm,
-            shape: :rounded,
+            shape: :circular,
             class: "shrink-0",
             role: "img",
             tabindex: 0,
@@ -146,7 +175,7 @@ module HotelPortal
       def actions_menu
         return if @actions.empty?
 
-        render PanelsUI::DropdownMenu.new(id: "#{@room.dom_id}-actions", placement: :bottom_end) do |menu|
+        render PanelsUI::DropdownMenu.new(id: "#{@room.dom_id}-actions", placement: :bottom_end, class: "max-h-80 overflow-y-auto") do |menu|
           menu.with_trigger(variant: :ghost, size: :icon_xs, aria_label: "Actions for room #{@room.room_number}") do
             helpers.app_icon("ellipsis-vertical", class: "size-4", aria: { hidden: true })
           end

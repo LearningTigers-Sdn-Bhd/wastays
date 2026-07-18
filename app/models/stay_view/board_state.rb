@@ -3,8 +3,10 @@
 module StayView
   class BoardState
     FILTER_KEYS = %i[room_type_id booking_status occupancy physical_status].freeze
+    GROUPINGS = %w[room_type none].freeze
+    DEFAULT_GROUPING = "room_type"
 
-    attr_reader :date_window, :filters
+    attr_reader :date_window, :filters, :room_grouping
 
     def initialize(hotel:, params:, now: Time.current)
       source = params.to_h.with_indifferent_access
@@ -13,11 +15,13 @@ module StayView
 
       @date_window = DateWindow.new(hotel:, start_date:, days: source[:days], view_mode:, now:)
       @filters = FilterState.build(source.slice(*FILTER_KEYS))
+      @room_grouping = source[:group_by].to_s.presence_in(GROUPINGS) || DEFAULT_GROUPING
       freeze
     end
 
     def view_mode = date_window.view_mode
     def density = :compact
+    def grouped_rooms? = room_grouping == "room_type"
 
     def build_options
       {
@@ -41,7 +45,7 @@ module StayView
 
     def base_query
       dates = if view_mode == :rooms
-        { view: :rooms, date: date_window.start_date }
+        { view: :rooms, date: date_window.start_date, group_by: room_grouping }
       else
         { view: :timeline, start_date: date_window.start_date, days: date_window.days }
       end
@@ -54,6 +58,8 @@ module StayView
       normalized = values.slice(*FILTER_KEYS).compact
 
       if view == :rooms
+        grouping = values[:group_by].to_s.presence_in(GROUPINGS)
+        normalized[:group_by] = grouping if grouping && grouping != DEFAULT_GROUPING
         normalized.merge(view:, date: values[:date].presence || values[:start_date].presence || date_window.start_date)
       else
         normalized.merge(

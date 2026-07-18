@@ -21,6 +21,25 @@ RSpec.describe StayView::BoardState do
     expect(state.query).not_to have_key(:density)
   end
 
+  it "tracks room grouping as URL state, defaulting to room type" do
+    default = described_class.new(hotel:, params: { view: "rooms", date: "2026-07-16" })
+    expect(default).to have_attributes(room_grouping: "room_type", grouped_rooms?: true)
+    expect(default.query).not_to have_key(:group_by)
+
+    ungrouped = described_class.new(hotel:, params: { view: "rooms", date: "2026-07-16", group_by: "none" })
+    expect(ungrouped).to have_attributes(room_grouping: "none", grouped_rooms?: false)
+    expect(ungrouped.query).to include(view: :rooms, group_by: "none")
+
+    invalid = described_class.new(hotel:, params: { view: "rooms", date: "2026-07-16", group_by: "sideways" })
+    expect(invalid.room_grouping).to eq("room_type")
+  end
+
+  it "ignores room grouping outside Room View" do
+    state = described_class.new(hotel:, params: { view: "timeline", start_date: "2026-07-16", group_by: "none" })
+
+    expect(state.query).not_to have_key(:group_by)
+  end
+
   it "uses the room date and safe defaults for invalid state" do
     state = described_class.new(hotel:, params: { view: "rooms", date: "bad", days: 30, density: "large" })
 

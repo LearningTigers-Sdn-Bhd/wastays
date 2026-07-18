@@ -108,91 +108,112 @@ module HotelPortal::StayViewHelper
     actions
   end
 
+  # Room-block operations only. Room status moves to the status badge dropdown
+  # and housekeeping to the per-task actions in the housekeeping popover.
   def stay_view_room_actions(room, state)
+    return [] unless room.capabilities.manage_room_blocks?
+
     return_to = state.return_path(current_hotel)
-    actions = []
-    if room.capabilities.manage_room_status?
+    actions = [ {
+      label: "Block room",
+      href: new_hotel_stay_view_room_block_path(
+        current_hotel,
+        room_type_id: room.room_type_id,
+        room_number: room.room_number,
+        start_date: state.date_window.start_date,
+        return_to:
+      ),
+      icon: "wrench"
+    } ]
+    room.operational_segments.each do |segment|
       actions << {
-        label: "Change room status",
-        href: hotel_stay_view_room_status_path(current_hotel, room.room_type_id, room.room_number, return_to:),
-        icon: "sparkles"
+        label: "Edit #{segment.label.downcase}",
+        href: edit_hotel_stay_view_room_block_path(current_hotel, segment.room_block_id, return_to:),
+        icon: "square-pen"
       }
-    end
-    if room.capabilities.manage_room_blocks?
-      actions << {
-        label: "Block room",
-        href: new_hotel_stay_view_room_block_path(
-          current_hotel,
-          room_type_id: room.room_type_id,
-          room_number: room.room_number,
-          start_date: state.date_window.start_date,
-          return_to:
-        ),
-        icon: "wrench"
-      }
-      room.operational_segments.each do |segment|
-        actions << {
-          label: "Edit #{segment.label.downcase}",
-          href: edit_hotel_stay_view_room_block_path(current_hotel, segment.room_block_id, return_to:),
-          icon: "square-pen"
-        }
-      end
-    end
-    if room.housekeeping_alerts.any? && room.capabilities.manage_housekeeping?
-      actions << {
-        label: "Assign room tasks",
-        href: edit_hotel_stay_view_housekeeping_request_assignment_path(
-          current_hotel,
-          room.housekeeping_alerts.first.request_id,
-          return_to:
-        ),
-        icon: "user-round-check"
-      }
-    end
-    if room.capabilities.update_housekeeping_status?
-      room.housekeeping_alerts.each do |alert|
-        actions << {
-          label: "Update task status — #{truncate(alert.details, length: 36)}",
-          href: edit_hotel_stay_view_housekeeping_request_status_path(current_hotel, alert.request_id, return_to:),
-          icon: "clipboard-list"
-        }
-      end
     end
     actions
   end
 
-  def stay_view_room_menu_actions(room, state)
-    booking_actions = room.booking_segments.flat_map do |segment|
-      stay_view_booking_actions(segment, state).map do |action|
-        action.merge(label: "#{action[:label]} — #{segment.guest_label}")
-      end
-    end
-    (booking_actions + stay_view_room_actions(room, state)).map do |action|
-      action.merge(data: stay_view_action_data)
+  # Status quick-pick items for the room-status badge dropdown. Each opens the
+  # room-status sheet preselected to that status so it can be settled.
+  def stay_view_status_menu_actions(room, state)
+    return [] unless room.capabilities.manage_room_status?
+
+    return_to = state.return_path(current_hotel)
+    (RoomStatus::STATUSES - [ "late_checkout_detected" ]).map do |status|
+      {
+        label: status.humanize,
+        value: status,
+        current: status.to_sym == room.current_physical_status,
+        href: hotel_stay_view_room_status_path(current_hotel, room.room_type_id, room.room_number, status:, return_to:),
+        data: stay_view_action_data
+      }
     end
   end
 
-  def stay_view_timeline_menu_actions(room, state)
-    booking_entries = room.booking_segments.filter_map do |segment|
-      actions = stay_view_booking_actions(segment, state)
-      next if actions.empty?
-
-      {
-        label: timeline_booking_menu_label(segment, room.booking_segments),
-        id: "#{room.dom_id}-booking-#{segment.booking_id}-actions",
-        children: actions.map { |action| action.merge(data: stay_view_action_data) }
-      }
-    end
-
+  # Per-task actions surfaced inside the housekeeping popover.
+  def stay_view_housekeeping_task_actions(alert, room, state)
+    return_to = state.return_path(current_hotel)
     actions = []
-    if booking_entries.any?
+    if room.capabilities.update_housekeeping_status?
       actions << {
-        label: "Booking",
-        id: "#{room.dom_id}-booking-actions",
-        children: booking_entries
+        label: "Update status",
+        href: edit_hotel_stay_view_housekeeping_request_status_path(current_hotel, alert.request_id, return_to:),
+        icon: "clipboard-list"
       }
     end
-    actions.concat(stay_view_room_actions(room, state).map { |action| action.merge(data: stay_view_action_data) })
+    if room.capabilities.manage_housekeeping?
+      actions << {
+        label: "Assign",
+        href: edit_hotel_stay_view_housekeeping_request_assignment_path(current_hotel, alert.request_id, return_to:),
+        icon: "user-round-check"
+      }
+    end
+    actions.map { |action| action.merge(data: stay_view_action_data) }
+  end
+
+  def stay_view_room_menu_actions(room, state)
+    # The Room View card has one menu per room, so a single stay needs no guest
+    # suffix. Only disambiguate when a turnover puts more than one stay in a room.
+    disambiguate = room.booking_segments.size > 1
+    booking_actions = room.booking_segments.flat_map do |segment|
+      stay_view_booking_actions(segment, state).map do |action|
+        label = disambiguate ? "#{action[:label]} — #{segment.guest_label}" : action[:label]
+        action.merge(label:)
+      end
+    end
+    actions = stay_view_add_booking_action(room, state) + booking_actions + stay_view_room_actions(room, state)
+    actions.map { |action| action.merge(data: stay_view_action_data) }
+  end
+
+  # Available-room "Add booking" entry for the Room View card menu. Mirrors the
+  # availability rule the card uses (single available occupancy, no active block).
+  def stay_view_add_booking_action(room, state)
+    cell = room.day_cells.first
+    available = cell && cell.occupancies.one? && cell.occupancies.first.state == :available
+    return [] unless room.capabilities.create_booking? && available && room.operational_segments.empty?
+
+    [ {
+      label: "Add booking",
+      icon: "plus",
+      href: hotel_booking_transaction_new_booking_path(
+        current_hotel,
+        check_in: cell.date,
+        check_out: cell.date + 1.day,
+        room_type_id: room.room_type_id,
+        room_number: room.room_number,
+        return_to: state.return_path(current_hotel)
+      )
+    } ]
+  end
+
+  def stay_view_room_operational_status(room, state)
+    ::StayView::CalculateCounts.operational_status(
+      room,
+      state.date_window.start_date,
+      state.date_window.operational_date
+    )
   end
 
   def stay_view_occupancy_label(occupancy)
@@ -205,13 +226,5 @@ module HotelPortal::StayViewHelper
 
   def stay_view_date_label(date)
     l(date, format: "%a %-d %b")
-  end
-
-  private
-
-  def timeline_booking_menu_label(segment, segments)
-    return segment.guest_label if segments.count { |candidate| candidate.guest_label == segment.guest_label } == 1
-
-    "#{segment.guest_label} · #{segment.check_in.to_fs(:medium)}–#{segment.check_out.to_fs(:medium)}"
   end
 end

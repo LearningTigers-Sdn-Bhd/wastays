@@ -25,6 +25,16 @@ module HotelPortal
 
         @room_status = current_hotel.room_statuses.find_or_initialize_by(room_type: @room_type, room_number: @room_number)
         @room_status.status ||= "ready"
+        preselect_status
+      end
+
+      # The status badge dropdown opens this sheet preselected to the picked
+      # status so it only needs to be settled, not re-chosen.
+      def preselect_status
+        requested = params[:status].to_s
+        return unless RoomStatus::STATUSES.include?(requested)
+
+        @room_status.status = requested
       end
 
       def status_params

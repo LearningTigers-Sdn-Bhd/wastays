@@ -268,7 +268,7 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
 
     expect(page).to have_css("[data-slot='stay-view-room-summary'][data-room='101']", text: "101")
     expect(page).to have_no_css("[data-slot='stay-view-room-summary']", text: room.room_type_name)
-    expect(page).to have_css("button[aria-label='Room status: Inspection failed'] .panel-badge-rounded[data-variant='destructive']")
+    expect(page).to have_css("button[aria-label='Room status: Inspection failed'] .panel-badge-circular[data-variant='destructive']")
     expect(page).to have_css("##{room.dom_id}-status[data-action*='mouseenter->panels-ui--popover#show']")
     expect(page).to have_css("##{room.dom_id}-status[data-action*='focusin->panels-ui--popover#show']")
     expect(page).to have_css("##{room.dom_id}-status-panel", text: "Inspection failed", visible: :all)
@@ -318,6 +318,13 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page.find("#stay-view-booking-1-trigger")).to have_text("Checked in")
     expect(page).to have_css("#stay-view-booking-1[data-action*='mouseenter->panels-ui--popover#show']")
     expect(page).to have_css("#stay-view-booking-1-panel", text: "Single booking", visible: :all)
+  end
+
+  it "shows the booking source in the popover when present" do
+    render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment.with(source_label: "Walk-in")))
+
+    expect(page).to have_css("#stay-view-booking-1-panel dt", text: "Source", visible: :all)
+    expect(page).to have_css("#stay-view-booking-1-panel dd", text: "Walk-in", visible: :all)
   end
 
   it "renders financial attention on the bar and full details in the popover" do
@@ -451,8 +458,8 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_no_link
   end
 
-  it "renders room identity with icon-only amenity tooltips" do
-    restricted_room = room.with(pets_allowed: false)
+  it "flags smoking and pet restrictions as icon-only circular badges" do
+    restricted_room = room.with(smoking_allowed: false, pets_allowed: false)
     render_inline(HotelPortal::StayView::RoomSummary.new(
       room: restricted_room,
       actions: [ { href: "/rooms/101", icon: "sparkles", label: "Change status" } ]
@@ -461,12 +468,19 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_css("[data-slot='stay-view-room-summary']", text: "101")
     expect(page).to have_no_css("[data-slot='stay-view-room-summary']", text: room.room_type_name)
     expect(page).to have_css("[data-slot='stay-view-room-summary'] > .w-full.justify-between")
-    expect(page).to have_css(".panel-badge-rounded[role='img'][aria-label='No smoking'][tabindex='0']")
-    expect(page).to have_css(".panel-badge-rounded[role='img'][aria-label='No pets'][tabindex='0']")
+    expect(page).to have_css(".panel-badge-circular[role='img'][aria-label='No smoking'][tabindex='0']")
+    expect(page).to have_css(".panel-badge-circular[role='img'][aria-label='No pets'][tabindex='0']")
     expect(page).to have_css("##{room.dom_id}-smoking-tooltip[role='tooltip']", text: "No smoking", visible: :all)
     expect(page).to have_css("##{room.dom_id}-pets-tooltip[role='tooltip']", text: "No pets", visible: :all)
-    expect(page).to have_css(".panel-badge-rounded svg[aria-hidden='true']", count: 3)
     expect(page).to have_css("##{room.dom_id}-actions-trigger svg", count: 1)
+  end
+
+  it "hides amenity badges when smoking and pets are both permitted" do
+    permissive_room = room.with(smoking_allowed: true, pets_allowed: true)
+    render_inline(HotelPortal::StayView::RoomSummary.new(room: permissive_room))
+
+    expect(page).to have_no_css("[aria-label='Room amenities']")
+    expect(page).to have_no_css(".panel-badge-circular[role='img']")
   end
 
   it "renders recursive booking actions separately from root room actions" do
@@ -498,6 +512,67 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_css("#room-101-bookings[aria-label='Booking'] #room-101-booking-1[aria-label='Jack']", visible: :all)
     expect(page).to have_css("#room-101-booking-1 a[data-turbo-frame='offcanvas_drawer']", text: "Move or reassign", visible: :all)
     expect(page).to have_css("##{room.dom_id}-actions-menu > a", text: "Change room status", visible: :all)
+  end
+
+  it "renders a plain operational-status badge for non-collapsed states" do
+    render_inline(HotelPortal::StayView::OperationalStatusBadge.new(
+      room:,
+      status: :occupied,
+      reference_date: Date.new(2026, 7, 18)
+    ))
+
+    expect(page).to have_css("[data-slot='stay-view-operational-status'][data-status='occupied']", text: "Occupied")
+    expect(page).to have_no_css("[id$='-operational-status-panel']")
+  end
+
+  it "reveals the maintenance block behind a collapsed Blocked badge" do
+    render_inline(HotelPortal::StayView::OperationalStatusBadge.new(
+      room:,
+      status: :blocked,
+      reference_date: Date.new(2026, 7, 18)
+    ))
+
+    expect(page).to have_css("button[aria-label='Room status: Blocked — Air-conditioning maintenance']")
+    expect(page).to have_css("##{room.dom_id}-operational-status-panel", text: "Air-conditioning maintenance", visible: :all)
+  end
+
+  it "reveals the occupied stay behind a collapsed Due out badge" do
+    departing = booking_segment.with(status: :review_due_out, check_out: Date.new(2026, 7, 18))
+    arriving = booking_segment.with(
+      dom_id: "stay-view-booking-2",
+      booking_id: 2,
+      booking_room_id: 12,
+      guest_label: "Arriving Guest",
+      status: :confirmed,
+      check_in: Date.new(2026, 7, 18),
+      check_out: Date.new(2026, 7, 20)
+    )
+    turnover_room = room.with(booking_segments: [ departing, arriving ])
+    render_inline(HotelPortal::StayView::OperationalStatusBadge.new(
+      room: turnover_room,
+      status: :due_out,
+      reference_date: Date.new(2026, 7, 18)
+    ))
+
+    expect(page).to have_css("[data-status='due_out']", text: "Due out")
+    expect(page).to have_css("##{room.dom_id}-operational-status-trigger[aria-label*='#{booking_segment.guest_label}']")
+    expect(page).to have_css("##{room.dom_id}-operational-status-panel", text: "Occupied stay checking out", visible: :all)
+    expect(page).to have_css("##{room.dom_id}-operational-status-panel", text: booking_segment.guest_label, visible: :all)
+    expect(page).to have_no_css("##{room.dom_id}-operational-status-trigger[aria-label*='Arriving Guest']")
+    expect(page).to have_no_css("##{room.dom_id}-operational-status-panel", text: "Arriving Guest", visible: :all)
+  end
+
+  it "describes a late checkout without attributing it to an unrelated booking" do
+    late_checkout_room = room.with(operational_flags: { late_checkout: true })
+    render_inline(HotelPortal::StayView::OperationalStatusBadge.new(
+      room: late_checkout_room,
+      status: :due_out,
+      reference_date: Date.new(2026, 7, 18)
+    ))
+
+    expect(page).to have_css("##{room.dom_id}-operational-status-trigger[aria-label='Room status: Due out — Late checkout detected']")
+    expect(page).to have_css("##{room.dom_id}-operational-status-panel", text: "Late checkout detected", visible: :all)
+    expect(page).to have_no_css("##{room.dom_id}-operational-status-panel", text: booking_segment.guest_label, visible: :all)
   end
 
   it "rejects objects outside the Phase 1 projection contract" do

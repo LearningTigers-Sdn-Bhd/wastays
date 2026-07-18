@@ -9,8 +9,9 @@ module HotelPortal
         housekeeping: { label: "Housekeeping request", icon: "brush-cleaning", variant: :info }.freeze
       }.freeze
 
-      def initialize(room:, class: nil, **attributes)
+      def initialize(room:, state: nil, class: nil, **attributes)
         @room = room
+        @state = state
         @class = binding.local_variable_get(:class)
         @attributes = attributes
       end
@@ -39,9 +40,9 @@ module HotelPortal
 
       def indicators
         @indicators ||= [
-          (flag_badge(:dnd) if @room.operational_flags[:dnd]),
+          housekeeping_popover,
           (flag_badge(:priority) if @room.operational_flags[:priority]),
-          housekeeping_popover
+          (flag_badge(:dnd) if @room.operational_flags[:dnd])
         ].compact
       end
 
@@ -51,7 +52,7 @@ module HotelPortal
           render PanelsUI::Badge.new(
             variant: presentation.fetch(:variant),
             size: :sm,
-            shape: :rounded,
+            shape: :circular,
             role: "img",
             tabindex: 0,
             aria: { label: presentation.fetch(:label) }
@@ -119,7 +120,28 @@ module HotelPortal
               alert.requested_at.to_fs(:short),
               datetime: alert.requested_at.iso8601,
               class: "mt-1 block text-xs text-muted-foreground"
-            )
+            ),
+            housekeeping_item_actions(alert)
+          ].compact)
+        end
+      end
+
+      def housekeeping_item_actions(alert)
+        return unless @state
+
+        actions = helpers.stay_view_housekeeping_task_actions(alert, @room, @state)
+        return if actions.empty?
+
+        tag.div(class: "mt-2 flex flex-wrap gap-1.5") do
+          safe_join(actions.map { |action| housekeeping_item_action(action) })
+        end
+      end
+
+      def housekeeping_item_action(action)
+        render PanelsUI::Button.new(href: action.fetch(:href), variant: :secondary, size: :xs, data: action.fetch(:data, {})) do
+          safe_join([
+            helpers.app_icon(action.fetch(:icon), class: "size-3.5", aria: { hidden: true }),
+            tag.span(action.fetch(:label))
           ])
         end
       end

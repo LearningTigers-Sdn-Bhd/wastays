@@ -30,7 +30,7 @@ module HotelPortal
           }
         )
         row.with_summary do
-          render RoomSummary.new(room: @room, actions: helpers.stay_view_timeline_menu_actions(@room, @state))
+          render RoomSummary.new(room: @room, state: @state)
         end
         add_cells(row)
         add_booking_segments(row)

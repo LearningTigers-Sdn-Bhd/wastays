@@ -118,7 +118,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     end
   end
 
-  it "opens the status guide by click and room status details by hover, focus, and tap" do
+  it "opens the status guide and changes room status from the timeline badge menu" do
     create(:room_status, hotel:, room_type:, room_number: "102", status: "dirty")
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
 
@@ -130,14 +130,17 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     find("button[aria-label='Stay View status guide']").click
 
     status_trigger = find("#stay_view_room_#{room_type.id}_102-status-trigger")
-    status_trigger.hover
-    expect(page).to have_css("#stay_view_room_#{room_type.id}_102-status-panel", text: "Dirty", visible: :visible)
-
-    page.execute_script("document.getElementById('stay_view_room_#{room_type.id}_102-status-trigger').focus()")
-    expect(page).to have_css("#stay_view_room_#{room_type.id}_102-status-panel", text: "Dirty", visible: :visible)
-
+    expect(status_trigger[:"aria-label"]).to eq("Room status: Dirty — change")
     status_trigger.click
-    expect(page).to have_css("#stay_view_room_#{room_type.id}_102-status-panel", text: "Dirty", visible: :visible)
+    within("#stay_view_room_#{room_type.id}_102-status-menu") do
+      click_link "Ready"
+    end
+
+    within("#offcanvas_drawer") do
+      expect(page).to have_content("Change room status")
+      expect(page).to have_content("Room 102")
+      expect(find("#room_status_status", visible: :all).value).to eq("ready")
+    end
   end
 
   it "shows authorized projected financial signals in Timeline and Room views" do
@@ -195,15 +198,15 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     visit hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
 
+    housekeeping_panel = "#stay_view_room_#{room_type.id}_101-housekeeping-panel"
     within("#stay_view_room_#{room_type.id}_101") do
       expect(page).to have_css("[role='img'][aria-label='Do not disturb']")
       expect(page).to have_css("[role='img'][aria-label='Cleaning priority']")
       find("button[aria-label='1 active housekeeping request']").click
-      expect(page).to have_css("#stay_view_room_#{room_type.id}_101-housekeeping-panel", text: "Fresh towels", visible: :visible)
     end
+    expect(page).to have_css(housekeeping_panel, text: "Fresh towels", visible: :visible)
 
-    find("button[aria-label='Actions for room 101']").click
-    click_link "Assign room tasks"
+    within(housekeeping_panel) { click_link "Assign" }
     within("#offcanvas_drawer") do
       expect(page).to have_content("updates all active housekeeping requests")
       find("#assignment_assigned_to-trigger").click
@@ -212,8 +215,10 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     end
     expect(housekeeping_request.reload.metadata).to include("assigned_to_name" => "Sam Lee")
 
-    find("button[aria-label='Actions for room 101']").click
-    click_link "Update task status — Fresh towels"
+    within("#stay_view_room_#{room_type.id}_101") do
+      find("button[aria-label='1 active housekeeping request']").click
+    end
+    within(housekeeping_panel) { click_link "Update status" }
     within("#offcanvas_drawer") do
       find("#housekeeping_request_status-trigger").click
       find("[role='option']", text: "Completed").click
@@ -225,37 +230,22 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(hotel.room_statuses.find_by(room_type:, room_number: "101").status).to eq("ready")
   end
 
-  it "nests Timeline booking actions by guest and opens the selected action sheet" do
-    duplicate = create(
-      :booking,
-      hotel:,
-      guest_name: booking.guest_name,
-      check_in: Date.current + 3.days,
-      check_out: Date.current + 4.days
-    )
-    create(:booking_room, booking: duplicate, room_type:, room_number: "101")
-
+  it "routes Timeline booking actions to the booking show off-canvas and drops the row menu" do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
 
-    find("button[aria-label='Actions for room 101']").click
-    click_button "Booking"
-    expect(page).to have_button("Ada Lovelace · 2026-07-16–2026-07-18")
-    expect(page).to have_button("Ada Lovelace · 2026-07-19–2026-07-20")
-    click_button "Ada Lovelace · 2026-07-16–2026-07-18"
-    click_link "Move or reassign"
-
-    within("#offcanvas_drawer") do
-      expect(page).to have_content("Move or reassign stay")
-      expect(page).to have_content("Ada Lovelace")
-    end
+    bar = find("#stay_view_booking_room_#{booking.booking_rooms.sole.id} a")
+    expect(bar[:"data-turbo-frame"]).to eq("offcanvas_drawer")
+    expect(URI.parse(bar[:href]).path).to eq(hotel_booking_transaction_show_booking_path(hotel, booking))
+    expect(page).to have_no_button("Actions for room 101")
   end
 
   it "moves a stay without dragging and refreshes the Room View board" do
     visit hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
 
     within("#stay_view_room_#{room_type.id}_101") do
-      click_link "Move or reassign"
+      find("button[aria-label='Actions for room 101']").click
     end
+    click_link "Move or reassign"
 
     within("#offcanvas_drawer") do
       expect(page).to have_content("Move or reassign stay")
