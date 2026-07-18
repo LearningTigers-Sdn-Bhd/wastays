@@ -21,8 +21,45 @@ RSpec.describe PanelsUI::Card, type: :component do
     expect(root["data-interactive"]).to eq("static")
     expect(root["data-dividers"]).to eq("automatic")
     expect(page).to have_css(".panel-card__sections > header + .panel-card__content + footer")
-    expect(page).to have_css(".panel-card__header-row > .panel-card__heading > .panel-card__title + .panel-card__description")
+    expect(page).to have_css(".panel-card__header-row > .panel-card__heading[data-heading='stacked'] > .panel-card__title + .panel-card__description")
     expect(page).to have_css("footer[data-align='between']", text: "Footer actions")
+  end
+
+  it "lays the heading title and description out inline when requested" do
+    render_card do |card|
+      card.with_header(title: "Room 101", description: "Garden Prestige Suite", orientation: :inline)
+    end
+
+    expect(page).to have_css(".panel-card__heading[data-heading='inline'] > .panel-card__title + .panel-card__description")
+  end
+
+  it "anchors an actions-only header to the end" do
+    render_card do |card|
+      card.with_header do |header|
+        header.with_actions { "Menu" }
+      end
+    end
+
+    expect(page).to have_css(".panel-card__header-row.justify-end > .panel-card__actions[data-actions='fixed']", text: "Menu")
+    expect(page).to have_no_css(".panel-card__heading")
+  end
+
+  it "lets a dense header wrap its actions when requested" do
+    render_card do |card|
+      card.with_header(actions_layout: :wrap) do |header|
+        header.with_actions { "Menu" }
+      end
+    end
+
+    expect(page).to have_css(".panel-card__actions[data-actions='wrap']", text: "Menu")
+  end
+
+  it "falls back to a stacked heading for an unknown orientation" do
+    render_card do |card|
+      card.with_header(title: "Room 101", description: "Garden Prestige Suite", orientation: :sideways)
+    end
+
+    expect(page).to have_css(".panel-card__heading[data-heading='stacked']")
   end
 
   it "supports every width, density, variant, orientation, divider mode, and root tag" do

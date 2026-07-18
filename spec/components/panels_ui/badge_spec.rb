@@ -25,6 +25,14 @@ RSpec.describe PanelsUI::Badge, type: :component do
     expect(page).to have_css("#status.panel-badge-rounded.ml-2[data-testid='badge'][data-indicator='true'][data-inverse='true'][aria-label='Booking status'] svg")
   end
 
+  it "renders a circular icon badge" do
+    render_inline(described_class.new(
+      shape: :circular, variant: :success, size: :sm, aria: { label: "Ready" }
+    )) { '<svg aria-hidden="true"></svg>'.html_safe }
+
+    expect(page).to have_css("span.panel-badge-circular[data-variant='success'][data-size='sm'][aria-label='Ready'] svg")
+  end
+
   it "falls back for unknown options" do
     render_inline(described_class.new(label: "Fallback", variant: :bogus, size: :huge, shape: :pillish))
 

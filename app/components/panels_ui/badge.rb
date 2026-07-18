@@ -4,7 +4,7 @@ module PanelsUI
   class Badge < PanelsUI::BaseComponent
     VARIANTS = %i[neutral primary accent info success warning destructive outline].freeze
     SIZES = %i[sm md lg].freeze
-    SHAPES = %i[rectangular rounded].freeze
+    SHAPES = %i[rectangular rounded circular].freeze
 
     def initialize(label: nil, variant: :neutral, size: :md, shape: :rectangular,
                    indicator: false, inverse: false, class: nil, **attributes)
@@ -38,6 +38,12 @@ module PanelsUI
 
     private
 
-    def badge_class = @shape == :rounded ? "panel-badge-rounded" : "panel-badge"
+    def badge_class
+      case @shape
+      when :circular then "panel-badge-circular"
+      when :rounded then "panel-badge-rounded"
+      else "panel-badge"
+      end
+    end
   end
 end
