@@ -24,7 +24,7 @@ module HotelPortal
       def call
         tag.div(
           safe_join(PRESENTATION.map { |state, presentation| badge(state, presentation) }),
-          class: "flex flex-wrap gap-2",
+          class: "flex flex-wrap gap-1.5",
           aria: { label: "Room summary for #{@counts.reference_date.to_fs(:long)}" },
           data: { slot: "stay-view-operational-counts" }
         )

@@ -1,6 +1,4 @@
 <div class="space-y-3">
-  <p class="text-xs text-muted-foreground">Booking bars run from the middle of check-in day to the middle of checkout day. Hatched bars mark room blocks.</p>
-
   <%= render PanelsUI::Timeline::Table.new(
     caption: "Room stays from #{state.date_window.start_date.to_fs(:long)} to #{(state.date_window.end_date - 1.day).to_fs(:long)}",
     track_count: state.date_window.days * 2,
@@ -25,7 +23,29 @@
           current: date == state.date_window.operational_date
         }
       end
-    ) %>
+    ) do %>
+      <%= form_with url: hotel_stay_view_path(current_hotel), method: :get,
+            class: "w-full",
+            data: {
+              controller: "stay-view--filters",
+              action: "change->stay-view--filters#submit turbo:submit-start->stay-view--filters#start turbo:submit-end->stay-view--filters#finish",
+              turbo_frame: "stay_view_board",
+              turbo_action: "advance"
+            } do |form| %>
+        <%= hidden_field_tag :view, board.view_mode %>
+        <%= hidden_field_tag :start_date, state.date_window.start_date.iso8601 %>
+        <%= hidden_field_tag :days, state.date_window.days %>
+        <%= hidden_field_tag :booking_status, board.filters.booking_status %>
+        <%= hidden_field_tag :occupancy, board.filters.occupancy %>
+        <%= hidden_field_tag :physical_status, board.filters.physical_status %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :room_type_id, label: "Filter rooms by room type", label_hidden: true, size: :sm, class: "w-full") do |field| %>
+          <% field.with_select_menu(
+            [ { label: "All room types", value: "" } ] + board.room_type_options.map { |option| { label: option.name, value: option.id } },
+            selected: board.filters.room_type_id
+          ) %>
+        <% end %>
+      <% end %>
+    <% end %>
 
     <% board.room_groups.each do |room_group| %>
       <% timeline.with_group(label: room_group.name, count: room_group.rooms.size) do |group| %>

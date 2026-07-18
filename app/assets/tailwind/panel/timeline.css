@@ -2,19 +2,18 @@
   .panel-timeline {
     --panel-timeline-room-size: 18rem;
     --panel-timeline-half-day-size: 3rem;
-    --panel-timeline-row-size: 3.75rem;
-    --panel-timeline-header-size: 3rem;
-    --panel-timeline-group-summary-size: 3.25rem;
-    --panel-timeline-footer-size: 2.5rem;
+    --panel-timeline-row-size: 2.75rem;
+    --panel-timeline-header-size: 2.5rem;
+    --panel-timeline-group-summary-size: 2.75rem;
+    --panel-timeline-footer-size: 2.25rem;
     position: relative;
     width: 100%;
-    max-height: 70dvh;
+    max-height: 65dvh;
     overflow: auto;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: var(--card);
     color: var(--card-foreground);
-    overscroll-behavior-inline: contain;
   }
 
   .panel-timeline:focus-visible {
@@ -546,7 +545,8 @@
     height: 100%;
     min-width: 0;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 0.375rem;
     overflow: hidden;
     padding-inline: 0.5rem;
     color: inherit;

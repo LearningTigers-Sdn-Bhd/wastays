@@ -24,7 +24,12 @@ module PanelsUI
         tag.div(**header_attributes) do
           tag.div(class: "panel-timeline__header-row", role: "row") do
             safe_join([
-              tag.div(@room_label, class: "panel-timeline__room-header", role: "columnheader"),
+              tag.div(
+                (content.presence || @room_label),
+                class: "panel-timeline__room-header",
+                role: "columnheader",
+                aria: { label: @room_label }
+              ),
               tag.div(class: "panel-timeline__date-track", role: "presentation") do
                 safe_join(@dates.each_with_index.map { |date, index| date_column(date, index) })
               end

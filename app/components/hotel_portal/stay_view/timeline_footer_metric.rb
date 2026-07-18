@@ -36,16 +36,28 @@ module HotelPortal
       end
 
       def occupancy_value
-        value = @summary.occupancy.nil? ? "N/A" : "#{(@summary.occupancy * 100).round}%"
-        label = if @summary.occupancy.nil?
+        return occupancy_label if @summary.occupancy.nil?
+
+        percent = (@summary.occupancy * 100).round
+        tag.div(class: "flex w-full min-w-0 items-center gap-1.5") do
+          safe_join([
+            render(PanelsUI::Progress.new(value: percent, max: 100, size: :sm, class: "min-w-0 flex-1 border border-border", aria: { hidden: "true" })),
+            occupancy_label(percent)
+          ])
+        end
+      end
+
+      def occupancy_label(percent = nil)
+        value = percent.nil? ? "N/A" : "#{percent}%"
+        label = if percent.nil?
           "Occupancy unavailable on #{formatted_date} because sellable inventory is zero"
         else
-          "#{(@summary.occupancy * 100).round} percent occupied on #{formatted_date}"
+          "#{percent} percent occupied on #{formatted_date}"
         end
 
         tag.span(
           value,
-          class: "panel-timeline__summary-metadata tabular-nums",
+          class: "panel-timeline__summary-metadata tabular-nums shrink-0",
           aria: { label: },
           data: { slot: "stay-view-footer-occupancy" }
         )
