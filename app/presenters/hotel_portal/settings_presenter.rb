@@ -145,6 +145,35 @@ module HotelPortal
       raw_value
     end
 
+    def time_picker_minutes_quarter
+      [ 0, 15, 30, 45 ]
+    end
+
+    def time_picker_minutes_all
+      (0..59)
+    end
+
+    def guest_registration_card_fields
+      hotel.guest_registration_card_fields.presence || GuestRegistrationCard::DISPLAY_FIELDS.keys
+    end
+
+    def boat_in_times
+      hotel.boat_in_times || []
+    end
+
+    def boat_out_times
+      hotel.boat_out_times || []
+    end
+
+    def default_currency_select_class
+      base = "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-900"
+      if can_edit_currency?
+        "#{base} bg-white focus:border-slate-300 focus:outline-none focus:ring-0"
+      else
+        "#{base} bg-slate-50 cursor-not-allowed text-slate-500"
+      end
+    end
+
     private
 
     def onboarding_stage

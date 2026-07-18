@@ -8,7 +8,7 @@ module HotelPortal
     include ReportDateFiltering
 
     PAYOUT_TABS = %w[upcoming paid].freeze
-    GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards bibo].freeze
+    GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards bibo meal_prep].freeze
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
 
     before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability guest_reports folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
@@ -312,7 +312,7 @@ module HotelPortal
 
     def guest_reports
       @active_guest_report_tab = GUEST_REPORT_TABS.include?(params[:tab]) ? params[:tab] : "arrivals"
-      if @active_guest_report_tab == "bibo" && !current_hotel.allow_boat_information?
+      if %w[bibo meal_prep].include?(@active_guest_report_tab) && !current_hotel.allow_boat_information?
         @active_guest_report_tab = "arrivals"
       end
       @report_start_date, @report_end_date = parse_report_date_range
@@ -328,36 +328,70 @@ module HotelPortal
         start_date: @report_start_date,
         end_date: @report_end_date
       ).call
+
+      if @active_guest_report_tab == "meal_prep"
+        params[:meal_type] = "breakfast" unless %w[breakfast lunch dinner].include?(params[:meal_type])
+        @meal_prep_report = HotelPortal::Reports::MealPrepReport.new(
+          hotel: current_hotel,
+          start_date: @report_start_date,
+          end_date: @report_end_date,
+          meal_type: params[:meal_type]
+        ).call
+
+        full_report = HotelPortal::Reports::MealPrepReport.new(
+          hotel: current_hotel,
+          start_date: @report_start_date,
+          end_date: @report_end_date
+        ).call
+
+        @meal_prep_counts = {
+          "breakfast" => full_report.records.select { |r| r[:meal_type].downcase.include?("breakfast") }.sum { |r| r[:pax] },
+          "lunch"     => full_report.records.select { |r| r[:meal_type].downcase.include?("lunch") }.sum { |r| r[:pax] },
+          "dinner"    => full_report.records.select { |r| r[:meal_type].downcase.include?("dinner") }.sum { |r| r[:pax] }
+        }
+      end
+
       load_guest_registration_cards(start_date: @report_start_date, end_date: @report_end_date)
+
+      report_to_export = if @active_guest_report_tab == "bibo"
+        @bibo_report
+      elsif @active_guest_report_tab == "meal_prep"
+        @meal_prep_report
+      else
+        @report
+      end
+
+      filename_suffix = if @active_guest_report_tab == "meal_prep"
+        "meal-prep-#{params[:meal_type]}"
+      else
+        @active_guest_report_tab.tr("_", "-")
+      end
 
       respond_to do |format|
         format.html
         format.csv do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          report_to_export = @active_guest_report_tab == "bibo" ? @bibo_report : @report
           csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
           send_data csv,
-            filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.csv",
+            filename: "guest-reports-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.csv",
             type: "text/csv"
         end
         format.any(:xls) do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          report_to_export = @active_guest_report_tab == "bibo" ? @bibo_report : @report
           workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
           send_data workbook,
-            filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.xls",
+            filename: "guest-reports-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.xls",
             type: "application/vnd.ms-excel",
             disposition: "attachment"
         end
         format.pdf do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          report_to_export = @active_guest_report_tab == "bibo" ? @bibo_report : @report
           pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: report_to_export, tab: @active_guest_report_tab).generate
           send_data pdf,
-            filename: "guest-reports-#{@active_guest_report_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.pdf",
+            filename: "guest-reports-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.pdf",
             type: "application/pdf",
             disposition: "attachment"
         end
@@ -587,27 +621,20 @@ module HotelPortal
     def load_guest_registration_cards(start_date: nil, end_date: nil)
       @status_filter = params[:status].to_s
       @grc_query = params[:q].to_s.strip
-      base_scope = current_hotel.guest_registration_cards
-                                .includes(:hotel, booking: :booking_rooms)
-                                .joins(:booking)
-      base_scope = base_scope.where(bookings: { check_in: start_date..end_date }) if start_date && end_date
-      @grc_total_count = base_scope.count
-      @grc_signed_count = base_scope.where(status: "signed").count
-      @grc_draft_count = base_scope.where(status: "draft").count
-      @grc_cards = base_scope.order("bookings.check_in DESC")
-      @grc_cards = @grc_cards.where(status: @status_filter) if %w[draft signed].include?(@status_filter)
-      if @grc_query.present?
-        query = "%#{ActiveRecord::Base.sanitize_sql_like(@grc_query.downcase)}%"
-        compact_query = "%#{ActiveRecord::Base.sanitize_sql_like(@grc_query.downcase.delete("-"))}%"
-        hotel_prefix = ActiveRecord::Base.connection.quote(current_hotel.hotel_prefix.to_s.downcase)
-        formatted_grc_sql = "LOWER(CONCAT(#{hotel_prefix}, '-2', LPAD(CAST(bookings.guest_registration_number AS TEXT), 7, '0')))"
-        @grc_cards = @grc_cards.where(
-          "LOWER(bookings.guest_name) LIKE :query OR LOWER(bookings.confirmation_token) LIKE :query OR CAST(bookings.guest_registration_number AS TEXT) LIKE :query OR #{formatted_grc_sql} LIKE :query OR REPLACE(#{formatted_grc_sql}, '-', '') LIKE :compact_query",
-          compact_query: compact_query,
-          query: query
-        )
-      end
-      @grc_cards = @grc_cards.page(params[:page]).per(25)
+
+      query_obj = HotelPortal::GuestRegistrationCardsQuery.new(
+        hotel: current_hotel,
+        start_date: start_date,
+        end_date: end_date,
+        status: @status_filter,
+        query: @grc_query,
+        page: params[:page]
+      )
+
+      @grc_total_count = query_obj.total_count
+      @grc_signed_count = query_obj.signed_count
+      @grc_draft_count = query_obj.draft_count
+      @grc_cards = query_obj.results
     end
 
     def authorize_view_reports!

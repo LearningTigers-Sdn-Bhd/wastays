@@ -1,0 +1,57 @@
+<div class="space-y-4 print:space-y-3 print:break-inside-avoid">
+  <div class="px-4 md:px-0">
+    <h2 class="text-base font-semibold text-foreground">
+      <%= meal_prep_title(params[:meal_type]) %>
+    </h2>
+  </div>
+
+  <%= render PanelsUI::Table.new(
+        caption: meal_prep_title(params[:meal_type]),
+        hoverable: true,
+        wrapper_class: "rounded-lg border border-border bg-card"
+      ) do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <th scope="col">Guest</th>
+        <th scope="col">Pax</th>
+        <th scope="col">Room Type</th>
+        <th scope="col">Room</th>
+        <th scope="col">Transfer</th>
+        <th scope="col">Boat Time</th>
+      </tr>
+    <% end %>
+    <% table.with_body do %>
+      <% if report.records.any? %>
+        <% report.records.each do |row| %>
+          <tr>
+            <th scope="row">
+              <div class="min-w-0">
+                <p class="font-semibold text-foreground"><%= row[:guest_name] %></p>
+                <p class="mt-1 font-mono text-xs text-muted-foreground"><%= row[:confirmation_token] %></p>
+              </div>
+            </th>
+            <td class="tabular-nums"><%= row[:pax] %></td>
+            <td><%= row[:room_type] %></td>
+            <td><%= row[:room_number] %></td>
+            <td>
+              <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold <%= meal_prep_transfer_class(row[:type]) %>">
+                <%= row[:type] %>
+              </span>
+            </td>
+            <td>
+              <span class="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium text-foreground">
+                <%= row[:formatted_boat_time] %>
+              </span>
+            </td>
+          </tr>
+        <% end %>
+      <% else %>
+        <tr>
+          <td colspan="6" class="h-32 text-center text-sm text-muted-foreground">
+            No boat transfers or meal records found for the selected period.
+          </td>
+        </tr>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

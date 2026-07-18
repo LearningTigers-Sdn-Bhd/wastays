@@ -58,7 +58,7 @@ module HotelPortal
         @hotel.bookings
               .where(status: ARRIVAL_STATUSES)
               .checking_in_between(@start_date, @end_date, @hotel.hotel_time_zone)
-              .includes(:pre_checkin, :booking_notes, booking_rooms: :room_type)
+              .includes(:pre_checkin, :booking_notes, :booking_guests, booking_rooms: :room_type)
               .order(:check_in, :created_at, :id)
       end
 
@@ -66,7 +66,7 @@ module HotelPortal
         @hotel.bookings
               .where(status: DEPARTURE_STATUSES)
               .checking_out_between(@start_date, @end_date, @hotel.hotel_time_zone)
-              .includes(:booking_notes, booking_rooms: :room_type)
+              .includes(:booking_notes, :booking_guests, booking_rooms: :room_type)
               .order(:check_out, :created_at, :id)
       end
 
@@ -82,7 +82,7 @@ module HotelPortal
         @hotel.bookings
               .where(status: CHECKOUT_STATUSES)
               .checking_out_between(@start_date, @end_date, @hotel.hotel_time_zone)
-              .includes(:booking_notes, booking_rooms: :room_type)
+              .includes(:booking_notes, :booking_guests, booking_rooms: :room_type)
               .order(:check_out, :created_at, :id)
       end
 
@@ -105,18 +105,22 @@ module HotelPortal
       def arrival_fields(booking)
         guarantee = booking.guarantee_method.presence || "none"
         deposit = booking.deposit_status.presence || "not_required"
+        primary_bg = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
 
         {
           pre_checkin_status: booking.pre_checkin_display_status.to_s.humanize,
           guarantee_method_status: guarantee.humanize,
           deposit_status: deposit.humanize,
-          guarantee_status: "#{guarantee.humanize} / #{deposit.humanize}"
+          guarantee_status: "#{guarantee.humanize} / #{deposit.humanize}",
+          boat_arrival: primary_bg&.boat_in_at
         }
       end
 
       def departure_fields(booking)
+        primary_bg = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
         {
-          departure_status: departure_status(booking)
+          departure_status: departure_status(booking),
+          boat_departure: primary_bg&.boat_out_at
         }
       end
 
@@ -129,8 +133,10 @@ module HotelPortal
       end
 
       def checkout_fields(booking)
+        primary_bg = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
         {
-          departure_status: departure_status(booking)
+          departure_status: departure_status(booking),
+          boat_departure: primary_bg&.boat_out_at
         }
       end
 

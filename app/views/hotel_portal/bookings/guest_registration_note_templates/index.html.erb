@@ -1,0 +1,86 @@
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+
+  <div class="flex h-full flex-col bg-card overflow-hidden">
+    <div class="flex items-center justify-between gap-4 border-b border-border px-6 py-5">
+      <div class="min-w-0 flex-1">
+        <h3 class="text-lg font-bold text-foreground">Manage Note Templates</h3>
+        <p class="mt-1 text-xs text-muted-foreground break-words">Create reusable templates to quickly apply standard remarks to the please note field.</p>
+      </div>
+      <div class="shrink-0">
+        <%= link_to hotel_booking_guest_registration_card_path(current_hotel, @booking),
+                    data: { turbo_frame: "_top" },
+                    class: "rounded-xl border border-border bg-card p-2.5 text-muted-foreground shadow-sm transition hover:bg-muted flex items-center justify-center" do %>
+          <%= cached_icon "x", class: "size-4.5" %>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Scrollable Content -->
+    <div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+      <!-- Create Form -->
+      <div class="rounded-2xl border border-border bg-muted/50 p-5 space-y-4">
+        <h4 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Create New Tag</h4>
+
+        <%= form_with model: @template, url: hotel_booking_guest_registration_note_templates_path(current_hotel, @booking), local: true, class: "space-y-4" do |f| %>
+          <% if @template.errors.any? %>
+            <div class="p-3 text-xs text-red-600 bg-red-50 rounded-xl border border-red-100 font-medium">
+              <%= @template.errors.full_messages.to_sentence %>
+            </div>
+          <% end %>
+
+          <div class="space-y-4">
+            <%= render PanelsUI::FormField.new(form: f, attribute: :title, label: "Tag Title", required: true) do |field| %>
+              <% field.with_input placeholder: "e.g. Late Checkout" %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: f, attribute: :content, required: true) do |field| %>
+              <% field.with_text_area rows: 10, placeholder: "e.g. Guest requested late checkout at 2 PM." %>
+            <% end %>
+          </div>
+
+          <div class="flex justify-end">
+            <%= f.submit "Create", class: "inline-flex items-center rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-xs transition hover:bg-primary-hover cursor-pointer" %>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- List of Templates -->
+      <div class="space-y-4">
+        <h4 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Existing Templates (<%= @templates.size %>)</h4>
+
+        <% if @templates.any? %>
+          <div class="divide-y divide-border border border-border rounded-2xl bg-card overflow-hidden shadow-xs">
+            <% @templates.each do |template| %>
+              <div class="flex items-center justify-between px-5 py-4 hover:bg-muted/50 transition-colors">
+                  <div class="flex items-center gap-x-3">
+                    <div class="size-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
+                      <%= cached_icon "tag", class: "size-4 text-muted-foreground" %>
+                    </div>
+                    <span class="text-sm font-semibold text-foreground"><%= template.title %></span>
+                  </div>
+
+                <div class="flex items-center gap-x-1.5">
+                  <%= link_to edit_hotel_booking_guest_registration_note_template_path(current_hotel, @booking, template),
+                              class: "inline-flex size-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs transition hover:border-border-interactive hover:text-foreground" do %>
+                    <%= cached_icon "pencil", class: "size-3.5" %>
+                  <% end %>
+                  <%= button_to hotel_booking_guest_registration_note_template_path(current_hotel, @booking, template),
+                                method: :delete,
+                                data: { turbo_confirm: "Are you sure you want to delete this note template?" },
+                                class: "inline-flex size-8 items-center justify-center rounded-lg border border-red-100 bg-card text-red shadow-xs transition hover:bg-red-50 hover:text-red-700" do %>
+                    <%= cached_icon "trash-2", class: "size-3.5" %>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-10 border border-dashed border-border rounded-2xl bg-muted/30">
+            <%= cached_icon "tags", class: "size-8 text-muted-foreground mx-auto mb-3" %>
+            <p class="text-xs text-muted-foreground font-medium">No note templates defined yet.</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>

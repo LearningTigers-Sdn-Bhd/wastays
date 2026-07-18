@@ -2,17 +2,18 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   connect() {
-    const select = this.element.querySelector('select[name="date_preset"]')
-    if (select) this.updateCustomControls(select.value === "custom")
+    this.updateCustomControls()
   }
 
   toggleCustom(event) {
     const select = event.target
     const form = select.closest("form")
-    const custom = select.value === "custom"
+    const value = select.value
+    const custom = value === "custom"
+    const single = value === "single"
 
-    this.updateCustomControls(custom)
-    if (!custom && form) form.requestSubmit()
+    this.updateCustomControls()
+    if (!custom && !single && form) form.requestSubmit()
   }
 
   submitDate(event) {
@@ -24,13 +25,57 @@ export default class extends Controller {
     if (range.length === 1 || (range[0] && range[1])) form.requestSubmit()
   }
 
-  updateCustomControls(custom) {
+  updateCustomControls() {
+    const select = this.element.querySelector('select[name="date_preset"]')
     const customDates = this.element.querySelector("#custom-date-range")
-    if (!customDates) return
+    if (!select || !customDates) return
 
-    customDates.classList.toggle("hidden", !custom)
-    customDates.classList.toggle("flex", custom)
+    const value = select.value
+    const custom = value === "custom"
+    const single = value === "single"
+
+    customDates.classList.toggle("hidden", !custom && !single)
+    customDates.classList.toggle("flex", custom || single)
+
+    const singleWrapper = this.element.querySelector("#single-date-wrapper")
+    const customWrapper = this.element.querySelector("#custom-date-wrapper")
+    if (singleWrapper) {
+      singleWrapper.classList.toggle("hidden", !single)
+    }
+    if (customWrapper) {
+      customWrapper.classList.toggle("hidden", !custom)
+    }
+
     customDates.querySelectorAll('input[name="date_range"], input[name="start_date"], input[name="end_date"], input[name="as_of_date"]')
-      .forEach((input) => { input.disabled = !custom })
+      .forEach((input) => {
+        if (input.name === "date_range") {
+          input.disabled = !custom
+        } else if (input.name === "start_date") {
+          input.disabled = !single
+        } else if (input.name === "end_date") {
+          input.disabled = !custom
+        } else {
+          input.disabled = (!custom && !single)
+        }
+      })
+
+    const endInput = customDates.querySelector('input[name="end_date"]')
+    if (endInput) {
+      const endDiv = endInput.closest("div")
+      if (endDiv) {
+        endDiv.classList.toggle("hidden", !custom)
+      }
+    }
+
+    const startInput = customDates.querySelector('input[name="start_date"]')
+    if (startInput) {
+      const startDiv = startInput.closest("div")
+      if (startDiv) {
+        const label = startDiv.querySelector("label")
+        if (label) {
+          label.textContent = single ? "Date" : "Start Date"
+        }
+      }
+    }
   }
 }

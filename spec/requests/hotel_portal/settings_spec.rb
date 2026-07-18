@@ -6,7 +6,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
   let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
-  let(:hotel) { create(:hotel, account: account, status: 'registered', plan: plan) }
+  let(:hotel) { create(:hotel, account: account, status: 'registered', plan: plan, allow_boat_information: false) }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 
   before do
@@ -337,6 +337,21 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
       expect(response).to redirect_to(hotel_general_settings_path(hotel))
       expect(hotel.reload.guest_registration_card_fields).to eq(%w[phone room_type check_in])
+    end
+
+    it "updates daily boat schedules" do
+      hotel.update!(allow_boat_information: true)
+      patch hotel_general_settings_path(hotel), params: {
+        form_id: "hotel_settings",
+        hotel: {
+          boat_in_times: [ "09:30", "12:00", "" ],
+          boat_out_times: [ "11:00", "15:30", "" ]
+        }
+      }
+
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+      expect(hotel.reload.boat_in_times).to eq([ "09:30", "12:00" ])
+      expect(hotel.boat_out_times).to eq([ "11:00", "15:30" ])
     end
 
     it "discards unknown guest registration card fields and allows none" do

@@ -18,6 +18,8 @@ module HotelPortal
         draw_header(pdf)
         if @tab == "bibo"
           draw_bibo_sections(pdf)
+        elsif @tab == "meal_prep"
+          draw_meal_prep_section(pdf)
         else
           draw_summary(pdf)
           draw_section(pdf, active_section_title, rows_for_active_tab, active_section_type, active_empty_message)
@@ -96,13 +98,14 @@ module HotelPortal
           return
         end
 
-        show_boat = (@tab == "in_house" && @hotel.allow_boat_information?)
+        show_boat = @hotel.allow_boat_information? && @tab != "checkout"
 
         table_rows = rows.map do |row|
           status = type == :arrival ? "#{row[:pre_checkin_status]} / #{row[:guarantee_status]}" : row[:departure_status]
           if show_boat
-            boat_dep_str = if row[:boat_departure].present?
-              boat_time = row[:boat_departure].in_time_zone(@hotel.hotel_time_zone)
+            boat_val = type == :arrival ? row[:boat_arrival] : row[:boat_departure]
+            boat_str = if boat_val.present?
+              boat_time = boat_val.in_time_zone(@hotel.hotel_time_zone)
               "#{boat_time.strftime('%d %b %Y')}\n#{boat_time.strftime('%I:%M %p')}"
             else
               "—"
@@ -112,7 +115,7 @@ module HotelPortal
               "#{row[:room_details]}\nRoom: #{row[:room_numbers]}",
               row[:stay_dates],
               status,
-              boat_dep_str,
+              boat_str,
               row[:latest_note].presence || "-"
             ]
           else
@@ -127,7 +130,7 @@ module HotelPortal
         end
 
         headers = if show_boat
-          [ "Guest / Ref", "Rooms", "Stay", "Departure", "Boat Departure", "Notes" ]
+          [ "Guest / Ref", "Rooms", "Stay", type == :arrival ? "Readiness" : "Departure", type == :arrival ? "Boat-in" : "Boat-out", "Notes" ]
         else
           [ "Guest / Ref", "Rooms", "Stay", type == :arrival ? "Readiness" : "Departure", "Notes" ]
         end
@@ -153,9 +156,9 @@ module HotelPortal
       end
 
       def draw_bibo_sections(pdf)
-        draw_bibo_section(pdf, "Boat Arrivals", @report.boat_ins, "No boat arrivals recorded or expected for this selected period.")
+        draw_bibo_section(pdf, "Boat-ins", @report.boat_ins, "No boat-in records found or expected for this selected period.")
         pdf.move_down 20
-        draw_bibo_section(pdf, "Boat Departures", @report.boat_outs, "No boat departures recorded or expected for this selected period.")
+        draw_bibo_section(pdf, "Boat-outs", @report.boat_outs, "No boat-out records found or expected for this selected period.")
       end
 
       def draw_bibo_section(pdf, title, rows, empty_message)
@@ -184,6 +187,36 @@ module HotelPortal
         end
       end
 
+      def draw_meal_prep_section(pdf)
+        meal_suffix = @report.respond_to?(:meal_type) && @report.meal_type.present? ? " - #{@report.meal_type.titleize}" : ""
+        pdf.text "Meal Prep Report#{meal_suffix}", size: 12, style: :bold
+        pdf.move_down 6
+
+        if @report.records.empty?
+          pdf.text("No boat transfers or meal records found for the selected period.", size: 10, style: :italic)
+          return
+        end
+
+        table_rows = @report.records.map do |row|
+          [
+            row[:type],
+            "#{row[:guest_name]}\n#{row[:confirmation_token]}",
+            row[:pax].to_s,
+            row[:room_type],
+            row[:room_number],
+            row[:formatted_boat_time]
+          ]
+        end
+        headers = [ "Type", "Guest / Ref", "Pax", "Room Type", "Room", "Boat Time" ]
+        pdf.table([ headers ] + table_rows, width: pdf.bounds.width, cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] }) do
+          row(0).font_style = :bold
+          row(0).background_color = "F1F5F9"
+        end
+
+        pdf.move_down 10
+        pdf.text "Total Pax: #{@report.total_pax}", size: 10, style: :bold, align: :right
+      end
+
       def rows_for_active_tab
         case @tab
         when "in_house" then @report.in_house
@@ -203,6 +236,11 @@ module HotelPortal
       end
 
       def active_tab_heading
+        if @tab == "meal_prep"
+          meal_suffix = @report.respond_to?(:meal_type) && @report.meal_type.present? ? " - #{@report.meal_type.titleize}" : ""
+          return "Meal Prep"
+        end
+
         {
           "arrivals" => "Arrivals",
           "in_house" => "In-House",

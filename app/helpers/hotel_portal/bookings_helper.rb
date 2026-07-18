@@ -45,20 +45,20 @@ module HotelPortal::BookingsHelper
       if primary_bg.boat_out_at.present?
         {
           type: :departure,
-          label: "Boat Departure",
+          label: "Boat-out",
           time_str: primary_bg.boat_out_at.in_time_zone(timezone).strftime("%H:%M"),
           class: "text-purple-600",
-          title: "Boat Departure Time"
+          title: "Boat-out Time"
         }
       end
     else
       if primary_bg.boat_in_at.present?
         {
           type: :arrival,
-          label: "Boat Arrival",
+          label: "Boat-in",
           time_str: primary_bg.boat_in_at.in_time_zone(timezone).strftime("%H:%M"),
           class: "text-blue-600",
-          title: "Boat Arrival Time"
+          title: "Boat-in Time"
         }
       end
     end
@@ -68,5 +68,30 @@ module HotelPortal::BookingsHelper
     return "—" if time.blank?
 
     time.in_time_zone(timezone).strftime("%d %b %Y, %I:%M %p")
+  end
+
+  def guest_list_column_width_class(show_bibo, column_type)
+    case column_type
+    when :guest
+      show_bibo ? "w-[12%]" : "w-[15%]"
+    when :guest_type
+      show_bibo ? "w-[9%]" : "w-[10%]"
+    when :contact
+      show_bibo ? "w-[19%]" : "w-[22%]"
+    when :identity
+      show_bibo ? "w-[15%]" : "w-[17%]"
+    when :guest_reg_no
+      show_bibo ? "w-[10%]" : "w-[12%]"
+    when :country
+      show_bibo ? "w-[10%]" : "w-[12%]"
+    end
+  end
+
+  def guest_display_field(val, default = "—")
+    val.presence || default
+  end
+
+  def guest_document_type_display(doc_type)
+    doc_type.presence&.to_s&.upcase || "IC/PASSPORT"
   end
 end

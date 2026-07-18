@@ -841,3 +841,14 @@
 [data-otas-mode="compact"] [data-channel-detail-row="true"] {
   display: none !important;
 }
+
+/* Guest Registration Card Print styles */
+@media print {
+  body * { visibility: hidden; }
+  .grc-print, .grc-print * { visibility: visible; }
+  .grc-print { position: absolute; top: 0; left: 0; right: 0; }
+  .grc-print-page { min-height: auto; display: flex; flex-direction: column; }
+  .grc-print-footer { margin-top: 1.5rem; }
+  .grc-no-print { display: none !important; }
+  @page { margin: 6mm; }
+}

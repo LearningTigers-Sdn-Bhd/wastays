@@ -1,5 +1,5 @@
 module FilteringHelper
-  def date_preset_options
+  def date_preset_options(include_single: false)
     options = [
       [ "Today", "today" ],
       [ "This Month", "this_month" ],
@@ -16,6 +16,7 @@ module FilteringHelper
       options << [ label, val ] unless options.any? { |o| o[1] == val }
     end
 
+    options << [ "Single Date", "single" ] if include_single
     options << [ "Custom Range", "custom" ]
     options
   end

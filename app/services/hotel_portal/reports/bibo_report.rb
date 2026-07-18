@@ -34,17 +34,15 @@ module HotelPortal
 
       def boat_ins
         @boat_ins ||= booking_guests_scope
-          .where(bookings: { check_in: @start_date..@end_date })
-          .or(booking_guests_scope.where(boat_in_at: @start_date.beginning_of_day..@end_date.end_of_day))
-          .order("bookings.check_in ASC, booking_guests.boat_in_at ASC NULLS FIRST")
+          .where(boat_in_at: @start_date.beginning_of_day..@end_date.end_of_day)
+          .order("booking_guests.boat_in_at ASC")
           .map { |bg| row_for_boat_in(bg) }
       end
 
       def boat_outs
         @boat_outs ||= booking_guests_scope
-          .where(bookings: { check_out: @start_date..@end_date })
-          .or(booking_guests_scope.where(boat_out_at: @start_date.beginning_of_day..@end_date.end_of_day))
-          .order("bookings.check_out ASC, booking_guests.boat_out_at ASC NULLS FIRST")
+          .where(boat_out_at: @start_date.beginning_of_day..@end_date.end_of_day)
+          .order("booking_guests.boat_out_at ASC")
           .map { |bg| row_for_boat_out(bg) }
       end
 

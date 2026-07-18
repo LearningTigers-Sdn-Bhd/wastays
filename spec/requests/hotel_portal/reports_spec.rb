@@ -6,7 +6,7 @@ require "nokogiri"
 RSpec.describe "HotelPortal::Reports", type: :request do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
-  let(:hotel) { create(:hotel, plan: plan) }
+  let(:hotel) { create(:hotel, plan: plan, allow_boat_information: false) }
   let(:user) { create(:user) }
   let(:role) { create(:role, account: hotel.account) }
 
