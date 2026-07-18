@@ -124,7 +124,11 @@ RSpec.describe "System design navigation", type: :system do
     expect(page).to have_css("section[data-theme='panel-light'] #timeline-preview-panel-light")
     expect(page).to have_css("section[data-theme='panel-dark'] #timeline-preview-panel-dark")
     expect(page).to have_css(".panel-timeline__segment[data-emphasis='hatched']", visible: :all)
-    expect(page).to have_link("Ada Lovelace", exact: true, visible: :all)
+    expect(page).to have_css(
+      "a#timeline-preview-booking-ada-panel-light-trigger[aria-label='Ada Lovelace, confirmed, room 101, Deluxe King, 20 July 2026 to 21 July 2026']",
+      text: "Ada Lovelace",
+      visible: :all
+    )
 
     geometry = page.evaluate_script(<<~JS)
       (() => {
@@ -151,7 +155,12 @@ RSpec.describe "System design navigation", type: :system do
       "roomPosition" => "sticky"
     )
 
-    find("#timeline-preview-panel-light").send_keys(:tab)
-    expect(page.evaluate_script("document.activeElement.classList.contains('panel-timeline__segment-action')")).to be(true)
+    page.execute_script("document.getElementById('timeline-preview-panel-light').focus()")
+    target_id = "timeline-preview-booking-grace-panel-light-trigger"
+    10.times do
+      page.driver.browser.keyboard.type(:tab)
+      break if page.evaluate_script("document.activeElement.id") == target_id
+    end
+    expect(page.evaluate_script("document.activeElement.id")).to eq(target_id)
   end
 end

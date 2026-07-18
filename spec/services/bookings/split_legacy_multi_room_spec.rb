@@ -88,7 +88,6 @@ RSpec.describe Bookings::SplitLegacyMultiRoom do
     add_rooms
     booking.update!(group_booking: create(:group_booking, hotel:), group_position: 1)
     expect(described_class.call(booking:).error).to match(/already assigned/)
-
   end
 
   it "splits externally managed financial records with anchor custody and pending review" do
