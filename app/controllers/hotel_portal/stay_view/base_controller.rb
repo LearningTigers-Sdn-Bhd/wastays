@@ -21,12 +21,16 @@ module HotelPortal
 
       def state_source
         direct = params.permit(:view, :start_date, :date, :days, :room_type_id, :booking_status, :occupancy, :physical_status).to_h
-        return direct if direct.present?
+        # Nested room-operation routes also use :room_type_id as a resource key.
+        # Do not accidentally reinterpret that path segment as a board filter;
+        # the canonical filter value remains available through return_to.
+        direct.delete("room_type_id") if request.path_parameters.key?(:room_type_id)
 
         query = URI.parse(@return_to).query
-        query.present? ? Rack::Utils.parse_nested_query(query) : {}
+        returned = query.present? ? Rack::Utils.parse_nested_query(query) : {}
+        returned.merge(direct)
       rescue URI::InvalidURIError
-        {}
+        direct
       end
 
       def capabilities

@@ -81,25 +81,44 @@ module StayView
   end
 
   HousekeepingAlert = Data.define(
-    :request_id, :room_key, :details, :status, :requested_at, :assigned_to_id, :assigned_to_name, :capabilities
+    :request_id, :room_key, :details, :status, :requested_at, :assigned_to_id, :assigned_to_name, :assignment_history,
+    :capabilities
   ) do
     def initialize(**attributes)
+      attributes[:assignment_history] ||= []
       attributes[:room_key] = attributes.fetch(:room_key).to_s.freeze
       attributes[:details] = attributes.fetch(:details).to_s.freeze
       attributes[:status] = attributes.fetch(:status).to_sym
       attributes[:assigned_to_name] = attributes[:assigned_to_name].presence&.to_s&.freeze
+      attributes[:assignment_history] = Immutable.array(attributes.fetch(:assignment_history))
       super(**attributes)
     end
   end
 
+  HousekeepingAssignmentEvent = Data.define(:assigned_to_name, :assigned_by_name, :timestamp) do
+    def initialize(assigned_to_name:, assigned_by_name:, timestamp:)
+      super(
+        assigned_to_name: assigned_to_name.to_s.freeze,
+        assigned_by_name: assigned_by_name.to_s.freeze,
+        timestamp:
+      )
+    end
+
+    def assigned? = assigned_to_name != "Unassigned"
+  end
+
   RoomRow = Data.define(
     :key, :dom_id, :room_number, :room_type_id, :room_type_name, :smoking_allowed, :pets_allowed,
-    :current_physical_status, :operational_flags, :day_cells, :booking_segments,
+    :current_physical_status, :status_note, :priority_note, :operational_flags, :day_cells, :booking_segments,
     :operational_segments, :housekeeping_alerts, :capabilities
   ) do
     def initialize(**attributes)
+      attributes[:status_note] ||= nil
+      attributes[:priority_note] ||= nil
       %i[key dom_id room_number room_type_name].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
       attributes[:current_physical_status] = attributes[:current_physical_status]&.to_sym
+      attributes[:status_note] = attributes[:status_note].presence&.to_s&.freeze
+      attributes[:priority_note] = attributes[:priority_note].presence&.to_s&.freeze
       attributes[:operational_flags] = Immutable.hash(attributes.fetch(:operational_flags))
       attributes[:housekeeping_alerts] ||= []
       %i[day_cells booking_segments operational_segments housekeeping_alerts].each do |key|

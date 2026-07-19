@@ -148,10 +148,14 @@ module StayView
     end
 
     def load_room_statuses
-      hotel.room_statuses.pluck(:room_type_id, :room_number, :status, :priority, :dnd, :dnd_date).map do |values|
+      note_column = capabilities.view_room_readiness? ? :notes : Arel.sql("NULL")
+      priority_note_column = capabilities.view_room_readiness? ? :priority_note : Arel.sql("NULL")
+      hotel.room_statuses.pluck(
+        :room_type_id, :room_number, :status, :priority, :dnd, :dnd_date, note_column, priority_note_column
+      ).map do |values|
         RoomStatusRecord.new(
           room_type_id: values[0], room_number: values[1].to_s.freeze, status: values[2].to_sym,
-          priority: values[3], dnd: values[4], dnd_date: values[5]
+          priority: values[3], dnd: values[4], dnd_date: values[5], status_note: values[6], priority_note: values[7]
         )
       end
     end
@@ -201,7 +205,8 @@ module StayView
           status:,
           requested_at: (requested_at || created_at).in_time_zone(date_window.time_zone_name),
           assigned_to_id: metadata["assigned_to"],
-          assigned_to_name: metadata["assigned_to_name"]
+          assigned_to_name: metadata["assigned_to_name"],
+          assignment_history: normalize_assignment_history(metadata["assignment_history"])
         )
       end.uniq { |record| [ record.request_id, record.room_type_id, record.room_number ] }
         .sort_by { |record| [ -record.requested_at.to_i, record.request_id ] }
@@ -238,6 +243,27 @@ module StayView
         "housekeeping_requests.status", "housekeeping_requests.requested_at", "housekeeping_requests.created_at",
         "housekeeping_requests.metadata"
       ]
+    end
+
+    def normalize_assignment_history(history)
+      Array(history).filter_map do |raw_event|
+        event = raw_event.respond_to?(:to_h) ? raw_event.to_h.stringify_keys : {}
+        assigned_to_name = event["assigned_to_name"].presence
+        timestamp = parse_assignment_timestamp(event["timestamp"])
+        next if assigned_to_name.blank? || timestamp.nil?
+
+        HousekeepingAssignmentEventRecord.new(
+          assigned_to_name:,
+          assigned_by_name: event["assigned_by_name"].presence || "System",
+          timestamp:
+        )
+      end.last(5).reverse
+    end
+
+    def parse_assignment_timestamp(value)
+      Time.iso8601(value.to_s).in_time_zone(date_window.time_zone_name)
+    rescue ArgumentError
+      nil
     end
   end
 end

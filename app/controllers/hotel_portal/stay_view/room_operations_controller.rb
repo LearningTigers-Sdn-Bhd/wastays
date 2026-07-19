@@ -10,7 +10,8 @@ module HotelPortal
 
       def update
         result = Rooms::UpdateStatus.new(room_status: @room_status, params: status_params, user: current_user).call
-        return respond_with_board("Room status updated.") if result.success?
+        return respond_with_board("Room status updated.", affected_room_keys: [ room_key ]) if result.success?
+        return respond_with_flag_error(result.error) if params[:flag_control].present?
 
         add_error(@room_status, result.error)
         render_sheet_error("hotel_portal/stay_view/room_operations/form")
@@ -38,7 +39,18 @@ module HotelPortal
       end
 
       def status_params
-        params.require(:room_status).permit(:status, :notes)
+        params.require(:room_status).permit(:status, :notes, :priority, :dnd, :priority_note)
+      end
+
+      def room_key = "#{@room_type.id}:#{@room_number}"
+
+      def respond_with_flag_error(message)
+        respond_to do |format|
+          format.turbo_stream do
+            render turbo_stream: toast_stream(Array(message).to_sentence, type: :error), status: :unprocessable_content
+          end
+          format.html { redirect_to @return_to, alert: Array(message).to_sentence, status: :see_other }
+        end
       end
     end
   end

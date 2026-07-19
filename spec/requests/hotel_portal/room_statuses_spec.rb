@@ -147,7 +147,8 @@ RSpec.describe "HotelPortal::RoomStatuses", type: :request do
       }
       expect(response).to redirect_to(hotel_room_status_board_path(hotel))
       expect(room_status.reload.priority).to be true
-      expect(room_status.notes).to eq("Need early prep for VIP.")
+      expect(room_status.priority_note).to eq("Need early prep for VIP.")
+      expect(room_status.notes).to be_nil
     end
 
     it "allows toggling the DND flag and sets the dnd_date" do

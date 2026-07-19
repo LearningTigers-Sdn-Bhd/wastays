@@ -86,6 +86,38 @@ RSpec.describe StayView::LoadInventory do
     expect(inventory.bookings).to be_frozen
   end
 
+  it "loads room-status notes only with readiness permission without adding queries" do
+    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    create(
+      :room_status,
+      hotel:,
+      room_type:,
+      room_number: "101",
+      status: "inspection_failed",
+      notes: "Dust on headboard",
+      priority: true,
+      priority_note: "Prepare before noon"
+    )
+
+    visible_sql = capture_sql { @visible = described_class.call(hotel:, date_window: window, capabilities:) }
+    hidden_sql = capture_sql do
+      @hidden = described_class.call(
+        hotel:,
+        date_window: window,
+        capabilities: capabilities.with(view_room_readiness: false)
+      )
+    end
+
+    expect(@visible.room_statuses.sole).to have_attributes(
+      status_note: "Dust on headboard",
+      priority_note: "Prepare before noon"
+    )
+    expect(@hidden.room_statuses.sole).to have_attributes(status_note: nil, priority_note: nil)
+    expect(visible_sql.count { |sql| sql.include?('FROM "room_statuses"') }).to eq(1)
+    expect(hidden_sql.count { |sql| sql.include?('FROM "room_statuses"') }).to eq(1)
+    expect(hidden_sql.join(" ")).not_to include('"room_statuses"."notes"', '"room_statuses"."priority_note"')
+  end
+
   def capture_sql
     queries = []
     callback = lambda do |_name, _start, _finish, _id, payload|
@@ -180,6 +212,14 @@ RSpec.describe StayView::LoadInventory do
     room_type = create(:room_type, hotel:, room_numbers: %w[101 102])
     booking = create(:booking, hotel:, guest_name: "Sensitive Guest", check_in: start_date, check_out: start_date + 2.days)
     create(:booking_room, booking:, room_type:, room_number: "102")
+    assignment_history = (1..6).map do |number|
+      {
+        "assigned_to_name" => "Housekeeper #{number}",
+        "assigned_by_name" => ("Manager" unless number == 6),
+        "timestamp" => Time.zone.local(2026, 7, 16, number).iso8601
+      }
+    end
+    assignment_history << { "assigned_to_name" => "Malformed", "timestamp" => "not-a-time" }
     direct = create(
       :housekeeping_request,
       booking: nil,
@@ -188,7 +228,7 @@ RSpec.describe StayView::LoadInventory do
       room_number: "101",
       request_details: "Replace towels",
       status: "assigned",
-      metadata: { "assigned_to" => 7, "assigned_to_name" => "Sam" }
+      metadata: { "assigned_to" => 7, "assigned_to_name" => "Sam", "assignment_history" => assignment_history }
     )
     legacy = create(
       :housekeeping_request,
@@ -214,6 +254,10 @@ RSpec.describe StayView::LoadInventory do
       assigned_to_id: 7,
       assigned_to_name: "Sam"
     )
+    expect(alerts.find { |alert| alert.request_id == direct.id }.assignment_history.map(&:assigned_to_name)).to eq(
+      [ "Housekeeper 6", "Housekeeper 5", "Housekeeper 4", "Housekeeper 3", "Housekeeper 2" ]
+    )
+    expect(alerts.find { |alert| alert.request_id == direct.id }.assignment_history.first.assigned_by_name).to eq("System")
     expect(alerts.find { |alert| alert.request_id == legacy.id }).to have_attributes(
       room_type_id: room_type.id,
       room_number: "102",

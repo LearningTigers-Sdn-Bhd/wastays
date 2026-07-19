@@ -73,7 +73,14 @@ RSpec.describe StayView::ProjectRoom do
       status: :assigned,
       requested_at: Time.zone.local(2026, 7, 16, 9),
       assigned_to_id: 4,
-      assigned_to_name: "Sam"
+      assigned_to_name: "Sam",
+      assignment_history: [
+        StayView::HousekeepingAssignmentEventRecord.new(
+          assigned_to_name: "Sam",
+          assigned_by_name: "Alex",
+          timestamp: Time.zone.local(2026, 7, 16, 8)
+        )
+      ]
     )
     sql = []
     current_window = window
@@ -101,6 +108,11 @@ RSpec.describe StayView::ProjectRoom do
       status: :assigned,
       assigned_to_name: "Sam"
     )
+    expect(row.housekeeping_alerts.sole.assignment_history.sole).to have_attributes(
+      assigned_to_name: "Sam",
+      assigned_by_name: "Alex"
+    )
+    expect(row.housekeeping_alerts.sole.assignment_history).to be_frozen
     expect(row.housekeeping_alerts).to be_frozen
   end
 end

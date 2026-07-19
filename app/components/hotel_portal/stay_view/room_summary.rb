@@ -84,11 +84,12 @@ module HotelPortal
         render PanelsUI::DropdownMenu.new(
           id: "#{@room.dom_id}-status",
           placement: :bottom_end,
-          class: "max-h-64 w-52 overflow-y-auto"
+          class: "max-h-64 w-56 overflow-y-auto"
         ) do |menu|
-          menu.with_trigger(variant: :ghost, size: :icon_xs, aria_label: "Room status: #{label} — change") do
+          menu.with_trigger(variant: :ghost, size: :icon_xs, aria_label: status_menu_label(label)) do
             status_badge(status)
           end
+          menu.with_header { status_menu_header(label) } if status == :inspection_failed && @room.status_note.present?
           items.each do |item|
             menu.with_item(href: item.fetch(:href), data: item.fetch(:data, {})) do
               safe_join([
@@ -98,6 +99,21 @@ module HotelPortal
               ].compact)
             end
           end
+        end
+      end
+
+      def status_menu_label(label)
+        details = @room.current_physical_status == :inspection_failed ? @room.status_note.presence : nil
+        [ "Room status: #{label}", details, "change" ].compact.join(" — ")
+      end
+
+      def status_menu_header(label)
+        tag.div(class: "space-y-1 text-left") do
+          safe_join([
+            tag.p(label, class: "text-sm font-semibold text-foreground"),
+            tag.p("Inspection reason", class: "text-xs text-muted-foreground"),
+            tag.p(@room.status_note, class: "break-words text-sm text-foreground")
+          ])
         end
       end
 
@@ -121,10 +137,17 @@ module HotelPortal
           tag.div(class: "text-left") do
             safe_join([
               tag.p("Room status", class: "text-xs text-muted-foreground"),
-              tag.p(label, class: "mt-1 text-sm font-semibold text-foreground")
-            ])
+              tag.p(label, class: "mt-1 text-sm font-semibold text-foreground"),
+              status_note(status)
+            ].compact)
           end
         end
+      end
+
+      def status_note(status)
+        return unless status == :inspection_failed && @room.status_note.present?
+
+        tag.p(@room.status_note, class: "mt-2 break-words text-sm text-foreground")
       end
 
       def status_badge(status)

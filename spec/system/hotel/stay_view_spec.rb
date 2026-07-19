@@ -101,6 +101,83 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_css("##{segment[:id]}-panel", text: "Confirmed", visible: :visible)
   end
 
+  it "changes priority and DND from keyboard-accessible popovers and restores focus after Turbo refresh" do
+    room_status = create(
+      :room_status,
+      hotel:,
+      room_type:,
+      room_number: "101",
+      status: "inspection_failed",
+      notes: "Reclean the bathroom"
+    )
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+
+    priority_trigger_id = "stay_view_room_#{room_type.id}_101-priority-trigger"
+    priority_trigger = find("##{priority_trigger_id}")
+    priority_trigger.send_keys(:enter)
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_101-priority-panel", visible: :visible)
+    find("#room_status_priority_note").send_keys(:escape)
+    expect(page).to have_css("##{priority_trigger_id}:focus", wait: 2)
+
+    find("##{priority_trigger_id}").click
+    within("#stay_view_room_#{room_type.id}_101-priority-panel") do
+      find("input[name='room_status[priority]'][role='switch']", visible: :all).set(true)
+      fill_in "Priority note", with: "Prepare before noon"
+      click_button "Apply"
+    end
+
+    expect(page).to have_css("##{priority_trigger_id}:focus", wait: 10)
+    expect(page).to have_css("##{priority_trigger_id}[aria-label='Cleaning priority: on — change']")
+    expect(room_status.reload).to have_attributes(
+      priority: true,
+      priority_note: "Prepare before noon",
+      notes: "Reclean the bathroom"
+    )
+
+    dnd_trigger_id = "stay_view_room_#{room_type.id}_101-dnd-trigger"
+    find("##{dnd_trigger_id}").click
+    within("#stay_view_room_#{room_type.id}_101-dnd-panel") do
+      find("input[name='room_status[dnd]'][role='switch']", visible: :all).set(true)
+      click_button "Apply"
+    end
+
+    expect(page).to have_css("##{dnd_trigger_id}:focus", wait: 10)
+    expect(room_status.reload).to have_attributes(dnd: true, dnd_date: Date.current)
+
+    click_link "Rooms"
+    find("##{priority_trigger_id}").click
+    within("#stay_view_room_#{room_type.id}_101-priority-panel") do
+      find("input[name='room_status[priority]'][role='switch']", visible: :all).set(false)
+      click_button "Apply"
+    end
+
+    expect(page).to have_css("##{priority_trigger_id}:focus", wait: 10)
+    expect(room_status.reload).to have_attributes(priority: false, priority_note: nil)
+  end
+
+  it "keeps operational controls within the mobile viewport under the dark portal theme" do
+    create(:room_status, hotel:, room_type:, room_number: "101", priority: true, priority_note: "Long preparation instructions for an early arrival")
+    page.current_window.resize_to(390, 844)
+    visit hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
+    page.execute_script("document.body.dataset.theme = 'panel-dark'")
+
+    find("#stay_view_room_#{room_type.id}_101-priority-trigger").click
+    panel_id = "stay_view_room_#{room_type.id}_101-priority-panel"
+    expect(page).to have_css("##{panel_id}", visible: :visible)
+    expect(find("##{panel_id} textarea").value).to eq("Long preparation instructions for an early arrival")
+    bounds = page.evaluate_script(<<~JS)
+      (() => {
+        const rect = document.getElementById('#{panel_id}').getBoundingClientRect()
+        return { left: rect.left, right: rect.right, width: window.innerWidth }
+      })()
+    JS
+    expect(bounds.fetch("left")).to be >= 0
+    expect(bounds.fetch("right")).to be <= bounds.fetch("width")
+    expect(find("body", visible: :all)["data-theme"]).to eq("panel-dark")
+  ensure
+    page.current_window.resize_to(1400, 1000)
+  end
+
   it "opens date-aware available-cell actions by keyboard and launches the existing booking sheet" do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
 
@@ -216,11 +293,12 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     housekeeping_panel = "#stay_view_room_#{room_type.id}_101-housekeeping-panel"
     within("#stay_view_room_#{room_type.id}_101") do
-      expect(page).to have_css("[role='img'][aria-label='Do not disturb']")
-      expect(page).to have_css("[role='img'][aria-label='Cleaning priority']")
+      expect(page).to have_css("button[aria-label='Do not disturb: on — change']")
+      expect(page).to have_css("button[aria-label='Cleaning priority: on — change']")
       find("button[aria-label='1 active housekeeping request']").click
     end
     expect(page).to have_css(housekeeping_panel, text: "Fresh towels", visible: :visible)
+    expect(page).to have_css("#{housekeeping_panel} [role='alert']", text: "Do not enter / do not clean", visible: :visible)
 
     within(housekeeping_panel) { click_link "Assign" }
     within("#offcanvas_drawer") do

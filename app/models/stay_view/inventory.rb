@@ -40,16 +40,36 @@ module StayView
       super(**attributes)
     end
   end
-  RoomStatusRecord = Data.define(:room_type_id, :room_number, :status, :priority, :dnd, :dnd_date)
+  RoomStatusRecord = Data.define(:room_type_id, :room_number, :status, :priority, :dnd, :dnd_date, :status_note, :priority_note) do
+    def initialize(**attributes)
+      attributes[:status_note] ||= nil
+      attributes[:priority_note] ||= nil
+      attributes[:status_note] = attributes[:status_note].presence&.to_s&.freeze
+      attributes[:priority_note] = attributes[:priority_note].presence&.to_s&.freeze
+      super(**attributes)
+    end
+  end
   RoomBlockRecord = Data.define(:id, :room_type_id, :room_number, :block_type, :reason, :start_date, :end_date)
+  HousekeepingAssignmentEventRecord = Data.define(:assigned_to_name, :assigned_by_name, :timestamp) do
+    def initialize(assigned_to_name:, assigned_by_name:, timestamp:)
+      super(
+        assigned_to_name: assigned_to_name.to_s.freeze,
+        assigned_by_name: assigned_by_name.to_s.freeze,
+        timestamp:
+      )
+    end
+  end
   HousekeepingAlertRecord = Data.define(
-    :request_id, :room_type_id, :room_number, :details, :status, :requested_at, :assigned_to_id, :assigned_to_name
+    :request_id, :room_type_id, :room_number, :details, :status, :requested_at, :assigned_to_id, :assigned_to_name,
+    :assignment_history
   ) do
     def initialize(**attributes)
+      attributes[:assignment_history] ||= []
       attributes[:room_number] = attributes.fetch(:room_number).to_s.freeze
       attributes[:details] = attributes.fetch(:details).to_s.freeze
       attributes[:status] = attributes.fetch(:status).to_sym
       attributes[:assigned_to_name] = attributes[:assigned_to_name].presence&.to_s&.freeze
+      attributes[:assignment_history] = Immutable.array(attributes.fetch(:assignment_history))
       super(**attributes)
     end
   end

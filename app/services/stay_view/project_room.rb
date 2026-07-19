@@ -51,6 +51,8 @@ module StayView
         smoking_allowed: room_type.smoking_allowed,
         pets_allowed: room_type.pets_allowed,
         current_physical_status: status.physical_status,
+        status_note: room_status&.status_note,
+        priority_note: room_status&.priority_note,
         operational_flags: status.operational_flags,
         day_cells: build_day_cells(operational_segments),
         booking_segments: booking_segments,
@@ -74,7 +76,16 @@ module StayView
         requested_at: alert.requested_at,
         assigned_to_id: alert.assigned_to_id,
         assigned_to_name: alert.assigned_to_name,
+        assignment_history: alert.assignment_history.map { |event| project_assignment_event(event) },
         capabilities:
+      )
+    end
+
+    def project_assignment_event(event)
+      HousekeepingAssignmentEvent.new(
+        assigned_to_name: event.assigned_to_name,
+        assigned_by_name: event.assigned_by_name,
+        timestamp: event.timestamp
       )
     end
 

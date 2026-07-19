@@ -53,6 +53,8 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
       smoking_allowed: false,
       pets_allowed: true,
       current_physical_status: :inspection_failed,
+      status_note: "Dust remains on the headboard after inspection",
+      priority_note: "Prepare before the early arrival",
       operational_flags: {},
       day_cells: [],
       booking_segments: [ booking_segment ],
@@ -71,6 +73,13 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
       requested_at: Time.zone.local(2026, 7, 16, 9, 30),
       assigned_to_id: 8,
       assigned_to_name: "Sam Lee",
+      assignment_history: [
+        ::StayView::HousekeepingAssignmentEvent.new(
+          assigned_to_name: "Sam Lee",
+          assigned_by_name: "Alex Manager",
+          timestamp: Time.zone.local(2026, 7, 16, 8, 30)
+        )
+      ],
       capabilities:
     )
   end
@@ -272,11 +281,13 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_css("##{room.dom_id}-status[data-action*='mouseenter->panels-ui--popover#show']")
     expect(page).to have_css("##{room.dom_id}-status[data-action*='focusin->panels-ui--popover#show']")
     expect(page).to have_css("##{room.dom_id}-status-panel", text: "Inspection failed", visible: :all)
+    expect(page).to have_css("##{room.dom_id}-status-panel", text: "Dust remains on the headboard", visible: :all)
   end
 
 
   it "renders accessible current operational flags and housekeeping details" do
     operational_room = room.with(
+      capabilities: capabilities.with(view_room_readiness: true),
       operational_flags: { dnd: true, priority: true },
       housekeeping_alerts: [ housekeeping_alert, housekeeping_alert.with(request_id: 22, assigned_to_name: nil) ]
     )
@@ -284,13 +295,26 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     render_inline(HotelPortal::StayView::OperationalIndicators.new(room: operational_room))
 
     expect(page).to have_css("[data-slot='stay-view-operational-indicators'][aria-label='Current operational indicators for room 101']")
-    expect(page).to have_css("[role='img'][aria-label='Do not disturb'][tabindex='0']")
-    expect(page).to have_css("[role='img'][aria-label='Cleaning priority'][tabindex='0']")
+    expect(page).to have_css("button[aria-label='Do not disturb: on'] [data-slot='stay-view-dnd-indicator'][data-state='on']")
+    expect(page).to have_css("button[aria-label='Cleaning priority: on'] [data-slot='stay-view-priority-indicator'][data-state='on']")
+    expect(page).to have_css("##{room.dom_id}-priority-panel", text: "Prepare before the early arrival", visible: :all)
     expect(page).to have_css("button[aria-label='2 active housekeeping requests']")
     expect(page).to have_css("##{room.dom_id}-housekeeping-panel[role='dialog']", text: housekeeping_alert.details, visible: :all)
+    expect(page).to have_css("##{room.dom_id}-housekeeping-panel [role='alert']", text: "Do not enter / do not clean", visible: :all)
     expect(page).to have_css("##{room.dom_id}-housekeeping-panel", text: "Assigned · Sam Lee", visible: :all)
     expect(page).to have_css("##{room.dom_id}-housekeeping-panel", text: "Assigned · Unassigned", visible: :all)
+    expect(page).to have_css("##{room.dom_id}-housekeeping-21-history[data-state='closed']", visible: :all)
+    expect(page).to have_css("##{room.dom_id}-housekeeping-21-history-content", text: "Assigned to Sam Lee", visible: :all)
     expect(page.native.to_html).not_to match(/(?:slate|gray|indigo|red|green)-\d+/)
+  end
+
+  it "renders both readiness flags in their off state for authorized viewers" do
+    authorized_room = room.with(capabilities: capabilities.with(view_room_readiness: true))
+
+    render_inline(HotelPortal::StayView::OperationalIndicators.new(room: authorized_room))
+
+    expect(page).to have_css("button[aria-label='Do not disturb: off'] [data-slot='stay-view-dnd-indicator'][data-state='off'][data-variant='outline']")
+    expect(page).to have_css("button[aria-label='Cleaning priority: off'] [data-slot='stay-view-priority-indicator'][data-state='off'][data-variant='outline']")
   end
 
   it "renders no operational indicator wrapper when the room has no active flags or requests" do

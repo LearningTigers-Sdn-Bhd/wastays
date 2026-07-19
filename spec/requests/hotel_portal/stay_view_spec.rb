@@ -96,6 +96,33 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(document.css("[data-slot='stay-view-footer-occupancy']").map(&:text)).to eq([ "50%", "50%", "0%", "0%", "0%", "0%", "0%" ])
     end
 
+    it "renders editable on/off operational controls and a separate status-action trigger" do
+      create(
+        :room_status,
+        hotel:,
+        room_type:,
+        room_number: "101",
+        status: "inspection_failed",
+        notes: "Reclean the bathroom",
+        priority: true,
+        priority_note: "Guest arriving early"
+      )
+
+      get hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
+
+      document = Nokogiri::HTML(response.body)
+      room_id = "stay_view_room_#{room_type.id}_101"
+      expect(document.at_css("button[aria-label='Cleaning priority: on — change']")).to be_present
+      expect(document.at_css("button[aria-label='Do not disturb: off — change']")).to be_present
+      expect(document.at_css("##{room_id}-priority-panel textarea[name='room_status[priority_note]']").text.strip).to eq("Guest arriving early")
+      expect(document.at_css("##{room_id}-dnd-panel input[name='room_status[dnd]'][role='switch']")).to be_present
+      expect(document.at_css("button[aria-label='Room status: Inspection failed — Reclean the bathroom — change']")).to be_present
+      expect(document.at_css("##{room_id}-status-menu .dropdown-menu__header").text).to include(
+        "Inspection reason",
+        "Reclean the bathroom"
+      )
+    end
+
     it "renders date-aware action menus for every available Timeline cell" do
       room_type
       start_date = Date.current - 1.day
@@ -628,6 +655,101 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include('target="stay_view_board"', "Room status updated.")
       expect(hotel.room_statuses.find_by(room_type:, room_number: "101")).to have_attributes(status: "cleaning", notes: "In progress")
+    end
+
+    it "updates priority and DND through stateful flag controls without overwriting the status note" do
+      room_status = create(
+        :room_status,
+        hotel:,
+        room_type:,
+        room_number: "101",
+        status: "inspection_failed",
+        notes: "Dust on headboard"
+      )
+
+      patch hotel_stay_view_room_status_path(hotel, room_type, "101"), params: {
+        flag_control: "priority",
+        return_to: hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7),
+        view: :timeline,
+        start_date: Date.current,
+        days: 7,
+        room_status: { priority: "1", priority_note: "Prepare before noon" }
+      }, headers: turbo_headers
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("target=\"stay_view_room_#{room_type.id}_101\"", "Room status updated.")
+      expect(response.body).not_to include('target="stay_view_board"')
+      expect(room_status.reload).to have_attributes(
+        priority: true,
+        priority_note: "Prepare before noon",
+        notes: "Dust on headboard"
+      )
+
+      patch hotel_stay_view_room_status_path(hotel, room_type, "101"), params: {
+        flag_control: "dnd",
+        return_to: hotel_stay_view_path(hotel, view: :rooms, date: Date.current),
+        view: :rooms,
+        date: Date.current,
+        room_status: { dnd: "1" }
+      }, headers: turbo_headers
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('target="stay_view_board"')
+      expect(room_status.reload).to have_attributes(dnd: true, dnd_date: Date.current)
+    end
+
+    it "uses the HTML fallback for flag updates" do
+      room_status = create(:room_status, hotel:, room_type:, room_number: "101", priority: false)
+      return_to = hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
+
+      patch hotel_stay_view_room_status_path(hotel, room_type, "101"), params: {
+        flag_control: "priority",
+        return_to:,
+        room_status: { priority: "1", priority_note: "Early arrival" }
+      }
+
+      expect(response).to have_http_status(:see_other)
+      expect(response).to redirect_to(return_to)
+      expect(room_status.reload).to have_attributes(priority: true, priority_note: "Early arrival")
+    end
+
+    it "returns a flag-control error without replacing the off-canvas sheet" do
+      room_type
+      failure = OpenStruct.new(success?: false, error: "Operational flag could not be saved")
+      allow(Rooms::UpdateStatus).to receive(:new).and_return(instance_double(Rooms::UpdateStatus, call: failure))
+
+      patch hotel_stay_view_room_status_path(hotel, room_type, "101"), params: {
+        flag_control: "priority",
+        room_status: { priority: "1" }
+      }, headers: turbo_headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Operational flag could not be saved")
+      expect(response.body).not_to include('target="offcanvas_drawer"')
+    end
+
+    it "redacts operational notes and flag indicators without readiness permission" do
+      create(
+        :room_status,
+        hotel:,
+        room_type:,
+        room_number: "101",
+        status: "inspection_failed",
+        notes: "Sensitive inspection reason",
+        priority: true,
+        priority_note: "Sensitive priority instructions"
+      )
+      role.role_permissions.joins(:permission).where(permissions: { slug: "manage_room_status" }).delete_all
+
+      get hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).not_to include(
+        "Sensitive inspection reason",
+        "Sensitive priority instructions",
+        "stay-view-priority-indicator",
+        "stay-view-dnd-indicator"
+      )
     end
 
     it "creates a room block through the authoritative command" do
