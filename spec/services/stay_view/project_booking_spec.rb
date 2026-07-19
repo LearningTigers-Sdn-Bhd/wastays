@@ -119,6 +119,67 @@ RSpec.describe StayView::ProjectBooking do
     expect(segment.source_label).to eq("Channel")
   end
 
+  it "projects pax and hotel-local boat times only with booking permission" do
+    check_in_at = Time.utc(2026, 7, 16, 7)
+    check_out_at = Time.utc(2026, 7, 18, 4)
+    booking = StayView::BookingRecord.new(
+      booking_room_id: 11, booking_id: 7, room_type_id: 3, room_number: "101",
+      status: :confirmed, guest_name: "Ada Lovelace",
+      check_in: Date.new(2026, 7, 16), check_out: Date.new(2026, 7, 18),
+      check_in_at:, check_out_at:,
+      adults: 2, children: 1,
+      boat_in_at: Time.utc(2026, 7, 16, 7), boat_out_at: Time.utc(2026, 7, 18, 4)
+    )
+
+    permitted = described_class.call(
+      booking:, room_type_name: "Deluxe", date_window: window,
+      capabilities: capabilities.with(view_booking: true)
+    )
+    expect(permitted).to have_attributes(
+      adults: 2, children: 1,
+      check_in_at: check_in_at.in_time_zone(window.time_zone_name),
+      check_out_at: check_out_at.in_time_zone(window.time_zone_name)
+    )
+    expect(permitted.boat_in_at.time_zone.name).to eq(window.time_zone_name)
+    expect(permitted.accessible_label).to include(
+      "2 adults, 1 children", "check-in 15:00", "check-out 12:00", "boat-in"
+    )
+
+    redacted = described_class.call(booking:, room_type_name: "Deluxe", date_window: window, capabilities:)
+    expect(redacted).to have_attributes(
+      adults: nil, children: nil, boat_in_at: nil, boat_out_at: nil,
+      check_in_at: nil, check_out_at: nil
+    )
+    expect(redacted.accessible_label).not_to include("adults", "check-in", "check-out", "boat-in", "boat-out")
+  end
+
+  it "carries actual lifecycle dates without changing scheduled timeline geometry" do
+    actual_check_in_at = Time.zone.local(2026, 7, 16, 15, 5)
+    actual_check_out_at = Time.zone.local(2026, 7, 19, 7, 55)
+    booking = StayView::BookingRecord.new(
+      booking_room_id: 11, booking_id: 7, room_type_id: 3, room_number: "101",
+      status: :completed, guest_name: "Ada Lovelace",
+      check_in: Date.new(2026, 7, 16), check_out: Date.new(2026, 7, 18),
+      actual_check_in: Date.new(2026, 7, 16), actual_check_out: Date.new(2026, 7, 19),
+      actual_check_in_at:, actual_check_out_at:
+    )
+
+    segment = described_class.call(
+      booking:, room_type_name: "Deluxe", date_window: window,
+      capabilities: capabilities.with(view_booking: true)
+    )
+
+    expect(segment).to have_attributes(
+      check_in: Date.new(2026, 7, 16),
+      check_out: Date.new(2026, 7, 18),
+      actual_check_in: Date.new(2026, 7, 16),
+      actual_check_out: Date.new(2026, 7, 19),
+      actual_check_in_at:,
+      actual_check_out_at:
+    )
+    expect(segment.end_track).to eq(window.booking_tracks(booking.check_in, booking.check_out).end_track)
+  end
+
   it "projects immutable display-ready financial signals into accessible booking text" do
     booking = StayView::BookingRecord.new(
       booking_room_id: 11,

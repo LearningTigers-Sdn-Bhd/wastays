@@ -68,11 +68,11 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(global_actions.at_css("a[href^='#{hotel_booking_transaction_new_booking_path(hotel)}']").text.squish).to eq("Add booking")
       operational_counts = document.css("[data-slot='stay-view-operational-count']")
       expect(operational_counts.map { |badge| badge["data-state"] }).to eq(
-        %w[all vacant occupied reserved blocked due_out dirty]
+        %w[all vacant arrival occupied departure turnover blocked dirty]
       )
       expect(operational_counts.map { |badge| badge.css("span").map(&:text) }).to eq(
-        [ [ "All", "2" ], [ "Vacant", "1" ], [ "Occupied", "0" ], [ "Reserved", "1" ],
-         [ "Blocked", "0" ], [ "Due out", "0" ], [ "Dirty", "0" ] ]
+        [ [ "All", "2" ], [ "Vacant", "1" ], [ "Arrival", "1" ], [ "Occupied", "0" ],
+         [ "Departure", "0" ], [ "Turnover", "0" ], [ "Blocked", "0" ], [ "Dirty", "0" ] ]
       )
       expect(document.at_css("button[aria-label='Stay View status guide']")).to be_present
       expect(document.at_css("#stay-view-status-guide-panel").text).to include("No-show review", "Do not disturb")
@@ -161,7 +161,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(today_trigger["data-alignment"]).to eq("center")
     end
 
-    it "keeps a checkout-only cell actionable and counts a due-out room at the left edge" do
+    it "keeps a checkout-only cell actionable and counts a departure room at the left edge" do
       departing = create(
         :booking,
         hotel:,
@@ -178,7 +178,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(document.at_css("#stay_view_room_#{room_type.id}_101-#{Date.current.iso8601}-cell-actions")).to be_present
       checkout_trigger = document.at_css("#stay_view_room_#{room_type.id}_101-#{Date.current.iso8601}-cell-actions-trigger")
       expect(checkout_trigger["data-alignment"]).to eq("end")
-      expect(document.at_css("[data-state='due_out']").css("span").map(&:text)).to eq([ "Due out", "1" ])
+      expect(document.at_css("[data-state='departure']").css("span").map(&:text)).to eq([ "Departure", "1" ])
       expect(document.at_css("[data-state='vacant']").css("span").map(&:text)).to eq([ "Vacant", "1" ])
     end
 
@@ -208,8 +208,8 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       document = Nokogiri::HTML(response.body)
       expect(document.css("[data-slot='stay-view-operational-count']").map { |badge| badge.css("span").map(&:text) }).to eq(
-        [ [ "All", "0" ], [ "Vacant", "0" ], [ "Occupied", "0" ], [ "Reserved", "0" ],
-         [ "Blocked", "0" ], [ "Due out", "0" ], [ "Dirty", "0" ] ]
+        [ [ "All", "0" ], [ "Vacant", "0" ], [ "Arrival", "0" ], [ "Occupied", "0" ],
+         [ "Departure", "0" ], [ "Turnover", "0" ], [ "Blocked", "0" ], [ "Dirty", "0" ] ]
       )
     end
 
@@ -289,9 +289,203 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       get hotel_stay_view_path(hotel, view: "rooms", date: Date.current, group_by: "none")
       flat = Nokogiri::HTML(response.body)
-      expect(flat.css("[data-testid='stay-view-room-cards'] section")).to be_empty
+      expect(flat.css("[data-testid='stay-view-room-cards'] > section")).to be_empty
       expect(flat.css("[data-testid='stay-view-room-cards'] article h3").map(&:text)).to contain_exactly("101", "102", "201")
       expect(response.body).to include("Room 101", "Room 201")
+    end
+
+    it "renders a compact turnover panel without a room action menu or footer" do
+      departing = create(
+        :booking,
+        hotel:,
+        status: "completed",
+        guest_name: "Departing Guest",
+        adults: 2,
+        children: 1,
+        check_in: hotel.hotel_time_zone.local(2026, 7, 14, 15),
+        check_out: hotel.hotel_time_zone.local(2026, 7, 16, 12),
+        checked_out_at: hotel.hotel_time_zone.local(2026, 7, 16, 7, 55)
+      )
+      arriving = create(
+        :booking,
+        hotel:,
+        status: "confirmed",
+        guest_name: "Arriving Guest",
+        adults: 1,
+        children: 0,
+        check_in: hotel.hotel_time_zone.local(2026, 7, 16, 15),
+        check_out: hotel.hotel_time_zone.local(2026, 7, 18, 12),
+        source: "walk_in"
+      )
+      create(:booking_room, booking: departing, room_type:, room_number: "101")
+      create(:booking_room, booking: arriving, room_type:, room_number: "101")
+      create(
+        :booking_guest,
+        booking: departing,
+        is_primary: true,
+        boat_out_at: hotel.hotel_time_zone.local(2026, 7, 16, 8, 30)
+      )
+      create(
+        :booking_guest,
+        booking: arriving,
+        is_primary: true,
+        boat_in_at: hotel.hotel_time_zone.local(2026, 7, 16, 14, 30)
+      )
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+      document = Nokogiri::HTML(response.body)
+      room = document.at_css("#stay_view_room_#{room_type.id}_101")
+      expect(room["data-room-state"]).to eq("turnover")
+      expect(room.at_css("[data-slot='stay-view-room-identity']")["class"]).to include(
+        "grid-cols-[minmax(0,1fr)_auto]"
+      )
+      expect(room.at_css("[data-slot='stay-view-room-summary']")["data-layout"]).to eq("split_controls")
+      expect(room.at_css("[data-slot='stay-view-room-turnover']").text).to include(
+        "Departing Guest", "Departed at 07:55", "2 adults, 1 child", "Boat-out 08:30",
+        "Arriving Guest", "Arrives today at 15:00", "1 adult, 0 children", "Boat-in 14:30"
+      )
+      turnover_panel = room.at_css("[data-slot='stay-view-room-turnover']")
+      expect(turnover_panel["class"].split).to include("divide-y", "divide-border")
+      booking_items = room.css("a[data-slot='stay-view-room-booking-item']")
+      expect(booking_items.size).to eq(2)
+      expect(booking_items.map { |item| item.at_css("[data-slot='stay-view-room-pax']").text.squish }).to eq(%w[3 1])
+      booking_items.each do |item|
+        expect(item["class"].split).not_to include("border-0")
+        expect(item.at_css("[role='tooltip'][popover='manual']")).to be_present
+        expect(Rack::Utils.parse_nested_query(URI.parse(item["href"]).query)).to include("source" => "stay_view")
+      end
+      expect(room.at_css("button[aria-label='Actions for room 101']")).to be_nil
+      expect(room.at_css("[data-slot='stay-view-room-footer']")).to be_nil
+      expect(response.body).to include("xl:grid-cols-5")
+      expect(room["class"].split).to include("h-full")
+      expect(response.body).not_to include("grid items-start gap-4")
+    end
+
+    it "renders date-aware ButtonGroups only in a vacant card footer" do
+      room_type
+      expected = {
+        Date.current - 1.day => %w[Backdated Block],
+        Date.current => [ "Walk-in", "Book", "Block" ],
+        Date.current + 1.day => %w[Book Block]
+      }
+
+      expected.each do |date, labels|
+        get hotel_stay_view_path(hotel, view: "rooms", date:)
+
+        room = Nokogiri::HTML(response.body).at_css("#stay_view_room_#{room_type.id}_101")
+        activity = room.at_css("[data-slot='stay-view-room-activity']")
+        footer = room.at_css("[data-slot='stay-view-room-footer']")
+        expect(activity.text).to include("No activity today")
+        expect(footer.css("[data-slot='button-group'] a").map { |item| item.text.squish }).to eq(labels)
+        footer.css("[data-slot='button-group'] a").each do |item|
+          expect(Rack::Utils.parse_nested_query(URI.parse(item["href"]).query)).to include("source" => "stay_view")
+        end
+      end
+    end
+
+    it "renders the same date-aware footer for a departure without an arrival" do
+      departing = create(
+        :booking,
+        hotel:,
+        status: "completed",
+        guest_name: "Departing Guest",
+        check_in: Date.current - 2.days,
+        check_out: Date.current
+      )
+      create(:booking_room, booking: departing, room_type:, room_number: "101")
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+      room = Nokogiri::HTML(response.body).at_css("#stay_view_room_#{room_type.id}_101")
+      expect(room["data-room-state"]).to eq("departure")
+      expect(room.at_css("[data-context='departure']").text).to include("Departing Guest", "Departed")
+      expect(room.css("[data-slot='stay-view-room-footer'] a").map { |item| item.text.squish }).to eq(
+        [ "Walk-in", "Book", "Block" ]
+      )
+    end
+
+    it "suppresses the footer for an occupied stay" do
+      occupied = create(
+        :booking,
+        hotel:,
+        status: "checked_in",
+        guest_name: "Occupied Guest",
+        check_in: Date.current - 1.day,
+        check_out: Date.current + 1.day
+      )
+      create(:booking_room, booking: occupied, room_type:, room_number: "101")
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+      room = Nokogiri::HTML(response.body).at_css("#stay_view_room_#{room_type.id}_101")
+      expect(room["data-room-state"]).to eq("occupied")
+      expect(room.at_css("[data-context='occupied']").text).to include("Occupied Guest", "Stays until")
+      expect(room.at_css("[data-slot='stay-view-room-footer']")).to be_nil
+    end
+
+    it "uses actual lifecycle history for past Room View states and footer eligibility" do
+      zone = hotel.hotel_time_zone
+      actual_arrival = Date.current - 3.days
+      scheduled_departure = Date.current - 2.days
+      actual_departure = Date.current - 1.day
+      completed = create(
+        :booking,
+        hotel:,
+        status: "completed",
+        guest_name: "Historical Guest",
+        check_in: zone.local(actual_arrival.year, actual_arrival.month, actual_arrival.day, 15),
+        check_out: zone.local(scheduled_departure.year, scheduled_departure.month, scheduled_departure.day, 12),
+        checked_in_at: zone.local(actual_arrival.year, actual_arrival.month, actual_arrival.day, 15),
+        checked_out_at: zone.local(actual_departure.year, actual_departure.month, actual_departure.day, 8)
+      )
+      create(:booking_room, booking: completed, room_type:, room_number: "101")
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: actual_arrival)
+      arrival = Nokogiri::HTML(response.body).at_css("#stay_view_room_#{room_type.id}_101")
+      expect(arrival["data-room-state"]).to eq("arrival")
+      expect(arrival.at_css("[data-context='arrival']").text).to include("Historical Guest", "Arrived")
+      expect(arrival.at_css("[data-slot='stay-view-room-footer']")).to be_nil
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: scheduled_departure)
+      occupied = Nokogiri::HTML(response.body).at_css("#stay_view_room_#{room_type.id}_101")
+      expect(occupied["data-room-state"]).to eq("occupied")
+      expect(occupied.at_css("[data-context='occupied']").text).to include(
+        "Historical Guest", "Stayed until #{actual_departure.to_fs(:medium)}"
+      )
+      expect(occupied.at_css("[data-slot='stay-view-room-footer']")).to be_nil
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: actual_departure)
+      departure = Nokogiri::HTML(response.body).at_css("#stay_view_room_#{room_type.id}_101")
+      expect(departure["data-room-state"]).to eq("departure")
+      expect(departure.at_css("[data-context='departure']").text).to include("Historical Guest", "Departed")
+      expect(departure.css("[data-slot='stay-view-room-footer'] a").map { |item| item.text.squish }).to eq(
+        %w[Backdated Block]
+      )
+    end
+
+    it "uses the six-state Room View filter while Timeline retains occupancy filtering" do
+      arriving = create(
+        :booking,
+        hotel:,
+        status: "confirmed",
+        guest_name: "Arriving Guest",
+        check_in: Date.current,
+        check_out: Date.current + 1.day
+      )
+      create(:booking_room, booking: arriving, room_type:, room_number: "101")
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current, room_state: "arrival")
+
+      room_view = Nokogiri::HTML(response.body)
+      expect(response.body).to include("Room state", "All room states", "Turnover")
+      expect(response.body).not_to include("All occupancy states")
+      expect(room_view.css("[data-testid='stay-view-room-cards'] article").map { |card| card["data-room-state"] }).to eq([ "arrival" ])
+
+      get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, occupancy: "arrival")
+
+      expect(response.body).to include("Occupancy", "All occupancy states")
+      expect(response.body).not_to include("All room states")
     end
 
     it "renders authorized financial attention in Timeline View and a full badge in Room View" do
@@ -462,7 +656,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).not_to include("cell-actions-trigger")
     end
 
-    it "renders the lifecycle-derived Room View action matrix for projected bookings" do
+    it "renders the lifecycle-derived action matrix in the booking drawer opened from Room View" do
       booking = create(
         :booking,
         hotel:,
@@ -486,12 +680,17 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       expected.each do |status, labels|
         booking.update_column(:status, status)
-        get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+        return_to = hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+        get hotel_booking_transaction_show_booking_path(hotel, booking, source: "stay_view", return_to:)
 
         document = Nokogiri::HTML(response.body)
-        menu = document.at_css("#stay_view_room_#{room_type.id}_101-actions-menu")
-        rendered = menu.css("a[role='menuitem']").map { |item| item.text.squish } & lifecycle_labels
+        items = document.css("[role='menu'] a[role='menuitem']")
+        rendered = items.map { |item| item.text.squish } & lifecycle_labels
         expect(rendered).to eq(labels), "unexpected rendered actions for #{status}"
+        items.select { |item| item.text.squish.in?(labels) }.each do |item|
+          query = Rack::Utils.parse_nested_query(URI.parse(item["href"]).query)
+          expect(query).to include("source" => "stay_view", "return_to" => return_to)
+        end
       end
     end
 
@@ -503,9 +702,11 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
 
       document = Nokogiri::HTML(response.body)
-      menu = document.at_css("#stay_view_room_#{room_type.id}_101-actions-menu")
-      expect(menu.text).to include("Open booking")
-      expect(menu.text).not_to include("Check-in", "Cancel", "Mark No-show", "Check-out")
+      item = document.at_css("#stay_view_room_#{room_type.id}_101 a[data-slot='stay-view-room-booking-item']")
+      expect(item).to be_present
+
+      get item["href"]
+      expect(response.body).not_to include(">Actions<", "Check-in", "Cancel", "Mark No-show", "Check-out")
     end
 
     it "rejects users without board access before loading the board" do
@@ -642,6 +843,36 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Block room", "Block type", "Room 101")
+    end
+
+    it "keeps an existing custom room-block type selected and saveable" do
+      block = create(:room_block, hotel:, room_type:, room_number: "101")
+      block.update_column(:block_type, "storm_recovery")
+
+      get edit_hotel_stay_view_room_block_path(hotel, block), params: {
+        return_to: hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
+      }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
+
+      document = Nokogiri::HTML(response.body)
+      option = document.at_css("select[name='room_block[block_type]'] option[value='storm_recovery']")
+      expect(option).to be_present
+      expect(option.text).to eq("Storm recovery (existing)")
+      expect(option["selected"]).to eq("selected")
+
+      patch hotel_stay_view_room_block_path(hotel, block), params: {
+        return_to: hotel_stay_view_path(hotel, view: :rooms, date: Date.current),
+        room_block: {
+          room_type_id: room_type.id,
+          room_number: "101",
+          start_date: block.start_date,
+          end_date: block.end_date,
+          block_type: "storm_recovery",
+          reason: "Weather damage repaired"
+        }
+      }, headers: turbo_headers
+
+      expect(response).to have_http_status(:success)
+      expect(block.reload).to have_attributes(block_type: "storm_recovery", reason: "Weather damage repaired")
     end
 
     it "updates room status and refreshes the board" do

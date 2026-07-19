@@ -5,21 +5,22 @@
     <span><%= action.fetch(:label) %></span>
   <% end %>
 <% end %>
-<% if stay_view_actions.any? && presenter.summary_actions.any? %>
+<% summary_actions = local_assigns.fetch(:summary_actions, presenter.summary_actions) %>
+<% if stay_view_actions.any? && summary_actions.any? %>
   <div class="my-1 border-t border-border" role="separator"></div>
 <% end %>
-<% return_to = request.fullpath %>
-<% presenter.summary_actions.each do |summary_action| %>
+<% action_state = { return_to: local_assigns[:return_to].presence || request.fullpath, source: local_assigns[:source].presence }.compact %>
+<% summary_actions.each do |summary_action| %>
   <% action_booking = summary_action.target_booking %>
   <% action_path = case summary_action.key
-    when :check_in, :edit_check_in then hotel_booking_transaction_check_in_reservation_path(current_hotel, action_booking, return_to: return_to)
-    when :cancel then hotel_booking_transaction_cancel_booking_path(current_hotel, action_booking, return_to: return_to)
-    when :backdated_check_in then hotel_booking_transaction_booking_backdated_check_in_path(current_hotel, action_booking, return_to: return_to)
-    when :mark_no_show then hotel_booking_transaction_mark_no_show_path(current_hotel, action_booking, return_to: return_to)
-    when :check_out then hotel_booking_transaction_check_out_path(current_hotel, action_booking, return_to: return_to)
-    when :undo_check_in then hotel_booking_transaction_undo_check_in_path(current_hotel, action_booking, return_to: return_to)
-    when :late_checkout then hotel_booking_transaction_late_checkout_path(current_hotel, action_booking, return_to: return_to)
-    when :reinstate then hotel_booking_transaction_reinstate_no_show_path(current_hotel, action_booking, return_to: return_to)
+    when :check_in, :edit_check_in then hotel_booking_transaction_check_in_reservation_path(current_hotel, action_booking, action_state)
+    when :cancel then hotel_booking_transaction_cancel_booking_path(current_hotel, action_booking, action_state)
+    when :backdated_check_in then hotel_booking_transaction_booking_backdated_check_in_path(current_hotel, action_booking, action_state)
+    when :mark_no_show then hotel_booking_transaction_mark_no_show_path(current_hotel, action_booking, action_state)
+    when :check_out then hotel_booking_transaction_check_out_path(current_hotel, action_booking, action_state)
+    when :undo_check_in then hotel_booking_transaction_undo_check_in_path(current_hotel, action_booking, action_state)
+    when :late_checkout then hotel_booking_transaction_late_checkout_path(current_hotel, action_booking, action_state)
+    when :reinstate then hotel_booking_transaction_reinstate_no_show_path(current_hotel, action_booking, action_state)
     end %>
   <% action_class = case summary_action.tone
     when :danger then "text-rose-700 hover:bg-rose-50 focus-visible:bg-rose-50"

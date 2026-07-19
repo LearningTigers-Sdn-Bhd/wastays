@@ -84,20 +84,42 @@ module StayView
       primary_guest_column = capabilities.view_booking? ? primary_guest_name_column : Arel.sql("NULL")
       group_reference_column = capabilities.view_booking? ? "group_bookings.reservation_number" : Arel.sql("NULL")
       group_name_column = capabilities.view_booking? ? "group_bookings.name" : Arel.sql("NULL")
+      adults_column = capabilities.view_booking? ? "bookings.adults" : Arel.sql("NULL")
+      children_column = capabilities.view_booking? ? "bookings.children" : Arel.sql("NULL")
+      boat_in_column = load_boat_information? ? primary_guest_attribute_column(:boat_in_at) : Arel.sql("NULL")
+      boat_out_column = load_boat_information? ? primary_guest_attribute_column(:boat_out_at) : Arel.sql("NULL")
       columns = [
         "booking_rooms.id", "bookings.id", "booking_rooms.room_type_id", "booking_rooms.room_number",
-        "bookings.status", guest_column, primary_guest_column, "bookings.check_in", "bookings.check_out", "bookings.group_booking_id",
-        group_reference_column, group_name_column, "bookings.group_position", "bookings.source"
+        "bookings.status", guest_column, primary_guest_column, "bookings.check_in", "bookings.check_out",
+        "bookings.checked_in_at", "bookings.checked_out_at", "bookings.group_booking_id",
+        group_reference_column, group_name_column, "bookings.group_position", "bookings.source",
+        adults_column, children_column, boat_in_column, boat_out_column
       ]
 
-      BookingRoom.joins(:booking)
+      scope = BookingRoom.joins(:booking)
         .left_joins(booking: :group_booking)
         .where(bookings: { hotel_id: hotel.id, status: visible_booking_statuses })
         .where.not(room_number: [ nil, "" ])
-        .where("bookings.check_in < ? AND bookings.check_out >= ?", date_window.window_end_at, date_window.window_start_at)
+      scope = if date_window.view_mode == :rooms
+        scope.where(
+          "COALESCE(bookings.checked_in_at, bookings.check_in) < :window_end AND " \
+          "COALESCE(bookings.checked_out_at, bookings.check_out) >= :window_start",
+          window_end: date_window.window_end_at,
+          window_start: date_window.window_start_at
+        )
+      else
+        scope.where("bookings.check_in < ? AND bookings.check_out >= ?", date_window.window_end_at, date_window.window_start_at)
+      end
+
+      scope
         .pluck(*columns)
         .map do |booking_room_id, booking_id, room_type_id, room_number, status, guest_name, primary_guest_name, check_in, check_out,
-                 group_booking_id, group_reservation_number, group_name, group_position, source|
+                 checked_in_at, checked_out_at, group_booking_id, group_reservation_number, group_name, group_position, source,
+                 adults, children, boat_in_at, boat_out_at|
+          check_in_at = check_in.in_time_zone(date_window.time_zone_name)
+          check_out_at = check_out.in_time_zone(date_window.time_zone_name)
+          actual_check_in_at = checked_in_at&.in_time_zone(date_window.time_zone_name)
+          actual_check_out_at = checked_out_at&.in_time_zone(date_window.time_zone_name)
           BookingRecord.new(
             booking_room_id: booking_room_id,
             booking_id: booking_id,
@@ -106,13 +128,23 @@ module StayView
             status: status.to_sym,
             guest_name: guest_name&.to_s&.freeze,
             primary_guest_name: primary_guest_name&.to_s&.freeze,
-            check_in: check_in.in_time_zone(date_window.time_zone_name).to_date,
-            check_out: check_out.in_time_zone(date_window.time_zone_name).to_date,
+            check_in: check_in_at.to_date,
+            check_out: check_out_at.to_date,
+            check_in_at:,
+            check_out_at:,
+            actual_check_in: actual_check_in_at&.to_date,
+            actual_check_out: actual_check_out_at&.to_date,
+            actual_check_in_at:,
+            actual_check_out_at:,
             group_booking_id:,
             group_reference: group_reference(group_reservation_number),
             group_name:,
             group_position:,
-            source:
+            source:,
+            adults:,
+            children:,
+            boat_in_at:,
+            boat_out_at:
           )
         end
     end
@@ -123,6 +155,18 @@ module StayView
         .select("COALESCE(booking_guests.name_snapshot, guests.name)")
         .limit(1)
       Arel.sql("COALESCE((#{primary_guest.to_sql}), bookings.guest_name)")
+    end
+
+    def primary_guest_attribute_column(attribute)
+      primary_guest = BookingGuest
+        .where("booking_guests.booking_id = bookings.id", role: "primary")
+        .select("booking_guests.#{attribute}")
+        .limit(1)
+      Arel.sql("(#{primary_guest.to_sql})")
+    end
+
+    def load_boat_information?
+      capabilities.view_booking? && hotel.allow_boat_information?
     end
 
     def load_group_rooms(group_booking_ids)

@@ -34,6 +34,27 @@ RSpec.describe StayView::BoardState do
     expect(invalid.room_grouping).to eq("room_type")
   end
 
+  it "keeps the six-state filter only in Room View" do
+    room_state = described_class.new(hotel:, params: {
+      view: "rooms",
+      date: "2026-07-16",
+      room_state: "turnover",
+      occupancy: "arrival"
+    })
+    timeline = described_class.new(hotel:, params: {
+      view: "timeline",
+      start_date: "2026-07-16",
+      room_state: "turnover",
+      occupancy: "arrival"
+    })
+
+    expect(room_state.filters).to have_attributes(room_state: :turnover, occupancy: nil)
+    expect(room_state.query).to include(room_state: :turnover)
+    expect(room_state.query).not_to have_key(:occupancy)
+    expect(timeline.filters).to have_attributes(room_state: nil, occupancy: :arrival)
+    expect(timeline.query).not_to have_key(:room_state)
+  end
+
   it "ignores room grouping outside Room View" do
     state = described_class.new(hotel:, params: { view: "timeline", start_date: "2026-07-16", group_by: "none" })
 
@@ -51,12 +72,13 @@ RSpec.describe StayView::BoardState do
   end
 
   it "translates dates when switching modes" do
-    state = described_class.new(hotel:, params: { view: "rooms", date: "2026-07-22" })
+    state = described_class.new(hotel:, params: { view: "rooms", date: "2026-07-22", room_state: "arrival" })
 
     expect(state.query(view: :timeline, days: 7)).to include(
       view: :timeline,
       start_date: Date.new(2026, 7, 22),
       days: 7
     )
+    expect(state.query(view: :timeline, days: 7)).not_to have_key(:room_state)
   end
 end

@@ -199,16 +199,66 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     return_to = hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
     visit return_to
 
-    within("#stay_view_room_#{room_type.id}_101") do
-      find("button[aria-label='Actions for room 101']").click
+    within("#stay_view_room_#{room_type.id}_101[data-room-state='arrival']") do
+      expect(page).to have_no_css("[data-slot='stay-view-room-footer']")
+      find("a[data-slot='stay-view-room-booking-item']").click
     end
-    click_link "Check-in"
+    within("#offcanvas_drawer") do
+      click_button "Actions"
+    end
+    find("a[role='menuitem']", text: "Check-in", visible: :visible).click
 
     within("#offcanvas_drawer") do
       expect(page).to have_content("CONFIRM CHECK-IN")
       expect(find("input[name='source']", visible: :all).value).to eq("stay_view")
       expect(find("input[name='return_to']", visible: :all).value).to eq(return_to)
     end
+  end
+
+  it "opens date-aware Room View footer actions by keyboard from a vacant card" do
+    visit hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
+
+    room_card = find("#stay_view_room_#{room_type.id}_102[data-room-state='vacant']")
+    expect(room_card).to have_content("No activity today")
+    book = room_card.find("[data-slot='stay-view-room-footer'] a[aria-label^='Add booking for room 102']")
+    expect(Rack::Utils.parse_nested_query(URI.parse(book[:href]).query)).to include("room_number" => "102")
+    book.send_keys(:enter)
+
+    within("#offcanvas_drawer") do
+      expect(find("#booking_check_in").value).to start_with(Date.current.iso8601)
+      expect(find("#booking_check_out").value).to start_with((Date.current + 1.day).iso8601)
+    end
+  end
+
+  it "opens an active block item and finishes it through the existing sheet" do
+    block = create(
+      :room_block,
+      hotel:,
+      room_type:,
+      room_number: "102",
+      start_date: Date.current,
+      end_date: Date.current,
+      reason: "Repair the balcony door"
+    )
+    visit hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
+
+    within("#stay_view_room_#{room_type.id}_102[data-room-state='blocked']") do
+      expect(page).to have_no_css("[data-slot='stay-view-room-footer']")
+      item = find("a[data-slot='stay-view-room-block-item']")
+      expect(Rack::Utils.parse_nested_query(URI.parse(item[:href]).query)).to include("source" => "stay_view")
+      item.click
+    end
+    within("#offcanvas_drawer") do
+      expect(page).to have_content("Edit room block")
+      expect(find("#room_block_reason").value).to eq("Repair the balcony door")
+      click_button "Finish block"
+    end
+
+    expect(block.reload.completed_at).to be_present
+    expect(page).to have_css(
+      "#stay_view_room_#{room_type.id}_102[data-room-state='vacant'] [data-slot='stay-view-room-activity']",
+      text: "No activity today"
+    )
   end
 
   it "opens the status guide and changes room status from the timeline badge menu" do
@@ -393,9 +443,10 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     visit hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
 
     within("#stay_view_room_#{room_type.id}_101") do
-      find("button[aria-label='Actions for room 101']").click
+      find("a[data-slot='stay-view-room-booking-item']").click
     end
-    click_link "Move or reassign"
+    within("#offcanvas_drawer") { click_button "Actions" }
+    find("a[role='menuitem']", text: "Move or reassign", visible: :visible).click
 
     within("#offcanvas_drawer") do
       expect(page).to have_content("Move or reassign stay")

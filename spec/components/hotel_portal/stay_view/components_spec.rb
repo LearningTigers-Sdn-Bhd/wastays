@@ -107,7 +107,9 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
   let(:status_counts) do
     ::StayView::StatusCounts.new(
       reference_date: Date.new(2026, 7, 16),
-      room_states: { all: 4, vacant: 0, occupied: 2, reserved: 1, blocked: 1, due_out: 0, dirty: 1 }
+      room_states: {
+        all: 6, vacant: 0, arrival: 1, occupied: 2, departure: 1, turnover: 1, blocked: 1, dirty: 1
+      }
     )
   end
 
@@ -116,11 +118,11 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
 
     badges = page.all("[data-slot='stay-view-operational-count']")
     expect(badges.map { |badge| badge["data-state"] }).to eq(
-      %w[all vacant occupied reserved blocked due_out dirty]
+      %w[all vacant arrival occupied departure turnover blocked dirty]
     )
     expect(badges.map { |badge| badge.all("span").map(&:text) }).to eq(
-      [ [ "All", "4" ], [ "Vacant", "0" ], [ "Occupied", "2" ], [ "Reserved", "1" ],
-       [ "Blocked", "1" ], [ "Due out", "0" ], [ "Dirty", "1" ] ]
+      [ [ "All", "6" ], [ "Vacant", "0" ], [ "Arrival", "1" ], [ "Occupied", "2" ],
+       [ "Departure", "1" ], [ "Turnover", "1" ], [ "Blocked", "1" ], [ "Dirty", "1" ] ]
     )
     expect(page).to have_css("[data-state='vacant'][data-variant='success'][aria-label='Vacant: 0 rooms']")
     expect(page).to have_css("[data-state='blocked'][data-variant='destructive']")
@@ -306,6 +308,28 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_css("##{room.dom_id}-housekeeping-21-history[data-state='closed']", visible: :all)
     expect(page).to have_css("##{room.dom_id}-housekeeping-21-history-content", text: "Assigned to Sam Lee", visible: :all)
     expect(page.native.to_html).not_to match(/(?:slate|gray|indigo|red|green)-\d+/)
+  end
+
+  it "splits room-card restrictions from controls in the required order" do
+    operational_room = room.with(
+      smoking_allowed: false,
+      pets_allowed: false,
+      capabilities: capabilities.with(view_room_readiness: true),
+      housekeeping_alerts: [ housekeeping_alert ]
+    )
+
+    render_inline(HotelPortal::StayView::RoomSummary.new(
+      room: operational_room,
+      layout: :split_controls,
+      show_identity: false
+    ))
+
+    summary = page.find("[data-slot='stay-view-room-summary']")
+    html = summary.native.to_html
+    expect(html.index("aria-label=\"No pets\"")).to be < html.index("aria-label=\"No smoking\"")
+    expect(html.index("#{room.dom_id}-status")).to be < html.index("#{room.dom_id}-dnd")
+    expect(html.index("#{room.dom_id}-dnd")).to be < html.index("#{room.dom_id}-priority")
+    expect(html.index("#{room.dom_id}-priority")).to be < html.index("#{room.dom_id}-housekeeping")
   end
 
   it "renders both readiness flags in their off state for authorized viewers" do
@@ -538,65 +562,36 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_css("##{room.dom_id}-actions-menu > a", text: "Change room status", visible: :all)
   end
 
-  it "renders a plain operational-status badge for non-collapsed states" do
+  it "renders a static operational-status badge" do
     render_inline(HotelPortal::StayView::OperationalStatusBadge.new(
       room:,
       status: :occupied,
       reference_date: Date.new(2026, 7, 18)
     ))
 
-    expect(page).to have_css("[data-slot='stay-view-operational-status'][data-status='occupied']", text: "Occupied")
-    expect(page).to have_no_css("[id$='-operational-status-panel']")
-  end
-
-  it "reveals the maintenance block behind a collapsed Blocked badge" do
-    render_inline(HotelPortal::StayView::OperationalStatusBadge.new(
-      room:,
-      status: :blocked,
-      reference_date: Date.new(2026, 7, 18)
-    ))
-
-    expect(page).to have_css("button[aria-label='Room status: Blocked — Air-conditioning maintenance']")
-    expect(page).to have_css("##{room.dom_id}-operational-status-panel", text: "Air-conditioning maintenance", visible: :all)
-  end
-
-  it "reveals the occupied stay behind a collapsed Due out badge" do
-    departing = booking_segment.with(status: :review_due_out, check_out: Date.new(2026, 7, 18))
-    arriving = booking_segment.with(
-      dom_id: "stay-view-booking-2",
-      booking_id: 2,
-      booking_room_id: 12,
-      guest_label: "Arriving Guest",
-      status: :confirmed,
-      check_in: Date.new(2026, 7, 18),
-      check_out: Date.new(2026, 7, 20)
+    expect(page).to have_css(
+      "[data-slot='stay-view-operational-status'][data-status='occupied']" \
+      "[aria-label='Operational state: Occupied']",
+      text: "Occupied"
     )
-    turnover_room = room.with(booking_segments: [ departing, arriving ])
-    render_inline(HotelPortal::StayView::OperationalStatusBadge.new(
-      room: turnover_room,
-      status: :due_out,
-      reference_date: Date.new(2026, 7, 18)
-    ))
-
-    expect(page).to have_css("[data-status='due_out']", text: "Due out")
-    expect(page).to have_css("##{room.dom_id}-operational-status-trigger[aria-label*='#{booking_segment.guest_label}']")
-    expect(page).to have_css("##{room.dom_id}-operational-status-panel", text: "Occupied stay checking out", visible: :all)
-    expect(page).to have_css("##{room.dom_id}-operational-status-panel", text: booking_segment.guest_label, visible: :all)
-    expect(page).to have_no_css("##{room.dom_id}-operational-status-trigger[aria-label*='Arriving Guest']")
-    expect(page).to have_no_css("##{room.dom_id}-operational-status-panel", text: "Arriving Guest", visible: :all)
+    expect(page).to have_no_css("button")
   end
 
-  it "describes a late checkout without attributing it to an unrelated booking" do
-    late_checkout_room = room.with(operational_flags: { late_checkout: true })
-    render_inline(HotelPortal::StayView::OperationalStatusBadge.new(
-      room: late_checkout_room,
-      status: :due_out,
-      reference_date: Date.new(2026, 7, 18)
-    ))
+  it "uses the configured semantic variant for every room-card state" do
+    expected = {
+      vacant: "success", arrival: "info", occupied: "primary", departure: "neutral",
+      turnover: "warning", blocked: "destructive"
+    }
 
-    expect(page).to have_css("##{room.dom_id}-operational-status-trigger[aria-label='Room status: Due out — Late checkout detected']")
-    expect(page).to have_css("##{room.dom_id}-operational-status-panel", text: "Late checkout detected", visible: :all)
-    expect(page).to have_no_css("##{room.dom_id}-operational-status-panel", text: booking_segment.guest_label, visible: :all)
+    expected.each do |status, variant|
+      render_inline(HotelPortal::StayView::OperationalStatusBadge.new(
+        room:,
+        status:,
+        reference_date: Date.new(2026, 7, 18)
+      ))
+
+      expect(page).to have_css("[data-status='#{status}'][data-variant='#{variant}']")
+    end
   end
 
   it "rejects objects outside the Phase 1 projection contract" do

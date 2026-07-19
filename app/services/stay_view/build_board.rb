@@ -24,10 +24,13 @@ module StayView
       resolved_capabilities = capabilities || BuildCapabilities.call(user:, hotel:)
       date_window = DateWindow.new(hotel:, start_date:, days:, view_mode:, now:)
       inventory = LoadInventory.call(hotel:, date_window:, capabilities: resolved_capabilities)
-      normalized_filters = FilterState.build(filters)
+      normalized_filters = FilterState.build(filters).for_view(date_window.view_mode)
       filtered_groups = ApplyFilters.call(
         room_groups: project_groups(inventory, date_window, resolved_capabilities),
-        filters: normalized_filters
+        filters: normalized_filters,
+        hotel:,
+        reference_date: date_window.start_date,
+        operational_date: date_window.operational_date
       )
       groups = CalculateInventorySummaries.call(
         room_groups: filtered_groups,
@@ -40,10 +43,11 @@ module StayView
         )
       )
       footer_summaries = CalculateFooterSummaries.call(room_groups: groups, dates: date_window.dates)
+      room_card_presentations = resolve_room_card_presentations(groups, date_window)
       counts = CalculateCounts.call(
         room_groups: groups,
-        reference_date: date_window.start_date,
-        operational_date: date_window.operational_date
+        room_card_presentations:,
+        reference_date: date_window.start_date
       )
       room_type_options = inventory.room_types.map { |room_type| RoomTypeOption.new(id: room_type.id, name: room_type.name) }
       board = Board.new(
@@ -54,7 +58,8 @@ module StayView
         room_type_options:,
         status_counts: counts,
         filters: normalized_filters,
-        capabilities: resolved_capabilities
+        capabilities: resolved_capabilities,
+        room_card_presentations:
       )
       instrument(board, started_at)
       board
@@ -82,6 +87,20 @@ module StayView
         end
         RoomGroup.new(room_type_id: room_type.id, name: room_type.name, rooms: rooms)
       end.freeze
+    end
+
+    def resolve_room_card_presentations(groups, date_window)
+      groups.flat_map(&:rooms).to_h do |room|
+        [
+          room.key,
+          ResolveRoomCardSlots.call(
+            hotel:,
+            room:,
+            date: date_window.start_date,
+            operational_date: date_window.operational_date
+          )
+        ]
+      end
     end
 
     def instrument(board, started_at)

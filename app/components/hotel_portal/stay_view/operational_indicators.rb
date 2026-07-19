@@ -9,15 +9,20 @@ module HotelPortal
         housekeeping: { label: "Housekeeping request", icon: "brush-cleaning", variant: :info }.freeze
       }.freeze
 
-      def initialize(room:, state: nil, class: nil, **attributes)
+      DEFAULT_ORDER = %i[housekeeping priority dnd].freeze
+      ORDERS = PRESENTATIONS.keys.freeze
+
+      def initialize(room:, state: nil, order: DEFAULT_ORDER, class: nil, **attributes)
         @room = room
         @state = state
+        @order = Array(order).map(&:to_sym)
         @class = binding.local_variable_get(:class)
         @attributes = attributes
       end
 
       def before_render
         raise ArgumentError, "OperationalIndicators requires a StayView::RoomRow" unless @room.is_a?(::StayView::RoomRow)
+        raise ArgumentError, "Unsupported operational indicator order" unless @order.sort == ORDERS.sort
       end
 
       def call
@@ -39,11 +44,12 @@ module HotelPortal
       private
 
       def indicators
-        @indicators ||= [
-          housekeeping_popover,
-          (flag_popover(:priority) if @room.capabilities.view_room_readiness?),
-          (flag_popover(:dnd) if @room.capabilities.view_room_readiness?)
-        ].compact
+        @indicators ||= @order.filter_map do |key|
+          case key
+          when :housekeeping then housekeeping_popover
+          when :priority, :dnd then flag_popover(key) if @room.capabilities.view_room_readiness?
+          end
+        end
       end
 
       def flag_popover(key)

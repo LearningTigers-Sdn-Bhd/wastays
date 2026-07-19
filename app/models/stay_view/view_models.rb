@@ -43,14 +43,19 @@ module StayView
 
   BookingSegment = Data.define(
     :dom_id, :booking_id, :booking_room_id, :guest_label, :primary_guest_name, :booking_type, :status, :check_in, :check_out,
+    :check_in_at, :check_out_at, :actual_check_in, :actual_check_out, :actual_check_in_at, :actual_check_out_at,
     :start_track, :end_track, :clipped_left, :clipped_right, :accessible_label, :capabilities,
-    :group_booking_id, :group_reference, :group_name, :group_position, :group_rooms, :financial_signals, :source_label
+    :group_booking_id, :group_reference, :group_name, :group_position, :group_rooms, :financial_signals, :source_label,
+    :adults, :children, :boat_in_at, :boat_out_at
   ) do
     alias_method :clipped_left?, :clipped_left
     alias_method :clipped_right?, :clipped_right
 
     def initialize(**attributes)
-      %i[group_booking_id group_reference group_name group_position source_label].each { |key| attributes[key] ||= nil }
+      %i[check_in_at check_out_at actual_check_in actual_check_out actual_check_in_at actual_check_out_at group_booking_id group_reference
+         group_name group_position source_label adults children boat_in_at boat_out_at].each do |key|
+        attributes[key] ||= nil
+      end
       attributes[:financial_signals] ||= []
       attributes[:primary_guest_name] ||= attributes[:guest_label]
       attributes[:booking_type] ||= attributes[:group_booking_id].present? ? :group : :single
@@ -67,15 +72,17 @@ module StayView
 
   OperationalSegment = Data.define(
     :dom_id, :room_block_id, :kind, :label, :start_date, :end_date, :start_track, :end_track,
-    :clipped_left, :clipped_right, :accessible_label, :capabilities
+    :clipped_left, :clipped_right, :accessible_label, :capabilities, :reason
   ) do
     alias_method :clipped_left?, :clipped_left
     alias_method :clipped_right?, :clipped_right
 
     def initialize(**attributes)
       attributes[:room_block_id] ||= nil
+      attributes[:reason] ||= nil
       attributes[:kind] = attributes.fetch(:kind).to_sym
       %i[dom_id label accessible_label].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
+      attributes[:reason] = attributes[:reason]&.to_s&.freeze
       super(**attributes)
     end
   end
@@ -186,15 +193,22 @@ module StayView
     end
   end
 
-  FilterState = Data.define(:room_type_id, :booking_status, :occupancy, :physical_status) do
+  ROOM_CARD_STATES = %i[vacant arrival occupied departure turnover blocked].freeze
+
+  FilterState = Data.define(:room_type_id, :booking_status, :occupancy, :physical_status, :room_state) do
     def self.build(value = {})
       source = value.to_h.symbolize_keys
       new(
         room_type_id: Integer(source[:room_type_id], exception: false),
         booking_status: normalize_symbol(source[:booking_status], Booking::OCCUPYING_STATUSES),
         occupancy: normalize_symbol(source[:occupancy], %w[available arrival occupied departure]),
-        physical_status: normalize_symbol(source[:physical_status], RoomStatus::STATUSES - [ "late_checkout_detected" ])
+        physical_status: normalize_symbol(source[:physical_status], RoomStatus::STATUSES - [ "late_checkout_detected" ]),
+        room_state: normalize_symbol(source[:room_state], ROOM_CARD_STATES.map(&:to_s))
       )
+    end
+
+    def for_view(view_mode)
+      view_mode.to_sym == :rooms ? with(occupancy: nil) : with(room_state: nil)
     end
 
     def self.normalize_symbol(value, allowed)
@@ -205,7 +219,7 @@ module StayView
     private_class_method :normalize_symbol
   end
 
-  STATUS_COUNT_STATES = %i[all vacant occupied reserved blocked due_out dirty].freeze
+  STATUS_COUNT_STATES = [ :all, *ROOM_CARD_STATES, :dirty ].freeze
 
   StatusCounts = Data.define(:reference_date, :room_states) do
     def initialize(reference_date:, room_states:)
@@ -225,10 +239,12 @@ module StayView
   end
 
   Board = Data.define(
-    :view_mode, :date_window, :room_groups, :footer_summaries, :room_type_options, :status_counts, :filters, :capabilities
+    :view_mode, :date_window, :room_groups, :footer_summaries, :room_type_options, :status_counts, :filters, :capabilities,
+    :room_card_presentations
   ) do
     def initialize(
-      view_mode:, date_window:, room_groups:, footer_summaries:, room_type_options:, status_counts:, filters:, capabilities:
+      view_mode:, date_window:, room_groups:, footer_summaries:, room_type_options:, status_counts:, filters:, capabilities:,
+      room_card_presentations: {}
     )
       super(
         view_mode: view_mode.to_sym,
@@ -238,8 +254,13 @@ module StayView
         room_type_options: Immutable.array(room_type_options),
         status_counts: status_counts,
         filters: filters,
-        capabilities: capabilities
+        capabilities: capabilities,
+        room_card_presentations: Immutable.hash(room_card_presentations)
       )
+    end
+
+    def room_card_presentation_for(room)
+      room_card_presentations.fetch(room.key)
     end
 
     def empty?

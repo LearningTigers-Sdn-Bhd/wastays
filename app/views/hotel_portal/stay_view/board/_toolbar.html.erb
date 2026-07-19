@@ -35,11 +35,20 @@
             selected: board.filters.booking_status
           ) %>
         <% end %>
-        <%= render PanelsUI::FormField.new(form:, attribute: :occupancy, label: "Occupancy", size: :sm, class: "w-44") do |field| %>
-          <% field.with_select_menu(
-            [ { label: "All occupancy states", value: "" } ] + HotelPortal::StayViewHelper::OCCUPANCY_LABELS.map { |value, label| { label:, value: } },
-            selected: board.filters.occupancy
-          ) %>
+        <% if board.view_mode == :rooms %>
+          <%= render PanelsUI::FormField.new(form:, attribute: :room_state, label: "Room state", size: :sm, class: "w-44") do |field| %>
+            <% field.with_select_menu(
+              [ { label: "All room states", value: "" } ] + StayView::ROOM_CARD_STATES.map { |value| { label: value.to_s.humanize, value: } },
+              selected: board.filters.room_state
+            ) %>
+          <% end %>
+        <% else %>
+          <%= render PanelsUI::FormField.new(form:, attribute: :occupancy, label: "Occupancy", size: :sm, class: "w-44") do |field| %>
+            <% field.with_select_menu(
+              [ { label: "All occupancy states", value: "" } ] + HotelPortal::StayViewHelper::OCCUPANCY_LABELS.map { |value, label| { label:, value: } },
+              selected: board.filters.occupancy
+            ) %>
+          <% end %>
         <% end %>
         <%= render PanelsUI::FormField.new(form:, attribute: :physical_status, label: "Physical status", size: :sm, class: "w-44") do |field| %>
           <% field.with_select_menu(
@@ -48,7 +57,7 @@
           ) %>
         <% end %>
         <div class="flex items-center pb-0.5">
-          <%= render PanelsUI::Button.new(href: stay_view_path_for(state, room_type_id: nil, booking_status: nil, occupancy: nil, physical_status: nil), variant: :ghost, size: :sm) do %>Clear<% end %>
+          <%= render PanelsUI::Button.new(href: stay_view_path_for(state, room_type_id: nil, booking_status: nil, occupancy: nil, physical_status: nil, room_state: nil), variant: :ghost, size: :sm) do %>Clear<% end %>
           <noscript><button type="submit" class="panel-button" data-variant="primary" data-size="sm">Apply filters</button></noscript>
         </div>
       </div>

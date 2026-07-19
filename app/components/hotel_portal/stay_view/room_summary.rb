@@ -21,12 +21,17 @@ module HotelPortal
         unknown: "circle-question-mark"
       }.freeze
 
-      def initialize(room:, state: nil, actions: [], show_identity: true, show_amenities: true, class: nil, **attributes)
+      LAYOUTS = %i[inline split_controls].freeze
+
+      def initialize(
+        room:, state: nil, actions: [], show_identity: true, show_amenities: true, layout: :inline, class: nil, **attributes
+      )
         @room = room
         @state = state
         @actions = actions
         @show_identity = show_identity
         @show_amenities = show_amenities
+        @layout = LAYOUTS.include?(layout.to_sym) ? layout.to_sym : :inline
         @class = binding.local_variable_get(:class)
         @attributes = attributes
       end
@@ -37,13 +42,27 @@ module HotelPortal
 
       def call
         tag.div(**summary_attributes) do
-          identity_row
+          @layout == :split_controls ? split_controls_row : identity_row
         end
       end
 
       def identity_row
         tag.div(class: "flex w-full min-w-0 items-center justify-between gap-2") do
           safe_join([ identity, controls ].compact)
+        end
+      end
+
+      def split_controls_row
+        tag.div(class: "flex w-full min-w-0 items-center justify-between gap-2") do
+          safe_join([
+            amenity_badges || tag.span,
+            tag.div(class: "flex min-w-0 shrink-0 items-center justify-end gap-1") do
+              safe_join([
+                status_control,
+                render(OperationalIndicators.new(room: @room, state: @state, order: %i[dnd priority housekeeping]))
+              ].compact)
+            end
+          ])
         end
       end
 
@@ -68,7 +87,7 @@ module HotelPortal
 
         attributes.merge(
           class: tw_merge("flex h-full min-w-0 items-center px-3 py-1", @class, attributes.delete(:class)),
-          data: data.merge(slot: "stay-view-room-summary")
+          data: data.merge(slot: "stay-view-room-summary", layout: @layout)
         )
       end
 
@@ -171,8 +190,8 @@ module HotelPortal
         return unless @show_amenities
 
         badges = [
-          (amenity_badge(label: "No smoking", icon: "cigarette-off", key: :smoking) unless @room.smoking_allowed),
-          (amenity_badge(label: "No pets", icon: "ban", key: :pets) unless @room.pets_allowed)
+          (amenity_badge(label: "No pets", icon: "ban", key: :pets) unless @room.pets_allowed),
+          (amenity_badge(label: "No smoking", icon: "cigarette-off", key: :smoking) unless @room.smoking_allowed)
         ].compact
         return if badges.empty?
 

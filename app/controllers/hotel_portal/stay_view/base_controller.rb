@@ -20,7 +20,9 @@ module HotelPortal
       end
 
       def state_source
-        direct = params.permit(:view, :start_date, :date, :days, :room_type_id, :booking_status, :occupancy, :physical_status).to_h
+        direct = params.permit(
+          :view, :start_date, :date, :days, :room_type_id, :booking_status, :occupancy, :physical_status, :room_state
+        ).to_h
         # Nested room-operation routes also use :room_type_id as a resource key.
         # Do not accidentally reinterpret that path segment as a board filter;
         # the canonical filter value remains available through return_to.

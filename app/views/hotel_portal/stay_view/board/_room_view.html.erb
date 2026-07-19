@@ -8,17 +8,17 @@
           <hr class="flex-1 border-border">
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <% room_group.rooms.each do |room| %>
-            <%= render "hotel_portal/stay_view/board/room_card", room:, state:, heading_level: :h4 %>
+            <%= render "hotel_portal/stay_view/board/room_card", room:, state:, presentation: board.room_card_presentation_for(room), heading_level: :h4 %>
           <% end %>
         </div>
       </section>
     <% end %>
   <% else %>
-    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       <% board.room_groups.flat_map(&:rooms).each do |room| %>
-        <%= render "hotel_portal/stay_view/board/room_card", room:, state:, heading_level: :h3 %>
+        <%= render "hotel_portal/stay_view/board/room_card", room:, state:, presentation: board.room_card_presentation_for(room), heading_level: :h3 %>
       <% end %>
     </div>
   <% end %>

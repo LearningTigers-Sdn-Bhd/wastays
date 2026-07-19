@@ -8,117 +8,63 @@ RSpec.describe StayView::CalculateCounts do
     StayView::Capabilities.new(**StayView::Capabilities.members.index_with { false })
   end
 
-  it "returns every operational count, including zero values" do
+  it "returns every mutually exclusive operational count, including zero values" do
     room = room_row(room_number: "101")
     group = StayView::RoomGroup.new(room_type_id: 3, name: "Deluxe", rooms: [ room ])
 
     counts = described_class.call(
       room_groups: [ group ],
-      reference_date:,
-      operational_date: reference_date
+      room_card_presentations: { room.key => presentation(:vacant) },
+      reference_date:
     )
 
     expect(counts.reference_date).to eq(reference_date)
     expect(counts.room_states).to eq(
       all: 1,
       vacant: 1,
+      arrival: 0,
       occupied: 0,
-      reserved: 0,
+      departure: 0,
+      turnover: 0,
       blocked: 0,
-      due_out: 0,
       dirty: 0
     )
   end
 
-  it "counts filtered rooms once per state while allowing dirty and due out to overlap" do
-    reserved = room_row(
-      room_number: "101",
-      physical_status: :dirty,
-      booking_segments: [ booking_segment(id: 1, status: :confirmed, check_out: reference_date + 1.day) ]
-    )
-    occupied = room_row(
-      room_number: "102",
-      booking_segments: [ booking_segment(id: 2, status: :checked_in, check_out: reference_date + 1.day) ]
-    )
-    blocked = room_row(
-      room_number: "103",
-      operational_segments: [ operational_segment ]
-    )
-    due_out = room_row(
-      room_number: "104",
-      booking_segments: [ booking_segment(id: 4, status: :review_due_out, check_out: reference_date) ]
-    )
-    late_checkout = room_row(room_number: "105", operational_flags: { late_checkout: true })
-    vacant = room_row(room_number: "106")
-    group = StayView::RoomGroup.new(
-      room_type_id: 3,
-      name: "Deluxe",
-      rooms: [ reserved, occupied, blocked, due_out, late_checkout, vacant ]
-    )
+  it "counts every room once operationally while keeping dirty supplemental" do
+    states = StayView::ROOM_CARD_STATES
+    rooms = states.each_with_index.map do |state, index|
+      room_row(room_number: (101 + index).to_s, physical_status: (state == :arrival ? :dirty : :ready))
+    end
+    group = StayView::RoomGroup.new(room_type_id: 3, name: "Deluxe", rooms:)
+    presentations = rooms.zip(states).to_h { |room, state| [ room.key, presentation(state) ] }
 
-    counts = described_class.call(
-      room_groups: [ group ],
-      reference_date:,
-      operational_date: reference_date
-    )
+    counts = described_class.call(room_groups: [ group ], room_card_presentations: presentations, reference_date:)
 
     expect(counts.room_states).to eq(
       all: 6,
       vacant: 1,
+      arrival: 1,
       occupied: 1,
-      reserved: 1,
+      departure: 1,
+      turnover: 1,
       blocked: 1,
-      due_out: 2,
       dirty: 1
     )
   end
 
-  it "does not apply the current late-checkout flag to another reference date" do
-    room = room_row(room_number: "101", operational_flags: { late_checkout: true })
-    group = StayView::RoomGroup.new(room_type_id: 3, name: "Deluxe", rooms: [ room ])
-
-    counts = described_class.call(
-      room_groups: [ group ],
-      reference_date: reference_date + 1.day,
-      operational_date: reference_date
-    )
-
-    expect(counts.due_out).to eq(0)
-    expect(counts.vacant).to eq(1)
-  end
-
-  describe ".operational_status" do
-    it "collapses overlaps to a single dominant status by precedence" do
-      blocked = room_row(
-        room_number: "101",
-        booking_segments: [ booking_segment(id: 1, status: :checked_in, check_out: reference_date + 1.day) ],
-        operational_segments: [ operational_segment ]
-      )
-      due_out = room_row(
-        room_number: "102",
-        booking_segments: [ booking_segment(id: 2, status: :checkout_required, check_out: reference_date) ]
-      )
-      occupied = room_row(
-        room_number: "103",
-        booking_segments: [ booking_segment(id: 3, status: :checked_in, check_out: reference_date + 1.day) ]
-      )
-      reserved = room_row(
-        room_number: "104",
-        booking_segments: [ booking_segment(id: 4, status: :confirmed, check_out: reference_date + 1.day) ]
-      )
-      vacant = room_row(room_number: "105")
-
-      expect(described_class.operational_status(blocked, reference_date, reference_date)).to eq(:blocked)
-      expect(described_class.operational_status(due_out, reference_date, reference_date)).to eq(:due_out)
-      expect(described_class.operational_status(occupied, reference_date, reference_date)).to eq(:occupied)
-      expect(described_class.operational_status(reserved, reference_date, reference_date)).to eq(:reserved)
-      expect(described_class.operational_status(vacant, reference_date, reference_date)).to eq(:vacant)
-    end
-  end
-
   private
 
-  def room_row(room_number:, physical_status: :ready, operational_flags: {}, booking_segments: [], operational_segments: [])
+  def presentation(state)
+    StayView::ResolveRoomCardSlots::Result.new(
+      departure: nil,
+      current_booking: nil,
+      current_block: nil,
+      state:
+    )
+  end
+
+  def room_row(room_number:, physical_status: :ready)
     StayView::RoomRow.new(
       key: "3:#{room_number}",
       dom_id: "room-#{room_number}",
@@ -128,48 +74,11 @@ RSpec.describe StayView::CalculateCounts do
       smoking_allowed: false,
       pets_allowed: false,
       current_physical_status: physical_status,
-      operational_flags:,
-      day_cells: [ StayView::DayCell.new(
-        date: reference_date,
-        occupancies: [ StayView::Occupancy.new(state: :available, label: "Available") ]
-      ) ],
-      booking_segments:,
-      operational_segments:,
-      capabilities:
-    )
-  end
-
-  def booking_segment(id:, status:, check_out:)
-    StayView::BookingSegment.new(
-      dom_id: "booking-#{id}",
-      booking_id: id,
-      booking_room_id: id,
-      guest_label: "Guest #{id}",
-      status:,
-      check_in: reference_date - 1.day,
-      check_out:,
-      start_track: 1,
-      end_track: 2,
-      clipped_left: false,
-      clipped_right: false,
-      accessible_label: "Guest #{id}",
-      capabilities:
-    )
-  end
-
-  def operational_segment
-    StayView::OperationalSegment.new(
-      dom_id: "block-1",
-      room_block_id: 1,
-      kind: :maintenance,
-      label: "Maintenance",
-      start_date: reference_date,
-      end_date: reference_date + 1.day,
-      start_track: 1,
-      end_track: 3,
-      clipped_left: false,
-      clipped_right: false,
-      accessible_label: "Maintenance",
+      operational_flags: {},
+      day_cells: [],
+      booking_segments: [],
+      operational_segments: [],
+      housekeeping_alerts: [],
       capabilities:
     )
   end

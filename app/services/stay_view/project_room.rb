@@ -114,7 +114,8 @@ module StayView
         clipped_left: tracks.clipped_left?,
         clipped_right: tracks.clipped_right?,
         accessible_label: "#{label}, room #{room_number}, #{block.start_date.to_fs(:long)} to #{block.end_date.to_fs(:long)}: #{block.reason}",
-        capabilities: capabilities
+        capabilities: capabilities,
+        reason: block.reason
       )
     end
   end

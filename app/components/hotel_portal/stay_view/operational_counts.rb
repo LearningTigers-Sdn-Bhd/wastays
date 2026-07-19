@@ -6,10 +6,11 @@ module HotelPortal
       PRESENTATION = {
         all: { label: "All", variant: :outline },
         vacant: { label: "Vacant", variant: :success },
+        arrival: { label: "Arrival", variant: :info },
         occupied: { label: "Occupied", variant: :primary },
-        reserved: { label: "Reserved", variant: :info },
+        departure: { label: "Departure", variant: :neutral },
+        turnover: { label: "Turnover", variant: :warning },
         blocked: { label: "Blocked", variant: :destructive },
-        due_out: { label: "Due out", variant: :warning },
         dirty: { label: "Dirty", variant: :warning }
       }.freeze
 

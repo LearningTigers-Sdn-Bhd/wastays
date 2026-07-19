@@ -82,9 +82,10 @@ RSpec.describe StayView::BuildBoard do
 
     expect(board.room_groups.map(&:room_type_id)).to eq([ deluxe.id ])
     expect(board.status_counts.reference_date).to eq(start_date)
-    expect(board.status_counts.room_states).to eq(
-      all: 1, vacant: 0, occupied: 0, reserved: 1, blocked: 0, due_out: 0, dirty: 1
-    )
+      expect(board.status_counts.room_states).to eq(
+        all: 1, vacant: 0, arrival: 1, occupied: 0, departure: 0, turnover: 0, blocked: 0, dirty: 1
+      )
+      expect(board.room_card_presentation_for(board.room_groups.first.rooms.first).state).to eq(:arrival)
     expect(board.room_groups.sole.inventory_summary_for(start_date)).to have_attributes(
       sellable: 1,
       sold: 1,

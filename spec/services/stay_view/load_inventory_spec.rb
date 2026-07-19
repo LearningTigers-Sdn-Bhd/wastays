@@ -86,6 +86,39 @@ RSpec.describe StayView::LoadInventory do
     expect(inventory.bookings).to be_frozen
   end
 
+  it "loads actual lifecycle dates for Room View without extending Timeline inventory" do
+    business_date = Date.new(2026, 7, 19)
+    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    zone = hotel.hotel_time_zone
+    booking = create(
+      :booking,
+      hotel:,
+      status: "completed",
+      check_in: zone.local(2026, 7, 17, 15),
+      check_out: zone.local(2026, 7, 18, 12),
+      checked_in_at: zone.local(2026, 7, 17, 15),
+      checked_out_at: zone.local(2026, 7, 19, 8)
+    )
+    create(:booking_room, booking:, room_type:, room_number: "101")
+    room_window = StayView::DateWindow.new(hotel:, start_date: business_date, view_mode: :rooms)
+    timeline_window = StayView::DateWindow.new(hotel:, start_date: business_date, days: 7, view_mode: :timeline)
+
+    room_inventory = described_class.call(hotel:, date_window: room_window, capabilities:)
+    timeline_inventory = described_class.call(hotel:, date_window: timeline_window, capabilities:)
+
+    expect(room_inventory.bookings.sole).to have_attributes(
+      check_in: Date.new(2026, 7, 17),
+      check_out: Date.new(2026, 7, 18),
+      check_in_at: zone.local(2026, 7, 17, 15),
+      check_out_at: zone.local(2026, 7, 18, 12),
+      actual_check_in: Date.new(2026, 7, 17),
+      actual_check_out: Date.new(2026, 7, 19),
+      actual_check_in_at: zone.local(2026, 7, 17, 15),
+      actual_check_out_at: zone.local(2026, 7, 19, 8)
+    )
+    expect(timeline_inventory.bookings).to be_empty
+  end
+
   it "loads room-status notes only with readiness permission without adding queries" do
     room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
     create(
@@ -206,6 +239,52 @@ RSpec.describe StayView::LoadInventory do
     )
     expect(record.group_reference).to be_frozen
     expect(record.group_name).to be_frozen
+  end
+
+  it "loads booking pax and primary-guest boat times as bounded scalars when enabled" do
+    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    booking = create(
+      :booking,
+      hotel:,
+      adults: 3,
+      children: 2,
+      check_in: start_date,
+      check_out: start_date + 2.days
+    )
+    create(:booking_room, booking:, room_type:, room_number: "101")
+    primary = create(
+      :booking_guest,
+      booking:,
+      is_primary: true,
+      boat_in_at: Time.zone.local(2026, 7, 16, 9),
+      boat_out_at: Time.zone.local(2026, 7, 18, 7)
+    )
+    visible = capabilities.with(view_booking: true)
+
+    sql = capture_sql { @inventory = described_class.call(hotel:, date_window: window, capabilities: visible) }
+
+    expect(@inventory.bookings.sole).to have_attributes(
+      adults: 3,
+      children: 2,
+      boat_in_at: primary.boat_in_at,
+      boat_out_at: primary.boat_out_at
+    )
+    booking_queries = sql.grep(/FROM "booking_rooms"/)
+    expect(booking_queries.size).to eq(1)
+    expect(booking_queries.sole).to include("boat_in_at", "boat_out_at", '"bookings"."adults"', '"bookings"."children"')
+  end
+
+  it "does not select pax or boat scalars when booking identity is redacted" do
+    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    booking = create(:booking, hotel:, adults: 3, children: 2, check_in: start_date, check_out: start_date + 2.days)
+    create(:booking_room, booking:, room_type:, room_number: "101")
+    create(:booking_guest, booking:, is_primary: true, boat_in_at: Time.zone.local(2026, 7, 16, 9))
+
+    sql = capture_sql { @inventory = described_class.call(hotel:, date_window: window, capabilities:) }
+
+    expect(@inventory.bookings.sole).to have_attributes(adults: nil, children: nil, boat_in_at: nil, boat_out_at: nil)
+    booking_query = sql.grep(/FROM "booking_rooms"/).sole
+    expect(booking_query).not_to include("boat_in_at", "boat_out_at", '"bookings"."adults"', '"bookings"."children"')
   end
 
   it "loads active hotel-owned and legacy booking-owned housekeeping alerts without booking identity" do

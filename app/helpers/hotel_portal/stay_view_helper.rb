@@ -181,33 +181,6 @@ module HotelPortal::StayViewHelper
     presentation.except(:key).merge(label:, href:)
   end
 
-  # Room-block operations only. Room status moves to the status badge dropdown
-  # and housekeeping to the per-task actions in the housekeeping popover.
-  def stay_view_room_actions(room, state)
-    return [] unless room.capabilities.manage_room_blocks?
-
-    return_to = state.return_path(current_hotel)
-    actions = [ {
-      label: "Block room",
-      href: new_hotel_stay_view_room_block_path(
-        current_hotel,
-        room_type_id: room.room_type_id,
-        room_number: room.room_number,
-        start_date: state.date_window.start_date,
-        return_to:
-      ),
-      icon: "wrench"
-    } ]
-    room.operational_segments.each do |segment|
-      actions << {
-        label: "Edit #{segment.label.downcase}",
-        href: edit_hotel_stay_view_room_block_path(current_hotel, segment.room_block_id, return_to:),
-        icon: "square-pen"
-      }
-    end
-    actions
-  end
-
   # Status quick-pick items for the room-status badge dropdown. Each opens the
   # room-status sheet preselected to that status so it can be settled.
   def stay_view_status_menu_actions(room, state)
@@ -246,47 +219,72 @@ module HotelPortal::StayViewHelper
     actions.map { |action| action.merge(data: stay_view_action_data) }
   end
 
-  def stay_view_room_menu_actions(room, state)
-    # The Room View card has one menu per room, so a single stay needs no guest
-    # suffix. Only disambiguate when a turnover puts more than one stay in a room.
-    disambiguate = room.booking_segments.size > 1
-    booking_actions = room.booking_segments.flat_map do |segment|
-      stay_view_booking_actions(segment, state).map do |action|
-        label = disambiguate ? "#{action[:label]} — #{segment.guest_label}" : action[:label]
-        action.merge(label:)
+  def stay_view_room_slot_actions(room, state)
+    date = state.date_window.start_date
+    return_to = state.return_path(current_hotel)
+    common = {
+      check_in: date,
+      check_out: date + 1.day,
+      room_type_id: room.room_type_id,
+      room_number: room.room_number,
+      source: "stay_view",
+      return_to:
+    }
+    actions = []
+
+    if room.capabilities.create_booking?
+      if date < state.date_window.operational_date
+        actions << {
+          label: "Backdated",
+          aria_label: "Backdated check-in for room #{room.room_number} on #{I18n.l(date, format: :long)}",
+          href: hotel_booking_transaction_backdated_check_in_path(current_hotel, common),
+          icon: "history",
+          variant: :secondary
+        }
+      elsif date == state.date_window.operational_date
+        actions << {
+          label: "Walk-in",
+          aria_label: "Walk-in check-in for room #{room.room_number} on #{I18n.l(date, format: :long)}",
+          href: hotel_booking_transaction_walk_in_check_in_path(current_hotel, common),
+          icon: "log-in",
+          variant: :secondary
+        }
+        actions << {
+          label: "Book",
+          aria_label: "Add booking for room #{room.room_number} on #{I18n.l(date, format: :long)}",
+          href: hotel_booking_transaction_new_booking_path(current_hotel, common),
+          icon: "calendar-plus",
+          variant: :neutral
+        }
+      else
+        actions << {
+          label: "Book",
+          aria_label: "Add booking for room #{room.room_number} on #{I18n.l(date, format: :long)}",
+          href: hotel_booking_transaction_new_booking_path(current_hotel, common),
+          icon: "calendar-plus",
+          variant: :secondary
+        }
       end
     end
-    actions = stay_view_add_booking_action(room, state) + booking_actions + stay_view_room_actions(room, state)
+
+    if room.capabilities.manage_room_blocks?
+      actions << {
+        label: "Block",
+        aria_label: "Block room #{room.room_number} from #{I18n.l(date, format: :long)}",
+        href: new_hotel_stay_view_room_block_path(
+          current_hotel,
+          room_type_id: room.room_type_id,
+          room_number: room.room_number,
+          start_date: date,
+          source: "stay_view",
+          return_to:
+        ),
+        icon: "wrench",
+        variant: :neutral
+      }
+    end
+
     actions.map { |action| action.merge(data: stay_view_action_data) }
-  end
-
-  # Available-room "Add booking" entry for the Room View card menu. Mirrors the
-  # availability rule the card uses (single available occupancy, no active block).
-  def stay_view_add_booking_action(room, state)
-    cell = room.day_cells.first
-    available = cell && cell.occupancies.one? && cell.occupancies.first.state == :available
-    return [] unless room.capabilities.create_booking? && available && room.operational_segments.empty?
-
-    [ {
-      label: "Add booking",
-      icon: "plus",
-      href: hotel_booking_transaction_new_booking_path(
-        current_hotel,
-        check_in: cell.date,
-        check_out: cell.date + 1.day,
-        room_type_id: room.room_type_id,
-        room_number: room.room_number,
-        return_to: state.return_path(current_hotel)
-      )
-    } ]
-  end
-
-  def stay_view_room_operational_status(room, state)
-    ::StayView::CalculateCounts.operational_status(
-      room,
-      state.date_window.start_date,
-      state.date_window.operational_date
-    )
   end
 
   def stay_view_occupancy_label(occupancy)

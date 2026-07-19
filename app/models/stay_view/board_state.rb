@@ -2,7 +2,7 @@
 
 module StayView
   class BoardState
-    FILTER_KEYS = %i[room_type_id booking_status occupancy physical_status].freeze
+    FILTER_KEYS = %i[room_type_id booking_status occupancy physical_status room_state].freeze
     GROUPINGS = %w[room_type none].freeze
     DEFAULT_GROUPING = "room_type"
 
@@ -14,7 +14,7 @@ module StayView
       start_date = view_mode == "rooms" ? source[:date] : source[:start_date]
 
       @date_window = DateWindow.new(hotel:, start_date:, days: source[:days], view_mode:, now:)
-      @filters = FilterState.build(source.slice(*FILTER_KEYS))
+      @filters = FilterState.build(source.slice(*FILTER_KEYS)).for_view(view_mode)
       @room_grouping = source[:group_by].to_s.presence_in(GROUPINGS) || DEFAULT_GROUPING
       freeze
     end
@@ -56,6 +56,7 @@ module StayView
     def normalize_query(values)
       view = values[:view].to_s == "rooms" ? :rooms : :timeline
       normalized = values.slice(*FILTER_KEYS).compact
+      view == :rooms ? normalized.delete(:occupancy) : normalized.delete(:room_state)
 
       if view == :rooms
         grouping = values[:group_by].to_s.presence_in(GROUPINGS)

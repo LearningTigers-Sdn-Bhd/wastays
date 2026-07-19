@@ -13,12 +13,27 @@ module StayView
       group_reference = booking.group_reference if capabilities.view_booking?
       group_name = booking.group_name if capabilities.view_booking?
       source_label = source_label_for(booking.source) if capabilities.view_booking?
+      adults = booking.adults if capabilities.view_booking?
+      children = booking.children if capabilities.view_booking?
+      boat_in_at = booking.boat_in_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
+      boat_out_at = booking.boat_out_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
+      check_in_at = booking.check_in_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
+      check_out_at = booking.check_out_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
+      actual_check_in_at = booking.actual_check_in_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
+      actual_check_out_at = booking.actual_check_out_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
       room_label = booking.room_number
       dates_label = "#{booking.check_in.to_fs(:long)} to #{booking.check_out.to_fs(:long)}"
       group_label = [ group_name, group_reference ].compact_blank.join(", ")
       accessible_parts = [ guest_label, booking.status.to_s.humanize, "room #{room_label}", room_type_name, dates_label ]
       accessible_parts << "group #{group_label}" if group_label.present?
       accessible_parts << "source #{source_label}" if source_label.present?
+      accessible_parts << "#{adults.to_i} adults, #{children.to_i} children" if adults.present? || children.present?
+      accessible_parts << "check-in #{check_in_at.strftime('%H:%M')}" if check_in_at.present?
+      accessible_parts << "check-out #{check_out_at.strftime('%H:%M')}" if check_out_at.present?
+      accessible_parts << "checked in #{actual_check_in_at.strftime('%H:%M')}" if actual_check_in_at.present?
+      accessible_parts << "checked out #{actual_check_out_at.strftime('%H:%M')}" if actual_check_out_at.present?
+      accessible_parts << "boat-in #{boat_in_at.to_fs(:time)}" if boat_in_at.present?
+      accessible_parts << "boat-out #{boat_out_at.to_fs(:time)}" if boat_out_at.present?
       accessible_parts.concat(financial_signals.map(&:label))
 
       BookingSegment.new(
@@ -31,6 +46,12 @@ module StayView
         status: booking.status,
         check_in: booking.check_in,
         check_out: booking.check_out,
+        check_in_at:,
+        check_out_at:,
+        actual_check_in: booking.actual_check_in,
+        actual_check_out: booking.actual_check_out,
+        actual_check_in_at:,
+        actual_check_out_at:,
         start_track: tracks.start_track,
         end_track: tracks.end_track,
         clipped_left: tracks.clipped_left?,
@@ -43,7 +64,11 @@ module StayView
         group_position: booking.group_position,
         group_rooms: project_group_rooms(group_rooms, booking, capabilities),
         financial_signals:,
-        source_label:
+        source_label:,
+        adults:,
+        children:,
+        boat_in_at:,
+        boat_out_at:
       )
     end
 

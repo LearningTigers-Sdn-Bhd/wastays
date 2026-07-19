@@ -1,57 +1,100 @@
-<% bookings = room.booking_segments %>
-<% financial_signals = bookings.flat_map(&:financial_signals) %>
-<%= render PanelsUI::Card.new(as: :article, width: :full, density: :compact, variant: :outlined, id: room.dom_id, class: "h-full min-h-44", aria: { label: "Room #{room.room_number}, #{room.room_type_name}" }) do |card| %>
-  <% card.with_header(actions_layout: :wrap, id: "#{room.dom_id}-header") do |header| %>
-    <% header.with_actions do %>
-      <%= render HotelPortal::StayView::RoomSummary.new(room:, state:, actions: stay_view_room_menu_actions(room, state), show_identity: false, class: "h-auto w-full p-0") %>
+<% date = state.date_window.start_date %>
+<% footer_actions = presentation.state.in?(%i[vacant departure]) ? stay_view_room_slot_actions(room, state) : [] %>
+<%= render PanelsUI::Card.new(
+  as: :article,
+  width: :full,
+  density: :compact,
+  variant: :outlined,
+  dividers: :always,
+  id: room.dom_id,
+  class: "h-full",
+  aria: { label: "Room #{room.room_number}, #{room.room_type_name}" },
+  data: { room_state: presentation.state }
+) do |card| %>
+  <% card.with_header(id: "#{room.dom_id}-header") do %>
+    <div class="space-y-2">
+      <div class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2" data-slot="stay-view-room-identity">
+        <div class="min-w-0">
+          <%= tag.public_send(heading_level, room.room_number, id: "#{room.dom_id}-title", class: "truncate text-sm font-semibold text-foreground") %>
+          <p class="truncate text-xs text-muted-foreground"><%= room.room_type_name %></p>
+        </div>
+        <%= render HotelPortal::StayView::OperationalStatusBadge.new(
+          room:,
+          status: presentation.state,
+          reference_date: date
+        ) %>
+      </div>
+      <%= render HotelPortal::StayView::RoomSummary.new(
+        room:,
+        state:,
+        show_identity: false,
+        layout: :split_controls,
+        class: "h-auto w-full p-0"
+      ) %>
+    </div>
+  <% end %>
+
+  <% card.with_card_content(class: "p-3", data: { slot: "stay-view-room-activity" }) do %>
+    <% case presentation.state %>
+    <% when :vacant %>
+      <div class="flex h-full min-h-16 items-center justify-center rounded-md border border-dashed border-border px-3 py-2 text-center">
+        <p class="text-sm text-muted-foreground">No activity today</p>
+      </div>
+    <% when :blocked %>
+      <%= render HotelPortal::StayView::RoomBlockItem.new(segment: presentation.current_block, state:) %>
+    <% when :turnover %>
+      <div class="flex h-full flex-col divide-y divide-border overflow-hidden rounded-md border border-border" data-slot="stay-view-room-turnover">
+        <%= render HotelPortal::StayView::RoomBookingItem.new(
+          segment: presentation.departure,
+          state:,
+          context: :departure,
+          surface: :joined
+        ) %>
+        <%= render HotelPortal::StayView::RoomBookingItem.new(
+          segment: presentation.current_booking,
+          state:,
+          context: :arrival,
+          surface: :joined
+        ) %>
+      </div>
+    <% when :departure %>
+      <%= render HotelPortal::StayView::RoomBookingItem.new(
+        segment: presentation.departure,
+        state:,
+        context: :departure
+      ) %>
+    <% when :occupied %>
+      <%= render HotelPortal::StayView::RoomBookingItem.new(
+        segment: presentation.current_booking,
+        state:,
+        context: :occupied
+      ) %>
+    <% when :arrival %>
+      <%= render HotelPortal::StayView::RoomBookingItem.new(
+        segment: presentation.current_booking,
+        state:,
+        context: :arrival
+      ) %>
     <% end %>
   <% end %>
 
-  <% card.with_card_content(class: "flex flex-col gap-3") do %>
-    <div class="flex items-start justify-between gap-2">
-      <div class="flex min-w-0 flex-col">
-        <%= tag.public_send(heading_level, room.room_number, id: "#{room.dom_id}-title", class: "truncate text-sm font-semibold leading-5 text-foreground") %>
-        <p class="truncate text-[0.6875rem] leading-4 text-muted-foreground"><%= room.room_type_name %></p>
-      </div>
-      <div class="flex shrink-0 flex-col items-start">
-        <%= render HotelPortal::StayView::OperationalStatusBadge.new(
-          room:,
-          status: stay_view_room_operational_status(room, state),
-          reference_date: state.date_window.start_date
-        ) %>
-      </div>
-    </div>
-
-    <% if bookings.any? %>
-      <hr class="border-border">
-      <div class="space-y-3">
-        <% bookings.each do |segment| %>
-          <div class="space-y-1">
-            <p class="truncate text-xs font-medium text-foreground"><%= segment.guest_label %></p>
-            <% if segment.group_reference.present? %>
-              <p class="truncate text-[0.6875rem] leading-4 text-muted-foreground"><%= [ segment.group_name, segment.group_reference ].compact_blank.join(" · ") %></p>
-            <% end %>
-            <p class="text-[0.6875rem] leading-4 text-muted-foreground"><%= segment.check_in.to_fs(:medium) %> – <%= segment.check_out.to_fs(:medium) %></p>
-            <% if segment.source_label.present? %>
-              <p class="text-[0.6875rem] leading-4 text-muted-foreground">Source: <%= segment.source_label %></p>
-            <% end %>
-          </div>
+  <% if footer_actions.any? %>
+    <% card.with_footer(class: "p-2", data: { slot: "stay-view-room-footer" }) do %>
+      <%= render PanelsUI::ButtonGroup.new(class: "w-full", aria: { label: "Available room actions for room #{room.room_number} on #{I18n.l(date, format: :long)}" }) do %>
+        <% footer_actions.each do |action| %>
+          <%= render PanelsUI::Button.new(
+            href: action.fetch(:href),
+            variant: action.fetch(:variant),
+            size: :xs,
+            class: "min-w-0 flex-1 px-2",
+            aria_label: action.fetch(:aria_label),
+            data: action.fetch(:data)
+          ) do %>
+            <%= app_icon action.fetch(:icon), class: "size-3 shrink-0", aria: { hidden: true } %>
+            <span class="truncate"><%= action.fetch(:label) %></span>
+          <% end %>
         <% end %>
-      </div>
-    <% end %>
-
-    <% if financial_signals.any? %>
-      <div class="mt-auto flex flex-wrap items-center gap-2">
-        <% financial_signals.each do |signal| %>
-          <%= render PanelsUI::Badge.new(
-            label: signal.label,
-            variant: stay_view_financial_badge_variant(signal),
-            size: :sm,
-            class: "max-w-full whitespace-normal break-words text-left",
-            data: { slot: "stay-view-financial-signal" }
-          ) %>
-        <% end %>
-      </div>
+      <% end %>
     <% end %>
   <% end %>
 <% end %>

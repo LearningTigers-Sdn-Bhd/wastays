@@ -21,10 +21,15 @@ module StayView
 
   BookingRecord = Data.define(
     :booking_room_id, :booking_id, :room_type_id, :room_number, :status, :guest_name, :primary_guest_name, :check_in, :check_out,
-    :group_booking_id, :group_reference, :group_name, :group_position, :source
+    :check_in_at, :check_out_at, :actual_check_in, :actual_check_out, :actual_check_in_at, :actual_check_out_at,
+    :group_booking_id, :group_reference, :group_name, :group_position, :source,
+    :adults, :children, :boat_in_at, :boat_out_at
   ) do
     def initialize(**attributes)
-      %i[group_booking_id group_reference group_name group_position source].each { |key| attributes[key] ||= nil }
+      %i[check_in_at check_out_at actual_check_in actual_check_out actual_check_in_at actual_check_out_at group_booking_id group_reference
+         group_name group_position source adults children boat_in_at boat_out_at].each do |key|
+        attributes[key] ||= nil
+      end
       attributes[:primary_guest_name] ||= attributes[:guest_name]
       attributes[:room_number] = attributes.fetch(:room_number).to_s.freeze
       attributes[:status] = attributes.fetch(:status).to_sym

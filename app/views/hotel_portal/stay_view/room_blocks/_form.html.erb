@@ -16,7 +16,11 @@
         <% end %>
       </div>
       <%= render PanelsUI::FormField.new(form:, attribute: :block_type, label: "Block type", required: true) do |field| %>
-        <% field.with_select_menu(RoomBlock::BLOCK_TYPES.map { |type| { label: type.humanize, value: type } }, selected: @room_block.block_type) %>
+        <% block_type_options = RoomBlock::BLOCK_TYPES.map { |type| { label: type.humanize, value: type } } %>
+        <% if persisted && @room_block.block_type.present? && !RoomBlock::BLOCK_TYPES.include?(@room_block.block_type) %>
+          <% block_type_options << { label: "#{@room_block.block_type.humanize} (existing)", value: @room_block.block_type } %>
+        <% end %>
+        <% field.with_select_menu(block_type_options, selected: @room_block.block_type) %>
       <% end %>
       <%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason", required: true) do |field| %>
         <% field.with_text_area(rows: 4) %>
