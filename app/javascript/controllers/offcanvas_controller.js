@@ -43,6 +43,16 @@ export default class extends Controller {
     const trigger = event.target.closest(`[data-turbo-frame="${this.frameTarget.id}"]`)
     if (!trigger) return
 
+    // Replacing content inside an open drawer is a continuation of the same
+    // interaction. Keep the external opener so completion and cancellation can
+    // restore focus after the nested link itself leaves the DOM.
+    const navigatingInsideOpenDrawer = this.element.contains(trigger) && this.element.classList.contains(this.openClass)
+    if (navigatingInsideOpenDrawer) {
+      this.pendingVariant = trigger.dataset.offcanvasVariant || this.pendingVariant || this.variantValue
+      setTimeout(() => window.dispatchEvent(new CustomEvent("dropdown:close-all")), 0)
+      return
+    }
+
     this.trigger = trigger.closest("[data-controller~='panels-ui--dropdown-menu']")
       ?.querySelector("[data-panels-ui--dropdown-menu-target='trigger']") || trigger
     this.pendingVariant = trigger.dataset.offcanvasVariant || this.variantValue

@@ -50,8 +50,28 @@ module HotelPortal::StayViewHelper
     { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }
   end
 
-  def stay_view_booking_path(booking_id, return_to:)
-    hotel_booking_transaction_show_booking_path(current_hotel, booking_id, return_to:)
+  def stay_view_booking_path(booking_id, return_to:, source: nil)
+    hotel_booking_transaction_show_booking_path(current_hotel, booking_id, { return_to:, source: }.compact)
+  end
+
+  def stay_view_drawer_booking_actions(booking_id, capabilities:, return_to:)
+    common = { return_to:, source: "stay_view" }
+    actions = []
+    if capabilities.move_booking?
+      actions << {
+        label: "Move or reassign",
+        href: edit_hotel_stay_view_booking_move_path(current_hotel, booking_id, common),
+        icon: "move"
+      }
+    end
+    if capabilities.change_dates?
+      actions << {
+        label: "Change dates",
+        href: edit_hotel_stay_view_booking_dates_path(current_hotel, booking_id, common),
+        icon: "calendar-range"
+      }
+    end
+    actions.map { |action| action.merge(data: stay_view_action_data) }
   end
 
   def stay_view_cell_actions(room, cell, state)

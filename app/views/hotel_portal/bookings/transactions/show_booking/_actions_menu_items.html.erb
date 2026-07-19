@@ -1,3 +1,13 @@
+<% stay_view_actions = Array(local_assigns[:stay_view_actions]) %>
+<% stay_view_actions.each do |action| %>
+  <%= link_to action.fetch(:href), role: "menuitem", data: action.fetch(:data), class: "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none" do %>
+    <%= app_icon action.fetch(:icon), class: "size-4 shrink-0", aria: { hidden: true } %>
+    <span><%= action.fetch(:label) %></span>
+  <% end %>
+<% end %>
+<% if stay_view_actions.any? && presenter.summary_actions.any? %>
+  <div class="my-1 border-t border-border" role="separator"></div>
+<% end %>
 <% return_to = request.fullpath %>
 <% presenter.summary_actions.each do |summary_action| %>
   <% action_booking = summary_action.target_booking %>

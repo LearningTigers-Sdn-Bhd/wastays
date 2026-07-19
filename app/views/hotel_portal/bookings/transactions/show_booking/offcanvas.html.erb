@@ -1,6 +1,11 @@
 <% booking = @booking %>
 <% presenter = @panel_presenter %>
 <% is_group = booking.group_booking_id.present? %>
+<% stay_view_actions = if @stay_view_capabilities
+  stay_view_drawer_booking_actions(booking.id, capabilities: @stay_view_capabilities, return_to: @transaction_return_to)
+else
+  []
+end %>
 
 <%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "compact-right" } do %>
   <div class="flex h-full flex-col bg-card">
@@ -29,14 +34,14 @@
     <div class="flex flex-wrap items-center gap-2 border-b border-border px-6 py-3">
       <%= link_to "Booking Control Panel", hotel_booking_control_panel_path(current_hotel, booking), data: { turbo: false }, class: "rounded-lg bg-primary px-3.5 py-2 text-xs font-black text-primary-foreground shadow-sm hover:bg-primary-hover" %>
 
-      <% if presenter.summary_actions.any? %>
+      <% if stay_view_actions.any? || presenter.summary_actions.any? %>
         <div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true">
           <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-black text-foreground shadow-sm hover:bg-muted" aria-haspopup="menu" aria-expanded="false" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown">
             Actions
             <%= cached_icon "chevron-down", class: "size-3.5" %>
           </button>
           <div data-dropdown-target="menu" class="hidden w-56 rounded-lg border border-border bg-card p-1.5 shadow-lg" role="menu" tabindex="-1">
-            <%= render "hotel_portal/bookings/transactions/show_booking/actions_menu_items", presenter: presenter %>
+            <%= render "hotel_portal/bookings/transactions/show_booking/actions_menu_items", presenter:, stay_view_actions: %>
           </div>
         </div>
       <% end %>

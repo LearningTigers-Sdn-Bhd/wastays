@@ -251,8 +251,64 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     bar = find("#stay_view_booking_room_#{booking.booking_rooms.sole.id} a")
     expect(bar[:"data-turbo-frame"]).to eq("offcanvas_drawer")
-    expect(URI.parse(bar[:href]).path).to eq(hotel_booking_transaction_show_booking_path(hotel, booking))
+    uri = URI.parse(bar[:href])
+    expect(uri.path).to eq(hotel_booking_transaction_show_booking_path(hotel, booking))
+    expect(Rack::Utils.parse_nested_query(uri.query)).to include(
+      "source" => "stay_view",
+      "return_to" => hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+    )
     expect(page).to have_no_button("Actions for room 101")
+  end
+
+  it "moves a Timeline stay through the keyboard-accessible booking drawer and restores focus",
+    skip: "Pending the stacked PR that replaces legacy off-canvas flows with the new overlay components" do
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 30)
+    timeline = find("#stay-view-timeline")
+    page.execute_script("arguments[0].scrollLeft = 20", timeline)
+    trigger_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}-trigger"
+    trigger = find("##{trigger_id}")
+    trigger.send_keys(:enter)
+
+    within("#offcanvas_drawer") do
+      actions = find_button("Actions")
+      actions.send_keys(:down)
+    end
+    find("a[role='menuitem']", text: "Move or reassign", visible: :visible).send_keys(:enter)
+
+    within("#offcanvas_drawer") do
+      expect(page).to have_content("Move or reassign stay")
+      page.execute_script(<<~JS)
+        document.querySelector('#booking_check_in').value = '#{Date.current.iso8601}'
+        const room = document.querySelector('#booking_room_assignment')
+        room.value = '#{room_type.id}|102'
+        room.dispatchEvent(new Event('change', { bubbles: true }))
+      JS
+      find_button("Confirm move").trigger("click")
+    end
+
+    expect(booking.reload.booking_rooms.first.room_number).to eq("102")
+    expect(page).to have_css("##{trigger_id}:focus", wait: 10)
+    expect(page.evaluate_script("document.getElementById('stay-view-timeline').scrollLeft")).to be_within(2).of(20)
+  end
+
+  it "opens explicit Change dates without pointer proposal state and restores focus on Escape",
+    skip: "Pending the stacked PR that replaces legacy off-canvas flows with the new overlay components" do
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+    trigger_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}-trigger"
+    find("##{trigger_id}").click
+
+    within("#offcanvas_drawer") do
+      click_button "Actions"
+    end
+    link = find("a[role='menuitem']", text: "Change dates", visible: :visible)
+    expect(Rack::Utils.parse_nested_query(URI.parse(link[:href]).query)).not_to have_key("proposal")
+    link.click
+
+    expect(page).to have_css("#offcanvas_drawer", text: "Change stay dates", visible: :visible)
+    find("#booking_check_in").send_keys(:escape)
+    expect(page).to have_no_css("#offcanvas_drawer", text: "Change stay dates", visible: :visible)
+    expect(page).to have_css("##{trigger_id}:focus", wait: 2)
+    expect(booking.reload.check_out.to_date).to eq(Date.current + 2.days)
   end
 
   it "moves a stay without dragging and refreshes the Room View board" do

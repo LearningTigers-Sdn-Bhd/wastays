@@ -93,4 +93,32 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
     expect(labels).to be_empty
     expect(labels).not_to include("Confirm", "Review no-show", "Mark overbooked", "Detect late checkout")
   end
+
+  it "builds capability-gated non-pointer actions for the Timeline booking drawer" do
+    return_to = hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+    actions = helper.stay_view_drawer_booking_actions(
+      123,
+      capabilities: capabilities.with(move_booking: true, change_dates: false),
+      return_to:
+    )
+
+    expect(actions.pluck(:label)).to eq([ "Move or reassign" ])
+    uri = URI.parse(actions.sole.fetch(:href))
+    query = Rack::Utils.parse_nested_query(uri.query)
+    expect(uri.path).to eq(edit_hotel_stay_view_booking_move_path(hotel, 123))
+    expect(query).to include("source" => "stay_view", "return_to" => return_to)
+    expect(query).not_to have_key("proposal")
+    expect(actions.sole.fetch(:data)).to eq(helper.stay_view_action_data)
+  end
+
+  it "independently gates Change dates in the Timeline booking drawer" do
+    actions = helper.stay_view_drawer_booking_actions(
+      123,
+      capabilities: capabilities.with(move_booking: false, change_dates: true),
+      return_to: state.return_path(hotel)
+    )
+
+    expect(actions.pluck(:label)).to eq([ "Change dates" ])
+    expect(URI.parse(actions.sole.fetch(:href)).path).to eq(edit_hotel_stay_view_booking_dates_path(hotel, 123))
+  end
 end
