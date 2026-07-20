@@ -31,7 +31,7 @@ RSpec.describe "Nearby attractions sheet", type: :system, js: true do
     expect(page).to have_content("Add Nearby Attraction")
 
     # Submitting invalid keeps the sheet open with the frame re-rendered.
-    within("dialog#nearby-attraction-sheet") { click_button "Create Nearby Attraction" }
+    within("dialog#nearby-attraction-sheet") { click_in_overlay "Create Nearby Attraction" }
     expect(page).to have_css("dialog#nearby-attraction-sheet[open]")
     expect(page).to have_current_path(hotel_nearby_attractions_path(hotel))
 
@@ -39,7 +39,7 @@ RSpec.describe "Nearby attractions sheet", type: :system, js: true do
       fill_in "Attraction Name", with: "Batu Caves"
       fill_in "City", with: "Kuala Lumpur"
       fill_in "Country", with: "Malaysia"
-      click_button "Create Nearby Attraction"
+      click_in_overlay "Create Nearby Attraction"
     end
 
     expect(page).to have_no_css("dialog#nearby-attraction-sheet[open]")
@@ -63,7 +63,7 @@ RSpec.describe "Nearby attractions sheet", type: :system, js: true do
     within("dialog#nearby-attraction-sheet") do
       expect(page).to have_field("Attraction Name", with: "Batu Caves")
       fill_in "Attraction Name", with: "Batu Caves Temple"
-      click_button "Update Nearby Attraction"
+      click_in_overlay "Update Nearby Attraction"
     end
 
     expect(page).to have_content("Nearby attraction updated successfully.")

@@ -38,7 +38,7 @@ RSpec.describe "Concierge QR dialog", type: :system, js: true do
     expect(page.evaluate_script("document.activeElement.id")).to eq("concierge-qr-code-dialog-title")
 
     page.execute_script("window.print = () => { window.__conciergePrintCalled = true }")
-    click_button "Print"
+    click_in_overlay "Print"
     expect(page.evaluate_script("window.__conciergePrintCalled")).to be(true)
 
     page.execute_script(<<~JS)
@@ -47,7 +47,7 @@ RSpec.describe "Concierge QR dialog", type: :system, js: true do
         value: { writeText: (value) => { window.__conciergeCopiedUrl = value; return Promise.resolve() } }
       })
     JS
-    click_button "Copy URL"
+    click_in_overlay "Copy URL"
     expect(page).to have_button("Copied")
     expect(page.evaluate_script("window.__conciergeCopiedUrl")).to include("/concierge/#{hotel.slug}")
   end
@@ -56,7 +56,7 @@ RSpec.describe "Concierge QR dialog", type: :system, js: true do
     original_overflow = page.evaluate_script("document.body.style.overflow")
     open_qr_dialog
 
-    find("dialog#concierge-qr-code-dialog button[aria-label='Close']").click
+    click_in_overlay find("dialog#concierge-qr-code-dialog button[aria-label='Close']")
 
     expect(page).to have_no_css("dialog#concierge-qr-code-dialog[open]")
     expect(page).to have_current_path(hotel_general_settings_path(hotel))

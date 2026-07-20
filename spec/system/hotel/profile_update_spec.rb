@@ -56,7 +56,7 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
     expect(page).to have_css("[data-hotel-photo-queue-target='counterText']", text: '1 queued')
 
     within('dialog#hotel-photo-upload-sheet') do
-      find("button[aria-label='Close']").click
+      click_in_overlay find("button[aria-label='Close']")
     end
     expect(page).to have_no_css("dialog#hotel-photo-upload-sheet[open]")
 
@@ -66,7 +66,7 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
     expect(page).to have_css("dialog#hotel-photo-upload-sheet[open] [data-signed-id]", text: 'sample_image.jpg')
     wait_for_transition_end("#hotel-photo-upload-sheet")
 
-    click_button 'Confirm Upload'
+    click_in_overlay 'Confirm Upload'
 
     expect(page).to have_css("[aria-label='Published hotel photos'] .panel-attachment", text: 'sample_image.jpg')
     expect(hotel.reload.photos.count).to eq(1)
@@ -86,12 +86,12 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
 
     expect(page).to have_css("dialog#turbo-confirm-dialog[open][data-tone='destructive']")
 
-    within('dialog#turbo-confirm-dialog') { click_button 'Cancel' }
+    within('dialog#turbo-confirm-dialog') { click_in_overlay 'Cancel' }
     expect(hotel.reload.photos.count).to eq(1)
 
     find("button[aria-label='Actions for published.jpg']").click
     click_button 'Remove photo'
-    within('dialog#turbo-confirm-dialog') { click_button 'Confirm' }
+    within('dialog#turbo-confirm-dialog') { click_in_overlay 'Confirm' }
 
     expect(page).to have_no_css('#hotel-published-photos .panel-attachment', text: 'published.jpg')
     expect(page).to have_css('.toast', text: 'Hotel photo removed successfully.')

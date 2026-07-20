@@ -98,7 +98,7 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     expect(page.evaluate_script("document.querySelector('#booking-audit-trail-sheet').contains(document.activeElement)")).to be(true)
     within("#booking-audit-trail-sheet") do
       expect(page).to have_content("Audit Trail")
-      find("summary", text: "View Changes").click
+      click_in_overlay find("summary", text: "View Changes")
       expect(page).to have_content("Pending")
       expect(page).to have_content("Confirmed")
     end
