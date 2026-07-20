@@ -319,7 +319,6 @@ Rails.application.routes.draw do
         get :availability, to: "bookings/availabilities#show"
         get :rate_options, to: "bookings/rate_options#show"
         get :stay_price, to: "bookings/prices#show"
-        get :board, to: "bookings/board#index"
       end
 
       member do
@@ -619,11 +618,5 @@ Rails.application.routes.draw do
     resources :rate_plans, only: %i[create destroy]
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
-    get "room-status", to: "room_status_board#index", as: :room_status_board
-    get "room-status/housekeeping-requests/:room_number", to: "room_status_board#housekeeping_requests", as: :room_status_housekeeping_requests
-    resources :room_statuses, only: [ :update ]
-    resources :room_blocks, only: [ :new, :edit, :create, :update, :destroy ] do
-      post :finish, on: :member
-    end
   end
 end

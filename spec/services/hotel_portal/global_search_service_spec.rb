@@ -19,7 +19,7 @@ RSpec.describe HotelPortal::GlobalSearchService do
 
   it "returns renamed and settings-hub navigation destinations" do
     expect(described_class.new(hotel, "departures").perform).to include(hash_including(title: "Front Desk", group: "Pages", url: Rails.application.routes.url_helpers.hotel_front_desk_path(hotel)))
-    expect(described_class.new(hotel, "timeline board").perform).to include(hash_including(title: "Timeline Board", group: "Pages"))
+    expect(described_class.new(hotel, "timeline board").perform).to include(hash_including(title: "Stay View", group: "Pages"))
     expect(described_class.new(hotel, "plan billing").perform).to include(hash_including(title: "Plan & Billing", group: "Pages"))
     expect(described_class.new(hotel, "transaction codes").perform).to include(hash_including(title: "Transaction Codes", group: "Pages"))
     expect(described_class.new(hotel, "general ledger").perform).to include(hash_including(title: "General Ledger Mappings", group: "Pages"))

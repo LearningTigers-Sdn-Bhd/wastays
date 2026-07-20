@@ -1,4 +1,23 @@
 module HotelPortal::BookingsHelper
+  STATUS_ICONS = {
+    "pending" => "clock",
+    "confirmed" => "circle-check",
+    "review_no_show" => "triangle-alert",
+    "checked_in" => "log-in",
+    "completed" => "check-check",
+    "cancelled" => "circle-x",
+    "no_show" => "user-x",
+    "review_due_out" => "triangle-alert",
+    "checkout_required" => "log-out",
+    "overbooked" => "octagon-alert",
+    "not_ready" => "ban",
+    "available" => "circle-check"
+  }.freeze
+
+  def booking_status_icon(status)
+    STATUS_ICONS.fetch(status.to_s, "circle")
+  end
+
   def hotel_payment_display_status(status)
     status.to_s == "refunded" ? "cancelled" : status
   end

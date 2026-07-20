@@ -47,7 +47,7 @@
     </div>
   </div>
 
-  <%= render "hotel_portal/bookings/board/partials/content_footer",
+  <%= render "hotel_portal/shared/offcanvas/content_footer",
     show_full_page_link: false,
     submit_button: f.submit(mode == "add" ? "Add Guest" : "Save Guest", class: "rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground") %>
 <% end %>

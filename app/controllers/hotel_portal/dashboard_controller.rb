@@ -16,7 +16,7 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
     if current_user.has_permission?("view_reports", hotel: @current_hotel) && !current_user.has_permission?("manage_guest_arrival", hotel: @current_hotel)
       redirect_to hotel_reports_path(@current_hotel) and return
     elsif current_user.has_permission?("manage_room_status", hotel: @current_hotel) && !current_user.has_permission?("manage_guest_arrival", hotel: @current_hotel)
-      redirect_to hotel_room_status_board_path(@current_hotel) and return
+      redirect_to hotel_stay_view_path(@current_hotel) and return
     end
 
     stats = HotelPortal::DashboardStats.new(@current_hotel)

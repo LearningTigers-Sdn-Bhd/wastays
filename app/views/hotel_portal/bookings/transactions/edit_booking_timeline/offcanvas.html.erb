@@ -1,7 +1,7 @@
 <%= turbo_frame_tag "offcanvas_drawer" do %>
   <div class="flex h-full flex-col bg-card">
     <% moving = @timeline_action == "move" %>
-    <%= render "hotel_portal/bookings/board/partials/content_header",
+    <%= render "hotel_portal/shared/offcanvas/content_header",
       title: moving ? "Move Stay" : "Extend Stay",
       subtitle: @booking.guest_name,
       icon: cached_icon(moving ? "move" : "calendar-plus", class: "size-5") %>

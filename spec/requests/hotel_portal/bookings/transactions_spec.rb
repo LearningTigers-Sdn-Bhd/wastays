@@ -177,10 +177,10 @@ RSpec.describe "HotelPortal booking transactions", type: :request do
     expect(booking.booking_rooms.first.room_number).to eq("101")
   end
 
-  it "completes timeline edits back to the booking board" do
+  it "completes timeline edits back to the stay view" do
     booking = create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 2.days)
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-    return_to = board_hotel_bookings_path(hotel, start_date: Date.current)
+    return_to = hotel_stay_view_path(hotel, start_date: Date.current)
 
     patch hotel_booking_transaction_edit_booking_timeline_path(hotel, booking), params: {
       timeline_action: "extend",

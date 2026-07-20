@@ -66,10 +66,9 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
         expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Front Office")
         expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Planning & Inventory")
         expect(page).to have_link("Reservations", href: hotel_front_desk_path(hotel), visible: :all)
-        expect(page).to have_link("Room Status", visible: :all)
+        expect(page).to have_link("Stay View", visible: :all)
         expect(page).to have_link("Requests", visible: :all)
         expect(page).to have_link("Night Audit", visible: :all)
-        expect(page).to have_link("Timeline Board", visible: :all)
         expect(page).to have_link("Rates & Inventory", visible: :all)
         expect(page).to have_link("Guest Records", visible: :all)
       end
@@ -138,9 +137,8 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
     within("#hotel-sidebar") do
       expect(page).to have_link("Dashboard", href: hotel_dashboard_path(hotel))
       expect(page).to have_link("Reservations", href: hotel_front_desk_path(hotel), visible: :all)
-      expect(page).to have_link("Timeline Board", href: board_hotel_bookings_path(hotel), visible: :all)
+      expect(page).to have_link("Stay View", href: hotel_stay_view_path(hotel), visible: :all)
       expect(page).to have_link("Rates & Inventory", href: hotel_inventory_index_path(hotel), visible: :all)
-      expect(page).to have_link("Room Status", href: hotel_room_status_board_path(hotel), visible: :all)
       expect(page).to have_link("Guest Records", href: hotel_guests_path(hotel), visible: :all)
       expect(page).to have_link("Requests", href: hotel_requests_path(hotel), visible: :all)
       expect(page).to have_link("Folios", href: hotel_folios_path(hotel), visible: :all)

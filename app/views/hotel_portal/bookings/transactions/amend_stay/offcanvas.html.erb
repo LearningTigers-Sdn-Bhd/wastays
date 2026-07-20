@@ -13,7 +13,7 @@
           booking_calc_exclude_booking_id_value: @booking.id
         } do |f| %>
       <%# Modal Header %>
-      <%= render "hotel_portal/bookings/board/partials/content_header",
+      <%= render "hotel_portal/shared/offcanvas/content_header",
                  title: "Edit Stay & Room",
                  subtitle: "Update booking dates and room assignment",
                  icon: cached_icon("pen-line", stroke_width: 2.5, class: "size-5") %>
@@ -106,7 +106,7 @@
       </div>
 
       <%# Modal Footer %>
-      <%= render "hotel_portal/bookings/board/partials/content_footer",
+      <%= render "hotel_portal/shared/offcanvas/content_footer",
                  show_full_page_link: false,
                  submit_button: f.submit("Save Changes", class: "px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-sm") %>
     <% end %>

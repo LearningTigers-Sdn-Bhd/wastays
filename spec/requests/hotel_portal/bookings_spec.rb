@@ -413,16 +413,6 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(booking.checked_in_at.to_i).to eq(expected_checked_in_at.to_i)
     end
 
-    it "returns turbo stream completion to the reservation board" do
-      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
-           params: { checked_in_at: Time.current.to_s },
-           headers: { "Accept" => "text/vnd.turbo-stream.html", "Referer" => board_hotel_bookings_url(hotel) }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(%(url="#{board_hotel_bookings_path(hotel)}"))
-    end
-
     it "completes the offcanvas back to booking details on turbo failures outside the reservation board" do
       booking = create(:booking, hotel: hotel, status: "pending")
 
@@ -643,24 +633,6 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         hotel_corporate_account: relationship,
         due_on: hotel.current_business_date + 21.days
       )
-    end
-
-    it "returns timeline-board checkout-sheet submissions to the Booking Timeline Board" do
-      booking.transition_status_to!("checked_in", event: "check_in")
-      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
-
-      post check_out_hotel_booking_path(hotel, booking),
-        params: {
-          checkout_sheet: "1",
-          source: "booking_timeline_board",
-          checked_out_at: Time.current.to_s,
-          checkout_folios: {
-            folio.id.to_s => { action: "close" }
-          }
-        }
-
-      expect(response).to redirect_to(board_hotel_bookings_path(hotel))
-      expect(booking.reload.status).to eq("completed")
     end
 
     it "posts early departure charge before checkout-sheet settlement and redirects" do
