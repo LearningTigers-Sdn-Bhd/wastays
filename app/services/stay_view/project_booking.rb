@@ -6,7 +6,14 @@ module StayView
 
     def self.call(booking:, room_type_name:, group_rooms: [], financial_signals: [], date_window:, capabilities:)
       financial_signals = [] unless capabilities.view_financial_status?
-      tracks = date_window.booking_tracks(booking.check_in, booking.check_out)
+      # Position the bar on the room's actual occupancy: once a guest has
+      # physically checked in/out we honour those dates (e.g. a late checkout
+      # stretches the bar into the turnover day), falling back to the scheduled
+      # dates while the stay is still upcoming. Keeps the timeline aligned with
+      # the operationally-aware rooms view (see ResolveRoomCardSlots).
+      occupancy_check_in = booking.actual_check_in || booking.check_in
+      occupancy_check_out = booking.actual_check_out || booking.check_out
+      tracks = date_window.booking_tracks(occupancy_check_in, occupancy_check_out)
       guest_label = capabilities.view_booking? ? booking.guest_name.presence || "Guest" : "Reserved"
       primary_guest_name = capabilities.view_booking? ? booking.primary_guest_name.presence || guest_label : "Reserved"
       booking_type = booking.group_booking_id.present? ? :group : :single

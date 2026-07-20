@@ -144,7 +144,7 @@ RSpec.describe StayView::LoadInventory do
     expect(inventory.bookings).to be_frozen
   end
 
-  it "loads actual lifecycle dates for Room View without extending Timeline inventory" do
+  it "loads late checkouts into both the Room and Timeline views by actual occupancy" do
     business_date = Date.new(2026, 7, 19)
     room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
     zone = hotel.hotel_time_zone
@@ -164,7 +164,7 @@ RSpec.describe StayView::LoadInventory do
     room_inventory = described_class.call(hotel:, date_window: room_window, capabilities:)
     timeline_inventory = described_class.call(hotel:, date_window: timeline_window, capabilities:)
 
-    expect(room_inventory.bookings.sole).to have_attributes(
+    expected_attributes = {
       check_in: Date.new(2026, 7, 17),
       check_out: Date.new(2026, 7, 18),
       check_in_at: zone.local(2026, 7, 17, 15),
@@ -173,8 +173,12 @@ RSpec.describe StayView::LoadInventory do
       actual_check_out: Date.new(2026, 7, 19),
       actual_check_in_at: zone.local(2026, 7, 17, 15),
       actual_check_out_at: zone.local(2026, 7, 19, 8)
-    )
-    expect(timeline_inventory.bookings).to be_empty
+    }
+    expect(room_inventory.bookings.sole).to have_attributes(expected_attributes)
+    # The scheduled checkout (18 Jul) falls before the 19 Jul timeline window,
+    # but the actual checkout (19 Jul) keeps the stay in view so the turnover
+    # renders instead of silently disappearing.
+    expect(timeline_inventory.bookings.sole).to have_attributes(expected_attributes)
   end
 
   it "loads room-status notes only with readiness permission without adding queries" do

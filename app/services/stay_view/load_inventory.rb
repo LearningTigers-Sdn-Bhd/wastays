@@ -148,16 +148,16 @@ module StayView
         .left_joins(booking: :group_booking)
         .where(bookings: { hotel_id: hotel.id, status: visible_booking_statuses })
         .where.not(room_number: [ nil, "" ])
-      scope = if date_window.view_mode == :rooms
-        scope.where(
-          "COALESCE(bookings.checked_in_at, bookings.check_in) < :window_end AND " \
-          "COALESCE(bookings.checked_out_at, bookings.check_out) >= :window_start",
-          window_end: date_window.window_end_at,
-          window_start: date_window.window_start_at
-        )
-      else
-        scope.where("bookings.check_in < ? AND bookings.check_out >= ?", date_window.window_end_at, date_window.window_start_at)
-      end
+      # Filter on the effective occupancy window (actual timestamps when the
+      # guest has physically checked in/out, scheduled dates otherwise) so late
+      # checkouts and early arrivals surface in both the rooms and timeline
+      # views instead of only the schedule-based one.
+      scope = scope.where(
+        "COALESCE(bookings.checked_in_at, bookings.check_in) < :window_end AND " \
+        "COALESCE(bookings.checked_out_at, bookings.check_out) >= :window_start",
+        window_end: date_window.window_end_at,
+        window_start: date_window.window_start_at
+      )
 
       scope
         .pluck(*columns)

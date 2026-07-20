@@ -121,4 +121,16 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
     expect(actions.pluck(:label)).to eq([ "Change dates" ])
     expect(URI.parse(actions.sole.fetch(:href)).path).to eq(edit_hotel_stay_view_booking_dates_path(hotel, 123))
   end
+
+  it "reframes the board header copy per view mode" do
+    expect(helper.stay_view_board_description(:timeline)).to include("across the coming days")
+    expect(helper.stay_view_board_caption(:timeline)).to include("middle of check-in day")
+    expect(helper.stay_view_board_description(:rooms)).to include("single day")
+    expect(helper.stay_view_board_caption(:rooms)).to include("arrivals, departures, and turnovers")
+  end
+
+  it "falls back to the timeline header copy for an unknown view mode" do
+    expect(helper.stay_view_board_description(:unknown)).to eq(helper.stay_view_board_description(:timeline))
+    expect(helper.stay_view_board_caption(:unknown)).to eq(helper.stay_view_board_caption(:timeline))
+  end
 end

@@ -2,10 +2,10 @@
   <div class="space-y-5">
     <%= render PanelsUI::PageHeader.new(
       title: "Stay View",
-      description: "Plan stays and manage room operations from one shared view."
+      description: stay_view_board_description(board.view_mode)
     ) do |header| %>
       <% header.with_caption do %>
-        Booking bars run from the middle of check-in day to the middle of checkout day. Hatched bars mark room blocks.
+        <%= stay_view_board_caption(board.view_mode) %>
       <% end %>
       <% header.with_actions do %>
         <%= render PanelsUI::Tabs.new(id: "stay-view-modes", active: board.view_mode, variant: :pill, aria_label: "Stay View mode") do |tabs| %>

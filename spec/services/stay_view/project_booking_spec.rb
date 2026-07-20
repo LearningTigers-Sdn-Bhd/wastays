@@ -153,7 +153,7 @@ RSpec.describe StayView::ProjectBooking do
     expect(redacted.accessible_label).not_to include("adults", "check-in", "check-out", "boat-in", "boat-out")
   end
 
-  it "carries actual lifecycle dates without changing scheduled timeline geometry" do
+  it "positions the bar on actual occupancy dates while keeping scheduled display dates" do
     actual_check_in_at = Time.zone.local(2026, 7, 16, 15, 5)
     actual_check_out_at = Time.zone.local(2026, 7, 19, 7, 55)
     booking = StayView::BookingRecord.new(
@@ -169,6 +169,9 @@ RSpec.describe StayView::ProjectBooking do
       capabilities: capabilities.with(view_booking: true)
     )
 
+    # Display fields stay scheduled, but a late checkout stretches the bar to
+    # the actual departure day so it forms the same-day turnover the rooms view
+    # already reports.
     expect(segment).to have_attributes(
       check_in: Date.new(2026, 7, 16),
       check_out: Date.new(2026, 7, 18),
@@ -177,7 +180,10 @@ RSpec.describe StayView::ProjectBooking do
       actual_check_in_at:,
       actual_check_out_at:
     )
-    expect(segment.end_track).to eq(window.booking_tracks(booking.check_in, booking.check_out).end_track)
+    actual_tracks = window.booking_tracks(booking.actual_check_in, booking.actual_check_out)
+    expect(segment.start_track).to eq(actual_tracks.start_track)
+    expect(segment.end_track).to eq(actual_tracks.end_track)
+    expect(segment.end_track).not_to eq(window.booking_tracks(booking.check_in, booking.check_out).end_track)
   end
 
   it "projects immutable display-ready financial signals into accessible booking text" do

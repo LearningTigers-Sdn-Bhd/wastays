@@ -7,6 +7,19 @@ module HotelPortal::StayViewHelper
     occupied: "Occupied",
     departure: "Departure"
   }.freeze
+  # Header copy that reframes the board for whichever view is active: the
+  # timeline reads across days, the rooms view reads a single day's operations.
+  BOARD_HEADER_COPY = {
+    timeline: {
+      description: "Plan stays across the coming days and spot turnovers before they happen.",
+      caption: "Booking bars run from the middle of check-in day to the middle of checkout day. Hatched bars mark room blocks."
+    }.freeze,
+    rooms: {
+      description: "Check room readiness and guest movements for a single day.",
+      caption: "Each room card shows the selected day's arrivals, departures, and turnovers, alongside housekeeping status."
+    }.freeze
+  }.freeze
+  DEFAULT_BOARD_HEADER_COPY = BOARD_HEADER_COPY.fetch(:timeline)
   FINANCIAL_BADGE_VARIANTS = {
     balance_due: :warning,
     credit: :warning,
@@ -297,5 +310,19 @@ module HotelPortal::StayViewHelper
 
   def stay_view_date_label(date)
     l(date, format: "%a %-d %b")
+  end
+
+  def stay_view_board_description(view_mode)
+    board_header_copy(view_mode).fetch(:description)
+  end
+
+  def stay_view_board_caption(view_mode)
+    board_header_copy(view_mode).fetch(:caption)
+  end
+
+  private
+
+  def board_header_copy(view_mode)
+    BOARD_HEADER_COPY.fetch(view_mode.to_sym, DEFAULT_BOARD_HEADER_COPY)
   end
 end
