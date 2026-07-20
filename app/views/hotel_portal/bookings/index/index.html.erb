@@ -9,15 +9,15 @@
             <%= cached_icon "chevron-down", class: "hidden size-4 md:inline-block" %>
           <% end %>
           <% menu.with_group(label: "Insert Transaction") do |group| %>
-            <% group.with_item(href: hotel_booking_transaction_quick_booking_path(current_hotel), variant: :default, data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }) do %>
+            <% group.with_item(href: hotel_booking_action_quick_booking_path(current_hotel), variant: :default, data: { turbo_frame: "booking_action_sheet" }) do %>
               <%= cached_icon "calendar-plus", stroke_width: 2.2, class: "size-4" %>
               New Booking
             <% end %>
-            <% group.with_item(href: hotel_booking_transaction_walk_in_check_in_path(current_hotel), variant: :default, data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }) do %>
+            <% group.with_item(href: hotel_booking_action_walk_in_check_in_path(current_hotel), variant: :default, data: { turbo_frame: "booking_action_sheet" }) do %>
               <%= cached_icon "user-check", stroke_width: 2.2, class: "size-4" %>
               Walk-in Check-in
             <% end %>
-            <% group.with_item(href: hotel_booking_transaction_backdated_check_in_path(current_hotel), variant: :default, data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }) do %>
+            <% group.with_item(href: hotel_booking_action_backdated_check_in_path(current_hotel), variant: :default, data: { turbo_frame: "booking_action_sheet" }) do %>
               <%= cached_icon "calendar-clock", stroke_width: 2.2, class: "size-4" %>
               Backdated Check-in
             <% end %>

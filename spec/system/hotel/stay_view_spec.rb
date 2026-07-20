@@ -238,7 +238,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_css("##{menu_id}", text: "Walk-in check-in", visible: :visible)
     within("##{menu_id}") { click_link "Add booking" }
 
-    within("#offcanvas_drawer") do
+    within("#booking-creation-sheet") do
       expect(find("#booking_check_in").value).to start_with(Date.current.iso8601)
       expect(find("#booking_check_out").value).to start_with((Date.current + 1.day).iso8601)
     end
@@ -273,7 +273,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(Rack::Utils.parse_nested_query(URI.parse(book[:href]).query)).to include("room_number" => "102")
     book.send_keys(:enter)
 
-    within("#offcanvas_drawer") do
+    within("#booking-creation-sheet") do
       expect(find("#booking_check_in").value).to start_with(Date.current.iso8601)
       expect(find("#booking_check_out").value).to start_with((Date.current + 1.day).iso8601)
     end

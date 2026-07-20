@@ -51,10 +51,9 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).not_to include(hotel_booking_transaction_quick_booking_path(hotel))
-      expect(response.body).not_to include(hotel_booking_transaction_new_booking_path(hotel))
-      expect(response.body).not_to include(hotel_booking_transaction_walk_in_check_in_path(hotel))
-      expect(response.body).not_to include(hotel_booking_transaction_backdated_check_in_path(hotel))
+      expect(response.body).not_to include(hotel_booking_action_quick_booking_path(hotel))
+      expect(response.body).not_to include(hotel_booking_action_walk_in_check_in_path(hotel))
+      expect(response.body).not_to include(hotel_booking_action_backdated_check_in_path(hotel))
     end
 
     it "renders dashboard page without stale hotel booking path helpers" do

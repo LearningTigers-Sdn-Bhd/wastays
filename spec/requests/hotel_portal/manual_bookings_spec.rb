@@ -98,16 +98,16 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
   describe "quick and grouped booking creation" do
     let(:rate_plan) { create(:rate_plan, room_type: room_type) }
 
-    it "launches new booking through the quick booking drawer" do
+    it "launches new booking through the quick booking sheet" do
       get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list" }
 
       document = Nokogiri::HTML(response.body)
-      new_booking_link = document.at_css("a[href='#{hotel_booking_transaction_quick_booking_path(hotel)}']")
+      new_booking_link = document.at_css("a[href='#{hotel_booking_action_quick_booking_path(hotel)}']")
 
       expect(new_booking_link.text.squish).to eq("New Booking")
-      expect(new_booking_link["data-offcanvas-variant"]).to eq("right")
+      expect(new_booking_link["data-turbo-frame"]).to eq("booking_action_sheet")
       expect(response.body).not_to include("Full Booking")
-      expect(document.at_css("a[href='#{hotel_booking_transaction_new_booking_path(hotel)}']")).to be_nil
+      expect(document.at_css("a[href='#{hotel_booking_action_new_booking_path(hotel)}']")).to be_nil
     end
 
     it "renders quick booking as a compact room-row form" do

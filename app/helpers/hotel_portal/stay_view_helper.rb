@@ -63,6 +63,12 @@ module HotelPortal::StayViewHelper
     { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }
   end
 
+  # Booking-creation actions open in the shared booking_action_sheet, whose size
+  # is decided centrally by the action type (see bookings/actions/booking_creations).
+  def stay_view_create_booking_data
+    { turbo_frame: "booking_action_sheet" }
+  end
+
   def stay_view_booking_path(booking_id, return_to:, source: nil)
     hotel_booking_transaction_show_booking_path(current_hotel, booking_id, { return_to:, source: }.compact)
   end
@@ -103,25 +109,29 @@ module HotelPortal::StayViewHelper
       if cell.date < state.date_window.operational_date
         actions << {
           label: "Backdated check-in",
-          href: hotel_booking_transaction_backdated_check_in_path(current_hotel, common),
-          icon: "history"
+          href: hotel_booking_action_backdated_check_in_path(current_hotel, common),
+          icon: "history",
+          data: stay_view_create_booking_data
         }
       elsif cell.date == state.date_window.operational_date
         actions << {
           label: "Walk-in check-in",
-          href: hotel_booking_transaction_walk_in_check_in_path(current_hotel, common),
-          icon: "log-in"
+          href: hotel_booking_action_walk_in_check_in_path(current_hotel, common),
+          icon: "log-in",
+          data: stay_view_create_booking_data
         }
         actions << {
           label: "Add booking",
-          href: hotel_booking_transaction_new_booking_path(current_hotel, common),
-          icon: "calendar-plus"
+          href: hotel_booking_action_new_booking_path(current_hotel, common),
+          icon: "calendar-plus",
+          data: stay_view_create_booking_data
         }
       else
         actions << {
           label: "Add booking",
-          href: hotel_booking_transaction_new_booking_path(current_hotel, common),
-          icon: "calendar-plus"
+          href: hotel_booking_action_new_booking_path(current_hotel, common),
+          icon: "calendar-plus",
+          data: stay_view_create_booking_data
         }
       end
     end
@@ -140,7 +150,7 @@ module HotelPortal::StayViewHelper
       }
     end
 
-    actions.map { |action| action.merge(data: stay_view_action_data) }
+    actions.map { |action| action.merge(data: action.fetch(:data, stay_view_action_data)) }
   end
 
   def stay_view_booking_actions(segment, state)
@@ -250,32 +260,36 @@ module HotelPortal::StayViewHelper
         actions << {
           label: "Backdated",
           aria_label: "Backdated check-in for room #{room.room_number} on #{I18n.l(date, format: :long)}",
-          href: hotel_booking_transaction_backdated_check_in_path(current_hotel, common),
+          href: hotel_booking_action_backdated_check_in_path(current_hotel, common),
           icon: "history",
-          variant: :secondary
+          variant: :secondary,
+          data: stay_view_create_booking_data
         }
       elsif date == state.date_window.operational_date
         actions << {
           label: "Walk-in",
           aria_label: "Walk-in check-in for room #{room.room_number} on #{I18n.l(date, format: :long)}",
-          href: hotel_booking_transaction_walk_in_check_in_path(current_hotel, common),
+          href: hotel_booking_action_walk_in_check_in_path(current_hotel, common),
           icon: "log-in",
-          variant: :secondary
+          variant: :secondary,
+          data: stay_view_create_booking_data
         }
         actions << {
           label: "Book",
           aria_label: "Add booking for room #{room.room_number} on #{I18n.l(date, format: :long)}",
-          href: hotel_booking_transaction_new_booking_path(current_hotel, common),
+          href: hotel_booking_action_new_booking_path(current_hotel, common),
           icon: "calendar-plus",
-          variant: :neutral
+          variant: :neutral,
+          data: stay_view_create_booking_data
         }
       else
         actions << {
           label: "Book",
           aria_label: "Add booking for room #{room.room_number} on #{I18n.l(date, format: :long)}",
-          href: hotel_booking_transaction_new_booking_path(current_hotel, common),
+          href: hotel_booking_action_new_booking_path(current_hotel, common),
           icon: "calendar-plus",
-          variant: :secondary
+          variant: :secondary,
+          data: stay_view_create_booking_data
         }
       end
     end
@@ -297,7 +311,7 @@ module HotelPortal::StayViewHelper
       }
     end
 
-    actions.map { |action| action.merge(data: stay_view_action_data) }
+    actions.map { |action| action.merge(data: action.fetch(:data, stay_view_action_data)) }
   end
 
   def stay_view_occupancy_label(occupancy)
