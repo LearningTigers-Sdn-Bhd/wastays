@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Card", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design" }
 
   it "activates the primary link with the keyboard" do
     link = find("[data-testid='clickable-record-card'] .panel-card__primary-link")

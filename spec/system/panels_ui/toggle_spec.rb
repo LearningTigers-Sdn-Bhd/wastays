@@ -130,8 +130,10 @@ RSpec.describe "PanelsUI toggle controls", type: :system do
     send_key("ArrowUp")
     expect(page.evaluate_script("document.activeElement.dataset.value")).to eq("start")
 
-    page.execute_script("arguments[0].setAttribute('dir', 'rtl')", density_group)
-    page.execute_script("arguments[0].focus()", density_group.find("button[data-value='compact']"))
+    page.execute_script("document.getElementById('toggle_group_panel_light-density').setAttribute('dir', 'rtl')")
+    page.execute_script(
+      "document.querySelector(\"#toggle_group_panel_light-density button[data-value='compact']\").focus()"
+    )
     send_key("ArrowRight")
     expect(page.evaluate_script("document.activeElement.dataset.value")).to eq("comfortable")
   end

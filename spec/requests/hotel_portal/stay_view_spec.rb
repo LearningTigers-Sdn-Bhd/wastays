@@ -631,7 +631,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
         :hotel_corporate_account,
         hotel:,
         corporate_account: create(:account, :corporate, name: "Acme Sdn Bhd"),
-        direct_bill_enabled: true
+        relationship_type: "direct_bill"
       )
       party = create(:booking_billing_party, booking:, hotel:, hotel_corporate_account: relationship)
       create(

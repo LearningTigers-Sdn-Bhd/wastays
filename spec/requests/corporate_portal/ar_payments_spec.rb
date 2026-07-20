@@ -327,6 +327,10 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
   def create_invoice(relationship)
     booking = create(:booking, hotel: relationship.hotel)
     folio = create(:booking_folio, :secondary, booking: booking, hotel: relationship.hotel, hotel_corporate_account: relationship)
-    create(:ar_invoice, hotel: relationship.hotel, booking_folio: folio, hotel_corporate_account: relationship, amount: 100, paid_amount: 0, outstanding_amount: 100, currency: relationship.hotel.default_currency)
+    # Pin invoice_number instead of relying on FactoryBot's process-global sequence,
+    # which can otherwise collide with values rendered elsewhere on the page in a full suite run.
+    create(:ar_invoice, hotel: relationship.hotel, booking_folio: folio, hotel_corporate_account: relationship,
+           invoice_number: SecureRandom.random_number(10_000_000..99_999_999),
+           amount: 100, paid_amount: 0, outstanding_amount: 100, currency: relationship.hotel.default_currency)
   end
 end

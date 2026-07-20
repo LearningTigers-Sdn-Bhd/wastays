@@ -52,7 +52,6 @@ class Api::V2::BookingsController < Api::V2::BaseController
       guest_phone: primary.guest_phone,
       adults: bookings.sum(&:adults),
       children: bookings.sum { |child| child.children.to_i },
-      infants: bookings.sum { |child| child.infants.to_i },
       bookings: bookings.map { |child| booking_payload(child) }
     }
 
@@ -96,7 +95,6 @@ class Api::V2::BookingsController < Api::V2::BaseController
       guest_phone: booking.guest_phone,
       adults: booking.adults,
       children: booking.children,
-      infants: booking.infants,
       room: room_payload(room)
     }
   end
