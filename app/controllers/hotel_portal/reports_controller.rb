@@ -10,6 +10,8 @@ module HotelPortal
     PAYOUT_TABS = %w[upcoming paid].freeze
     GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards bibo].freeze
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
+    DAILY_REVENUE_TABS = %w[overview transactions].freeze
+    DAILY_REVENUE_FILTER_KEYS = %i[q transaction_type category transaction_code_id posting_source reversal_status].freeze
 
     before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability guest_reports folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
     before_action :authorize_view_payouts!, only: %i[payouts]
@@ -185,24 +187,25 @@ module HotelPortal
         end_date: @report_end_date,
         date_preset: params[:date_preset]
       ).call
+      prepare_daily_revenue_transactions
 
       respond_to do |format|
         format.html
         format.csv do
-          csv = HotelPortal::Reports::DailyRevenueCsvExportService.new(report: @report).generate
+          csv = HotelPortal::Reports::DailyRevenueTransactionsCsvExportService.new(transactions: @transaction_scope).generate
           send_data csv,
-            filename: "daily-revenue-#{@report.start_date}-#{@report.end_date}.csv",
+            filename: "daily-revenue-transactions-#{@report.start_date}-#{@report.end_date}.csv",
             type: "text/csv"
         end
         format.any(:xls) do
-          workbook = HotelPortal::Reports::DailyRevenueExcelExportService.new(report: @report).generate
+          workbook = HotelPortal::Reports::DailyRevenueExcelExportService.new(report: @report, transactions: @transaction_scope).generate
           send_data workbook,
             filename: "daily-revenue-#{@report.start_date}-#{@report.end_date}.xls",
             type: "application/vnd.ms-excel",
             disposition: "attachment"
         end
         format.pdf do
-          pdf = HotelPortal::Reports::DailyRevenuePdfExportService.new(hotel: current_hotel, report: @report).generate
+          pdf = HotelPortal::Reports::DailyRevenuePdfExportService.new(hotel: current_hotel, report: @report, transactions: @transaction_scope).generate
           send_data pdf,
             filename: "daily-revenue-#{@report.start_date}-#{@report.end_date}.pdf",
             type: "application/pdf",
@@ -583,6 +586,24 @@ module HotelPortal
     end
 
     private
+
+    def prepare_daily_revenue_transactions
+      @daily_revenue_tab = params[:tab].presence_in(DAILY_REVENUE_TABS) || "overview"
+      query = HotelPortal::Reports::DailyRevenueTransactionQuery.new(
+        hotel: current_hotel,
+        start_date: @report_start_date,
+        end_date: @report_end_date,
+        filters: params.permit(*DAILY_REVENUE_FILTER_KEYS)
+      )
+      @transaction_filters = query.filters
+      @transaction_scope = query.call
+      @transaction_count = @transaction_scope.count
+      @transaction_codes = current_hotel.transaction_codes.active.order(:name, :code)
+      return unless @daily_revenue_tab == "transactions" && request.format.html?
+
+      @transactions = @transaction_scope.page(params[:page]).per(50)
+      @transaction_rows = @transactions.map { |transaction| HotelPortal::Reports::DailyRevenueTransactionRow.new(transaction) }
+    end
 
     def load_guest_registration_cards(start_date: nil, end_date: nil)
       @status_filter = params[:status].to_s

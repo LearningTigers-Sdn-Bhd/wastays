@@ -817,6 +817,57 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to eq("You are not authorized to perform this action.")
     end
+
+    describe "transactions tab" do
+      it "shows the Transactions tab as current and paginates at 50 rows" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        51.times { |n| create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 10 + n, posting_date: start_date) }
+
+        get daily_revenue_hotel_reports_path(hotel, tab: "transactions", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response).to have_http_status(:success)
+        expect(response.body.scan('data-testid="daily-revenue-transaction-row"').size).to eq(50)
+        expect(response.body).to include('data-testid="daily-revenue-tab-transactions"')
+      end
+
+      it "keeps the date-filter form on the Transactions tab after changing the date range" do
+        get daily_revenue_hotel_reports_path(hotel, tab: "transactions", start_date: start_date.to_s, end_date: end_date.to_s)
+
+        expect(response.body).to match(%r{<input[^>]*name="tab"[^>]*value="transactions"})
+      end
+
+      it "defaults to Overview when tab is absent or unknown" do
+        get daily_revenue_hotel_reports_path(hotel, start_date: start_date.to_s, end_date: end_date.to_s)
+        expect(response.body).to include("Revenue by Source")
+
+        get daily_revenue_hotel_reports_path(hotel, tab: "bogus", start_date: start_date.to_s, end_date: end_date.to_s)
+        expect(response.body).to include("Revenue by Source")
+      end
+
+      it "never leaks another hotel's transactions through search or filters" do
+        other_hotel = create(:hotel)
+        other_booking = create(:booking, hotel: other_hotel, guest_name: "Other Hotel Guest")
+        other_folio = create(:booking_folio, booking: other_booking, hotel: other_hotel)
+        create(:folio_transaction, booking_folio: other_folio, category: "accommodation", amount: 999, posting_date: start_date)
+
+        get daily_revenue_hotel_reports_path(hotel, tab: "transactions", q: "Other Hotel Guest", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).not_to include("Other Hotel Guest")
+      end
+
+      it "exports the transaction list as csv regardless of active tab" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: start_date)
+
+        get daily_revenue_hotel_reports_path(hotel, format: :csv, start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include("Posting Date", "Transaction Code")
+      end
+    end
   end
 
   describe "GET /managers_flash" do

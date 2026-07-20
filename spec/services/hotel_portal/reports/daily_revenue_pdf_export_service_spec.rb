@@ -39,4 +39,21 @@ RSpec.describe HotelPortal::Reports::DailyRevenuePdfExportService do
 
     expect(pdf).to start_with("%PDF")
   end
+
+  it "appends a transaction register page with service identity and reversal status" do
+    hotel = create(:hotel)
+    booking = create(:booking, hotel: hotel)
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    code = create(:transaction_code, hotel: hotel, code: "CHARTER_BOAT", name: "Charter Boat", kind: "charge", category: "other")
+    transaction = create(:folio_transaction, booking_folio: folio, transaction_code: code, category: "other", amount: 280)
+
+    report = HotelPortal::Reports::DailyRevenueReport.new(hotel: hotel, start_date: transaction.posting_date, end_date: transaction.posting_date).call
+
+    pdf = described_class.new(hotel: hotel, report: report, transactions: [ transaction ]).generate
+    text = PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
+
+    expect(text).to include("All Transactions")
+    expect(text).to include("Charter Boat")
+    expect(text).to include("Original")
+  end
 end

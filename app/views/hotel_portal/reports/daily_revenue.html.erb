@@ -15,6 +15,7 @@
         <%= render "preset_report_actions",
           form_url: daily_revenue_hotel_reports_path(current_hotel),
           form_id: "daily-revenue-range-form",
+          hidden_params: { tab: @daily_revenue_tab },
           date_preset: @date_preset,
           start_date: @report.start_date,
           end_date: @report.end_date,
@@ -30,6 +31,19 @@
     <% end %>
   </div>
 
+  <% preserved_params = { start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset }.merge(@transaction_filters) %>
+  <%= render PanelsUI::Tabs.new(
+        id: "daily-revenue-tabs",
+        active: @daily_revenue_tab,
+        variant: :line,
+        aria_label: "Daily Revenue sections") do |tabs| %>
+    <% tabs.with_tab(name: "overview", label: "Overview", href: daily_revenue_hotel_reports_path(current_hotel, preserved_params.merge(tab: "overview")), data: { testid: "daily-revenue-tab-overview" }) %>
+    <% tabs.with_tab(name: "transactions", label: "Transactions", count: @transaction_count, href: daily_revenue_hotel_reports_path(current_hotel, preserved_params.merge(tab: "transactions")), data: { testid: "daily-revenue-tab-transactions" }) %>
+  <% end %>
+
+  <% if @daily_revenue_tab == "transactions" %>
+    <%= render "daily_revenue_transactions", preserved_params: preserved_params %>
+  <% else %>
   <!-- Summary Cards -->
   <div class="grid grid-cols-2 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-4">
     <div class="p-6 md:border-r md:border-border">
@@ -137,4 +151,5 @@
       </table>
     </div>
   </div>
+  <% end %>
 </div>

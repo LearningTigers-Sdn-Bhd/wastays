@@ -1,0 +1,70 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe HotelPortal::Reports::DailyRevenueTransactionRow do
+  let(:hotel) { create(:hotel) }
+  let(:booking) { create(:booking, hotel: hotel, guest_name: "Jane Doe") }
+  let(:folio) { create(:booking_folio, booking: booking, hotel: hotel) }
+
+  it "preserves a custom service identity" do
+    code = create(:transaction_code, hotel: hotel, code: "ISLAND_HOP", name: "Island Hopping", kind: "charge", category: "other")
+    transaction = create(:folio_transaction, booking_folio: folio, transaction_code: code, category: "other", amount: 100, description: "Two guests")
+    row = described_class.new(transaction)
+
+    expect(row.transaction_code).to eq("ISLAND_HOP")
+    expect(row.service_name).to eq("Island Hopping")
+    expect(row.signed_amount).to eq(100.to_d)
+  end
+
+  it "falls back to category and description when a transaction code is missing" do
+    transaction = create(:folio_transaction, booking_folio: folio, category: "accommodation", description: "Room charge")
+    transaction.update_column(:transaction_code_id, nil)
+    row = described_class.new(transaction.reload)
+
+    expect(row.transaction_code).to eq("—")
+    expect(row.service_name).to eq("Room charge")
+  end
+
+  it "extracts payment method and posting source from metadata" do
+    transaction = create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: "payment",
+      category: "cash",
+      amount: 50,
+      metadata: { "payment_source" => "front_desk", "posting_source" => "manual" }
+    )
+    row = described_class.new(transaction)
+
+    expect(row.payment_method).to eq("front_desk")
+    expect(row.posting_source).to eq("manual")
+  end
+
+  it "reports relationship status for original, reversed, and reversal rows" do
+    original = create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100)
+    reversal = create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: "adjustment",
+      category: "correction",
+      amount: -100,
+      reversal_of_transaction: original
+    )
+    original.update_column(:voided_by_transaction_id, reversal.id)
+
+    expect(described_class.new(original.reload).relationship_status).to eq("Reversed")
+    expect(described_class.new(reversal).relationship_status).to eq("Reversal")
+
+    untouched = create(:folio_transaction, booking_folio: folio, category: "tax", amount: 5)
+    expect(described_class.new(untouched).relationship_status).to eq("Original")
+  end
+
+  it "handles a legacy row with no user" do
+    transaction = create(:folio_transaction, booking_folio: folio, user: nil, category: "accommodation", amount: 100)
+    row = described_class.new(transaction)
+
+    expect(row.actor_name).to eq("—")
+    expect(row.room_number).to eq("—")
+  end
+end

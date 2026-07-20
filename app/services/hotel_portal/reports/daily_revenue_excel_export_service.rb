@@ -7,8 +7,9 @@ module HotelPortal
     class DailyRevenueExcelExportService
       XML_HEADER = %(<?xml version="1.0"?>).freeze
 
-      def initialize(report:)
+      def initialize(report:, transactions: [])
         @report = report
+        @transactions = transactions
       end
 
       def generate
@@ -32,6 +33,11 @@ module HotelPortal
             <Worksheet ss:Name="Revenue by Source">
               <Table>
                 #{source_rows}
+              </Table>
+            </Worksheet>
+            <Worksheet ss:Name="All Transactions">
+              <Table>
+                #{transaction_rows}
               </Table>
             </Worksheet>
           </Workbook>
@@ -91,6 +97,36 @@ module HotelPortal
             money(row[:tax]),
             money(row[:total_charges]),
             money(row[:net_amount])
+          ])
+        end
+        rows.join("\n")
+      end
+
+      def transaction_rows
+        rows = []
+        rows << spreadsheet_row(HotelPortal::Reports::DailyRevenueTransactionsCsvExportService::HEADERS)
+        @transactions.each do |transaction|
+          row = HotelPortal::Reports::DailyRevenueTransactionRow.new(transaction)
+          rows << spreadsheet_row([
+            row.posting_date.iso8601,
+            row.posted_at&.iso8601,
+            row.transaction_code,
+            row.service_name,
+            row.transaction_type,
+            row.category,
+            row.description,
+            row.booking_reference,
+            row.folio_number,
+            row.guest_name,
+            row.room_number,
+            row.payment_method,
+            row.posting_source,
+            row.actor_name,
+            row.stay_date,
+            row.relationship_status,
+            row.related_transaction_id,
+            money(row.signed_amount),
+            row.currency
           ])
         end
         rows.join("\n")

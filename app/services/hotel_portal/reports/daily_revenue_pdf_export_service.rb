@@ -6,9 +6,10 @@ require "prawn/table"
 module HotelPortal
   module Reports
     class DailyRevenuePdfExportService
-      def initialize(hotel:, report:)
+      def initialize(hotel:, report:, transactions: [])
         @hotel = hotel
         @report = report
+        @transactions = transactions
       end
 
       def generate
@@ -19,6 +20,7 @@ module HotelPortal
         draw_daily_table(pdf)
         pdf.move_down 12
         draw_source_table(pdf)
+        draw_transactions_table(pdf) if @transactions.present?
 
         pdf.render
       end
@@ -143,6 +145,33 @@ module HotelPortal
         pdf.table([
           [ "Source", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Net" ]
         ] + rows, width: pdf.bounds.width, cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] }) do
+          row(0).font_style = :bold
+          row(0).background_color = "F1F5F9"
+        end
+      end
+
+      def draw_transactions_table(pdf)
+        pdf.start_new_page(layout: :landscape)
+        pdf.text "All Transactions", size: 12, style: :bold
+        pdf.move_down 6
+
+        rows = @transactions.map do |transaction|
+          row = HotelPortal::Reports::DailyRevenueTransactionRow.new(transaction)
+          [
+            "#{row.posting_date.strftime('%d %b')} #{row.posted_at&.strftime('%H:%M')}",
+            "#{row.transaction_code} / #{row.service_name}",
+            "#{row.transaction_type.to_s.humanize} / #{row.category.to_s.humanize}",
+            "#{row.booking_reference} / #{row.folio_number}",
+            "#{row.guest_name} / #{row.room_number}",
+            row.description.to_s,
+            "#{row.currency} #{money(row.signed_amount)}",
+            row.relationship_status
+          ]
+        end
+
+        pdf.table([
+          [ "Date/Time", "Code/Service", "Type/Category", "Booking/Folio", "Guest/Room", "Description", "Amount", "Status" ]
+        ] + rows, width: pdf.bounds.width, cell_style: { size: 7, padding: [ 4, 4, 4, 4 ] }) do
           row(0).font_style = :bold
           row(0).background_color = "F1F5F9"
         end

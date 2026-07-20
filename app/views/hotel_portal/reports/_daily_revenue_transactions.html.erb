@@ -1,0 +1,51 @@
+<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+  <div class="px-6 py-5 border-b border-border flex items-center justify-between">
+    <h2 class="text-lg font-bold tracking-tight text-foreground">All Transactions</h2>
+    <p class="text-sm text-muted-foreground"><%= @transaction_count %> transaction<%= "s" unless @transaction_count == 1 %></p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full">
+      <thead class="bg-muted">
+        <tr>
+          <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Date</th>
+          <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Code</th>
+          <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Service</th>
+          <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Type</th>
+          <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Booking / Folio</th>
+          <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Guest</th>
+          <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Room</th>
+          <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
+          <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Amount</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border bg-card" data-testid="daily-revenue-transaction-rows">
+        <% if @transaction_rows.present? %>
+          <% @transaction_rows.each do |row| %>
+            <tr class="hover:bg-muted/50" data-testid="daily-revenue-transaction-row">
+              <td class="px-4 py-3 text-sm text-foreground whitespace-nowrap">
+                <%= row.posting_date.strftime("%d %b %Y") %>
+                <% if row.posted_at %><span class="block text-xs text-muted-foreground"><%= row.posted_at.strftime("%H:%M") %></span><% end %>
+              </td>
+              <td class="px-4 py-3 text-sm text-foreground"><%= row.transaction_code %></td>
+              <td class="px-4 py-3 text-sm text-foreground"><%= row.service_name %></td>
+              <td class="px-4 py-3 text-sm text-muted-foreground"><%= row.transaction_type.to_s.humanize %> · <%= row.category.to_s.humanize %></td>
+              <td class="px-4 py-3 text-sm text-foreground">
+                <%= link_to row.booking_reference, hotel_booking_control_panel_path(current_hotel, row.booking, tab: "folio_operations", folio_id: row.folio.id) %>
+                <span class="block text-xs text-muted-foreground">Folio <%= row.folio_number %></span>
+              </td>
+              <td class="px-4 py-3 text-sm text-foreground"><%= row.guest_name %></td>
+              <td class="px-4 py-3 text-sm text-foreground"><%= row.room_number %></td>
+              <td class="px-4 py-3 text-sm text-foreground"><%= row.relationship_status %></td>
+              <td class="px-4 py-3 text-sm font-semibold text-foreground text-right"><%= row.currency %> <%= number_with_precision(row.signed_amount, precision: 2) %></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr><td colspan="9" class="px-6 py-20 text-center text-sm font-medium text-muted-foreground">No posted folio transactions found for this selected period.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <% if @transactions.present? %>
+    <div class="px-6 py-4 border-t border-border flex justify-center"><%= paginate @transactions %></div>
+  <% end %>
+</div>

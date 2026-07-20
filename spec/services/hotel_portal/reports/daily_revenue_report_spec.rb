@@ -58,6 +58,21 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
     row = report.rows.find { |r| r[:date] == start_date }
     expect(row[:accommodation]).to eq(100.to_d)
     expect(row[:booking_count]).to eq(1) # Still counted as active because a booking_id had accommodation activity
+    expect(row[:adjustments]).to eq(-100.to_d)
+    expect(row[:net_revenue]).to eq(0.to_d)
+  end
+
+  it "includes write-offs in signed adjustments" do
+    booking = create(:booking, hotel: hotel)
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: start_date)
+    create(:folio_transaction, booking_folio: folio, transaction_type: "adjustment", category: "write_off", amount: -15, posting_date: start_date)
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    row = report.rows.find { |r| r[:date] == start_date }
+    expect(row[:adjustments]).to eq(-15.to_d)
+    expect(row[:net_revenue]).to eq(85.to_d)
   end
 
   it "correctly filters by hotel" do
@@ -69,6 +84,33 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
     expect(report.totals[:accommodation]).to eq(0)
+  end
+
+  it "omits days with no transactions from daily rows" do
+    booking = create(:booking, hotel: hotel)
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: Date.new(2026, 5, 6))
+
+    report = described_class.new(hotel: hotel, start_date: Date.new(2026, 5, 1), end_date: Date.new(2026, 5, 10)).call
+
+    expect(report.rows.map { |r| r[:date] }).to eq([ Date.new(2026, 5, 6) ])
+  end
+
+  it "includes every month in range for the this_year preset, even months with no transactions" do
+    booking = create(:booking, hotel: hotel)
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: Date.new(2026, 3, 15))
+
+    report = described_class.new(
+      hotel: hotel,
+      start_date: Date.new(2026, 1, 1),
+      end_date: Date.new(2026, 12, 31),
+      date_preset: "this_year"
+    ).call
+
+    expect(report.rows.map { |r| r[:date] }).to eq((1..12).map { |m| Date.new(2026, m, 1) })
+    expect(report.rows.find { |r| r[:date] == Date.new(2026, 3, 1) }[:accommodation]).to eq(100.to_d)
+    expect(report.rows.find { |r| r[:date] == Date.new(2026, 1, 1) }[:accommodation]).to eq(0)
   end
 
   it "includes all charge categories (e.g., F&B) in revenue" do

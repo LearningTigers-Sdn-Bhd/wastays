@@ -33,85 +33,38 @@ module HotelPortal
                            "reversal_of_transactions_folio_transactions.category as reversed_category"
                          )
 
+        accounting = DailyRevenueAccounting.new(transactions)
+
         # Build daily stats
         daily_stats = Hash.new do |h, k|
-          h[k] = {
-            booking_ids: Set.new,
-            accommodation: 0.to_d,
-            tax: 0.to_d,
-            other_charges: 0.to_d,
-            discount: 0.to_d,
-            gateway_payment: 0.to_d,
-            cash_payment: 0.to_d,
-            booking_payment: 0.to_d,
-            refund: 0.to_d
-          }
+          h[k] = { booking_ids: Set.new, discount: 0.to_d }.merge(DailyRevenueAccounting::ZERO_BUCKET)
         end
 
         source_stats = Hash.new do |h, k|
-          h[k] = {
-            booking_ids: Set.new,
-            accommodation: 0.to_d,
-            tax: 0.to_d,
-            other_charges: 0.to_d,
-            discount: 0.to_d,
-            gateway_payment: 0.to_d,
-            cash_payment: 0.to_d,
-            booking_payment: 0.to_d,
-            refund: 0.to_d
-          }
+          h[k] = { booking_ids: Set.new, discount: 0.to_d }.merge(DailyRevenueAccounting::ZERO_BUCKET)
         end
 
         transactions.each do |tx|
           date = tx.posting_date
           source = normalize_source(tx.booking_source)
-          amount = tx.amount.to_d.abs
           booking_id = tx.booking_id
 
           daily_stats[date][:booking_ids] << booking_id
           source_stats[source][:booking_ids] << booking_id
 
-          case tx.transaction_type
-          when "charge"
-            case tx.category
-            when "accommodation"
-              daily_stats[date][:accommodation] += amount
-              source_stats[source][:accommodation] += amount
-            when "tax"
-              daily_stats[date][:tax] += amount
-              source_stats[source][:tax] += amount
-            else
-              daily_stats[date][:other_charges] += amount
-              source_stats[source][:other_charges] += amount
-            end
-          when "payment"
-            case tx.category
-            when "gateway_payment"
-              daily_stats[date][:gateway_payment] += amount
-              source_stats[source][:gateway_payment] += amount
-            when "cash"
-              daily_stats[date][:cash_payment] += amount
-              source_stats[source][:cash_payment] += amount
-            when "booking_payment"
-              daily_stats[date][:booking_payment] += amount
-              source_stats[source][:booking_payment] += amount
-            when "refund"
-              daily_stats[date][:refund] += amount
-              source_stats[source][:refund] += amount
-            end
-          when "adjustment"
-            if tx.category == "discount" || tx.reversed_category == "discount"
-              daily_stats[date][:discount] += amount
-              source_stats[source][:discount] += amount
-            end
+          accounting.bucket_for(tx).each do |key, amount|
+            daily_stats[date][key] += amount
+            source_stats[source][key] += amount
+          end
+
+          if tx.category == "discount" || tx.reversed_category == "discount"
+            daily_stats[date][:discount] += tx.amount.to_d
+            source_stats[source][:discount] += tx.amount.to_d
           end
         end
 
-        rows = (@start_date..@end_date).map do |date|
-          stats = daily_stats[date]
-          total_charges = stats[:accommodation] + stats[:tax] + stats[:other_charges]
-          total_payments = stats[:gateway_payment] + stats[:cash_payment] + stats[:booking_payment]
-          net_amount = total_payments - stats[:refund]
+        rows = daily_stats.keys.sort.map do |date|
+          stats = accounting.with_derived_fields(daily_stats[date])
 
           {
             date: date,
@@ -119,23 +72,24 @@ module HotelPortal
             accommodation: stats[:accommodation].round(2),
             other_charges: stats[:other_charges].round(2),
             tax: stats[:tax].round(2),
-            total_charges: total_charges.round(2),
+            total_charges: stats[:total_charges].round(2),
+            adjustments: stats[:adjustments].round(2),
+            net_revenue: stats[:net_revenue].round(2),
             discount: stats[:discount].round(2),
             gateway_payment: stats[:gateway_payment].round(2),
             cash_payment: stats[:cash_payment].round(2),
             booking_payment: stats[:booking_payment].round(2),
-            total_payments: total_payments.round(2),
+            total_payments: stats[:total_payments].round(2),
             refund: stats[:refund].round(2),
-            net_amount: net_amount.round(2)
+            net_payments: stats[:net_payments].round(2),
+            net_amount: stats[:net_payments].round(2)
           }
         end
 
         rows = monthly? ? aggregate_monthly(rows) : rows
 
-        source_rows = source_stats.map do |source, stats|
-          total_charges = stats[:accommodation] + stats[:tax] + stats[:other_charges]
-          total_payments = stats[:gateway_payment] + stats[:cash_payment] + stats[:booking_payment]
-          net_amount = total_payments - stats[:refund]
+        source_rows = source_stats.map do |source, raw_stats|
+          stats = accounting.with_derived_fields(raw_stats)
 
           {
             source: source,
@@ -143,14 +97,17 @@ module HotelPortal
             accommodation: stats[:accommodation].round(2),
             other_charges: stats[:other_charges].round(2),
             tax: stats[:tax].round(2),
-            total_charges: total_charges.round(2),
+            total_charges: stats[:total_charges].round(2),
+            adjustments: stats[:adjustments].round(2),
+            net_revenue: stats[:net_revenue].round(2),
             discount: stats[:discount].round(2),
             gateway_payment: stats[:gateway_payment].round(2),
             cash_payment: stats[:cash_payment].round(2),
             booking_payment: stats[:booking_payment].round(2),
-            total_payments: total_payments.round(2),
+            total_payments: stats[:total_payments].round(2),
             refund: stats[:refund].round(2),
-            net_amount: net_amount.round(2)
+            net_payments: stats[:net_payments].round(2),
+            net_amount: stats[:net_payments].round(2)
           }
         end.sort_by { |row| -row[:total_charges] }
 
@@ -160,13 +117,16 @@ module HotelPortal
           other_charges: rows.sum { |r| r[:other_charges] },
           tax: rows.sum { |r| r[:tax] },
           total_charges: rows.sum { |r| r[:total_charges] },
+          adjustments: rows.sum { |r| r[:adjustments] },
+          net_revenue: rows.sum { |r| r[:net_revenue] },
           discount: rows.sum { |r| r[:discount] },
           gateway_payment: rows.sum { |r| r[:gateway_payment] },
           cash_payment: rows.sum { |r| r[:cash_payment] },
           booking_payment: rows.sum { |r| r[:booking_payment] },
           total_payments: rows.sum { |r| r[:total_payments] },
           refund: rows.sum { |r| r[:refund] },
-          net_amount: rows.sum { |r| r[:net_amount] }
+          net_payments: rows.sum { |r| r[:net_payments] },
+          net_amount: rows.sum { |r| r[:net_payments] }
         }
 
         Result.new(
@@ -184,11 +144,26 @@ module HotelPortal
         @date_preset == "this_year"
       end
 
+      def each_month_in_range
+        month = @start_date.beginning_of_month
+        last_month = @end_date.beginning_of_month
+        while month <= last_month
+          yield month
+          month = month.next_month
+        end
+      end
+
       def aggregate_monthly(rows)
-        rows.group_by { |row| row[:date].beginning_of_month }
-            .map do |month, month_rows|
+        rows_by_month = rows.group_by { |row| row[:date].beginning_of_month }
+
+        months = []
+        each_month_in_range { |month| months << month }
+
+        months.map do |month|
+          month_rows = rows_by_month[month] || []
           total_charges = month_rows.sum { |row| row[:total_charges].to_d }
           total_payments = month_rows.sum { |row| row[:total_payments].to_d }
+          net_payments = month_rows.sum { |row| row[:net_payments].to_d }
 
           {
             date: month,
@@ -197,13 +172,16 @@ module HotelPortal
             other_charges: month_rows.sum { |row| row[:other_charges].to_d }.round(2),
             tax: month_rows.sum { |row| row[:tax].to_d }.round(2),
             total_charges: total_charges.round(2),
+            adjustments: month_rows.sum { |row| row[:adjustments].to_d }.round(2),
+            net_revenue: month_rows.sum { |row| row[:net_revenue].to_d }.round(2),
             discount: month_rows.sum { |row| row[:discount].to_d }.round(2),
             gateway_payment: month_rows.sum { |row| row[:gateway_payment].to_d }.round(2),
             cash_payment: month_rows.sum { |row| row[:cash_payment].to_d }.round(2),
             booking_payment: month_rows.sum { |row| row[:booking_payment].to_d }.round(2),
             total_payments: total_payments.round(2),
             refund: month_rows.sum { |row| row[:refund].to_d }.round(2),
-            net_amount: month_rows.sum { |row| row[:net_amount].to_d }.round(2)
+            net_payments: net_payments.round(2),
+            net_amount: net_payments.round(2)
           }
         end
       end
