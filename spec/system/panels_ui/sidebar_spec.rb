@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Sidebar", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design" }
 
   after do
     page.execute_script("window.localStorage.clear()")
@@ -14,9 +14,24 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
 
   let(:sidebar) { find("#sd-nav-sidebar") }
 
+  COLOR_PROPERTIES = %w[backgroundColor color borderColor].freeze
+
+  # Chrome can serialize the same resolved color as either oklch(...) or oklab(...)
+  # depending on how the declaring CSS rule computed it (e.g. color-mix() vs a literal
+  # value), even though the underlying color is identical. Route color properties
+  # through a canvas fillStyle round-trip so both sides normalize to the same rgb notation.
   def computed_style(selector, property)
-    page.evaluate_script(<<~JS)
+    value = page.evaluate_script(<<~JS)
       getComputedStyle(document.querySelector(#{selector.to_json}))[#{property.to_json}]
+    JS
+    return value unless COLOR_PROPERTIES.include?(property)
+
+    page.evaluate_script(<<~JS)
+      (function(value) {
+        const ctx = document.createElement("canvas").getContext("2d");
+        ctx.fillStyle = value;
+        return ctx.fillStyle;
+      })(#{value.to_json})
     JS
   end
 

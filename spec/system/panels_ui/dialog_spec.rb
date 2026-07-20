@@ -6,7 +6,7 @@ require "rails_helper"
 # in-app /system-design showcase, so Stimulus + Tailwind are live. Skipped
 # automatically when no Chrome binary is present (see spec/rails_helper.rb).
 RSpec.describe "PanelsUI::Dialog", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design" }
 
   it "opens via the trigger and moves focus to the title, not the close button" do
     expect(page).to have_no_css("dialog[open]")
