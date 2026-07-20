@@ -9,7 +9,7 @@ RSpec.describe StayView::ApplyFilters do
   let(:hotel) { instance_double(Hotel, id: 9) }
   let(:reference_date) { Date.new(2026, 7, 16) }
 
-  it "filters room attributes and removes booking states outside the selected status" do
+  it "filters room attributes without rewriting booking occupancy" do
     confirmed = booking_segment(id: 1, status: :confirmed)
     checked_in = booking_segment(id: 2, status: :checked_in)
     matching_room = room_row(
@@ -25,7 +25,6 @@ RSpec.describe StayView::ApplyFilters do
     group = StayView::RoomGroup.new(room_type_id: 3, name: "Deluxe", rooms: [ matching_room, other_room ])
     filters = StayView::FilterState.build(
       room_type_id: 3,
-      booking_status: :confirmed,
       occupancy: :arrival,
       physical_status: :dirty
     )
@@ -34,8 +33,8 @@ RSpec.describe StayView::ApplyFilters do
 
     expect(result.one?).to be(true)
     expect(result.first.rooms.map(&:room_number)).to eq([ "101" ])
-    expect(result.first.rooms.first.booking_segments).to eq([ confirmed ])
-    expect(result.first.rooms.first.day_cells.first.occupancies.map(&:booking_status)).to eq([ :confirmed ])
+    expect(result.first.rooms.first.booking_segments).to eq([ confirmed, checked_in ])
+    expect(result.first.rooms.first.day_cells.first.occupancies.map(&:booking_status)).to eq([ :confirmed, :checked_in ])
     expect(result).to be_frozen
   end
 

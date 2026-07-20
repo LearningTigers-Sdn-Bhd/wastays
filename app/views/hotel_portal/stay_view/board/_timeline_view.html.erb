@@ -35,7 +35,7 @@
         <%= hidden_field_tag :view, board.view_mode %>
         <%= hidden_field_tag :start_date, state.date_window.start_date.iso8601 %>
         <%= hidden_field_tag :days, state.date_window.days %>
-        <%= hidden_field_tag :booking_status, board.filters.booking_status %>
+        <%= hidden_field_tag :rate_plan_id, board.filters.rate_plan_id %>
         <%= hidden_field_tag :occupancy, board.filters.occupancy %>
         <%= hidden_field_tag :physical_status, board.filters.physical_status %>
         <%= render PanelsUI::FormField.new(form:, attribute: :room_type_id, label: "Filter rooms by room type", label_hidden: true, size: :sm, class: "w-full") do |field| %>

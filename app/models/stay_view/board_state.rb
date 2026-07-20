@@ -2,7 +2,7 @@
 
 module StayView
   class BoardState
-    FILTER_KEYS = %i[room_type_id booking_status occupancy physical_status room_state].freeze
+    FILTER_KEYS = %i[room_type_id rate_plan_id occupancy physical_status room_state].freeze
     GROUPINGS = %w[room_type none].freeze
     DEFAULT_GROUPING = "room_type"
 
@@ -16,6 +16,8 @@ module StayView
       @date_window = DateWindow.new(hotel:, start_date:, days: source[:days], view_mode:, now:)
       @filters = FilterState.build(source.slice(*FILTER_KEYS)).for_view(view_mode)
       @room_grouping = source[:group_by].to_s.presence_in(GROUPINGS) || DEFAULT_GROUPING
+      @hotel = hotel
+      @now = now
       freeze
     end
 
@@ -39,6 +41,15 @@ module StayView
 
     def return_path(hotel)
       Rails.application.routes.url_helpers.hotel_stay_view_path(hotel, query)
+    end
+
+    def with_filters(effective_filters)
+      cleared_filters = FILTER_KEYS.index_with(nil)
+      self.class.new(
+        hotel: @hotel,
+        params: query(cleared_filters.merge(effective_filters.to_h.compact)),
+        now: @now
+      )
     end
 
     private

@@ -24,11 +24,12 @@ module HotelPortal
           capabilities: @capabilities,
           **@stay_view_state.build_options
         )
+        @stay_view_state = @stay_view_state.with_filters(@board.filters)
       end
 
       def board_params
         params.permit(
-          :view, :start_date, :date, :days, :room_type_id, :booking_status, :occupancy, :physical_status, :room_state,
+          :view, :start_date, :date, :days, :room_type_id, :rate_plan_id, :occupancy, :physical_status, :room_state,
           :group_by
         )
       end

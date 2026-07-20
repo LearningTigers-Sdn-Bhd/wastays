@@ -105,13 +105,27 @@ module StayView
     end
   end
 
+  RatePlanOption = Data.define(:id, :name, :currency, :room_type_ids, :room_type_names, :label) do
+    def initialize(id:, name:, currency:, room_type_ids:, room_type_names:, label:)
+      super(
+        id:,
+        name: name.to_s.freeze,
+        currency: currency.to_s.freeze,
+        room_type_ids: Immutable.array(room_type_ids.map { |value| Integer(value) }),
+        room_type_names: Immutable.array(room_type_names.map { |value| value.to_s.freeze }),
+        label: label.to_s.freeze
+      )
+    end
+  end
+
   Inventory = Data.define(
     :room_types, :bookings, :group_rooms, :room_statuses, :room_blocks,
-    :housekeeping_alerts, :room_inventories, :standard_rates, :financial_signals
+    :housekeeping_alerts, :room_inventories, :standard_rates, :financial_signals,
+    :rate_plan_options, :selected_rate_plan_id
   ) do
     def initialize(
       room_types:, bookings:, group_rooms:, room_statuses:, room_blocks:, housekeeping_alerts: [], room_inventories: [],
-      standard_rates: [], financial_signals: {}
+      standard_rates: [], financial_signals: {}, rate_plan_options: [], selected_rate_plan_id: nil
     )
       super(
         room_types: Immutable.array(room_types),
@@ -122,7 +136,9 @@ module StayView
         housekeeping_alerts: Immutable.array(housekeeping_alerts),
         room_inventories: Immutable.array(room_inventories),
         standard_rates: Immutable.array(standard_rates),
-        financial_signals: Immutable.hash(financial_signals)
+        financial_signals: Immutable.hash(financial_signals),
+        rate_plan_options: Immutable.array(rate_plan_options),
+        selected_rate_plan_id:
       )
     end
   end

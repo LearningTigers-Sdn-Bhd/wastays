@@ -195,12 +195,12 @@ module StayView
 
   ROOM_CARD_STATES = %i[vacant arrival occupied departure turnover blocked].freeze
 
-  FilterState = Data.define(:room_type_id, :booking_status, :occupancy, :physical_status, :room_state) do
+  FilterState = Data.define(:room_type_id, :rate_plan_id, :occupancy, :physical_status, :room_state) do
     def self.build(value = {})
       source = value.to_h.symbolize_keys
       new(
         room_type_id: Integer(source[:room_type_id], exception: false),
-        booking_status: normalize_symbol(source[:booking_status], Booking::OCCUPYING_STATUSES),
+        rate_plan_id: Integer(source[:rate_plan_id], exception: false),
         occupancy: normalize_symbol(source[:occupancy], %w[available arrival occupied departure]),
         physical_status: normalize_symbol(source[:physical_status], RoomStatus::STATUSES - [ "late_checkout_detected" ]),
         room_state: normalize_symbol(source[:room_state], ROOM_CARD_STATES.map(&:to_s))
@@ -239,12 +239,12 @@ module StayView
   end
 
   Board = Data.define(
-    :view_mode, :date_window, :room_groups, :footer_summaries, :room_type_options, :status_counts, :filters, :capabilities,
-    :room_card_presentations
+    :view_mode, :date_window, :room_groups, :footer_summaries, :room_type_options, :rate_plan_options,
+    :status_counts, :filters, :capabilities, :room_card_presentations
   ) do
     def initialize(
-      view_mode:, date_window:, room_groups:, footer_summaries:, room_type_options:, status_counts:, filters:, capabilities:,
-      room_card_presentations: {}
+      view_mode:, date_window:, room_groups:, footer_summaries:, room_type_options:, rate_plan_options: [],
+      status_counts:, filters:, capabilities:, room_card_presentations: {}
     )
       super(
         view_mode: view_mode.to_sym,
@@ -252,6 +252,7 @@ module StayView
         room_groups: Immutable.array(room_groups),
         footer_summaries: Immutable.array(footer_summaries),
         room_type_options: Immutable.array(room_type_options),
+        rate_plan_options: Immutable.array(rate_plan_options),
         status_counts: status_counts,
         filters: filters,
         capabilities: capabilities,

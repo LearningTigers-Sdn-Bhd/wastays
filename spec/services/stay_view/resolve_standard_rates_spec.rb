@@ -35,6 +35,28 @@ RSpec.describe StayView::ResolveStandardRates do
     expect(result.values.sole).to be_frozen
   end
 
+  it "uses only an explicitly selected plan without Standard fallbacks" do
+    selected = StayView::RatePlanOption.new(
+      id: 9,
+      name: "Flexible",
+      currency: "USD",
+      room_type_ids: [ 3 ],
+      room_type_names: [ "Deluxe" ],
+      label: "Flexible — Deluxe"
+    )
+    selected_rate = rate(rate_plan_id: 9, price: 175, currency: "USD")
+
+    resolved = described_class.call(
+      room_types: [ room_type(base_price: 100) ],
+      standard_rates: [ rate(rate_plan_id: nil, price: 120), selected_rate ],
+      dates: [ date, date + 1.day ],
+      selected_rate_plan: selected
+    )
+
+    expect(resolved.fetch([ 3, date ])).to have_attributes(amount: 175.to_d, currency: "USD")
+    expect(resolved.fetch([ 3, date + 1.day ])).to be_nil
+  end
+
   it "matches the booking financial snapshot for master-plan and base-price standard rates" do
     hotel = create(:hotel, default_currency: "MYR")
     persisted_room_type = create(:room_type, hotel:, base_price: 100)

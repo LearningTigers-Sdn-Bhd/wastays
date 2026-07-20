@@ -245,6 +245,51 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_css(".panel-timeline__summary-metadata[data-slot='stay-view-standard-rate']")
   end
 
+  it "reuses the nightly rate in a currency-labelled room-card presentation" do
+    summary = inventory_summary.with(
+      standard_rate: ::StayView::StandardRate.new(amount: 145, currency: "MYR", source: :room_rate)
+    )
+    render_inline(HotelPortal::StayView::NightlyRate.new(
+      summary:, room_type_name: "Deluxe King", view_rates: true, context: :room_card
+    ))
+
+    rate = page.find("[data-slot='stay-view-standard-rate'][data-context='room_card']")
+    expect(rate.text.squish).to eq("MYR 145.00")
+    expect(rate["aria-label"]).to eq(
+      "Standard nightly rate for Deluxe King on #{I18n.l(summary.date, format: :long)}: 145.00 MYR"
+    )
+    expect(rate).to have_css("svg[aria-hidden='true']")
+  end
+
+  it "renders the shared N/A state in a room card" do
+    render_inline(HotelPortal::StayView::NightlyRate.new(
+      summary: inventory_summary, room_type_name: "Deluxe King", view_rates: true, context: :room_card
+    ))
+    expect(page).to have_css("[data-slot='stay-view-standard-rate'][data-context='room_card']", text: "N/A")
+  end
+
+  it "completely redacts an unauthorized room-card rate" do
+    render_inline(HotelPortal::StayView::NightlyRate.new(
+      summary: inventory_summary.with(
+        standard_rate: ::StayView::StandardRate.new(amount: 987.65, currency: "MYR", source: :room_rate)
+      ),
+      room_type_name: "Deluxe King",
+      view_rates: false,
+      context: :room_card
+    ))
+
+    expect(page).to have_no_css("[data-slot='stay-view-standard-rate']")
+    expect(page.text).not_to include("987.65", "N/A", "MYR")
+  end
+
+  it "rejects invalid nightly-rate presentation inputs" do
+    expect do
+      render_inline(HotelPortal::StayView::NightlyRate.new(
+        summary: Object.new, room_type_name: "Deluxe", view_rates: true, context: :card
+      ))
+    end.to raise_error(ArgumentError, /requires an inventory summary/)
+  end
+
   it "renders N/A only for an authorized missing-rate state" do
     render_inline(HotelPortal::StayView::RoomTypeDateSummary.new(
       summary: inventory_summary, room_type_name: "Deluxe King", view_rates: true

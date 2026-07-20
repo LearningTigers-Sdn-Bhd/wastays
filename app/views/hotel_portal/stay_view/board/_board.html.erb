@@ -36,7 +36,7 @@
           <p class="mt-1 text-sm text-muted-foreground">Clear the filters or configure room numbers before using Stay View.</p>
           <% if board.filters.to_h.compact.any? %>
             <div class="mt-4">
-              <%= render PanelsUI::Button.new(href: stay_view_path_for(state, room_type_id: nil, booking_status: nil, occupancy: nil, physical_status: nil), variant: :secondary, size: :sm) do %>
+              <%= render PanelsUI::Button.new(href: stay_view_path_for(state, room_type_id: nil, rate_plan_id: nil, occupancy: nil, physical_status: nil, room_state: nil), variant: :secondary, size: :sm) do %>
                 Clear filters
               <% end %>
             </div>

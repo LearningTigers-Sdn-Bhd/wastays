@@ -16,25 +16,11 @@ module StayView
     end
 
     def self.filter_room(room, filters, hotel:, reference_date:, operational_date:)
-      filtered = filter_booking_status(room, filters.booking_status)
-      return unless filtered
-      return unless physical_status_matches?(filtered, filters.physical_status)
-      return unless occupancy_matches?(filtered, filters.occupancy)
-      return unless room_state_matches?(filtered, filters.room_state, hotel:, reference_date:, operational_date:)
+      return unless physical_status_matches?(room, filters.physical_status)
+      return unless occupancy_matches?(room, filters.occupancy)
+      return unless room_state_matches?(room, filters.room_state, hotel:, reference_date:, operational_date:)
 
-      filtered
-    end
-
-    def self.filter_booking_status(room, status)
-      return room unless status
-
-      segments = room.booking_segments.select { |segment| segment.status == status }
-      cells = room.day_cells.map do |cell|
-        occupancies = cell.occupancies.select { |entry| entry.booking_status == status }
-        occupancies = [ Occupancy.new(state: :available, label: "Available") ] if occupancies.empty?
-        DayCell.new(date: cell.date, occupancies:, operational_kinds: cell.operational_kinds)
-      end
-      room.with(booking_segments: segments.freeze, day_cells: cells.freeze) if segments.any?
+      room
     end
 
     def self.physical_status_matches?(room, status)
@@ -57,7 +43,7 @@ module StayView
       ).state == room_state
     end
 
-    private_class_method :filter_room, :filter_booking_status, :physical_status_matches?, :occupancy_matches?,
+    private_class_method :filter_room, :physical_status_matches?, :occupancy_matches?,
       :room_state_matches?
   end
 end

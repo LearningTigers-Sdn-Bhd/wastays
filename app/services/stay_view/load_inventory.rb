@@ -2,14 +2,15 @@
 
 module StayView
   class LoadInventory
-    def self.call(hotel:, date_window:, capabilities:)
-      new(hotel:, date_window:, capabilities:).call
+    def self.call(hotel:, date_window:, capabilities:, rate_plan_id: nil)
+      new(hotel:, date_window:, capabilities:, rate_plan_id:).call
     end
 
-    def initialize(hotel:, date_window:, capabilities:)
+    def initialize(hotel:, date_window:, capabilities:, rate_plan_id: nil)
       @hotel = hotel
       @date_window = date_window
       @capabilities = capabilities
+      @requested_rate_plan_id = Integer(rate_plan_id, exception: false)
     end
 
     def call
@@ -23,13 +24,15 @@ module StayView
         housekeeping_alerts: load_housekeeping_alerts,
         room_inventories: load_room_inventories,
         standard_rates: load_standard_rates,
-        financial_signals: load_financial_signals(bookings)
+        financial_signals: load_financial_signals(bookings),
+        rate_plan_options: load_rate_plan_options,
+        selected_rate_plan_id:
       )
     end
 
     private
 
-    attr_reader :hotel, :date_window, :capabilities
+    attr_reader :hotel, :date_window, :capabilities, :requested_rate_plan_id
 
     def load_room_types
       base_price_column = capabilities.view_rates? ? :base_price : Arel.sql("NULL")
@@ -48,30 +51,75 @@ module StayView
     def load_master_plans
       return {} unless capabilities.view_rates?
 
-      @master_plans ||= RoomTypeRatePlan.joins(:rate_plan)
-        .where(room_type_id: hotel.room_types.select(:id))
-        .order(:room_type_id, :rate_plan_id)
-        .pluck(:room_type_id, :rate_plan_id, "rate_plans.currency")
-        .each_with_object({}) do |(room_type_id, rate_plan_id, currency), result|
-          result[room_type_id] ||= [ rate_plan_id, currency ]
-        end
+      @master_plans ||= load_rate_plan_rows.each_with_object({}) do |row, result|
+        room_type_id, rate_plan_id, _rate_plan_name, currency = row
+        result[room_type_id] ||= [ rate_plan_id, currency ]
+      end
     end
 
     def load_standard_rates
       return [] unless capabilities.view_rates?
 
-      room_type_ids = load_room_types.map(&:id)
-      master_plan_ids = load_room_types.filter_map(&:master_rate_plan_id)
-      RoomRate.where(
-        room_type_id: room_type_ids,
-        rate_plan_id: [ nil, *master_plan_ids ],
-        date: date_window.start_date...date_window.end_date
-      ).order(:room_type_id, :date, :rate_plan_id, :currency)
+      selected = selected_rate_plan
+      scope = if selected
+        RoomRate.where(room_type_id: selected.room_type_ids, rate_plan_id: selected.id)
+      else
+        room_type_ids = load_room_types.map(&:id)
+        master_plan_ids = load_room_types.filter_map(&:master_rate_plan_id)
+        RoomRate.where(room_type_id: room_type_ids, rate_plan_id: [ nil, *master_plan_ids ])
+      end
+
+      scope.where(date: date_window.start_date...date_window.end_date)
+        .order(:room_type_id, :date, :rate_plan_id, :currency)
         .pluck(:room_type_id, :rate_plan_id, :date, :price, :currency)
         .map do |values|
           StandardRateRecord.new(**%i[room_type_id rate_plan_id date price currency].zip(values).to_h)
         end
     end
+
+    def load_rate_plan_options
+      return [] unless capabilities.view_rates?
+
+      @rate_plan_options ||= load_rate_plan_rows
+        .group_by { |row| row[1] }
+        .map do |rate_plan_id, rows|
+          _room_type_id, _id, name, currency = rows.first
+          room_type_ids = rows.map(&:first)
+          room_type_names = rows.map { |row| row[4] }
+          scope_label = room_type_names.one? ? room_type_names.first : "#{room_type_names.size} room types"
+          RatePlanOption.new(
+            id: rate_plan_id,
+            name:,
+            currency:,
+            room_type_ids:,
+            room_type_names:,
+            label: "#{name} — #{scope_label}"
+          )
+        end
+        .sort_by { |option| [ option.name.downcase, option.id ] }
+        .freeze
+    end
+
+    def load_rate_plan_rows
+      return [] unless capabilities.view_rates?
+
+      @rate_plan_rows ||= RoomTypeRatePlan.joins(:rate_plan, :room_type)
+        .where(room_types: { hotel_id: hotel.id }, rate_plans: { hotel_id: hotel.id })
+        .order("room_type_rate_plans.room_type_id", "room_type_rate_plans.rate_plan_id")
+        .pluck(
+          "room_type_rate_plans.room_type_id",
+          "room_type_rate_plans.rate_plan_id",
+          "rate_plans.name",
+          "rate_plans.currency",
+          "room_types.name"
+        )
+    end
+
+    def selected_rate_plan
+      @selected_rate_plan ||= load_rate_plan_options.find { |option| option.id == requested_rate_plan_id }
+    end
+
+    def selected_rate_plan_id = selected_rate_plan&.id
 
     def load_financial_signals(bookings)
       return {} unless capabilities.view_financial_status?

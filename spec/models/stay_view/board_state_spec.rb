@@ -11,14 +11,19 @@ RSpec.describe StayView::BoardState do
       start_date: "2026-07-20",
       days: "21",
       density: "comfortable",
-      occupancy: "arrival"
+      occupancy: "arrival",
+      rate_plan_id: "42",
+      booking_status: "confirmed"
     })
 
     expect(state).to have_attributes(view_mode: :timeline, density: :compact)
     expect(state.date_window).to have_attributes(start_date: Date.new(2026, 7, 20), days: 21)
-    expect(state.filters.occupancy).to eq(:arrival)
-    expect(state.query).to include(view: :timeline, start_date: Date.new(2026, 7, 20), days: 21, occupancy: :arrival)
+    expect(state.filters).to have_attributes(occupancy: :arrival, rate_plan_id: 42)
+    expect(state.query).to include(
+      view: :timeline, start_date: Date.new(2026, 7, 20), days: 21, occupancy: :arrival, rate_plan_id: 42
+    )
     expect(state.query).not_to have_key(:density)
+    expect(state.query).not_to have_key(:booking_status)
   end
 
   it "tracks room grouping as URL state, defaulting to room type" do
@@ -72,13 +77,26 @@ RSpec.describe StayView::BoardState do
   end
 
   it "translates dates when switching modes" do
-    state = described_class.new(hotel:, params: { view: "rooms", date: "2026-07-22", room_state: "arrival" })
+    state = described_class.new(hotel:, params: { view: "rooms", date: "2026-07-22", room_state: "arrival", rate_plan_id: 8 })
 
     expect(state.query(view: :timeline, days: 7)).to include(
       view: :timeline,
       start_date: Date.new(2026, 7, 22),
-      days: 7
+      days: 7,
+      rate_plan_id: 8
     )
     expect(state.query(view: :timeline, days: 7)).not_to have_key(:room_state)
+  end
+
+  it "rebuilds canonical state from effective filters" do
+    state = described_class.new(hotel:, params: {
+      view: "rooms", date: "2026-07-22", rate_plan_id: 99, room_state: "arrival", physical_status: "dirty"
+    })
+
+    canonical = state.with_filters(state.filters.with(rate_plan_id: nil, physical_status: nil))
+
+    expect(canonical.query).to include(view: :rooms, date: Date.new(2026, 7, 22), room_state: :arrival)
+    expect(canonical.query).not_to have_key(:rate_plan_id)
+    expect(canonical.query).not_to have_key(:physical_status)
   end
 end

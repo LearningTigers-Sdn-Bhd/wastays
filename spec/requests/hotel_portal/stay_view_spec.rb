@@ -58,10 +58,14 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).not_to include('id="density-select-menu"')
       expect(response.body).to include('tabs-root--pill', 'data-controller="stay-view--filters"')
       expect(response.body).to include('id="start_date-date-picker"', 'id="days-select-menu"')
-      expect(response.body).to include("All room types", "All booking statuses", "All occupancy states", "All physical statuses")
-      expect(response.body).to include("Confirmed")
+      expect(response.body).to include("All room types", "All occupancy states", "All physical statuses")
+      expect(response.body).not_to include("All booking statuses")
 
       document = Nokogiri::HTML(response.body)
+      advanced = document.at_css("#stay-view-advanced-filters")
+      expect(advanced.at_css("button").text.squish).to eq("Advanced filters")
+      expect(advanced.at_css("#stay-view-advanced-filters-content")["hidden"]).to eq("hidden")
+      expect(document.at_css("#rate_plan_id-select-menu")).to be_nil
       global_actions = document.at_css("[data-slot='stay-view-global-actions']")
       expect(global_actions.ancestors("#stay_view_toolbar")).to be_present
       expect(global_actions.at_css("a[href^='#{hotel_booking_transaction_walk_in_check_in_path(hotel)}']").text.squish).to eq("Walk-in")
@@ -253,10 +257,82 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       document = Nokogiri::HTML(response.body)
       rates = document.css("[data-slot='stay-view-standard-rate']")
       expect(response).to have_http_status(:success)
+      expect(document.at_css("#rate_plan_id-select-menu")).to be_present
+      expect(document.at_css("#rate_plan_id-select-menu").text).to include("Standard", "#{master_plan.name} — #{room_type.name}")
+      advanced_trigger = document.at_css("#stay-view-advanced-filters-trigger")
+      expect(advanced_trigger["class"].split).to include("w-auto", "shrink-0")
+      expect(document.at_css("button[aria-label='Stay View status guide']")).to be_present
       expect(rates.size).to eq(7)
       expect(rates.first.text).to eq("145.00")
       expect(rates.first["aria-label"]).to end_with("145.00 #{master_plan.currency}")
       expect(rates[1].text).to eq(CurrencyFormatter.format(room_type.base_price, currency: master_plan.currency, symbol: false))
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+      cards = Nokogiri::HTML(response.body)
+      card_rates = cards.css("[data-testid='stay-view-room-cards'] [data-slot='stay-view-standard-rate']")
+      expect(card_rates.map { |rate| rate.text.squish }).to eq([ "#{master_plan.currency} 145.00" ] * 2)
+      expect(card_rates).to all(satisfy { |rate| rate.at_css("svg[aria-hidden='true']").present? })
+      first_card = cards.at_css("[data-testid='stay-view-room-cards'] article")
+      rate_row = first_card.at_css("[data-slot='stay-view-standard-rate']")
+      expect(rate_row.parent.element_children.map { |node| node["data-slot"] }).to eq(
+        %w[stay-view-room-identity stay-view-standard-rate stay-view-room-summary]
+      )
+    end
+
+    it "filters both views to an explicitly selected linked rate plan" do
+      grant("manage_rates")
+      deluxe = room_type
+      suite = create(:room_type, hotel:, name: "Suite", room_numbers: [ "201" ])
+      flexible = create(:rate_plan, hotel:, name: "Flexible", currency: "USD")
+      create(:room_type_rate_plan, room_type: deluxe, rate_plan: flexible)
+      create(:room_rate, room_type: deluxe, rate_plan: flexible, date: Date.current, price: 175, currency: "USD")
+
+      get hotel_stay_view_path(
+        hotel, view: "timeline", start_date: Date.current, days: 7,
+        rate_plan_id: flexible.id, room_type_id: suite.id
+      )
+
+      timeline = Nokogiri::HTML(response.body)
+      rendered_groups = timeline.css("[data-slot='timeline-group']").map { |group| group.text.squish }
+      expect(rendered_groups).to all(include("Deluxe"))
+      expect(rendered_groups.none? { |group| group.include?("Suite") }).to be(true)
+      expect(timeline.css("[data-slot='stay-view-standard-rate']").map(&:text)).to eq([ "175.00", *(%w[N/A] * 6) ])
+      expect(timeline.at_css("#rate_plan_id-select-menu").text).to include("Flexible — Deluxe")
+      expect(timeline.at_css("#stay-view-modes-tab-rooms")["href"]).to include("rate_plan_id=#{flexible.id}")
+      expect(timeline.at_css("#stay-view-modes-tab-rooms")["href"]).not_to include("room_type_id")
+      timeline_room_types = timeline.at_css("#room_type_id-select-menu").text
+      expect(timeline_room_types).to include("All room types", deluxe.name)
+      expect(timeline_room_types).not_to include(suite.name)
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current, rate_plan_id: flexible.id)
+
+      rooms = Nokogiri::HTML(response.body)
+      expect(rooms.css("[data-testid='stay-view-room-cards'] article h4").map(&:text)).to contain_exactly("101", "102")
+      expect(rooms.css("[data-testid='stay-view-room-cards'] > section h3").map(&:text)).to eq([ deluxe.name ])
+      expect(rooms.at_css("[data-slot='stay-view-room-workspace-toolbar'] input[name='rate_plan_id']")["value"]).to eq(flexible.id.to_s)
+      room_view_room_types = rooms.at_css("#room_type_id-select-menu").text
+      expect(room_view_room_types).to include("All room types", deluxe.name)
+      expect(room_view_room_types).not_to include(suite.name)
+      expect(rooms.css("[data-testid='stay-view-room-cards'] [data-slot='stay-view-standard-rate']").map { |rate| rate.text.squish }).to eq(
+        [ "USD 175.00" ] * 2
+      )
+    end
+
+    it "canonicalizes a cross-hotel rate-plan selection to Standard" do
+      grant("manage_rates")
+      room_type
+      foreign_plan = create(:rate_plan, hotel: create(:hotel), name: "Foreign")
+
+      get hotel_stay_view_path(
+        hotel, view: "timeline", start_date: Date.current, days: 7, rate_plan_id: foreign_plan.id
+      )
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("#rate_plan_id-select-menu .panel-select-menu__value").text.squish).to eq("Standard")
+      expect(document.text).not_to include("Foreign")
+      today = document.css("a").find { |link| link.text.squish == "Today" }
+      expect(today["href"]).not_to include("rate_plan_id")
     end
 
     it "renders N/A for an authorized genuinely missing standard rate" do
@@ -267,6 +343,23 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(Nokogiri::HTML(response.body).css("[data-slot='stay-view-standard-rate']").map(&:text)).to eq([ "N/A" ] * 7)
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+      expect(Nokogiri::HTML(response.body).css("[data-testid='stay-view-room-cards'] [data-slot='stay-view-standard-rate']").map { |rate| rate.text.squish }).to eq(
+        [ "N/A" ] * 2
+      )
+    end
+
+    it "omits the complete rate row from Room View without rate permission" do
+      room_type
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.css("[data-testid='stay-view-room-cards'] [data-slot='stay-view-standard-rate']")).to be_empty
+      expect(document.css("[data-testid='stay-view-room-cards'] svg").map { |icon| icon["class"] }).not_to include("banknote")
+      expect(response.body).not_to include(room_type.base_price.to_s, "Standard nightly rate")
     end
 
     it "renders Room View from the shared projection" do
@@ -286,6 +379,23 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
       grouped = Nokogiri::HTML(response.body)
       expect(grouped.css("[data-testid='stay-view-room-cards'] section")).not_to be_empty
+      workspace = grouped.at_css("[data-slot='stay-view-room-workspace-toolbar']")
+      expect(workspace["class"].split).not_to include("rounded-lg", "border", "bg-card", "p-2")
+      expect(workspace.css("span").map { |span| span.text.squish }).not_to include("Grouping")
+      expect(workspace.at_css("#room_type_id-select-menu")).to be_present
+      toggle = workspace.at_css("#stay-view-room-grouping")
+      expect(toggle["aria-label"]).to eq("Room card grouping")
+      expect(toggle["data-variant"]).to eq("outline")
+      expect(toggle["data-spacing"]).to eq("0")
+      expect(toggle.css("button").map { |button| [ button.text.squish, button["aria-pressed"] ] }).to eq(
+        [ [ "Grouped", "true" ], [ "Ungrouped", "false" ] ]
+      )
+      expect(toggle.css("button svg[aria-hidden='true']").size).to eq(2)
+      expect(toggle.css("button")).to all(satisfy { |button| button["class"].split.include?("panel-toggle") })
+      expect(workspace.text).to include("3 rooms")
+      advanced = grouped.at_css("#stay-view-advanced-filters-content")
+      expect(advanced.text).to include("Room state", "Physical status")
+      expect(advanced.text).not_to include("Occupancy")
 
       get hotel_stay_view_path(hotel, view: "rooms", date: Date.current, group_by: "none")
       flat = Nokogiri::HTML(response.body)

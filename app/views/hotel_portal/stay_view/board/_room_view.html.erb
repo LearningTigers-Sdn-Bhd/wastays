@@ -1,4 +1,54 @@
-<div class="max-h-[65dvh] space-y-6 overflow-y-auto overflow-x-hidden pr-1" data-testid="stay-view-room-cards">
+<div class="space-y-3">
+  <%= form_with url: hotel_stay_view_path(current_hotel), method: :get,
+        class: "flex flex-wrap items-end justify-between gap-2",
+        data: {
+          controller: "stay-view--filters",
+          action: "change->stay-view--filters#submit turbo:submit-start->stay-view--filters#start turbo:submit-end->stay-view--filters#finish",
+          turbo_frame: "stay_view_board",
+          turbo_action: "advance",
+          slot: "stay-view-room-workspace-toolbar"
+        } do |form| %>
+    <%= hidden_field_tag :view, :rooms %>
+    <%= hidden_field_tag :date, state.date_window.start_date.iso8601 %>
+    <%= hidden_field_tag :rate_plan_id, board.filters.rate_plan_id %>
+    <%= hidden_field_tag :room_state, board.filters.room_state %>
+    <%= hidden_field_tag :physical_status, board.filters.physical_status %>
+
+    <div class="flex flex-wrap items-end gap-2">
+      <%= render PanelsUI::FormField.new(form:, attribute: :room_type_id, label: "Room type", size: :sm, class: "w-52 shrink-0") do |field| %>
+        <% field.with_select_menu(
+          [ { label: "All room types", value: "" } ] + board.room_type_options.map { |option| { label: option.name, value: option.id } },
+          selected: board.filters.room_type_id
+        ) %>
+      <% end %>
+      <%= render PanelsUI::ToggleGroup.new(
+            id: "stay-view-room-grouping",
+            type: :single,
+            value: state.room_grouping,
+            variant: :outline,
+            size: :sm,
+            spacing: 0,
+            required: true,
+            form:,
+            attribute: :group_by,
+            aria_label: "Room card grouping"
+          ) do |group| %>
+        <% group.with_item(value: "room_type") do %>
+          <%= app_icon "group", class: "size-3.5", aria: { hidden: true } %>
+          <span>Grouped</span>
+        <% end %>
+        <% group.with_item(value: "none") do %>
+          <%= app_icon "ungroup", class: "size-3.5", aria: { hidden: true } %>
+          <span>Ungrouped</span>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% visible_room_count = board.room_groups.sum { |group| group.rooms.size } %>
+    <p class="pb-1 text-sm text-muted-foreground" aria-live="polite"><%= pluralize(visible_room_count, "room") %></p>
+  <% end %>
+
+  <div class="max-h-[60dvh] space-y-6 overflow-y-auto overflow-x-hidden pr-1" data-testid="stay-view-room-cards">
   <% if state.grouped_rooms? %>
     <% board.room_groups.each do |room_group| %>
       <% next if room_group.rooms.empty? %>
@@ -9,17 +59,22 @@
         </div>
 
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <% inventory_summary = room_group.inventory_summary_for(state.date_window.start_date) %>
           <% room_group.rooms.each do |room| %>
-            <%= render "hotel_portal/stay_view/board/room_card", room:, state:, presentation: board.room_card_presentation_for(room), heading_level: :h4 %>
+            <%= render "hotel_portal/stay_view/board/room_card", room:, state:, inventory_summary:, presentation: board.room_card_presentation_for(room), heading_level: :h4 %>
           <% end %>
         </div>
       </section>
     <% end %>
   <% else %>
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-      <% board.room_groups.flat_map(&:rooms).each do |room| %>
-        <%= render "hotel_portal/stay_view/board/room_card", room:, state:, presentation: board.room_card_presentation_for(room), heading_level: :h3 %>
+      <% board.room_groups.each do |room_group| %>
+        <% inventory_summary = room_group.inventory_summary_for(state.date_window.start_date) %>
+        <% room_group.rooms.each do |room| %>
+          <%= render "hotel_portal/stay_view/board/room_card", room:, state:, inventory_summary:, presentation: board.room_card_presentation_for(room), heading_level: :h3 %>
+        <% end %>
       <% end %>
     </div>
   <% end %>
+  </div>
 </div>

@@ -14,12 +14,16 @@ RSpec.describe StayView::LoadInventory do
 
   it "does not select pricing scalars or query pricing tables without rate permission" do
     create(:room_type, hotel:, room_numbers: [ "101" ], base_price: 987.65)
-    sql = capture_sql { @inventory = described_class.call(hotel:, date_window: window, capabilities:) }
+    sql = capture_sql do
+      @inventory = described_class.call(hotel:, date_window: window, capabilities:, rate_plan_id: 999)
+    end
 
     expect(@inventory.room_types.sole).to have_attributes(
       base_price: nil, master_rate_plan_id: nil, rate_currency: nil
     )
     expect(@inventory.standard_rates).to be_empty
+    expect(@inventory.rate_plan_options).to be_empty
+    expect(@inventory.selected_rate_plan_id).to be_nil
     expect(sql.join(" ")).not_to include("room_type_rate_plans", "room_rates", "base_price")
   end
 
@@ -45,7 +49,61 @@ RSpec.describe StayView::LoadInventory do
       date: start_date, rate_plan_id: master_plan.id, currency: included.currency
     )
     expect(@inventory.standard_rates).to be_frozen
+    expect(@inventory.rate_plan_options.sole).to have_attributes(
+      id: master_plan.id,
+      label: "#{master_plan.name} — #{room_type.name}",
+      room_type_ids: [ room_type.id ]
+    )
     expect(pricing_queries.size).to eq(2)
+  end
+
+  it "loads only an explicitly selected hotel plan and its linked room types" do
+    visible = capabilities.with(view_rates: true)
+    deluxe = create(:room_type, hotel:, name: "Deluxe", room_numbers: [ "101" ], base_price: 100)
+    suite = create(:room_type, hotel:, name: "Suite", room_numbers: [ "201" ], base_price: 200)
+    flexible = create(:rate_plan, hotel:, name: "Flexible", currency: "USD")
+    create(:room_type_rate_plan, room_type: deluxe, rate_plan: flexible)
+    selected_rate = create(:room_rate, room_type: deluxe, rate_plan: flexible, date: start_date, price: 175, currency: "USD")
+    create(:room_rate, room_type: suite, rate_plan: suite.rate_plans.first, date: start_date, price: 999)
+
+    sql = capture_sql do
+      @inventory = described_class.call(
+        hotel:, date_window: window, capabilities: visible, rate_plan_id: flexible.id
+      )
+    end
+    inventory = @inventory
+
+    expect(inventory.selected_rate_plan_id).to eq(flexible.id)
+    expect(inventory.standard_rates).to contain_exactly(
+      have_attributes(
+        room_type_id: deluxe.id,
+        rate_plan_id: flexible.id,
+        price: selected_rate.price,
+        currency: "USD"
+      )
+    )
+    expect(inventory.rate_plan_options.find { |option| option.id == flexible.id }).to have_attributes(
+      room_type_ids: [ deluxe.id ],
+      label: "Flexible — Deluxe"
+    )
+    expect(inventory.rate_plan_options).to be_frozen
+    expect(sql.grep(/(?:room_type_rate_plans|FROM "room_rates")/).size).to eq(2)
+  end
+
+  it "falls back to Standard for a cross-hotel rate plan" do
+    visible = capabilities.with(view_rates: true)
+    room_type = create(:room_type, hotel:, room_numbers: [ "101" ], base_price: 100)
+    master_plan = room_type.rate_plans.first
+    create(:room_rate, room_type:, rate_plan: master_plan, date: start_date, price: 145, currency: master_plan.currency)
+    foreign_plan = create(:rate_plan, hotel: create(:hotel), name: "Foreign")
+
+    inventory = described_class.call(
+      hotel:, date_window: window, capabilities: visible, rate_plan_id: foreign_plan.id
+    )
+
+    expect(inventory.selected_rate_plan_id).to be_nil
+    expect(inventory.rate_plan_options.map(&:id)).not_to include(foreign_plan.id)
+    expect(inventory.standard_rates.sole.rate_plan_id).to eq(master_plan.id)
   end
 
   it "loads bounded scalar inventory and redacts booking identity without permission" do

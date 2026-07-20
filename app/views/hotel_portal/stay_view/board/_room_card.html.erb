@@ -24,6 +24,12 @@
           reference_date: date
         ) %>
       </div>
+      <%= render HotelPortal::StayView::NightlyRate.new(
+        summary: inventory_summary,
+        room_type_name: room.room_type_name,
+        view_rates: room.capabilities.view_rates?,
+        context: :room_card
+      ) %>
       <%= render HotelPortal::StayView::RoomSummary.new(
         room:,
         state:,

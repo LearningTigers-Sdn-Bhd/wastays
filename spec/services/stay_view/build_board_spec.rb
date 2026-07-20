@@ -77,7 +77,7 @@ RSpec.describe StayView::BuildBoard do
 
     board = described_class.call(
       hotel:, user:, start_date:, days: 7,
-      filters: { room_type_id: deluxe.id, booking_status: "confirmed", occupancy: "arrival", physical_status: "dirty" }
+      filters: { room_type_id: deluxe.id, occupancy: "arrival", physical_status: "dirty" }
     )
 
     expect(board.room_groups.map(&:room_type_id)).to eq([ deluxe.id ])
@@ -128,16 +128,57 @@ RSpec.describe StayView::BuildBoard do
     expect(active_record_values(board)).to be_empty
   end
 
-  it "ignores a non-occupying booking status filter instead of emptying the board" do
+  it "ignores the removed booking status filter instead of altering occupancy" do
     room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
     booking = create(:booking, hotel:, check_in: start_date, check_out: start_date + 2.days)
     create(:booking_room, booking:, room_type:, room_number: "101")
 
     board = described_class.call(hotel:, user:, start_date:, days: 7, filters: { booking_status: "cancelled" })
 
-    expect(board.filters.booking_status).to be_nil
+    expect(board.filters.to_h).not_to have_key(:booking_status)
     expect(board.status_counts.all).to eq(1)
     expect(board.room_groups.first.rooms.first.booking_segments.map(&:status)).to eq([ :confirmed ])
+  end
+
+  it "filters linked room types and recalculates summaries for an explicit rate plan" do
+    manage_rates = Permission.find_or_create_by!(slug: "manage_rates") { |record| record.name = "Manage Rates" }
+    create(:role_permission, role:, permission: manage_rates)
+    deluxe = create(:room_type, hotel:, name: "Deluxe", room_numbers: [ "101" ], base_price: 100)
+    suite = create(:room_type, hotel:, name: "Suite", room_numbers: [ "201" ], base_price: 200)
+    flexible = create(:rate_plan, hotel:, name: "Flexible", currency: "USD")
+    create(:room_type_rate_plan, room_type: deluxe, rate_plan: flexible)
+    create(:room_rate, room_type: deluxe, rate_plan: flexible, date: start_date, price: 175, currency: "USD")
+
+    board = described_class.call(
+      hotel:, user:, start_date:, days: 7,
+      filters: { rate_plan_id: flexible.id, room_type_id: suite.id }
+    )
+
+    expect(board.filters.rate_plan_id).to eq(flexible.id)
+    expect(board.filters.room_type_id).to be_nil
+    expect(board.room_type_options.map(&:id)).to eq([ deluxe.id ])
+    expect(board.room_groups.map(&:room_type_id)).to eq([ deluxe.id ])
+    expect(board.status_counts.all).to eq(1)
+    expect(board.room_groups.sole.inventory_summary_for(start_date).standard_rate).to have_attributes(
+      amount: 175.to_d,
+      currency: "USD"
+    )
+    expect(board.room_groups.sole.inventory_summary_for(start_date + 1.day).standard_rate).to be_nil
+  end
+
+  it "canonicalizes an unavailable rate plan to Standard" do
+    manage_rates = Permission.find_or_create_by!(slug: "manage_rates") { |record| record.name = "Manage Rates" }
+    create(:role_permission, role:, permission: manage_rates)
+    create(:room_type, hotel:, name: "Deluxe", room_numbers: [ "101" ])
+    foreign_plan = create(:rate_plan, hotel: create(:hotel), name: "Foreign")
+
+    board = described_class.call(
+      hotel:, user:, start_date:, days: 7, filters: { rate_plan_id: foreign_plan.id }
+    )
+
+    expect(board.filters.rate_plan_id).to be_nil
+    expect(board.room_groups.size).to eq(1)
+    expect(board.rate_plan_options.map(&:id)).not_to include(foreign_plan.id)
   end
 
   it "redacts guest names before inventory leaves the loader" do
