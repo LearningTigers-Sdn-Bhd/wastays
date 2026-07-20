@@ -495,7 +495,7 @@ failure_count() {
   local output_file="$1"
 
   BOLD="$BOLD" BLUE="$BLUE" CYAN="$CYAN" RESET="$RESET" ruby -e '
-    text = File.read(ARGV.fetch(0))
+    text = File.read(ARGV.fetch(0), encoding: "UTF-8").scrub
     matches = text.scan(/(\d+)\s+failures?/)
     errors = text.scan(/(\d+)\s+errors? occurred outside of examples/)
     if !errors.empty? && errors.last.first.to_i > 0
@@ -552,9 +552,13 @@ print_result_card() {
 
 print_failure_digest() {
   local output_file="$1"
+  local digest
 
-  BOLD="$BOLD" BLUE="$BLUE" CYAN="$CYAN" RESET="$RESET" ruby -e '
-    text = File.read(ARGV.fetch(0))
+  # Ruby parses the RSpec log into plain ASCII-safe rows; all decorative
+  # box drawing stays in bash printf below so the Ruby source needs no
+  # non-ASCII characters (which fail to parse under a non-UTF-8 locale).
+  digest=$(ruby -e '
+    text = File.read(ARGV.fetch(0), encoding: "UTF-8").scrub
     blocks = text.split(/^\s*(?=\d+\)\s)/).select { |block| block.match?(/^\s*\d+\)\s/) }
     failures = blocks.map do |block|
       number, title = block.match(/^\s*(\d+)\)\s+(.+)$/)&.captures
@@ -610,27 +614,26 @@ print_failure_digest() {
     end
 
     if failures.empty?
-      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("CYAN")}╭─ 🔎 Failures ─────────────────────────────────────#{ENV.fetch("RESET")}"
-      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("BLUE")}│#{ENV.fetch("RESET")} Failure details could not be summarized."
-      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("BLUE")}│#{ENV.fetch("RESET")} See RSpec output above."
-      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("CYAN")}╰───────────────────────────────────────────────────#{ENV.fetch("RESET")}"
-      exit
+      puts "Failure details could not be summarized."
+      puts "See RSpec output above."
+    else
+      failures.first(5).each_with_index do |failure, index|
+        location = failure[:location] || failure[:title]
+        error = failure[:error] || "See RSpec output above."
+        location = location.length > 47 ? "#{location[0, 44]}..." : location
+        error = error.length > 47 ? "#{error[0, 44]}..." : error
+        puts "#{index + 1}. #{location}"
+        puts "   #{error}"
+      end
+      puts "... #{failures.length - 5} more failure(s) in RSpec output above" if failures.length > 5
     end
+  ' "$output_file")
 
-    puts "#{ENV.fetch("BOLD")}#{ENV.fetch("CYAN")}╭─ 🔎 Failures ─────────────────────────────────────#{ENV.fetch("RESET")}"
-    failures.first(5).each_with_index do |failure, index|
-      location = failure[:location] || failure[:title]
-      error = failure[:error] || "See RSpec output above."
-      location = location.length > 47 ? "#{location[0, 44]}..." : location
-      error = error.length > 47 ? "#{error[0, 44]}..." : error
-      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("BLUE")}│#{ENV.fetch("RESET")} #{index + 1}. #{location}"
-      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("BLUE")}│#{ENV.fetch("RESET")}    #{error}"
-    end
-    if failures.length > 5
-      puts "#{ENV.fetch("BOLD")}#{ENV.fetch("BLUE")}│#{ENV.fetch("RESET")} ... #{failures.length - 5} more failure(s) in RSpec output above"
-    end
-    puts "#{ENV.fetch("BOLD")}#{ENV.fetch("CYAN")}╰───────────────────────────────────────────────────#{ENV.fetch("RESET")}"
-  ' "$output_file"
+  printf "${BOLD}${CYAN}╭─ 🔎 Failures ─────────────────────────────────────${RESET}\n"
+  while IFS= read -r line; do
+    printf "${BOLD}${BLUE}│${RESET} %s\n" "$line"
+  done <<< "$digest"
+  printf "${BOLD}${CYAN}╰───────────────────────────────────────────────────${RESET}\n"
 }
 
 run_and_report() {

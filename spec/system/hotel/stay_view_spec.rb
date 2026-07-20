@@ -67,8 +67,41 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
   def drag_booking(room_number:, day_delta:, edge: nil, pointer_type: "mouse", long_press: false)
     segment_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}"
     dispatch_pointer_down(segment_id:, edge:, pointer_type:)
-    sleep 0.4 if long_press
+    wait_for_drag_activation(segment_id) if long_press
     dispatch_pointer_finish(room_number:, day_delta:)
+  end
+
+  # A quick swipe: pointerdown/move/up dispatched in a single synchronous script so
+  # the touch long-press timer cannot fire mid-gesture. This deterministically
+  # exercises the "swipe cancels activation" path regardless of machine load.
+  def dispatch_pointer_swipe(segment_id:, room_number:, day_delta:, pointer_type: "touch", pointer_id: 41)
+    page.execute_script(<<~JS)
+      (() => {
+        const segment = document.getElementById(#{segment_id.to_json})
+        const source = segment.querySelector(".panel-timeline__segment-content")
+        const rect = source.getBoundingClientRect()
+        const startX = rect.left + rect.width / 2
+        const startY = rect.top + rect.height / 2
+        const row = document.querySelector(`[data-room-number="#{room_number}"][data-stay-view--interaction-target~="row"]`)
+        const rowRect = row.querySelector(".panel-timeline__row-track").getBoundingClientRect()
+        const dayWidth = row.querySelector(".panel-timeline__cell").getBoundingClientRect().width
+        const endX = startX + (dayWidth * #{day_delta})
+        const endY = rowRect.top + rowRect.height / 2
+        const options = (x, y) => ({
+          bubbles: true, cancelable: true, pointerId: #{pointer_id}, pointerType: #{pointer_type.to_json},
+          isPrimary: true, button: 0, clientX: x, clientY: y
+        })
+        source.dispatchEvent(new PointerEvent("pointerdown", options(startX, startY)))
+        window.dispatchEvent(new PointerEvent("pointermove", options(endX, endY)))
+        window.dispatchEvent(new PointerEvent("pointerup", options(endX, endY)))
+      })()
+    JS
+  end
+
+  # Waits for the controller to promote a pending press into an active drag instead
+  # of sleeping past the long-press delay, which is racy under load.
+  def wait_for_drag_activation(segment_id)
+    expect(page).to have_css("##{segment_id}[data-interacting='true']", visible: :all)
   end
 
   it "switches between URL-backed views and restores the prior view with browser history" do
@@ -510,12 +543,12 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
     segment_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}"
 
-    dispatch_pointer_down(segment_id:, pointer_type: "touch")
-    dispatch_pointer_finish(room_number: "102", day_delta: 1)
+    dispatch_pointer_swipe(segment_id:, room_number: "102", day_delta: 1)
+    expect(page).to have_no_css("##{segment_id}[data-interacting='true']", visible: :all)
     expect(page).to have_no_css("#offcanvas_drawer", text: "Move or reassign stay", visible: :visible)
 
     dispatch_pointer_down(segment_id:, pointer_type: "touch")
-    sleep 0.4
+    wait_for_drag_activation(segment_id)
     dispatch_pointer_finish(room_number: "102", day_delta: 0)
 
     within("#offcanvas_drawer") do
