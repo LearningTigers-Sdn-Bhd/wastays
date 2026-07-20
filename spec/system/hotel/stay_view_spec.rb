@@ -80,8 +80,8 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(URI.parse(page.current_url).query).to include("view=rooms", "date=2026-07-16")
 
     page.go_back
-    expect(URI.parse(page.current_url).query).to include("view=timeline", "days=7")
     expect(page).to have_css("#stay-view-timeline", wait: 10)
+    expect(URI.parse(page.current_url).query).to include("view=timeline", "days=7")
 
     page.go_forward
     expect(page).to have_css("[data-testid='stay-view-room-cards']", wait: 10)
@@ -254,11 +254,11 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
       click_button "Finish block"
     end
 
-    expect(block.reload.completed_at).to be_present
     expect(page).to have_css(
       "#stay_view_room_#{room_type.id}_102[data-room-state='vacant'] [data-slot='stay-view-room-activity']",
       text: "No activity today"
     )
+    expect(block.reload.completed_at).to be_present
   end
 
   it "opens the status guide and changes room status from the timeline badge menu" do
@@ -357,6 +357,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
       find("[role='option']", text: "Sam Lee").click
       click_button "Save assignment"
     end
+    expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 3)
     expect(housekeeping_request.reload.metadata).to include("assigned_to_name" => "Sam Lee")
 
     within("#stay_view_room_#{room_type.id}_101") do
@@ -493,14 +494,15 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
       expect(find("#booking_check_out", visible: :all).value).to eq((Date.current + 2.days).iso8601)
       click_button "Save dates"
     end
-    expect(booking.reload.check_in.to_date).to eq(Date.current + 1.day)
     expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 2)
+    expect(booking.reload.check_in.to_date).to eq(Date.current + 1.day)
 
     drag_booking(room_number: "101", day_delta: 1, edge: "end")
     within("#offcanvas_drawer") do
       expect(find("#booking_check_out", visible: :all).value).to eq((Date.current + 3.days).iso8601)
       click_button "Save dates"
     end
+    expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 2)
     expect(booking.reload.check_out.to_date).to eq(Date.current + 3.days)
   end
 
@@ -713,7 +715,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     find("#days-trigger").click
     find("#days-option-0", text: "7 days").click
-    expect(URI.parse(page.current_url).query).to include("days=7")
+    expect(page).to have_current_path(/[?&]days=7(?:&|$)/, url: true, wait: 10)
 
     page.execute_script(<<~JS)
       const startDate = document.querySelector('#start_date')

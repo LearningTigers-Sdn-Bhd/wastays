@@ -56,8 +56,8 @@ export default class extends Controller {
     this.trigger = trigger.closest("[data-controller~='panels-ui--dropdown-menu']")
       ?.querySelector("[data-panels-ui--dropdown-menu-target='trigger']") || trigger
     this.pendingVariant = trigger.dataset.offcanvasVariant || this.variantValue
-    this.returnFocusElement = trigger
-    this.returnFocusId = trigger.id || document.activeElement?.id
+    this.returnFocusElement = this.trigger
+    this.returnFocusId = this.trigger.id || document.activeElement?.id
     setTimeout(() => window.dispatchEvent(new CustomEvent("dropdown:close-all")), 0)
   }
 

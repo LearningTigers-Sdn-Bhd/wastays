@@ -132,8 +132,9 @@
           <% timeline.with_header(room_label: "Room", dates: dates) %>
           <% group = timeline.with_group(label: "Deluxe King", count: rooms.size) %>
           <% rooms.each do |room| %>
-            <% row = group.with_row(accessible_label: "Room #{room.room_number}, #{room.room_type_name}", id: "#{room.dom_id}-#{theme}") %>
-            <% row.with_summary { render HotelPortal::StayView::RoomSummary.new(room: room) } %>
+            <% themed_room = room.with(dom_id: "#{room.dom_id}-#{theme}") %>
+            <% row = group.with_row(accessible_label: "Room #{room.room_number}, #{room.room_type_name}", id: themed_room.dom_id) %>
+            <% row.with_summary { render HotelPortal::StayView::RoomSummary.new(room: themed_room) } %>
             <% room.day_cells.each_with_index do |cell, index| %>
               <% row.with_cell(
                    position: index + 1,
