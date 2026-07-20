@@ -411,6 +411,8 @@ Rails.application.routes.draw do
     end
     scope "booking-actions", as: :booking_action, module: "bookings/actions" do
       get "audit-trail/:booking_id", to: "audit_trails#show", as: :audit_trail
+      get "show-booking/:booking_id", to: "summaries#show", as: :show_booking
+      get "show-booking/:booking_id/print-send", to: "documents#show", as: :group_print_send
       match "new-booking", to: "new_bookings#show", via: [ :get, :post ], as: :new_booking
       match "quick-booking", to: "quick_bookings#show", via: [ :get, :post ], as: :quick_booking
       match "walk-in-check-in", to: "walk_in_check_ins#show", via: [ :get, :post ], as: :walk_in_check_in

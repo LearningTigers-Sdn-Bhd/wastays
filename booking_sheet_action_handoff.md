@@ -5,7 +5,9 @@
 >
 > **Done & green so far:** (1) Phase-1 prep + Audit Trail pilot, (2) the entire
 > **booking-creation family** (New / Quick / Walk-in / Backdated), including every
-> launcher across front desk, bookings index, and Stay View.
+> launcher across front desk, bookings index, and Stay View, (3) **Show Booking
+> summary + group Print/Send**, which also established the **two-frame stacking
+> pattern** and the `click_in_overlay` system-spec helper (see below).
 
 ## Stack / conventions (must follow)
 
@@ -25,11 +27,11 @@
 **New (Sheet) — target:**
 - Namespace `HotelPortal::Bookings::Actions`, view root `app/views/hotel_portal/bookings/actions/`.
 - Renders into `PanelsUI::Sheet` (`app/components/panels_ui/sheet.rb`), a native `<dialog>` (focus trap, inertness, focus restore, reduced-motion, theming for free).
-- Frame `booking_action_sheet`; completion action `complete_sheet`.
+- Two frames: `booking_action_sheet` (primary) + `booking_action_sheet_secondary` (stacked). Completion action `complete_sheet`.
 
 | Concept | Legacy | New |
 |---|---|---|
-| Turbo Frame | `offcanvas_drawer` | `booking_action_sheet` |
+| Turbo Frame | `offcanvas_drawer` (+ `offcanvas_drawer_secondary`) | `booking_action_sheet` (+ `booking_action_sheet_secondary`) |
 | Completion stream action | `complete_offcanvas` | `complete_sheet` |
 | Completion concern | `OffcanvasTransactionCompletion` | `BookingActionCompletion` |
 | Sheet-open JS | `offcanvas_controller.js` | `panels-ui--sheet-frame` (reused, existing) |
@@ -39,9 +41,9 @@
 
 Precedent: `nearby_attractions` (+ `panels-ui--sheet-frame`). Also how Audit Trail and Creation are wired.
 
-1. An **empty** `turbo_frame_tag "booking_action_sheet"` lives globally in `app/views/layouts/_hotel_shell.html.erb`.
-2. A **launcher** is a plain link/menu-item with `data: { turbo_frame: "booking_action_sheet" }` pointing at the action route. **No `offcanvas_variant`** — size is decided by the view, not the launcher (see "Sizing" below).
-3. The action view wraps content in `turbo_frame_tag "booking_action_sheet"` → `<div data-controller="panels-ui--sheet-frame">` → `PanelsUI::Sheet`. On connect, `panels-ui--sheet-frame` (`app/javascript/controllers/panels_ui/sheet_frame_controller.js`) auto-opens the `<dialog>` and clears the frame on the native `close` event.
+1. Two **empty** frames live globally in `app/views/layouts/_hotel_shell.html.erb`: `turbo_frame_tag "booking_action_sheet"` and `turbo_frame_tag "booking_action_sheet_secondary"`.
+2. A **launcher** is a plain link/menu-item with `data: { turbo_frame: "booking_action_sheet" }` pointing at the action route. **No `offcanvas_variant`** — size is decided by the view, not the launcher (see "Sizing" below). The frame it targets is the **stacking knob** (see "Stacking / multistep" below).
+3. The action view renders through the shared shell, which wraps content in `turbo_frame_tag <frame>` → `<div data-controller="panels-ui--sheet-frame">` → `PanelsUI::Sheet`. `<frame>` defaults to the **requesting** frame (`turbo_frame_request_id`, falling back to `booking_action_sheet`), so one view works in any frame. On connect, `panels-ui--sheet-frame` (`app/javascript/controllers/panels_ui/sheet_frame_controller.js`) auto-opens the `<dialog>` and clears **its own** frame on the native `close` event (`element.closest("turbo-frame")` — frame-agnostic).
 4. Controllers render `layout: false`.
 5. **Read-only** actions need nothing more. **Mutating** actions complete via `complete_booking_action` (emits `complete_sheet` → close + navigate to a validated destination). On validation failure, re-render the form into the frame with `:unprocessable_content` (the `<dialog>` reconnects/reopens with submitted values + errors).
 
@@ -70,6 +72,39 @@ per-entry-point offcanvas variants (`right`, `fullscreen-bottom`, `compact-right
 
 When migrating a new action family, follow the same rule: put the size on the Sheet in the view.
 
+## Stacking / multistep — the frame knob (important)
+
+A sheet is a native `<dialog>`; the PanelsUI overlay stack (`support/overlay.js`:
+`activeOverlays` / `isTopOverlay` / ref-counted `lockScroll`) already supports
+**stacking** — several dialogs coexist in the top layer, only the top one answers
+Escape/backdrop, and closing it reveals the one beneath (LIFO). See the showcase
+`_sheet_preview.html.erb` / `spec/system/panels_ui/sheet_spec.rb`.
+
+Because the shared shell renders into the **requesting** frame (see canonical
+pattern #3), **the launcher's `data-turbo-frame` is the only knob**:
+
+| Launcher targets… | Result |
+|---|---|
+| `booking_action_sheet` | top-level sheet |
+| `booking_action_sheet_secondary` | **stacks** above the primary (primary stays open, inert underneath) |
+| the frame already showing a sheet | **replaces** it (multistep) |
+
+Rules of thumb:
+- One action = one lazy controller/route/view. It does **not** know whether it's
+  top-level or stacked — that's decided by whoever launches it. This is what lets
+  the same action open **standalone** (primary frame) or **stacked** (secondary
+  frame) — e.g. group Print/Send stacks over the summary but is also launchable on
+  its own.
+- Prefer **stacking** for a drill-down you can return from (native focus
+  restoration walks the stack back for free). Avoid **replace/multistep** for a
+  drill-down off a *stateful* sheet — replacing discards the parent's state (this
+  is why an earlier replace-in-frame attempt with a `navigate()` hack was reverted).
+- Depth today is 2 frames (primary + secondary). Add another `_secondary`-style
+  frame only if a real 3-deep flow appears.
+- Close a stacked child with a `data-action="panels-ui--sheet#close"` control
+  (closes the top overlay, reveals the parent). Its `sheet-frame` clears the child
+  frame; the parent is untouched.
+
 ## Shipped #1 — Audit Trail (read-only pilot)
 
 - Route `get "audit-trail/:booking_id" → audit_trails#show`.
@@ -95,18 +130,28 @@ When migrating a new action family, follow the same rule: put the size on the Sh
 
 **Known minor regression:** Quick's "More options → Full" is a plain `booking_action_sheet` frame-reload link (drops the legacy JS value-preservation on switch).
 
+## Shipped #3 — Show Booking summary + group Print/Send (first stacking case)
+
+- Routes: `get "show-booking/:booking_id" → summaries#show` and `get "show-booking/:booking_id/print-send" → documents#show` in the `booking-actions` scope.
+- **`bookings/actions/overview_base_controller.rb < BaseController`** — read-only base for both: `skip_before_action :authorize_manage_bookings!` + `authorize_view_bookings!`, eager-loads the booking (and, for groups, the whole group) with folios/rooms/guests, builds `@presenter` (`BookingPresenter`) + `@panel_presenter` (`BookingControlPanelPresenter`).
+- **`summaries_controller.rb`** — the booking summary sheet (`#booking-summary-sheet`, right/lg). Standalone bookings show a Print/Send **dropdown** (`_print_send_menu`); group bookings show a Print/Send **link** targeting `booking_action_sheet_secondary` → stacks the documents sheet.
+- **`documents_controller.rb`** — group Print/Send documents (`#booking-group-documents-sheet`, right/lg), rendered via the shared shell so it lands in whichever frame launched it. Non-group bookings redirect back to the summary with an alert. "Back to booking summary" is a `panels-ui--sheet#close` button (closes the stacked child, reveals the summary). **This is the reference implementation for stacking + standalone.**
+- Launcher: Stay View Room-View booking item now opens the summary sheet (`stay_view_helper#stay_view_booking_action_data` = `{ turbo_frame: "booking_action_sheet" }`).
+- Specs: `spec/requests/hotel_portal/bookings/actions/booking_overviews_spec.rb` (summary content + secondary-frame link; documents rendered into the secondary frame *and* standalone into the primary; close-button shape; non-group redirect). System stacking + focus-restoration flow in `stay_view_spec.rb` ("opens group documents…").
+
 ## Verification status
 
-`bin/test bookings` → all pass. `stay_view_spec.rb` (JS) → 24 pass, 2 pre-existing pending. Rubocop clean. No `offcanvas` in any new file.
+`bin/test bookings` → all pass. Request specs for `bookings/actions/**` (audit, creations, overviews) → green. Sheet system specs (stacking, audit, nearby-attractions, concierge-QR, profile-update, panels_ui sheet) → green with the `click_in_overlay` helper. Rubocop clean. No `offcanvas` in any new file.
+
+**Known failing (not mine to guess):** `stay_view_spec.rb:231` ("opens a lifecycle drawer from Room View…") — a **stale legacy test**. Show-Booking now opens the summary *sheet*, so this test's `#offcanvas_drawer` + "Actions → Check-in" premise is gone. Needs a product decision on how check-in is reached now (via the sheet, or a retained offcanvas entry) — then fix or delete it.
 
 ## Next actions (recommended order)
 
-1. **Cancellation** (doc rollout step 3 — proves invalid-form + completion + group targeting). Two legacy pieces: `Transactions::CancelBookingsController#show` (renders form) + `Bookings::CancellationsController#create` (POST, runs `Bookings::TransitionStatus`, supports group batch-cancel via the `GroupLifecycleTargeting` concern + `group-lifecycle-targets` Stimulus controller + `shared/_group_target_selector` partial — all drawer-agnostic, reuse as-is). Build one `bookings/actions/cancellations_controller.rb` with `show` + `create`; add a request spec asserting the `complete_sheet` action-tag shape (mirror `transactions_spec.rb`: `action="complete_sheet"`, target `booking_action_sheet`, CGI-escaped destination) and the invalid-form branch. **Launchers are heterogeneous** — some live inside unmigrated Edit/Show-Booking offcanvas views; repoint only the standalone-page ones (`_summary_row`, Stay View) and leave the embedded ones on legacy.
-2. Show Booking + group Print/Send.
-3. Guest + internal-note management (`bookings/show/actions/**`).
-4. Stay-editing (edit booking, amend stay, change room/timeline, dates).
-5. Check-in / checkout lifecycle (incl. the existing-booking backdated flow).
-6. Delete each legacy action once its caller count hits zero; retire the offcanvas infra last.
+1. **Cancellation** (doc rollout step 3 — proves invalid-form + completion + group targeting). Two legacy pieces: `Transactions::CancelBookingsController#show` (renders form) + `Bookings::CancellationsController#create` (POST, runs `Bookings::TransitionStatus`, supports group batch-cancel via the `GroupLifecycleTargeting` concern + `group-lifecycle-targets` Stimulus controller + `shared/_group_target_selector` partial — all drawer-agnostic, reuse as-is). Build one `bookings/actions/cancellations_controller.rb` with `show` + `create`; add a request spec asserting the `complete_sheet` action-tag shape (mirror `transactions_spec.rb`: `action="complete_sheet"`, target `booking_action_sheet`, CGI-escaped destination) and the invalid-form branch. **Launchers are heterogeneous** — some live inside unmigrated Edit/Show-Booking offcanvas views; repoint only the standalone-page ones (`_summary_row`, Stay View) and leave the embedded ones on legacy. Cancellation launched **from the summary sheet** should stack (target `booking_action_sheet_secondary`).
+2. Guest + internal-note management (`bookings/show/actions/**`).
+3. Stay-editing (edit booking, amend stay, change room/timeline, dates).
+4. Check-in / checkout lifecycle (incl. the existing-booking backdated flow). Resolve the `:231` stale test here.
+5. Delete each legacy action once its caller count hits zero; retire the offcanvas infra last.
 
 ## Acceptance checklist (every migrated action)
 
@@ -123,6 +168,8 @@ When migrating a new action family, follow the same rule: put the size on the Sh
 - `PanelsUI::Sheet.new` raises unless `title:` or `aria_label:` is given. Use `aria_label:` when the body partial already renders its own heading (avoids a duplicate visible title).
 - Turbo-format render pitfall: `render template: "…show", layout: false` has no `.turbo_stream` variant → `MissingTemplate` on a Turbo submit. For failure re-renders use a `respond_to` that renders `turbo_stream.update("booking_action_sheet", partial: "…/form")` (see `render_new_booking_failure`).
 - Native `<dialog>` restores focus to whatever was focused at `showModal()` — do **not** hand-roll focus restoration.
+- **System-spec clicks inside an open sheet must use `click_in_overlay`** (`spec/support/overlay_interaction_helper.rb`), not `click_link`/`click_button`/`.click`. cuprite's coordinate hit-testing intermittently misses controls in the `<dialog>` top layer — a normal click reports success yet never lands, so the flow silently stalls (~40–60% flake). The helper focuses the element (so focus restoration still works) then dispatches the DOM click. Use it **only** inside an open modal dialog; elsewhere keep standard Capybara actions (they also verify clickability). Reads/assertions inside a sheet need no change. Close via Escape still uses `find("dialog#…").send_keys(:escape)`.
+- The shared `_sheet` renders into `turbo_frame_request_id` (default `booking_action_sheet`). A request spec hitting the route **without** a `Turbo-Frame` header gets the primary frame; pass `headers: { "Turbo-Frame" => "booking_action_sheet_secondary" }` to assert the stacked case.
 - `require_feature!(slug)` is in `PlanGated` (app-wide). Feature gating in specs: `hotel.update!(plan: create(:plan))` + `create(:plan_feature, plan: hotel.plan, feature: create(:feature, feature_group: create(:feature_group), slug: "…"), enabled: true)`.
 - Routing uses `scope … module:` (not `namespace`); route prefixes singular (`hotel_booking_action_*`).
 - Authorization is direct permission checks raising `Pundit::NotAuthorizedError` (rescued app-wide to a root redirect + "not authorized" flash) — no booking Pundit policy.

@@ -60,7 +60,7 @@ module HotelPortal
             render BookingBar.new(
               segment:,
               href: helpers.stay_view_booking_path(segment.booking_id, return_to:, source: "stay_view"),
-              link_attributes: { data: helpers.stay_view_action_data },
+              link_attributes: { data: helpers.stay_view_booking_action_data },
               interaction: interaction_for(segment)
             )
           end

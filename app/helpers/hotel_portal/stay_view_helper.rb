@@ -69,8 +69,12 @@ module HotelPortal::StayViewHelper
     { turbo_frame: "booking_action_sheet" }
   end
 
+  def stay_view_booking_action_data
+    { turbo_frame: "booking_action_sheet" }
+  end
+
   def stay_view_booking_path(booking_id, return_to:, source: nil)
-    hotel_booking_transaction_show_booking_path(current_hotel, booking_id, { return_to:, source: }.compact)
+    hotel_booking_action_show_booking_path(current_hotel, booking_id, { return_to:, source: }.compact)
   end
 
   def stay_view_drawer_booking_actions(booking_id, capabilities:, return_to:)
@@ -157,7 +161,14 @@ module HotelPortal::StayViewHelper
     return_to = state.return_path(current_hotel)
     common = { return_to:, source: "stay_view" }
     actions = []
-    actions << { label: "Open booking", href: stay_view_booking_path(segment.booking_id, return_to:), icon: "external-link" } if segment.capabilities.view_booking?
+    if segment.capabilities.view_booking?
+      actions << {
+        label: "Open booking",
+        href: stay_view_booking_path(segment.booking_id, return_to:, source: "stay_view"),
+        icon: "external-link",
+        data: stay_view_booking_action_data
+      }
+    end
     if segment.capabilities.move_booking?
       actions << { label: "Move or reassign", href: edit_hotel_stay_view_booking_move_path(current_hotel, segment.booking_id, common), icon: "move" }
     end
@@ -165,7 +176,7 @@ module HotelPortal::StayViewHelper
       actions << { label: "Change dates", href: edit_hotel_stay_view_booking_dates_path(current_hotel, segment.booking_id, common), icon: "calendar-range" }
     end
     actions.concat(stay_view_lifecycle_booking_actions(segment, common))
-    actions.map { |action| action.merge(data: stay_view_action_data) }
+    actions.map { |action| action.merge(data: action.fetch(:data, stay_view_action_data)) }
   end
 
   def stay_view_lifecycle_booking_actions(segment, common)

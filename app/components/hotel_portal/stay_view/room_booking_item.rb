@@ -26,7 +26,7 @@ module HotelPortal
         if permitted_href
           helpers.link_to(
             permitted_href,
-            **attributes.merge(data: helpers.stay_view_action_data.merge(attributes.fetch(:data)))
+            **attributes.merge(data: helpers.stay_view_booking_action_data.merge(attributes.fetch(:data)))
           ) { item_content }
         else
           tag.div(item_content, **attributes)

@@ -143,7 +143,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     segment.hover
     expect(page).to have_css("##{segment[:id]}-panel", text: "Ada Lovelace", visible: :visible)
     expect(page).to have_css("##{segment[:id]}-panel", text: "Single booking", visible: :visible)
-    expect(URI.parse(segment.find("a")[:href]).path).to eq(hotel_booking_transaction_show_booking_path(hotel, booking))
+    expect(URI.parse(segment.find("a")[:href]).path).to eq(hotel_booking_action_show_booking_path(hotel, booking))
 
     page.execute_script("document.querySelector('##{segment[:id]}-trigger').focus()")
     expect(page).to have_css("##{segment[:id]}-panel", text: "Confirmed", visible: :visible)
@@ -424,18 +424,42 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(hotel.room_statuses.find_by(room_type:, room_number: "101").status).to eq("ready")
   end
 
-  it "routes Timeline booking actions to the booking show off-canvas and drops the row menu" do
+  it "routes Timeline booking actions to the booking summary Sheet and drops the row menu" do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
 
     bar = find("#stay_view_booking_room_#{booking.booking_rooms.sole.id} a")
-    expect(bar[:"data-turbo-frame"]).to eq("offcanvas_drawer")
+    expect(bar[:"data-turbo-frame"]).to eq("booking_action_sheet")
     uri = URI.parse(bar[:href])
-    expect(uri.path).to eq(hotel_booking_transaction_show_booking_path(hotel, booking))
+    expect(uri.path).to eq(hotel_booking_action_show_booking_path(hotel, booking))
     expect(Rack::Utils.parse_nested_query(uri.query)).to include(
       "source" => "stay_view",
       "return_to" => hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
     )
     expect(page).to have_no_button("Actions for room 101")
+  end
+
+  it "opens group documents in the booking summary Sheet and restores launcher focus" do
+    group = create(:group_booking, hotel:, name: "Conference Group")
+    booking.update!(group_booking: group, group_position: 1)
+    sibling = create(:booking, hotel:, group_booking: group, group_position: 2, guest_name: "Grace Hopper")
+    create(:booking_room, booking: sibling, room_type:, room_number: "102")
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+
+    launcher = find("#stay_view_booking_room_#{booking.booking_rooms.sole.id} a")
+    launcher.click
+    expect(page).to have_css("dialog#booking-summary-sheet[open]", text: "Conference Group")
+
+    # click_in_overlay dispatches the DOM click directly; cuprite's coordinate
+    # hit-testing is unreliable for controls inside a showModal() top-layer dialog.
+    within("#booking-summary-sheet") { click_in_overlay "Print / Send" }
+    expect(page).to have_css("dialog#booking-group-documents-sheet[open]", text: "Group documents")
+
+    within("#booking-group-documents-sheet") { click_in_overlay "Back to booking summary" }
+    expect(page).to have_css("dialog#booking-summary-sheet[open]", text: "Conference Group")
+    find("dialog#booking-summary-sheet").send_keys(:escape)
+
+    expect(page).to have_no_css("dialog#booking-summary-sheet", wait: 3)
+    expect(page.evaluate_script("document.activeElement.id")).to eq(launcher[:id])
   end
 
   it "moves a Timeline stay through the keyboard-accessible booking drawer and restores focus",

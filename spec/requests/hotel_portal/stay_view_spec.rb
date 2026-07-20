@@ -68,8 +68,8 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(document.at_css("#rate_plan_id-select-menu")).to be_nil
       global_actions = document.at_css("[data-slot='stay-view-global-actions']")
       expect(global_actions.ancestors("#stay_view_toolbar")).to be_present
-      expect(global_actions.at_css("a[href^='#{hotel_booking_transaction_walk_in_check_in_path(hotel)}']").text.squish).to eq("Walk-in")
-      expect(global_actions.at_css("a[href^='#{hotel_booking_transaction_new_booking_path(hotel)}']").text.squish).to eq("Add booking")
+      expect(global_actions.at_css("a[href^='#{hotel_booking_action_walk_in_check_in_path(hotel)}']").text.squish).to eq("Walk-in")
+      expect(global_actions.at_css("a[href^='#{hotel_booking_action_new_booking_path(hotel)}']").text.squish).to eq("Add booking")
       operational_counts = document.css("[data-slot='stay-view-operational-count']")
       expect(operational_counts.map { |badge| badge["data-state"] }).to eq(
         %w[all vacant arrival occupied departure turnover blocked dirty]
@@ -151,7 +151,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       add_booking = today_menu.css("[role='menuitem']").find { |item| item.text.squish == "Add booking" }
       add_booking_uri = URI.parse(add_booking["href"])
-      expect(add_booking_uri.path).to eq(hotel_booking_transaction_new_booking_path(hotel))
+      expect(add_booking_uri.path).to eq(hotel_booking_action_new_booking_path(hotel))
       expect(Rack::Utils.parse_nested_query(add_booking_uri.query)).to include(
         "check_in" => Date.current.iso8601,
         "check_out" => (Date.current + 1.day).iso8601,
@@ -159,7 +159,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
         "room_number" => "101",
         "source" => "stay_view"
       )
-      expect(add_booking["data-turbo-frame"]).to eq("offcanvas_drawer")
+      expect(add_booking["data-turbo-frame"]).to eq("booking_action_sheet")
 
       today_trigger = document.at_css("##{room_id}-#{Date.current.iso8601}-cell-actions-trigger")
       expect(today_trigger["data-alignment"]).to eq("center")
@@ -766,7 +766,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).not_to include("cell-actions-trigger")
     end
 
-    it "renders the lifecycle-derived action matrix in the booking drawer opened from Room View" do
+    it "keeps unmigrated lifecycle actions out of the booking summary Sheet" do
       booking = create(
         :booking,
         hotel:,
@@ -779,28 +779,15 @@ RSpec.describe "HotelPortal Stay View", type: :request do
         "Check-in", "Cancel", "Backdated Check-in", "Mark No-show", "Check-out",
         "Edit Check-In", "Undo Check-in", "Review Late Checkout", "Complete Checkout"
       ]
-      expected = {
-        "confirmed" => [ "Check-in", "Cancel" ],
-        "review_no_show" => [ "Backdated Check-in", "Mark No-show", "Cancel" ],
-        "checked_in" => [ "Check-out", "Edit Check-In", "Undo Check-in" ],
-        "review_due_out" => [ "Review Late Checkout" ],
-        "checkout_required" => [ "Complete Checkout" ],
-        "completed" => []
-      }
-
-      expected.each do |status, labels|
+      %w[confirmed review_no_show checked_in review_due_out checkout_required completed].each do |status|
         booking.update_column(:status, status)
         return_to = hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
-        get hotel_booking_transaction_show_booking_path(hotel, booking, source: "stay_view", return_to:)
+        get hotel_booking_action_show_booking_path(hotel, booking, source: "stay_view", return_to:)
 
         document = Nokogiri::HTML(response.body)
-        items = document.css("[role='menu'] a[role='menuitem']")
-        rendered = items.map { |item| item.text.squish } & lifecycle_labels
-        expect(rendered).to eq(labels), "unexpected rendered actions for #{status}"
-        items.select { |item| item.text.squish.in?(labels) }.each do |item|
-          query = Rack::Utils.parse_nested_query(URI.parse(item["href"]).query)
-          expect(query).to include("source" => "stay_view", "return_to" => return_to)
-        end
+        expect(document.at_css("turbo-frame#booking_action_sheet")).to be_present
+        control_labels = document.css("a, button").map { |control| control.text.squish }
+        expect(control_labels & lifecycle_labels).to be_empty
       end
     end
 
@@ -816,7 +803,8 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(item).to be_present
 
       get item["href"]
-      expect(response.body).not_to include(">Actions<", "Check-in", "Cancel", "Mark No-show", "Check-out")
+      control_labels = Nokogiri::HTML(response.body).css("a, button").map { |control| control.text.squish }
+      expect(control_labels).not_to include("Actions", "Check-in", "Cancel", "Mark No-show", "Check-out")
     end
 
     it "rejects users without board access before loading the board" do
