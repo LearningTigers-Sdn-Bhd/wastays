@@ -10,17 +10,17 @@ module HotelPortal
     PAYOUT_TABS = %w[upcoming paid].freeze
     GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards bibo].freeze
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
-    DAILY_REVENUE_TABS = %w[overview transactions].freeze
+    DAILY_REPORT_TABS = %w[overview revenue cashier].freeze
     DAILY_REVENUE_FILTER_KEYS = %i[q transaction_type category transaction_code_id posting_source reversal_status].freeze
 
-    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_revenue managers_flash outstanding_balance deposit_liability guest_reports folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
+    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_report managers_flash outstanding_balance deposit_liability guest_reports folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
     before_action :authorize_view_payouts!, only: %i[payouts]
     before_action -> { require_feature!("daily_occupancy_revenue") }, only: %i[daily_occupancy]
     before_action -> { require_feature!("arrivals_departures_list") }, only: %i[guest_reports]
     before_action -> { require_feature!("outstanding_balance_noshow") }, only: %i[outstanding_balance]
     before_action -> { require_feature!("housekeeper_productivity") }, only: %i[managers_flash]
     before_action -> { require_feature!("booking_source_analysis") }, only: %i[breakdown]
-    before_action -> { require_feature!("revenue_allocation_per_night") }, only: %i[daily_revenue]
+    before_action -> { require_feature!("revenue_allocation_per_night") }, only: %i[daily_report]
     before_action -> { require_feature!("excel_pdf_export") }, if: -> { %i[csv xls pdf].include?(request.format.symbol) }
 
     def index
@@ -179,35 +179,62 @@ module HotelPortal
       end
     end
 
-    def daily_revenue
+    def daily_report
       @report_start_date, @report_end_date = parse_report_date_range
-      @report = HotelPortal::Reports::DailyRevenueReport.new(
+      @daily_report_tab = params[:tab].presence_in(DAILY_REPORT_TABS) || "overview"
+
+      @revenue_report = HotelPortal::Reports::DailyRevenueReport.new(
         hotel: current_hotel,
         start_date: @report_start_date,
         end_date: @report_end_date,
         date_preset: params[:date_preset]
       ).call
-      prepare_daily_revenue_transactions
+
+      @cashier_report = HotelPortal::Reports::CashierSalesReport.new(
+        hotel: current_hotel,
+        start_date: @report_start_date,
+        end_date: @report_end_date
+      ).call
+
+      prepare_charge_register
+      prepare_cashier_lists
 
       respond_to do |format|
         format.html
         format.csv do
-          csv = HotelPortal::Reports::DailyRevenueTransactionsCsvExportService.new(transactions: @transaction_scope).generate
+          csv = HotelPortal::Reports::DailyReportCsvExportService.new(
+            tab: @daily_report_tab,
+            revenue_report: @revenue_report,
+            cashier_report: @cashier_report,
+            charge_register: @charge_register_scope
+          ).generate
           send_data csv,
-            filename: "daily-revenue-transactions-#{@report.start_date}-#{@report.end_date}.csv",
+            filename: "daily-report-#{@daily_report_tab}-#{@revenue_report.start_date}-#{@revenue_report.end_date}.csv",
             type: "text/csv"
         end
-        format.any(:xls) do
-          workbook = HotelPortal::Reports::DailyRevenueExcelExportService.new(report: @report, transactions: @transaction_scope).generate
+        format.xlsx do
+          workbook = HotelPortal::Reports::DailyReportExcelExportService.new(
+            hotel: current_hotel,
+            tab: @daily_report_tab,
+            revenue_report: @revenue_report,
+            cashier_report: @cashier_report,
+            charge_register: @charge_register_scope
+          ).generate
           send_data workbook,
-            filename: "daily-revenue-#{@report.start_date}-#{@report.end_date}.xls",
-            type: "application/vnd.ms-excel",
+            filename: "daily-report-#{@daily_report_tab}-#{@revenue_report.start_date}-#{@revenue_report.end_date}.xlsx",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             disposition: "attachment"
         end
         format.pdf do
-          pdf = HotelPortal::Reports::DailyRevenuePdfExportService.new(hotel: current_hotel, report: @report, transactions: @transaction_scope).generate
+          pdf = HotelPortal::Reports::DailyReportPdfExportService.new(
+            hotel: current_hotel,
+            tab: @daily_report_tab,
+            revenue_report: @revenue_report,
+            cashier_report: @cashier_report,
+            charge_register: @charge_register_scope
+          ).generate
           send_data pdf,
-            filename: "daily-revenue-#{@report.start_date}-#{@report.end_date}.pdf",
+            filename: "daily-report-#{@daily_report_tab}-#{@revenue_report.start_date}-#{@revenue_report.end_date}.pdf",
             type: "application/pdf",
             disposition: "attachment"
         end
@@ -587,22 +614,41 @@ module HotelPortal
 
     private
 
-    def prepare_daily_revenue_transactions
-      @daily_revenue_tab = params[:tab].presence_in(DAILY_REVENUE_TABS) || "overview"
+    def prepare_charge_register
       query = HotelPortal::Reports::DailyRevenueTransactionQuery.new(
         hotel: current_hotel,
         start_date: @report_start_date,
         end_date: @report_end_date,
-        filters: params.permit(*DAILY_REVENUE_FILTER_KEYS)
+        filters: params.permit(*DAILY_REVENUE_FILTER_KEYS),
+        transaction_types: %w[charge adjustment]
       )
       @transaction_filters = query.filters
-      @transaction_scope = query.call
-      @transaction_count = @transaction_scope.count
+      @charge_register_scope = query.call
+      @charge_register_count = @charge_register_scope.count
       @transaction_codes = current_hotel.transaction_codes.active.order(:name, :code)
-      return unless @daily_revenue_tab == "transactions" && request.format.html?
+      return unless request.format.html?
 
-      @transactions = @transaction_scope.page(params[:page]).per(50)
-      @transaction_rows = @transactions.map { |transaction| HotelPortal::Reports::DailyRevenueTransactionRow.new(transaction) }
+      @charge_register_transactions = @charge_register_scope.page(params[:page]).per(50)
+      @charge_register_rows = @charge_register_transactions.map { |transaction| HotelPortal::Reports::DailyReportTransactionRow.new(transaction) }
+    end
+
+    def prepare_cashier_lists
+      return unless request.format.html?
+
+      @advance_transactions = @cashier_report.advance_scope.page(params[:advance_page]).per(50)
+      @advance_rows = @advance_transactions.map do |transaction|
+        HotelPortal::Reports::DailyReportTransactionRow.new(
+          transaction,
+          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id]
+        )
+      end
+      @settlement_transactions = @cashier_report.settlement_scope.page(params[:settlement_page]).per(50)
+      @settlement_rows = @settlement_transactions.map do |transaction|
+        HotelPortal::Reports::DailyReportTransactionRow.new(
+          transaction,
+          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id]
+        )
+      end
     end
 
     def load_guest_registration_cards(start_date: nil, end_date: nil)

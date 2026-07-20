@@ -7,15 +7,17 @@ module HotelPortal
 
       attr_reader :filters
 
-      def initialize(hotel:, start_date:, end_date:, filters: {})
+      def initialize(hotel:, start_date:, end_date:, filters: {}, transaction_types: nil)
         @hotel = hotel
         @start_date = start_date.to_date
         @end_date = end_date.to_date
         @filters = filters.to_h.stringify_keys.slice(*FILTER_KEYS).transform_values { |value| value.to_s.strip }.compact_blank
+        @transaction_types = Array(transaction_types).presence
       end
 
       def call
         scope = base_scope
+        scope = scope.where(transaction_type: @transaction_types) if @transaction_types
         scope = apply_search(scope)
         scope = apply_transaction_type(scope)
         scope = apply_category(scope)

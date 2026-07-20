@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe HotelPortal::Reports::DailyRevenueTransactionRow do
+RSpec.describe HotelPortal::Reports::DailyReportTransactionRow do
   let(:hotel) { create(:hotel) }
   let(:booking) { create(:booking, hotel: hotel, guest_name: "Jane Doe") }
   let(:folio) { create(:booking_folio, booking: booking, hotel: hotel) }
@@ -41,6 +41,37 @@ RSpec.describe HotelPortal::Reports::DailyRevenueTransactionRow do
     expect(row.posting_source).to eq("manual")
   end
 
+  it "uses a resolved cashier mode when supplied" do
+    transaction = create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "refund", amount: -25)
+
+    row = described_class.new(transaction, settlement_mode: "Cash Payment")
+
+    expect(row.settlement_mode).to eq("Cash Payment")
+  end
+
+  it "identifies automated gateway receipts without treating the gateway as a user" do
+    transaction = create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: "payment",
+      category: "gateway_payment",
+      amount: 50,
+      user: nil,
+      metadata: { payment_transaction_id: 42, posting_source: "gateway_payment" }
+    )
+
+    expect(described_class.new(transaction).received_by).to eq("Payment Gateway")
+  end
+
+  it "uses the staff name for manual receipts and an em dash for unattributed records" do
+    staff = create(:user, name: "Aisha Cashier")
+    manual = create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 50, user: staff)
+    legacy = create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 50, user: nil, metadata: {})
+
+    expect(described_class.new(manual).received_by).to eq("Aisha Cashier")
+    expect(described_class.new(legacy).received_by).to eq("—")
+  end
+
   it "reports relationship status for original, reversed, and reversal rows" do
     original = create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100)
     reversal = create(
@@ -66,5 +97,19 @@ RSpec.describe HotelPortal::Reports::DailyRevenueTransactionRow do
 
     expect(row.actor_name).to eq("—")
     expect(row.room_number).to eq("—")
+  end
+
+  it "exposes the folio invoice number, falling back to an em dash" do
+    hotel = create(:hotel)
+    booking = create(:booking, hotel: hotel)
+    folio = create(:booking_folio, booking: booking, hotel: hotel, invoice_number: 20260007)
+    transaction = create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100)
+
+    row = described_class.new(transaction)
+
+    expect(row.invoice_number).to eq(20260007)
+
+    folio.update_column(:invoice_number, nil)
+    expect(described_class.new(transaction.reload).invoice_number).to eq("—")
   end
 end

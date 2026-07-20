@@ -2,14 +2,24 @@
 
 module HotelPortal
   module Reports
-    class DailyRevenueTransactionRow
+    class DailyReportTransactionRow
+      CASHIER_LIST_HEADERS = [
+        "Date & Time", "Reservation", "Guest", "Room", "Folio", "Invoice",
+        "Payment Mode", "Received By", "Remarks", "Amount"
+      ].freeze
+      CASHIER_VISUAL_HEADERS = [
+        "Date & Time", "Reservation", "Guest Details", "Folio", "Invoice",
+        "Payment Mode", "Received By", "Remarks", "Amount"
+      ].freeze
+
       attr_reader :transaction
 
       delegate :posting_date, :posted_at, :transaction_type, :category, :description,
         :currency, to: :transaction
 
-      def initialize(transaction)
+      def initialize(transaction, settlement_mode: nil)
         @transaction = transaction
+        @settlement_mode = settlement_mode
       end
 
       def booking
@@ -28,12 +38,20 @@ module HotelPortal
         transaction.transaction_code&.name.presence || description.presence || category.to_s.humanize
       end
 
+      def settlement_mode
+        @settlement_mode.presence || service_name
+      end
+
       def booking_reference
         booking.confirmation_token
       end
 
       def folio_number
         folio.folio_reference_display
+      end
+
+      def invoice_number
+        folio.invoice_number.presence || "—"
       end
 
       def guest_name
@@ -54,6 +72,12 @@ module HotelPortal
 
       def actor_name
         transaction.user&.name.presence || (posting_source == "—" ? "—" : posting_source.humanize)
+      end
+
+      def received_by
+        return "Payment Gateway" if gateway_receipt?
+
+        transaction.user&.name.presence || "—"
       end
 
       def stay_date
@@ -79,6 +103,10 @@ module HotelPortal
 
       def metadata
         transaction.metadata.to_h.stringify_keys
+      end
+
+      def gateway_receipt?
+        metadata["payment_transaction_id"].present? || posting_source == "gateway_payment"
       end
     end
   end

@@ -440,7 +440,11 @@ Rails.application.routes.draw do
         get :guest_reports
         get :arrivals_departures, to: redirect { |params, request| "/hotel/#{params[:hotel_id]}/reports/guest_reports#{request.query_string.present? ? "?#{request.query_string}" : ""}" }
         get :daily_occupancy
-        get :daily_revenue
+        get :daily_report
+        get :daily_revenue, to: redirect { |params, request|
+          destination = "/hotel/#{params[:hotel_id]}/reports/daily_report"
+          request.query_string.present? ? "#{destination}?#{request.query_string}" : destination
+        }
         get :managers_flash
         get :outstanding_balance
         get :deposit_liability

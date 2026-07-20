@@ -1,0 +1,394 @@
+# frozen_string_literal: true
+
+require "caxlsx"
+
+module HotelPortal
+  module Reports
+    class DailyReportExcelExportService
+      CASHIER_HEADERS = [
+        "Date & Time", "Reservation", "Guest", "Room", "Folio", "Invoice",
+        "Payment Mode", "Received By", "Remarks", "Currency", "Amount"
+      ].freeze
+
+      COLORS = {
+        ink: "18332F",
+        primary: "205B4E",
+        primary_light: "E7F1ED",
+        muted: "667772",
+        border: "D9E4DF",
+        stripe: "F5F8F7",
+        white: "FFFFFF",
+        negative: "A33636"
+      }.freeze
+
+      def initialize(hotel:, tab:, revenue_report:, cashier_report:, charge_register: [])
+        @hotel = hotel
+        @tab = tab
+        @revenue_report = revenue_report
+        @cashier_report = cashier_report
+        @charge_register = charge_register
+      end
+
+      def generate
+        package = Axlsx::Package.new
+        @workbook = package.workbook
+        build_styles
+
+        case @tab
+        when "revenue" then build_revenue_workbook
+        when "cashier" then build_cashier_workbook
+        else build_overview_workbook
+        end
+
+        package.to_stream.read
+      end
+
+      private
+
+      def build_styles
+        styles = @workbook.styles
+        @styles = {
+          title: styles.add_style(
+            bg_color: COLORS[:primary], fg_color: COLORS[:white], b: true, sz: 16,
+            alignment: { vertical: :center }
+          ),
+          metadata: styles.add_style(fg_color: COLORS[:muted], sz: 9),
+          section: styles.add_style(
+            bg_color: COLORS[:primary_light], fg_color: COLORS[:ink], b: true, sz: 11,
+            border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] }
+          ),
+          header: styles.add_style(
+            bg_color: COLORS[:ink], fg_color: COLORS[:white], b: true, sz: 10,
+            alignment: { vertical: :center, wrap_text: true }
+          ),
+          body: styles.add_style(
+            fg_color: COLORS[:ink], sz: 10,
+            border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] },
+            alignment: { vertical: :top }
+          ),
+          body_alt: styles.add_style(
+            bg_color: COLORS[:stripe], fg_color: COLORS[:ink], sz: 10,
+            border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] },
+            alignment: { vertical: :top }
+          ),
+          date: styles.add_style(
+            fg_color: COLORS[:ink], sz: 10, format_code: "yyyy-mm-dd",
+            border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] }
+          ),
+          datetime: styles.add_style(
+            fg_color: COLORS[:ink], sz: 10, format_code: "yyyy-mm-dd hh:mm",
+            border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] }
+          ),
+          integer: styles.add_style(
+            fg_color: COLORS[:ink], sz: 10, format_code: "#,##0",
+            border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] },
+            alignment: { horizontal: :right }
+          ),
+          money: styles.add_style(
+            fg_color: COLORS[:ink], sz: 10, format_code: "#,##0.00;[Red]-#,##0.00",
+            border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] },
+            alignment: { horizontal: :right }
+          ),
+          total_label: styles.add_style(
+            bg_color: COLORS[:primary_light], fg_color: COLORS[:ink], b: true, sz: 10,
+            border: { style: :thin, color: COLORS[:primary], edges: [ :top ] }
+          ),
+          total_number: styles.add_style(
+            bg_color: COLORS[:primary_light], fg_color: COLORS[:ink], b: true, sz: 10,
+            format_code: "#,##0.00;[Red]-#,##0.00",
+            border: { style: :thin, color: COLORS[:primary], edges: [ :top ] },
+            alignment: { horizontal: :right }
+          ),
+          kpi_label: styles.add_style(fg_color: COLORS[:muted], sz: 10),
+          kpi_value: styles.add_style(fg_color: COLORS[:ink], b: true, sz: 11, format_code: "#,##0.00;[Red]-#,##0.00")
+        }
+      end
+
+      def build_overview_workbook
+        sheet = add_sheet("Overview", 4, widths: [ 28, 18, 14, 18 ])
+        add_report_header(sheet, "Overview", 4)
+        add_metric_section(sheet, "Revenue (Accrual)", [
+          [ "Bookings Engaged", @revenue_report.totals[:booking_count], nil ],
+          [ "Total Charges", decimal(@revenue_report.totals[:total_charges]), "MYR" ],
+          [ "Adjustments", decimal(@revenue_report.totals[:adjustments]), "MYR" ],
+          [ "Net Revenue", decimal(@revenue_report.totals[:net_revenue]), "MYR" ]
+        ])
+        sheet.add_row([])
+        add_metric_section(sheet, "Cashier Sales (Cash Flow)", [
+          [ "Cash Movements", @cashier_report.totals[:movement_count], nil ],
+          [ "Total Collected", decimal(@cashier_report.totals[:total_collected]), "MYR" ],
+          [ "Total Refunded", decimal(@cashier_report.totals[:total_refunded]), "MYR" ],
+          [ "Net Cash", decimal(@cashier_report.totals[:net_cash]), "MYR" ]
+        ])
+      end
+
+      def build_revenue_workbook
+        daily = add_sheet("Daily Breakdown", 8, widths: [ 14, 11, 18, 18, 15, 18, 17, 18 ])
+        add_report_header(daily, "Revenue - Daily Breakdown", 8)
+        add_metric_section(daily, "Revenue Summary", revenue_metrics)
+        daily.add_row([])
+        add_table(
+          daily,
+          headers: [ "Date", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Adjustments", "Net Revenue" ],
+          rows: @revenue_report.rows.map { |row| revenue_row(row, :date) },
+          date_columns: [ 0 ], integer_columns: [ 1 ], money_columns: (2..7).to_a,
+          total_row: [ "Total", @revenue_report.totals[:booking_count], decimal(@revenue_report.totals[:accommodation]),
+            decimal(@revenue_report.totals[:other_charges]), decimal(@revenue_report.totals[:tax]),
+            decimal(@revenue_report.totals[:total_charges]), decimal(@revenue_report.totals[:adjustments]),
+            decimal(@revenue_report.totals[:net_revenue]) ]
+        )
+
+        source = add_sheet("Revenue by Source", 8, widths: [ 24, 11, 18, 18, 15, 18, 17, 18 ])
+        add_report_header(source, "Revenue by Source", 8)
+        add_table(
+          source,
+          headers: [ "Source", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Adjustments", "Net Revenue" ],
+          rows: @revenue_report.source_rows.map { |row| revenue_row(row, :source) },
+          integer_columns: [ 1 ], money_columns: (2..7).to_a,
+          total_row: [ "Total", @revenue_report.totals[:booking_count], decimal(@revenue_report.totals[:accommodation]),
+            decimal(@revenue_report.totals[:other_charges]), decimal(@revenue_report.totals[:tax]),
+            decimal(@revenue_report.totals[:total_charges]), decimal(@revenue_report.totals[:adjustments]),
+            decimal(@revenue_report.totals[:net_revenue]) ]
+        )
+
+        register = add_sheet("Charge Register", 19, widths: charge_register_widths)
+        add_report_header(register, "Charge Register", 19)
+        rows = @charge_register.map { |transaction| charge_register_row(transaction) }
+        add_table(
+          register,
+          headers: DailyRevenueTransactionsCsvExportService::HEADERS,
+          rows: rows,
+          date_columns: [ 0 ], datetime_columns: [ 1 ], money_columns: [ 17 ],
+          total_row: total_for_register(rows, 19, 17)
+        )
+      end
+
+      def build_cashier_workbook
+        advance = add_sheet("Advance", CASHIER_HEADERS.size, widths: cashier_widths)
+        add_report_header(advance, "Cashier Sales - Advance", CASHIER_HEADERS.size)
+        add_metric_section(advance, "Cashier Sales Summary", cashier_metrics)
+        advance.add_row([])
+        advance_rows = cashier_rows(@cashier_report.advance_scope)
+        add_table(
+          advance, headers: CASHIER_HEADERS, rows: advance_rows,
+          datetime_columns: [ 0 ], money_columns: [ 10 ], total_row: total_for_cashier(advance_rows)
+        )
+
+        settlement = add_sheet("Settlement", CASHIER_HEADERS.size, widths: cashier_widths)
+        add_report_header(settlement, "Cashier Sales - Settlement", CASHIER_HEADERS.size)
+        settlement_rows = cashier_rows(@cashier_report.settlement_scope)
+        add_table(
+          settlement, headers: CASHIER_HEADERS, rows: settlement_rows,
+          datetime_columns: [ 0 ], money_columns: [ 10 ], total_row: total_for_cashier(settlement_rows)
+        )
+
+        summary = add_sheet("Cashier Summary", 6, widths: [ 28, 13, 16, 18, 18, 18 ])
+        add_report_header(summary, "Cashier Summary", 6)
+        summary_rows = @cashier_report.mode_summary_rows.map do |row|
+          [ row[:mode], row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+        end
+        summary_rows += @cashier_report.mode_totals.map do |row|
+          [ "#{row[:mode]} Total", nil, nil, decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+        end
+        add_table(
+          summary,
+          headers: [ "Payment Mode", "Currency", "Section", "Amount In", "Amount Out", "Balance" ],
+          rows: summary_rows, money_columns: [ 3, 4, 5 ]
+        )
+
+        currency = add_sheet("Currency Summary", 5, widths: [ 16, 18, 20, 20, 20 ])
+        add_report_header(currency, "Currency Summary", 5)
+        currency_rows = @cashier_report.currency_summary_rows.map do |row|
+          [ row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+        end
+        grand = @cashier_report.grand_total
+        add_table(
+          currency,
+          headers: [ "Currency", "Section", "Amount In", "Amount Out", "Balance" ],
+          rows: currency_rows, money_columns: [ 2, 3, 4 ],
+          total_row: [ "Grand Total", nil, decimal(grand[:amount_in]), decimal(grand[:amount_out]), decimal(grand[:balance]) ]
+        )
+      end
+
+      def add_sheet(name, column_count, widths:)
+        @workbook.add_worksheet(name: name, show_gridlines: false) do |sheet|
+          sheet.column_widths(*widths)
+          sheet.sheet_view.zoom_scale = 100
+          sheet.page_setup.orientation = column_count > 6 ? :landscape : :portrait
+          sheet.page_setup.fit_to_width = 1
+          sheet.page_setup.fit_to_height = 0
+          return sheet
+        end
+      end
+
+      def add_report_header(sheet, section_name, column_count)
+        last_column = column_letter(column_count)
+        sheet.add_row([ "Daily Report - #{section_name}" ], style: [ @styles[:title] ], height: 28)
+        sheet.merge_cells("A1:#{last_column}1")
+        sheet.add_row([ @hotel.name.to_s ], style: [ @styles[:metadata] ])
+        sheet.merge_cells("A2:#{last_column}2")
+        sheet.add_row([ "Reporting period: #{period_label}" ], style: [ @styles[:metadata] ])
+        sheet.merge_cells("A3:#{last_column}3")
+        sheet.add_row([ "Generated: #{Time.current.strftime('%d %b %Y, %H:%M %Z')}" ], style: [ @styles[:metadata] ])
+        sheet.merge_cells("A4:#{last_column}4")
+      end
+
+      def add_metric_section(sheet, title, metrics)
+        column_count = [ sheet.column_info.size, 3 ].max
+        last_column = column_letter(column_count)
+        sheet.add_row([ title ], style: [ @styles[:section] ])
+        sheet.merge_cells("A#{sheet.rows.size}:#{last_column}#{sheet.rows.size}")
+        sheet.add_row([ "Metric", "Value", "Currency" ], style: Array.new(3, @styles[:header]))
+        metrics.each do |label, value, currency|
+          value_style = value.is_a?(Integer) ? @styles[:integer] : @styles[:kpi_value]
+          sheet.add_row([ label, value, currency ], style: [ @styles[:kpi_label], value_style, @styles[:body] ], height: 20)
+        end
+      end
+
+      def add_table(sheet, headers:, rows:, money_columns: [], date_columns: [], datetime_columns: [], integer_columns: [], total_row: nil)
+        header_row = sheet.rows.size + 1
+        sheet.add_row(headers, style: Array.new(headers.size, @styles[:header]), height: 28)
+
+        rows.each_with_index do |values, index|
+          styles = row_styles(
+            headers.size, index,
+            money_columns: money_columns,
+            date_columns: date_columns,
+            datetime_columns: datetime_columns,
+            integer_columns: integer_columns
+          )
+          sheet.add_row(values, style: styles, height: 20)
+        end
+
+        if total_row
+          styles = Array.new(headers.size, @styles[:total_label])
+          money_columns.each { |index| styles[index] = @styles[:total_number] }
+          integer_columns.each { |index| styles[index] = @styles[:total_label] }
+          sheet.add_row(total_row, style: styles, height: 20)
+        end
+
+        last_data_row = header_row + [ rows.size, 1 ].max
+        sheet.auto_filter = "A#{header_row}:#{column_letter(headers.size)}#{last_data_row}"
+        freeze_at(sheet, header_row)
+      end
+
+      def freeze_at(sheet, header_row)
+        sheet.sheet_view.pane do |pane|
+          pane.state = :frozen
+          pane.y_split = header_row
+          pane.top_left_cell = "A#{header_row + 1}"
+          pane.active_pane = :bottom_left
+        end
+      end
+
+      def row_styles(column_count, row_index, money_columns:, date_columns:, datetime_columns:, integer_columns:)
+        styles = Array.new(column_count, row_index.odd? ? @styles[:body_alt] : @styles[:body])
+        money_columns.each { |index| styles[index] = @styles[:money] }
+        date_columns.each { |index| styles[index] = @styles[:date] }
+        datetime_columns.each { |index| styles[index] = @styles[:datetime] }
+        integer_columns.each { |index| styles[index] = @styles[:integer] }
+        styles
+      end
+
+      def revenue_metrics
+        [
+          [ "Bookings Engaged", @revenue_report.totals[:booking_count], nil ],
+          [ "Total Charges", decimal(@revenue_report.totals[:total_charges]), "MYR" ],
+          [ "Adjustments", decimal(@revenue_report.totals[:adjustments]), "MYR" ],
+          [ "Net Revenue", decimal(@revenue_report.totals[:net_revenue]), "MYR" ]
+        ]
+      end
+
+      def cashier_metrics
+        [
+          [ "Cash Movements", @cashier_report.totals[:movement_count], nil ],
+          [ "Total Collected", decimal(@cashier_report.totals[:total_collected]), "MYR" ],
+          [ "Total Refunded", decimal(@cashier_report.totals[:total_refunded]), "MYR" ],
+          [ "Net Cash", decimal(@cashier_report.totals[:net_cash]), "MYR" ]
+        ]
+      end
+
+      def revenue_row(row, label_key)
+        [
+          row[label_key], row[:booking_count], decimal(row[:accommodation]), decimal(row[:other_charges]),
+          decimal(row[:tax]), decimal(row[:total_charges]), decimal(row[:adjustments]), decimal(row[:net_revenue])
+        ]
+      end
+
+      def charge_register_row(transaction)
+        row = DailyReportTransactionRow.new(transaction)
+        [
+          row.posting_date, row.posted_at&.to_datetime, row.transaction_code, row.service_name,
+          row.transaction_type, row.category, row.description, row.booking_reference, row.folio_number,
+          row.guest_name, row.room_number, row.payment_method, row.posting_source, row.actor_name,
+          row.stay_date, row.relationship_status, row.related_transaction_id, decimal(row.signed_amount), row.currency
+        ]
+      end
+
+      def cashier_rows(transactions)
+        transactions.map do |transaction|
+          row = cashier_row(transaction)
+          [
+            transaction_datetime(row), row.booking_reference, row.guest_name, row.room_number,
+            row.folio_number, row.invoice_number, row.settlement_mode, row.received_by,
+            row.description, row.currency, decimal(row.signed_amount)
+          ]
+        end
+      end
+
+      def cashier_row(transaction)
+        DailyReportTransactionRow.new(
+          transaction,
+          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id]
+        )
+      end
+
+      def transaction_datetime(row)
+        time = row.posted_at
+        return row.posting_date unless time
+
+        DateTime.new(row.posting_date.year, row.posting_date.month, row.posting_date.day, time.hour, time.min, time.sec)
+      end
+
+      def total_for_cashier(rows)
+        total = rows.sum { |row| row[10].to_d }
+        [ "Total", *Array.new(8), rows.first&.[](9) || "MYR", decimal(total) ]
+      end
+
+      def total_for_register(rows, column_count, amount_index)
+        values = Array.new(column_count)
+        values[0] = "Total"
+        values[amount_index] = decimal(rows.sum { |row| row[amount_index].to_d })
+        values
+      end
+
+      def charge_register_widths
+        [ 14, 20, 16, 24, 15, 18, 34, 24, 20, 22, 12, 18, 18, 20, 14, 16, 18, 16, 12 ]
+      end
+
+      def cashier_widths
+        [ 20, 25, 22, 12, 20, 16, 24, 20, 42, 12, 16 ]
+      end
+
+      def period_label
+        return @revenue_report.start_date.strftime("%d %b %Y") if @revenue_report.start_date == @revenue_report.end_date
+
+        "#{@revenue_report.start_date.strftime('%d %b %Y')} - #{@revenue_report.end_date.strftime('%d %b %Y')}"
+      end
+
+      def column_letter(column_count)
+        number = column_count
+        letters = +""
+        while number.positive?
+          number, remainder = (number - 1).divmod(26)
+          letters.prepend((65 + remainder).chr)
+        end
+        letters
+      end
+
+      def decimal(value)
+        value.to_d.to_f
+      end
+    end
+  end
+end

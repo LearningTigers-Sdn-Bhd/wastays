@@ -21,7 +21,7 @@ module HotelPortal
         "\xEF\xBB\xBF" + CSV.generate(headers: true) do |csv|
           csv << HEADERS
           @transactions.each do |transaction|
-            row = HotelPortal::Reports::DailyRevenueTransactionRow.new(transaction)
+            row = HotelPortal::Reports::DailyReportTransactionRow.new(transaction)
             csv << [
               row.posting_date.iso8601,
               row.posted_at&.iso8601,

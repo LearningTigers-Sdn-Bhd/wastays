@@ -101,6 +101,24 @@ RSpec.describe HotelPortal::Reports::DailyRevenueTransactionQuery do
     expect(query.call.ids).to eq([ charge.id ])
   end
 
+  it "restricts to the given transaction_types when provided" do
+    hotel = create(:hotel)
+    booking = create(:booking, hotel: hotel)
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    charge = create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: Date.current)
+    payment = create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 100, posting_date: Date.current)
+
+    scope = described_class.new(
+      hotel: hotel,
+      start_date: Date.current,
+      end_date: Date.current,
+      transaction_types: %w[charge adjustment]
+    ).call
+
+    expect(scope).to include(charge)
+    expect(scope).not_to include(payment)
+  end
+
   it "does not grow query count with more rows once eager loaded" do
     def sql_count
       count = 0
@@ -116,7 +134,7 @@ RSpec.describe HotelPortal::Reports::DailyRevenueTransactionQuery do
 
     def materialize(scope)
       scope.each do |transaction|
-        row = HotelPortal::Reports::DailyRevenueTransactionRow.new(transaction)
+        row = HotelPortal::Reports::DailyReportTransactionRow.new(transaction)
         [ row.transaction_code, row.service_name, row.booking_reference, row.folio_number, row.guest_name, row.room_number, row.actor_name ]
       end
     end

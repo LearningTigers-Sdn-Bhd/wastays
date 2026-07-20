@@ -778,94 +778,196 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
   end
 
-  describe "GET /daily_revenue" do
+  describe "GET /daily_report" do
     let(:start_date) { Date.new(2026, 5, 6) }
     let(:end_date) { Date.new(2026, 5, 7) }
 
-    it "renders daily revenue report for selected range" do
+    it "renders the Daily Report page for the selected range" do
       create(:booking, hotel: hotel, status: "confirmed", source: "walk_in", total_amount: 100, tourism_tax_applied: true, tourism_tax_amount: 10, created_at: Time.zone.local(2026, 5, 6, 10, 0))
-      create(:booking, hotel: hotel, status: "completed", source: "agoda", total_amount: 200, created_at: Time.zone.local(2026, 5, 7, 11, 0))
 
-      get daily_revenue_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      get "/hotel/#{hotel.id}/reports/daily_report", params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Daily Revenue Report")
-      expect(response.body).to include("Revenue by Source")
+      expect(response.body).to include("Daily Report")
     end
 
-    it "exports csv/xls/pdf" do
-      create(:booking, hotel: hotel, status: "confirmed", source: "walk_in", total_amount: 100, created_at: Time.zone.local(2026, 5, 6, 10, 0))
+    it "redirects the legacy Daily Revenue URL while preserving its query string" do
+      get "/hotel/#{hotel.id}/reports/daily_revenue", params: { tab: "cashier", start_date: start_date.to_s }
 
-      get daily_revenue_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
-      expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("text/csv")
-
-      get daily_revenue_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
-      expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
-
-      get daily_revenue_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
-      expect(response).to have_http_status(:success)
-      expect(response.content_type).to eq("application/pdf")
+      expect(response).to redirect_to(
+        "/hotel/#{hotel.id}/reports/daily_report?tab=cashier&start_date=#{start_date}"
+      )
     end
 
     it "requires view_reports permission" do
       role.permissions.delete(Permission.find_by!(slug: "view_reports"))
 
-      get daily_revenue_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      get daily_report_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to eq("You are not authorized to perform this action.")
     end
 
-    describe "transactions tab" do
-      it "shows the Transactions tab as current and paginates at 50 rows" do
+    describe "revenue tab" do
+      it "shows the accrual charge register, scoped to charges/adjustments only" do
         booking = create(:booking, hotel: hotel)
         folio = create(:booking_folio, booking: booking, hotel: hotel)
-        51.times { |n| create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 10 + n, posting_date: start_date) }
+        charge = create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 120, posting_date: start_date)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 360, posting_date: start_date)
 
-        get daily_revenue_hotel_reports_path(hotel, tab: "transactions", start_date: start_date.to_s, end_date: start_date.to_s)
-
-        expect(response).to have_http_status(:success)
-        expect(response.body.scan('data-testid="daily-revenue-transaction-row"').size).to eq(50)
-        expect(response.body).to include('data-testid="daily-revenue-tab-transactions"')
-      end
-
-      it "keeps the date-filter form on the Transactions tab after changing the date range" do
-        get daily_revenue_hotel_reports_path(hotel, tab: "transactions", start_date: start_date.to_s, end_date: end_date.to_s)
-
-        expect(response.body).to match(%r{<input[^>]*name="tab"[^>]*value="transactions"})
-      end
-
-      it "defaults to Overview when tab is absent or unknown" do
-        get daily_revenue_hotel_reports_path(hotel, start_date: start_date.to_s, end_date: end_date.to_s)
-        expect(response.body).to include("Revenue by Source")
-
-        get daily_revenue_hotel_reports_path(hotel, tab: "bogus", start_date: start_date.to_s, end_date: end_date.to_s)
-        expect(response.body).to include("Revenue by Source")
-      end
-
-      it "never leaks another hotel's transactions through search or filters" do
-        other_hotel = create(:hotel)
-        other_booking = create(:booking, hotel: other_hotel, guest_name: "Other Hotel Guest")
-        other_folio = create(:booking_folio, booking: other_booking, hotel: other_hotel)
-        create(:folio_transaction, booking_folio: other_folio, category: "accommodation", amount: 999, posting_date: start_date)
-
-        get daily_revenue_hotel_reports_path(hotel, tab: "transactions", q: "Other Hotel Guest", start_date: start_date.to_s, end_date: start_date.to_s)
+        get daily_report_hotel_reports_path(hotel, tab: "revenue", start_date: start_date.to_s, end_date: start_date.to_s)
 
         expect(response).to have_http_status(:success)
-        expect(response.body).not_to include("Other Hotel Guest")
+        expect(response.body.scan('data-testid="charge-register-row"').size).to eq(1)
+        expect(response.body).to include("120.00")
+        expect(charge.amount).to eq(120)
       end
 
-      it "exports the transaction list as csv regardless of active tab" do
+      it "shows positive adjustments as revenue increases" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "adjustment", category: "correction", amount: 25, posting_date: start_date)
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response.body).to include("+ MYR 25.00", "Increases revenue")
+        expect(response.body).not_to include("- MYR 25.00")
+      end
+
+      it "includes adjustments and net revenue in Revenue by Source" do
+        booking = create(:booking, hotel: hotel, source: "walk_in")
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: start_date)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "adjustment", category: "discount", amount: -10, posting_date: start_date)
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        source_table = Nokogiri::HTML(response.body).at_css("[aria-labelledby='revenue-source-heading']")
+        expect(source_table.text).to include("Adjustments", "Net Revenue", "- MYR 10.00", "MYR 90.00")
+      end
+    end
+
+    describe "cashier sales tab" do
+      it "splits Advance and Settlement payment rows" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(
+          :folio_transaction,
+          booking_folio: folio,
+          transaction_type: "payment",
+          category: "booking_payment",
+          amount: 100,
+          posting_date: start_date,
+          user: nil,
+          metadata: { payment_transaction_id: 42, posting_source: "gateway_payment" }
+        )
+        create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 360, posting_date: start_date)
+
+        get daily_report_hotel_reports_path(hotel, tab: "cashier", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include("Advance")
+        expect(response.body).to include("Settlement")
+        expect(response.body).to include("Remarks")
+
+        headers = Nokogiri::HTML(response.body)
+          .css("[aria-labelledby='cashier-advance-heading'] thead th")
+          .map { |header| header.text.strip }
+        expect(headers).to eq([
+          "Date & Time", "Reservation", "Guest Details", "Folio", "Invoice",
+          "Payment Mode", "Received By", "Remarks", "Amount"
+        ])
+
+        advance_row = Nokogiri::HTML(response.body).at_css('[data-testid="advance-row"]')
+        advance_cells = advance_row.css("td")
+        expect(advance_cells.size).to eq(9)
+        expect(advance_cells[2].text.squish).to include(booking.guest_name, "Room —")
+        expect(advance_cells[3].text.strip).to eq(folio.folio_reference_display)
+        expect(advance_cells[4].text.strip).to eq("—")
+        expect(advance_row.text).to include("Payment Gateway")
+
+        settlement_row = Nokogiri::HTML(response.body).at_css('[data-testid="settlement-row"]')
+        [ advance_row, settlement_row ].each do |row|
+          expect(row.css("td").last["class"].split).to include("whitespace-nowrap")
+        end
+      end
+
+      it "shows a refund under its resolved settlement mode" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "refund", amount: -25, posting_date: start_date, metadata: { refund_source: "cash" })
+
+        get daily_report_hotel_reports_path(hotel, tab: "cashier", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        settlement_row = Nokogiri::HTML(response.body).at_css('[data-testid="settlement-row"]')
+        expect(settlement_row.text).to include("Cash Payment")
+        expect(settlement_row.text).not_to include("Refund")
+      end
+    end
+
+    describe "csv export" do
+      it "exports only the combined KPI summary on the overview tab" do
+        get daily_report_hotel_reports_path(hotel, tab: "overview", format: :csv, start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response.body).to include("Revenue (Accrual)", "Cashier Sales (Cash Flow)", "Net Revenue", "Net Cash")
+        expect(response.body).not_to include("Posting Date", "Daily Breakdown")
+      end
+
+      it "exports the charge register on the revenue tab" do
         booking = create(:booking, hotel: hotel)
         folio = create(:booking_folio, booking: booking, hotel: hotel)
         create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: start_date)
 
-        get daily_revenue_hotel_reports_path(hotel, format: :csv, start_date: start_date.to_s, end_date: start_date.to_s)
+        get daily_report_hotel_reports_path(hotel, tab: "revenue", format: :csv, start_date: start_date.to_s, end_date: start_date.to_s)
 
         expect(response).to have_http_status(:success)
-        expect(response.body).to include("Posting Date", "Transaction Code")
+        expect(response.body).to include("Daily Breakdown", "Revenue by Source", "Charge Register", "Posting Date", "Transaction Code")
+        expect(response.body).not_to include("Cashier Summary")
+      end
+
+      it "exports the combined Advance + Settlement list on the cashier tab" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel, invoice_number: 20260506)
+        create(
+          :folio_transaction,
+          booking_folio: folio,
+          transaction_type: "payment",
+          category: "cash",
+          amount: 100,
+          posting_date: start_date,
+          posted_at: Time.zone.local(2026, 5, 6, 14, 30),
+          description: "Cashier note",
+          user: nil,
+          metadata: { payment_transaction_id: 42, posting_source: "gateway_payment" }
+        )
+
+        get daily_report_hotel_reports_path(hotel, tab: "cashier", format: :csv, start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include(
+          "Advance", "Settlement", "Cashier Summary", "Currency Summary",
+          "Date & Time,Reservation,Guest,Room,Folio,Invoice,Payment Mode,Received By,Remarks,Currency,Amount",
+          "Payment Gateway", "20260506", "Cashier note"
+        )
+        expect(response.body).to include("#{start_date.iso8601}T")
+        expect(response.body).not_to include("#{start_date.iso8601} 2026-")
+        expect(response.body).not_to include("Room #", "Res. #", "Bill #")
+        expect(response.body).not_to include("Daily Breakdown", "Charge Register")
+      end
+    end
+
+    describe "xlsx export" do
+      it "downloads a genuine xlsx workbook for the active tab" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: start_date)
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue", format: :xlsx, start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response).to have_http_status(:success)
+        expect(response.content_type).to eq("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        expect(response.headers["Content-Disposition"]).to include(".xlsx")
+        expect(response.body).to start_with("PK")
       end
     end
   end
