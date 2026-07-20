@@ -685,6 +685,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     )
     expect(page).to have_css("[data-slot='stay-view-footer-occupancy']", text: "50%")
 
+    click_button "Advanced filters"
     find("#physical_status-trigger").click
     find("#physical_status-option-2", text: "Dirty").click
 
@@ -737,6 +738,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 14)
 
     expect(page).to have_css("[data-slot='stay-view-standard-rate']", text: "145.00")
+    click_button "Advanced filters"
     find("#physical_status-trigger").click
     find("#physical_status-option-2", text: "Dirty").click
     expect(page).to have_css("#stay_view_room_#{room_type.id}_101")

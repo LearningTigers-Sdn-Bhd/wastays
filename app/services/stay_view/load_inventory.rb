@@ -208,7 +208,7 @@ module StayView
     def primary_guest_attribute_column(attribute)
       primary_guest = BookingGuest
         .where("booking_guests.booking_id = bookings.id", role: "primary")
-        .select("booking_guests.#{attribute}")
+        .select(BookingGuest.arel_table[attribute])
         .limit(1)
       Arel.sql("(#{primary_guest.to_sql})")
     end

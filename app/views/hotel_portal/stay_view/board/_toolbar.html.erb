@@ -59,6 +59,7 @@ end %>
 
     <%= render PanelsUI::Collapsible.new(
           id: "stay-view-advanced-filters",
+          open: advanced_filter_count.positive?,
           region: true,
           class: "contents",
           trigger_class: "panel-button w-auto shrink-0 justify-start gap-2",
