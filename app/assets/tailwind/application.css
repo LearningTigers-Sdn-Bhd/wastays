@@ -19,6 +19,8 @@
 @import "./panel/date-time-picker.css";
 @import "./panel/command-palette.css";
 @import "./panel/button.css";
+@import "./panel/toggle.css";
+@import "./panel/toggle-group.css";
 @import "./panel/badge.css";
 @import "./panel/avatar.css";
 @import "./panel/skeleton.css";

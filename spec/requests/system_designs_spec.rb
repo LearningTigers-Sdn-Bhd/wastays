@@ -44,6 +44,8 @@ RSpec.describe "System design showcase", type: :request do
     time_picker_preview
     timeline_preview
     toast_preview
+    toggle_preview
+    toggle_group_preview
     tooltip_preview
   ].freeze
 
@@ -109,6 +111,12 @@ RSpec.describe "System design showcase", type: :request do
     expect(response.body).to include("panel-collapsible")
     expect(response.body).to include("checkbox-preview-heading")
     expect(response.body).to include("panel-checkbox")
+    expect(response.body).to include("toggle-preview-heading")
+    expect(response.body).to include("panel-toggle")
+    expect(response.body).to include("toggle-group-preview-heading")
+    expect(response.body).to include("panel-toggle-group")
+    expect(document.at_css("#toggle-preview .panel-toggle svg.size-3\\.5")).to be_present
+    expect(document.css("#toggle_group_panel_light-alignment .panel-toggle svg.size-3\\.5").size).to eq(3)
     expect(response.body).to include('data-toast-variant="danger"')
     expect(response.body).to include('data-variant="destructive"')
     expect(response.body).to include("stylesheet")
