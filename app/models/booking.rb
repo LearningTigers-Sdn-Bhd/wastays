@@ -66,6 +66,9 @@ class Booking < ApplicationRecord
   end
 
   STATUSES = %w[pending confirmed review_no_show checked_in review_due_out checkout_required cancelled completed overbooked no_show].freeze
+  # Statuses that occupy a room on the timeline (arrival/occupied/departure). Shared by the
+  # Stay View loader and its filter contract so both describe the same set of bookings.
+  OCCUPYING_STATUSES = %w[confirmed review_no_show checked_in review_due_out checkout_required completed].freeze
   PAYMENT_STATUSES = %w[pending authorized partial captured failed refunded].freeze
   PAYOUT_STATUSES = %w[pending processing paid].freeze
 
@@ -251,7 +254,7 @@ class Booking < ApplicationRecord
   end
 
   def group_booking?
-    group_booking_id.present? || booking_rooms.size > 1
+    group_booking_id.present?
   end
 
   def payout_eligible?

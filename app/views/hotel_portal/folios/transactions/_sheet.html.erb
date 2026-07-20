@@ -5,7 +5,7 @@
     <%= hidden_field_tag "redirect_to_checkout", "true" if @redirect_to_checkout %>
     <%= hidden_field_tag "folio_origin", @folio_origin if @folio_origin.present? %>
 
-    <%= render "hotel_portal/bookings/board/partials/content_header",
+    <%= render "hotel_portal/shared/offcanvas/content_header",
       title: @sheet_title,
       subtitle: "#{@booking.confirmation_token} · #{@active_folio.display_name}",
       icon: cached_icon("receipt-text", stroke_width: 2.5, class: "size-5") %>
@@ -99,7 +99,7 @@
       </div>
     </div>
 
-    <%= render "hotel_portal/bookings/board/partials/content_footer",
+    <%= render "hotel_portal/shared/offcanvas/content_footer",
       show_full_page_link: false,
       submit_button: f.submit(@submit_label, class: "rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover") %>
   <% end %>

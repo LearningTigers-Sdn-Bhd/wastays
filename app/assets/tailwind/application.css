@@ -19,6 +19,8 @@
 @import "./panel/date-time-picker.css";
 @import "./panel/command-palette.css";
 @import "./panel/button.css";
+@import "./panel/toggle.css";
+@import "./panel/toggle-group.css";
 @import "./panel/badge.css";
 @import "./panel/avatar.css";
 @import "./panel/skeleton.css";
@@ -34,6 +36,7 @@
 @import "./panel/card.css";
 @import "./panel/metric-card.css";
 @import "./panel/table.css";
+@import "./panel/timeline.css";
 @import "./panel/floating.css";
 @import "./panel/dropdown-menu.css";
 @import "./panel/profile-menu.css";

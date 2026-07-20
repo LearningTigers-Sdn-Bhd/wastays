@@ -64,12 +64,8 @@ class HotelPortal::Bookings::CheckInsController < HotelPortal::BaseController
 
       respond_to do |format|
         format.turbo_stream do
-          if booking_timeline_board_request?
-            render turbo_stream: toast_stream(result.error, type: :error)
-          else
-            flash[:alert] = result.error
-            render_offcanvas_completion(check_in_success_path)
-          end
+          flash[:alert] = result.error
+          render_offcanvas_completion(check_in_success_path)
         end
         format.html do
           redirect_to check_in_success_path, alert: result.error, status: :see_other
@@ -151,13 +147,8 @@ class HotelPortal::Bookings::CheckInsController < HotelPortal::BaseController
   def check_in_success_path
     fallback = hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details")
     return offcanvas_return_to(fallback: fallback) if params[:return_to].present?
-    return board_hotel_bookings_path(current_hotel) if booking_timeline_board_request?
 
     fallback
-  end
-
-  def booking_timeline_board_request?
-    params[:source] == "booking_timeline_board" || request.referer&.include?("bookings/board")
   end
 
   def authorize_manage_bookings!

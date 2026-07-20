@@ -57,8 +57,21 @@ RSpec.describe Folios::SyncForecastedCharges do
     end
 
     it "does not treat one same-amount room charge as posted for every matching forecast" do
-      second_room = create(:booking_room, booking: booking, subtotal: 200.0)
+      group_booking = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group_booking, group_position: 1)
+      second_booking = create(
+        :booking,
+        hotel: hotel,
+        group_booking: group_booking,
+        group_position: 2,
+        status: "checked_in",
+        check_in: booking.check_in,
+        check_out: booking.check_out
+      )
+      second_room = create(:booking_room, booking: second_booking, subtotal: 200.0)
+      second_folio = create(:booking_folio, hotel: hotel, booking: second_booking)
       Folios::GenerateForecastedCharges.call(booking_folio: folio)
+      Folios::GenerateForecastedCharges.call(booking_folio: second_folio)
       create(
         :folio_transaction,
         booking_folio: folio,
@@ -73,8 +86,10 @@ RSpec.describe Folios::SyncForecastedCharges do
       )
 
       described_class.call(booking_folio: folio)
+      described_class.call(booking_folio: second_folio)
 
-      pending_today = folio.folio_forecasted_charges.forecast.where(stay_date: business_date, charge_kind: "accommodation")
+      expect(group_booking.bookings.reload).to all(satisfy { |child| child.booking_rooms.one? })
+      pending_today = second_folio.folio_forecasted_charges.forecast.where(stay_date: business_date, charge_kind: "accommodation")
       expect(pending_today.pluck(:identity)).to contain_exactly(second_room.id.to_s)
     end
 

@@ -1,0 +1,52 @@
+<%= turbo_frame_tag "stay_view_board", data: { turbo_action: "advance" } do %>
+  <div class="space-y-5">
+    <%= render PanelsUI::PageHeader.new(
+      title: "Stay View",
+      description: stay_view_board_description(board.view_mode)
+    ) do |header| %>
+      <% header.with_caption do %>
+        <%= stay_view_board_caption(board.view_mode) %>
+      <% end %>
+      <% header.with_actions do %>
+        <%= render PanelsUI::Tabs.new(id: "stay-view-modes", active: board.view_mode, variant: :pill, aria_label: "Stay View mode") do |tabs| %>
+          <% tabs.with_tab(
+            name: "timeline",
+            label: "Timeline",
+            icon: "timeline",
+            href: stay_view_path_for(state, view: :timeline, start_date: state.date_window.start_date, days: (state.date_window.days == 1 ? 14 : state.date_window.days), date: nil)
+          ) %>
+          <% tabs.with_tab(
+            name: "rooms",
+            label: "Rooms",
+            icon: "bed-double",
+            href: stay_view_path_for(state, view: :rooms, date: state.date_window.start_date, start_date: nil, days: nil)
+          ) %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <section class="space-y-4" aria-labelledby="stay-view-workspace-title">
+      <h2 id="stay-view-workspace-title" class="sr-only">Stay View workspace</h2>
+      <%= render "hotel_portal/stay_view/board/toolbar", board:, state: %>
+
+      <% if board.empty? %>
+        <div class="rounded-lg border border-border bg-card p-6 text-center">
+          <%= app_icon "bed-double", class: "mx-auto size-6 text-muted-foreground", aria: { hidden: true } %>
+          <h3 class="mt-3 text-base font-semibold text-foreground">No rooms to show</h3>
+          <p class="mt-1 text-sm text-muted-foreground">Clear the filters or configure room numbers before using Stay View.</p>
+          <% if board.filters.to_h.compact.any? %>
+            <div class="mt-4">
+              <%= render PanelsUI::Button.new(href: stay_view_path_for(state, room_type_id: nil, rate_plan_id: nil, occupancy: nil, physical_status: nil, room_state: nil), variant: :secondary, size: :sm) do %>
+                Clear filters
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% elsif board.view_mode == :rooms %>
+        <%= render "hotel_portal/stay_view/board/room_view", board:, state: %>
+      <% else %>
+        <%= render "hotel_portal/stay_view/board/timeline_view", board:, state: %>
+      <% end %>
+    </section>
+  </div>
+<% end %>

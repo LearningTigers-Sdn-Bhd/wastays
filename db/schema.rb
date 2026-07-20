@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_17_053008) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -401,6 +401,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_17_053008) do
     t.datetime "updated_at", null: false
     t.string "room_number"
     t.bigint "rate_plan_id"
+    t.index ["booking_id"], name: "idx_booking_rooms_unique_booking", unique: true
     t.index ["booking_id"], name: "index_booking_rooms_on_booking_id"
     t.index ["rate_plan_id"], name: "index_booking_rooms_on_rate_plan_id"
     t.index ["room_type_id"], name: "index_booking_rooms_on_room_type_id"
@@ -926,7 +927,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_17_053008) do
     t.string "confirmation_token", null: false
     t.integer "reservation_number", null: false
     t.integer "receipt_number", null: false
+    t.string "channel_manager_reference"
+    t.integer "revision_number", default: 0, null: false
     t.index ["confirmation_token"], name: "index_group_bookings_on_confirmation_token", unique: true
+    t.index ["hotel_id", "channel_manager_reference"], name: "idx_group_bookings_channel_identity", unique: true, where: "((channel_manager_reference IS NOT NULL) AND ((channel_manager_reference)::text <> ''::text))"
+    t.index ["hotel_id", "external_reference"], name: "idx_group_bookings_external_identity", unique: true, where: "((external_reference IS NOT NULL) AND ((external_reference)::text <> ''::text))"
     t.index ["hotel_id", "receipt_number"], name: "idx_group_bookings_on_hotel_receipt_number", unique: true
     t.index ["hotel_id", "reservation_number"], name: "idx_group_bookings_on_hotel_reservation_number", unique: true
     t.index ["hotel_id", "status"], name: "index_group_bookings_on_hotel_id_and_status"
@@ -1369,6 +1374,30 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_17_053008) do
     t.datetime "updated_at", null: false
     t.index ["hotel_id", "business_date"], name: "index_journal_batches_on_hotel_id_and_business_date", unique: true
     t.index ["hotel_id"], name: "index_journal_batches_on_hotel_id"
+  end
+
+  create_table "legacy_booking_split_lineages", force: :cascade do |t|
+    t.bigint "legacy_booking_id", null: false
+    t.bigint "group_booking_id", null: false
+    t.bigint "child_booking_id", null: false
+    t.bigint "booking_room_id", null: false
+    t.boolean "anchor", default: false, null: false
+    t.string "review_status", default: "approved", null: false
+    t.text "review_reason"
+    t.uuid "batch_id", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["batch_id"], name: "index_legacy_booking_split_lineages_on_batch_id"
+    t.index ["booking_room_id"], name: "idx_legacy_split_lineages_unique_room", unique: true
+    t.index ["booking_room_id"], name: "index_legacy_booking_split_lineages_on_booking_room_id"
+    t.index ["child_booking_id"], name: "idx_legacy_split_lineages_unique_child", unique: true
+    t.index ["child_booking_id"], name: "index_legacy_booking_split_lineages_on_child_booking_id"
+    t.index ["group_booking_id"], name: "index_legacy_booking_split_lineages_on_group_booking_id"
+    t.index ["legacy_booking_id", "batch_id"], name: "idx_legacy_split_lineages_booking_batch"
+    t.index ["legacy_booking_id"], name: "idx_legacy_split_lineages_unique_anchor", unique: true, where: "(anchor = true)"
+    t.index ["legacy_booking_id"], name: "index_legacy_booking_split_lineages_on_legacy_booking_id"
+    t.check_constraint "review_status::text = ANY (ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying]::text[])", name: "legacy_split_lineages_review_status_allowed"
   end
 
   create_table "margin_rules", force: :cascade do |t|
@@ -1854,6 +1883,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_17_053008) do
     t.boolean "priority", default: false, null: false
     t.boolean "dnd", default: false, null: false
     t.date "dnd_date"
+    t.text "priority_note"
     t.index ["hotel_id", "dnd", "dnd_date"], name: "index_room_statuses_on_hotel_id_and_dnd_and_dnd_date"
     t.index ["hotel_id", "priority"], name: "index_room_statuses_on_hotel_id_and_priority"
     t.index ["hotel_id", "room_type_id", "room_number"], name: "idx_room_statuses_on_hotel_room_type_number", unique: true
@@ -2166,6 +2196,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_17_053008) do
   add_foreign_key "invitations", "users", column: "invited_by_user_id"
   add_foreign_key "journal_batch_entries", "journal_batches"
   add_foreign_key "journal_batches", "hotels"
+  add_foreign_key "legacy_booking_split_lineages", "booking_rooms"
+  add_foreign_key "legacy_booking_split_lineages", "bookings", column: "child_booking_id"
+  add_foreign_key "legacy_booking_split_lineages", "bookings", column: "legacy_booking_id"
+  add_foreign_key "legacy_booking_split_lineages", "group_bookings"
   add_foreign_key "nearby_attractions", "hotels"
   add_foreign_key "night_audit_financial_summaries", "night_audits"
   add_foreign_key "night_audit_logs", "hotels"

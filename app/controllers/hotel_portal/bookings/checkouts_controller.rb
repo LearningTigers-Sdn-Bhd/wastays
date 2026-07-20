@@ -38,12 +38,8 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
 
         respond_to do |format|
           format.turbo_stream do
-            if booking_timeline_board_request?
-              render turbo_stream: toast_stream(result.error, type: :error)
-            else
-              flash[:alert] = result.error
-              render_offcanvas_completion(booking_details_path)
-            end
+            flash[:alert] = result.error
+            render_offcanvas_completion(booking_details_path)
           end
           format.html do
             redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: result.error, status: :see_other
@@ -143,22 +139,14 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
 
       respond_to do |format|
         format.turbo_stream do
-          if booking_timeline_board_request?
-            render turbo_stream: toast_stream(result.error, type: :error)
-          else
-            flash[:alert] = result.error
-            render_offcanvas_completion(booking_details_path)
-          end
+          flash[:alert] = result.error
+          render_offcanvas_completion(booking_details_path)
         end
         format.html do
           redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: result.error, status: :see_other
         end
       end
     end
-  end
-
-  def booking_timeline_board_request?
-    params[:source] == "booking_timeline_board" || request.referer&.include?("bookings/board")
   end
 
   def check_out_from_sheet(timestamp)
@@ -339,7 +327,6 @@ class HotelPortal::Bookings::CheckoutsController < HotelPortal::BaseController
   def checkout_success_path
     fallback = hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details", checkout_success: true)
     return offcanvas_return_to(fallback: fallback) if params[:return_to].present?
-    return board_hotel_bookings_path(current_hotel) if booking_timeline_board_request?
 
     fallback
   end

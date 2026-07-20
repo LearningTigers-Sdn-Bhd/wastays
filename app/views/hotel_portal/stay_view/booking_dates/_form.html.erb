@@ -1,0 +1,23 @@
+<div class="flex h-full flex-col bg-card">
+  <%= render "hotel_portal/stay_view/sheet_header", title: "Change stay dates", subtitle: @booking.guest_name %>
+  <%= form_with scope: :booking, url: hotel_stay_view_booking_dates_path(current_hotel, @booking), method: :patch, class: "flex min-h-0 flex-1 flex-col", data: { turbo_stream: true } do |form| %>
+    <%= render "hotel_portal/stay_view/state_fields", state: stay_view_state, return_to: @return_to %>
+    <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
+      <%= render "hotel_portal/stay_view/errors", record: @booking, title: "The stay dates could not be changed." %>
+      <% if pointer_proposal? %>
+        <p class="text-sm text-muted-foreground">Review the proposed dates. Availability will be checked again when you confirm.</p>
+      <% end %>
+      <p class="text-sm text-muted-foreground">The assigned room stays the same. Use Move or reassign if the room also needs to change.</p>
+      <%= render PanelsUI::FormField.new(form:, attribute: :check_in, label: "Check-in", required: true) do |field| %>
+        <% field.with_date_picker(value: @check_in_value, linked_to: :check_out) %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :check_out, label: "Checkout", required: true) do |field| %>
+        <% field.with_date_picker(value: @check_out_value, min: @check_in_value) %>
+      <% end %>
+    </div>
+    <div class="flex justify-end gap-2 border-t border-border p-4">
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "click->offcanvas#close" }) do %>Cancel<% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Save dates<% end %>
+    </div>
+  <% end %>
+</div>

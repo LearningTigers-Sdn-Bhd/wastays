@@ -128,14 +128,18 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
   end
 
   describe "rooms" do
-    it "totals booked quantity and exposes room number and type rows" do
+    it "exposes one room row for each child of a multi-room group booking" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
       deluxe = create(:room_type, hotel: hotel, name: "Deluxe King")
       family = create(:room_type, hotel: hotel, name: "Family Suite")
       create(:booking_room, booking: booking, room_type: deluxe, room_number: "101")
-      create(:booking_room, booking: booking, room_type: family, room_number: nil)
+      create(:booking_room, booking: sibling, room_type: family, room_number: nil)
+      sibling_presenter = described_class.new(sibling)
 
-      expect(presenter.room_count).to eq(2)
-      expect(presenter.rooms.map(&:to_h)).to eq(
+      expect([ presenter.room_count, sibling_presenter.room_count ]).to eq([ 1, 1 ])
+      expect((presenter.rooms + sibling_presenter.rooms).map(&:to_h)).to eq(
         [
           { room_number: "101", room_type: "Deluxe King" },
           { room_number: "Unassigned", room_type: "Family Suite" }
@@ -171,11 +175,25 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
     end
 
     it "renders every room and night combination" do
-      booking.update!(check_in: Time.zone.local(2026, 7, 10, 15), check_out: Time.zone.local(2026, 7, 12, 11))
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(
+        check_in: Time.zone.local(2026, 7, 10, 15),
+        check_out: Time.zone.local(2026, 7, 12, 11),
+        group_booking: group,
+        group_position: 1
+      )
+      sibling = create(
+        :booking,
+        hotel: hotel,
+        check_in: booking.check_in,
+        check_out: booking.check_out,
+        group_booking: group,
+        group_position: 2
+      )
       create(:booking_room, booking: booking, room_number: "201")
-      create(:booking_room, booking: booking, room_number: "202")
+      create(:booking_room, booking: sibling, room_number: "202")
 
-      rows = described_class.new(booking.reload).room_rate_rows
+      rows = described_class.new(booking.reload).room_rate_rows + described_class.new(sibling.reload).room_rate_rows
 
       expect(rows.size).to eq(4)
       expect(rows.map(&:room)).to contain_exactly("201", "201", "202", "202")
@@ -347,13 +365,16 @@ RSpec.describe HotelPortal::BookingControlPanelPresenter do
   end
 
   describe "context tree groups" do
-    it "groups room context by room type and room number" do
+    it "groups each group booking child room by room type and room number" do
+      group_booking = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group_booking, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group_booking, group_position: 2)
       deluxe = create(:room_type, hotel: hotel, name: "Deluxe King")
       family = create(:room_type, hotel: hotel, name: "Family Suite")
       create(:booking_room, booking: booking, room_type: deluxe, room_number: "101")
-      create(:booking_room, booking: booking, room_type: family, room_number: "201")
+      create(:booking_room, booking: sibling, room_type: family, room_number: "201")
 
-      groups = presenter.room_tree_groups
+      groups = presenter.room_tree_groups + described_class.new(sibling).room_tree_groups
 
       expect(groups.map(&:label)).to contain_exactly("Deluxe King", "Family Suite")
       expect(groups.flat_map(&:rows).map(&:label)).to contain_exactly("101", "201")

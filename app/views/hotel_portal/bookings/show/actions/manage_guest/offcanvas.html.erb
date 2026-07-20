@@ -1,6 +1,6 @@
 <%= turbo_frame_tag "offcanvas_drawer" do %>
   <div class="flex h-full flex-col bg-card">
-    <%= render "hotel_portal/bookings/board/partials/content_header",
+    <%= render "hotel_portal/shared/offcanvas/content_header",
       title: @mode == "add" ? "Add Additional Guest" : "Edit Guest",
       subtitle: @booking.guest_name,
       icon: cached_icon(@mode == "add" ? "user-plus" : "user-pen", class: "size-5") %>

@@ -179,6 +179,7 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     JS
     click_button "Save & Update Guest Record"
 
+    expect(page).to have_content("Guest details and guest record updated.")
     expect(page).to have_field("Full Name", with: "Shared Guest Name")
     expect(booking.reload.primary_guest.name).to eq("Shared Guest Name")
   end

@@ -45,7 +45,7 @@ module HotelPortal
       front_desk_children = [
         NavItem.new(label: "Reservations", path: hotel_front_desk_path(current_hotel), search_text: "Reservations Front Desk Arrivals In-House Guests Departures Check-in Check-out", active: controller_name == "front_desk", icon: "calendar-check-2"),
         NavItem.new(label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory Front Desk", active: controller_name == "guests", icon: "user", permission: "view_guest_records", plan_feature: "unified_guest_profile"),
-        NavItem.new(label: "Room Status", path: hotel_room_status_board_path(current_hotel), search_text: "Room Status Housekeeping Front Desk", active: controller_name == "room_status_board", icon: "layout-grid", permission: [ "view_room_readiness", "manage_room_status" ], plan_feature: "room_status_board"),
+        NavItem.new(label: "Stay View", path: hotel_stay_view_path(current_hotel), search_text: "Stay View Timeline Board Room Status Housekeeping Planning Operations Calendar Tape Chart Front Desk", active: controller_path == "hotel_portal/stay_view/board", icon: "table-2", permission: [ "view_bookings", "manage_bookings", "view_room_readiness", "manage_room_status" ]),
         NavItem.new(label: "Housekeeping Tasks", path: hotel_housekeeping_tasks_path(current_hotel), search_text: "Housekeeping Tasks Cleaning Room Status Front Desk", active: controller_name == "housekeeping_tasks", icon: "clipboard-check", permission: "manage_housekeeping_tasks", plan_feature: "task_assignment_minibar_log"),
         NavItem.new(label: "Requests", path: hotel_requests_path(current_hotel), search_text: "Requests Housekeeping Complaint Reservations", active: controller_name == "requests", icon: "clipboard-list", permission: "manage_requests", plan_feature: "task_assignment_minibar_log"),
         NavItem.new(label: "Night Audit", path: hotel_night_audits_path(current_hotel), search_text: "Night Audit Business Date Close Reports", active: controller_name == "night_audits", icon: "moon", permission: "manage_night_audit", plan_feature: "no_show_auto_handling")
@@ -53,7 +53,6 @@ module HotelPortal
       front_desk_active = front_desk_children.any?(&:active)
 
       reservations_children = [
-        NavItem.new(label: "Timeline Board", path: board_hotel_bookings_path(current_hotel), search_text: "Timeline Board Booking Calendar Tape Chart Reservations", active: controller_path == "hotel_portal/bookings/board", icon: "table-2", permission: [ "view_reservation_board", "manage_bookings" ]),
         NavItem.new(label: "Rates & Inventory", path: hotel_inventory_index_path(current_hotel), search_text: "Rates Inventory Availability Pricing Reservations", active: controller_name == "inventory_dashboards", icon: "calendar-range", permission: "manage_hotel_profile")
       ]
       reservations_active = reservations_children.any?(&:active)
@@ -74,7 +73,7 @@ module HotelPortal
         NavSection.new(label: "", items: [
           NavItem.new(label: "Dashboard", path: hotel_dashboard_path(current_hotel), search_text: "Dashboard Home", active: controller_name == "dashboard", icon: "layout-dashboard", permission: "view_bookings"),
           NavItem.new(label: "Front Office", path: hotel_front_desk_path(current_hotel), search_text: "Front Office Reservations Guest Operations", active: front_desk_active, icon: "monitor", children: front_desk_children),
-          NavItem.new(label: "Planning & Inventory", path: board_hotel_bookings_path(current_hotel), search_text: "Planning Inventory Timeline Rates Availability", active: reservations_active, icon: "calendar", children: reservations_children)
+          NavItem.new(label: "Planning & Inventory", path: hotel_inventory_index_path(current_hotel), search_text: "Planning Inventory Rates Availability", active: reservations_active, icon: "calendar", children: reservations_children)
         ]),
         NavSection.new(label: "Billing", items: [
           NavItem.new(label: "Folios", path: hotel_folios_path(current_hotel), search_text: "Folios Ledger Guest Balances Billing", active: controller_name == "folios" && action_name == "index", icon: "book-open", permission: "view_bookings"),

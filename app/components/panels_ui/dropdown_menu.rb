@@ -157,7 +157,8 @@ module PanelsUI
           checkbox: Checkbox,
           radio_group: RadioGroup,
           group: ->(**args) { Group.new(**args) },
-          separator: Separator
+          separator: Separator,
+          submenu: ->(**args) { Submenu.new(**args) }
         }
       end
       def with_item(...) = with_entry_item(...)
@@ -165,6 +166,7 @@ module PanelsUI
       def with_radio_group(...) = with_entry_radio_group(...)
       def with_group(...) = with_entry_group(...)
       def with_separator(...) = with_entry_separator(...)
+      def with_submenu(...) = with_entry_submenu(...)
     end
 
     class Group < PanelsUI::BaseComponent

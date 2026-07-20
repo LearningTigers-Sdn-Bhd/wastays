@@ -93,16 +93,20 @@ RSpec.describe Folios::CreateFolio do
   end
 
   it "creates and promotes a room-scoped folio without disturbing other primary scopes" do
-    first_room = create(:booking_room, booking: booking)
-    second_room = create(:booking_room, booking: booking)
-    first_room_primary = create(:booking_folio, booking: booking, hotel: hotel, booking_room: first_room, folio_number: 103)
+    group_booking = create(:group_booking, hotel: hotel)
+    booking.update!(group_booking: group_booking, group_position: 1)
+    sibling = create(:booking, hotel: hotel, group_booking: group_booking, group_position: 2)
+    room = create(:booking_room, booking: booking)
+    sibling_room = create(:booking_room, booking: sibling)
+    old_room_primary = create(:booking_folio, booking: booking, hotel: hotel, booking_room: room, folio_number: 103)
+    sibling_primary = create(:booking_folio, booking: sibling, hotel: hotel, booking_room: sibling_room, folio_number: 104)
 
     result = described_class.call(
       booking: booking,
       user: user,
       attributes: {
-        booking_room_id: second_room.id,
-        name: "Room 2 Guest Folio",
+        booking_room_id: room.id,
+        name: "Room Guest Folio",
         folio_type: "guest",
         payer_type: "guest",
         is_primary: true,
@@ -111,11 +115,13 @@ RSpec.describe Folios::CreateFolio do
     )
 
     expect(result).to be_success
-    expect(result.folio.booking_room).to eq(second_room)
+    expect(group_booking.bookings.reload).to all(satisfy { |child| child.booking_rooms.one? })
+    expect(result.folio.booking_room).to eq(room)
     expect(result.folio).to be_is_primary
     expect(guest_folio.reload).to be_is_primary
-    expect(first_room_primary.reload).to be_is_primary
-    expect(FolioOperationLog.last.metadata["booking_room_id"]).to eq(second_room.id)
+    expect(old_room_primary.reload).not_to be_is_primary
+    expect(sibling_primary.reload).to be_is_primary
+    expect(FolioOperationLog.last.metadata["booking_room_id"]).to eq(room.id)
   end
 
   it "rejects room scope from another booking" do

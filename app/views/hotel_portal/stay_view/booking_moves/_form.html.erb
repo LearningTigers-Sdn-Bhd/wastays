@@ -1,0 +1,29 @@
+<div class="flex h-full flex-col bg-card">
+  <%= render "hotel_portal/stay_view/sheet_header", title: "Move or reassign stay", subtitle: @booking.guest_name %>
+
+  <%= form_with scope: :booking, url: hotel_stay_view_booking_move_path(current_hotel, @booking), method: :patch, class: "flex min-h-0 flex-1 flex-col", data: { turbo_stream: true } do |form| %>
+    <%= render "hotel_portal/stay_view/state_fields", state: stay_view_state, return_to: @return_to %>
+    <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
+      <%= render "hotel_portal/stay_view/errors", record: @booking, title: "The stay could not be moved." %>
+      <% if pointer_proposal? %>
+        <p class="text-sm text-muted-foreground">Review the proposed room and date. Availability will be checked again when you confirm.</p>
+      <% end %>
+
+      <dl class="grid gap-3 rounded-md border border-border bg-muted p-3 text-sm sm:grid-cols-2">
+        <div><dt class="text-xs text-muted-foreground">Current dates</dt><dd class="mt-1 font-medium text-foreground"><%= @booking.check_in.to_date.to_fs(:medium) %> – <%= @booking.check_out.to_date.to_fs(:medium) %></dd></div>
+        <div><dt class="text-xs text-muted-foreground">Current room</dt><dd class="mt-1 font-medium text-foreground"><%= @original_room&.room_type&.name %> · <%= @original_room&.room_number %></dd></div>
+      </dl>
+
+      <%= render PanelsUI::FormField.new(form:, attribute: :check_in, label: "New check-in", hint: "The current stay duration will be preserved.", required: true) do |field| %>
+        <% field.with_date_picker(value: @check_in_value) %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :room_assignment, label: "Room", hint: "Availability is checked again when you confirm.", required: true) do |field| %>
+        <% field.with_select_menu(@room_assignment_choices, selected: @room_assignment_value, prompt: "Select a room") %>
+      <% end %>
+    </div>
+    <div class="flex justify-end gap-2 border-t border-border p-4">
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "click->offcanvas#close" }) do %>Cancel<% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Confirm move<% end %>
+    </div>
+  <% end %>
+</div>

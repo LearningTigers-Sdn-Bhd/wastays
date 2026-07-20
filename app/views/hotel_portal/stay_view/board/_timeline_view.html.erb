@@ -1,0 +1,84 @@
+<div class="space-y-3">
+  <%= render PanelsUI::Timeline::Table.new(
+    caption: "Room stays from #{state.date_window.start_date.to_fs(:long)} to #{(state.date_window.end_date - 1.day).to_fs(:long)}",
+    track_count: state.date_window.days * 2,
+    density: state.density,
+    id: "stay-view-timeline",
+    data: {
+      controller: "stay-view--interaction stay-view--viewport",
+      "stay-view--interaction-long-press-value": 350,
+      "stay-view--interaction-drag-threshold-value": 6,
+      "stay-view--interaction-touch-tolerance-value": 8,
+      "stay-view--interaction-drawer-id-value": "offcanvas_drawer",
+      "stay-view--viewport-state-key-value": state.query.to_query
+    }
+  ) do |timeline| %>
+    <% timeline.with_header(
+      room_label: "Room",
+      dates: state.date_window.dates.map do |date|
+        {
+          label: l(date, format: "%a"),
+          metadata: l(date, format: "%-d %b"),
+          accessible_label: l(date, format: :long),
+          current: date == state.date_window.operational_date
+        }
+      end
+    ) do %>
+      <%= form_with url: hotel_stay_view_path(current_hotel), method: :get,
+            class: "w-full",
+            data: {
+              controller: "stay-view--filters",
+              action: "change->stay-view--filters#submit turbo:submit-start->stay-view--filters#start turbo:submit-end->stay-view--filters#finish",
+              turbo_frame: "stay_view_board",
+              turbo_action: "advance"
+            } do |form| %>
+        <%= hidden_field_tag :view, board.view_mode %>
+        <%= hidden_field_tag :start_date, state.date_window.start_date.iso8601 %>
+        <%= hidden_field_tag :days, state.date_window.days %>
+        <%= hidden_field_tag :rate_plan_id, board.filters.rate_plan_id %>
+        <%= hidden_field_tag :occupancy, board.filters.occupancy %>
+        <%= hidden_field_tag :physical_status, board.filters.physical_status %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :room_type_id, label: "Filter rooms by room type", label_hidden: true, size: :sm, class: "w-full") do |field| %>
+          <% field.with_select_menu(
+            [ { label: "All room types", value: "" } ] + board.room_type_options.map { |option| { label: option.name, value: option.id } },
+            selected: board.filters.room_type_id
+          ) %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% board.room_groups.each do |room_group| %>
+      <% timeline.with_group(label: room_group.name, count: room_group.rooms.size) do |group| %>
+        <% room_group.inventory_summaries.each do |summary| %>
+          <% group.with_summary do %>
+            <%= render HotelPortal::StayView::RoomTypeDateSummary.new(
+              summary:,
+              room_type_name: room_group.name,
+              view_rates: board.capabilities.view_rates?
+            ) %>
+          <% end %>
+        <% end %>
+
+        <% room_group.rooms.each do |room| %>
+          <% group.with_custom_row(component: HotelPortal::StayView::TimelineRow.new(room:, state:)) %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% timeline.with_footer do |footer| %>
+      <% available_row = footer.with_row(label: "Available inventory") %>
+      <% board.footer_summaries.each do |summary| %>
+        <% available_row.with_summary do %>
+          <%= render HotelPortal::StayView::TimelineFooterMetric.new(summary:, metric: :available) %>
+        <% end %>
+      <% end %>
+
+      <% occupancy_row = footer.with_row(label: "Occupancy") %>
+      <% board.footer_summaries.each do |summary| %>
+        <% occupancy_row.with_summary do %>
+          <%= render HotelPortal::StayView::TimelineFooterMetric.new(summary:, metric: :occupancy) %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

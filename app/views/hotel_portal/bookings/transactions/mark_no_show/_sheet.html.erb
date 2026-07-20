@@ -1,7 +1,7 @@
 <div class="flex h-full flex-col bg-card">
   <% target_presenter = HotelPortal::BookingLifecycleTargetPresenter.new(booking: @booking, action: :mark_no_show) %>
   <% eligible_rows = target_presenter.render? ? target_presenter.rows.select(&:eligible) : [] %>
-  <%= render "hotel_portal/bookings/board/partials/content_header",
+  <%= render "hotel_portal/shared/offcanvas/content_header",
     title: "Mark as No-show",
     subtitle: @booking.guest_name,
     icon: cached_icon("user-x", class: "size-5 text-rose-600") %>
@@ -38,7 +38,7 @@
       </div>
       <% if @booking.group_booking_id? %></div></div><% end %>
     </div>
-    <%= render "hotel_portal/bookings/board/partials/content_footer",
+    <%= render "hotel_portal/shared/offcanvas/content_footer",
       show_full_page_link: false,
       submit_button: f.submit("Confirm No-show", class: "rounded-xl bg-rose-600 px-6 py-2.5 text-sm font-bold text-primary-foreground") %>
   <% end %>

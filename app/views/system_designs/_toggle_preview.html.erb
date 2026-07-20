@@ -1,0 +1,46 @@
+<section aria-labelledby="toggle-preview-heading" class="border-t border-border pt-8">
+  <h2 id="toggle-preview-heading" class="text-lg font-semibold text-foreground">Toggle</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    Two-state buttons for compact application controls, with optional hidden values for Rails forms.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, label| %>
+      <% scope = "toggle_#{theme.tr('-', '_')}" %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm"
+           data-theme="<%= theme %>"
+           data-controller="system-designs--toggle-preview"
+           data-action="panels-ui--toggle:change->system-designs--toggle-preview#show">
+        <h3 class="text-sm font-semibold"><%= label %> toggles</h3>
+        <div class="mt-4 flex flex-wrap items-center gap-2">
+          <%= render PanelsUI::Toggle.new(name: "#{scope}[rates]", pressed: true) do %>
+            <%= app_icon "badge-dollar-sign", class: "size-3.5", aria: { hidden: "true" } %>
+            Show rates
+          <% end %>
+          <%= render PanelsUI::Toggle.new(name: "#{scope}[restrictions]", variant: :outline) do %>
+            Restrictions
+          <% end %>
+          <%= render PanelsUI::Toggle.new(pressed: true, disabled: true) do %>
+            Locked on
+          <% end %>
+          <%= render PanelsUI::Toggle.new(
+                size: :icon,
+                variant: :outline,
+                aria_label: "Pin toolbar") do %>
+            <%= app_icon "pin", aria: { hidden: "true" } %>
+          <% end %>
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-center gap-2" aria-label="Toggle sizes">
+          <% %i[xs sm md lg].each do |size| %>
+            <%= render PanelsUI::Toggle.new(size: size) { size.to_s.upcase } %>
+          <% end %>
+        </div>
+
+        <output class="mt-4 block text-xs text-muted-foreground" data-system-designs--toggle-preview-target="output">
+          Press a form-backed toggle to inspect its value.
+        </output>
+      </div>
+    <% end %>
+  </div>
+</section>

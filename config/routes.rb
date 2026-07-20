@@ -77,6 +77,9 @@ Rails.application.routes.draw do
         resources :complaint_requests, only: [ :create ], module: :bookings
       end
     end
+    namespace :v2 do
+      resources :bookings, only: [ :show ]
+    end
   end
 
   # Public Concierge (front-desk QR)
@@ -294,13 +297,28 @@ Rails.application.routes.draw do
       post :resend, on: :member
     end
     resources :room_groups, except: [ :show ]
+    get "stay-view", to: "stay_view/board#index", as: :stay_view
+    scope "stay-view", module: :stay_view, as: :stay_view do
+      resources :bookings, only: [] do
+        resource :move, only: [ :edit, :update ], controller: "booking_moves"
+        resource :dates, only: [ :edit, :update ], controller: "booking_dates"
+      end
+      get "rooms/:room_type_id/:room_number/status", to: "room_operations#edit", as: :room_status
+      patch "rooms/:room_type_id/:room_number/status", to: "room_operations#update"
+      resources :room_blocks, only: [ :new, :edit, :create, :update, :destroy ] do
+        post :finish, on: :member
+      end
+      resources :housekeeping_requests, only: [] do
+        resource :assignment, only: [ :edit, :update ], controller: "housekeeping_assignments"
+        resource :status, only: [ :edit, :update ], controller: "housekeeping_statuses"
+      end
+    end
     resources :bookings, only: [ :index, :show, :update ] do
       collection do
         post :sync, to: "bookings/syncs#create"
         get :availability, to: "bookings/availabilities#show"
         get :rate_options, to: "bookings/rate_options#show"
         get :stay_price, to: "bookings/prices#show"
-        get :board, to: "bookings/board#index"
       end
 
       member do
@@ -600,11 +618,5 @@ Rails.application.routes.draw do
     resources :rate_plans, only: %i[create destroy]
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
-    get "room-status", to: "room_status_board#index", as: :room_status_board
-    get "room-status/housekeeping-requests/:room_number", to: "room_status_board#housekeeping_requests", as: :room_status_housekeeping_requests
-    resources :room_statuses, only: [ :update ]
-    resources :room_blocks, only: [ :new, :edit, :create, :update, :destroy ] do
-      post :finish, on: :member
-    end
   end
 end

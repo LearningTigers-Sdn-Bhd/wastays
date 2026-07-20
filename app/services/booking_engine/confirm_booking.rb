@@ -11,7 +11,7 @@ module BookingEngine
 
     def call
       @quote.with_lock do
-        if BookingRedesign.enabled? && multi_room_quote?
+        if multi_room_quote?
           return BookingEngine::ConfirmGroupBooking.call(quote: @quote, payment_details: @payment_details)
         end
 

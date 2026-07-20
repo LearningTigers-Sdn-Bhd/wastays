@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Hotel room status sidebar", type: :system do
+RSpec.describe "Hotel stay view sidebar", type: :system do
   let(:account) { create(:account) }
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
@@ -29,23 +29,23 @@ RSpec.describe "Hotel room status sidebar", type: :system do
     create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "room_status_board"), enabled: true)
   end
 
-  it "shows the Room Status link for users with view_room_readiness permission" do
+  it "shows the Stay View link for users with view_room_readiness permission" do
     sign_in_with_permissions("view_room_readiness")
 
     visit hotel_dashboard_path(hotel)
 
-    expect(page).to have_link("Room Status", href: hotel_room_status_board_path(hotel), visible: :all)
+    expect(page).to have_link("Stay View", href: hotel_stay_view_path(hotel), visible: :all)
   end
 
-  it "hides the Room Status link for users without room status permissions" do
+  it "hides the Stay View link for users without stay view permissions" do
     sign_in_with_permissions
 
     visit hotel_dashboard_path(hotel)
 
-    expect(page).to have_no_link("Room Status", href: hotel_room_status_board_path(hotel), visible: :all)
+    expect(page).to have_no_link("Stay View", href: hotel_stay_view_path(hotel), visible: :all)
   end
 
-  it "shows the Room Status link for account-level permissions only" do
+  it "shows the Stay View link for account-level permissions only" do
     user = sign_in_with_permissions
     account_role = create(:role, account: account)
     grant_permission(account_role, "view_room_readiness")
@@ -53,6 +53,6 @@ RSpec.describe "Hotel room status sidebar", type: :system do
 
     visit hotel_dashboard_path(hotel)
 
-    expect(page).to have_link("Room Status", href: hotel_room_status_board_path(hotel), visible: :all)
+    expect(page).to have_link("Stay View", href: hotel_stay_view_path(hotel), visible: :all)
   end
 end

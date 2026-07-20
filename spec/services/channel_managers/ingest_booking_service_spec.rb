@@ -237,11 +237,115 @@ RSpec.describe ChannelManagers::IngestBookingService do
       create(:room_inventory, room_type: other_room_type, date: date, quantity: 3, status: "open")
     end
 
-    expect { described_class.new(booking_data: data).call }
-      .to change { BookingAuditLog.where(auditable: existing).count }.by(1)
+    result = nil
+    expect { result = described_class.new(booking_data: data).call }
+      .to change { BookingAuditLog.where(auditable_type: "GroupBooking").count }.by(1)
 
-    audit = BookingAuditLog.where(auditable: existing).last
+    audit = BookingAuditLog.where(auditable: result.group_booking).last
     expect(audit.old_value["rooms"]).to include(a_string_including(room_type.name))
     expect(audit.new_value["rooms"]).to eq([ "2x Suite" ])
+  end
+
+  describe "multi-room reservations" do
+    let(:multi_room_data) do
+      booking_data.merge(
+        total_amount: 400.0,
+        rooms: [ { room_type: room_type, quantity: 2, amount: 400.0 } ]
+      )
+    end
+
+    it "creates one channel-owned group with one individually addressable booking per room" do
+      result = described_class.new(booking_data: multi_room_data).call
+
+      expect(result.success?).to be(true), result.message
+      expect(result.group_booking).to have_attributes(
+        hotel: hotel,
+        channel_manager_reference: "CM456",
+        external_reference: "EXT123",
+        revision_number: 1
+      )
+      expect(result.bookings.size).to eq(2)
+      expect(result.booking).to eq(result.bookings.first)
+      expect(result.bookings).to all(have_attributes(group_booking: result.group_booking))
+      expect(result.bookings.map { |booking| booking.booking_rooms.count }).to eq([ 1, 1 ])
+      expect(result.bookings).to all(have_attributes(channel_manager_reference: nil, external_reference: nil))
+      expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 0, 0 ])
+    end
+
+    it "ignores duplicate and older revisions without touching children, inventory, or audit" do
+      first = described_class.new(booking_data: multi_room_data).call
+      child_ids = first.bookings.map(&:id)
+      inventory = room_type.room_inventories.order(:date).pluck(:quantity)
+      audit_count = BookingAuditLog.where(auditable: first.group_booking).count
+
+      duplicate = described_class.new(booking_data: multi_room_data).call
+      older = described_class.new(booking_data: multi_room_data.merge(revision_number: 0)).call
+
+      expect(duplicate.success?).to be(true)
+      expect(older.success?).to be(true)
+      expect(duplicate.bookings.map(&:id)).to eq(child_ids)
+      expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq(inventory)
+      expect(BookingAuditLog.where(auditable: first.group_booking).count).to eq(audit_count)
+    end
+
+    it "updates children in place while reconciling dates, categories, and quantity" do
+      other_room_type = create(:room_type, hotel: hotel, name: "Suite")
+      first = described_class.new(booking_data: multi_room_data).call
+      original_ids = first.bookings.map(&:id)
+      new_check_in = booking_data[:check_in] + 3.days
+      new_check_out = booking_data[:check_out] + 3.days
+      (new_check_in...new_check_out).each do |date|
+        create(:room_inventory, room_type: room_type, date: date, quantity: 2, status: "open")
+        create(:room_inventory, room_type: other_room_type, date: date, quantity: 2, status: "open")
+      end
+      revised_data = multi_room_data.merge(
+        check_in: new_check_in,
+        check_out: new_check_out,
+        revision_number: 2,
+        rooms: [
+          { room_type: room_type, quantity: 1, amount: 200.0 },
+          { room_type: other_room_type, quantity: 2, amount: 400.0 }
+        ]
+      )
+
+      result = described_class.new(booking_data: revised_data).call
+
+      expect(result.success?).to be(true), result.message
+      expect(result.bookings.size).to eq(3)
+      expect(result.bookings.map(&:id)).to include(*original_ids)
+      expect(result.bookings.map { |booking| booking.booking_rooms.count }).to eq([ 1, 1, 1 ])
+      expect(result.bookings.map { |booking| booking.check_in.to_date }.uniq).to eq([ new_check_in ])
+      expect(result.bookings.map { |booking| booking.status }.uniq).to eq([ "confirmed" ])
+      expect(result.bookings.map { |booking| booking.booking_rooms.first.room_type.name }.tally)
+        .to eq(room_type.name => 1, "Suite" => 2)
+      expect(room_type.room_inventories.where(date: booking_data[:check_in]...booking_data[:check_out]).order(:date).pluck(:quantity)).to eq([ 2, 2 ])
+      expect(other_room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 0, 0 ])
+    end
+
+    it "cancels and retains the surplus child when room quantity decreases" do
+      first = described_class.new(booking_data: multi_room_data).call
+      original_ids = first.bookings.map(&:id)
+
+      result = described_class.new(booking_data: booking_data.merge(revision_number: 2)).call
+
+      expect(result.success?).to be(true), result.message
+      expect(result.bookings.size).to eq(2)
+      expect(original_ids).to include(result.booking.id)
+      expect(result.booking.booking_rooms.count).to eq(1)
+      expect(first.group_booking.bookings.reload.pluck(:id)).to match_array(original_ids)
+      expect(result.bookings.map(&:status).tally).to eq("confirmed" => 1, "cancelled" => 1)
+      expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 1, 1 ])
+    end
+
+    it "cancels every child and releases each room's inventory on a newer revision" do
+      first = described_class.new(booking_data: multi_room_data).call
+
+      result = described_class.new(booking_data: multi_room_data.merge(status: "cancelled", rooms: [], revision_number: 2)).call
+
+      expect(result.success?).to be(true), result.message
+      expect(first.group_booking.reload.status).to eq("cancelled")
+      expect(result.bookings.map(&:status).uniq).to eq([ "cancelled" ])
+      expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 2, 2 ])
+    end
   end
 end

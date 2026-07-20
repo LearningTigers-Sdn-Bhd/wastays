@@ -116,4 +116,51 @@ RSpec.describe "System design navigation", type: :system do
     expect(page).to have_current_path(%r{/system-design#alert-preview$}, url: true)
     expect(page).to have_css("a[href='#alert-preview'][aria-current='location']", count: 2, visible: :all)
   end
+
+  it "renders the timeline preview with responsive overflow and keyboard-accessible stays" do
+    page.current_window.resize_to(390, 844)
+    visit "/system-design#timeline-preview"
+
+    expect(page).to have_css("section[data-theme='panel-light'] #timeline-preview-panel-light")
+    expect(page).to have_css("section[data-theme='panel-dark'] #timeline-preview-panel-dark")
+    expect(page).to have_css(".panel-timeline__segment[data-emphasis='hatched']", visible: :all)
+    expect(page).to have_css(
+      "a#timeline-preview-booking-ada-panel-light-trigger[aria-label='Ada Lovelace, confirmed, room 101, Deluxe King, 20 July 2026 to 21 July 2026']",
+      text: "Ada Lovelace",
+      visible: :all
+    )
+
+    geometry = page.evaluate_script(<<~JS)
+      (() => {
+        const timeline = document.getElementById("timeline-preview-panel-light")
+        const header = timeline.querySelector(".panel-timeline__header")
+        const room = timeline.querySelector(".panel-timeline__room-summary")
+        const grace = timeline.querySelector("#timeline-preview-booking-grace-panel-light").getBoundingClientRect()
+        const ada = timeline.querySelector("#timeline-preview-booking-ada-panel-light").getBoundingClientRect()
+        return {
+          overflows: timeline.scrollWidth > timeline.clientWidth,
+          sequentialStaysDoNotOverlap: grace.right <= ada.left,
+          timelinePosition: getComputedStyle(timeline).position,
+          headerPosition: getComputedStyle(header).position,
+          roomPosition: getComputedStyle(room).position
+        }
+      })()
+    JS
+
+    expect(geometry).to include(
+      "overflows" => true,
+      "sequentialStaysDoNotOverlap" => true,
+      "timelinePosition" => "relative",
+      "headerPosition" => "sticky",
+      "roomPosition" => "sticky"
+    )
+
+    page.execute_script("document.getElementById('timeline-preview-panel-light').focus()")
+    target_id = "timeline-preview-booking-grace-panel-light-trigger"
+    10.times do
+      page.driver.browser.keyboard.type(:tab)
+      break if page.evaluate_script("document.activeElement.id") == target_id
+    end
+    expect(page.evaluate_script("document.activeElement.id")).to eq(target_id)
+  end
 end

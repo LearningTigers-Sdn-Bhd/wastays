@@ -14,6 +14,16 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: slug), enabled: true)
   end
 
+  def create_grouped_room_bookings(count:, hotel:, booking_attributes:, room_attributes:)
+    group = create(:group_booking, hotel: hotel)
+
+    count.times.map do |index|
+      booking = create(:booking, **booking_attributes, hotel: hotel, group_booking: group, group_position: index + 1)
+      create(:booking_room, **room_attributes, booking: booking)
+      booking
+    end
+  end
+
   before do
     [ "view_reports", "view_payouts" ].each do |slug|
       permission = Permission.find_by(slug: slug) || create(:permission, name: slug.titleize, slug: slug)
@@ -516,8 +526,12 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       room_type = create(:room_type, hotel: hotel, quantity: 10)
       create(:room_inventory, room_type: room_type, date: start_date, quantity: 8, status: "open")
       create(:room_inventory, room_type: room_type, date: end_date, quantity: 9, status: "open")
-      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, guest_name: "Occ Guest")
-      create_list(:booking_room, 2, booking: booking, room_type: room_type, subtotal: 150.0)
+      create_grouped_room_bookings(
+        count: 2,
+        hotel: hotel,
+        booking_attributes: { status: "confirmed", check_in: start_date, check_out: end_date + 1.day, guest_name: "Occ Guest" },
+        room_attributes: { room_type: room_type, subtotal: 150.0 }
+      )
 
       get daily_occupancy_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -573,14 +587,18 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
     it "does not include data from another hotel" do
       room_type = create(:room_type, hotel: create(:hotel), quantity: 10)
-      booking = create(:booking, hotel: room_type.hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
-      create_list(:booking_room, 5, booking: booking, room_type: room_type, subtotal: 100.0)
+      bookings = create_grouped_room_bookings(
+        count: 5,
+        hotel: room_type.hotel,
+        booking_attributes: { status: "confirmed", check_in: start_date, check_out: end_date + 1.day },
+        room_attributes: { room_type: room_type, subtotal: 100.0 }
+      )
 
       get daily_occupancy_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Daily Occupancy Report")
-      expect(response.body).not_to include(booking.confirmation_token)
+      bookings.each { |booking| expect(response.body).not_to include(booking.confirmation_token) }
     end
 
     it "defaults blank first load to today" do
@@ -605,8 +623,12 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
     it "exports CSV" do
       room_type = create(:room_type, hotel: hotel, quantity: 10)
-      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
-      create_list(:booking_room, 2, booking: booking, room_type: room_type, subtotal: 150.0)
+      create_grouped_room_bookings(
+        count: 2,
+        hotel: hotel,
+        booking_attributes: { status: "confirmed", check_in: start_date, check_out: end_date + 1.day },
+        room_attributes: { room_type: room_type, subtotal: 150.0 }
+      )
 
       get daily_occupancy_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -825,8 +847,12 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
     it "renders the manager flash report for the selected range" do
       room_type = create(:room_type, hotel: hotel, quantity: 10)
-      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
-      create_list(:booking_room, 2, booking: booking, room_type: room_type, subtotal: 200.0)
+      create_grouped_room_bookings(
+        count: 2,
+        hotel: hotel,
+        booking_attributes: { status: "confirmed", check_in: start_date, check_out: end_date + 1.day },
+        room_attributes: { room_type: room_type, subtotal: 200.0 }
+      )
 
       get managers_flash_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 

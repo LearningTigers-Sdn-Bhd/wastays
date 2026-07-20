@@ -19,4 +19,17 @@ RSpec.describe GroupBooking do
       expect(booking.receipt_number).to eq(2)
     end
   end
+
+  describe "channel identity" do
+    it "is unique within a hotel" do
+      hotel = create(:hotel)
+      create(:group_booking, hotel: hotel, channel_manager_reference: "channel-1", external_reference: "ota-1")
+
+      duplicate = build(:group_booking, hotel: hotel, channel_manager_reference: "channel-1", external_reference: "ota-1")
+
+      expect(duplicate).not_to be_valid
+      expect(duplicate.errors).to include(:channel_manager_reference, :external_reference)
+      expect(build(:group_booking, channel_manager_reference: "channel-1", external_reference: "ota-1")).to be_valid
+    end
+  end
 end
