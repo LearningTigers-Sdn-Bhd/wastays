@@ -409,6 +409,13 @@ Rails.application.routes.draw do
       get "repair-no-show-folio/:booking_id", to: "repair_no_show_folios#show", as: :repair_no_show_folio
       get "cancel-booking/:booking_id", to: "cancel_bookings#show", as: :cancel_booking
     end
+    scope "booking-actions", as: :booking_action, module: "bookings/actions" do
+      get "audit-trail/:booking_id", to: "audit_trails#show", as: :audit_trail
+      match "new-booking", to: "new_bookings#show", via: [ :get, :post ], as: :new_booking
+      match "quick-booking", to: "quick_bookings#show", via: [ :get, :post ], as: :quick_booking
+      match "walk-in-check-in", to: "walk_in_check_ins#show", via: [ :get, :post ], as: :walk_in_check_in
+      match "backdated-check-in", to: "backdated_check_ins#show", via: [ :get, :post ], as: :backdated_check_in
+    end
 
     resources :folios, only: [ :index, :show ], param: :booking_id do
       get :invoice, on: :member

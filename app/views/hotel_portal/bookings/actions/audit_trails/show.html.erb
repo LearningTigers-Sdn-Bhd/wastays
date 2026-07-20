@@ -1,0 +1,12 @@
+<%= render "hotel_portal/bookings/actions/shared/sheet",
+      id: "booking-audit-trail-sheet",
+      aria_label: @presenter.group_overview? ? "Group Audit Trail" : "Audit Trail",
+      size: :lg,
+      body_class: "px-0 py-0" do %>
+  <%= render "hotel_portal/booking_control_panels/audit_trails/booking_audit_log",
+        booking: @booking,
+        presenter: @presenter,
+        audit_logs: @audit_logs,
+        audit_history: @audit_history,
+        closeable: false %>
+<% end %>

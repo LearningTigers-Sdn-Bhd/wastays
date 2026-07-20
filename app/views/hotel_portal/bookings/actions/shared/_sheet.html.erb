@@ -1,0 +1,41 @@
+<%#
+  Reusable shell for booking-action Sheets.
+
+  Lazy-loaded into the `booking_action_sheet` Turbo Frame; panels-ui--sheet-frame
+  auto-opens the native <dialog> on connect and clears the frame on close.
+
+  Locals:
+    id          - dialog id (required)
+    title:      - visible title, OR
+    aria_label: - accessible label when there is no visible title
+    size:       - :sm | :md | :lg | :full (default :md)
+    side:       - :right | :left | :top | :bottom (default :right)
+    description:- optional sub-heading
+    body_class: - optional class override for the body region
+    dismissible:- default true
+
+  Yields the sheet body via the block.
+%>
+<% dismissible = local_assigns.fetch(:dismissible, true) %>
+<%= turbo_frame_tag "booking_action_sheet" do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: id,
+          side: local_assigns.fetch(:side, :right),
+          size: local_assigns.fetch(:size, :md),
+          title: local_assigns[:title],
+          aria_label: local_assigns[:aria_label],
+          description: local_assigns[:description],
+          dismissible: dismissible,
+          body_class: local_assigns[:body_class]) do |sheet| %>
+      <% sheet.with_body do %>
+        <%= yield %>
+      <% end %>
+      <% if local_assigns[:footer].present? %>
+        <% sheet.with_footer do %>
+          <%= footer %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

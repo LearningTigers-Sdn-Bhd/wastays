@@ -484,9 +484,8 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
 
         action = response.parsed_body.at_xpath("//a[normalize-space()='Audit trail']")
         expect(action).to be_present, "expected Audit trail on #{tab}"
-        expect(action["href"]).to eq(audit_trail_hotel_booking_control_panel_path(hotel, record))
-        expect(action["data-turbo-frame"]).to eq("offcanvas_drawer")
-        expect(action["data-offcanvas-variant"]).to eq("right")
+        expect(action["href"]).to eq(hotel_booking_action_audit_trail_path(hotel, record))
+        expect(action["data-turbo-frame"]).to eq("booking_action_sheet")
         menu = action.ancestors.find { |ancestor| ancestor["role"] == "menu" }
         expect(menu.css('[role="separator"]').size).to eq(1)
         group = action.ancestors.find { |ancestor| ancestor["role"] == "group" }

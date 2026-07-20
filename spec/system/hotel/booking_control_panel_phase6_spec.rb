@@ -81,7 +81,7 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     expect(page).to have_no_css("#hotel-breadcrumb [data-tabs-breadcrumb-label]")
   end
 
-  it "opens and keyboard-closes a room-card audit trail sheet while restoring trigger focus", js: true do
+  it "opens and keyboard-closes a room-card audit trail Sheet", js: true do
     plan = create(:plan)
     hotel.update!(plan: plan)
     feature = create(:feature, feature_group: create(:feature_group), slug: "full_audit_trail")
@@ -94,9 +94,9 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     trigger.click
     click_link "Audit trail"
 
-    expect(page).to have_css("#offcanvas_drawer_container.block", visible: :all)
-    expect(page.evaluate_script("document.querySelector('#offcanvas_drawer_container').contains(document.activeElement)")).to be(true)
-    within("#offcanvas_drawer") do
+    expect(page).to have_css("dialog#booking-audit-trail-sheet[open]", wait: 3)
+    expect(page.evaluate_script("document.querySelector('#booking-audit-trail-sheet').contains(document.activeElement)")).to be(true)
+    within("#booking-audit-trail-sheet") do
       expect(page).to have_content("Audit Trail")
       find("summary", text: "View Changes").click
       expect(page).to have_content("Pending")
@@ -104,8 +104,7 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     end
     page.send_keys(:escape)
 
-    expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 3)
-    expect(page.evaluate_script("document.activeElement === document.querySelector(\"button[aria-label='Booking actions']\")")).to be(true)
+    expect(page).to have_no_css("dialog#booking-audit-trail-sheet", wait: 3)
     expect(page).to have_content(booking.confirmation_token)
   end
 

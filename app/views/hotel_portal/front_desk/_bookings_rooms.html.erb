@@ -11,7 +11,7 @@
         <% total = booking.total_amount.to_d %>
         <% paid = [total - balance, 0].max %>
         <% actions = [{ label: "Open booking", path: hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details") }] %>
-        <% if current_user.has_permission?("view_bookings", hotel: current_hotel) && current_hotel.feature_enabled?("full_audit_trail") %><% actions << { label: "Audit trail", path: audit_trail_hotel_booking_control_panel_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } } %><% end %>
+        <% if current_user.has_permission?("view_bookings", hotel: current_hotel) && current_hotel.feature_enabled?("full_audit_trail") %><% actions << { label: "Audit trail", path: hotel_booking_action_audit_trail_path(current_hotel, booking), data: { turbo_frame: "booking_action_sheet" } } %><% end %>
         <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %><% actions << { label: "Print reservation voucher", path: hotel_booking_reservation_voucher_path(current_hotel, booking), data: { turbo: false }, target: "_blank" } %><% end %>
         <article class="front-desk-stay-card min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm <%= 'border-destructive bg-muted' if presenter.blacklisted? %>">
           <header class="flex min-w-0 items-stretch gap-2 border-b border-border p-3">
