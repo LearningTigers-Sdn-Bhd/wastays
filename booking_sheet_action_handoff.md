@@ -8,7 +8,8 @@
 > launcher across front desk, bookings index, and Stay View, (3) **Show Booking
 > summary + group Print/Send**, which also established the **two-frame stacking
 > pattern** and the `click_in_overlay` system-spec helper, (4) **Cancellation**, and
-> (5) **guest management + structured internal notes** (see below).
+> (5) **guest management + structured internal notes**, and (6) the complete
+> **stay-editing family** (dates, room assignment/move, rate, and booking details).
 
 ## Stack / conventions (must follow)
 
@@ -125,7 +126,7 @@ Rules of thumb:
 - Launchers repointed to the sheet:
   - `front_desk/index.html.erb`, `bookings/index/index.html.erb` (quick + walk-in + backdated).
   - Stay View: `stay_view/board/_toolbar.html.erb` (Walk-in + Add booking) and `stay_view_helper.rb` (`stay_view_cell_actions` + `stay_view_room_slot_actions` — backdated/walk-in/new).
-- **Stay View mechanism (do this pattern for future stay-view migrations):** `stay_view_action_data` (offcanvas `compact-right`) is shared by many *non-migrated* actions (moves, dates, housekeeping, room blocks) — **do not change it globally**. Added `stay_view_create_booking_data` (`{ turbo_frame: "booking_action_sheet" }`), set it on the create action hashes, and changed only those two builders' final `.map` to `action.fetch(:data, stay_view_action_data)` so per-action sheet data isn't clobbered.
+- **Stay View mechanism:** action hashes carry intent-specific frame data. Creation and stay-editing actions target `booking_action_sheet`; remaining legacy housekeeping/room-block actions retain `stay_view_action_data` and the Offcanvas. Do not change the legacy helper globally until those remaining callers migrate.
 - Specs: `spec/requests/hotel_portal/bookings/actions/booking_creations_spec.rb` (GET all 4 into the sheet incl. side assertions; POST create→redirect; walk-in create→checked-in; Turbo→`complete_sheet`; invalid re-render; backdate-reason guard; permission block). Updated `stay_view_spec.rb` create scenarios to assert on `#booking-creation-sheet`. Updated legacy-launcher assertions in `manual_bookings_spec.rb`, `bookings_spec.rb`, `front_desk_spec.rb`.
 - Legacy `transactions` create controllers/views are now **zero-caller (dead but present)** for rollback.
 
@@ -157,16 +158,29 @@ Rules of thumb:
 - Removed after caller count reached zero: `bookings/show/actions/**`, old guest/note REST controllers/routes, the shared legacy guest/note confirmation, and dormant guest list/drawer partials.
 - Specs: new guest/note service and request specs, plus end-to-end guest add/remove and note add/edit/history/delete browser flows in `booking_control_panel_phase6_spec.rb`.
 
+## Shipped #6 — Stay editing (dates / room / rate / booking details)
+
+- Routes (GET+PATCH): `edit-dates/:booking_id`, `edit-room/:booking_id`, `edit-rate/:booking_id`, and `edit-booking/:booking_id`, exposed as `hotel_booking_action_edit_{dates,room,rate,booking}_path`.
+- Intent-scoped controllers: `BookingDatesController`, `RoomAssignmentsController`, and `RateChangesController` include the shared `StayEditingForm` concern; `BookingEditsController` owns guest/contact/source/guarantee fields. Controllers orchestrate `Bookings::UpdateStayService` and re-render the requesting Sheet frame with 422 errors.
+- Date changes alone are group-aware through `Bookings::UpdateGroupStay`. Room, rate, and booking-detail edits remain per-booking so a Sheet never silently mutates siblings.
+- Stay View drag/resize proposals now open the matching Sheet without mutation. Room moves carry proposed room and dates into `RoomAssignmentsController`; date resize proposals go to `BookingDatesController`. `Bookings::ValidateStayProposal` performs the non-mutating room/date check.
+- Rate selection is centralized in `Bookings::RateSelection`. Standard plans use the plan ID token; walk-in/corporate tiers use `tier_<tier>_<plan_id>`. `UpdateStayService` persists the selected tier in each nightly snapshot, preserves manual overrides for date-only changes, and clears them for an explicit rate change.
+- Dynamic room/rate choices use PanelsUI select menus. `panels-ui--select-menu#replaceOptions` keeps the hidden native select and styled listbox synchronized when room type or stay dates change.
+- Launchers in the booking summary, booking control panel, and Stay View now target `booking_action_sheet` or the secondary frame as appropriate. The legacy amend-stay, timeline-edit, Stay View move/date controllers, views, routes, and `timeline_move_form_controller.js` were removed after their caller count reached zero.
+- Stay View viewport restoration now persists scroll/focus across Sheet completion reloads. `data-viewport-settled` marks completion of the single initial restore/center frame; Sheet close clears a consumed focus request so Escape does not leak stale focus into a later refresh. Do not add a second `turbo:load` restore path.
+- Specs: request coverage in `spec/requests/hotel_portal/bookings/actions/{booking_dates,booking_edits,rate_changes,room_assignments}_spec.rb`, service coverage for rate selection/update behavior, and keyboard/drag/resize/focus/scroll browser coverage in `spec/system/hotel/stay_view_spec.rb`.
+
 ## Verification status
 
-`bin/test bookings` → 580 examples, all pass. `booking_control_panel_phase6_spec.rb` → 11 examples, 0 failures, 2 pre-existing pending. Guest/note service and request specs are green. Rubocop clean. No `offcanvas` in any new guest/note file.
+Pre-stay-editing baseline: `bin/test bookings` → 580 examples, all pass; `booking_control_panel_phase6_spec.rb` → 11 examples, 0 failures, 2 pre-existing pending; Rubocop clean.
+
+Latest stay-editing verification: the original keyboard/focus/scroll flake passed 30 repeated runs, the selective-refresh scroll case passed 10 repeated runs, related focused Stay View examples passed, and `spec/system/panels_ui/sheet_spec.rb` passed 8/8. `git diff --check` was clean. A full post-migration domain/CI run has not yet been recorded in this handoff.
 
 ## Next actions (recommended order)
 
-1. Stay-editing (amend stay/rate, move or reassign, change dates, room assignment, extend). Reconcile the overlapping transaction and Stay View implementations before coding; do not copy the broken timeline launcher contract.
-2. Check-in and exception lifecycle (check in/edit time, existing-booking backdated check-in, undo check-in, mark no-show, reinstate).
-3. Late-checkout review, then full checkout last because it coordinates folios, early departure, audit blockers, groups, deposits, and side effects.
-4. Delete each remaining legacy action once its caller count hits zero; retire the offcanvas infrastructure last.
+1. Check-in and exception lifecycle (check in/edit time, existing-booking backdated check-in, undo check-in, mark no-show, reinstate).
+2. Late-checkout review, then full checkout last because it coordinates folios, early departure, audit blockers, groups, deposits, and side effects.
+3. Delete each remaining legacy action once its caller count hits zero; retire the offcanvas infrastructure last.
 
 ## Acceptance checklist (every migrated action)
 
@@ -182,7 +196,7 @@ Rules of thumb:
 
 - `PanelsUI::Sheet.new` raises unless `title:` or `aria_label:` is given. Use `aria_label:` when the body partial already renders its own heading (avoids a duplicate visible title).
 - Turbo-format render pitfall: `render template: "…show", layout: false` has no `.turbo_stream` variant → `MissingTemplate` on a Turbo submit. For failure re-renders use a `respond_to` that renders `turbo_stream.update("booking_action_sheet", partial: "…/form")` (see `render_new_booking_failure`).
-- Native `<dialog>` restores focus to whatever was focused at `showModal()` — do **not** hand-roll focus restoration.
+- Native `<dialog>` restores focus to whatever was focused at `showModal()`; rely on it for ordinary and stacked closes. Stay View completion is the exception because `complete_sheet` performs a page visit: its viewport controller persists the launcher ID and scroll snapshot across that reload.
 - **System-spec clicks inside an open sheet must use `click_in_overlay`** (`spec/support/overlay_interaction_helper.rb`), not `click_link`/`click_button`/`.click`. cuprite's coordinate hit-testing intermittently misses controls in the `<dialog>` top layer — a normal click reports success yet never lands, so the flow silently stalls (~40–60% flake). The helper focuses the element (so focus restoration still works) then dispatches the DOM click. Use it **only** inside an open modal dialog; elsewhere keep standard Capybara actions (they also verify clickability). Reads/assertions inside a sheet need no change. Close via Escape still uses `find("dialog#…").send_keys(:escape)`.
 - The shared `_sheet` renders into `turbo_frame_request_id` (default `booking_action_sheet`). A request spec hitting the route **without** a `Turbo-Frame` header gets the primary frame; pass `headers: { "Turbo-Frame" => "booking_action_sheet_secondary" }` to assert the stacked case.
 - `require_feature!(slug)` is in `PlanGated` (app-wide). Feature gating in specs: `hotel.update!(plan: create(:plan))` + `create(:plan_feature, plan: hotel.plan, feature: create(:feature, feature_group: create(:feature_group), slug: "…"), enabled: true)`.
