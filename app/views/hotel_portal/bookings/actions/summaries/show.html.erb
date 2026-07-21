@@ -36,56 +36,12 @@
       size: :lg,
       footer: sheet_footer do %>
   <div class="space-y-6">
-    <div class="flex flex-wrap items-center gap-2 border-b border-border pb-4">
-      <%= render PanelsUI::Button.new(
-            href: hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"),
-            variant: :primary,
-            size: :sm,
-            data: { turbo: false }) do %>
-        <%= app_icon "external-link", class: "size-4", aria: { hidden: true } %>
-        <span>Booking Control Panel</span>
-      <% end %>
-
-      <% if group_booking %>
-        <%= render PanelsUI::Button.new(
-              href: hotel_booking_action_group_print_send_path(current_hotel, booking, navigation),
-              variant: :secondary,
-              size: :sm,
-              data: { turbo_frame: "booking_action_sheet_secondary" }) do %>
-          <%= app_icon "file-text", class: "size-4", aria: { hidden: true } %>
-          <span>Print / Send</span>
-        <% end %>
-      <% else %>
-        <%= render "hotel_portal/bookings/actions/summaries/print_send_menu", booking: booking %>
-      <% end %>
-
-      <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && presenter.summary_actions.any? { |summary_action| summary_action.key == :cancel } %>
-        <%= render PanelsUI::Button.new(
-              href: hotel_booking_action_cancel_booking_path(current_hotel, booking, navigation),
-              variant: :destructive,
-              size: :sm,
-              data: { turbo_frame: "booking_action_sheet_secondary" }) do %>
-          <%= app_icon "circle-x", class: "size-4", aria: { hidden: true } %>
-          <span>Cancel booking</span>
-        <% end %>
-      <% end %>
-
-      <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && booking.status.in?(HotelPortal::BookingLifecycleTargetPresenter::ELIGIBLE_STATUSES.fetch(:amend_stay)) %>
-        <% [
-             [ "Edit dates", hotel_booking_action_edit_dates_path(current_hotel, booking, navigation), "calendar-range" ],
-             [ "Change room", hotel_booking_action_edit_room_path(current_hotel, booking, navigation), "bed-double" ],
-             [ "Change rate", hotel_booking_action_edit_rate_path(current_hotel, booking, navigation), "tag" ]
-           ].each do |label, href, icon| %>
-          <%= render PanelsUI::Button.new(
-                href: href,
-                variant: :secondary,
-                size: :sm,
-                data: { turbo_frame: "booking_action_sheet_secondary" }) do %>
-            <%= app_icon icon, class: "size-4", aria: { hidden: true } %>
-            <span><%= label %></span>
-          <% end %>
-        <% end %>
-      <% end %>
+    <div class="flex items-center border-b border-border pb-4">
+      <%= render "hotel_portal/bookings/actions/summaries/actions_menu",
+        booking:,
+        presenter:,
+        group_booking:,
+        navigation: %>
     </div>
 
     <% if group_booking %>

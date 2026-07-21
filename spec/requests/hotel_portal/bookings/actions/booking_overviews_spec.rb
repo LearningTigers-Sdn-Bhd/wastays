@@ -43,10 +43,11 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       expect(dialog["data-panels-ui-sheet-side"]).to eq("right")
       expect(dialog["class"]).to include("w-[36rem]")
       expect(dialog.text).to include("Ada Lovelace", "Booking No.", "Stay summary", booking.formatted_reservation_number, "Garden Suite", "MYR 480.00")
-      expect(dialog.text).to include("Booking Control Panel", "Print / Send", "Receipt", "Resend Confirmation")
+      expect(dialog.text).to include("Actions", "Booking Control Panel", "Receipt", "Resend Confirmation")
       expect(dialog.text).not_to include("Guest Registration Card")
       control_labels = dialog.css("a, button").map { |control| control.text.squish }
-      expect(control_labels).not_to include("Actions", "Check-in", "Cancel")
+      expect(control_labels).to include("Actions")
+      expect(control_labels).not_to include("Check-in", "Cancel booking")
       expect(response.body).not_to include("<!DOCTYPE html>")
     end
 
@@ -65,6 +66,20 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       expect(cancel["data-turbo-frame"]).to eq("booking_action_sheet_secondary")
     end
 
+    it "launches Check-in from the Actions dropdown into the secondary frame" do
+      role.permissions << manage_bookings
+
+      get hotel_booking_action_show_booking_path(hotel, booking, source: "stay_view", return_to: hotel_stay_view_path(hotel))
+
+      summary = Nokogiri::HTML(response.body).at_css("dialog#booking-summary-sheet")
+      check_in = summary.css("a").find { |candidate| candidate.text.squish == "Check-in" }
+      uri = URI.parse(check_in["href"])
+
+      expect(uri.path).to eq(hotel_booking_action_check_in_path(hotel, booking))
+      expect(Rack::Utils.parse_nested_query(uri.query)).to include("source" => "stay_view", "return_to" => hotel_stay_view_path(hotel))
+      expect(check_in["data-turbo-frame"]).to eq("booking_action_sheet_secondary")
+    end
+
     it "launches intent-scoped stay-editing actions into the secondary frame" do
       role.permissions << manage_bookings
 
@@ -76,6 +91,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
 
       expect(uri.path).to eq(hotel_booking_action_edit_dates_path(hotel, booking))
       expect(Rack::Utils.parse_nested_query(uri.query)).to include("source" => "stay_view", "return_to" => hotel_stay_view_path(hotel))
+      expect(Rack::Utils.parse_nested_query(uri.query)).not_to have_key("proposal")
       expect(edit_dates["data-turbo-frame"]).to eq("booking_action_sheet_secondary")
 
       labels = summary.css("a").map { |anchor| anchor.text.squish }
@@ -99,6 +115,14 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
 
       expect(response.body).to include("Guest Registration Card", "Issue Tourism Tax Voucher")
       expect(response.body).to include(issue_hotel_booking_tourism_tax_voucher_path(hotel, booking))
+    end
+
+    it "omits the tourism tax voucher when the booking has no tourism tax" do
+      role.permissions << manage_bookings
+
+      get hotel_booking_action_show_booking_path(hotel, booking)
+
+      expect(response.body).not_to include("Tourism Tax Voucher")
     end
 
     it "renders a group summary that launches Print / Send into the secondary frame" do
