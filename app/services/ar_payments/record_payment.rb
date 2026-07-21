@@ -43,6 +43,8 @@ module ArPayments
         return failure(e.message)
       end
 
+      auto_allocate!(payment) if allocation_rows.empty? && @hotel_corporate_account.auto_allocate_payments?
+
       success(payment)
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages.to_sentence)
@@ -166,6 +168,10 @@ module ArPayments
           end
         }
       )
+    end
+
+    def auto_allocate!(payment)
+      ArPayments::AutoAllocate.call(payment: payment, user: @user)
     end
 
     def success(payment)

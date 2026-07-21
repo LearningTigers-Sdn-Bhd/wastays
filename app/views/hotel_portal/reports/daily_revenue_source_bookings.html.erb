@@ -1,0 +1,47 @@
+<%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "right" } do %>
+  <div class="flex h-full min-h-0 flex-col bg-slate-100">
+    <header class="shrink-0 border-b border-slate-200 bg-white">
+      <div class="flex items-start justify-between gap-4 px-6 py-5">
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Daily Revenue Report</p>
+          <h2 class="mt-1 text-xl font-bold tracking-tight text-slate-950"><%= @detail.source_label %> Bookings</h2>
+          <p class="mt-1 text-xs font-medium text-slate-500"><%= @detail.start_date.strftime("%d %b %Y") %> – <%= @detail.end_date.strftime("%d %b %Y") %></p>
+        </div>
+        <button type="button" class="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" data-action="click->offcanvas#close" aria-label="Close">
+          <%= cached_icon "x", stroke_width: 2.5, class: "size-5" %>
+        </button>
+      </div>
+    </header>
+
+    <div class="min-h-0 flex-1 overflow-y-auto p-6">
+      <% if @detail.entries.any? %>
+        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <table class="w-full text-left text-sm">
+            <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+              <tr>
+                <th class="px-4 py-3">Booking</th>
+                <th class="px-4 py-3">Guest</th>
+                <th class="px-4 py-3">Stay</th>
+                <th class="px-4 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% @detail.entries.each do |entry| %>
+                <tr>
+                  <td class="px-4 py-3 font-semibold text-slate-900">
+                    <%= link_to entry.confirmation_token, hotel_booking_path(current_hotel, entry.id), class: "underline decoration-dotted underline-offset-2 hover:decoration-slate-600", data: { turbo_frame: "_top" } %>
+                  </td>
+                  <td class="px-4 py-3 text-slate-600"><%= entry.guest_name %></td>
+                  <td class="whitespace-nowrap px-4 py-3 text-slate-600"><%= entry.check_in.strftime("%d %b") %> – <%= entry.check_out.strftime("%d %b %Y") %></td>
+                  <td class="px-4 py-3 text-slate-600"><%= entry.status.humanize %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="px-6 py-10 text-center text-sm text-slate-500">No bookings found for this source.</p>
+      <% end %>
+    </div>
+  </div>
+<% end %>

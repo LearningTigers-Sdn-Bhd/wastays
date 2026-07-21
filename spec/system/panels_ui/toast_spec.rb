@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Toast", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=toast_preview" }
 
   # Scope trigger clicks to the toast section: the button label "Info" otherwise
   # substring-matches the "Informational" button in the Button preview above it.
@@ -27,8 +27,7 @@ RSpec.describe "PanelsUI::Toast", type: :system do
     toast_id = page.evaluate_script(<<~JS)
       window.toast("Short-lived", { type: "default", duration: 300 })
     JS
-    sleep 0.6
-    expect(page).to have_no_css("##{toast_id}")
+    expect(page).to have_no_css("##{toast_id}", wait: 5)
     expect(page.evaluate_script("window.Toast")).to be_nil
   end
 end

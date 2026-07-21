@@ -6,7 +6,7 @@ RSpec.describe Folios::ProcessCheckoutActions do
   let(:hotel) { create(:hotel) }
   let(:booking) { create(:booking, hotel: hotel, status: "checked_in", currency: "MYR") }
   let(:user) { create(:user, :superadmin) }
-  let(:company_relationship) { create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true) }
+  let(:company_relationship) { create(:hotel_corporate_account, :direct_bill, hotel: hotel) }
   let!(:guest_folio) { create(:booking_folio, booking: booking, hotel: hotel) }
   let!(:company_folio) { create(:booking_folio, :secondary, booking: booking, hotel: hotel, hotel_corporate_account: company_relationship) }
   let(:posting_date) { Date.current }
@@ -125,7 +125,7 @@ RSpec.describe Folios::ProcessCheckoutActions do
   end
 
   it "allows keeping Company & Government folios open without Direct Bill enabled" do
-    company_relationship.update!(direct_bill_enabled: false)
+    company_relationship.update!(relationship_type: "standard")
     create(:folio_transaction, booking_folio: company_folio, amount: 100)
 
     expect {
@@ -168,7 +168,7 @@ RSpec.describe Folios::ProcessCheckoutActions do
   end
 
   it "rejects Direct Bill when the Company & Government account is not eligible" do
-    company_relationship.update!(direct_bill_enabled: false)
+    company_relationship.update!(relationship_type: "standard")
     create(:folio_transaction, booking_folio: company_folio, amount: 100)
 
     result = call_service({

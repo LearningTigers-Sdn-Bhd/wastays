@@ -24,15 +24,30 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include("Received This Month")
-    expect(response.body).to include("Total Unapplied")
-    expect(response.body).to include("Needs Allocation")
+    expect(response.body).to include("Bank Transfers This Month")
+    expect(response.body).to include("Pending Submissions")
     expect(response.body).to include("BANK-AR-500")
-    expect(response.body).to include("Unapplied")
     expect(response.body).not_to include(hidden.reference_number)
     expect(response.body).to include(hotel_ar_payment_path(hotel, payment))
   end
 
-  it "filters by query, account, date, and allocation status" do
+  it "combines confirmed payments and pending submissions into one Payment Record list" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 250, reference_number: "COMBINED-PAY")
+    submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship, amount: 175, reference_number: "COMBINED-SLIP")
+    approved_submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship, amount: 90, reference_number: "COMBINED-APPROVED", status: "approved", ar_payment: payment, reviewed_by: user, reviewed_at: Time.current)
+
+    get hotel_ar_payments_path(hotel)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("COMBINED-PAY")
+    expect(response.body).to include("COMBINED-SLIP")
+    expect(response.body).to include("Pending Review")
+    expect(response.body).not_to include("COMBINED-APPROVED")
+    expect(response.body).to include(new_hotel_ar_payment_path(hotel, ar_payment_submission_id: submission.id))
+  end
+
+  it "filters by query, account, and date" do
     payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 200, received_at: Date.current, reference_number: "FILTER-ME")
     create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 300, reference_number: "HIDE-ME")
 
@@ -40,8 +55,7 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
       query: "FILTER-ME",
       hotel_corporate_account_id: payment.hotel_corporate_account_id,
       received_from: Date.current.iso8601,
-      received_to: Date.current.iso8601,
-      status: "unapplied"
+      received_to: Date.current.iso8601
     }
 
     expect(response.body).to include("FILTER-ME")

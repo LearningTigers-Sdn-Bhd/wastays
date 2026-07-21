@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::DatePicker", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=date_picker_preview" }
 
   def picker_css(theme, attribute)
     section = '[aria-labelledby="date-picker-preview-heading"]'
@@ -202,20 +202,23 @@ RSpec.describe "PanelsUI::DatePicker", type: :system do
         input.form.reset()
       })()
     JS
-    sleep 0.05
 
-    result = page.evaluate_script(<<~JS)
-      (() => {
-        const input = document.querySelector(#{picker_css('panel-light', 'report_window').to_json})
-        const picker = input.closest('.panel-date-picker')
-        const calendar = picker.querySelector('calendar-range')
-        return {
-          input: input.value,
-          calendar: calendar.value,
-          display: picker.querySelector('.panel-date-picker__value').textContent
-        }
-      })()
-    JS
+    result = nil
+    wait_until("date picker did not restore its reset state") do
+      result = page.evaluate_script(<<~JS)
+        (() => {
+          const input = document.querySelector(#{picker_css('panel-light', 'report_window').to_json})
+          const picker = input.closest('.panel-date-picker')
+          const calendar = picker.querySelector('calendar-range')
+          return {
+            input: input.value,
+            calendar: calendar.value,
+            display: picker.querySelector('.panel-date-picker__value').textContent
+          }
+        })()
+      JS
+      result["input"].match?(%r{\A\d{4}-\d{2}-\d{2}/\d{4}-\d{2}-\d{2}\z})
+    end
 
     expect(result["input"]).to match(%r{\A\d{4}-\d{2}-\d{2}/\d{4}-\d{2}-\d{2}\z})
     expect(result["calendar"]).to eq(result["input"])

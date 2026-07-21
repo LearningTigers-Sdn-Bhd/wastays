@@ -77,6 +77,31 @@ RSpec.describe ArPayments::RecordPayment do
     expect(result.error).to eq("Allocation for #{invoice.formatted_invoice_number} exceeds outstanding amount.")
   end
 
+  context "when the corporate account has auto-allocate enabled" do
+    let(:relationship) { create(:hotel_corporate_account, hotel: hotel, auto_allocate_payments: true) }
+
+    it "auto-applies an unallocated payment to the oldest open invoice" do
+      invoice = create_invoice(amount: 100)
+
+      result = call_service(amount: 40, allocations: {})
+
+      expect(result).to be_success
+      expect(invoice.reload).to have_attributes(paid_amount: 40.to_d, outstanding_amount: 60.to_d, status: "partially_paid")
+      expect(result.ar_payment.reload.unallocated_amount).to eq(0.to_d)
+    end
+
+    it "does not override allocations explicitly provided by the caller" do
+      invoice_one = create_invoice(amount: 100)
+      invoice_two = create_invoice(amount: 100)
+
+      result = call_service(amount: 100, allocations: { invoice_two.id => "100.00" })
+
+      expect(result).to be_success
+      expect(invoice_one.reload.outstanding_amount).to eq(100.to_d)
+      expect(invoice_two.reload.outstanding_amount).to eq(0.to_d)
+    end
+  end
+
   def call_service(amount:, allocations:)
     described_class.call(
       hotel: hotel,

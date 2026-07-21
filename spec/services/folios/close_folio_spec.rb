@@ -58,7 +58,7 @@ RSpec.describe Folios::CloseFolio do
   end
 
   it "rejects Direct Bill close when the company account is suspended" do
-    relationship = create(:hotel_corporate_account, hotel: booking.hotel, direct_bill_enabled: true, status: "active")
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel, status: "active")
     company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, hotel_corporate_account: relationship)
     relationship.suspend!
     create(:folio_transaction, booking_folio: company_folio, amount: 125)
@@ -83,7 +83,7 @@ RSpec.describe Folios::CloseFolio do
   end
 
   it "closes an eligible company folio as Direct Bill and creates an AR invoice" do
-    relationship = create(:hotel_corporate_account, hotel: booking.hotel, direct_bill_enabled: true, payment_terms_days: 30)
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel, payment_terms_days: 30)
     company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, hotel_corporate_account: relationship)
     create(:folio_transaction, booking_folio: company_folio, amount: 125)
 
@@ -118,7 +118,7 @@ RSpec.describe Folios::CloseFolio do
   end
 
   it "prevents duplicate AR invoices for the same folio" do
-    relationship = create(:hotel_corporate_account, hotel: booking.hotel, direct_bill_enabled: true)
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel)
     company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, hotel_corporate_account: relationship)
     create(:folio_transaction, booking_folio: company_folio, amount: 125)
     create(:ar_invoice, booking_folio: company_folio, hotel: booking.hotel, hotel_corporate_account: relationship)
@@ -131,7 +131,7 @@ RSpec.describe Folios::CloseFolio do
   end
 
   it "blocks Direct Bill above the corporate credit limit unless explicitly overridden" do
-    relationship = create(:hotel_corporate_account, hotel: booking.hotel, direct_bill_enabled: true, credit_limit: 100)
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel, credit_limit: 100)
     company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, hotel_corporate_account: relationship)
     create(:folio_transaction, booking_folio: company_folio, amount: 125)
 

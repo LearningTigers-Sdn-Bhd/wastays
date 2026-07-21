@@ -221,8 +221,7 @@ module ApplicationHelper
     occ = item.occupancy_snapshot || {}
     adults = (occ["adults"] || occ[:adults] || 0).to_i
     children = (occ["children"] || occ[:children] || 0).to_i
-    infants = (occ["infants"] || occ[:infants] || 0).to_i
-    total_pax = adults + children + infants
+    total_pax = adults + children
 
     quantity = item.respond_to?(:quantity) ? item.quantity : 1
 
@@ -235,7 +234,6 @@ module ApplicationHelper
     return [] unless rate_plan
 
     child_multiplier = rate_plan.child_price_multiplier || 1.to_d
-    infant_multiplier = rate_plan.infant_price_multiplier || 0.to_d
 
     # Sum up for the stay
     dates = item.nightly_rate_snapshot.keys.map { |d| Date.parse(d) }
@@ -244,7 +242,6 @@ module ApplicationHelper
 
     total_adults_cost = 0.to_d
     total_children_cost = 0.to_d
-    total_infants_cost = 0.to_d
     total_supplement = 0.to_d
 
     item.nightly_rate_snapshot.each do |date_str, snapshot|
@@ -254,7 +251,6 @@ module ApplicationHelper
 
       total_adults_cost += adults * base_price
       total_children_cost += children * base_price * child_multiplier
-      total_infants_cost += infants * base_price * infant_multiplier
 
       if total_pax == 1
         supplement = room_rate&.single_supplement || rate_plan.single_supplement || 0.to_d
@@ -285,17 +281,6 @@ module ApplicationHelper
       lines << {
         label: "#{children * quantity} Child(ren)",
         detail: "#{nights_count} night(s) @ #{formatted_rate} (#{(child_multiplier * 100).to_i}%)",
-        amount: formatted_total
-      }
-    end
-
-    if infants > 0
-      avg_infant_rate = (total_infants_cost / (infants * nights_count)).round(2)
-      formatted_rate = display_amount(avg_infant_rate, quote_currency: quote_curr, display_currency: display_currency, hotel: hotel)
-      formatted_total = display_amount(total_infants_cost * quantity, quote_currency: quote_curr, display_currency: display_currency, hotel: hotel)
-      lines << {
-        label: "#{infants * quantity} Infant(s)",
-        detail: "#{nights_count} night(s) @ #{formatted_rate} (#{(infant_multiplier * 100).to_i}%)",
         amount: formatted_total
       }
     end

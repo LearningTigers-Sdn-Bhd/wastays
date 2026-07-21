@@ -17,7 +17,7 @@
          class: "panel-input panel-date-picker__display",
          disabled: field_disabled?,
          aria: { labelledby: @labelled_by, describedby: @described_by, invalid: (@invalid ? "true" : nil), required: (@required ? "true" : nil) },
-         data: { "#{stimulus_identifier}-target" => "trigger" }) do %>
+         data: { "#{stimulus_identifier}-target" => "trigger", size: @size }) do %>
       <span class="panel-date-picker__value"
             data-<%= stimulus_identifier %>-target="display"
             data-placeholder="<%= placeholder_text %>"></span>

@@ -1,0 +1,106 @@
+<% date = state.date_window.start_date %>
+<% footer_actions = presentation.state.in?(%i[vacant departure]) ? stay_view_room_slot_actions(room, state) : [] %>
+<%= render PanelsUI::Card.new(
+  as: :article,
+  width: :full,
+  density: :compact,
+  variant: :outlined,
+  dividers: :always,
+  id: room.dom_id,
+  class: "h-full",
+  aria: { label: "Room #{room.room_number}, #{room.room_type_name}" },
+  data: { room_state: presentation.state }
+) do |card| %>
+  <% card.with_header(id: "#{room.dom_id}-header") do %>
+    <div class="space-y-2">
+      <div class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2" data-slot="stay-view-room-identity">
+        <div class="min-w-0">
+          <%= tag.public_send(heading_level, room.room_number, id: "#{room.dom_id}-title", class: "truncate text-sm font-semibold text-foreground") %>
+          <p class="truncate text-xs text-muted-foreground"><%= room.room_type_name %></p>
+        </div>
+        <%= render HotelPortal::StayView::OperationalStatusBadge.new(
+          room:,
+          status: presentation.state,
+          reference_date: date
+        ) %>
+      </div>
+      <%= render HotelPortal::StayView::NightlyRate.new(
+        summary: inventory_summary,
+        room_type_name: room.room_type_name,
+        view_rates: room.capabilities.view_rates?,
+        context: :room_card
+      ) %>
+      <%= render HotelPortal::StayView::RoomSummary.new(
+        room:,
+        state:,
+        show_identity: false,
+        layout: :split_controls,
+        class: "h-auto w-full p-0"
+      ) %>
+    </div>
+  <% end %>
+
+  <% card.with_card_content(class: "p-3", data: { slot: "stay-view-room-activity" }) do %>
+    <% case presentation.state %>
+    <% when :vacant %>
+      <div class="flex h-full min-h-16 items-center justify-center rounded-md border border-dashed border-border px-3 py-2 text-center">
+        <p class="text-sm text-muted-foreground">No activity today</p>
+      </div>
+    <% when :blocked %>
+      <%= render HotelPortal::StayView::RoomBlockItem.new(segment: presentation.current_block, state:) %>
+    <% when :turnover %>
+      <div class="flex h-full flex-col divide-y divide-border overflow-hidden rounded-md border border-border" data-slot="stay-view-room-turnover">
+        <%= render HotelPortal::StayView::RoomBookingItem.new(
+          segment: presentation.departure,
+          state:,
+          context: :departure,
+          surface: :joined
+        ) %>
+        <%= render HotelPortal::StayView::RoomBookingItem.new(
+          segment: presentation.current_booking,
+          state:,
+          context: :arrival,
+          surface: :joined
+        ) %>
+      </div>
+    <% when :departure %>
+      <%= render HotelPortal::StayView::RoomBookingItem.new(
+        segment: presentation.departure,
+        state:,
+        context: :departure
+      ) %>
+    <% when :occupied %>
+      <%= render HotelPortal::StayView::RoomBookingItem.new(
+        segment: presentation.current_booking,
+        state:,
+        context: :occupied
+      ) %>
+    <% when :arrival %>
+      <%= render HotelPortal::StayView::RoomBookingItem.new(
+        segment: presentation.current_booking,
+        state:,
+        context: :arrival
+      ) %>
+    <% end %>
+  <% end %>
+
+  <% if footer_actions.any? %>
+    <% card.with_footer(class: "p-2", data: { slot: "stay-view-room-footer" }) do %>
+      <%= render PanelsUI::ButtonGroup.new(class: "w-full", aria: { label: "Available room actions for room #{room.room_number} on #{I18n.l(date, format: :long)}" }) do %>
+        <% footer_actions.each do |action| %>
+          <%= render PanelsUI::Button.new(
+            href: action.fetch(:href),
+            variant: action.fetch(:variant),
+            size: :xs,
+            class: "min-w-0 flex-1 px-2",
+            aria_label: action.fetch(:aria_label),
+            data: action.fetch(:data)
+          ) do %>
+            <%= app_icon action.fetch(:icon), class: "size-3 shrink-0", aria: { hidden: true } %>
+            <span class="truncate"><%= action.fetch(:label) %></span>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

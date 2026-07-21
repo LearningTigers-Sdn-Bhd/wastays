@@ -4,7 +4,7 @@
 
 <%= turbo_frame_tag "offcanvas_drawer_secondary", data: { offcanvas_variant: "right" } do %>
   <div class="flex h-full flex-col bg-card">
-    <%= render "hotel_portal/bookings/board/partials/content_header",
+    <%= render "hotel_portal/shared/offcanvas/content_header",
       title: "Print / Send",
       subtitle: "Select an action per booking, or act on the whole group",
       icon: cached_icon("file-text", class: "size-5") %>

@@ -33,6 +33,32 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       end
       end
 
+  describe '#sync_rate_plan' do
+    let!(:hotel_mapping) { create(:channel_mapping, mappable: hotel, external_id: "ch_prop_123") }
+    let!(:room_type_mapping) { create(:channel_mapping, mappable: room_type, external_id: "ch_rt_123") }
+
+    it 'does not call Channex and returns nil for a per_person rate plan' do
+      hotel.update!(allow_pax_pricing: true)
+      rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type, sell_mode: "per_person")
+
+      expect(client_double).not_to receive(:post)
+      expect(client_double).not_to receive(:put)
+      expect(adapter.sync_rate_plan(rate_plan)).to be_nil
+    end
+
+    it 'still syncs a per_room rate plan (regression guard)' do
+      rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type, sell_mode: "per_room")
+      create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan)
+
+      allow(client_double).to receive(:post).and_return({ "data" => { "id" => "ch_rp_999" } })
+
+      result = adapter.sync_rate_plan(rate_plan)
+
+      expect(result).not_to be_nil
+      expect(client_double).to have_received(:post).with("/rate_plans", hash_including(rate_plan: hash_including(sell_mode: "per_room")))
+    end
+  end
+
   describe '#push_ari' do
     let(:start_date) { Date.current }
     let(:end_date) { start_date + 2.days }

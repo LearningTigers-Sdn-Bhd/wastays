@@ -59,6 +59,23 @@ RSpec.describe ArInvoices::AgingReport do
     )
   end
 
+  it "filters rows by account_types when provided" do
+    hotel = create(:hotel, default_currency: "MYR")
+    agent = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent",
+      corporate_account: create(:account, :corporate, name: "Sunset Travel Agency"))
+    company = create(:hotel_corporate_account, hotel: hotel, account_type: "company",
+      corporate_account: create(:account, :corporate, name: "Acme Sdn Bhd"))
+    as_of_date = Date.new(2026, 6, 25)
+
+    create_invoice(relationship: agent, amount: 100, due_on: as_of_date - 15.days)
+    create_invoice(relationship: company, amount: 200, due_on: as_of_date - 15.days)
+
+    report = described_class.call(hotel: hotel, as_of_date: as_of_date, account_types: %w[travel_agent airline])
+
+    expect(report.rows.map { |row| row.corporate_account.name }).to eq([ "Sunset Travel Agency" ])
+    expect(report.totals.fetch("MYR").total).to eq(100.to_d)
+  end
+
   def create_invoice(
     relationship:,
     amount:,

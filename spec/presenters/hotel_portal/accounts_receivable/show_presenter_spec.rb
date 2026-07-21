@@ -9,10 +9,10 @@ RSpec.describe HotelPortal::AccountsReceivable::ShowPresenter do
   let(:relationship) do
     create(
       :hotel_corporate_account,
+      :direct_bill,
       hotel: hotel,
       corporate_account: create(:account, :corporate, name: "Northstar Travel"),
-      payment_terms_days: 45,
-      direct_bill_enabled: true
+      payment_terms_days: 45
     )
   end
   let(:booking) { create(:booking, hotel: hotel, confirmation_token: "BK-NORTHSTAR") }

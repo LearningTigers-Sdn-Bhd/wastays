@@ -7,12 +7,12 @@
 
   <%= render PanelsUI::FormField.new(form: form, attribute: :date_preset, label: "Time Period", class: "w-full md:w-44") do |field| %>
     <% field.with_select_menu(
-          date_preset_options,
+          date_preset_options(include_single: !local_assigns.fetch(:single_date, false)),
           selected: date_preset,
           data: { action: "change->date-preset#toggleCustom" }) %>
   <% end %>
 
-  <div id="custom-date-range" class="<%= date_preset == 'custom' ? 'flex' : 'hidden' %> items-end gap-3">
+  <div id="custom-date-range" class="<%= %w[custom single].include?(date_preset) ? 'flex' : 'hidden' %> items-end gap-3">
     <% if local_assigns.fetch(:single_date, false) %>
       <%= render PanelsUI::FormField.new(form: form, attribute: :as_of_date, label: "As Of Date", label_hidden: true, class: "w-full md:w-44") do |field| %>
         <% field.with_date_picker(
@@ -21,15 +21,26 @@
              data: { action: "change->date-preset#submitDate" }) %>
       <% end %>
     <% else %>
-      <%= render PanelsUI::FormField.new(form: form, attribute: :date_range, label: "Date Range", label_hidden: true, class: "w-full md:w-64") do |field| %>
-        <% field.with_date_picker(
-             range: true,
-             months: 2,
-             responsive_months: true,
-             value: "#{start_date.iso8601}/#{end_date.iso8601}",
-             placeholder: "Date range",
-             data: { action: "change->date-preset#submitDate" }) %>
-      <% end %>
+      <div id="single-date-wrapper" class="<%= date_preset == 'single' ? '' : 'hidden' %> w-full md:w-44">
+        <%= render PanelsUI::FormField.new(form: form, attribute: :start_date, label: "Date", label_hidden: true) do |field| %>
+          <% field.with_date_picker(
+               value: start_date.iso8601,
+               placeholder: "Select date",
+               data: { action: "change->date-preset#submitDate" }) %>
+        <% end %>
+      </div>
+
+      <div id="custom-date-wrapper" class="<%= date_preset == 'custom' ? '' : 'hidden' %> w-full md:w-64">
+        <%= render PanelsUI::FormField.new(form: form, attribute: :date_range, label: "Date Range", label_hidden: true) do |field| %>
+          <% field.with_date_picker(
+               range: true,
+               months: 2,
+               responsive_months: true,
+               value: "#{start_date.iso8601}/#{end_date.iso8601}",
+               placeholder: "Date range",
+               data: { action: "change->date-preset#submitDate" }) %>
+        <% end %>
+      </div>
     <% end %>
   </div>
 

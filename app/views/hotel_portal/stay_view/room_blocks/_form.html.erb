@@ -1,0 +1,48 @@
+<% persisted = @room_block.persisted? %>
+<div class="flex h-full flex-col bg-card">
+  <%= render "hotel_portal/stay_view/sheet_header", title: persisted ? "Edit room block" : "Block room", subtitle: "#{@room_block.room_type.name} · Room #{@room_block.room_number}" %>
+  <%= form_with model: @room_block, url: persisted ? hotel_stay_view_room_block_path(current_hotel, @room_block) : hotel_stay_view_room_blocks_path(current_hotel), method: persisted ? :patch : :post, class: "flex min-h-0 flex-1 flex-col", data: { turbo_stream: true } do |form| %>
+    <%= render "hotel_portal/stay_view/state_fields", state: stay_view_state, return_to: @return_to %>
+    <%= form.hidden_field :room_type_id %>
+    <%= form.hidden_field :room_number %>
+    <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
+      <%= render "hotel_portal/stay_view/errors", record: @room_block, title: "The room block could not be saved." %>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(form:, attribute: :start_date, label: "Start date", required: true) do |field| %>
+          <% field.with_date_picker(value: @room_block.start_date, linked_to: :end_date) %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :end_date, label: "End date", required: true) do |field| %>
+          <% field.with_date_picker(value: @room_block.end_date, min: @room_block.start_date) %>
+        <% end %>
+      </div>
+      <%= render PanelsUI::FormField.new(form:, attribute: :block_type, label: "Block type", required: true) do |field| %>
+        <% block_type_options = RoomBlock::BLOCK_TYPES.map { |type| { label: type.humanize, value: type } } %>
+        <% if persisted && @room_block.block_type.present? && !RoomBlock::BLOCK_TYPES.include?(@room_block.block_type) %>
+          <% block_type_options << { label: "#{@room_block.block_type.humanize} (existing)", value: @room_block.block_type } %>
+        <% end %>
+        <% field.with_select_menu(block_type_options, selected: @room_block.block_type) %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason", required: true) do |field| %>
+        <% field.with_text_area(rows: 4) %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :notes, label: "Internal notes") do |field| %>
+        <% field.with_text_area(rows: 3) %>
+      <% end %>
+    </div>
+    <div class="flex justify-end gap-2 border-t border-border p-4">
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "click->offcanvas#close" }) do %>Cancel<% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit) do %><%= persisted ? "Save block" : "Block room" %><% end %>
+    </div>
+  <% end %>
+
+  <% if persisted %>
+    <div class="flex gap-2 border-t border-border px-4 py-3">
+      <%= button_to finish_hotel_stay_view_room_block_path(current_hotel, @room_block), method: :post, params: stay_view_state.query.merge(return_to: @return_to), form: { data: { turbo_stream: true }, class: "flex-1" } do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, size: :sm, class: "w-full") do %>Finish block<% end %>
+      <% end %>
+      <%= button_to hotel_stay_view_room_block_path(current_hotel, @room_block), method: :delete, params: stay_view_state.query.merge(return_to: @return_to), form: { data: { turbo_stream: true, turbo_confirm: "Remove this room block?" }, class: "flex-1" } do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, size: :sm, class: "w-full") do %>Remove block<% end %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

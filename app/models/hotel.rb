@@ -52,11 +52,13 @@ class Hotel < ApplicationRecord
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
   has_many :guest_registration_cards, dependent: :restrict_with_error
+  has_many :guest_registration_note_templates, dependent: :destroy
   has_many :group_bookings, dependent: :restrict_with_error
   has_many :group_deposits, dependent: :restrict_with_error
   has_many :booking_folios, dependent: :restrict_with_error
   has_many :ar_invoices, dependent: :restrict_with_error
   has_many :ar_payments, dependent: :restrict_with_error
+  has_many :ar_payment_submissions, dependent: :restrict_with_error
   has_many :folio_routing_rules, dependent: :destroy
   has_many :deposits, dependent: :restrict_with_error
   has_many :hotel_taxes, dependent: :destroy
@@ -79,7 +81,6 @@ class Hotel < ApplicationRecord
   has_many :room_statuses, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :destroy
   has_many :room_blocks, dependent: :destroy
-  has_many :agent_accounts, dependent: :destroy
   has_many :notification_configs, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
   has_many :channel_derived_settings, dependent: :destroy

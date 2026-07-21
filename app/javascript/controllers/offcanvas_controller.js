@@ -6,12 +6,11 @@ export default class extends Controller {
   static values = { variant: { type: String, default: "right" } }
 
   connect() {
+    this.lifecycle = new AbortController()
     this.pendingVariant = this.variantValue
-    this.handleTriggerClick = this.handleTriggerClick.bind(this)
-    this.handleKeydown = this.handleKeydown.bind(this)
-
-    document.addEventListener("click", this.handleTriggerClick)
-    document.addEventListener("keydown", this.handleKeydown)
+    document.addEventListener("click", (event) => this.handleTriggerClick(event), { signal: this.lifecycle.signal })
+    document.addEventListener("keydown", (event) => this.handleKeydown(event), { signal: this.lifecycle.signal })
+    window.addEventListener("offcanvas:load", (event) => this.load(event), { signal: this.lifecycle.signal })
 
     // Listen synchronously for clicks on close triggers to bypass Stimulus race conditions
     this.element.addEventListener("click", (event) => {
@@ -20,7 +19,7 @@ export default class extends Controller {
         event.preventDefault()
         this.close()
       }
-    })
+    }, { signal: this.lifecycle.signal })
 
     // Listen for turbo frame loads to open the drawer
     this.element.addEventListener("turbo:frame-load", (event) => {
@@ -30,12 +29,11 @@ export default class extends Controller {
         this.applyVariant(variant)
         this.open()
       }
-    })
+    }, { signal: this.lifecycle.signal })
   }
 
   disconnect() {
-    document.removeEventListener("click", this.handleTriggerClick)
-    document.removeEventListener("keydown", this.handleKeydown)
+    this.lifecycle?.abort()
     clearTimeout(this.closeTimeout)
     clearTimeout(this.completeTimeout)
     clearTimeout(this.openTimeout)
@@ -45,10 +43,33 @@ export default class extends Controller {
     const trigger = event.target.closest(`[data-turbo-frame="${this.frameTarget.id}"]`)
     if (!trigger) return
 
+    // Replacing content inside an open drawer is a continuation of the same
+    // interaction. Keep the external opener so completion and cancellation can
+    // restore focus after the nested link itself leaves the DOM.
+    const navigatingInsideOpenDrawer = this.element.contains(trigger) && this.element.classList.contains(this.openClass)
+    if (navigatingInsideOpenDrawer) {
+      this.pendingVariant = trigger.dataset.offcanvasVariant || this.pendingVariant || this.variantValue
+      setTimeout(() => window.dispatchEvent(new CustomEvent("dropdown:close-all")), 0)
+      return
+    }
+
     this.trigger = trigger.closest("[data-controller~='panels-ui--dropdown-menu']")
       ?.querySelector("[data-panels-ui--dropdown-menu-target='trigger']") || trigger
     this.pendingVariant = trigger.dataset.offcanvasVariant || this.variantValue
+    this.returnFocusElement = this.trigger
+    this.returnFocusId = this.trigger.id || document.activeElement?.id
     setTimeout(() => window.dispatchEvent(new CustomEvent("dropdown:close-all")), 0)
+  }
+
+  load(event) {
+    const { url, variant, returnFocusId, drawerId } = event.detail || {}
+    if (!url) return
+    if (drawerId && drawerId !== this.frameTarget.id) return
+
+    this.pendingVariant = variant || this.variantValue
+    this.returnFocusElement = document.getElementById(returnFocusId) || document.activeElement
+    this.returnFocusId = returnFocusId || document.activeElement?.id
+    this.frameTarget.src = url
   }
 
   open() {
@@ -82,11 +103,12 @@ export default class extends Controller {
       this.frameTarget.src = "" // Clear the frame content
       this.frameTarget.innerHTML = `
         <div class="flex items-center justify-center h-full">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
         </div>
       `
       document.body.classList.remove("overflow-hidden")
-      this.trigger?.focus()
+      this.restoreFocus()
+      window.dispatchEvent(new CustomEvent("offcanvas:closed", { detail: { returnFocusId: this.returnFocusId } }))
     }, 300)
   }
 
@@ -147,6 +169,11 @@ export default class extends Controller {
     } else {
       this.panelTarget.classList.add("inset-y-0", "right-0", "w-full", "sm:w-[600px]", "md:w-[800px]", "lg:w-[1000px]", transformClass)
     }
+  }
+
+  restoreFocus() {
+    const target = (this.returnFocusElement?.isConnected && this.returnFocusElement) || document.getElementById(this.returnFocusId)
+    target?.focus({ preventScroll: true })
   }
 
   get closedTransformClass() {

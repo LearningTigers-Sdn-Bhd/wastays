@@ -6,7 +6,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
   let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
-  let(:hotel) { create(:hotel, account: account, status: 'registered', plan: plan) }
+  let(:hotel) { create(:hotel, account: account, status: 'registered', plan: plan, allow_boat_information: false) }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 
   before do
@@ -279,6 +279,27 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
   end
 
+  describe "GET /hotel/:hotel_id/settings/general/rates" do
+    it "renders the rate settings tab with a rate plan list and a New Rate Plan trigger" do
+      get hotel_rates_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Rate Settings")
+      expect(response.body).to include("New Rate Plan")
+    end
+
+    it "hides the Walk-in Rate plan row when the hotel is pax_pricing_only" do
+      hotel.update!(allow_pax_pricing: true, pax_pricing_only: true)
+      create(:rate_plan, hotel: hotel, name: "Standard Rate", sell_mode: "per_person")
+      create(:rate_plan, hotel: hotel, name: "Walk-in Rate", sell_mode: "per_room")
+
+      get hotel_rates_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("Walk-in Rate")
+    end
+  end
+
   describe "GET /hotel/:hotel_id/concierge_qr" do
     it "renders an almost-full Panels UI dialog as a Turbo Frame payload" do
       get hotel_concierge_qr_path(hotel), headers: { "Turbo-Frame" => "concierge_qr_dialog" }
@@ -337,6 +358,21 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
       expect(response).to redirect_to(hotel_general_settings_path(hotel))
       expect(hotel.reload.guest_registration_card_fields).to eq(%w[phone room_type check_in])
+    end
+
+    it "updates daily boat schedules" do
+      hotel.update!(allow_boat_information: true)
+      patch hotel_general_settings_path(hotel), params: {
+        form_id: "hotel_settings",
+        hotel: {
+          boat_in_times: [ "09:30", "12:00", "" ],
+          boat_out_times: [ "11:00", "15:30", "" ]
+        }
+      }
+
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+      expect(hotel.reload.boat_in_times).to eq([ "09:30", "12:00" ])
+      expect(hotel.boat_out_times).to eq([ "11:00", "15:30" ])
     end
 
     it "discards unknown guest registration card fields and allows none" do

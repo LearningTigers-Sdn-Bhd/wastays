@@ -134,6 +134,7 @@ platform_permissions = [
   { name: 'Manage Rates', slug: 'manage_rates' },
   { name: 'Manage Inventory', slug: 'manage_inventory' },
   { name: 'View Bookings', slug: 'view_bookings' },
+  { name: 'View Financial Status', slug: 'view_financial_status' },
   { name: 'Manage Bookings', slug: 'manage_bookings' },
   { name: 'View Guest Records', slug: 'view_guest_records' },
   { name: 'View Guest Phone', slug: 'view_guest_phone' },
@@ -166,7 +167,7 @@ platform_permissions = [
 role_templates = [
   { name: 'Hotel Owner', slug: 'hotel_owner', permissions: platform_permissions.map { |p| p[:slug] } },
   { name: 'General Manager', slug: 'general_manager', permissions: platform_permissions.map { |p| p[:slug] }.reject { |s| s == 'manage_account' } },
-  { name: 'Front Desk', slug: 'front_desk', permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit manage_room_status post_charges post_folio_charges post_folio_payments manage_requests manage_concierge manage_housekeeping_tasks] },
+  { name: 'Front Desk', slug: 'front_desk', permissions: %w[view_bookings view_financial_status manage_bookings manage_guest_arrival manage_night_audit manage_room_status post_charges post_folio_charges post_folio_payments manage_requests manage_concierge manage_housekeeping_tasks] },
   { name: 'Housekeeper', slug: 'housekeeper', permissions: %w[manage_room_status manage_requests manage_housekeeping_tasks] }
 ]
 

@@ -22,6 +22,7 @@ class Public::HotelsController < ApplicationController
 
     @adults = (params[:adults].presence || 2).to_i
     @children = (params[:children].presence || 0).to_i
+    @child_ages = Array(params[:child_ages]).map(&:to_i)
     @room_count = (params[:room_count].presence || params[:rooms].presence || 1).to_i
     @display_currency = display_currency_for_request
 
@@ -33,6 +34,7 @@ class Public::HotelsController < ApplicationController
           check_in: @check_in,
           check_out: @check_out,
           room_count: @room_count,
+          child_ages: @child_ages,
           corporate_rate: current_agent_account.present?
         )
       )
@@ -115,13 +117,13 @@ class Public::HotelsController < ApplicationController
     return unless params[:agent_code].present?
 
     @hotel = Hotel.friendly.find(params[:id])
-    agent = @hotel.agent_accounts.find_by(agent_code: params[:agent_code].upcase)
+    agent = @hotel.hotel_corporate_accounts.active.find_by(agent_code: params[:agent_code].upcase)
 
     if agent
-      session[:agent_account_id] = agent.id
-      flash.now[:notice] = "Agent Code Applied: #{agent.name}"
+      session[:hotel_corporate_account_id] = agent.id
+      flash.now[:notice] = "Agent Code Applied: #{agent.corporate_account.name}"
     else
-      session[:agent_account_id] = nil
+      session[:hotel_corporate_account_id] = nil
       flash.now[:alert] = "Invalid Agent Code"
     end
   end

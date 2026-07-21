@@ -12,10 +12,17 @@ module Rooms
 
     def call
       if @params.key?(:priority)
-        @room_status.priority = @params[:priority]
+        @room_status.priority = ActiveRecord::Type::Boolean.new.cast(@params[:priority])
+        @room_status.priority_note = nil unless @room_status.priority?
       end
 
-      if @params.key?(:notes)
+      if @params.key?(:priority_note) && @room_status.priority?
+        @room_status.priority_note = @params[:priority_note].presence
+      elsif legacy_priority_note_request? && @room_status.priority?
+        @room_status.priority_note = @params[:notes].presence
+      end
+
+      if @params.key?(:notes) && !legacy_priority_note_request?
         @room_status.notes = @params[:notes]
       end
 
@@ -38,6 +45,12 @@ module Rooms
           OpenStruct.new(success?: false, error: @room_status.errors.full_messages.to_sentence)
         end
       end
+    end
+
+    private
+
+    def legacy_priority_note_request?
+      @params.key?(:priority) && @params[:status].blank? && @params.key?(:notes)
     end
   end
 end

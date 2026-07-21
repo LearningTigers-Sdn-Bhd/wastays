@@ -67,13 +67,17 @@ RSpec.describe Bookings::TransitionStatus do
         expect(log.auditable).to eq(booking)
       end
 
-      it "requires every booking room to be assigned" do
+      it "requires the booking room to be assigned" do
+        group_booking = create(:group_booking, hotel: booking.hotel)
+        booking.update!(group_booking: group_booking, group_position: 1)
+        sibling = create(:booking, hotel: booking.hotel, group_booking: group_booking, group_position: 2)
         room_type = create(:room_type, hotel: booking.hotel)
-        create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
         create(:booking_room, booking: booking, room_type: room_type, room_number: nil)
+        create(:booking_room, booking: sibling, room_type: room_type, room_number: "101")
 
         result = subject.call
 
+        expect(group_booking.bookings.reload).to all(satisfy { |child| child.booking_rooms.one? })
         expect(result.success?).to be(false)
         expect(result.error).to eq("Assign a room number to every room before check-in.")
         expect(booking.reload.status).to eq("confirmed")
@@ -506,20 +510,37 @@ RSpec.describe Bookings::TransitionStatus do
         expect(hk_req).to be_nil
       end
 
-      it "creates only one checkout request for a multi-room booking" do
+      it "creates one checkout request per child in a group booking" do
+        group_booking = create(:group_booking, hotel: booking.hotel)
+        booking.update!(group_booking: group_booking, group_position: 1)
+        sibling = create(
+          :booking,
+          hotel: booking.hotel,
+          group_booking: group_booking,
+          group_position: 2,
+          status: "checked_in"
+        )
         room_type = create(:room_type, hotel: booking.hotel)
         create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-        create(:booking_room, booking: booking, room_type: room_type, room_number: "102")
+        create(:booking_room, booking: sibling, room_type: room_type, room_number: "102")
         create_settled_folio
+        sibling_folio = create(:booking_folio, booking: sibling, status: "open")
+        create(:folio_transaction, booking_folio: sibling_folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
+        create(:folio_transaction, booking_folio: sibling_folio, transaction_type: :payment, category: "cash", amount: 100.0)
         allow_any_instance_of(Folios::CloseForCheckout).to receive(:validate_all_nights_posted).and_return(nil)
 
-        result = subject.call
+        first_result = subject.call
+        second_result = described_class.new(booking: sibling, status: "completed", timestamp: timestamp).call
 
-        expect(result.success?).to be(true)
+        expect(first_result.success?).to be(true)
+        expect(second_result.success?).to be(true)
+        expect(group_booking.bookings.reload).to all(satisfy { |child| child.booking_rooms.one? })
         expect(booking.reload.check_out_requests.count).to eq(1)
         expect(booking.check_out_requests.first.guest_notes).to eq("Checkout Room Cleaning")
         expect(booking.check_out_requests.first.metadata["room_number"]).to eq("101")
-        expect(HousekeepingRequest.where(booking: booking, request_details: "Checkout Room Cleaning")).to be_empty
+        expect(sibling.reload.check_out_requests.count).to eq(1)
+        expect(sibling.check_out_requests.first.metadata["room_number"]).to eq("102")
+        expect(HousekeepingRequest.where(booking: [ booking, sibling ], request_details: "Checkout Room Cleaning")).to be_empty
       end
     end
 

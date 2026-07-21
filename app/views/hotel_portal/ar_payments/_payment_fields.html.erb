@@ -1,18 +1,64 @@
 <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-  <div class="border-b border-border px-6 py-5"><h2 class="text-lg font-bold text-foreground">Payment Details</h2></div>
+  <div class="border-b border-border px-6 py-5">
+    <h2 class="text-lg font-bold text-foreground">Payment Details</h2>
+    <% if @ar_payment_submission.present? %>
+      <% invoice_numbers = @ar_payment_submission.ar_invoices.map(&:formatted_invoice_number) %>
+      <p class="mt-1 text-xs font-semibold text-muted-foreground">These details come from a submitted payment slip, targeting <%= invoice_numbers.one? ? "invoice" : "invoices" %> <%= invoice_numbers.to_sentence %>, and can't be edited here — reject the submission below if they're wrong.</p>
+    <% end %>
+  </div>
   <div class="grid gap-4 p-6 sm:grid-cols-2">
     <div>
       <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Corporate Account</label>
-      <%= select_tag "ar_payment[hotel_corporate_account_id]",
-        options_from_collection_for_select(current_hotel.hotel_corporate_accounts.includes(:corporate_account).order(created_at: :desc), :id, ->(relationship) { relationship.corporate_account.name }, @hotel_corporate_account&.id),
-        class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground",
-        data: { ar_payment_form_target: "account", action: "change->ar-payment-form#accountChanged" } %>
+      <% if @ar_payment_submission.present? %>
+        <div class="w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-semibold text-foreground"><%= @hotel_corporate_account&.corporate_account&.name %></div>
+        <%= hidden_field_tag "ar_payment[hotel_corporate_account_id]", @hotel_corporate_account&.id %>
+      <% else %>
+        <%= select_tag "ar_payment[hotel_corporate_account_id]",
+          options_from_collection_for_select(current_hotel.hotel_corporate_accounts.includes(:corporate_account).order(created_at: :desc), :id, ->(relationship) { relationship.corporate_account.name }, @hotel_corporate_account&.id),
+          class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground",
+          data: { ar_payment_form_target: "account", action: "change->ar-payment-form#accountChanged" } %>
+      <% end %>
     </div>
-    <div><label class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Reference Number</label><%= text_field_tag "ar_payment[reference_number]", params.dig(:ar_payment, :reference_number), required: true, class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground" %></div>
-    <div><label class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Amount</label><%= number_field_tag "ar_payment[amount]", params.dig(:ar_payment, :amount), step: "0.01", min: "0.01", required: true, class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground", data: { ar_payment_form_target: "amount", action: "input->ar-payment-form#recalculate" } %></div>
-    <div><label class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Currency</label><%= text_field_tag "ar_payment[currency]", params.dig(:ar_payment, :currency).presence || current_hotel.default_currency, required: true, readonly: true, class: "w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-semibold text-foreground" %></div>
-    <div><label class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Received At</label><%= date_field_tag "ar_payment[received_at]", params.dig(:ar_payment, :received_at).presence || current_hotel.current_business_date, required: true, class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground" %></div>
-    <div><label class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment Method</label><%= select_tag "ar_payment[payment_method]", options_for_select(ArPayment::PAYMENT_METHODS.map { |method| [ method.humanize, method ] }, params.dig(:ar_payment, :payment_method).presence || "bank_transfer"), class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground" %></div>
-    <div class="sm:col-span-2"><label class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Notes</label><%= text_area_tag "ar_payment[notes]", params.dig(:ar_payment, :notes), rows: 3, class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground" %></div>
+    <div>
+      <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Reference Number</label>
+      <% if @ar_payment_submission.present? %>
+        <div class="w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-semibold text-foreground"><%= @ar_payment_submission.reference_number %></div>
+        <%= hidden_field_tag "ar_payment[reference_number]", @ar_payment_submission.reference_number %>
+      <% else %>
+        <%= text_field_tag "ar_payment[reference_number]", params.dig(:ar_payment, :reference_number), required: true, class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground" %>
+      <% end %>
+    </div>
+    <div>
+      <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Amount</label>
+      <% if @ar_payment_submission.present? %>
+        <div class="w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-semibold text-foreground"><%= @ar_payment_submission.amount %></div>
+        <%= hidden_field_tag "ar_payment[amount]", @ar_payment_submission.amount, data: { ar_payment_form_target: "amount" } %>
+      <% else %>
+        <%= number_field_tag "ar_payment[amount]", params.dig(:ar_payment, :amount), step: "0.01", min: "0.01", required: true, class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground", data: { ar_payment_form_target: "amount", action: "input->ar-payment-form#recalculate" } %>
+      <% end %>
+    </div>
+    <div>
+      <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Currency</label>
+      <%= text_field_tag "ar_payment[currency]", params.dig(:ar_payment, :currency).presence || @ar_payment_submission&.currency || current_hotel.default_currency, required: true, readonly: true, class: "w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-semibold text-foreground" %>
+    </div>
+    <div>
+      <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Received At</label>
+      <% if @ar_payment_submission.present? %>
+        <div class="w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-semibold text-foreground"><%= l(@ar_payment_submission.received_at, format: :short) %></div>
+        <%= hidden_field_tag "ar_payment[received_at]", @ar_payment_submission.received_at %>
+      <% else %>
+        <%= date_field_tag "ar_payment[received_at]", params.dig(:ar_payment, :received_at).presence || current_hotel.current_business_date, required: true, class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground" %>
+      <% end %>
+    </div>
+    <div>
+      <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment Method</label>
+      <% if @ar_payment_submission.present? %>
+        <div class="w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-semibold text-foreground"><%= @ar_payment_submission.payment_method.humanize %></div>
+        <%= hidden_field_tag "ar_payment[payment_method]", @ar_payment_submission.payment_method %>
+      <% else %>
+        <%= select_tag "ar_payment[payment_method]", options_for_select(ArPayment::PAYMENT_METHODS.map { |method| [ method.humanize, method ] }, params.dig(:ar_payment, :payment_method).presence || "bank_transfer"), class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground" %>
+      <% end %>
+    </div>
+    <div class="sm:col-span-2"><label class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Notes</label><%= text_area_tag "ar_payment[notes]", params.dig(:ar_payment, :notes).presence || @ar_payment_submission&.notes, rows: 3, class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground" %></div>
   </div>
 </section>

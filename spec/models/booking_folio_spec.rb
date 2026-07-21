@@ -142,12 +142,15 @@ RSpec.describe BookingFolio, type: :model do
       expect(booking.reload.booking_folio).to eq(booking_primary)
     end
 
-    it "allows primary folios for different rooms" do
+    it "allows primary folios for rooms on different group booking children" do
+      group = create(:group_booking, hotel: booking.hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: booking.hotel, group_booking: group, group_position: 2)
       first_room = create(:booking_room, booking: booking)
-      second_room = create(:booking_room, booking: booking)
+      second_room = create(:booking_room, booking: sibling)
 
       first_primary = create(:booking_folio, hotel: booking.hotel, booking: booking, booking_room: first_room, folio_number: 1)
-      second_primary = create(:booking_folio, hotel: booking.hotel, booking: booking, booking_room: second_room, folio_number: 2)
+      second_primary = create(:booking_folio, hotel: booking.hotel, booking: sibling, booking_room: second_room, folio_number: 2)
 
       expect(first_primary).to be_valid
       expect(second_primary).to be_valid

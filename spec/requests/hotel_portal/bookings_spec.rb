@@ -323,7 +323,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       booking.update!(check_out: Date.current)
       booking.transition_status_to!("checked_in", event: "check_in")
       guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
-      relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+      relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
       company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", hotel_corporate_account: relationship)
       create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 604.80)
 
@@ -411,16 +411,6 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response).to redirect_to(booking_details_path(booking))
       expect(booking.reload.status).to eq("checked_in")
       expect(booking.checked_in_at.to_i).to eq(expected_checked_in_at.to_i)
-    end
-
-    it "returns turbo stream completion to the reservation board" do
-      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
-           params: { checked_in_at: Time.current.to_s },
-           headers: { "Accept" => "text/vnd.turbo-stream.html", "Referer" => board_hotel_bookings_url(hotel) }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(%(url="#{board_hotel_bookings_path(hotel)}"))
     end
 
     it "completes the offcanvas back to booking details on turbo failures outside the reservation board" do
@@ -616,7 +606,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       booking.update!(check_out: Date.current)
       booking.transition_status_to!("checked_in", event: "check_in")
       guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
-      relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true, payment_terms_days: 21)
+      relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel, payment_terms_days: 21)
       company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", hotel_corporate_account: relationship)
       create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 604.80)
 
@@ -643,24 +633,6 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
         hotel_corporate_account: relationship,
         due_on: hotel.current_business_date + 21.days
       )
-    end
-
-    it "returns timeline-board checkout-sheet submissions to the Booking Timeline Board" do
-      booking.transition_status_to!("checked_in", event: "check_in")
-      folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
-
-      post check_out_hotel_booking_path(hotel, booking),
-        params: {
-          checkout_sheet: "1",
-          source: "booking_timeline_board",
-          checked_out_at: Time.current.to_s,
-          checkout_folios: {
-            folio.id.to_s => { action: "close" }
-          }
-        }
-
-      expect(response).to redirect_to(board_hotel_bookings_path(hotel))
-      expect(booking.reload.status).to eq("completed")
     end
 
     it "posts early departure charge before checkout-sheet settlement and redirects" do
@@ -823,7 +795,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       grant_permission("post_folio_payments")
       booking.transition_status_to!("checked_in", event: "check_in")
       guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
-      company_relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+      company_relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
       company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", name: "ABC Sdn Bhd - Room", hotel_corporate_account: company_relationship)
       create(:folio_transaction, booking_folio: guest_folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
       create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 270.0)
@@ -892,7 +864,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     it "requires a reason before keeping a company folio open" do
       booking.transition_status_to!("checked_in", event: "check_in")
       guest_folio = create(:booking_folio, booking: booking, hotel: hotel, status: "open")
-      company_relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+      company_relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
       company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "open", hotel_corporate_account: company_relationship)
       create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 270.0)
 

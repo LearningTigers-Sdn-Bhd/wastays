@@ -9,7 +9,9 @@ RSpec.describe Rooms::UpdateStatus do
   let(:room_status) { create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty", priority: false, dnd: false) }
 
   context "updating priority and notes" do
-    it "updates attributes and saves the record" do
+    it "routes legacy priority notes without overwriting the physical-status note" do
+      room_status.update!(notes: "Inspection failed near the window")
+
       result = described_class.new(
         room_status: room_status,
         params: { priority: "true", notes: "Please clean quickly" },
@@ -19,7 +21,32 @@ RSpec.describe Rooms::UpdateStatus do
       expect(result).to be_success
       room_status.reload
       expect(room_status.priority).to be_truthy
-      expect(room_status.notes).to eq("Please clean quickly")
+      expect(room_status.priority_note).to eq("Please clean quickly")
+      expect(room_status.notes).to eq("Inspection failed near the window")
+    end
+
+    it "accepts the explicit priority-note contract" do
+      result = described_class.new(
+        room_status:,
+        params: { priority: "true", priority_note: "Prepare before noon" },
+        user:
+      ).call
+
+      expect(result).to be_success
+      expect(room_status.reload).to have_attributes(priority: true, priority_note: "Prepare before noon")
+    end
+
+    it "clears the priority note when priority is removed" do
+      room_status.update!(priority: true, priority_note: "VIP arrival", notes: "Inspection reason")
+
+      result = described_class.new(
+        room_status:,
+        params: { priority: "false", notes: "Legacy priority form value" },
+        user:
+      ).call
+
+      expect(result).to be_success
+      expect(room_status.reload).to have_attributes(priority: false, priority_note: nil, notes: "Inspection reason")
     end
   end
 

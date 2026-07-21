@@ -11,7 +11,7 @@ class ApplicationController < ActionController::Base
   rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
   rescue_from ActiveRecord::RecordNotFound, with: :not_found
 
-  helper_method :current_user, :logged_in?, :current_agent_account, :can_view_room_status_board?, :can_view_reservation_board?
+  helper_method :current_user, :logged_in?, :current_agent_account
   around_action :use_user_time_zone
   before_action :set_current_request_id
   before_action :redirect_legacy_hotel_portal_path
@@ -19,7 +19,7 @@ class ApplicationController < ActionController::Base
   private
 
   def current_agent_account
-    @current_agent_account ||= AgentAccount.find_by(id: session[:agent_account_id]) if session[:agent_account_id]
+    @current_agent_account ||= HotelCorporateAccount.find_by(id: session[:hotel_corporate_account_id]) if session[:hotel_corporate_account_id]
   end
 
   def set_current_request_id
@@ -45,20 +45,6 @@ class ApplicationController < ActionController::Base
 
   def logged_in?
     current_user.present?
-  end
-
-  def can_view_room_status_board?
-    current_user&.has_permission?("view_room_readiness", hotel: current_hotel) ||
-      current_user&.has_permission?("view_room_readiness") ||
-      current_user&.has_permission?("manage_room_status", hotel: current_hotel) ||
-      current_user&.has_permission?("manage_room_status")
-  end
-
-  def can_view_reservation_board?
-    current_user&.has_permission?("view_reservation_board", hotel: current_hotel) ||
-      current_user&.has_permission?("view_reservation_board") ||
-      current_user&.has_permission?("manage_bookings", hotel: current_hotel) ||
-      current_user&.has_permission?("manage_bookings")
   end
 
   def authenticate_user!

@@ -21,26 +21,9 @@ RSpec.describe GroupBookings::CreateFromBookings do
     expect(result.group_booking.reservation_number).to be_present
     expect(result.group_booking.receipt_number).to be_present
     expect(result.group_booking.bookings.reload).to contain_exactly(first, second)
+    expect(result.group_booking.bookings).to all(satisfy { |child| child.booking_rooms.one? })
     expect(first.reload.group_position).to eq(1)
     expect(second.reload.group_position).to eq(2)
-  end
-
-  it "rejects a multi-room booking" do
-    hotel = create(:hotel)
-    multi_room = create(:booking, hotel: hotel)
-    normal = create(:booking, hotel: hotel)
-    create(:booking_room, booking: multi_room)
-    create(:booking_room, booking: multi_room)
-    create(:booking_room, booking: normal)
-
-    result = described_class.call(
-      hotel: hotel,
-      bookings: [ multi_room, normal ],
-      attributes: { name: "Invalid" }
-    )
-
-    expect(result).not_to be_success
-    expect(result.error).to include("exactly one room")
   end
 
   it "projects status from children and removes membership without changing the booking lifecycle" do

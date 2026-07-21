@@ -5,25 +5,19 @@ module HotelPortal
     include OffcanvasTransactionCompletion
 
     before_action :authorize_manage_corporate_accounts!
-    before_action :set_relationship, only: %i[suspend reactivate]
+    before_action :set_relationship, only: %i[edit update suspend reactivate]
 
     def index
-      @relationships = current_hotel.hotel_corporate_accounts
-        .includes(corporate_account: :users)
-        .order(created_at: :desc)
+      @presenter = HotelPortal::AccountsReceivable::CorporateAccountsPresenter.new(hotel: current_hotel, params: params)
       @pending_invitations = current_hotel.corporate_invitations
         .unaccepted
         .includes(:invited_by_user)
         .order(created_at: :desc)
-      @credit_exposures = @relationships.index_with do |relationship|
-        ArInvoices::CreditExposure.call(hotel_corporate_account: relationship)
-      end
     end
 
     def new
       @corporate_invitation = current_hotel.corporate_invitations.build(
         relationship_type: "standard",
-        direct_bill_enabled: false,
         credit_currency: current_hotel.default_currency
       )
     end
@@ -45,6 +39,20 @@ module HotelPortal
           current_hotel.corporate_invitations.build(corporate_invitation_params)
         @corporate_invitation.errors.add(:base, result.error)
         render :new, status: :unprocessable_content
+      end
+    end
+
+    def edit
+    end
+
+    def update
+      if @relationship.update(relationship_params)
+        offcanvas_transaction_response(
+          destination: hotel_corporate_accounts_path(current_hotel),
+          notice: "#{@relationship.corporate_account.name} updated."
+        )
+      else
+        render :edit, status: :unprocessable_content
       end
     end
 
@@ -71,11 +79,24 @@ module HotelPortal
     def corporate_invitation_params
       params.require(:corporate_invitation).permit(
         :email,
+        :account_type,
         :relationship_type,
-        :direct_bill_enabled,
         :credit_limit,
         :credit_currency,
         :payment_terms_days
+      )
+    end
+
+    def relationship_params
+      params.require(:hotel_corporate_account).permit(
+        :account_type,
+        :relationship_type,
+        :credit_limit,
+        :credit_currency,
+        :payment_terms_days,
+        :contact_email,
+        :contact_phone,
+        :auto_allocate_payments
       )
     end
   end

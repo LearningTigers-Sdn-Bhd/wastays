@@ -15,6 +15,23 @@ module HotelPortal
       @presenter = HotelPortal::AccountsReceivable::AgingPresenter.new(report: report)
     end
 
+    def agent_summary
+      ArInvoices::RefreshOverdueStatuses.call(hotel: current_hotel)
+      report = ArInvoices::AgingReport.call(hotel: current_hotel, account_types: %w[travel_agent airline])
+      @presenter = HotelPortal::AccountsReceivable::AgingPresenter.new(report: report)
+
+      respond_to do |format|
+        format.html
+        format.pdf do
+          pdf = ::Reports::AccountsReceivable::GenerateAgentSummary.new(hotel: current_hotel, report: report).generate
+          send_data pdf,
+            filename: "agent-summary-soa-#{current_hotel.slug}-#{report.as_of_date}.pdf",
+            type: "application/pdf",
+            disposition: "inline"
+        end
+      end
+    end
+
     def show
       @ar_invoice = current_hotel.ar_invoices
         .includes(

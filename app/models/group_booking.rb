@@ -13,6 +13,8 @@ class GroupBooking < ApplicationRecord
   validates :confirmation_token, uniqueness: true
   validates :reservation_number, uniqueness: { scope: :hotel_id, allow_nil: true }
   validates :receipt_number, uniqueness: { scope: :hotel_id, allow_nil: true }
+  validates :channel_manager_reference, uniqueness: { scope: :hotel_id, allow_blank: true }
+  validates :external_reference, uniqueness: { scope: :hotel_id, allow_blank: true }
   validates :status, inclusion: { in: STATUSES }
   validate :organizer_guest_belongs_to_hotel
   validate :default_dates_are_ordered

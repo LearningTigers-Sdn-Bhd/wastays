@@ -1,2 +1,0 @@
-module HotelPortal::AgentAccountsHelper
-end

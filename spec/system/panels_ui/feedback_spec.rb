@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI feedback components", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=alert_preview,banner_preview" }
 
   it "removes a dismissible alert until reload" do
     within("[data-testid='dismissible-alert']") { find("button[aria-label='Dismiss alert']").click }

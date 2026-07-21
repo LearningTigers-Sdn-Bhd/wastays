@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Collapsible", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=collapsible_preview" }
 
   let(:root) { find("#sd-collapsible-panel-light") }
   let(:trigger) { find("#sd-collapsible-panel-light-trigger") }

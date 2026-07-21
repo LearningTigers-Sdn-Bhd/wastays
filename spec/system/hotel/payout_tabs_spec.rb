@@ -59,4 +59,13 @@ RSpec.describe "Hotel payout tabs", type: :system, js: true do
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Paid History")
     expect(page).to have_content("PAID-TAB")
   end
+
+  it "denies access without the view_payouts permission" do
+    role.permissions.delete_all
+
+    visit payouts_hotel_reports_path(hotel, tab: "paid")
+
+    expect(page).to have_current_path(root_path)
+    expect(page).to have_content("You are not authorized to perform this action.")
+  end
 end

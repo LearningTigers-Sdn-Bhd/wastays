@@ -46,12 +46,16 @@ module PanelsUI
       renders_one :actions
 
       HEADING_TAGS = %i[h2 h3 h4 h5 h6 p].freeze
+      HEADING_ORIENTATIONS = %i[stacked inline].freeze
+      ACTIONS_LAYOUTS = %i[fixed wrap].freeze
 
-      def initialize(title: nil, description: nil, primary_href: nil, title_as: :h3, class: nil, **attributes)
+      def initialize(title: nil, description: nil, primary_href: nil, title_as: :h3, orientation: :stacked, actions_layout: :fixed, class: nil, **attributes)
         @title = title
         @description = description
         @primary_href = primary_href
         @title_as = HEADING_TAGS.include?(title_as) ? title_as : :h3
+        @orientation = HEADING_ORIENTATIONS.include?(orientation) ? orientation : :stacked
+        @actions_layout = ACTIONS_LAYOUTS.include?(actions_layout) ? actions_layout : :fixed
         @class = binding.local_variable_get(:class)
         @attributes = attributes
       end
@@ -74,13 +78,16 @@ module PanelsUI
       def header_row
         return unless @title.present? || @description.present? || actions?
 
-        tag.div(class: "panel-card__header-row") do
+        heading = @title.present? || @description.present?
+        # With no heading the row holds only actions, so anchor them to the end
+        # instead of leaving them stranded at the start by justify-between.
+        tag.div(class: tw_merge("panel-card__header-row", ("justify-end" unless heading))) do
           safe_join([
             (tag.div(safe_join([
               title_element,
               (tag.p(@description, class: "panel-card__description") if @description.present?)
-            ].compact), class: "panel-card__heading") if @title.present? || @description.present?),
-            (tag.div(actions, class: "panel-card__actions") if actions?)
+            ].compact), class: "panel-card__heading", data: { heading: @orientation }) if heading),
+            (tag.div(actions, class: "panel-card__actions", data: { actions: @actions_layout }) if actions?)
           ].compact)
         end
       end

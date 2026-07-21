@@ -11,7 +11,7 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
   let(:user1) { create(:user, account: hotel.account, name: "Admin One") }
   let(:user2) { create(:user, account: hotel.account, name: "Admin Two") }
   let!(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "206", "207" ]) }
-  let!(:booking) { create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current, check_out: Date.current + 2.days) }
+  let!(:booking) { create(:booking, hotel: hotel, status: "confirmed", check_in: hotel_today(hotel), check_out: hotel_today(hotel) + 2.days) }
   let!(:booking_room) { create(:booking_room, booking: booking, room_type: room_type) }
 
   before do
@@ -25,7 +25,7 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
     create(:user_hotel_access, user: user2, hotel: hotel, role: role)
 
     # Ensure room_type has inventory
-    (Date.current..(Date.current + 5.days)).each do |date|
+    (hotel_today(hotel)..(hotel_today(hotel) + 5.days)).each do |date|
       create(:room_inventory, room_type: room_type, date: date, quantity: 2, available_room_numbers: [ "206", "207" ])
     end
   end
@@ -49,7 +49,7 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
       max_wait = 10
       start_time = Time.current
       until RoomLock.where(hotel: hotel, room_type: room_type, room_number: "206", user: user1).exists? || (Time.current - start_time) > max_wait
-        sleep 0.5
+        sleep 0.1
       end
 
       expect(RoomLock.where(hotel: hotel, room_type: room_type, room_number: "206", user: user1).exists?).to be true
@@ -101,10 +101,10 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
       execute_script("document.querySelector('[data-action=\"click->offcanvas#close\"]').click()")
     end
 
-    max_retries = 10
+    max_retries = 50
     retries = 0
     while retries < max_retries && RoomLock.count > 0
-      sleep 0.5
+      sleep 0.1
       retries += 1
     end
 

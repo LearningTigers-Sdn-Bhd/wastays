@@ -3,15 +3,15 @@ require "rails_helper"
 RSpec.describe "Admin::Plans", type: :request do
   let(:account) { create(:account) }
   let(:superadmin) { create(:user, :superadmin, account: account) }
-  let!(:plan) { create(:plan, name: "Core", slug: "core") }
-  let!(:feature_group) { create(:feature_group, slug: "aic", name: "AI Concierge (AIC)") }
-  let!(:external_feature) { create(:feature, feature_group: feature_group, slug: "whatsapp_automation_flows", name: "WhatsApp automation flows") }
-  let!(:gated_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page", name: "AI Concierge Page") }
-  let!(:be_group) { create(:feature_group, slug: "be", name: "Booking Engine (BE)") }
-  let!(:folio_feature) { create(:feature, feature_group: be_group, slug: "folio_management_billing", name: "Folio Management & Billing") }
-  let!(:external_plan_feature) { create(:plan_feature, plan: plan, feature: external_feature, enabled: true) }
-  let!(:gated_plan_feature) { create(:plan_feature, plan: plan, feature: gated_feature, enabled: true) }
-  let!(:folio_plan_feature) { create(:plan_feature, plan: plan, feature: folio_feature, enabled: true) }
+  let_it_be(:plan) { create(:plan, name: "Core", slug: "core") }
+  let_it_be(:feature_group) { create(:feature_group, slug: "aic", name: "AI Concierge (AIC)") }
+  let_it_be(:external_feature) { create(:feature, feature_group: feature_group, slug: "whatsapp_automation_flows", name: "WhatsApp automation flows") }
+  let_it_be(:gated_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page", name: "AI Concierge Page") }
+  let_it_be(:be_group) { create(:feature_group, slug: "be", name: "Booking Engine (BE)") }
+  let_it_be(:folio_feature) { create(:feature, feature_group: be_group, slug: "folio_management_billing", name: "Folio Management & Billing") }
+  let_it_be(:external_plan_feature, reload: true) { create(:plan_feature, plan: plan, feature: external_feature, enabled: true) }
+  let_it_be(:gated_plan_feature, reload: true) { create(:plan_feature, plan: plan, feature: gated_feature, enabled: true) }
+  let_it_be(:folio_plan_feature, reload: true) { create(:plan_feature, plan: plan, feature: folio_feature, enabled: true) }
 
   before do
     sign_in_as(superadmin)

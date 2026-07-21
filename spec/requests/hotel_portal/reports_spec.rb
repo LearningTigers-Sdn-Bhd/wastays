@@ -6,12 +6,22 @@ require "nokogiri"
 RSpec.describe "HotelPortal::Reports", type: :request do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
-  let(:hotel) { create(:hotel, plan: plan) }
+  let(:hotel) { create(:hotel, plan: plan, allow_boat_information: false) }
   let(:user) { create(:user) }
   let(:role) { create(:role, account: hotel.account) }
 
   def enable_plan_feature(slug)
     create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: slug), enabled: true)
+  end
+
+  def create_grouped_room_bookings(count:, hotel:, booking_attributes:, room_attributes:)
+    group = create(:group_booking, hotel: hotel)
+
+    count.times.map do |index|
+      booking = create(:booking, **booking_attributes, hotel: hotel, group_booking: group, group_position: index + 1)
+      create(:booking_room, **room_attributes, booking: booking)
+      booking
+    end
   end
 
   before do
@@ -516,8 +526,12 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       room_type = create(:room_type, hotel: hotel, quantity: 10)
       create(:room_inventory, room_type: room_type, date: start_date, quantity: 8, status: "open")
       create(:room_inventory, room_type: room_type, date: end_date, quantity: 9, status: "open")
-      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, guest_name: "Occ Guest")
-      create_list(:booking_room, 2, booking: booking, room_type: room_type, subtotal: 150.0)
+      create_grouped_room_bookings(
+        count: 2,
+        hotel: hotel,
+        booking_attributes: { status: "confirmed", check_in: start_date, check_out: end_date + 1.day, guest_name: "Occ Guest" },
+        room_attributes: { room_type: room_type, subtotal: 150.0 }
+      )
 
       get daily_occupancy_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -573,14 +587,18 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
     it "does not include data from another hotel" do
       room_type = create(:room_type, hotel: create(:hotel), quantity: 10)
-      booking = create(:booking, hotel: room_type.hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
-      create_list(:booking_room, 5, booking: booking, room_type: room_type, subtotal: 100.0)
+      bookings = create_grouped_room_bookings(
+        count: 5,
+        hotel: room_type.hotel,
+        booking_attributes: { status: "confirmed", check_in: start_date, check_out: end_date + 1.day },
+        room_attributes: { room_type: room_type, subtotal: 100.0 }
+      )
 
       get daily_occupancy_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Daily Occupancy Report")
-      expect(response.body).not_to include(booking.confirmation_token)
+      bookings.each { |booking| expect(response.body).not_to include(booking.confirmation_token) }
     end
 
     it "defaults blank first load to today" do
@@ -605,8 +623,12 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
     it "exports CSV" do
       room_type = create(:room_type, hotel: hotel, quantity: 10)
-      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
-      create_list(:booking_room, 2, booking: booking, room_type: room_type, subtotal: 150.0)
+      create_grouped_room_bookings(
+        count: 2,
+        hotel: hotel,
+        booking_attributes: { status: "confirmed", check_in: start_date, check_out: end_date + 1.day },
+        room_attributes: { room_type: room_type, subtotal: 150.0 }
+      )
 
       get daily_occupancy_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
@@ -1184,14 +1206,88 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
   end
 
+  describe "GET /daily_revenue/cell" do
+    let(:date) { Date.new(2026, 5, 6) }
+
+    it "renders the underlying booking for an accommodation charge" do
+      booking = create(:booking, hotel: hotel, source: "walk_in", confirmation_token: "WS-CELL")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 120, posting_date: date)
+
+      get daily_revenue_cell_hotel_reports_path(hotel), params: { date: date.to_s, category: "accommodation", date_preset: "custom" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Accommodation")
+      expect(response.body).to include("WS-CELL")
+      expect(response.body).to include("120.00")
+    end
+
+    it "renders the underlying corporate account for an agent bank transfer" do
+      agent_account = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent")
+      create(:ar_payment, hotel: hotel, hotel_corporate_account: agent_account, payment_method: "bank_transfer", amount: 400, received_at: date)
+
+      get daily_revenue_cell_hotel_reports_path(hotel), params: { date: date.to_s, category: "agent_bank_transfer", date_preset: "custom" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include(agent_account.corporate_account.name)
+      expect(response.body).to include("400.00")
+    end
+
+    it "requires view_reports permission" do
+      role.permissions.delete(Permission.find_by!(slug: "view_reports"))
+
+      get daily_revenue_cell_hotel_reports_path(hotel), params: { date: date.to_s, category: "accommodation" }
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+    end
+
+    it "returns bad_request when date is missing" do
+      get daily_revenue_cell_hotel_reports_path(hotel), params: { category: "accommodation" }
+
+      expect(response).to have_http_status(:bad_request)
+    end
+  end
+
+  describe "GET /daily_revenue/source" do
+    let(:date) { Date.new(2026, 5, 6) }
+
+    it "lists the bookings behind a source's booking count" do
+      booking = create(:booking, hotel: hotel, source: "walk_in", guest_name: "Source Drilldown Guest", confirmation_token: "WS-SRC")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: date)
+
+      get daily_revenue_source_bookings_hotel_reports_path(hotel), params: { source: "Walk-in", start_date: date.to_s, end_date: date.to_s, date_preset: "custom" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Walk-in Bookings")
+      expect(response.body).to include("WS-SRC")
+      expect(response.body).to include("Source Drilldown Guest")
+      expect(response.body).to include(hotel_booking_path(hotel, booking))
+    end
+
+    it "requires view_reports permission" do
+      role.permissions.delete(Permission.find_by!(slug: "view_reports"))
+
+      get daily_revenue_source_bookings_hotel_reports_path(hotel), params: { source: "Walk-in", start_date: date.to_s, end_date: date.to_s }
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+    end
+  end
+
   describe "GET /managers_flash" do
     let(:start_date) { Date.new(2026, 5, 6) }
     let(:end_date) { Date.new(2026, 5, 7) }
 
     it "renders the manager flash report for the selected range" do
       room_type = create(:room_type, hotel: hotel, quantity: 10)
-      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
-      create_list(:booking_room, 2, booking: booking, room_type: room_type, subtotal: 200.0)
+      create_grouped_room_bookings(
+        count: 2,
+        hotel: hotel,
+        booking_attributes: { status: "confirmed", check_in: start_date, check_out: end_date + 1.day },
+        room_attributes: { room_type: room_type, subtotal: 200.0 }
+      )
 
       get managers_flash_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 

@@ -90,12 +90,16 @@ RSpec.describe "Hotel front desk toolbar", type: :system, js: true do
         sessionStorage.setItem("frontDeskSubmitCount", String(count + 1))
       }, true)
       let delayed = false
+      window.__delayedResumeFired = false
       document.addEventListener("turbo:before-fetch-request", event => {
         if (delayed) return
 
         delayed = true
         event.preventDefault()
-        setTimeout(() => event.detail.resume(), 600)
+        setTimeout(() => {
+          event.detail.resume()
+          window.__delayedResumeFired = true
+        }, 600)
       }, true)
 
       const form = document.querySelector("form[action*='front-desk']")
@@ -109,7 +113,9 @@ RSpec.describe "Hotel front desk toolbar", type: :system, js: true do
     JS
 
     expect(page).to have_current_path(/arrival_q=Race/, url: true, wait: 10)
-    sleep 0.6
+    wait_until("expected the delayed, superseded request to finish resolving") do
+      page.evaluate_script("window.__delayedResumeFired")
+    end
     expect(page.current_url).to include("arrival_start_date=2026-07-20", "arrival_end_date=2026-07-22")
     expect(page.current_url).not_to include("front_desk_date_range")
     expect(page.evaluate_script('Number(sessionStorage.getItem("frontDeskSubmitCount"))')).to eq(1)

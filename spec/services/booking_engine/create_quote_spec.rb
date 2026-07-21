@@ -213,5 +213,73 @@ RSpec.describe BookingEngine::CreateQuote do
         expect(result.quote.total_amount).to eq(270.0) # 3 rooms * (30 * 1 pax + 15 supplement) * 2 nights = 3 * 45 * 2 = 270.0
       end
     end
+
+    context "with age-banded per_person pricing plan" do
+      let!(:family_room) { RoomType.create!(hotel: hotel, name: "Family", quantity: 3, max_adults: 2, max_children: 3, base_price: 100, room_number_mode: "range") }
+      let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Age Banded Plan", sell_mode: "per_person", child_price_multiplier: 0.6, currency: "MYR") }
+
+      before do
+        RoomTypeRatePlan.create!(room_type: family_room, rate_plan: pax_rate_plan)
+        RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
+        RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 12, max_age: 17, price_value: 20, label: "Teen")
+
+        stay_dates.each do |date|
+          RoomInventory.create!(room_type: family_room, date: date, quantity: 3, status: "open")
+          RoomRate.create!(room_type: family_room, rate_plan: pax_rate_plan, date: date, price: 50.0, currency: "MYR")
+        end
+      end
+
+      it "freezes the resolved age -> band -> multiplier mapping into occupancy_snapshot at quote time" do
+        # 2 adults @ 50 + 1 child(6) @ 50*0.4 + 1 child(15) @ 50*0.2 = 100 + 20 + 10 = 130/night, 2 nights = 260
+        service = described_class.new(
+          hotel_id: hotel.id,
+          allocations: [ { room_type_id: family_room.id, quantity: 1 } ],
+          check_in: check_in,
+          check_out: check_out,
+          adults: 2,
+          children: 2,
+          child_ages: [ 6, 15 ],
+          room_count: 1,
+          rate_plan_id: pax_rate_plan.id
+        )
+        result = service.call
+
+        expect(result.success?).to be true
+        expect(result.quote.total_amount).to eq(260.0)
+
+        snapshot = result.quote.booking_quote_items.first.occupancy_snapshot
+        expect(snapshot["child_ages"]).to contain_exactly(6, 15)
+
+        bands = snapshot["child_age_bands"]
+        child_band = bands.find { |b| b["age"] == 6 }
+        teen_band = bands.find { |b| b["age"] == 15 }
+        expect(child_band["band_label"]).to eq("Child")
+        expect(child_band["pricing_mode"]).to eq("multiplier")
+        expect(child_band["price_value"]).to eq("40.0")
+        expect(teen_band["band_label"]).to eq("Teen")
+        expect(teen_band["price_value"]).to eq("20.0")
+      end
+
+      it "falls back to the flat child_price_multiplier and empty child_ages when no ages are supplied" do
+        service = described_class.new(
+          hotel_id: hotel.id,
+          allocations: [ { room_type_id: family_room.id, quantity: 1 } ],
+          check_in: check_in,
+          check_out: check_out,
+          adults: 2,
+          children: 2,
+          room_count: 1,
+          rate_plan_id: pax_rate_plan.id
+        )
+        result = service.call
+
+        expect(result.success?).to be true
+        # 2 adults @ 50 + 2 children @ 50*0.6 = 160/night, 2 nights = 320
+        expect(result.quote.total_amount).to eq(320.0)
+
+        snapshot = result.quote.booking_quote_items.first.occupancy_snapshot
+        expect(snapshot["child_ages"]).to eq([])
+      end
+    end
   end
 end

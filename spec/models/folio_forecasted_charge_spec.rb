@@ -18,10 +18,10 @@ RSpec.describe FolioForecastedCharge, type: :model do
   end
 
   describe "scopes" do
-    let(:folio) { create(:booking_folio) }
-    let!(:forecast_record) { create(:folio_forecasted_charge, booking_folio: folio, status: "forecast") }
-    let!(:actualized_record) { create(:folio_forecasted_charge, booking_folio: folio, status: "actualized", stay_date: Date.tomorrow) }
-    let!(:superseded_record) { create(:folio_forecasted_charge, booking_folio: folio, status: "superseded", stay_date: Date.tomorrow + 1) }
+    let_it_be(:folio) { create(:booking_folio) }
+    let_it_be(:forecast_record) { create(:folio_forecasted_charge, booking_folio: folio, status: "forecast") }
+    let_it_be(:actualized_record) { create(:folio_forecasted_charge, booking_folio: folio, status: "actualized", stay_date: Date.tomorrow) }
+    let_it_be(:superseded_record) { create(:folio_forecasted_charge, booking_folio: folio, status: "superseded", stay_date: Date.tomorrow + 1) }
 
     it "returns forecast records" do
       expect(described_class.forecast).to contain_exactly(forecast_record)

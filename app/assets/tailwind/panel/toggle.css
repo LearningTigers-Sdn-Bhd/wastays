@@ -1,0 +1,138 @@
+@layer components {
+  .panel-toggle-root {
+    @apply inline-flex;
+  }
+
+  .panel-toggle {
+    @apply relative inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-transparent bg-transparent text-sm font-medium text-foreground outline-none select-none;
+    @apply transition-colors duration-150 ease-standard motion-reduce:transition-none;
+    min-height: 2rem;
+  }
+
+  .panel-toggle svg {
+    @apply shrink-0 pointer-events-none;
+  }
+
+  .panel-toggle svg:not([class*="size-"]) {
+    @apply size-4;
+  }
+
+  .panel-toggle:focus-visible {
+    @apply z-10 ring-2 ring-ring ring-offset-2;
+    --tw-ring-offset-color: var(--background);
+  }
+
+  .panel-toggle:not(:disabled):hover {
+    background: color-mix(in oklab, var(--muted) 72%, transparent);
+  }
+
+  .panel-toggle[data-state="on"] {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  .panel-toggle[data-state="on"]:not(:disabled):hover {
+    border-color: var(--primary-hover);
+    background: var(--primary-hover);
+  }
+
+  .panel-toggle[data-state="on"]:not(:disabled):active {
+    border-color: var(--primary-active);
+    background: var(--primary-active);
+  }
+
+  .panel-toggle[data-variant="outline"] {
+    border-color: var(--border);
+    background: var(--card);
+    color: var(--card-foreground);
+  }
+
+  .panel-toggle[data-variant="outline"]:not(:disabled):hover {
+    border-color: var(--border-interactive);
+    background: var(--muted);
+  }
+
+  .panel-toggle[data-variant="outline"][data-state="on"] {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  .panel-toggle[data-variant="outline"][data-state="on"]:not(:disabled):hover {
+    border-color: var(--primary-hover);
+    background: var(--primary-hover);
+  }
+
+  .panel-toggle[data-variant="outline"][data-state="on"]:not(:disabled):active {
+    border-color: var(--primary-active);
+    background: var(--primary-active);
+  }
+
+  .panel-toggle:disabled {
+    border-color: var(--border);
+    background: color-mix(in oklab, var(--muted) 82%, var(--background));
+    color: var(--muted-foreground);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .panel-toggle[data-size="xs"] {
+    @apply h-6 gap-1 px-2 text-xs;
+    min-height: 1.5rem;
+  }
+
+  .panel-toggle[data-size="sm"] {
+    @apply h-7 px-2.5 text-xs;
+    min-height: 1.75rem;
+  }
+
+  .panel-toggle[data-size="md"] {
+    @apply h-8 px-3 text-sm;
+    min-height: 2rem;
+  }
+
+  .panel-toggle[data-size="lg"] {
+    @apply h-9 px-4 text-sm;
+    min-height: 2.25rem;
+  }
+
+  .panel-toggle[data-size="xs"] svg:not([class*="size-"]),
+  .panel-toggle[data-size="icon_xs"] svg:not([class*="size-"]) {
+    @apply size-3;
+  }
+
+  .panel-toggle[data-size="icon_xs"] {
+    @apply size-6 p-0;
+    min-width: 1.5rem;
+    min-height: 1.5rem;
+  }
+
+  .panel-toggle[data-size="icon_sm"] {
+    @apply size-7 p-0;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+  }
+
+  .panel-toggle[data-size="icon"] {
+    @apply size-8 p-0;
+    min-width: 2rem;
+    min-height: 2rem;
+  }
+
+  .panel-toggle[data-size="icon_lg"] {
+    @apply size-9 p-0;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+  }
+
+  .panel-toggle[data-icon-only="true"] {
+    @apply gap-0;
+    aspect-ratio: 1 / 1;
+  }
+
+  @media (pointer: coarse) {
+    .panel-toggle { min-height: 2.5rem; }
+    .panel-toggle[data-icon-only="true"] { min-width: 2.5rem; }
+  }
+}

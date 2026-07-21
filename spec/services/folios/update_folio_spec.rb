@@ -57,15 +57,18 @@ RSpec.describe Folios::UpdateFolio do
   end
 
   it "promotes a primary only within the folio's room scope" do
+    group_booking = create(:group_booking, hotel: booking.hotel)
+    booking.update!(group_booking: group_booking, group_position: 1)
+    sibling = create(:booking, hotel: booking.hotel, group_booking: group_booking, group_position: 2)
     booking_primary = create(:booking_folio, booking: booking, hotel: booking.hotel)
-    first_room = create(:booking_room, booking: booking)
-    second_room = create(:booking_room, booking: booking)
-    old_first_primary = create(:booking_folio, booking: booking, hotel: booking.hotel, booking_room: first_room)
-    new_first_primary = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, booking_room: first_room)
-    second_primary = create(:booking_folio, booking: booking, hotel: booking.hotel, booking_room: second_room)
+    room = create(:booking_room, booking: booking)
+    sibling_room = create(:booking_room, booking: sibling)
+    old_room_primary = create(:booking_folio, booking: booking, hotel: booking.hotel, booking_room: room)
+    new_room_primary = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, booking_room: room)
+    sibling_primary = create(:booking_folio, booking: sibling, hotel: booking.hotel, booking_room: sibling_room)
 
     result = described_class.call(
-      folio: new_first_primary,
+      folio: new_room_primary,
       user: user,
       attributes: {
         is_primary: true,
@@ -74,10 +77,11 @@ RSpec.describe Folios::UpdateFolio do
     )
 
     expect(result).to be_success
-    expect(new_first_primary.reload).to be_is_primary
-    expect(old_first_primary.reload).not_to be_is_primary
+    expect(group_booking.bookings.reload).to all(satisfy { |child| child.booking_rooms.one? })
+    expect(new_room_primary.reload).to be_is_primary
+    expect(old_room_primary.reload).not_to be_is_primary
     expect(booking_primary.reload).to be_is_primary
-    expect(second_primary.reload).to be_is_primary
-    expect(FolioOperationLog.last.metadata["booking_room_id"]).to eq(first_room.id)
+    expect(sibling_primary.reload).to be_is_primary
+    expect(FolioOperationLog.last.metadata["booking_room_id"]).to eq(room.id)
   end
 end

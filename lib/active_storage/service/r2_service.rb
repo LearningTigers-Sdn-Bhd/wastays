@@ -155,10 +155,13 @@ module ActiveStorage
         AppConfig.get("r2_bucket") != "pending"
     end
 
+    # Fetch the registered "local" disk service (config/storage.yml) rather than
+    # building an ad-hoc, unnamed DiskService instance. An unnamed service leaves
+    # blob.service_name/signed URLs pointing at a nil service, which blows up
+    # ActiveStorage::DiskController (Blob.services.fetch(nil.to_sym)) when serving
+    # or downloading the file later.
     def local_service
-      @local_service ||= ActiveStorage::Service::DiskService.new(
-        root: Rails.root.join("storage")
-      )
+      @local_service ||= ActiveStorage::Blob.services.fetch(:local)
     end
 
     def client

@@ -2,25 +2,48 @@
   <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
     <div class="border-b border-border px-6 py-5">
       <h2 class="text-lg font-bold text-foreground">Invoice Allocations</h2>
-      <p class="mt-1 text-xs text-muted-foreground">Optional. Any remainder stays unapplied on the corporate account.</p>
+      <p class="mt-1 text-xs text-muted-foreground">
+        <% if readonly %>
+          These are the invoices the agent selected when they submitted this payment.
+        <% else %>
+          Optional. Any remainder stays unapplied on the corporate account.
+        <% end %>
+      </p>
     </div>
     <% if open_invoices.any? %>
       <div class="overflow-x-auto">
         <table class="w-full min-w-[900px] text-left text-sm">
-          <thead class="border-b border-border bg-muted text-xs uppercase tracking-wider text-muted-foreground"><tr><th class="px-6 py-3">Invoice</th><th class="px-6 py-3">Source</th><th class="px-6 py-3">Due</th><th class="px-6 py-3 text-right">Outstanding</th><th class="px-6 py-3">Allocate</th></tr></thead>
+          <thead class="border-b border-border bg-muted text-xs uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th class="px-6 py-3">Invoice</th>
+              <th class="px-6 py-3">Source</th>
+              <th class="px-6 py-3">Due</th>
+              <th class="px-6 py-3 text-right"><%= readonly ? "Amount" : "Outstanding" %></th>
+              <% unless readonly %>
+                <th class="px-6 py-3">Allocate</th>
+              <% end %>
+            </tr>
+          </thead>
           <tbody class="divide-y divide-border">
             <% open_invoices.each do |invoice| %>
               <tr>
                 <td class="px-6 py-4 font-bold text-foreground"><%= invoice.formatted_invoice_number %></td>
                 <td class="px-6 py-4 text-muted-foreground"><%= invoice.booking.confirmation_token %> · <%= invoice.booking_folio.folio_reference_display %></td>
                 <td class="px-6 py-4 text-muted-foreground"><%= invoice.due_on.strftime("%d %b %Y") %></td>
-                <td class="px-6 py-4 text-right font-bold tabular-nums text-foreground"><%= invoice.currency %> <%= number_with_precision(invoice.outstanding_amount, precision: 2) %></td>
-                <td class="px-6 py-4"><%= number_field_tag "allocations[#{invoice.id}]", (source_invoice&.id == invoice.id ? invoice.outstanding_amount : nil), step: "0.01", min: "0", max: invoice.outstanding_amount, class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground", data: { ar_payment_form_target: "allocation", action: "input->ar-payment-form#recalculate" } %></td>
+                <td class="px-6 py-4 text-right font-bold tabular-nums text-foreground"><%= invoice.currency %> <%= number_with_precision(readonly ? source_allocations[invoice.id] : invoice.outstanding_amount, precision: 2) %></td>
+                <% unless readonly %>
+                  <td class="px-6 py-4"><%= number_field_tag "allocations[#{invoice.id}]", source_allocations[invoice.id], step: "0.01", min: "0", max: invoice.outstanding_amount, class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground", data: { ar_payment_form_target: "allocation", action: "input->ar-payment-form#recalculate" } %></td>
+                <% end %>
               </tr>
             <% end %>
           </tbody>
         </table>
       </div>
+      <% if readonly %>
+        <% open_invoices.each do |invoice| %>
+          <%= hidden_field_tag "allocations[#{invoice.id}]", source_allocations[invoice.id] %>
+        <% end %>
+      <% end %>
     <% else %>
       <p class="px-6 py-10 text-center text-sm text-muted-foreground">No open invoices are available for this corporate account.</p>
     <% end %>

@@ -242,7 +242,7 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
 
   it "rejects open folios" do
     open_booking = create(:booking, hotel: hotel)
-    create(:booking_folio, booking: open_booking, hotel: hotel, status: "open")
+    create(:booking_folio, booking: open_booking, hotel: hotel, folio_number: 999, status: "open")
 
     expect { described_class.new(booking: open_booking).call }.to raise_error(described_class::UnavailableError)
   end

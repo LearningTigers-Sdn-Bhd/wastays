@@ -116,7 +116,6 @@ standard_plan.sell_mode = "per_person"
 standard_plan.currency = "MYR"
 standard_plan.single_supplement = 20.0
 standard_plan.child_price_multiplier = 0.5
-standard_plan.infant_price_multiplier = 0.0
 standard_plan.save!
 
 # Delete any existing per pax rate plans
@@ -364,7 +363,7 @@ def post_nightly_charges_for_dates(booking, date_limit)
   end
 end
 
-def seed_pax_booking(hotel:, room_type:, rate_plan:, guest:, check_in:, check_out:, adults:, children: 0, infants: 0, room_number: nil, status: "confirmed", payment_status: "captured", confirmation_token: nil, shift_days: 0)
+def seed_pax_booking(hotel:, room_type:, rate_plan:, guest:, check_in:, check_out:, adults:, children: 0, room_number: nil, status: "confirmed", payment_status: "captured", confirmation_token: nil, shift_days: 0)
   # We perform the creation for future/current dates so it passes availability/closing checks, then we shift it.
   effective_check_in = check_in + shift_days.days
   effective_check_out = check_out + shift_days.days
@@ -377,7 +376,6 @@ def seed_pax_booking(hotel:, room_type:, rate_plan:, guest:, check_in:, check_ou
     check_out: effective_check_out,
     adults: adults,
     children: children,
-    infants: infants,
     rate_plan_id: rate_plan.id,
     guest_name: guest.name,
     guest_email: guest.email,
@@ -514,10 +512,10 @@ seed_pax_booking(
   shift_days: 15
 )
 
-# Scenario 2: Past Booking - Multi-generational Family (Child/Infant Multiplier)
+# Scenario 2: Past Booking - Multi-generational Family (Child Multiplier)
 # Checked in 6 days ago, checked out 4 days ago.
 # Room: Pax Family Suite
-# Pax: 2 adults, 1 child, 1 infant
+# Pax: 2 adults, 2 children
 # Nights: 2
 # Rate Plan: Standard Rate
 seed_pax_booking(
@@ -528,8 +526,7 @@ seed_pax_booking(
   check_in: Date.current - 6.days,
   check_out: Date.current - 4.days,
   adults: 2,
-  children: 1,
-  infants: 1,
+  children: 2,
   room_number: "301",
   status: "completed",
   confirmation_token: "WS-PAX-PST-002",

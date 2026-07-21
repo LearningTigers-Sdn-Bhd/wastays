@@ -7,6 +7,8 @@ class SystemDesignsController < ApplicationController
   layout "system_design"
 
   def index
+    @previews = SystemDesigns::Previews::ALL
+    @previews = @previews.select { |preview| requested_partials.include?(preview[:partial]) } if params[:only].present?
     @reservation_request = SystemDesigns::ReservationRequest.new
   end
 
@@ -33,6 +35,10 @@ class SystemDesignsController < ApplicationController
   end
 
   private
+
+  def requested_partials
+    params[:only].to_s.split(",")
+  end
 
   def reservation_params
     params.fetch(:reservation_request, {}).permit(:guest_name, :email, :nights)

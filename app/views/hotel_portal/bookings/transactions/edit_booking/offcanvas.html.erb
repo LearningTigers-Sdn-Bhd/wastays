@@ -1,6 +1,6 @@
 <%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "compact-right" } do %>
   <div class="flex h-full flex-col bg-card">
-    <%= render "hotel_portal/bookings/board/partials/content_header",
+    <%= render "hotel_portal/shared/offcanvas/content_header",
       title: "Edit Booking",
       subtitle: "Guest, contact, source, and guarantee details",
       icon: cached_icon("pencil", class: "size-5") %>

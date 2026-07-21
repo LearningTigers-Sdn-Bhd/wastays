@@ -79,8 +79,11 @@ RSpec.describe "Hotel inventory tabs", type: :system, js: true do
       subtab: "overrides"
     )
 
-    find("a[title='Next 14 days']").click
+    next_page = find("a[title='Next 14 days']")
+    expected_path = URI.parse(next_page[:href]).request_uri
+    next_page.click
 
+    expect(page).to have_current_path(expected_path)
     uri = URI.parse(page.current_url)
     query = Rack::Utils.parse_nested_query(uri.query)
     expect(query).to include(

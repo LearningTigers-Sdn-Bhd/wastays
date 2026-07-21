@@ -152,13 +152,32 @@ RSpec.describe Folios::GenerateForecastedCharges do
       expect(forecasts[2].amount).to eq(33.34)
     end
 
-    context "with multiple rooms" do
-      let!(:booking_room2) { create(:booking_room, booking: booking, subtotal: 100.0) }
+    context "with a group booking" do
+      let(:group_booking) { create(:group_booking, hotel: hotel) }
+      let(:second_booking) do
+        create(
+          :booking,
+          hotel: hotel,
+          group_booking: group_booking,
+          group_position: 2,
+          check_in: booking.check_in,
+          check_out: booking.check_out
+        )
+      end
+      let!(:second_booking_room) { create(:booking_room, booking: second_booking, subtotal: 100.0) }
+      let(:second_folio) { create(:booking_folio, hotel: hotel, booking: second_booking) }
 
-      it "creates separate forecasts per room" do
+      before do
+        booking.update!(group_booking: group_booking, group_position: 1)
+      end
+
+      it "creates separate forecasts for each one-room child" do
         described_class.call(booking_folio: folio)
+        described_class.call(booking_folio: second_folio)
 
-        accommodation_forecasts = folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation")
+        expect(group_booking.bookings.reload).to all(satisfy { |child| child.booking_rooms.one? })
+        accommodation_forecasts = FolioForecastedCharge.forecast
+          .where(booking_folio: [ folio, second_folio ], charge_kind: "accommodation")
         expect(accommodation_forecasts.count).to eq(4) # 2 rooms x 2 nights
       end
     end

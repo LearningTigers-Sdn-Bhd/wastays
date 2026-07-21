@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Breadcrumb", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=breadcrumb_preview" }
 
   let(:toggle) { find("button[aria-label='Open Financial navigation']") }
 

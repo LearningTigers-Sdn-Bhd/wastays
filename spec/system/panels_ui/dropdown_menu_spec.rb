@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::DropdownMenu", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=dropdown_menu_preview" }
 
   def open_main_menu
     click_button "Menu options"
@@ -74,6 +74,53 @@ RSpec.describe "PanelsUI::DropdownMenu", type: :system do
     dispatch_key("ArrowLeft")
     expect(page).to have_no_css("[role='menu'][aria-label='Export']:popover-open")
     expect(page).to have_css("[role='menuitem'][aria-haspopup='menu']:focus", text: "Export")
+  end
+
+  it "navigates nested submenus while preserving and recursively closing the ancestor branch" do
+    open_main_menu
+    export = find("[role='menuitem'][aria-haspopup='menu']", text: "Export")
+    page.execute_script("arguments[0].focus()", export)
+    dispatch_key("ArrowRight")
+    expect(page).to have_css("[role='menu'][aria-label='Export'] [role='menuitem']:focus", text: "PDF")
+    statements = find("[role='menuitem'][aria-controls='sd-dropdown-statements']", text: "Statements")
+    page.execute_script("arguments[0].focus()", statements)
+
+    expect(focused_text).to eq("Statements›")
+    dispatch_key("ArrowRight")
+    expect(page).to have_css("[role='menu'][aria-label='Export']:popover-open")
+    expect(page).to have_css("#sd-dropdown-statements:popover-open [role='menuitem']:focus", text: "Monthly")
+
+    archives = find("[role='menuitem'][aria-controls='sd-dropdown-archives']", text: "Archives")
+    page.execute_script("arguments[0].focus()", archives)
+    dispatch_key("ArrowRight")
+    expect(page).to have_no_css("#sd-dropdown-statements:popover-open")
+    expect(page).to have_css("[role='menu'][aria-label='Export']:popover-open")
+    expect(page).to have_css("#sd-dropdown-archives:popover-open [role='menuitem']:focus", text: "ZIP")
+
+    dispatch_key("ArrowLeft")
+    expect(page).to have_no_css("#sd-dropdown-archives:popover-open")
+    expect(page).to have_css("[role='menuitem'][aria-controls='sd-dropdown-archives']:focus", text: "Archives")
+    dispatch_key("ArrowLeft")
+    expect(page).to have_no_css("[role='menu'][aria-label='Export']:popover-open")
+    expect(page).to have_css("#sd-dropdown-menu:popover-open [role='menuitem']:focus", text: "Export")
+
+    dispatch_key("ArrowRight")
+    expect(page).to have_css("[role='menu'][aria-label='Export'] [role='menuitem']:focus", text: "PDF")
+    statements = find("[role='menuitem'][aria-controls='sd-dropdown-statements']", text: "Statements")
+    page.execute_script("arguments[0].focus()", statements)
+    dispatch_key("ArrowRight")
+    expect(page).to have_css("#sd-dropdown-statements [role='menuitem']:focus", text: "Monthly")
+    find("h1", text: "PanelsUI").click
+    expect(page).to have_no_css("#sd-dropdown-menu:popover-open, [role='menu'][aria-label='Export']:popover-open, #sd-dropdown-statements:popover-open")
+  end
+
+  it "opens each nested submenu level with pointer clicks" do
+    open_main_menu
+
+    find("[role='menuitem'][aria-controls]", text: "Export").click
+    expect(page).to have_css("[role='menu'][aria-label='Export']:popover-open")
+    find("[role='menuitem'][aria-controls='sd-dropdown-statements']", text: "Statements").click
+    expect(page).to have_css("#sd-dropdown-statements:popover-open", text: "Monthly")
   end
 
   it "flips away from a constrained viewport edge and closes on outside pointer input" do

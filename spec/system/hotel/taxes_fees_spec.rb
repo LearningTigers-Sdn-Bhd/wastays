@@ -181,7 +181,7 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
   xit "reviews and confirms a forecast-impacting hotel-wide transaction-code tax change" do
     hotel.transaction_configuration.update!(room_revenue_tax_rule_application: "open_folio_forecasts")
     room_type = create(:room_type, hotel: hotel)
-    booking = create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 1.day)
+    booking = create(:booking, hotel: hotel, check_in: hotel_today(hotel), check_out: hotel_today(hotel) + 1.day)
     create(:booking_room, booking: booking, room_type: room_type, subtotal: 150.0)
     folio = create(:booking_folio, booking: booking, hotel: hotel)
     create(:folio_forecasted_charge, booking_folio: folio, amount: 150.0)

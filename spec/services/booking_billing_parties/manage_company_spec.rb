@@ -6,7 +6,7 @@ RSpec.describe BookingBillingParties::ManageCompany do
   it "idempotently adds a company party with separate booking terms and an audit entry" do
     booking = create(:booking)
     actor = create(:user, account: booking.hotel.account)
-    account = create(:hotel_corporate_account, hotel: booking.hotel, direct_bill_enabled: true)
+    account = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel)
 
     2.times do
       result = described_class.call(booking: booking, actor: actor, attributes: {
@@ -24,7 +24,7 @@ RSpec.describe BookingBillingParties::ManageCompany do
   it "sets account_type from the submitted attribute, defaulting to company" do
     booking = create(:booking)
     actor = create(:user, account: booking.hotel.account)
-    account = create(:hotel_corporate_account, hotel: booking.hotel, direct_bill_enabled: true)
+    account = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel)
 
     result = described_class.call(booking: booking, actor: actor, attributes: {
       hotel_corporate_account_id: account.id, account_type: "government"
@@ -50,7 +50,7 @@ RSpec.describe BookingBillingParties::ManageCompany do
   it "creates exactly one folio when a new company party is added" do
     booking = create(:booking)
     actor = create(:user, account: booking.hotel.account)
-    account = create(:hotel_corporate_account, hotel: booking.hotel, direct_bill_enabled: true)
+    account = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel)
 
     result = described_class.call(booking: booking, actor: actor, attributes: { hotel_corporate_account_id: account.id })
 
@@ -64,7 +64,7 @@ RSpec.describe BookingBillingParties::ManageCompany do
   it "does not create a second folio when only billing_terms are updated on an already-active party" do
     booking = create(:booking)
     actor = create(:user, account: booking.hotel.account)
-    account = create(:hotel_corporate_account, hotel: booking.hotel, direct_bill_enabled: true)
+    account = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel)
 
     described_class.call(booking: booking, actor: actor, attributes: { hotel_corporate_account_id: account.id })
     expect do
@@ -75,7 +75,7 @@ RSpec.describe BookingBillingParties::ManageCompany do
   it "does not duplicate the folio when reactivating an archived party that already has one" do
     booking = create(:booking)
     actor = create(:user, account: booking.hotel.account)
-    account = create(:hotel_corporate_account, hotel: booking.hotel, direct_bill_enabled: true)
+    account = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel)
 
     described_class.call(booking: booking, actor: actor, attributes: { hotel_corporate_account_id: account.id })
     party = booking.booking_billing_parties.companies.sole
@@ -93,7 +93,7 @@ RSpec.describe BookingBillingParties::ManageCompany do
       booking_one = create(:booking, hotel: group.hotel, group_booking: group, group_position: 1)
       booking_two = create(:booking, hotel: group.hotel, group_booking: group, group_position: 2)
       actor = create(:user, account: group.hotel.account)
-      account = create(:hotel_corporate_account, hotel: group.hotel, direct_bill_enabled: true)
+      account = create(:hotel_corporate_account, :direct_bill, hotel: group.hotel)
 
       result = described_class.call_for_group(group_booking: group, actor: actor, attributes: { hotel_corporate_account_id: account.id })
 
@@ -110,7 +110,7 @@ RSpec.describe BookingBillingParties::ManageCompany do
       booking_one = create(:booking, hotel: group.hotel, group_booking: group, group_position: 1)
       booking_two = create(:booking, hotel: group.hotel, group_booking: group, group_position: 2)
       actor = create(:user, account: group.hotel.account)
-      account = create(:hotel_corporate_account, hotel: group.hotel, direct_bill_enabled: true)
+      account = create(:hotel_corporate_account, :direct_bill, hotel: group.hotel)
 
       call_count = 0
       allow(described_class).to receive(:call).and_wrap_original do |original, **kwargs|

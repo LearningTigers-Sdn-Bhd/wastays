@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe CorporateArPayments::InitializeCheckout do
   let(:hotel) { create(:hotel, status: "approved") }
-  let(:relationship) { create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true, status: "active") }
+  let(:relationship) { create(:hotel_corporate_account, :direct_bill, hotel: hotel, status: "active") }
   let(:intent) { create(:corporate_ar_payment_intent, hotel: hotel, hotel_corporate_account: relationship, amount: 150, currency: "MYR", gateway: "razorpay") }
 
   before do

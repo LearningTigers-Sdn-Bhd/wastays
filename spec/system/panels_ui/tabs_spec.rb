@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Tabs", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=tabs_preview,breadcrumb_preview" }
 
   def tab(name) = find("#sd-tabs-tab-#{name}")
 
@@ -54,12 +54,12 @@ RSpec.describe "PanelsUI::Tabs", type: :system do
   end
 
   it "initializes from a valid query parameter without rewriting an invalid value" do
-    visit "/system-design?tab=exports"
+    visit_when_loaded "/system-design?only=tabs_preview&tab=exports"
     expect(page).to have_css("#sd-tabs-tab-exports[aria-selected='true']")
 
-    visit "/system-design?tab=unknown"
+    visit_when_loaded "/system-design?only=tabs_preview&tab=unknown"
     expect(page).to have_css("#sd-tabs-tab-history[aria-selected='true']")
-    expect(page).to have_current_path("/system-design?tab=unknown")
+    expect(page).to have_current_path("/system-design?only=tabs_preview&tab=unknown")
   end
 
   it "updates configured breadcrumb labels for parent and nested tabs" do

@@ -99,6 +99,7 @@ group :test do
   gem "shoulda-matchers"
   gem "simplecov", require: false
   gem "webmock"
+  gem "test-prof"
 end
 
 group :development do

@@ -29,11 +29,12 @@ module HotelPortal
       guest_compliance_nav_active = guest_compliance_nav_items.any?(&:active)
 
       accounts_receivable_nav_items = [
-        PanelsUI::Navigation::Item.new(label: "Corporate Accounts", path: hotel_corporate_accounts_path(current_hotel), search_text: "Corporate Accounts Government Direct Bill Credit Terms External Payers Accounts Receivable", active: controller_name.in?(%w[corporate_accounts corporate_invitations]), icon: "building-2", permission: "manage_corporate_accounts"),
-        PanelsUI::Navigation::Item.new(label: "AR Invoices", path: hotel_ar_invoices_path(current_hotel), search_text: "AR Invoices Accounts Receivable Direct Bill Aging Finance", active: controller_name == "ar_invoices" && action_name != "aging", icon: "file-text", permission: "view_reports"),
-        PanelsUI::Navigation::Item.new(label: "AR Payments", path: hotel_ar_payments_path(current_hotel), search_text: "AR Payments Corporate Payments Accounts Receivable Finance", active: controller_name == "ar_payments", icon: "landmark", permission: "view_reports"),
-        PanelsUI::Navigation::Item.new(label: "AR Statements", path: hotel_ar_statements_path(current_hotel), search_text: "AR Statements Corporate Account Statement Ledger Accounts Receivable Finance", active: controller_name == "ar_statements", icon: "file-spreadsheet", permission: "view_reports"),
-        PanelsUI::Navigation::Item.new(label: "Aging Report", path: hotel_ar_aging_path(current_hotel), search_text: "AR Aging Aging Report Credit Exposure Accounts Receivable Finance", active: controller_name == "ar_invoices" && action_name == "aging", icon: "chart-bar", permission: "view_reports")
+        NavItem.new(label: "Corporate Accounts", path: hotel_corporate_accounts_path(current_hotel), search_text: "Corporate Accounts Government Direct Bill Credit Terms External Payers Accounts Receivable", active: controller_name.in?(%w[corporate_accounts corporate_invitations]), icon: "building-2", permission: "manage_corporate_accounts"),
+        NavItem.new(label: "AR Invoices", path: hotel_ar_invoices_path(current_hotel), search_text: "AR Invoices Accounts Receivable Direct Bill Aging Finance", active: controller_name == "ar_invoices" && action_name.in?(%w[index show]), icon: "file-text", permission: "view_reports"),
+        NavItem.new(label: "Payment Record", path: hotel_ar_payments_path(current_hotel), search_text: "Payment Record AR Payments Payment Submissions Agent Slip Verification Corporate Payments Accounts Receivable Finance", active: controller_name.in?(%w[ar_payments ar_payment_submissions]), icon: "landmark", permission: "view_reports"),
+        NavItem.new(label: "AR Statements", path: hotel_ar_statements_path(current_hotel), search_text: "AR Statements Corporate Account Statement Ledger Accounts Receivable Finance", active: controller_name == "ar_statements", icon: "file-spreadsheet", permission: "view_reports"),
+        NavItem.new(label: "Aging Report", path: hotel_ar_aging_path(current_hotel), search_text: "AR Aging Aging Report Credit Exposure Accounts Receivable Finance", active: controller_name == "ar_invoices" && action_name == "aging", icon: "chart-bar", permission: "view_reports"),
+        NavItem.new(label: "Agent Summary", path: hotel_ar_agent_summary_path(current_hotel), search_text: "Agent Summary Statement Travel Agent Airline Accounts Receivable Finance", active: controller_name == "ar_invoices" && action_name == "agent_summary", icon: "briefcase", permission: "view_reports")
       ]
       accounts_receivable_nav_active = accounts_receivable_nav_items.any?(&:active)
 
@@ -45,7 +46,7 @@ module HotelPortal
       front_desk_children = [
         NavItem.new(label: "Reservations", path: hotel_front_desk_path(current_hotel), search_text: "Reservations Front Desk Arrivals In-House Guests Departures Check-in Check-out", active: controller_name == "front_desk", icon: "calendar-check-2"),
         NavItem.new(label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory Front Desk", active: controller_name == "guests", icon: "user", permission: "view_guest_records", plan_feature: "unified_guest_profile"),
-        NavItem.new(label: "Room Status", path: hotel_room_status_board_path(current_hotel), search_text: "Room Status Housekeeping Front Desk", active: controller_name == "room_status_board", icon: "layout-grid", permission: [ "view_room_readiness", "manage_room_status" ], plan_feature: "room_status_board"),
+        NavItem.new(label: "Stay View", path: hotel_stay_view_path(current_hotel), search_text: "Stay View Timeline Board Room Status Housekeeping Planning Operations Calendar Tape Chart Front Desk", active: controller_path == "hotel_portal/stay_view/board", icon: "table-2", permission: [ "view_bookings", "manage_bookings", "view_room_readiness", "manage_room_status" ]),
         NavItem.new(label: "Housekeeping Tasks", path: hotel_housekeeping_tasks_path(current_hotel), search_text: "Housekeeping Tasks Cleaning Room Status Front Desk", active: controller_name == "housekeeping_tasks", icon: "clipboard-check", permission: "manage_housekeeping_tasks", plan_feature: "task_assignment_minibar_log"),
         NavItem.new(label: "Requests", path: hotel_requests_path(current_hotel), search_text: "Requests Housekeeping Complaint Reservations", active: controller_name == "requests", icon: "clipboard-list", permission: "manage_requests", plan_feature: "task_assignment_minibar_log"),
         NavItem.new(label: "Night Audit", path: hotel_night_audits_path(current_hotel), search_text: "Night Audit Business Date Close Reports", active: controller_name == "night_audits", icon: "moon", permission: "manage_night_audit", plan_feature: "no_show_auto_handling")
@@ -53,7 +54,6 @@ module HotelPortal
       front_desk_active = front_desk_children.any?(&:active)
 
       reservations_children = [
-        NavItem.new(label: "Timeline Board", path: board_hotel_bookings_path(current_hotel), search_text: "Timeline Board Booking Calendar Tape Chart Reservations", active: controller_path == "hotel_portal/bookings/board", icon: "table-2", permission: [ "view_reservation_board", "manage_bookings" ]),
         NavItem.new(label: "Rates & Inventory", path: hotel_inventory_index_path(current_hotel), search_text: "Rates Inventory Availability Pricing Reservations", active: controller_name == "inventory_dashboards", icon: "calendar-range", permission: "manage_hotel_profile")
       ]
       reservations_active = reservations_children.any?(&:active)
@@ -74,7 +74,7 @@ module HotelPortal
         NavSection.new(label: "", items: [
           NavItem.new(label: "Dashboard", path: hotel_dashboard_path(current_hotel), search_text: "Dashboard Home", active: controller_name == "dashboard", icon: "layout-dashboard", permission: "view_bookings"),
           NavItem.new(label: "Front Office", path: hotel_front_desk_path(current_hotel), search_text: "Front Office Reservations Guest Operations", active: front_desk_active, icon: "monitor", children: front_desk_children),
-          NavItem.new(label: "Planning & Inventory", path: board_hotel_bookings_path(current_hotel), search_text: "Planning Inventory Timeline Rates Availability", active: reservations_active, icon: "calendar", children: reservations_children)
+          NavItem.new(label: "Planning & Inventory", path: hotel_inventory_index_path(current_hotel), search_text: "Planning Inventory Rates Availability", active: reservations_active, icon: "calendar", children: reservations_children)
         ]),
         NavSection.new(label: "Billing", items: [
           NavItem.new(label: "Folios", path: hotel_folios_path(current_hotel), search_text: "Folios Ledger Guest Balances Billing", active: controller_name == "folios" && action_name == "index", icon: "book-open", permission: "view_bookings"),

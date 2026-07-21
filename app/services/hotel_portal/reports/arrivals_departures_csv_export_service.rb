@@ -15,11 +15,25 @@ module HotelPortal
           csv << headers_for_active_tab
           if @tab == "bibo"
             @report.boat_ins.each do |row|
-              csv << [ "Boat Arrival", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ]
+              csv << [ "Boat-in", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ]
             end
             @report.boat_outs.each do |row|
-              csv << [ "Boat Departure", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ]
+              csv << [ "Boat-out", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ]
             end
+          elsif @tab == "meal_prep"
+            @report.records.each do |row|
+              csv << [
+                row[:type],
+                row[:guest_name],
+                row[:confirmation_token],
+                row[:pax],
+                row[:room_type],
+                row[:room_number],
+                row[:formatted_boat_time]
+              ]
+            end
+            csv << []
+            csv << [ "", "", "", "", "", "Total Pax", @report.total_pax ]
           else
             rows_for_active_tab.each do |row|
               csv << values_for_active_tab(row)
@@ -32,12 +46,23 @@ module HotelPortal
 
       def headers_for_active_tab
         return [ "Type", "Guest Name", "Booking Ref", "Room Type", "Room Number", "Stay Dates", "Boat Time" ] if @tab == "bibo"
-        return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Pre-checkin Status", "Guarantee Method", "Deposit Status", "Departure Status", "Notes" ] if @tab == "arrivals"
-        if @tab == "in_house"
-          if @report.respond_to?(:allow_boat_information) && !@report.allow_boat_information
-            return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ]
+        return [ "Type", "Guest Name", "Booking Ref", "Pax", "Room Type", "Room Number", "Boat Time" ] if @tab == "meal_prep"
+
+        allow_boat = @report.respond_to?(:allow_boat_information) && @report.allow_boat_information && @tab != "checkout"
+
+        if @tab == "arrivals"
+          if allow_boat
+            return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Pre-checkin Status", "Guarantee Method", "Deposit Status", "Departure Status", "Boat-in", "Notes" ]
           else
-            return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Boat Departure", "Notes" ]
+            return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Pre-checkin Status", "Guarantee Method", "Deposit Status", "Departure Status", "Notes" ]
+          end
+        end
+
+        if @tab == "in_house" || @tab == "departures" || @tab == "checkout"
+          if allow_boat
+            return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Boat-out", "Notes" ]
+          else
+            return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ]
           end
         end
 
@@ -59,27 +84,43 @@ module HotelPortal
           "in_house" => "In-House",
           "departures" => "Departure",
           "checkout" => "Checkout",
-          "bibo" => "Boat Transfers"
+          "bibo" => "Boat Transfers",
+          "meal_prep" => "Meal Prep"
         }.fetch(@tab, "Arrival")
       end
 
       def values_for_active_tab(row)
-        return [
-          active_tab_label,
-          row[:guest_name],
-          row[:confirmation_token],
-          row[:room_details],
-          row[:room_numbers],
-          row[:stay_dates],
-          row[:pre_checkin_status],
-          row[:guarantee_method_status],
-          row[:deposit_status],
-          nil,
-          row[:latest_note]
-        ] if @tab == "arrivals"
+        allow_boat = @report.respond_to?(:allow_boat_information) && @report.allow_boat_information && @tab != "checkout"
+        tz = @report.respond_to?(:hotel_time_zone) ? @report.hotel_time_zone : Time.zone.name
 
-        if @tab == "in_house"
-          if @report.respond_to?(:allow_boat_information) && !@report.allow_boat_information
+        if @tab == "arrivals"
+          cols = [
+            active_tab_label,
+            row[:guest_name],
+            row[:confirmation_token],
+            row[:room_details],
+            row[:room_numbers],
+            row[:stay_dates],
+            row[:pre_checkin_status],
+            row[:guarantee_method_status],
+            row[:deposit_status],
+            nil
+          ]
+          if allow_boat
+            boat_arr_str = if row[:boat_arrival].present?
+              boat_time = row[:boat_arrival].in_time_zone(tz)
+              "#{boat_time.strftime('%d %b %Y')} #{boat_time.strftime('%I:%M %p')}"
+            else
+              "—"
+            end
+            cols << boat_arr_str
+          end
+          cols << row[:latest_note]
+          return cols
+        end
+
+        if @tab == "in_house" || @tab == "departures" || @tab == "checkout"
+          if !allow_boat
             return [
               active_tab_label,
               row[:guest_name],
@@ -93,9 +134,8 @@ module HotelPortal
           end
 
           boat_dep_str = if row[:boat_departure].present?
-            tz = @report.respond_to?(:hotel_time_zone) ? @report.hotel_time_zone : Time.zone.name
             boat_time = row[:boat_departure].in_time_zone(tz)
-            "#{boat_time.strftime('%d %b %Y')}\n#{boat_time.strftime('%I:%M %p')}"
+            "#{boat_time.strftime('%d %b %Y')} #{boat_time.strftime('%I:%M %p')}"
           else
             "—"
           end

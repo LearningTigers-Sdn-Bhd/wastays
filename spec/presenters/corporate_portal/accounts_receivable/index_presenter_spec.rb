@@ -25,12 +25,12 @@ RSpec.describe CorporatePortal::AccountsReceivable::IndexPresenter do
     let(:second_relationship) { create(:hotel_corporate_account, hotel: second_hotel, corporate_account: account, credit_currency: "MYR") }
 
     before do
-      create_invoice(relationship: relationship, confirmation_token: "BK-FIRST", folio_number: 201, status: "open", due_on: Date.new(2026, 7, 10), amount: 100)
-      create_invoice(relationship: second_relationship, confirmation_token: "BK-SECOND", folio_number: 202, status: "paid", due_on: Date.new(2026, 8, 1), amount: 50, paid_amount: 50, outstanding_amount: 0)
+      create_invoice(relationship: relationship, confirmation_token: "BK-FIRST", folio_number: 201, invoice_number: 500_201, status: "open", due_on: Date.new(2026, 7, 10), amount: 100)
+      create_invoice(relationship: second_relationship, confirmation_token: "BK-SECOND", folio_number: 202, invoice_number: 700_202, status: "paid", due_on: Date.new(2026, 8, 1), amount: 50, paid_amount: 50, outstanding_amount: 0)
     end
 
     it "searches by invoice number, booking reference, and hotel name" do
-      first_invoice = account.hotel_corporate_accounts.first.ar_invoices.first
+      first_invoice = relationship.ar_invoices.first
 
       expect(presenter_for(query: first_invoice.invoice_number.to_s).paginated_rows.map(&:booking_reference)).to eq([ "BK-FIRST" ])
       expect(presenter_for(query: "BK-FIRST").paginated_rows.map(&:booking_reference)).to eq([ "BK-FIRST" ])
@@ -177,6 +177,7 @@ RSpec.describe CorporatePortal::AccountsReceivable::IndexPresenter do
     relationship:,
     confirmation_token: "BK-#{SecureRandom.hex(4)}",
     folio_number: rand(10_000..99_999),
+    invoice_number: rand(1_000_000..9_999_999),
     amount: 100,
     paid_amount: 0,
     outstanding_amount: nil,
@@ -189,7 +190,7 @@ RSpec.describe CorporatePortal::AccountsReceivable::IndexPresenter do
     booking = create(:booking, hotel: relationship.hotel, confirmation_token: confirmation_token, currency: currency)
     folio = create(:booking_folio, :secondary, booking: booking, hotel: relationship.hotel, folio_number: folio_number, hotel_corporate_account: relationship, currency: currency)
     create(:ar_invoice, hotel: relationship.hotel, booking_folio: folio, hotel_corporate_account: relationship,
-           amount: amount, paid_amount: paid_amount, outstanding_amount: outstanding_amount,
+           invoice_number: invoice_number, amount: amount, paid_amount: paid_amount, outstanding_amount: outstanding_amount,
            currency: currency, status: status, issued_on: issued_on, due_on: due_on)
   end
 end

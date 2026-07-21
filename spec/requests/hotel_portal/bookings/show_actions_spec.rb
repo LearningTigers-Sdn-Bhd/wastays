@@ -34,6 +34,43 @@ RSpec.describe "HotelPortal booking show actions", type: :request do
     end
   end
 
+  describe "Stay View actions" do
+    let(:return_to) { hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7) }
+
+    it "prepends explicit move and date actions for a Timeline-origin drawer" do
+      booking.update_column(:status, "completed")
+
+      get hotel_booking_transaction_show_booking_path(hotel, booking), params: { source: "stay_view", return_to: }
+
+      document = Nokogiri::HTML(response.body)
+      actions_button = document.css("button").find { |button| button.text.squish == "Actions" }
+      menu = actions_button.parent.at_css("[role='menu']")
+      expect(response).to have_http_status(:success)
+      expect(menu.css("a[role='menuitem']").map { |item| item.text.squish }).to eq([ "Move or reassign", "Change dates" ])
+
+      expected = {
+        "Move or reassign" => edit_hotel_stay_view_booking_move_path(hotel, booking),
+        "Change dates" => edit_hotel_stay_view_booking_dates_path(hotel, booking)
+      }
+      menu.css("a[role='menuitem']").each do |item|
+        uri = URI.parse(item["href"])
+        query = Rack::Utils.parse_nested_query(uri.query)
+        expect(uri.path).to eq(expected.fetch(item.text.squish))
+        expect(query).to include("source" => "stay_view", "return_to" => return_to)
+        expect(query).not_to have_key("proposal")
+        expect(item["data-turbo-frame"]).to eq("offcanvas_drawer")
+        expect(item["data-offcanvas-variant"]).to eq("compact-right")
+      end
+    end
+
+    it "does not add Stay View actions to an ordinary booking drawer" do
+      get hotel_booking_transaction_show_booking_path(hotel, booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).not_to include("Move or reassign", "Change dates")
+    end
+  end
+
   it "renders guest add and edit sheets in the offcanvas frame" do
     additional = create(:booking_guest, booking: booking, is_primary: false)
 

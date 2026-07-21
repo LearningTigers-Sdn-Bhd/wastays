@@ -383,6 +383,30 @@ module HotelPortal
       }
     end
 
+    def guest_details_boat_in_date
+      split_boat_time(:boat_in)&.first
+    end
+
+    def guest_details_boat_in_time
+      split_boat_time(:boat_in)&.last
+    end
+
+    def guest_details_boat_in_time_options
+      boat_time_options(hotel.boat_in_times)
+    end
+
+    def guest_details_boat_out_date
+      split_boat_time(:boat_out)&.first
+    end
+
+    def guest_details_boat_out_time
+      split_boat_time(:boat_out)&.last
+    end
+
+    def guest_details_boat_out_time_options
+      boat_time_options(hotel.boat_out_times)
+    end
+
     def guest_display(booking_guest = selected_booking_guest)
       record = booking_guest
       {
@@ -966,6 +990,18 @@ module HotelPortal
     end
 
     private
+
+    def split_boat_time(key)
+      guest_details_boat_times[key]&.split("T")
+    end
+
+    def boat_time_options(times)
+      (times || []).sort.map do |t|
+        t_obj = Time.zone.parse("2000-01-01 #{t}") rescue nil
+        label = t_obj ? t_obj.strftime("%I:%M %p") : t
+        [ label, t ]
+      end
+    end
 
     def valid_room_rate_dates?(child)
       child.check_in.present? && child.check_out.present? && child.check_out.to_date > child.check_in.to_date

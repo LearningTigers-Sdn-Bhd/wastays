@@ -85,15 +85,17 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     end
 
     it "filters requests by room status" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "202")
+      group = create(:group_booking, hotel: hotel)
+      dirty_room_booking = create(:booking, hotel: hotel, group_booking: group, group_position: 1)
+      ready_room_booking = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      create(:booking_room, booking: dirty_room_booking, room_type: room_type, room_number: "101")
+      create(:booking_room, booking: ready_room_booking, room_type: room_type, room_number: "202")
 
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "202", status: "ready")
 
-      create(:housekeeping_request, booking: booking, room_number: "101", status: "in_progress", request_details: "Sheets")
-      create(:housekeeping_request, booking: booking, room_number: "202", status: "in_progress", request_details: "Trash")
+      create(:housekeeping_request, booking: dirty_room_booking, room_number: "101", status: "in_progress", request_details: "Sheets")
+      create(:housekeeping_request, booking: ready_room_booking, room_number: "202", status: "in_progress", request_details: "Trash")
 
       get hotel_housekeeping_tasks_path(hotel, room_status: "dirty")
 

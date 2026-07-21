@@ -27,6 +27,20 @@ module CorporatePortal
       @presenter = CorporatePortal::AccountsReceivable::PayInvoicesPresenter.new(account: current_user.account, params: params)
     end
 
+    def pay_balance
+      @presenter = CorporatePortal::AccountsReceivable::PayBalancePresenter.new(account: current_user.account, params: params)
+    end
+
+    def choose_method
+      @presenter = CorporatePortal::AccountsReceivable::ChooseMethodPresenter.new(
+        account: current_user.account,
+        hotel_corporate_account_id: params[:hotel_corporate_account_id],
+        invoice_ids: params[:invoice_ids]
+      )
+
+      redirect_to pay_invoices_corporate_ar_payments_path, alert: "Select at least one invoice to continue." if @presenter.invoices.empty?
+    end
+
     def review
       result = CorporateArPayments::CreateIntent.call(
         user: current_user,
@@ -34,11 +48,16 @@ module CorporatePortal
         invoice_ids: payment_params[:invoice_ids],
         amount: payment_params[:amount],
         currency: payment_params[:currency],
-        gateway: payment_params[:gateway]
+        gateway: payment_params[:gateway],
+        lump_sum: lump_sum?
       )
 
       if result.success?
         @presenter = CorporatePortal::AccountsReceivable::ReviewPaymentPresenter.new(intent: result.intent)
+      elsif lump_sum?
+        @presenter = CorporatePortal::AccountsReceivable::PayBalancePresenter.new(account: current_user.account, params: params)
+        flash.now[:alert] = result.error
+        render :pay_balance, status: :unprocessable_content
       else
         @presenter = CorporatePortal::AccountsReceivable::PayInvoicesPresenter.new(account: current_user.account, params: params)
         flash.now[:alert] = result.error
@@ -87,7 +106,11 @@ module CorporatePortal
     end
 
     def payment_params
-      params.fetch(:corporate_ar_payment, {}).permit(:hotel_corporate_account_id, :amount, :currency, :gateway, invoice_ids: [])
+      params.fetch(:corporate_ar_payment, {}).permit(:hotel_corporate_account_id, :amount, :currency, :gateway, :lump_sum, invoice_ids: [])
+    end
+
+    def lump_sum?
+      ActiveModel::Type::Boolean.new.cast(payment_params[:lump_sum])
     end
 
     def payment_response_params

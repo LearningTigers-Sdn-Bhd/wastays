@@ -25,8 +25,6 @@ module HotelPortal
         update_settings
       elsif params[:payment_setting].present?
         redirect_to settings_page_path(active_settings_page), alert: "Payment gateway credentials are managed by superadmin."
-      elsif params[:rate_plans].present?
-        update_rate_plans
       else
         update_banking_details
       end
@@ -59,48 +57,6 @@ module HotelPortal
       else
         prepare_settings_page
         render :index, status: :unprocessable_entity
-      end
-    end
-
-    def update_rate_plans
-      authorize_settings_update!
-
-      rate_plans_params = {}
-      params.require(:rate_plans).each do |rp_id, rp_attrs|
-        next unless rp_id.to_s.match?(/\A\d+\z/)
-
-        rate_plans_params[rp_id] = rp_attrs.permit(
-          :sell_mode,
-          :base_occupancy,
-          :extra_pax_charge,
-          :single_supplement,
-          :child_price_multiplier,
-          :infant_price_multiplier,
-          room_type_ids: []
-        )
-      end
-
-      success = true
-      ActiveRecord::Base.transaction do
-        rate_plans_params.each do |rp_id, rp_attrs|
-          rate_plan = @hotel.rate_plans.find(rp_id)
-
-          if rp_attrs.key?(:room_type_ids)
-            rt_ids = Array(rp_attrs.delete(:room_type_ids)).reject(&:blank?).map(&:to_i)
-            rate_plan.room_type_ids = rt_ids
-          end
-
-          unless rate_plan.update(rp_attrs)
-            success = false
-            raise ActiveRecord::Rollback
-          end
-        end
-      end
-
-      if success
-        redirect_to hotel_rates_settings_path(@hotel), notice: "Rate settings updated successfully."
-      else
-        redirect_to hotel_rates_settings_path(@hotel), alert: "Failed to update some rate plans. Please verify the values."
       end
     end
 

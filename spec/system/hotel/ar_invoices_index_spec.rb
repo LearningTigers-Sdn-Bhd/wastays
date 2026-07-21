@@ -7,7 +7,7 @@ RSpec.describe "Hotel AR invoices index", type: :system, js: true do
   let(:hotel) { create(:hotel, account: account, status: "approved") }
   let(:user) { create(:user, account: account, email: "ar-manager@example.com") }
   let(:role) { create(:role, account: account) }
-  let(:relationship) { create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true) }
+  let(:relationship) { create(:hotel_corporate_account, :direct_bill, hotel: hotel) }
   let(:booking) { create(:booking, hotel: hotel, confirmation_token: "BK-AR-ROW") }
   let(:folio) do
     create(
@@ -69,5 +69,14 @@ RSpec.describe "Hotel AR invoices index", type: :system, js: true do
     find("[data-testid='ar-invoice-card-#{invoice.id}']").click
 
     expect(page).to have_current_path(hotel_ar_invoice_path(hotel, invoice))
+  end
+
+  it "denies access without the view_reports permission" do
+    role.permissions.delete_all
+
+    visit hotel_ar_invoices_path(hotel)
+
+    expect(page).to have_current_path(root_path)
+    expect(page).to have_content("You are not authorized to perform this action.")
   end
 end

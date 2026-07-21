@@ -66,6 +66,7 @@ RSpec.describe "Nearby attractions sheet", type: :system, js: true do
       click_button "Update Nearby Attraction"
     end
 
+    expect(page).to have_content("Nearby attraction updated successfully.")
     expect(page).to have_no_css("dialog#nearby-attraction-sheet[open]")
     within("#nearby_attractions_list") { expect(page).to have_content("Batu Caves Temple") }
   end

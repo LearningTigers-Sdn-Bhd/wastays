@@ -352,7 +352,7 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
   end
 
   it "adds and edits a company billing party through inline Billing Preferences actions" do
-    account = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+    account = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
 
     post add_billing_party_hotel_booking_control_panel_path(hotel, booking), params: {
       billing_party: { hotel_corporate_account_id: account.id, settlement_type: "city_ledger", purchase_order_reference: "PO-100" }
@@ -374,7 +374,7 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
     group = create(:group_booking, hotel: hotel)
     booking.update!(group_booking: group, group_position: 1)
     sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
-    account = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+    account = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
     folio_count = BookingFolio.count
     routing_rule_count = FolioRoutingRule.count
 
@@ -402,7 +402,7 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
     group = create(:group_booking, hotel: hotel)
     booking.update!(group_booking: group, group_position: 1)
     create(:booking, hotel: hotel, group_booking: group, group_position: 2)
-    account = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+    account = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
 
     expect do
       post add_billing_party_hotel_booking_control_panel_path(hotel, booking), params: {
@@ -418,7 +418,7 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
     group = create(:group_booking, hotel: hotel)
     booking.update!(group_booking: group, group_position: 1)
     sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
-    account = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+    account = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
 
     expect do
       post add_billing_party_hotel_booking_control_panel_path(hotel, booking), params: {

@@ -12,6 +12,10 @@ module ChannelManagers
     end
 
     def call
+      if group_ingestion?
+        return IngestGroupBookingService.new(booking_data: @data).call
+      end
+
       Booking.transaction do
         @hotel.lock!
         booking = find_or_initialize_booking
@@ -113,6 +117,17 @@ module ChannelManagers
     end
 
     private
+
+    def group_ingestion?
+      total_room_quantity > 1 || GroupBooking.exists?(
+        hotel: @hotel,
+        channel_manager_reference: @data[:channel_manager_reference]
+      )
+    end
+
+    def total_room_quantity
+      Array(@data[:rooms]).sum { |room| [ room[:quantity].to_i, 1 ].max }
+    end
 
     def find_or_initialize_booking
       Booking.find_by(channel_manager_reference: @data[:channel_manager_reference]) ||

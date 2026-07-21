@@ -77,6 +77,8 @@ export default class extends Controller {
   }
 
   startNavigation(anchor) {
+    if (this.syncFrame) cancelAnimationFrame(this.syncFrame)
+    this.syncFrame = null
     this.pendingAnchor = anchor
     this.pageEndAnchor = null
     this.navigationDeadline = performance.now() + 1200
@@ -132,19 +134,25 @@ export default class extends Controller {
 
     const completedAnchor = this.pendingAnchor
     const target = document.getElementById(this.pendingAnchor)
-    const targetRect = target?.getBoundingClientRect()
-    const targetIsVisible = targetRect && targetRect.bottom > 0 && targetRect.top < window.innerHeight
-    const targetMargin = target ? Number.parseFloat(window.getComputedStyle(target).scrollMarginTop) || 0 : 0
-    const targetReachedPosition = targetRect && Math.abs(targetRect.top - targetMargin) <= 2
-    const atPageEnd = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2
 
     if (this.syncFrame) cancelAnimationFrame(this.syncFrame)
-    this.syncFrame = null
-    this.pendingAnchor = null
-    this.pageEndAnchor = atPageEnd && targetIsVisible ? completedAnchor : null
     if (this.navigationTimer) window.clearTimeout(this.navigationTimer)
     this.navigationTimer = null
-    if (!targetReachedPosition && !(atPageEnd && targetIsVisible)) this.setActive(completedAnchor, false)
+
+    // Hold the requested anchor through the current frame, then hand control
+    // back to the scrollspy after the browser has applied the layout.
+    this.syncFrame = requestAnimationFrame(() => {
+      this.syncFrame = null
+      if (this.pendingAnchor !== completedAnchor) return
+
+      const targetRect = target?.getBoundingClientRect()
+      const targetIsVisible = targetRect && targetRect.bottom > 0 && targetRect.top < window.innerHeight
+      const atPageEnd = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2
+
+      this.pendingAnchor = null
+      this.pageEndAnchor = atPageEnd && targetIsVisible ? completedAnchor : null
+      this.setActive(completedAnchor, false)
+    })
   }
 
   setActive(anchor, updateUrl) {

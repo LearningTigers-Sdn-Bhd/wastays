@@ -36,4 +36,13 @@ RSpec.describe 'Hotel Policies Update', type: :system do
     expect(hotel.property_policy.reload.check_in_time).to eq('15:00')
     expect(page).to have_content('Hotel Dashboard')
   end
+
+  it 'denies access without the manage_hotel_profile permission' do
+    role.permissions.delete_all
+
+    visit edit_hotel_property_policy_path(hotel)
+
+    expect(page).to have_current_path(root_path)
+    expect(page).to have_content('You are not authorized to perform this action.')
+  end
 end

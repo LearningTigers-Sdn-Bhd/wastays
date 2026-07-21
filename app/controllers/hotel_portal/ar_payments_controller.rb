@@ -6,7 +6,7 @@ module HotelPortal
     before_action :authorize_manage_ar_payments!, only: %i[new create eligible_invoices]
 
     def index
-      @presenter = HotelPortal::ArPayments::IndexPresenter.new(hotel: current_hotel, params: params)
+      @presenter = HotelPortal::AccountsReceivable::PaymentRecordPresenter.new(hotel: current_hotel, params: params)
     end
 
     def show
@@ -24,11 +24,15 @@ module HotelPortal
     end
 
     def new
+      @ar_payment_submission = find_pending_submission
       set_context
+      apply_submission_context if @ar_payment_submission.present?
     end
 
     def create
       @hotel_corporate_account = current_hotel.hotel_corporate_accounts.find(ar_payment_params[:hotel_corporate_account_id])
+      submission = find_pending_submission
+
       result = ::ArPayments::RecordPayment.call(
         hotel: current_hotel,
         hotel_corporate_account: @hotel_corporate_account,
@@ -43,9 +47,12 @@ module HotelPortal
       )
 
       if result.success?
+        submission&.approve!(ar_payment: result.ar_payment, reviewed_by: current_user)
         redirect_to hotel_ar_payment_path(current_hotel, result.ar_payment), notice: "Corporate payment recorded."
       else
         set_context
+        @ar_payment_submission = submission
+        apply_submission_context if @ar_payment_submission.present?
         @ar_payment_error = result.error
         flash.now[:alert] = result.error
         render :new, status: :unprocessable_content
@@ -55,15 +62,28 @@ module HotelPortal
     def eligible_invoices
       @hotel_corporate_account = current_hotel.hotel_corporate_accounts.find_by(id: params[:hotel_corporate_account_id])
       @open_invoices = open_invoices
-      render partial: "invoice_allocations", locals: { open_invoices: @open_invoices, source_invoice: nil }
+      render partial: "invoice_allocations", locals: { open_invoices: @open_invoices, source_allocations: {}, readonly: false }
     end
 
     private
+
+    def find_pending_submission
+      current_hotel.ar_payment_submissions.pending.includes(ar_payment_submission_allocations: { ar_invoice: [ :hotel, { booking_folio: :booking } ] }).find_by(id: params[:ar_payment_submission_id])
+    end
+
+    def apply_submission_context
+      @hotel_corporate_account = @ar_payment_submission.hotel_corporate_account
+      @source_allocations = @ar_payment_submission.ar_payment_submission_allocations.index_by(&:ar_invoice_id).transform_values(&:amount)
+      # Only the invoices the agent picked when submitting — not the account's full open
+      # invoice list — since this payment is already fixed to exactly those invoices.
+      @open_invoices = @ar_payment_submission.ar_payment_submission_allocations.map(&:ar_invoice).sort_by(&:due_on)
+    end
 
     def set_context
       @source_invoice = current_hotel.ar_invoices.includes(hotel_corporate_account: :corporate_account).find_by(id: params[:ar_invoice_id].presence || ar_payment_params[:ar_invoice_id].presence)
       @hotel_corporate_account = @source_invoice&.hotel_corporate_account || current_hotel.hotel_corporate_accounts.includes(:corporate_account).find_by(id: ar_payment_params[:hotel_corporate_account_id].presence || params[:hotel_corporate_account_id].presence)
       @hotel_corporate_account ||= current_hotel.hotel_corporate_accounts.active.includes(:corporate_account).order(created_at: :desc).first
+      @source_allocations = @source_invoice.present? ? { @source_invoice.id => @source_invoice.outstanding_amount } : {}
       @open_invoices = open_invoices
     end
 

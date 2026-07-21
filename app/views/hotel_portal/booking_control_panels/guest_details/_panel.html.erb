@@ -76,17 +76,46 @@
             <% if current_hotel.allow_boat_information? %>
               <section class="border-t border-slate-200 pt-6" aria-labelledby="guest-bibo-heading">
                 <div class="mb-4">
-                  <h3 id="guest-bibo-heading" class="text-sm font-bold text-slate-950">Boat Arrival & Departure</h3>
-                  <p class="mt-1 text-xs text-slate-500">Guest Boat Arrival / Boat Departure timestamps.</p>
+                  <h3 id="guest-bibo-heading" class="text-sm font-bold text-slate-955">Boat transfer</h3>
+                  <p class="mt-1 text-xs text-slate-500">Guest Boat-In / Boat-Out timestamps.</p>
                 </div>
                 <div class="grid gap-5 md:grid-cols-2">
-                  <div>
-                    <%= label_tag "booking_guest_boat_in_at", "Boat Arrival Time", class: "booking-form__label" %>
-                    <%= datetime_local_field_tag "booking_guest[boat_in_at]", boat_times[:boat_in], class: "booking-form__control" %>
+                  <!-- Boat-In -->
+                  <div class="space-y-1.5" data-controller="boat-time-combiner">
+                    <%= label_tag "booking_guest_boat_in_at", "Boat-In", class: "booking-form__label" %>
+                    <%= hidden_field_tag "booking_guest[boat_in_at]", boat_times[:boat_in], data: { boat_time_combiner_target: "datetimeInput" } %>
+                    <div class="grid grid-cols-2 gap-2">
+                      <input type="date" 
+                             value="<%= presenter.guest_details_boat_in_date %>" 
+                             data-boat-time-combiner-target="dateInput" 
+                             data-action="change->boat-time-combiner#combine" 
+                             class="booking-form__control">
+                      <select data-boat-time-combiner-target="timeInput" 
+                              data-action="change->boat-time-combiner#combine" 
+                              class="booking-form__control">
+                        <option value="">Select time</option>
+                        <%= options_for_select(presenter.guest_details_boat_in_time_options, presenter.guest_details_boat_in_time) %>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <%= label_tag "booking_guest_boat_out_at", "Boat Departure Time", class: "booking-form__label" %>
-                    <%= datetime_local_field_tag "booking_guest[boat_out_at]", boat_times[:boat_out], class: "booking-form__control" %>
+
+                  <!-- Boat-Out -->
+                  <div class="space-y-1.5" data-controller="boat-time-combiner">
+                    <%= label_tag "booking_guest_boat_out_at", "Boat-Out", class: "booking-form__label" %>
+                    <%= hidden_field_tag "booking_guest[boat_out_at]", boat_times[:boat_out], data: { boat_time_combiner_target: "datetimeInput" } %>
+                    <div class="grid grid-cols-2 gap-2">
+                      <input type="date" 
+                             value="<%= presenter.guest_details_boat_out_date %>" 
+                             data-boat-time-combiner-target="dateInput" 
+                             data-action="change->boat-time-combiner#combine" 
+                             class="booking-form__control">
+                      <select data-boat-time-combiner-target="timeInput" 
+                              data-action="change->boat-time-combiner#combine" 
+                              class="booking-form__control">
+                        <option value="">Select time</option>
+                        <%= options_for_select(presenter.guest_details_boat_out_time_options, presenter.guest_details_boat_out_time) %>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </section>

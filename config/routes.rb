@@ -3,7 +3,6 @@ require_relative "../app/constraints/superadmin_constraint"
 Rails.application.routes.draw do
   mount RailsIcons::Engine, at: "/rails_icons"
   namespace :hotel_portal do
-    resources :agent_accounts
     get "room_blocks/create"
     get "room_blocks/destroy"
   end
@@ -77,6 +76,9 @@ Rails.application.routes.draw do
         resources :complaint_requests, only: [ :create ], module: :bookings
       end
     end
+    namespace :v2 do
+      resources :bookings, only: [ :show ]
+    end
   end
 
   # Public Concierge (front-desk QR)
@@ -145,15 +147,19 @@ Rails.application.routes.draw do
     get "dashboard", to: "dashboard#index", as: :dashboard
     resource :profile, only: [ :show ]
     resources :ar_invoices, only: [ :index, :show ], path: "invoices"
+    resources :ar_statements, only: [ :index, :show ], path: "statements"
     resources :ar_payments, only: [ :index, :show ], path: "payments" do
       collection do
         get :pay_invoices, path: "pay-invoices"
+        get :pay_balance, path: "pay-balance"
+        get :choose_method, path: "choose-method"
         post :review
         post :checkout_session
         get :verify
         post :verify
       end
     end
+    resources :ar_payment_submissions, only: [ :show, :new, :create ], path: "payment-submissions"
   end
 
   # Superadmin dashboard
@@ -273,13 +279,14 @@ Rails.application.routes.draw do
 
     resource :property_policy, only: [ :edit, :update ]
     scope "accounts-receivable" do
-      resources :corporate_accounts, only: [ :index, :new, :create ], path: "corporate-accounts" do
+      resources :corporate_accounts, only: [ :index, :new, :create, :edit, :update ], path: "corporate-accounts" do
         member do
           patch :suspend
           patch :reactivate
         end
       end
       get "aging", to: "ar_invoices#aging", as: :ar_aging
+      get "agent-summary", to: "ar_invoices#agent_summary", as: :ar_agent_summary
       resources :ar_invoices, only: [ :index, :show ], path: "invoices"
       resources :ar_statements, only: [ :index, :show ], path: "statements"
       resources :ar_payments, only: [ :index, :show, :new, :create ], path: "payments" do
@@ -288,19 +295,39 @@ Rails.application.routes.draw do
           resource :reversal, only: [ :create ], controller: "ar_payment_allocation_reversals"
         end
       end
+      resources :ar_payment_submissions, only: [ :show ], path: "payment-submissions" do
+        member do
+          patch :reject
+        end
+      end
     end
 
     resources :corporate_invitations, only: [ :destroy ], path: "corporate-invitations" do
       post :resend, on: :member
     end
     resources :room_groups, except: [ :show ]
+    get "stay-view", to: "stay_view/board#index", as: :stay_view
+    scope "stay-view", module: :stay_view, as: :stay_view do
+      resources :bookings, only: [] do
+        resource :move, only: [ :edit, :update ], controller: "booking_moves"
+        resource :dates, only: [ :edit, :update ], controller: "booking_dates"
+      end
+      get "rooms/:room_type_id/:room_number/status", to: "room_operations#edit", as: :room_status
+      patch "rooms/:room_type_id/:room_number/status", to: "room_operations#update"
+      resources :room_blocks, only: [ :new, :edit, :create, :update, :destroy ] do
+        post :finish, on: :member
+      end
+      resources :housekeeping_requests, only: [] do
+        resource :assignment, only: [ :edit, :update ], controller: "housekeeping_assignments"
+        resource :status, only: [ :edit, :update ], controller: "housekeeping_statuses"
+      end
+    end
     resources :bookings, only: [ :index, :show, :update ] do
       collection do
         post :sync, to: "bookings/syncs#create"
         get :availability, to: "bookings/availabilities#show"
         get :rate_options, to: "bookings/rate_options#show"
         get :stay_price, to: "bookings/prices#show"
-        get :board, to: "bookings/board#index"
       end
 
       member do
@@ -321,6 +348,7 @@ Rails.application.routes.draw do
       resources :refund_requests, only: [ :new, :create ]
       resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
       resource :guest_registration_card, only: [ :show, :update, :destroy ], module: :bookings
+      resources :guest_registration_note_templates, only: [ :index, :new, :create, :edit, :update, :destroy ], module: :bookings
       resource :reservation_voucher, only: [ :show ], module: :bookings
       resource :tourism_tax_voucher, only: [ :show ], module: :bookings do
         post :issue
@@ -441,6 +469,8 @@ Rails.application.routes.draw do
         get :arrivals_departures, to: redirect { |params, request| "/hotel/#{params[:hotel_id]}/reports/guest_reports#{request.query_string.present? ? "?#{request.query_string}" : ""}" }
         get :daily_occupancy
         get :daily_report
+        get "daily_revenue/cell", to: "reports#daily_revenue_cell", as: :daily_revenue_cell
+        get "daily_revenue/source", to: "reports#daily_revenue_source_bookings", as: :daily_revenue_source_bookings
         get :daily_revenue, to: redirect { |params, request|
           destination = "/hotel/#{params[:hotel_id]}/reports/daily_report"
           request.query_string.present? ? "#{destination}?#{request.query_string}" : destination
@@ -600,14 +630,13 @@ Rails.application.routes.draw do
     get "roles-and-permissions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions/%{id}/edit")
 
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
-    resources :rate_plans, only: %i[create destroy]
+    resources :rate_plans, only: %i[new create edit update destroy] do
+      member do
+        patch :archive
+        patch :unarchive
+      end
+    end
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
-    get "room-status", to: "room_status_board#index", as: :room_status_board
-    get "room-status/housekeeping-requests/:room_number", to: "room_status_board#housekeeping_requests", as: :room_status_housekeeping_requests
-    resources :room_statuses, only: [ :update ]
-    resources :room_blocks, only: [ :new, :edit, :create, :update, :destroy ] do
-      post :finish, on: :member
-    end
   end
 end

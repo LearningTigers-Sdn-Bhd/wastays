@@ -8,7 +8,7 @@
       <%= hidden_field_tag :return_to, @transaction_return_to if @transaction_return_to.present? %>
 
       <%# Modal Header %>
-      <%= render "hotel_portal/bookings/board/partials/content_header",
+      <%= render "hotel_portal/shared/offcanvas/content_header",
                  title: "Undo Check-In",
                  subtitle: "Revert the check-in status back to confirmed for #{@booking.guest_name}.",
                  icon: cached_icon("rotate-ccw", stroke_width: 2.5, class: "size-5") %>
@@ -38,7 +38,7 @@
       </div>
 
       <%# Modal Footer %>
-      <%= render "hotel_portal/bookings/board/partials/content_footer",
+      <%= render "hotel_portal/shared/offcanvas/content_footer",
                  show_full_page_link: false,
                  submit_button: f.submit("Undo Check-In", class: "px-6 py-2.5 bg-rose-600 text-primary-foreground rounded-xl text-sm font-bold hover:bg-rose-700 transition-colors shadow-sm") %>
     <% end %>

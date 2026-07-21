@@ -1,5 +1,5 @@
 <div class="flex h-full min-h-0 flex-col bg-card">
-  <%= render "hotel_portal/bookings/board/partials/content_header",
+  <%= render "hotel_portal/shared/offcanvas/content_header",
     title: "Set billing terms",
     subtitle: "#{party.display_name} · Booking No. #{@booking.formatted_reservation_number.presence || '—'} · Billing Preferences",
     icon: cached_icon("credit-card", stroke_width: 2.5, class: "size-5") %>

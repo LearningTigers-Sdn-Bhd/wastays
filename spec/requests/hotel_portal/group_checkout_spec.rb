@@ -39,7 +39,7 @@ RSpec.describe "HotelPortal group checkout", type: :request do
 
   it "defaults eligible company folios to direct bill" do
     create_room_and_folio(booking, room_number: "203", room_type_name: "Deluxe King")
-    relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
     company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, hotel_corporate_account: relationship)
     create(:folio_transaction, booking_folio: company_folio, transaction_type: :charge, category: "accommodation", amount: 480)
 
