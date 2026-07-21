@@ -121,4 +121,75 @@ RSpec.describe Folios::PostEarlyCheckoutCharges do
       expect(projected).to eq(220.0)
     end
   end
+
+  describe "billing routing" do
+    let!(:primary_folio) { folio }
+    let!(:company_folio) { create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 9001) }
+    let(:room_code) { hotel.transaction_codes.find_by(system_key: "room_revenue") || create(:transaction_code, hotel: hotel, system_key: "room_revenue", code: "ROOM") }
+    let!(:routing_rule) { create(:folio_routing_rule, booking: booking, hotel: hotel, transaction_code: room_code, target_folio: company_folio) }
+
+    it "posts routed room charges to the company folio instead of the guest folio" do
+      result = described_class.call(
+        booking: booking,
+        folio: primary_folio,
+        user: user,
+        departure_date: departure_date,
+        original_check_out: original_check_out
+      )
+
+      expect(result).to be_success
+      expect(company_folio.folio_transactions.where("description LIKE ?", "Early checkout charge%").sum(:amount)).to eq(300.0)
+      expect(primary_folio.folio_transactions.where("description LIKE ?", "Early checkout charge%")).to be_empty
+    end
+
+    it "leaves unrouted tax charges on the guest folio" do
+      described_class.call(
+        booking: booking,
+        folio: primary_folio,
+        user: user,
+        departure_date: departure_date,
+        original_check_out: original_check_out
+      )
+
+      expect(primary_folio.folio_transactions.where(category: "tax").sum(:amount)).to eq(20.0)
+      expect(company_folio.folio_transactions.where(category: "tax")).to be_empty
+    end
+
+    it "routes to any target folio, not only company folios" do
+      guest_split_folio = create(:booking_folio, booking: booking, hotel: hotel, folio_number: 9002, name: "Split Folio", is_primary: false, folio_type: "guest", payer_type: "guest")
+      routing_rule.update!(target_folio: guest_split_folio)
+
+      described_class.call(booking: booking, folio: primary_folio, user: user, departure_date: departure_date, original_check_out: original_check_out)
+
+      expect(guest_split_folio.folio_transactions.where("description LIKE ?", "Early checkout charge%").sum(:amount)).to eq(300.0)
+      expect(primary_folio.folio_transactions.where("description LIKE ?", "Early checkout charge%")).to be_empty
+    end
+
+    it "tags preview lines with the routed target folio" do
+      lines = described_class.new(
+        booking: booking, folio: primary_folio, user: user,
+        departure_date: departure_date, original_check_out: original_check_out
+      ).preview
+
+      room_lines = lines.select { |line| line[:category] == "early_departure_charge" }
+      tax_lines = lines.select { |line| line[:category] == "tax" }
+
+      expect(room_lines).to all(include(target_folio_id: company_folio.id))
+      expect(tax_lines).to all(include(target_folio_id: primary_folio.id))
+    end
+
+    it "does not duplicate routed charges on retry" do
+      2.times do
+        described_class.call(
+          booking: booking,
+          folio: primary_folio,
+          user: user,
+          departure_date: departure_date,
+          original_check_out: original_check_out
+        )
+      end
+
+      expect(company_folio.folio_transactions.where("description LIKE ?", "Early checkout charge%").count).to eq(2)
+    end
+  end
 end

@@ -62,38 +62,113 @@ module Folios
     def call
       return failure("Booking has no folio.") unless @folio
 
+      candidate_lines = raw_preview.reject { |line| line[:amount].to_d.zero? }
+
+      routes = {}
+      candidate_lines.each do |line|
+        route = resolve_route(line)
+        return failure(route.error) unless route.success?
+
+        routes[line[:key]] = route
+      end
+
       transactions = []
-      @folio.with_lock do
-        @folio.reload
-        preview.each do |line|
-          next if line[:amount].to_d.zero?
+      error = nil
+
+      Booking.transaction do
+        lock_folios = (routes.values.map(&:folio) + [ @folio ]).uniq(&:id).sort_by(&:id)
+        lock_folios.each do |folio|
+          folio.lock!
+          folio.reload
+        end
+
+        candidate_lines.each do |line|
           next if already_posted?(line[:key])
 
+          route = routes[line[:key]]
           result = Folios::InsertTransaction.new(
-            booking_folio: @folio,
+            booking_folio: route.folio,
             amount: line[:amount],
             transaction_type: "charge",
             category: line[:category],
             user: @user,
             description: line[:description],
             posting_date: @departure_date,
-            options: transaction_options(line)
+            options: transaction_options(line, route)
           ).call
 
-          return failure(result.error) unless result.success?
+          unless result.success?
+            error = result.error
+            raise ActiveRecord::Rollback
+          end
 
           transactions << result.transaction
         end
       end
 
+      return failure(error) if error.present?
+
       success(transactions)
     end
 
+    # Early-checkout charges follow the same billing routes as nightly charges.
+    # Each line is resolved independently by its transaction code, so room and
+    # tax can land on different folios, and the destination is whatever the
+    # routing rule targets (company, custom, or a second folio) — falling back
+    # to the primary folio when unrouted. The transaction code is used only to
+    # resolve the destination; the charge itself is written exactly as before.
+    def resolve_route(line)
+      Folios::ResolveTargetFolio.call(
+        booking: @booking,
+        transaction_code: transaction_code_for(line),
+        fallback_transaction_code: line[:category] == "tax" ? source_transaction_code_for_tax_line(line[:tax_line]) : nil
+      )
+    end
+
+    def transaction_code_for(line)
+      line[:category] == "tax" ? transaction_code_for_tax_line(line[:tax_line]) : room_transaction_code
+    end
+
+    def room_transaction_code
+      @room_transaction_code ||= @booking.hotel.transaction_codes.find_by(system_key: "room_revenue")
+    end
+
+    def transaction_code_for_tax_line(tax_line)
+      tax_line = tax_line.to_h
+      id = tax_line["transaction_code_id"].presence || tax_line[:transaction_code_id].presence
+      return @booking.hotel.transaction_codes.find_by(id: id) if id.present?
+
+      case tax_line["type"].presence || tax_line[:type].presence
+      when "sst" then @booking.hotel.transaction_codes.find_by(system_key: "sst_tax")
+      when "tourism_tax" then @booking.hotel.transaction_codes.find_by(system_key: "tourism_tax")
+      end
+    end
+
+    def source_transaction_code_for_tax_line(tax_line)
+      tax_line = tax_line.to_h
+      id = tax_line["source_transaction_code_id"].presence || tax_line[:source_transaction_code_id].presence
+      return @booking.hotel.transaction_codes.find_by(id: id) if id.present?
+
+      nil
+    end
+
+    # Display preview: each line is tagged with the folio it will route to, so
+    # the checkout sheet can attribute balances per folio without re-deriving
+    # routing (the posting in #call resolves the same way).
     def preview
+      raw_preview.map { |line| line.merge(target_folio_id: preview_target_folio_id(line)) }
+    end
+
+    def raw_preview
       unused_nights.each_with_index.flat_map do |date, index|
         night_number = index + 1
         [ accommodation_line(date, night_number), *tax_lines(date, night_number) ].compact
       end
+    end
+
+    def preview_target_folio_id(line)
+      route = resolve_route(line)
+      route.success? ? route.folio&.id : @folio&.id
     end
 
     def pending_preview
@@ -185,10 +260,14 @@ module Folios
     end
 
     def already_posted?(key)
-      @folio.folio_transactions.where(voided_by_transaction_id: nil).where("metadata->>'early_checkout_charge_key' = ?", key).exists?
+      FolioTransaction.joins(:booking_folio)
+        .where(booking_folios: { booking_id: @booking.id })
+        .where(voided_by_transaction_id: nil)
+        .where("metadata->>'early_checkout_charge_key' = ?", key)
+        .exists?
     end
 
-    def transaction_options(line)
+    def transaction_options(line, route = nil)
       metadata = {
         posting_source: "early_departure",
         stay_date: line[:date].iso8601,
@@ -196,6 +275,10 @@ module Folios
         early_checkout_charge_key: line[:key]
       }
       metadata[:tax_line] = line[:tax_line] if line[:tax_line].present?
+      if route
+        metadata[:route_source] = route.route_source
+        metadata[:route_metadata] = route.route_metadata
+      end
 
       options = @options.merge(metadata: (@options[:metadata] || {}).merge(metadata))
 
