@@ -479,7 +479,8 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       get hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", booking_guest_id: guest.id)
       document = Nokogiri::HTML(response.body)
       add_guest = document.at_xpath("//a[normalize-space()='+ Add Guest']")
-      expect(add_guest["data-turbo-frame"]).to eq("offcanvas_drawer")
+      expect(add_guest["data-turbo-frame"]).to eq("booking_action_sheet")
+      expect(add_guest["href"]).to include(hotel_booking_action_manage_guest_path(hotel, booking))
       form = document.at_css("form#guest-details-form[data-controller*='guest-details-editor']")
       footer = document.at_css('[data-testid="guest-details-footer"]')
       save_guest = footer.at_xpath(".//button[@type='submit' and normalize-space()='Save Guest']")
@@ -502,9 +503,9 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       print_menu = print_grc.ancestors('[data-controller="document-print"]').first
       expect(print_menu["data-document-print-url-value"]).to eq(hotel_booking_guest_registration_card_path(hotel, booking))
       expect(discard_alert["role"]).to eq("alertdialog")
-      expect(response.body).to include("Guest Details", "Guest details recorded for this stay.", "GRC Actions", "Print")
+      expect(response.body).to include("Guest details", "Guest details recorded for this stay.", "GRC Actions", "Print")
       expect(response.body).not_to include("Stay Record", "Guest Profile")
-      expect(response.body).to include("Enter full name", "guest@example.com", "+60 12-345 6789", "Select country", "Select gender", "Select document type", "Enter IC or passport number", "Select date")
+      expect(response.body).to include("Enter full name", "guest@example.com", "+60 12-345 6789", "Search for a country", "Select a gender", "Select a document type", "Enter IC or passport number", "Select date of birth")
       expect(footer.at_xpath(".//button[@name='save_scope' and @value='snapshot']")).to be_present
       expect(footer.at_xpath(".//button[@name='save_scope' and @value='snapshot_and_profile']")).to be_present
       expect(response.body).not_to include("C Form")

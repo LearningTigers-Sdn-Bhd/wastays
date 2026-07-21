@@ -1,0 +1,161 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe "HotelPortal::Bookings::Actions cancellations", type: :request do
+  let(:hotel) { create(:hotel, status: "approved") }
+  let(:other_hotel) { create(:hotel, status: "approved") }
+  let(:user) { create(:user, account: hotel.account) }
+  let(:role) { create(:role, account: hotel.account) }
+  let(:room_type) { create(:room_type, hotel: hotel, name: "Garden Suite") }
+  let(:booking) do
+    create(:booking, hotel: hotel, guest_name: "Ada Lovelace", status: "confirmed").tap do |record|
+      create(:booking_room, booking: record, room_type: room_type, room_number: "101")
+    end
+  end
+
+  def grant_permission(role, slug)
+    permission = Permission.find_by(slug: slug) || create(:permission, slug: slug, name: slug.tr("_", " ").titleize)
+    create(:role_permission, role: role, permission: permission)
+  end
+
+  before do
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
+    grant_permission(role, "manage_bookings")
+    create(:user_hotel_access, user: user, hotel: hotel, role: role)
+    sign_in_as(user)
+  end
+
+  describe "GET the cancellation form" do
+    it "renders the cancellation Sheet in the primary frame" do
+      get hotel_booking_action_cancel_booking_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      dialog = document.at_css("turbo-frame#booking_action_sheet dialog#booking-cancellation-sheet[data-controller='panels-ui--sheet']")
+
+      expect(dialog).to be_present
+      expect(dialog["data-panels-ui-sheet-side"]).to eq("right")
+      expect(dialog.text).to include("Cancel booking", "Ada Lovelace", "Cancellation reason")
+      expect(dialog.at_css("textarea[name='cancellation_reason'][required]")).to be_present
+      expect(response.body).not_to include("<!DOCTYPE html>")
+      expect(response.body).not_to include("offcanvas")
+    end
+
+    it "renders the group target selector for a group booking" do
+      group = create(:group_booking, hotel: hotel, name: "Conference Group")
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "confirmed", guest_name: "Grace Hopper")
+      create(:booking_room, booking: sibling, room_type: room_type, room_number: "102")
+
+      get hotel_booking_action_cancel_booking_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      document = Nokogiri::HTML(response.body)
+      dialog = document.at_css("dialog#booking-cancellation-sheet")
+      expect(dialog.css("input[name='booking_ids[]']")).not_to be_empty
+      expect(dialog.at_css("input[name='target_scope']")).to be_present
+    end
+
+    it "renders into the secondary frame when launched stacked" do
+      get hotel_booking_action_cancel_booking_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet_secondary" }
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("turbo-frame#booking_action_sheet_secondary dialog#booking-cancellation-sheet")).to be_present
+    end
+  end
+
+  describe "POST the cancellation" do
+    it "cancels the booking and completes the sheet on a Turbo submission" do
+      post hotel_booking_action_cancel_booking_path(hotel, booking),
+        params: { cancellation_reason: "Guest requested" },
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('action="complete_sheet"')
+      expect(response.body).to include('target="booking_action_sheet"')
+      expect(response.body).to include(CGI.escapeHTML(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")))
+      expect(booking.reload.status).to eq("cancelled")
+    end
+
+    it "redirects to the control panel on a direct request" do
+      post hotel_booking_action_cancel_booking_path(hotel, booking),
+        params: { cancellation_reason: "Guest requested" }
+
+      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(flash[:notice]).to eq("Booking cancelled successfully.")
+      expect(booking.reload.status).to eq("cancelled")
+    end
+
+    it "keeps the sheet open with an error when the reason is blank" do
+      post hotel_booking_action_cancel_booking_path(hotel, booking),
+        params: { cancellation_reason: "" },
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("dialog", "Cancellation reason is required.")
+      expect(booking.reload.status).to eq("confirmed")
+    end
+
+    it "completes into the secondary frame when submitted stacked" do
+      post hotel_booking_action_cancel_booking_path(hotel, booking),
+        params: { cancellation_reason: "Guest requested" },
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet_secondary" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('target="booking_action_sheet_secondary"')
+      expect(booking.reload.status).to eq("cancelled")
+    end
+
+    it "closes the sheet with a flash alert when the booking cannot be cancelled" do
+      checked_in = create(:booking, hotel: hotel, status: "checked_in")
+
+      post hotel_booking_action_cancel_booking_path(hotel, checked_in),
+        params: { cancellation_reason: "Too late" },
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('action="complete_sheet"')
+      expect(flash[:alert]).to be_present
+      expect(checked_in.reload.status).to eq("checked_in")
+    end
+
+    it "batch-cancels the selected group bookings" do
+      group = create(:group_booking, hotel: hotel, name: "Conference Group")
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "confirmed", guest_name: "Grace Hopper")
+      create(:booking_room, booking: sibling, room_type: room_type, room_number: "102")
+
+      post hotel_booking_action_cancel_booking_path(hotel, booking),
+        params: { cancellation_reason: "Event cancelled", target_scope: "group", booking_ids: [ booking.id, sibling.id ] },
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('action="complete_sheet"')
+      expect(flash[:notice]).to eq("2 bookings cancelled.")
+      expect(booking.reload.status).to eq("cancelled")
+      expect(sibling.reload.status).to eq("cancelled")
+    end
+
+    it "blocks cancellation without manage_bookings permission" do
+      role.role_permissions.destroy_all
+
+      post hotel_booking_action_cancel_booking_path(hotel, booking),
+        params: { cancellation_reason: "Guest requested" }
+
+      expect(response).to have_http_status(:redirect)
+      expect(booking.reload.status).to eq("confirmed")
+    end
+
+    it "does not find a booking from another hotel" do
+      other_booking = create(:booking, hotel: other_hotel, status: "confirmed")
+
+      post hotel_booking_action_cancel_booking_path(hotel, other_booking),
+        params: { cancellation_reason: "Guest requested" }
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+end

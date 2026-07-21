@@ -63,7 +63,7 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
   it "builds every lifecycle action with its transaction route and Stay View state" do
     expected_paths = {
       "Check-in" => hotel_booking_transaction_check_in_reservation_path(hotel, 123),
-      "Cancel" => hotel_booking_transaction_cancel_booking_path(hotel, 123),
+      "Cancel" => hotel_booking_action_cancel_booking_path(hotel, 123),
       "Backdated Check-in" => hotel_booking_transaction_booking_backdated_check_in_path(hotel, 123),
       "Mark No-show" => hotel_booking_transaction_mark_no_show_path(hotel, 123),
       "Check-out" => hotel_booking_transaction_check_out_path(hotel, 123),
@@ -82,7 +82,9 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
 
       expect(uri.path).to eq(expected_paths.fetch(action.fetch(:label)))
       expect(query).to include("source" => "stay_view", "return_to" => state.return_path(hotel))
-      expect(action.fetch(:data)).to eq(helper.stay_view_action_data)
+      # Cancellation is migrated to the action Sheet; the rest still open the legacy Offcanvas.
+      expected_data = action.fetch(:label) == "Cancel" ? helper.stay_view_cancel_booking_data : helper.stay_view_action_data
+      expect(action.fetch(:data)).to eq(expected_data)
     end
   end
 

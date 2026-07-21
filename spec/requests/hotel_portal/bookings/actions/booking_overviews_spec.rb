@@ -50,6 +50,28 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       expect(response.body).not_to include("<!DOCTYPE html>")
     end
 
+    it "launches Cancel into the secondary frame so it stacks over the summary" do
+      role.permissions << manage_bookings
+
+      get hotel_booking_action_show_booking_path(hotel, booking)
+
+      document = Nokogiri::HTML(response.body)
+      summary = document.at_css("dialog#booking-summary-sheet")
+      cancel = summary.css("a").find { |candidate| candidate.text.squish.include?("Cancel booking") }
+
+      expect(cancel).to be_present
+      expect(URI.parse(cancel["href"]).path).to eq(hotel_booking_action_cancel_booking_path(hotel, booking))
+      # Targeting the secondary frame is the knob that stacks the cancellation.
+      expect(cancel["data-turbo-frame"]).to eq("booking_action_sheet_secondary")
+    end
+
+    it "hides Cancel from users without manage_bookings" do
+      get hotel_booking_action_show_booking_path(hotel, booking)
+
+      dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-summary-sheet")
+      expect(dialog.css("a").map { |anchor| anchor.text.squish }).not_to include("Cancel booking")
+    end
+
     it "shows management-only document actions to booking managers" do
       role.permissions << manage_bookings
       booking.update!(guest_country: "Singapore", tourism_tax_amount: 20, tourism_tax_applied: true,

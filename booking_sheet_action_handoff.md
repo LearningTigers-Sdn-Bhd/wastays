@@ -7,7 +7,8 @@
 > **booking-creation family** (New / Quick / Walk-in / Backdated), including every
 > launcher across front desk, bookings index, and Stay View, (3) **Show Booking
 > summary + group Print/Send**, which also established the **two-frame stacking
-> pattern** and the `click_in_overlay` system-spec helper (see below).
+> pattern** and the `click_in_overlay` system-spec helper, (4) **Cancellation**, and
+> (5) **guest management + structured internal notes** (see below).
 
 ## Stack / conventions (must follow)
 
@@ -139,19 +140,33 @@ Rules of thumb:
 - Launcher: Stay View Room-View booking item now opens the summary sheet (`stay_view_helper#stay_view_booking_action_data` = `{ turbo_frame: "booking_action_sheet" }`).
 - Specs: `spec/requests/hotel_portal/bookings/actions/booking_overviews_spec.rb` (summary content + secondary-frame link; documents rendered into the secondary frame *and* standalone into the primary; close-button shape; non-group redirect). System stacking + focus-restoration flow in `stay_view_spec.rb` ("opens group documents…").
 
+## Shipped #4 — Cancellation
+
+- Route: `match "cancel-booking/:booking_id" → cancellations#show` (GET+POST).
+- `bookings/actions/cancellations_controller.rb` uses `Bookings::TransitionStatus`, preserves group targeting, rerenders invalid forms in the requesting frame, and completes primary or stacked Sheets correctly.
+- Launchers: booking-control-panel summary, Stay View lifecycle actions, and the booking summary Sheet (secondary frame).
+- Specs: `spec/requests/hotel_portal/bookings/actions/cancellations_spec.rb` plus the browser flow in `booking_control_panel_phase6_spec.rb`.
+
+## Shipped #5 — Guest management + structured internal notes
+
+- Routes/controllers: `bookings/actions/guests_controller.rb` and `internal_notes_controller.rb`; guest add/remove and all note interactions use Sheets. Guest editing intentionally remains the existing inline Guest Details workspace, but now submits to the new isolated controller with an HTML 303 response.
+- Guest services: new `BookingGuests::Add` and `BookingGuests::UpdatePrimary`; existing `UpdateSnapshot`, `Remove`, and `Bookings::SetPrimaryGuest` are reused. The missing-primary fallback no longer reports success after a BIBO validation rollback.
+- Guest UI: Add Guest and Remove Guest use `booking_action_sheet`; Make Primary is now reachable from the active additional-guest footer. The inline form uses PanelsUI selection/date-time controls and retains snapshot vs reusable-profile save behavior.
+- Note services: `Bookings::CreateBookingNote`, `UpdateBookingNote`, and `DeleteBookingNote` own mutation + audit transactions. Existing edit-history and no-op audit behavior is preserved.
+- Notes UI: structured `BookingNote` records are now visible in Booking Details. Add/edit/history/delete use Sheet routes; successful mutations immediately replace the notes section and emit `complete_sheet`. This is separate from the scalar `Booking#internal_notes` field used by creation/registration-card workflows.
+- Removed after caller count reached zero: `bookings/show/actions/**`, old guest/note REST controllers/routes, the shared legacy guest/note confirmation, and dormant guest list/drawer partials.
+- Specs: new guest/note service and request specs, plus end-to-end guest add/remove and note add/edit/history/delete browser flows in `booking_control_panel_phase6_spec.rb`.
+
 ## Verification status
 
-`bin/test bookings` → all pass. Request specs for `bookings/actions/**` (audit, creations, overviews) → green. Sheet system specs (stacking, audit, nearby-attractions, concierge-QR, profile-update, panels_ui sheet) → green with the `click_in_overlay` helper. Rubocop clean. No `offcanvas` in any new file.
-
-**Known failing (not mine to guess):** `stay_view_spec.rb:231` ("opens a lifecycle drawer from Room View…") — a **stale legacy test**. Show-Booking now opens the summary *sheet*, so this test's `#offcanvas_drawer` + "Actions → Check-in" premise is gone. Needs a product decision on how check-in is reached now (via the sheet, or a retained offcanvas entry) — then fix or delete it.
+`bin/test bookings` → 580 examples, all pass. `booking_control_panel_phase6_spec.rb` → 11 examples, 0 failures, 2 pre-existing pending. Guest/note service and request specs are green. Rubocop clean. No `offcanvas` in any new guest/note file.
 
 ## Next actions (recommended order)
 
-1. **Cancellation** (doc rollout step 3 — proves invalid-form + completion + group targeting). Two legacy pieces: `Transactions::CancelBookingsController#show` (renders form) + `Bookings::CancellationsController#create` (POST, runs `Bookings::TransitionStatus`, supports group batch-cancel via the `GroupLifecycleTargeting` concern + `group-lifecycle-targets` Stimulus controller + `shared/_group_target_selector` partial — all drawer-agnostic, reuse as-is). Build one `bookings/actions/cancellations_controller.rb` with `show` + `create`; add a request spec asserting the `complete_sheet` action-tag shape (mirror `transactions_spec.rb`: `action="complete_sheet"`, target `booking_action_sheet`, CGI-escaped destination) and the invalid-form branch. **Launchers are heterogeneous** — some live inside unmigrated Edit/Show-Booking offcanvas views; repoint only the standalone-page ones (`_summary_row`, Stay View) and leave the embedded ones on legacy. Cancellation launched **from the summary sheet** should stack (target `booking_action_sheet_secondary`).
-2. Guest + internal-note management (`bookings/show/actions/**`).
-3. Stay-editing (edit booking, amend stay, change room/timeline, dates).
-4. Check-in / checkout lifecycle (incl. the existing-booking backdated flow). Resolve the `:231` stale test here.
-5. Delete each legacy action once its caller count hits zero; retire the offcanvas infra last.
+1. Stay-editing (amend stay/rate, move or reassign, change dates, room assignment, extend). Reconcile the overlapping transaction and Stay View implementations before coding; do not copy the broken timeline launcher contract.
+2. Check-in and exception lifecycle (check in/edit time, existing-booking backdated check-in, undo check-in, mark no-show, reinstate).
+3. Late-checkout review, then full checkout last because it coordinates folios, early departure, audit blockers, groups, deposits, and side effects.
+4. Delete each remaining legacy action once its caller count hits zero; retire the offcanvas infrastructure last.
 
 ## Acceptance checklist (every migrated action)
 
