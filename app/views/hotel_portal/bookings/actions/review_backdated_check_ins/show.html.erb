@@ -1,0 +1,3 @@
+<%= turbo_frame_tag(turbo_frame_request_id.presence || "booking_action_sheet") do %>
+  <%= render "hotel_portal/bookings/actions/review_backdated_check_ins/form", booking: @booking %>
+<% end %>
