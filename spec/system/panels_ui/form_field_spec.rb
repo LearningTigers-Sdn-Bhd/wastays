@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::FormField", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=form_fields_preview" }
 
   def inline_geometry(theme)
     page.evaluate_script(<<~JS)

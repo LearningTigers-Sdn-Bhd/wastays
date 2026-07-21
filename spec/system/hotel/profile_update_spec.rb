@@ -45,9 +45,10 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
   it 'queues and publishes a hotel album photo through the Panels UI dropzone' do
     visit edit_hotel_profile_path(hotel)
 
+    arm_transition_wait("#hotel-photo-upload-sheet", property: "translate")
     click_button 'Upload Photos'
     expect(page).to have_css("dialog#hotel-photo-upload-sheet[open][data-panels-open]")
-    sleep 0.5
+    wait_for_transition_end("#hotel-photo-upload-sheet")
 
     attach_file 'hotel_album_photos', Rails.root.join('spec/fixtures/files/sample_image.jpg'), make_visible: true
 
@@ -59,10 +60,11 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
     end
     expect(page).to have_no_css("dialog#hotel-photo-upload-sheet[open]")
 
+    arm_transition_wait("#hotel-photo-upload-sheet", property: "translate")
     click_button 'Upload Photos'
     expect(page).to have_css("dialog#hotel-photo-upload-sheet[open][data-panels-open]")
     expect(page).to have_css("dialog#hotel-photo-upload-sheet[open] [data-signed-id]", text: 'sample_image.jpg')
-    sleep 0.5
+    wait_for_transition_end("#hotel-photo-upload-sheet")
 
     click_button 'Confirm Upload'
 

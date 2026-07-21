@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI toggle controls", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=toggle_preview,toggle_group_preview" }
 
   def light_toggle
     find("[data-theme='panel-light'] input[name='toggle_panel_light[rates]']", visible: :all)

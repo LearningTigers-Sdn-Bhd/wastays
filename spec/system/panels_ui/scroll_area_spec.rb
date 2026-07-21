@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::ScrollArea", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=scroll_area_preview" }
 
   let(:root) { find("#sd-scroll-area-vertical-panel-light") }
   let(:viewport) { root.find(".panel-scroll-area__viewport") }

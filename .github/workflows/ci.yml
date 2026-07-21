@@ -59,8 +59,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      # System specs launch one Chrome process per RSpec worker. Three workers
-      # keep the browser suite within the hosted runner's CPU/memory envelope.
+      # Browser/system specs (spec/system) are intentionally excluded from CI and
+      # run locally only (bin/test system or bin/ci) — see docs/CODEBASE_MAP.md
+      # ("CI" / "GitHub Actions"). This job only runs the non-browser suite.
       PARALLEL_TEST_PROCESSORS: 3
 
     services:
@@ -82,7 +83,7 @@ jobs:
 
     steps:
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config google-chrome-stable
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -114,15 +115,9 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
           # REDIS_URL: redis://localhost:6379/0
-        run: bundle exec parallel_rspec -n "${PARALLEL_TEST_PROCESSORS}"
-
-
-      - name: Keep screenshots from failed system tests
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: screenshots
-          path: |
-            ${{ github.workspace }}/tmp/capybara
-            ${{ github.workspace }}/tmp/screenshots
-          if-no-files-found: ignore
+        run: >
+          bundle exec parallel_rspec
+          spec/models spec/services spec/requests spec/jobs spec/helpers
+          spec/mailers spec/presenters spec/views spec/tasks spec/seeds
+          spec/migrations spec/integration
+          -n "${PARALLEL_TEST_PROCESSORS}"

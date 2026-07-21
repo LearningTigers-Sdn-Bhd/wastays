@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::TimePicker", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=time_picker_preview" }
 
   def input_css(attribute)
     "[aria-labelledby='time-picker-preview-heading'] [data-theme='panel-light'] input[name$='[#{attribute}]']"

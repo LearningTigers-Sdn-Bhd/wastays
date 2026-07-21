@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Checkbox", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=checkbox_preview" }
 
   it "renders the checkbox showcase in both themes" do
     expect(page).to have_css("#checkbox-preview-heading", text: "Checkboxes")

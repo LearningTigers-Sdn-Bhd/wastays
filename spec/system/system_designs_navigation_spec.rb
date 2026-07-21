@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe "System design navigation", type: :system do
   it "preserves a deep-linked preview near the end of the page" do
     page.current_window.resize_to(1280, 900)
-    visit "/system-design#toast-preview"
+    visit_when_loaded "/system-design#toast-preview"
 
     expect(page).to have_css("a[href='#toast-preview'][aria-current='location']", count: 2, visible: :all)
     page.execute_script(<<~JS)
@@ -25,7 +25,7 @@ RSpec.describe "System design navigation", type: :system do
 
   it "tracks the visible preview in both navigation menus and the URL" do
     page.current_window.resize_to(1280, 900)
-    visit "/system-design"
+    visit_when_loaded "/system-design"
     page.execute_script('window.history.replaceState({ ...window.history.state, sentinel: "preserved" }, "", window.location.href)')
 
     page.execute_script("document.getElementById('table-preview').scrollIntoView({ block: 'start' })")
@@ -38,7 +38,7 @@ RSpec.describe "System design navigation", type: :system do
 
   it "keeps the active desktop link visible near the end of the catalogue" do
     page.current_window.resize_to(1280, 900)
-    visit "/system-design"
+    visit_when_loaded "/system-design"
 
     page.execute_script("document.getElementById('tooltip-preview').scrollIntoView({ block: 'start' })")
 
@@ -69,7 +69,7 @@ RSpec.describe "System design navigation", type: :system do
 
   it "reveals the active link when the desktop navigation appears after a resize" do
     page.current_window.resize_to(390, 844)
-    visit "/system-design"
+    visit_when_loaded "/system-design"
     page.execute_script("document.getElementById('tooltip-preview').scrollIntoView({ block: 'start' })")
     expect(page).to have_current_path(%r{/system-design#tooltip-preview$}, url: true)
 
@@ -82,7 +82,7 @@ RSpec.describe "System design navigation", type: :system do
 
   it "closes the mobile component menu after choosing a preview" do
     page.current_window.resize_to(390, 844)
-    visit "/system-design"
+    visit_when_loaded "/system-design"
 
     menu = find("details[data-system-designs--preview-navigation-target='mobileMenu']")
     menu.find("summary", text: "Components").click
@@ -105,7 +105,7 @@ RSpec.describe "System design navigation", type: :system do
 
   it "restores the active preview during browser history navigation" do
     page.current_window.resize_to(1280, 900)
-    visit "/system-design#alert-preview"
+    visit_when_loaded "/system-design#alert-preview"
     expect(page).to have_css("aside a[href='#alert-preview'][aria-current='location']")
 
     within("aside nav[aria-label='Component previews']") { click_link "Toast" }
@@ -119,7 +119,7 @@ RSpec.describe "System design navigation", type: :system do
 
   it "renders the timeline preview with responsive overflow and keyboard-accessible stays" do
     page.current_window.resize_to(390, 844)
-    visit "/system-design#timeline-preview"
+    visit_when_loaded "/system-design#timeline-preview"
 
     expect(page).to have_css("section[data-theme='panel-light'] #timeline-preview-panel-light")
     expect(page).to have_css("section[data-theme='panel-dark'] #timeline-preview-panel-dark")

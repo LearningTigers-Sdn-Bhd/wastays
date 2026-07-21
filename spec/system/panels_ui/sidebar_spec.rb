@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Sidebar", type: :system do
-  before { visit_when_loaded "/system-design" }
+  before { visit_when_loaded "/system-design?only=sidebar_preview" }
 
   after do
     page.execute_script("window.localStorage.clear()")
@@ -111,12 +111,14 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
     expect(computed_color(group, "backgroundColor")).to eq(computed_color(link, "backgroundColor"))
     expect(computed_color(group, "color")).to eq(computed_color(link, "color"))
 
+    arm_transition_wait(link)
     find(link).hover
-    sleep 0.2
+    wait_for_transition_end(link)
     link_hover = [ computed_color(link, "backgroundColor"), computed_color(link, "color") ]
     find("#sidebar-preview-heading").hover
+    arm_transition_wait(group)
     find(group).hover
-    sleep 0.2
+    wait_for_transition_end(group)
     group_hover = [ computed_color(group, "backgroundColor"), computed_color(group, "color") ]
     expect(group_hover).to eq(link_hover)
 
@@ -134,7 +136,7 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
     click_button "Toggle collapse"
     expect(page).to have_css("#sd-nav-sidebar[data-collapsed='true']")
 
-    visit "/system-design"
+    visit_when_loaded "/system-design?only=sidebar_preview"
     expect(page).to have_css("#sd-nav-sidebar[data-collapsed='true']")
   end
 
@@ -193,7 +195,7 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
     JS
     expect(trigger["aria-expanded"]).to eq("false")
 
-    visit "/system-design"
+    visit_when_loaded "/system-design?only=sidebar_preview"
     expect(find("#sd-nav-sidebar-desktop-section-1-item-2-collapsible-trigger")["aria-expanded"]).to eq("false")
   end
 
@@ -306,8 +308,9 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
 
   it "closes the mobile Sheet from its close button and backdrop" do
     page.current_window.resize_to(390, 844)
+    arm_transition_wait("#sd-nav-sidebar-mobile", property: "translate")
     click_button "Open mobile navigation"
-    sleep 0.35 # Wait for the deliberate Sheet entry transition before clicking its trailing control.
+    wait_for_transition_end("#sd-nav-sidebar-mobile")
     page.execute_script(<<~JS)
       document.querySelector(
         "#sd-nav-sidebar-mobile button[aria-label='Close navigation']"

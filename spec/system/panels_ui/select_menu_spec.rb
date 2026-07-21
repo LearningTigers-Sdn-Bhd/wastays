@@ -11,7 +11,7 @@ RSpec.describe "PanelsUI::SelectMenu", type: :system do
   ROOM_LISTBOX = "select_menu_panel_light_room_type-listbox"
   ROOM_NATIVE = "select_menu_panel_light_room_type"
 
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=select_menu_preview" }
 
   def open_menu
     find_by_id(TRIGGER).click

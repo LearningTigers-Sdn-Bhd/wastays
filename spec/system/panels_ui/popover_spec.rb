@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Popover", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=popover_preview,dropdown_menu_preview" }
 
   it "opens on trigger click and closes again on a second click" do
     click_button "Open popover"

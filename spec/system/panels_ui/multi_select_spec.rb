@@ -6,7 +6,7 @@ RSpec.describe "PanelsUI::MultiSelect", type: :system do
   MULTISELECT_NATIVE = "multi_select_panel_light_destination"
   MULTISELECT_ROOT = "#{MULTISELECT_NATIVE}-multi-select"
 
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=multi_select_preview" }
 
   def root
     find_by_id(MULTISELECT_ROOT)
@@ -191,7 +191,7 @@ RSpec.describe "PanelsUI::MultiSelect", type: :system do
   end
 
   it "does not duplicate the Tom Select wrapper after Turbo reconnects" do
-    page.execute_script("Turbo.visit('/system-design')")
+    page.execute_script("Turbo.visit('/system-design?only=multi_select_preview')")
     expect(page).to have_css("##{MULTISELECT_ROOT}[data-enhanced='true']")
     expect(root).to have_css(".ts-wrapper", count: 1)
   end
