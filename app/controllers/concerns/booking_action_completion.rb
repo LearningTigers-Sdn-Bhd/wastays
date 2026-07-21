@@ -11,20 +11,20 @@ module BookingActionCompletion
 
   private
 
-  def complete_booking_action(destination:, notice:, html_status: :see_other)
+  def complete_booking_action(destination:, notice:, html_status: :see_other, frame: "booking_action_sheet")
     respond_to do |format|
       format.turbo_stream do
         flash[:notice] = notice
-        render_booking_action_completion(destination)
+        render_booking_action_completion(destination, frame: frame)
       end
       format.html { redirect_to destination, notice: notice, status: html_status }
     end
   end
 
-  def render_booking_action_completion(destination)
+  def render_booking_action_completion(destination, frame: "booking_action_sheet")
     render body: helpers.turbo_stream_action_tag(
       :complete_sheet,
-      target: "booking_action_sheet",
+      target: frame,
       url: destination
     ), content_type: Mime[:turbo_stream]
   end

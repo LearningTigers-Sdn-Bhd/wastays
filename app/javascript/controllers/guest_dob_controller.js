@@ -7,12 +7,12 @@ export default class extends Controller {
     if (!this.readyForAutofill()) return
 
     const parsedDate = this.parseMalaysianIcDateOfBirth(this.governmentIdTarget.value)
-    if (parsedDate) this.dateOfBirthTarget.value = parsedDate
+    if (parsedDate) this.setTargetValue(this.dateOfBirthTarget, parsedDate)
   }
 
   readyForAutofill() {
     if (!this.hasGovernmentIdTarget || !this.hasDateOfBirthTarget) return false
-    if (this.dateOfBirthTarget.value.trim() !== "") return false
+    if (this.targetValue(this.dateOfBirthTarget).trim() !== "") return false
 
     const country = this.resolveCountry()
     const docType = this.resolveDocumentType()
@@ -22,7 +22,7 @@ export default class extends Controller {
   }
 
   resolveCountry() {
-    if (this.hasCountryTarget) return this.countryTarget.value.trim().toLowerCase()
+    if (this.hasCountryTarget) return this.targetValue(this.countryTarget).trim().toLowerCase()
     const form = this.element.closest("form")
     if (!form) return null
     const el = form.querySelector('[data-guest-field="country"]')
@@ -30,11 +30,30 @@ export default class extends Controller {
   }
 
   resolveDocumentType() {
-    if (this.hasDocumentTypeTarget) return this.documentTypeTarget.value
+    if (this.hasDocumentTypeTarget) return this.targetValue(this.documentTypeTarget)
     const form = this.element.closest("form")
     if (!form) return null
     const el = form.querySelector('[data-guest-field="document_type"]')
     return el ? el.value : null
+  }
+
+  targetValue(target) {
+    if ("value" in target) return target.value || ""
+
+    return target.querySelector("input, select")?.value || ""
+  }
+
+  setTargetValue(target, value) {
+    const input = "value" in target ? target : target.querySelector("input, select")
+    if (!input) return
+
+    input.value = value
+    const picker = input.closest("[data-controller~='panels-ui--date-picker']")
+    if (picker) {
+      this.application.getControllerForElementAndIdentifier(picker, "panels-ui--date-picker")?.resetFromInput()
+    }
+    input.dispatchEvent(new Event("input", { bubbles: true }))
+    input.dispatchEvent(new Event("change", { bubbles: true }))
   }
 
   parseMalaysianIcDateOfBirth(governmentId) {

@@ -28,15 +28,22 @@ module HotelPortal
         end
 
         def complete_action(notice: nil, alert: nil)
-          return complete_booking_action(destination: @return_to, notice: notice) if alert.blank?
+          return complete_booking_action(destination: @return_to, notice: notice, frame: requesting_sheet_frame) if alert.blank?
 
           respond_to do |format|
             format.turbo_stream do
               flash[:alert] = alert
-              render_booking_action_completion(@return_to)
+              render_booking_action_completion(@return_to, frame: requesting_sheet_frame)
             end
             format.html { redirect_to @return_to, alert: alert, status: :see_other }
           end
+        end
+
+        # The Turbo Frame that launched this action. A stacked launcher targets
+        # `booking_action_sheet_secondary`, so completion must close that frame's
+        # dialog rather than always the primary one.
+        def requesting_sheet_frame
+          turbo_frame_request_id.presence || "booking_action_sheet"
         end
 
         def authorize_manage_bookings!

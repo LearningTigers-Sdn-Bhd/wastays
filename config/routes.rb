@@ -338,15 +338,12 @@ Rails.application.routes.draw do
         post :mark_no_show, to: "bookings/no_shows#create"
         post :repair_no_show_folio, to: "bookings/no_show_folio_repairs#create"
         post :cancel, to: "bookings/cancellations#create"
-        post :add_guest, to: "bookings/guests#create"
         post :process_late_checkout, to: "bookings/checkouts#process_late_checkout"
-        delete "guests/:guest_id", to: "bookings/guests#destroy", as: :remove_guest
         post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings/housekeeping_requests#complete", as: :complete_housekeeping_request
         post "complaint_requests/:complaint_request_id/resolve", to: "bookings/complaint_requests#resolve", as: :resolve_complaint_request
       end
 
       resources :refund_requests, only: [ :new, :create ]
-      resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
       resource :guest_registration_card, only: [ :show, :update, :destroy ], module: :bookings
       resources :guest_registration_note_templates, only: [ :index, :new, :create, :edit, :update, :destroy ], module: :bookings
       resource :reservation_voucher, only: [ :show ], module: :bookings
@@ -357,7 +354,6 @@ Rails.application.routes.draw do
     resources :booking_control_panels, only: :show, param: :booking_id, path: "booking-control-panels" do
       member do
         get :audit_trail
-        patch :set_primary_guest, controller: :booking_control_panel_actions
         patch :update_room_rate, controller: :booking_control_panel_actions
         get :new_folio_window, controller: :booking_control_panel_actions
         post :create_folio_window, controller: :booking_control_panel_actions
@@ -383,11 +379,6 @@ Rails.application.routes.draw do
         post :complete_housekeeping_request, controller: :booking_control_panel_actions
         post :resolve_complaint_request, controller: :booking_control_panel_actions
       end
-    end
-    scope "bookings/:booking_id/show/actions", as: :booking_show_action, module: "bookings/show/actions" do
-      match "manage-guest", to: "manage_guests#show", via: [ :get, :post, :patch ], as: :manage_guest
-      match "confirmation", to: "confirmation_actions#show", via: [ :get, :delete ], as: :confirmation
-      match "manage-internal-notes", to: "manage_internal_notes#show", via: [ :get, :post, :patch ], as: :manage_internal_notes
     end
     scope "booking-transactions", as: :booking_transaction, module: "bookings/transactions" do
       match "quick-booking", to: "quick_bookings#show", via: [ :get, :post ], as: :quick_booking
@@ -417,6 +408,12 @@ Rails.application.routes.draw do
       match "quick-booking", to: "quick_bookings#show", via: [ :get, :post ], as: :quick_booking
       match "walk-in-check-in", to: "walk_in_check_ins#show", via: [ :get, :post ], as: :walk_in_check_in
       match "backdated-check-in", to: "backdated_check_ins#show", via: [ :get, :post ], as: :backdated_check_in
+      match "cancel-booking/:booking_id", to: "cancellations#show", via: [ :get, :post ], as: :cancel_booking
+      match "manage-guest/:booking_id", to: "guests#show", via: [ :get, :post, :patch ], as: :manage_guest
+      match "remove-guest/:booking_id/:booking_guest_id", to: "guests#remove", via: [ :get, :delete ], as: :remove_guest
+      patch "set-primary-guest/:booking_id/:booking_guest_id", to: "guests#set_primary", as: :set_primary_guest
+      match "internal-notes/:booking_id", to: "internal_notes#show", via: [ :get, :post, :patch ], as: :internal_notes
+      match "internal-notes/:booking_id/:note_id/delete", to: "internal_notes#delete", via: [ :get, :delete ], as: :delete_internal_note
     end
 
     resources :folios, only: [ :index, :show ], param: :booking_id do

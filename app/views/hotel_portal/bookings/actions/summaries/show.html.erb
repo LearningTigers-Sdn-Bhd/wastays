@@ -58,6 +58,17 @@
       <% else %>
         <%= render "hotel_portal/bookings/actions/summaries/print_send_menu", booking: booking %>
       <% end %>
+
+      <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && presenter.summary_actions.any? { |summary_action| summary_action.key == :cancel } %>
+        <%= render PanelsUI::Button.new(
+              href: hotel_booking_action_cancel_booking_path(current_hotel, booking, navigation),
+              variant: :destructive,
+              size: :sm,
+              data: { turbo_frame: "booking_action_sheet_secondary" }) do %>
+          <%= app_icon "circle-x", class: "size-4", aria: { hidden: true } %>
+          <span>Cancel booking</span>
+        <% end %>
+      <% end %>
     </div>
 
     <% if group_booking %>

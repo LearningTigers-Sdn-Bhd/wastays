@@ -1,0 +1,67 @@
+<% guest = @guest %>
+<% country_choices = COUNTRY_OPTIONS.map { |country| [country, country] } %>
+<% form_id = "booking-guest-form" %>
+<% footer = capture do %>
+  <div class="flex w-full items-center justify-end gap-2">
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, data: { turbo_submits_with: "Adding…" }) do %>Add guest<% end %>
+  </div>
+<% end %>
+
+<%= render "hotel_portal/bookings/actions/shared/sheet",
+      id: "booking-guest-sheet",
+      title: "Add guest",
+      description: @booking.guest_name,
+      side: :right,
+      size: :lg,
+      footer: footer do %>
+  <%= form_with model: guest,
+        url: hotel_booking_action_manage_guest_path(current_hotel, @booking, mode: "add"),
+        method: :post,
+        id: form_id,
+        class: "space-y-5",
+        data: { controller: "guest-dob" } do |form| %>
+    <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+
+    <% if guest.errors.any? %>
+      <div class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert" tabindex="-1">
+        <p class="font-medium">Guest could not be saved.</p>
+        <p class="mt-1"><%= guest.errors.full_messages.to_sentence %></p>
+      </div>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Full name", required: true) do |field| %>
+      <% field.with_input(autocomplete: "name", autofocus: true) %>
+    <% end %>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <%= render PanelsUI::FormField.new(form:, attribute: :email, label: "Email") do |field| %>
+        <% field.with_input(type: :email, autocomplete: "email", spellcheck: false) %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :phone, label: "Phone") do |field| %>
+        <% field.with_input(type: :tel, autocomplete: "tel") %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Country", required: true) do |field| %>
+        <% field.with_combobox(country_choices, selected: guest.country, prompt: "Search for a country", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" }) %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :gender, label: "Gender") do |field| %>
+        <% field.with_select_menu([[ "Male", "male" ], [ "Female", "female" ], [ "Other", "other" ]], selected: guest.gender, prompt: "Select a gender") %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :document_type, label: "Document type") do |field| %>
+        <% field.with_select_menu([[ "IC", "ic" ], [ "Passport", "passport" ]], selected: guest.document_type, prompt: "Select a document type", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" }) %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :government_id, label: "IC / Passport no.") do |field| %>
+        <% field.with_input(autocomplete: "off", spellcheck: false, data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" }) %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth, label: "Date of birth") do |field| %>
+        <% field.with_date_picker(
+             value: guest.date_of_birth&.iso8601,
+             max: Date.yesterday,
+             caption_layout: :dropdown,
+             year_range: (Date.current.year - 120)..Date.current.year,
+             placeholder: "Select date of birth",
+             data: { guest_dob_target: "dateOfBirth" }) %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
