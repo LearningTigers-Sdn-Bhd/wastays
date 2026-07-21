@@ -1,0 +1,75 @@
+<% booking = local_assigns.fetch(:booking) { @booking } %>
+<% group = booking.group_booking_id? %>
+<% form_data = group ? {
+     controller: "group-lifecycle-targets",
+     group_lifecycle_targets_master_detail_value: true,
+     group_lifecycle_targets_initial_booking_id_value: booking.id,
+     group_lifecycle_targets_selection_mode_value: "radio"
+   } : {} %>
+
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "booking-reinstate-sheet",
+        side: :right,
+        size: :xl,
+        title: "Reinstate no-show",
+        description: booking.guest_name,
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with model: booking, url: hotel_booking_action_reinstate_no_show_path(current_hotel, booking), method: :post, class: "flex h-full min-h-0 flex-col", data: form_data do %>
+        <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+
+        <% if group %>
+          <%= hidden_field_tag :target_scope, "individual" %>
+          <div class="min-h-0 flex-1 grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none">
+            <%= render "hotel_portal/bookings/actions/shared/group_target_selector",
+                  target_presenter: HotelPortal::BookingLifecycleTargetPresenter.new(booking: booking, action: :reinstate),
+                  master_detail: true,
+                  selection_mode: :radio,
+                  show_status_badges: true %>
+
+            <div class="min-h-0 min-w-0 overflow-y-auto custom-scrollbar lg:col-start-2">
+              <div class="space-y-6 p-6">
+                <% if booking.errors.any? %>
+                  <div class="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert"><%= booking.errors.full_messages.to_sentence %></div>
+                <% end %>
+                <% @group_reinstatement_bookings.each do |child| %>
+                  <% active = child.id == booking.id %>
+                  <section <%= "hidden" unless active %>
+                           data-group-lifecycle-targets-target="panel"
+                           data-booking-id="<%= child.id %>"
+                           aria-hidden="<%= !active %>"
+                           data-action="change->group-lifecycle-targets#configurationChanged">
+                    <%= render "hotel_portal/bookings/actions/reinstatements/booking_fields",
+                          booking: child,
+                          input_prefix: "reinstatements[#{child.id}][booking_rooms_attributes]",
+                          dom_prefix: "reinstatement_#{child.id}" %>
+                  </section>
+                <% end %>
+                <%= render "hotel_portal/bookings/actions/reinstatements/reason_field" %>
+              </div>
+            </div>
+          </div>
+        <% else %>
+          <div class="min-h-0 flex-1 overflow-y-auto">
+            <div class="space-y-6 p-6">
+              <% if booking.errors.any? %>
+                <div class="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert"><%= booking.errors.full_messages.to_sentence %></div>
+              <% end %>
+              <%= render "hotel_portal/bookings/actions/reinstatements/booking_fields",
+                    booking: booking,
+                    input_prefix: "booking[booking_rooms_attributes]",
+                    dom_prefix: "booking" %>
+              <%= render "hotel_portal/bookings/actions/reinstatements/reason_field" %>
+            </div>
+          </div>
+        <% end %>
+
+        <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+          <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-action="panels-ui--sheet#close">Cancel</button>
+          <%= submit_tag "Reinstate & check in", class: "rounded-md bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground", data: { turbo_submits_with: "Reinstating…" } %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>
