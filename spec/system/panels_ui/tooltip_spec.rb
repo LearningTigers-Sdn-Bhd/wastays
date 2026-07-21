@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Tooltip", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=tooltip_preview" }
 
   let(:trigger) { find_button("Hover or focus me") }
 

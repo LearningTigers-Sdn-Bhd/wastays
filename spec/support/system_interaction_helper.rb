@@ -83,6 +83,40 @@ module SystemInteractionHelper
     end
   end
 
+  # Waits for a real `transitionend` event on `selector` instead of a blind
+  # `sleep` guessing at the CSS transition's duration. Call `arm_transition_wait`
+  # BEFORE triggering whatever starts the transition (click/hover/attribute
+  # change), then `wait_for_transition_end` after, so the listener is attached
+  # before the transition can start (avoids missing an already-fired event).
+  def arm_transition_wait(selector, property: nil)
+    page.execute_script(<<~JS)
+      (() => {
+        const selector = #{selector.to_json}
+        const property = #{property.to_json}
+        const element = document.querySelector(selector)
+        if (!element) throw new Error(`arm_transition_wait: element not found for ${selector}`)
+
+        window.__pendingTransitions ||= new Map()
+        window.__pendingTransitions.set(selector, false)
+
+        const onTransitionEnd = (event) => {
+          if (property && event.propertyName !== property) return
+          element.removeEventListener("transitionend", onTransitionEnd)
+          window.__pendingTransitions.set(selector, true)
+        }
+        element.addEventListener("transitionend", onTransitionEnd)
+      })()
+    JS
+  end
+
+  def wait_for_transition_end(selector, timeout: 2)
+    Capybara.using_wait_time(timeout) do
+      synchronize_browser_state("expected transition to finish for #{selector}") do
+        page.evaluate_script("window.__pendingTransitions?.get(#{selector.to_json})") == true
+      end
+    end
+  end
+
   def dispatch_key(key, selector: nil)
     target = selector ? "document.querySelector(#{selector.to_json})" : "document.activeElement"
     page.execute_script(<<~JS)

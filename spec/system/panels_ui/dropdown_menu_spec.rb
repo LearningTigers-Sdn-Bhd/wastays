@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::DropdownMenu", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=dropdown_menu_preview" }
 
   def open_main_menu
     click_button "Menu options"

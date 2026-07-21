@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::DatePicker", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=date_picker_preview" }
 
   def picker_css(theme, attribute)
     section = '[aria-labelledby="date-picker-preview-heading"]'

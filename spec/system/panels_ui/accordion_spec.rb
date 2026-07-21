@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Accordion", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=accordion_preview" }
 
   def trigger(accordion, item)
     find("#sd-accordion-#{accordion}-item-#{item}-trigger")

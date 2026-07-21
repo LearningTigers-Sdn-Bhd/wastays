@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Sheet", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=sheet_preview" }
 
   it "opens from the right, focuses its title, and animates explicit close" do
     original_overflow = page.evaluate_script("document.body.style.overflow")
@@ -36,10 +36,11 @@ RSpec.describe "PanelsUI::Sheet", type: :system do
   end
 
   it "renders the floating variant inside a rounded viewport frame" do
+    arm_transition_wait("#sd-sheet-floating", property: "translate")
     click_button "Open floating sheet"
 
     expect(page).to have_css("dialog#sd-sheet-floating[open][data-panels-open]")
-    sleep 0.35 # Wait for the deliberate 300ms entry transition before measuring its frame.
+    wait_for_transition_end("#sd-sheet-floating")
     geometry = page.evaluate_script(<<~JS)
       (() => {
         const sheet = document.getElementById("sd-sheet-floating")

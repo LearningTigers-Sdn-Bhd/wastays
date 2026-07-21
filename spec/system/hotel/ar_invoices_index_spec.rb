@@ -70,4 +70,13 @@ RSpec.describe "Hotel AR invoices index", type: :system, js: true do
 
     expect(page).to have_current_path(hotel_ar_invoice_path(hotel, invoice))
   end
+
+  it "denies access without the view_reports permission" do
+    role.permissions.delete_all
+
+    visit hotel_ar_invoices_path(hotel)
+
+    expect(page).to have_current_path(root_path)
+    expect(page).to have_content("You are not authorized to perform this action.")
+  end
 end

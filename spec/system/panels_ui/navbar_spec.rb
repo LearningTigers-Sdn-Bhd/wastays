@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI Navbar and ProfileMenu", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=navbar_preview" }
 
   def focused_text
     page.evaluate_script("document.activeElement.textContent.trim()")

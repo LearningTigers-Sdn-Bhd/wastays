@@ -6,7 +6,7 @@ RSpec.describe "PanelsUI::Combobox", type: :system do
   COMBOBOX_NATIVE = "combobox_panel_light_destination"
   COMBOBOX_ROOT = "#{COMBOBOX_NATIVE}-combobox"
 
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=combobox_preview" }
 
   def root
     find_by_id(COMBOBOX_ROOT)
@@ -68,7 +68,7 @@ RSpec.describe "PanelsUI::Combobox", type: :system do
   end
 
   it "does not duplicate the Tom Select wrapper after Turbo reconnects" do
-    page.execute_script("Turbo.visit('/system-design')")
+    page.execute_script("Turbo.visit('/system-design?only=combobox_preview')")
     expect(page).to have_css("##{COMBOBOX_ROOT}[data-enhanced='true']")
     expect(root).to have_css(".ts-wrapper", count: 1)
   end

@@ -35,4 +35,13 @@ RSpec.describe "Hotel AR payments index", type: :system, js: true do
     card.send_keys(:enter)
     expect(page).to have_current_path(hotel_ar_payment_path(hotel, payment))
   end
+
+  it "denies access without the view_reports permission" do
+    role.permissions.delete_all
+
+    visit hotel_ar_payments_path(hotel)
+
+    expect(page).to have_current_path(root_path)
+    expect(page).to have_content("You are not authorized to perform this action.")
+  end
 end

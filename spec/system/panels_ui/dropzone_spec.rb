@@ -7,7 +7,7 @@ RSpec.describe "PanelsUI::Dropzone", type: :system do
   let(:second_image_path) { Rails.root.join("public/icon.png") }
   let(:third_image_path) { Rails.root.join("public/icon.svg") }
 
-  before { visit_when_loaded "/system-design" }
+  before { visit_when_loaded "/system-design?only=file_upload_preview" }
 
   # The dropzone controller re-renders its attachments on connect, which can replace
   # server-rendered nodes mid-interaction. Query + click atomically in one JS call,

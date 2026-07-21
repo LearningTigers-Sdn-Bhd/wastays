@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::AlertDialog", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=alert_dialog_preview,dialog_preview" }
 
   it "focuses cancel and only closes through an explicit response" do
     click_button "Basic"
@@ -118,7 +118,7 @@ RSpec.describe "PanelsUI::AlertDialog", type: :system do
   end
 
   it "reinstalls one Turbo handler after a Turbo page replacement" do
-    visit "/system-design"
+    visit_when_loaded "/system-design?only=alert_dialog_preview"
     wait_for_stimulus_controller("#turbo-confirm-dialog", "panels-ui--turbo-confirm")
     open_turbo_confirmation(message: "Still connected?", attributes: {})
 

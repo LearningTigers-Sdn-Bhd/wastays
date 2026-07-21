@@ -73,4 +73,13 @@ RSpec.describe "Hotel AR aging", type: :system, js: true do
       hotel_ar_invoices_path(hotel, hotel_corporate_account_id: relationship.id, balance: "outstanding")
     )
   end
+
+  it "denies access without the view_reports permission" do
+    role.permissions.delete_all
+
+    visit_when_loaded hotel_ar_aging_path(hotel)
+
+    expect(page).to have_current_path(root_path)
+    expect(page).to have_content("You are not authorized to perform this action.")
+  end
 end

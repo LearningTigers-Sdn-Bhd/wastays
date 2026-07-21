@@ -2,6 +2,18 @@
 
 set -euo pipefail
 
+MODE="fast"
+case "${1:-}" in
+  ""|--fast) ;;
+  --full) MODE="full" ;;
+  *)
+    printf "Usage: bin/ci [--full]\n" >&2
+    printf "  (default) - lint, security, and the non-browser spec suite (matches GitHub Actions)\n" >&2
+    printf "  --full    - lint, security, and the entire spec suite, including spec/system\n" >&2
+    exit 1
+    ;;
+esac
+
 if [[ -t 1 ]]; then
   BOLD=$'\033[1m'
   DIM=$'\033[2m'
@@ -284,6 +296,10 @@ print_summary() {
   else
     printf "\n${BOLD}${GREEN}🏆 Perfect run. All checks passed!${RESET}\n"
   fi
+
+  if [[ "$MODE" == "fast" ]]; then
+    printf "\n${DIM}This run excluded browser/system tests (spec/system). Run ${RESET}${BOLD}bin/ci --full${RESET}${DIM} to include them.${RESET}\n"
+  fi
 }
 
 handle_failure() {
@@ -303,40 +319,55 @@ run_optional_step "📦" "Importmap Audit" "bin/importmap audit" "Importmap audi
 run_step "🎨" "Tailwind Build" "bin/rails tailwindcss:build"
 run_step "🗄️" "Parallel DB Setup" "bundle exec rake parallel:prepare"
 
-# The full suite includes spec/system, which launches one headless Chrome
-# instance per worker. Chrome is far heavier than a plain RSpec process, so
-# running one worker per CPU core saturates the machine and causes flaky
-# Ferrum timeouts/login races. Halve the worker count unless already pinned.
-#
-# CPU headroom alone isn't enough on memory-constrained boxes: each worker
-# runs its own Puma + Postgres connection + headless Chrome, which in
-# practice needs ~3GB of real memory to stay reliable. On an 8 CPU / 8GB
-# machine, nproc/2 alone still picks 4 workers and reproducibly times out;
-# capping by total memory as well brings that down to 2, which was verified
-# stable. Well-provisioned CI runners have enough memory that this cap
-# never binds tighter than the existing CPU-based halving.
-if [[ -z "${PARALLEL_TEST_PROCESSORS:-}" ]]; then
-  ci_nprocessors=$(ruby -retc -e 'print Etc.nprocessors' 2>/dev/null || echo 4)
-  ci_cpu_worker_count=$(( ci_nprocessors / 2 ))
-  (( ci_cpu_worker_count < 2 )) && ci_cpu_worker_count=2
+if [[ "$MODE" == "full" ]]; then
+  spec_paths="spec"
+  spec_label="Parallel RSpec (full, incl. spec/system)"
 
-  ci_total_mem_bytes=0
-  if [[ "$(uname)" == "Darwin" ]]; then
-    ci_total_mem_bytes=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
-  elif [[ -r /proc/meminfo ]]; then
-    ci_total_mem_kb=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
-    ci_total_mem_bytes=$(( ${ci_total_mem_kb:-0} * 1024 ))
+  # The full suite includes spec/system, which launches one headless Chrome
+  # instance per worker. Chrome is far heavier than a plain RSpec process, so
+  # running one worker per CPU core saturates the machine and causes flaky
+  # Ferrum timeouts/login races. Halve the worker count unless already pinned.
+  #
+  # CPU headroom alone isn't enough on memory-constrained boxes: each worker
+  # runs its own Puma + Postgres connection + headless Chrome, which in
+  # practice needs ~3GB of real memory to stay reliable. On an 8 CPU / 8GB
+  # machine, nproc/2 alone still picks 4 workers and reproducibly times out;
+  # capping by total memory as well brings that down to 2, which was verified
+  # stable. Well-provisioned CI runners have enough memory that this cap
+  # never binds tighter than the existing CPU-based halving.
+  if [[ -z "${PARALLEL_TEST_PROCESSORS:-}" ]]; then
+    ci_nprocessors=$(ruby -retc -e 'print Etc.nprocessors' 2>/dev/null || echo 4)
+    ci_cpu_worker_count=$(( ci_nprocessors / 2 ))
+    (( ci_cpu_worker_count < 2 )) && ci_cpu_worker_count=2
+
+    ci_total_mem_bytes=0
+    if [[ "$(uname)" == "Darwin" ]]; then
+      ci_total_mem_bytes=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
+    elif [[ -r /proc/meminfo ]]; then
+      ci_total_mem_kb=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
+      ci_total_mem_bytes=$(( ${ci_total_mem_kb:-0} * 1024 ))
+    fi
+
+    ci_worker_count="$ci_cpu_worker_count"
+    if (( ci_total_mem_bytes > 0 )); then
+      ci_mem_worker_count=$(( ci_total_mem_bytes / (3 * 1024 * 1024 * 1024) ))
+      (( ci_mem_worker_count < 1 )) && ci_mem_worker_count=1
+      (( ci_mem_worker_count < ci_worker_count )) && ci_worker_count="$ci_mem_worker_count"
+    fi
+
+    (( ci_worker_count < 2 )) && ci_worker_count=2
+    export PARALLEL_TEST_PROCESSORS="$ci_worker_count"
   fi
+else
+  # Non-browser suite: no Chrome per worker, so a plain per-core worker count
+  # is safe. Matches bin/test fast and the GitHub Actions "test" job.
+  spec_paths="spec/models spec/services spec/requests spec/jobs spec/helpers spec/mailers spec/presenters spec/views spec/tasks spec/seeds spec/migrations spec/integration"
+  spec_label="Parallel RSpec (fast, excl. spec/system)"
 
-  ci_worker_count="$ci_cpu_worker_count"
-  if (( ci_total_mem_bytes > 0 )); then
-    ci_mem_worker_count=$(( ci_total_mem_bytes / (3 * 1024 * 1024 * 1024) ))
-    (( ci_mem_worker_count < 1 )) && ci_mem_worker_count=1
-    (( ci_mem_worker_count < ci_worker_count )) && ci_worker_count="$ci_mem_worker_count"
+  if [[ -z "${PARALLEL_TEST_PROCESSORS:-}" ]]; then
+    export PARALLEL_TEST_PROCESSORS=$(ruby -retc -e 'print Etc.nprocessors' 2>/dev/null || echo 4)
   fi
-
-  (( ci_worker_count < 2 )) && ci_worker_count=2
-  export PARALLEL_TEST_PROCESSORS="$ci_worker_count"
 fi
-run_step "🧪" "Parallel RSpec" "BULLET=true bundle exec rake parallel:spec" "stream"
+
+run_step "🧪" "$spec_label" "BULLET=true bundle exec parallel_rspec -n \"$PARALLEL_TEST_PROCESSORS\" -- $spec_paths" "stream"
 print_summary

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Avatar", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design?only=avatar_preview" }
 
   it "renders the avatar showcase in both themes at Nova dimensions" do
     expect(page).to have_css("#avatar-preview-heading", text: "Avatar")

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Card", type: :system do
-  before { visit_when_loaded "/system-design" }
+  before { visit_when_loaded "/system-design?only=card_preview" }
 
   it "activates the primary link with the keyboard" do
     link = find("[data-testid='clickable-record-card'] .panel-card__primary-link")
@@ -27,7 +27,7 @@ RSpec.describe "PanelsUI::Card", type: :system do
   it "keeps a nested action independent from card navigation" do
     find("#card-secondary-action").click
 
-    expect(page).to have_current_path("/system-design")
+    expect(page).to have_current_path("/system-design?only=card_preview")
     expect(page).to have_css("[data-testid='clickable-record-card']", text: "Booking #1042")
   end
 
