@@ -54,14 +54,32 @@ RSpec.describe Bookings::CreateStaffBooking do
     expect(Booking.where(hotel: hotel)).to be_empty
   end
 
-  it "applies corporate billing without leaking the account id into booking attributes" do
+  it "sponsors room charges to the company without hijacking the guest folio" do
     corporate_account = create(:hotel_corporate_account, hotel: hotel)
     params = common_params.merge(hotel_corporate_account_id: corporate_account.id)
 
     result = described_class.new(hotel: hotel, common_params: params, room_rows: room_rows, user: nil).call
-
     expect(result.errors).to be_empty
-    expect(result.booking.booking_folio).to have_attributes(payer_type: "company", hotel_corporate_account_id: corporate_account.id)
+
+    booking = result.booking
+    guest_folio = booking.booking_folio
+    company_folio = booking.booking_folios.find_by(payer_type: "company")
+
+    # Guest primary folio stays guest-owned; the account id never leaks onto it.
+    expect(guest_folio).to have_attributes(is_primary: true, payer_type: "guest", hotel_corporate_account_id: nil)
+
+    # A separate external company folio carries the corporate account.
+    expect(company_folio).to be_present
+    expect(company_folio).to have_attributes(folio_type: "external", hotel_corporate_account_id: corporate_account.id)
+
+    # Room revenue is *routed* to the company folio, not folio-hijacked.
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    rule = booking.folio_routing_rules.active.find_by(transaction_code: room_code)
+    expect(rule&.target_folio_id).to eq(company_folio.id)
+
+    # Accommodation forecasts land on the company folio; the guest folio has none.
+    expect(company_folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation")).to be_present
+    expect(guest_folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation")).to be_empty
   end
 
   it "rolls back all rooms when cumulative unassigned reservations exceed inventory" do

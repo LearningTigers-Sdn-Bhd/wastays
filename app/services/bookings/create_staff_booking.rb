@@ -12,6 +12,7 @@ module Bookings
       @backdate_reason = @common_params.delete(:backdate_reason)
       @retroactive_reason = @common_params.delete(:retroactive_reason)
       @hotel_corporate_account_id = @common_params.delete(:hotel_corporate_account_id)
+      @bill_tourism_tax_to_company = @common_params.delete(:bill_tourism_tax_to_company)
       @room_rows = Array(room_rows).map { |row| row.to_h.symbolize_keys }
       @user = user
       @booking_type = booking_type.presence || "reservation"
@@ -59,7 +60,7 @@ module Bookings
         end
 
         transition_children!(bookings) unless @booking_type == "reservation"
-        apply_corporate_billing!(bookings)
+        apply_bill_to!(bookings)
       end
 
       OpenStruct.new(success?: true, booking: bookings.first, bookings: bookings, group_booking: group_booking, errors: [])
@@ -150,21 +151,19 @@ module Bookings
 
     def backdated? = @booking_type == "backdated_check_in"
 
-    def apply_corporate_billing!(bookings)
+    # Sponsor room charges to the selected bill-to party. Room revenue is
+    # *routed* to the party's folio; the guest's primary folio is never
+    # reassigned, so it keeps incidentals and tourism tax.
+    def apply_bill_to!(bookings)
       account_id = @hotel_corporate_account_id
       return if account_id.blank?
 
       bookings.each do |booking|
-        result = BookingBillingParties::ManageCompany.call(
-          booking: booking, actor: @user,
-          attributes: { hotel_corporate_account_id: account_id, settlement_type: "cash_bank" }
+        result = ApplyBillTo.call(
+          booking: booking, actor: @user, hotel_corporate_account_id: account_id,
+          bill_tourism_tax_to_company: @bill_tourism_tax_to_company
         )
         raise CreationFailed, result.error unless result.success?
-
-        booking.booking_folios.update_all(
-          payer_type: "company", hotel_corporate_account_id: account_id,
-          booking_billing_party_id: result.party.id, updated_at: Time.current
-        )
       end
     end
 

@@ -96,6 +96,14 @@ RSpec.describe BookingFolio, type: :model do
       expect(house_folio.payer_type).to eq("hotel")
     end
 
+    it "blocks billing a guest-type folio to a company even via raw SQL" do
+      guest = create(:booking_folio, folio_type: "guest", booking: booking, hotel: booking.hotel)
+
+      expect do
+        BookingFolio.where(id: guest.id).update_all(payer_type: "company")
+      end.to raise_error(ActiveRecord::StatementInvalid, /booking_folios_guest_type_is_guest_payer/)
+    end
+
     it "requires an active same-hotel Company & Government account for company payer folios" do
       missing = build(:booking_folio, folio_type: "external", payer_type: "company", hotel_corporate_account: nil)
       suspended = build(:booking_folio, folio_type: "external", payer_type: "company", hotel: booking.hotel, booking: booking, hotel_corporate_account: create(:hotel_corporate_account, hotel: booking.hotel, status: "suspended"))
@@ -207,7 +215,7 @@ RSpec.describe BookingFolio, type: :model do
     let(:booking) { create(:booking) }
     let(:booking_room) { create(:booking_room, booking: booking) }
     let!(:booking_level_folio) { create(:booking_folio, booking: booking, hotel: booking.hotel) }
-    let!(:room_folio) { create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, booking_room: booking_room) }
+    let!(:room_folio) { create(:booking_folio, booking: booking, hotel: booking.hotel, booking_room: booking_room, folio_sequence: 2, is_primary: false) }
 
     it "separates room-scoped and booking-level folios" do
       expect(described_class.booking_level).to include(booking_level_folio)
