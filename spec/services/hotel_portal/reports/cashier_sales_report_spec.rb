@@ -26,6 +26,80 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
     expect(report.advance_scope).not_to include(charge)
   end
 
+  it "excludes Razorpay movements from lists, totals, and summaries" do
+    razorpay_advance = create(:payment_transaction, booking: booking, gateway: "razorpay")
+    razorpay_settlement = create(:payment_transaction, booking: booking, gateway: "razorpay")
+    advance = payment(
+      category: "booking_payment",
+      amount: 100,
+      posting_date: Date.new(2026, 6, 16),
+      metadata: { payment_transaction_id: razorpay_advance.id, posting_source: "gateway_payment" }
+    )
+    settlement = payment(
+      category: "gateway_payment",
+      amount: 200,
+      posting_date: Date.new(2026, 6, 17),
+      metadata: { payment_transaction_id: razorpay_settlement.id, posting_source: "gateway_payment" }
+    )
+    refund = payment(
+      category: "refund",
+      amount: -50,
+      posting_date: Date.new(2026, 6, 18),
+      reversal_of_transaction: settlement
+    )
+    cash = payment(category: "cash", amount: 360, posting_date: Date.new(2026, 6, 17))
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.advance_scope).not_to include(advance)
+    expect(report.settlement_scope).not_to include(settlement, refund)
+    expect(report.settlement_scope).to contain_exactly(cash)
+    expect(report.totals).to eq(
+      movement_count: 1,
+      total_collected: 360.to_d,
+      total_refunded: 0.to_d,
+      net_cash: 360.to_d
+    )
+    expect(report.mode_summary_rows).to contain_exactly(include(
+      mode: "Cash Payment",
+      amount_in: 360.to_d,
+      amount_out: 0.to_d,
+      balance: 360.to_d
+    ))
+    expect(report.currency_summary_rows).to contain_exactly(include(
+      currency: "MYR",
+      amount_in: 360.to_d,
+      amount_out: 0.to_d,
+      balance: 360.to_d
+    ))
+    expect(report.grand_total).to eq(amount_in: 360.to_d, amount_out: 0.to_d, balance: 360.to_d)
+  end
+
+  it "excludes manually recovered gateway payments but keeps card-terminal payments" do
+    gateway_code = hotel.transaction_codes.find_by!(system_key: "gateway_manual_recovery_payment")
+    card_code = hotel.transaction_codes.find_by!(system_key: "card_payment")
+    gateway_recovery = payment(
+      category: "gateway_payment",
+      amount: 200,
+      posting_date: Date.new(2026, 6, 17),
+      transaction_code: gateway_code,
+      metadata: { payment_source: "gateway" }
+    )
+    card_terminal = payment(
+      category: "cash",
+      amount: 300,
+      posting_date: Date.new(2026, 6, 17),
+      transaction_code: card_code,
+      metadata: { payment_source: "card" }
+    )
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.settlement_scope).not_to include(gateway_recovery)
+    expect(report.settlement_scope).to contain_exactly(card_terminal)
+    expect(report.grand_total[:balance]).to eq(300.to_d)
+  end
+
   it "classifies a refund from its linked original payment" do
     bank_code = hotel.transaction_codes.find_by!(system_key: "bank_payment")
     refund_code = hotel.transaction_codes.find_by!(system_key: "refund")

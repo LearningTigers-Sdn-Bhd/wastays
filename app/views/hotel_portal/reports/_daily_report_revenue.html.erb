@@ -74,18 +74,18 @@
   </div>
 </section>
 
-<section class="space-y-4" aria-labelledby="charge-register-heading">
+<section class="space-y-4" aria-labelledby="revenue-register-heading">
   <div class="flex items-center justify-between gap-4">
-    <h2 id="charge-register-heading" class="text-base font-semibold">Charge Register</h2>
-    <p class="text-sm text-muted-foreground"><%= @charge_register_count %> charge<%= "s" unless @charge_register_count == 1 %></p>
+    <h2 id="revenue-register-heading" class="text-base font-semibold">Revenue Register</h2>
+    <p class="text-sm text-muted-foreground"><%= @charge_register_count %> transaction<%= "s" unless @charge_register_count == 1 %></p>
   </div>
   <div class="overflow-hidden rounded-xl border border-border bg-card">
     <div class="overflow-x-auto">
     <table class="min-w-full">
       <thead class="bg-muted">
         <tr>
-          <% ["Date", "Code", "Service", "Type", "Booking / Folio", "Guest", "Status", "Amount"].each_with_index do |heading, index| %>
-            <th class="px-4 py-3 text-sm font-medium text-muted-foreground <%= index == 7 ? "text-right" : "text-left" %>"><%= heading %></th>
+          <% ["Date", "Service", "Booking / Folio", "Guest", "Status", "Base Amount", "Tax", "Total Amount"].each_with_index do |heading, index| %>
+            <th class="px-4 py-3 text-sm font-medium text-muted-foreground <%= index >= 5 ? "text-right" : "text-left" %>"><%= heading %></th>
           <% end %>
         </tr>
       </thead>
@@ -95,29 +95,45 @@
             <tr class="hover:bg-muted/50" data-testid="charge-register-row">
               <td class="px-4 py-3 text-sm text-foreground whitespace-nowrap">
                 <%= row.posting_date.strftime("%d %b %Y") %>
-                <% if row.posted_at %><span class="block text-xs text-muted-foreground"><%= row.posted_at.strftime("%H:%M") %></span><% end %>
+                <span class="block text-xs text-muted-foreground"><%= row.transaction_time.strftime("%-I:%M %p") %></span>
               </td>
-              <td class="px-4 py-3 text-sm text-foreground"><%= row.transaction_code %></td>
-              <td class="px-4 py-3 text-sm text-foreground"><%= row.service_name %></td>
-              <td class="px-4 py-3 text-sm text-muted-foreground"><%= row.transaction_type.to_s.humanize %> · <%= row.category.to_s.humanize %></td>
+              <td class="px-4 py-3 text-sm text-foreground">
+                <%= row.service_name %>
+                <% if row.transaction_code != "—" %>
+                  <span class="block text-xs text-muted-foreground"><%= row.transaction_code %></span>
+                <% end %>
+              </td>
               <td class="px-4 py-3 text-sm text-foreground">
                 <%= link_to row.booking_reference, hotel_booking_control_panel_path(current_hotel, row.booking, tab: "folio_operations", folio_id: row.folio.id) %>
                 <span class="block text-xs text-muted-foreground">Folio <%= row.folio_number %></span>
               </td>
-              <td class="px-4 py-3 text-sm text-foreground"><%= row.guest_name %></td>
+              <td class="px-4 py-3 text-sm text-foreground">
+                <%= row.guest_name %>
+                <% if row.room_details.present? %>
+                  <span class="block text-xs text-muted-foreground whitespace-nowrap"><%= row.room_details %></span>
+                <% end %>
+              </td>
               <td class="px-4 py-3 text-sm text-foreground"><%= row.relationship_status %></td>
-              <td class="px-4 py-3 text-sm font-semibold text-foreground text-right"><%= row.currency %> <%= number_with_precision(row.signed_amount, precision: 2) %></td>
+              <td class="px-4 py-3 text-sm font-semibold <%= row.signed_amount.negative? ? "text-destructive" : "text-foreground" %> text-right whitespace-nowrap">
+                <%= row.currency %> <%= number_with_precision(row.signed_amount, precision: 2) %>
+              </td>
+              <td class="px-4 py-3 text-sm font-semibold <%= row.tax_amount.negative? ? "text-destructive" : "text-foreground" %> text-right whitespace-nowrap">
+                <%= row.currency %> <%= number_with_precision(row.tax_amount, precision: 2) %>
+              </td>
+              <td class="px-4 py-3 text-sm font-semibold <%= row.total_amount.negative? ? "text-destructive" : "text-foreground" %> text-right whitespace-nowrap">
+                <%= row.currency %> <%= number_with_precision(row.total_amount, precision: 2) %>
+              </td>
             </tr>
           <% end %>
         <% else %>
-          <tr><td colspan="8" class="px-6 py-20 text-center text-sm text-muted-foreground">No posted charges found for this selected period.</td></tr>
+          <tr><td colspan="8" class="px-6 py-20 text-center text-sm text-muted-foreground">No revenue transactions found for this selected period.</td></tr>
         <% end %>
       </tbody>
     </table>
     </div>
-    <% if @charge_register_transactions.present? %>
+    <% if @charge_register_rows.present? %>
       <div class="border-t border-border px-4 py-3 flex justify-center">
-        <%= paginate @charge_register_transactions %>
+        <%= paginate @charge_register_rows %>
       </div>
     <% end %>
   </div>

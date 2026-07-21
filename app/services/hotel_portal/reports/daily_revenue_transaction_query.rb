@@ -41,7 +41,7 @@ module HotelPortal
           .includes(
             :transaction_code,
             :user,
-            booking_folio: [ :booking_room, { booking: :booking_rooms } ]
+            booking_folio: [ { booking_room: :room_type }, { booking: { booking_rooms: :room_type } } ]
           )
       end
 

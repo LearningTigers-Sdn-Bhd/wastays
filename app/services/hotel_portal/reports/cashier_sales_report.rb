@@ -26,15 +26,16 @@ module HotelPortal
 
       def call
         scope = base_scope
-        transactions = scope.to_a
+        transactions = exclude_gateway_movements(scope.to_a)
+        visible_scope = scope.where(id: transactions.map(&:id))
         advances, settlements = transactions.partition { |transaction| section_for(transaction) == "Advance" }
 
         Result.new(
           start_date: @start_date,
           end_date: @end_date,
           totals: totals_for(transactions),
-          advance_scope: scope.where(id: advances.map(&:id)),
-          settlement_scope: scope.where(id: settlements.map(&:id)),
+          advance_scope: visible_scope.where(id: advances.map(&:id)),
+          settlement_scope: visible_scope.where(id: settlements.map(&:id)),
           mode_by_transaction_id: transactions.to_h { |transaction| [ transaction.id, mode_label_for(transaction) ] },
           mode_summary_rows: mode_summary_for(transactions),
           mode_totals: mode_totals_for(transactions),
@@ -44,6 +45,31 @@ module HotelPortal
       end
 
       private
+
+      def exclude_gateway_movements(transactions)
+        payment_transaction_ids = transactions.filter_map do |transaction|
+          classification_transaction(transaction).metadata.to_h.stringify_keys["payment_transaction_id"].presence
+        end
+        razorpay_payment_ids = PaymentTransaction
+          .where(id: payment_transaction_ids, gateway: "razorpay")
+          .pluck(:id)
+          .map(&:to_s)
+
+        transactions.reject do |transaction|
+          gateway_originated?(classification_transaction(transaction), razorpay_payment_ids)
+        end
+      end
+
+      def gateway_originated?(transaction, razorpay_payment_ids)
+        metadata = transaction.metadata.to_h.stringify_keys
+
+        transaction.category == "gateway_payment" ||
+          transaction.transaction_code&.system_key == "gateway_manual_recovery_payment" ||
+          metadata["posting_source"] == "gateway_payment" ||
+          metadata["payment_source"] == "gateway" ||
+          metadata["refund_source"] == "gateway" ||
+          razorpay_payment_ids.include?(metadata["payment_transaction_id"].to_s)
+      end
 
       def base_scope
         FolioTransaction

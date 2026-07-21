@@ -99,6 +99,39 @@ RSpec.describe HotelPortal::Reports::DailyReportTransactionRow do
     expect(row.room_number).to eq("—")
   end
 
+  it "formats the booked room number and snapshotted room type compactly" do
+    room_type = create(:room_type, hotel: hotel, name: "Current Deluxe King")
+    booking_room = create(
+      :booking_room,
+      booking: booking,
+      room_type: room_type,
+      room_number: "G01",
+      room_type_snapshot: { "name" => "Booked Deluxe King" }
+    )
+    folio.update!(booking_room: booking_room)
+    transaction = create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100)
+
+    row = described_class.new(transaction)
+
+    expect(row.room_type_name).to eq("Booked Deluxe King")
+    expect(row.room_details).to eq("G01 · Booked Deluxe King")
+  end
+
+  it "shows only the room type when no room number is assigned" do
+    room_type = create(:room_type, hotel: hotel, name: "Deluxe King")
+    booking_room = create(:booking_room, booking: booking, room_type: room_type, room_number: nil)
+    folio.update!(booking_room: booking_room)
+    transaction = create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100)
+
+    expect(described_class.new(transaction).room_details).to eq("Deluxe King")
+  end
+
+  it "omits room details when the booking has no room" do
+    transaction = create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100)
+
+    expect(described_class.new(transaction).room_details).to be_nil
+  end
+
   it "exposes the folio invoice number, falling back to an em dash" do
     hotel = create(:hotel)
     booking = create(:booking, hotel: hotel)

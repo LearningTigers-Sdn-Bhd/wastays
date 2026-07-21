@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "csv"
+require "set"
 
 module HotelPortal
   class ReportsController < HotelPortal::BaseController
@@ -196,7 +197,11 @@ module HotelPortal
         end_date: @report_end_date
       ).call
 
-      prepare_charge_register
+      if @daily_report_tab == "revenue"
+        prepare_charge_register
+      else
+        prepare_empty_charge_register
+      end
       prepare_cashier_lists
 
       respond_to do |format|
@@ -206,7 +211,7 @@ module HotelPortal
             tab: @daily_report_tab,
             revenue_report: @revenue_report,
             cashier_report: @cashier_report,
-            charge_register: @charge_register_scope
+            charge_register: @charge_register_result.rows
           ).generate
           send_data csv,
             filename: "daily-report-#{@daily_report_tab}-#{@revenue_report.start_date}-#{@revenue_report.end_date}.csv",
@@ -218,7 +223,7 @@ module HotelPortal
             tab: @daily_report_tab,
             revenue_report: @revenue_report,
             cashier_report: @cashier_report,
-            charge_register: @charge_register_scope
+            charge_register: @charge_register_result.rows
           ).generate
           send_data workbook,
             filename: "daily-report-#{@daily_report_tab}-#{@revenue_report.start_date}-#{@revenue_report.end_date}.xlsx",
@@ -231,7 +236,7 @@ module HotelPortal
             tab: @daily_report_tab,
             revenue_report: @revenue_report,
             cashier_report: @cashier_report,
-            charge_register: @charge_register_scope
+            charge_register: @charge_register_result.rows
           ).generate
           send_data pdf,
             filename: "daily-report-#{@daily_report_tab}-#{@revenue_report.start_date}-#{@revenue_report.end_date}.pdf",
@@ -614,6 +619,15 @@ module HotelPortal
 
     private
 
+    def prepare_empty_charge_register
+      @transaction_filters = params.permit(*DAILY_REVENUE_FILTER_KEYS).to_h.compact_blank
+      @charge_register_result = HotelPortal::Reports::DailyReportChargeRegister::Result.new(
+        rows: [].freeze,
+        amount_total: 0.to_d,
+        tax_total: 0.to_d
+      )
+    end
+
     def prepare_charge_register
       query = HotelPortal::Reports::DailyRevenueTransactionQuery.new(
         hotel: current_hotel,
@@ -623,13 +637,37 @@ module HotelPortal
         transaction_types: %w[charge adjustment]
       )
       @transaction_filters = query.filters
-      @charge_register_scope = query.call
-      @charge_register_count = @charge_register_scope.count
       @transaction_codes = current_hotel.transaction_codes.active.order(:name, :code)
+      transactions = query.call
+      @charge_register_result = if query.filters.empty?
+        HotelPortal::Reports::DailyReportChargeRegister.new(transactions: transactions).call
+      else
+        filtered_charge_register_result(transactions.ids.to_set)
+      end
+      @charge_register_count = @charge_register_result.rows.size
       return unless request.format.html?
 
-      @charge_register_transactions = @charge_register_scope.page(params[:page]).per(50)
-      @charge_register_rows = @charge_register_transactions.map { |transaction| HotelPortal::Reports::DailyReportTransactionRow.new(transaction) }
+      @charge_register_rows = Kaminari.paginate_array(@charge_register_result.rows)
+        .page(params[:page]).per(50)
+    end
+
+    def filtered_charge_register_result(visible_transaction_ids)
+      result = HotelPortal::Reports::DailyReportChargeRegister.new(
+        transactions: HotelPortal::Reports::DailyRevenueTransactionQuery.new(
+          hotel: current_hotel,
+          start_date: @report_start_date,
+          end_date: @report_end_date,
+          transaction_types: %w[charge adjustment]
+        ).call
+      ).call
+      rows = result.rows.select do |row|
+        row.transaction_ids.any? { |transaction_id| visible_transaction_ids.include?(transaction_id) }
+      end.freeze
+      HotelPortal::Reports::DailyReportChargeRegister::Result.new(
+        rows: rows,
+        amount_total: rows.sum(&:signed_amount),
+        tax_total: rows.sum(&:tax_amount)
+      )
     end
 
     def prepare_cashier_lists

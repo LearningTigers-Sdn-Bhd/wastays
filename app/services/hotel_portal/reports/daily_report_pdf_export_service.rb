@@ -87,7 +87,7 @@ module HotelPortal
         pdf.move_down 16
         draw_revenue_table(pdf, "Revenue by Source", @revenue_report.source_rows, :source)
         pdf.start_new_page(layout: :landscape)
-        draw_section_heading(pdf, "Charge Register", "Charges and adjustments posted during the reporting period")
+        draw_section_heading(pdf, "Revenue Register", "Revenue charges and adjustments posted during the reporting period")
         draw_charge_register(pdf)
       end
 
@@ -145,15 +145,21 @@ module HotelPortal
       end
 
       def draw_charge_register(pdf)
-        rows = @charge_register.map do |transaction|
-          row = DailyReportTransactionRow.new(transaction)
+        negative_cells = []
+        rows = @charge_register.each_with_index.map do |row, index|
+          negative_cells << [ index, 5 ] if row.signed_amount.negative?
+          negative_cells << [ index, 6 ] if row.tax_amount.negative?
+          negative_cells << [ index, 7 ] if row.total_amount.negative?
+
           [
             date_time_label(row),
-            "#{row.transaction_code}\n#{row.service_name}",
+            [ row.service_name, (row.transaction_code unless row.transaction_code == "—") ].compact.join("\n"),
             "#{row.booking_reference}\nFolio #{row.folio_number}",
-            "#{row.guest_name}\nRoom #{row.room_number}",
+            [ row.guest_name, row.room_details ].compact.join("\n"),
+            row.relationship_status,
             "#{row.currency} #{money(row.signed_amount)}",
-            row.relationship_status
+            "#{row.currency} #{money(row.tax_amount)}",
+            "#{row.currency} #{money(row.total_amount)}"
           ]
         end
 
@@ -162,14 +168,16 @@ module HotelPortal
           return
         end
 
-        total = @charge_register.sum { |transaction| DailyReportTransactionRow.new(transaction).signed_amount }
-        rows << [ "Total", nil, nil, nil, "MYR #{money(total)}", nil ]
+        amount_total = @charge_register.sum(&:signed_amount)
+        tax_total = @charge_register.sum(&:tax_amount)
+        total_amount = amount_total + tax_total
+        rows << [ "Total", nil, nil, nil, nil, "MYR #{money(amount_total)}", "MYR #{money(tax_total)}", "MYR #{money(total_amount)}" ]
         draw_data_table(
           pdf,
-          [ "Date & Time", "Code / Service", "Reservation / Folio", "Guest / Room", "Amount", "Status" ],
+          [ "Date & Time", "Service / Code", "Booking / Folio", "Guest / Room Details", "Status", "Base Amount", "Tax", "Total Amount" ],
           rows,
-          numeric_columns: [ 4 ], total_row: rows.size,
-          column_widths: [ 75, 175, 155, 155, 110, 75 ]
+          numeric_columns: [ 5, 6, 7 ], negative_cells: negative_cells, total_row: rows.size,
+          column_widths: [ 65, 125, 125, 115, 60, 84, 78, 90 ]
         )
       end
 
@@ -250,7 +258,7 @@ module HotelPortal
         end
       end
 
-      def draw_data_table(pdf, headers, rows, numeric_columns: [], total_row: nil, column_widths: nil)
+      def draw_data_table(pdf, headers, rows, numeric_columns: [], negative_cells: [], total_row: nil, column_widths: nil)
         options = {
           header: true,
           width: column_widths ? column_widths.sum : pdf.bounds.width,
@@ -275,6 +283,9 @@ module HotelPortal
           table.row(index + 1).background_color = COLORS[:stripe] if index.odd?
         end
         numeric_columns.each { |column| table.column(column).style(align: :right) }
+        negative_cells.each do |row, column|
+          table.row(row + 1).column(column).style(text_color: COLORS[:negative])
+        end
         if total_row
           table.row(total_row).style(
             background_color: COLORS[:primary_light], font_style: :bold,
@@ -331,7 +342,7 @@ module HotelPortal
       end
 
       def date_time_label(row)
-        [ row.posting_date.strftime("%d %b %Y"), row.posted_at&.strftime("%H:%M") ].compact.join("\n")
+        [ row.posting_date.strftime("%d %b %Y"), row.transaction_time.strftime("%-I:%M %p") ].join("\n")
       end
 
       def tab_title

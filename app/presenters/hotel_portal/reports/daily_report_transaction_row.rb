@@ -59,7 +59,19 @@ module HotelPortal
       end
 
       def room_number
-        folio.booking_room&.room_number.presence || booking.booking_rooms.first&.room_number.presence || "—"
+        booked_room&.room_number.presence || "—"
+      end
+
+      def room_type_name
+        booked_room&.room_type_snapshot.to_h["name"].presence || booked_room&.room_type&.name.presence
+      end
+
+      def room_details
+        [ (room_number unless room_number == "—"), room_type_name ].compact.join(" · ").presence
+      end
+
+      def transaction_time
+        posted_at || transaction.created_at
       end
 
       def payment_method
@@ -100,6 +112,10 @@ module HotelPortal
       end
 
       private
+
+      def booked_room
+        @booked_room ||= folio.booking_room || booking.booking_rooms.first
+      end
 
       def metadata
         transaction.metadata.to_h.stringify_keys

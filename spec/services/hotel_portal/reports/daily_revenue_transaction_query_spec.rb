@@ -135,7 +135,8 @@ RSpec.describe HotelPortal::Reports::DailyRevenueTransactionQuery do
     def materialize(scope)
       scope.each do |transaction|
         row = HotelPortal::Reports::DailyReportTransactionRow.new(transaction)
-        [ row.transaction_code, row.service_name, row.booking_reference, row.folio_number, row.guest_name, row.room_number, row.actor_name ]
+        [ row.transaction_code, row.service_name, row.booking_reference, row.folio_number, row.guest_name,
+          row.room_number, row.room_type_name, row.actor_name ]
       end
     end
 

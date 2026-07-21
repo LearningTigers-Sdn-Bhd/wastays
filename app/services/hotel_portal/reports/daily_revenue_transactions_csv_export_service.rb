@@ -6,41 +6,33 @@ module HotelPortal
   module Reports
     class DailyRevenueTransactionsCsvExportService
       HEADERS = [
-        "Posting Date", "Posted At", "Transaction Code", "Service Name",
-        "Transaction Type", "Category", "Description", "Booking Ref",
-        "Folio Number", "Guest Name", "Room Number", "Payment Method",
-        "Posting Source", "Posted By", "Stay Date", "Relationship Status",
-        "Related Transaction ID", "Amount", "Currency"
+        "Posting Date", "Posted At", "Service Name", "Transaction Code",
+        "Booking Ref", "Folio Number", "Guest Name", "Room Number",
+        "Room Type", "Relationship Status", "Base Amount", "Tax", "Total Amount", "Currency"
       ].freeze
 
-      def initialize(transactions:)
-        @transactions = transactions
+      def initialize(rows:)
+        @rows = rows
       end
 
       def generate
         "\xEF\xBB\xBF" + CSV.generate(headers: true) do |csv|
           csv << HEADERS
-          @transactions.each do |transaction|
-            row = HotelPortal::Reports::DailyReportTransactionRow.new(transaction)
+          @rows.each do |row|
             csv << [
               row.posting_date.iso8601,
-              row.posted_at&.iso8601,
-              row.transaction_code,
+              row.transaction_time.iso8601,
               row.service_name,
-              row.transaction_type,
-              row.category,
-              row.description,
+              row.transaction_code,
               row.booking_reference,
               row.folio_number,
               row.guest_name,
               row.room_number,
-              row.payment_method,
-              row.posting_source,
-              row.actor_name,
-              row.stay_date,
+              row.room_type_name,
               row.relationship_status,
-              row.related_transaction_id,
               format("%.2f", row.signed_amount),
+              format("%.2f", row.tax_amount),
+              format("%.2f", row.total_amount),
               row.currency
             ]
           end

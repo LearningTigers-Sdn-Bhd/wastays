@@ -19,7 +19,17 @@ RSpec.describe "Daily Report: Revenue vs Cashier Sales", type: :system, js: true
     booking = create(:booking, hotel: hotel, guest_name: "Sunset Guest", check_in: today - 2.days, check_out: today)
     folio = create(:booking_folio, booking: booking, hotel: hotel)
     room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
-    create(:folio_transaction, booking_folio: folio, transaction_code: room_code, category: "accommodation", amount: 75, posting_date: today - 2.days, metadata: { stay_date: today - 2.days })
+    first_room_charge = create(:folio_transaction, booking_folio: folio,
+      transaction_code: room_code, category: "accommodation", amount: 75,
+      posting_date: today - 2.days, metadata: { stay_date: today - 2.days })
+    sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+    create(:folio_transaction, booking_folio: folio, transaction_code: sst_code,
+      category: "tax", amount: 6, posting_date: today - 2.days,
+      metadata: {
+        parent_folio_transaction_id: first_room_charge.id,
+        stay_date: (today - 2.days).iso8601,
+        tax_line: { type: "sst", source_transaction_code_id: room_code.id }
+      })
     create(:folio_transaction, booking_folio: folio, transaction_code: room_code, category: "accommodation", amount: 75, posting_date: today - 1.day, metadata: { stay_date: today - 1.day })
     create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 150, posting_date: today)
 
@@ -34,6 +44,13 @@ RSpec.describe "Daily Report: Revenue vs Cashier Sales", type: :system, js: true
     expect(page).to have_current_path(%r{tab=revenue})
     expect(page).to have_content("Room Revenue")
     expect(page).to have_css('[data-testid="charge-register-row"]', count: 2)
+    register = find("[aria-labelledby='revenue-register-heading']")
+    expect(register).to have_text("Tax")
+    room_charge_row = register.find('[data-testid="charge-register-row"]', text: "MYR 6.00")
+    expect(room_charge_row).to have_text("MYR 75.00")
+    expect(room_charge_row).to have_text("MYR 6.00")
+    expect(room_charge_row).to have_no_text("TAX_SST")
+    expect(register).to have_no_text("TAX_SST")
     expect(page).to have_content((today - 2.days).strftime("%d %b %Y"))
     expect(page).to have_content((today - 1.day).strftime("%d %b %Y"))
 

@@ -77,7 +77,7 @@ module HotelPortal
           decimal(@revenue_report.totals[:total_charges]), decimal(@revenue_report.totals[:adjustments]),
           decimal(@revenue_report.totals[:net_revenue]) ]
         csv << []
-        append_transactions(csv, "Charge Register", @charge_register)
+        append_transactions(csv, "Revenue Register", @charge_register)
       end
 
       def append_cashier(csv)
@@ -105,7 +105,7 @@ module HotelPortal
 
       def append_transactions(csv, title, transactions)
         csv << [ title ]
-        transaction_csv = DailyRevenueTransactionsCsvExportService.new(transactions: transactions).generate.delete_prefix(BOM)
+        transaction_csv = DailyRevenueTransactionsCsvExportService.new(rows: transactions).generate.delete_prefix(BOM)
         CSV.parse(transaction_csv).each { |row| csv << row }
         csv << []
       end

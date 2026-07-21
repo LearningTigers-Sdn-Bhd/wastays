@@ -151,15 +151,15 @@ module HotelPortal
             decimal(@revenue_report.totals[:net_revenue]) ]
         )
 
-        register = add_sheet("Charge Register", 19, widths: charge_register_widths)
-        add_report_header(register, "Charge Register", 19)
-        rows = @charge_register.map { |transaction| charge_register_row(transaction) }
+        register = add_sheet("Revenue Register", 14, widths: charge_register_widths)
+        add_report_header(register, "Revenue Register", 14)
+        rows = @charge_register.map { |row| charge_register_row(row) }
         add_table(
           register,
           headers: DailyRevenueTransactionsCsvExportService::HEADERS,
           rows: rows,
-          date_columns: [ 0 ], datetime_columns: [ 1 ], money_columns: [ 17 ],
-          total_row: total_for_register(rows, 19, 17)
+          date_columns: [ 0 ], datetime_columns: [ 1 ], money_columns: [ 10, 11, 12 ],
+          total_row: total_for_register(rows, 14, amount_indexes: [ 10, 11, 12 ])
         )
       end
 
@@ -315,13 +315,12 @@ module HotelPortal
         ]
       end
 
-      def charge_register_row(transaction)
-        row = DailyReportTransactionRow.new(transaction)
+      def charge_register_row(row)
         [
-          row.posting_date, row.posted_at&.to_datetime, row.transaction_code, row.service_name,
-          row.transaction_type, row.category, row.description, row.booking_reference, row.folio_number,
-          row.guest_name, row.room_number, row.payment_method, row.posting_source, row.actor_name,
-          row.stay_date, row.relationship_status, row.related_transaction_id, decimal(row.signed_amount), row.currency
+          row.posting_date, row.transaction_time.to_datetime, row.service_name, row.transaction_code,
+          row.booking_reference, row.folio_number, row.guest_name, row.room_number,
+          row.room_type_name, row.relationship_status, decimal(row.signed_amount), decimal(row.tax_amount),
+          decimal(row.total_amount), row.currency
         ]
       end
 
@@ -355,15 +354,17 @@ module HotelPortal
         [ "Total", *Array.new(8), rows.first&.[](9) || "MYR", decimal(total) ]
       end
 
-      def total_for_register(rows, column_count, amount_index)
+      def total_for_register(rows, column_count, amount_indexes:)
         values = Array.new(column_count)
         values[0] = "Total"
-        values[amount_index] = decimal(rows.sum { |row| row[amount_index].to_d })
+        amount_indexes.each do |index|
+          values[index] = decimal(rows.sum { |row| row[index].to_d })
+        end
         values
       end
 
       def charge_register_widths
-        [ 14, 20, 16, 24, 15, 18, 34, 24, 20, 22, 12, 18, 18, 20, 14, 16, 18, 16, 12 ]
+        [ 14, 20, 24, 16, 24, 20, 22, 12, 24, 16, 16, 16, 16, 12 ]
       end
 
       def cashier_widths
