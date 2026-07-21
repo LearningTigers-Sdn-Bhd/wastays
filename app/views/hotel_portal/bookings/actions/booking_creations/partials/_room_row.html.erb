@@ -1,0 +1,42 @@
+<%# One booking-creation room row. locals: index (String), values (Hash).
+    Rate plan and room number start with a placeholder choice and are repopulated
+    at runtime through SelectMenu#replaceOptions after the availability/rate AJAX
+    resolves — no native <select>, no <template> cloning. %>
+<% values = local_assigns.fetch(:values, {}).symbolize_keys %>
+<% room_type_choices = @room_types.map { |room_type| [ room_type.name, room_type.id ] }.presence || [ [ "No room types available", "" ] ] %>
+<div class="grid grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_1fr_36px] items-center gap-3 border-b border-border px-3 py-3 last:border-b-0"
+     data-booking-room-rows-target="row"
+     data-preserved-room-type="<%= values[:room_type_id] %>"
+     data-preserved-rate-plan="<%= values[:rate_plan_id] %>"
+     data-preserved-room-number="<%= values[:room_number] %>">
+  <%= fields_for "booking[rooms][#{index}]", BookingRoom.new do |rf| %>
+    <div class="min-w-0" data-role="room-type">
+      <%= render PanelsUI::FormField.new(form: rf, attribute: :room_type_id, label: "Room type", label_hidden: true, class: "min-w-0") do |field| %>
+        <% field.with_select_menu(
+             room_type_choices,
+             selected: values[:room_type_id],
+             prompt: "Select type",
+             class: "min-w-0",
+             data: { action: "change->booking-room-rows#roomTypeChanged" }) %>
+      <% end %>
+    </div>
+    <div class="min-w-0" data-role="rate-plan">
+      <%= render PanelsUI::FormField.new(form: rf, attribute: :rate_plan_id, label: "Rate plan", label_hidden: true, class: "min-w-0") do |field| %>
+        <% field.with_select_menu(
+             [["Select type and dates", ""]],
+             selected: "",
+             class: "min-w-0",
+             data: { action: "change->booking-room-rows#rateChanged" }) %>
+      <% end %>
+    </div>
+    <div class="min-w-0" data-role="room-number">
+      <%= render PanelsUI::FormField.new(form: rf, attribute: :room_number, label: "Room", label_hidden: true, class: "min-w-0") do |field| %>
+        <% field.with_select_menu([["Select room later", ""]], selected: "", class: "min-w-0") %>
+      <% end %>
+    </div>
+  <% end %>
+  <%= number_field_tag "booking[rooms][#{index}][adults]", values[:adults] || 1, min: 1, required: true, class: "booking-form__control", "aria-label": "Adults" %>
+  <%= number_field_tag "booking[rooms][#{index}][children]", values[:children] || 0, min: 0, required: true, class: "booking-form__control", "aria-label": "Children" %>
+  <div class="justify-end text-right text-sm font-semibold tabular-nums text-foreground" data-role="rate">0.00</div>
+  <button type="button" class="rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:invisible" aria-label="Remove room" data-role="remove" data-action="booking-room-rows#remove"><%= cached_icon("x", class: "size-4 mx-auto") %></button>
+</div>

@@ -44,6 +44,18 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", type: :request
       expect(dialog.text).to include("Quick Booking")
     end
 
+    it "renders a single server-rendered room row on demand" do
+      room_type
+      get room_row_hotel_bookings_path(hotel), params: { index: "3" }
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      row = document.at_css("[data-booking-room-rows-target='row']")
+      expect(row).to be_present
+      expect(row.at_css("[data-role='room-type'] select[name='booking[rooms][3][room_type_id]']")).to be_present
+      expect(row.at_css("[data-role='rate-plan'] select")).to be_present
+    end
+
     it "renders the Backdated Check-in sheet with the backdate fields" do
       get hotel_booking_action_backdated_check_in_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
 
@@ -143,10 +155,10 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", type: :request
             check_out: Date.current,
             record_payment: "1",
             payment_method: "cash",
-            payment_amount: "250.00"
+            payment_amount: "250.00",
+            backdate_reason: "Manual offline check-in"
           ),
           posting_date: past_date.to_s,
-          backdate_reason: "Manual offline check-in",
           retroactive_reason: "Router was down"
         }
       }.to change(Booking, :count).by(1)

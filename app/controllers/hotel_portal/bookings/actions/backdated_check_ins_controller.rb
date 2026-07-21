@@ -18,7 +18,7 @@ module HotelPortal
 
         def create
           if reason_missing?
-            message = params[:backdate_reason] == "Other" ? "Please provide details for the backdated check-in reason." : "Backdated check-in reason is required."
+            message = backdate_reason == "Other" ? "Please provide details for the backdated check-in reason." : "Backdated check-in reason is required."
             return render_new_booking_failure(transaction: :backdated_check_in, errors: [ message ])
           end
 
@@ -28,9 +28,15 @@ module HotelPortal
           render_new_booking_failure(transaction: :backdated_check_in, errors: result.errors)
         end
 
+        # The creation form posts the reason under booking[backdate_reason]; keep a
+        # top-level fallback for older callers.
+        def backdate_reason
+          booking_params[:backdate_reason].presence || params[:backdate_reason]
+        end
+
         def reason_missing?
-          (params[:backdate_reason] == "Other" && params[:retroactive_reason].blank?) ||
-            (params[:backdate_reason].blank? && params[:retroactive_reason].blank?)
+          (backdate_reason == "Other" && params[:retroactive_reason].blank?) ||
+            (backdate_reason.blank? && params[:retroactive_reason].blank?)
         end
       end
     end

@@ -35,7 +35,7 @@ module HotelPortal
           ::Bookings::CreateStaffBooking.new(
             hotel: current_hotel, common_params: staff_booking_common_params,
             room_rows: staff_room_rows, user: current_user,
-            booking_type: booking_type || params[:booking_type], posting_date: params[:posting_date]
+            booking_type: booking_type || booking_params[:booking_type], posting_date: params[:posting_date]
           ).call
         end
 
@@ -81,8 +81,9 @@ module HotelPortal
         end
 
         def staff_booking_common_params
-          booking_params.except(:rooms, :room_type_id, :room_number, :rate_plan_id, :adults, :children, :manual_rate_override).merge(
-            backdate_reason: params[:backdate_reason], retroactive_reason: params[:retroactive_reason]
+          booking_params.except(:rooms, :room_type_id, :room_number, :rate_plan_id, :adults, :children, :manual_rate_override, :booking_type).merge(
+            backdate_reason: booking_params[:backdate_reason].presence || params[:backdate_reason],
+            retroactive_reason: params[:retroactive_reason]
           )
         end
 
@@ -94,8 +95,8 @@ module HotelPortal
             :record_payment, :payment_method, :payment_amount, :payment_reference,
             :id_front, :id_back, :source, :internal_notes, :manual_rate_override, :existing_guest_id,
             :rate_plan_id, :apply_stop_sell_restriction, :apply_arrival_departure_restrictions, :apply_stay_length_restrictions,
-            :guarantee_method,
-            :hotel_corporate_account_id,
+            :guarantee_method, :booking_type, :backdate_reason,
+            :hotel_corporate_account_id, :bill_tourism_tax_to_company,
             rooms: [ :room_type_id, :room_number, :rate_plan_id, :adults, :children, :manual_rate_override ],
             booking_rooms_attributes: [ :id, :room_type_id, :room_number, :rate_plan_id ]
           )
@@ -106,7 +107,7 @@ module HotelPortal
             :room_type_id, :room_number, :record_payment, :payment_method, :payment_amount, :payment_reference,
             :existing_guest_id, :guest_update_intent, :rate_plan_id,
             :apply_stop_sell_restriction, :apply_arrival_departure_restrictions, :apply_stay_length_restrictions,
-            :rooms, :hotel_corporate_account_id
+            :rooms, :hotel_corporate_account_id, :bill_tourism_tax_to_company, :booking_type, :backdate_reason
           )
         end
 
