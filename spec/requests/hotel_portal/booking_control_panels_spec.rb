@@ -579,9 +579,8 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(summary.text).not_to include("Checked out")
       checkout_action = summary.at_xpath('.//a[normalize-space()="Check-out"]')
       expect(checkout_action.at_css("svg")).to be_present
-      expect(checkout_action["href"]).to include(hotel_booking_transaction_check_out_path(hotel, checkout_child))
-      expect(checkout_action["data-turbo-frame"]).to eq("offcanvas_drawer")
-      expect(checkout_action["data-offcanvas-variant"]).to eq("fullscreen-bottom")
+      expect(checkout_action["href"]).to include(hotel_booking_action_checkout_path(hotel, checkout_child))
+      expect(checkout_action["data-turbo-frame"]).to eq("booking_action_sheet")
     end
 
     it "renders group-aware actions on the group overview summary" do

@@ -766,7 +766,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).not_to include("cell-actions-trigger")
     end
 
-    it "keeps unmigrated lifecycle actions out of the booking summary Sheet" do
+    it "surfaces the status-appropriate migrated lifecycle action in the booking summary Sheet" do
       booking = create(
         :booking,
         hotel:,
@@ -775,11 +775,14 @@ RSpec.describe "HotelPortal Stay View", type: :request do
         check_out: Date.current + 1.day
       )
       create(:booking_room, booking:, room_type:, room_number: "101")
-      lifecycle_labels = [
-        "Check-in", "Cancel", "Backdated Check-in", "Mark No-show", "Check-out",
-        "Edit Check-In", "Undo Check-in", "Review Late Checkout", "Complete Checkout"
-      ]
-      %w[confirmed review_no_show checked_in review_due_out checkout_required completed].each do |status|
+      expected = {
+        "confirmed" => "Check-in",
+        "review_no_show" => "Mark No-show",
+        "checked_in" => "Check-out",
+        "review_due_out" => "Review Late Checkout",
+        "checkout_required" => "Complete Checkout"
+      }
+      expected.each do |status, label|
         booking.update_column(:status, status)
         return_to = hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
         get hotel_booking_action_show_booking_path(hotel, booking, source: "stay_view", return_to:)
@@ -787,7 +790,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
         document = Nokogiri::HTML(response.body)
         expect(document.at_css("turbo-frame#booking_action_sheet")).to be_present
         control_labels = document.css("a, button").map { |control| control.text.squish }
-        expect(control_labels & lifecycle_labels).to be_empty
+        expect(control_labels).to include(label), "expected #{label.inspect} for #{status}"
       end
     end
 
@@ -804,7 +807,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       get item["href"]
       control_labels = Nokogiri::HTML(response.body).css("a, button").map { |control| control.text.squish }
-      expect(control_labels).not_to include("Actions", "Check-in", "Cancel", "Mark No-show", "Check-out")
+      expect(control_labels).not_to include("Check-in", "Cancel", "Mark No-show", "Check-out")
     end
 
     it "rejects users without board access before loading the board" do

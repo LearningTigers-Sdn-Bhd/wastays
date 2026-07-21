@@ -618,9 +618,9 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       late_link = mobile.css("a").find { |link| link.text.strip == "Review late checkout" }
       checkout_link = mobile.css("a").find { |link| link.text.strip == "Complete checkout" }
       expect(late_link["href"]).to include(late.id.to_s, "return_to=")
-      expect(late_link["data-offcanvas-variant"]).to eq("right")
+      expect(late_link["data-turbo-frame"]).to eq("booking_action_sheet")
       expect(checkout_link["href"]).to include(checkout.id.to_s, "return_to=")
-      expect(checkout_link["data-offcanvas-variant"]).to eq("fullscreen-bottom")
+      expect(checkout_link["data-turbo-frame"]).to eq("booking_action_sheet")
 
       get hotel_front_desk_path(hotel), params: { tab: "checkout", view: "list", checkout_query: "MOBILE" }
       mobile = Nokogiri::HTML(response.body).at_css("#front-desk-results section > .lg\\:hidden")

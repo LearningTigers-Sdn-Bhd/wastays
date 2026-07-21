@@ -1,5 +1,5 @@
 <% can_manage = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-<% lifecycle_actions = can_manage ? presenter.summary_actions.select { |action| action.key.in?([ :check_in, :edit_check_in, :cancel ]) } : [] %>
+<% lifecycle_actions = can_manage ? presenter.summary_actions.select { |action| action.key.in?([ :check_in, :edit_check_in, :cancel, :mark_no_show, :undo_check_in, :backdated_check_in, :reinstate, :late_checkout, :check_out ]) } : [] %>
 <% can_edit_stay = can_manage && booking.status.in?(HotelPortal::BookingLifecycleTargetPresenter::ELIGIBLE_STATUSES.fetch(:amend_stay)) %>
 
 <%= render PanelsUI::DropdownMenu.new(id: "booking-summary-actions", placement: :bottom_start, class: "w-72") do |menu| %>
@@ -24,10 +24,16 @@
         <% href = case action.key
           when :check_in, :edit_check_in then hotel_booking_action_check_in_path(current_hotel, target, navigation)
           when :cancel then hotel_booking_action_cancel_booking_path(current_hotel, target, navigation)
+          when :mark_no_show then hotel_booking_action_mark_no_show_path(current_hotel, target, navigation)
+          when :undo_check_in then hotel_booking_action_undo_check_in_path(current_hotel, target, navigation)
+          when :backdated_check_in then hotel_booking_action_review_backdated_check_in_path(current_hotel, target, navigation)
+          when :reinstate then hotel_booking_action_reinstate_no_show_path(current_hotel, target, navigation)
+          when :late_checkout then hotel_booking_action_late_checkout_path(current_hotel, target, navigation)
+          when :check_out then hotel_booking_action_checkout_path(current_hotel, target, navigation)
           end %>
         <% group.with_item(
              href:,
-             variant: action.key == :cancel ? :danger : :default,
+             variant: action.key.in?([ :cancel, :mark_no_show ]) ? :danger : :default,
              data: { turbo_frame: "booking_action_sheet_secondary", action: "click->panels-ui--dropdown-menu#restoreTriggerFocus" }) do %>
           <%= app_icon action.icon, class: "size-4", aria: { hidden: true } %>
           <span><%= action.key == :cancel ? "Cancel booking" : action.label %></span>

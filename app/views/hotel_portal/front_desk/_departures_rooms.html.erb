@@ -12,7 +12,7 @@
         <% paid = [total - balance, 0].max %>
         <% actions = [{ label: "View booking", path: hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details") }] %>
         <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-          <% if booking.status == "checkout_required" %><% actions << { label: "Complete checkout", path: hotel_booking_transaction_check_out_path(current_hotel, booking, return_to: request.fullpath), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } } %>
+          <% if booking.status == "checkout_required" %><% actions << { label: "Complete checkout", path: hotel_booking_action_checkout_path(current_hotel, booking, return_to: request.fullpath), data: { turbo_frame: "booking_action_sheet" } } %>
           <% elsif booking.status == "checked_in" %><% actions << { label: "Check out", path: check_out_hotel_booking_path(current_hotel, booking), method: :post, data: { turbo_confirm: "Are you sure you want to check out this guest?" } } %><% end %>
           <% actions << { label: "Print invoice", path: invoice_booking_path(booking.confirmation_token), data: { turbo: false }, target: "_blank" } %>
         <% end %>

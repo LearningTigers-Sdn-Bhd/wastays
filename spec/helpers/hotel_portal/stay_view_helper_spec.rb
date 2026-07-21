@@ -67,13 +67,13 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
     expected_paths = {
       "Check-in" => hotel_booking_action_check_in_path(hotel, 123),
       "Cancel" => hotel_booking_action_cancel_booking_path(hotel, 123),
-      "Backdated Check-in" => hotel_booking_transaction_booking_backdated_check_in_path(hotel, 123),
-      "Mark No-show" => hotel_booking_transaction_mark_no_show_path(hotel, 123),
-      "Check-out" => hotel_booking_transaction_check_out_path(hotel, 123),
+      "Backdated Check-in" => hotel_booking_action_review_backdated_check_in_path(hotel, 123),
+      "Mark No-show" => hotel_booking_action_mark_no_show_path(hotel, 123),
+      "Check-out" => hotel_booking_action_checkout_path(hotel, 123),
       "Edit Check-In" => hotel_booking_action_check_in_path(hotel, 123),
-      "Undo Check-in" => hotel_booking_transaction_undo_check_in_path(hotel, 123),
-      "Review Late Checkout" => hotel_booking_transaction_late_checkout_path(hotel, 123),
-      "Complete Checkout" => hotel_booking_transaction_check_out_path(hotel, 123)
+      "Undo Check-in" => hotel_booking_action_undo_check_in_path(hotel, 123),
+      "Review Late Checkout" => hotel_booking_action_late_checkout_path(hotel, 123),
+      "Complete Checkout" => hotel_booking_action_checkout_path(hotel, 123)
     }
     actions = %w[confirmed review_no_show checked_in review_due_out checkout_required]
       .flat_map { |status| lifecycle_actions(status) }
@@ -85,7 +85,7 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
 
       expect(uri.path).to eq(expected_paths.fetch(action.fetch(:label)))
       expect(query).to include("source" => "stay_view", "return_to" => state.return_path(hotel))
-      sheet_actions = [ "Cancel", "Check-in", "Edit Check-In" ]
+      sheet_actions = [ "Cancel", "Check-in", "Edit Check-In", "Mark No-show", "Undo Check-in", "Backdated Check-in", "Review Late Checkout", "Check-out", "Complete Checkout" ]
       expected_data = action.fetch(:label).in?(sheet_actions) ? helper.stay_view_booking_sheet_data : helper.stay_view_action_data
       expect(action.fetch(:data)).to eq(expected_data)
     end

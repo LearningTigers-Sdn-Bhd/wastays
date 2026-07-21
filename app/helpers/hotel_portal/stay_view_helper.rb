@@ -205,21 +205,21 @@ module HotelPortal::StayViewHelper
     when :cancel
       hotel_booking_action_cancel_booking_path(current_hotel, segment.booking_id, common)
     when :backdated_check_in
-      hotel_booking_transaction_booking_backdated_check_in_path(current_hotel, segment.booking_id, common)
+      hotel_booking_action_review_backdated_check_in_path(current_hotel, segment.booking_id, common)
     when :mark_no_show
-      hotel_booking_transaction_mark_no_show_path(current_hotel, segment.booking_id, common)
+      hotel_booking_action_mark_no_show_path(current_hotel, segment.booking_id, common)
     when :check_out
-      hotel_booking_transaction_check_out_path(current_hotel, segment.booking_id, common)
+      hotel_booking_action_checkout_path(current_hotel, segment.booking_id, common)
     when :undo_check_in
-      hotel_booking_transaction_undo_check_in_path(current_hotel, segment.booking_id, common)
+      hotel_booking_action_undo_check_in_path(current_hotel, segment.booking_id, common)
     when :late_checkout
-      hotel_booking_transaction_late_checkout_path(current_hotel, segment.booking_id, common)
+      hotel_booking_action_late_checkout_path(current_hotel, segment.booking_id, common)
     else
       raise ArgumentError, "Unsupported Stay View lifecycle action: #{key}"
     end
 
     action = presentation.except(:key).merge(label:, href:)
-    key.in?([ :cancel, :check_in, :edit_check_in ]) ? action.merge(data: stay_view_booking_sheet_data) : action
+    key.in?([ :cancel, :check_in, :edit_check_in, :mark_no_show, :undo_check_in, :backdated_check_in, :late_checkout, :check_out ]) ? action.merge(data: stay_view_booking_sheet_data) : action
   end
 
   # Status quick-pick items for the room-status badge dropdown. Each opens the
