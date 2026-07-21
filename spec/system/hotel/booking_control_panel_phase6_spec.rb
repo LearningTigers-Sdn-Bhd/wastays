@@ -124,6 +124,59 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     expect(booking.reload.status).to eq("cancelled")
   end
 
+  it "checks in a booking through the action Sheet", js: true do
+    room_type = create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "101" ])
+    booking.update!(status: "confirmed", check_in: Time.current, check_out: 2.days.from_now)
+    booking.booking_rooms.first.update!(room_type: room_type, room_number: "101")
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
+
+    visit hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
+    find("button[aria-label='Booking actions']").click
+    click_link "Check-in"
+
+    expect(page).to have_css("dialog#booking-check-in-sheet[open]", wait: 3)
+    expect(page.evaluate_script("document.querySelector('#booking-check-in-sheet').contains(document.activeElement)")).to be(true)
+    within("#booking-check-in-sheet") do
+      expect(page).to have_content("Arrival details")
+      expect(page).to have_content("Room assignments")
+      click_in_overlay "Confirm check-in"
+    end
+
+    expect(page).to have_no_css("dialog#booking-check-in-sheet", wait: 3)
+    expect(booking.reload.status).to eq("checked_in")
+  end
+
+  it "selects and checks in multiple group children with the static action form", js: true do
+    room_type = create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: %w[101 102])
+    group = create(:group_booking, hotel: hotel, name: "Tour Group")
+    booking.update!(status: "confirmed", group_booking: group, group_position: 1, guest_name: "First Guest", check_in: Time.current, check_out: 2.days.from_now)
+    booking.booking_rooms.first.update!(room_type: room_type, room_number: "101")
+    sibling = create(:booking, hotel: hotel, status: "confirmed", group_booking: group, group_position: 2, guest_name: "Second Guest", check_in: booking.check_in, check_out: booking.check_out)
+    create(:booking_room, booking: sibling, room_type: room_type, room_number: "102")
+    create(:booking_guest, booking: sibling, guest: create(:guest, name: "Second Guest"), is_primary: true)
+    create(:booking_folio, booking: sibling, hotel: hotel, is_primary: true)
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
+
+    visit hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
+    find("button[aria-label='Booking actions']").click
+    click_link "Check-in"
+
+    expect(page).to have_css("dialog#booking-check-in-sheet[open]", wait: 3)
+    within("#booking-check-in-sheet") do
+      click_in_overlay find("label", text: "Group", match: :first)
+      expect(page).to have_checked_field("booking_ids[]", count: 2)
+      expect(page).to have_css("[data-group-lifecycle-targets-target='panel']", count: 0)
+      expect(page).to have_content("Arrival details")
+      expect(page).to have_content("Room assignments")
+
+      click_in_overlay "Confirm check-in"
+    end
+
+    expect(page).to have_no_css("dialog#booking-check-in-sheet", wait: 3)
+    expect(booking.reload.status).to eq("checked_in")
+    expect(sibling.reload.status).to eq("checked_in")
+  end
+
   it "adds and removes a guest through booking action Sheets", js: true do
     visit hotel_booking_control_panel_path(hotel, booking, tab: "guest_details")
 

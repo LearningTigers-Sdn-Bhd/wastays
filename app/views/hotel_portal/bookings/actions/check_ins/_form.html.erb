@@ -1,0 +1,63 @@
+<% group = @booking.group_booking_id? %>
+<% action = @editing_check_in ? :edit_check_in : :check_in %>
+<% target_presenter = HotelPortal::BookingLifecycleTargetPresenter.new(booking: @booking, action: action) %>
+
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "booking-check-in-sheet",
+        side: :right,
+        size: :full,
+        title: @editing_check_in ? "Edit check-in details" : (group ? "Check in guests" : "Check in guest"),
+        description: @booking.guest_name,
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with url: hotel_booking_action_check_in_path(current_hotel, @booking),
+            method: :post,
+            class: "flex h-full min-h-0 flex-col",
+            data: { controller: "group-lifecycle-targets" } do %>
+        <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+        <%= hidden_field_tag :source, params[:source] if params[:source].present? %>
+
+        <div class="min-h-0 flex-1 <%= group ? 'grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none' : 'overflow-y-auto' %>">
+          <%= render "hotel_portal/bookings/actions/shared/group_target_selector",
+            target_presenter:,
+            selected_booking_ids: @selected_booking_ids,
+            target_scope: @target_scope %>
+
+          <% if group %><div class="min-h-0 overflow-y-auto custom-scrollbar"><% end %>
+          <% if @booking.errors.any? %>
+            <div class="m-6 mb-0 rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert" aria-live="assertive" tabindex="-1">
+              <p class="font-semibold"><%= @editing_check_in ? "The check-in details could not be updated." : "The selected guests could not be checked in." %></p>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <% @booking.errors.full_messages.each do |message| %><li><%= message %></li><% end %>
+              </ul>
+            </div>
+          <% end %>
+
+          <section class="space-y-6 p-6">
+            <%= fields_for "check_in", OpenStruct.new(
+                  checked_in_at: @form_values[:checked_in_at],
+                  reason: @form_values[:reason],
+                  override_night_audit: @form_values[:override_night_audit],
+                  tourism_tax_collected: @form_values[:tourism_tax_collected]) do |booking_form| %>
+              <%= render "hotel_portal/bookings/actions/check_ins/booking_fields",
+                booking: @booking,
+                form: booking_form,
+                values: @form_values,
+                room_options: @room_options,
+                editing: @editing_check_in %>
+            <% end %>
+          </section>
+          <% if group %></div><% end %>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: @editing_check_in ? "Saving…" : "Checking in…" }) do %>
+            <%= @editing_check_in ? "Save changes" : "Confirm check-in" %>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

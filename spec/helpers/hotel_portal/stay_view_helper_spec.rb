@@ -37,7 +37,10 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
   end
 
   def lifecycle_actions(status, capabilities: self.capabilities)
-    helper.stay_view_booking_actions(segment(status, capabilities:), state)
+    helper.stay_view_lifecycle_booking_actions(
+      segment(status, capabilities:),
+      { return_to: state.return_path(hotel), source: "stay_view" }
+    ).map { |action| action.merge(data: action.fetch(:data, helper.stay_view_action_data)) }
   end
 
   it "derives the exact projected lifecycle action matrix from lifecycle events" do
@@ -62,12 +65,12 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
 
   it "builds every lifecycle action with its transaction route and Stay View state" do
     expected_paths = {
-      "Check-in" => hotel_booking_transaction_check_in_reservation_path(hotel, 123),
+      "Check-in" => hotel_booking_action_check_in_path(hotel, 123),
       "Cancel" => hotel_booking_action_cancel_booking_path(hotel, 123),
       "Backdated Check-in" => hotel_booking_transaction_booking_backdated_check_in_path(hotel, 123),
       "Mark No-show" => hotel_booking_transaction_mark_no_show_path(hotel, 123),
       "Check-out" => hotel_booking_transaction_check_out_path(hotel, 123),
-      "Edit Check-In" => hotel_booking_transaction_check_in_reservation_path(hotel, 123),
+      "Edit Check-In" => hotel_booking_action_check_in_path(hotel, 123),
       "Undo Check-in" => hotel_booking_transaction_undo_check_in_path(hotel, 123),
       "Review Late Checkout" => hotel_booking_transaction_late_checkout_path(hotel, 123),
       "Complete Checkout" => hotel_booking_transaction_check_out_path(hotel, 123)
@@ -82,8 +85,8 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
 
       expect(uri.path).to eq(expected_paths.fetch(action.fetch(:label)))
       expect(query).to include("source" => "stay_view", "return_to" => state.return_path(hotel))
-      # Cancellation is migrated to the action Sheet; the rest still open the legacy Offcanvas.
-      expected_data = action.fetch(:label) == "Cancel" ? helper.stay_view_cancel_booking_data : helper.stay_view_action_data
+      sheet_actions = [ "Cancel", "Check-in", "Edit Check-In" ]
+      expected_data = action.fetch(:label).in?(sheet_actions) ? helper.stay_view_booking_sheet_data : helper.stay_view_action_data
       expect(action.fetch(:data)).to eq(expected_data)
     end
   end

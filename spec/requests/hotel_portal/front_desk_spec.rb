@@ -585,7 +585,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(document.css("form input[name='in_house_page']").length).to be >= 1
     end
 
-    it "uses system typography and preserves arrival mobile fields and permitted drawer actions" do
+    it "uses system typography and preserves arrival mobile fields and permitted Sheet actions" do
       grant_arrival_permission
       grant_booking_permission
       confirmed = booking(status: "confirmed", confirmation_token: "MOBILE-CONFIRMED", check_in: hotel_today)
@@ -599,10 +599,12 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(mobile.text).to include("2 adults, 0 children", "Not Required", "No documents")
       check_in_link = mobile.css("a").find { |link| link.text.strip == "Check In" }
       expect(check_in_link["href"]).to include("return_to=")
-      expect(check_in_link["data-offcanvas-variant"]).to eq("right")
+      expect(check_in_link["data-turbo-frame"]).to eq("booking_action_sheet")
+      expect(check_in_link["data-offcanvas-variant"]).to be_nil
       expect(mobile.text).to include("Checked in", "Edit Time")
       edit_time_link = mobile.css("a").find { |link| link.text.strip == "Edit Time" }
       expect(edit_time_link["href"]).to include(checked_in.id.to_s)
+      expect(edit_time_link["data-turbo-frame"]).to eq("booking_action_sheet")
       expect(response.body).to include(confirmed.confirmation_token)
     end
 

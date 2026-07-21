@@ -137,17 +137,6 @@ module Bookings
 
           guest_reg = @booking.guest_registration_number || HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
 
-          sync_room_number_to_snapshot
-
-          @booking.booking_rooms.includes(:room_type).where.not(room_number: [ nil, "" ]).find_each do |booking_room|
-            room_status = RoomStatus.find_by(
-              hotel: @booking.hotel,
-              room_type: booking_room.room_type,
-              room_number: booking_room.room_number
-            )
-            room_status&.update!(dnd: false, dnd_date: nil)
-          end
-
           attributes = (@options[:attributes] || {}).merge(
             checked_in_at: @timestamp,
             guest_registration_number: guest_reg
@@ -158,6 +147,16 @@ module Bookings
             event: was_review_no_show ? "backdated_check_in" : "check_in",
             attributes: attributes
           )
+
+          sync_room_number_to_snapshot
+          @booking.booking_rooms.includes(:room_type).where.not(room_number: [ nil, "" ]).find_each do |booking_room|
+            room_status = RoomStatus.find_by(
+              hotel: @booking.hotel,
+              room_type: booking_room.room_type,
+              room_number: booking_room.room_number
+            )
+            room_status&.update!(dnd: false, dnd_date: nil)
+          end
 
           Folios::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
 
@@ -204,8 +203,10 @@ module Bookings
       return failure(error) if error.present?
       return success unless transitioned
 
-      Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
-      Notifications::Dispatcher.new(event: :booking_checked_in, booking: @booking).call
+      unless @options[:defer_side_effects]
+        Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
+        Notifications::Dispatcher.new(event: :booking_checked_in, booking: @booking).call
+      end
       success
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages.to_sentence)

@@ -252,7 +252,10 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
       expect(page).to have_no_css("[data-slot='stay-view-room-footer']")
       find("a[data-slot='stay-view-room-booking-item']").click
     end
-    within("#booking-summary-sheet") { click_in_overlay "Cancel booking" }
+    within("#booking-summary-sheet") do
+      click_in_overlay "Actions"
+      click_in_overlay "Cancel booking"
+    end
 
     within("#booking-cancellation-sheet") do
       expect(page).to have_content("Cancel booking")
@@ -447,11 +450,15 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     # click_in_overlay dispatches the DOM click directly; cuprite's coordinate
     # hit-testing is unreliable for controls inside a showModal() top-layer dialog.
-    within("#booking-summary-sheet") { click_in_overlay "Print / Send" }
+    within("#booking-summary-sheet") do
+      click_in_overlay "Actions"
+      click_in_overlay "Print / Send"
+    end
     expect(page).to have_css("dialog#booking-group-documents-sheet[open]", text: "Group documents")
 
     within("#booking-group-documents-sheet") { click_in_overlay "Back to booking summary" }
     expect(page).to have_css("dialog#booking-summary-sheet[open]", text: "Conference Group")
+    expect(page).to have_css("#booking-summary-actions-trigger:focus")
     find("dialog#booking-summary-sheet").send_keys(:escape)
 
     expect(page).to have_no_css("dialog#booking-summary-sheet", wait: 3)
@@ -472,6 +479,9 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     page.driver.browser.keyboard.type(:enter)
 
     within("#booking-summary-sheet") do
+      actions = find_button("Actions")
+      page.execute_script("arguments[0].focus()", actions)
+      page.driver.browser.keyboard.type(:enter)
       change_room = find_link("Change room")
       page.execute_script("arguments[0].focus()", change_room)
       page.driver.browser.keyboard.type(:enter)
@@ -504,6 +514,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     find("##{trigger_id}").click
 
     within("#booking-summary-sheet") do
+      click_in_overlay "Actions"
       link = find_link("Edit dates")
       expect(Rack::Utils.parse_nested_query(URI.parse(link[:href]).query)).not_to have_key("proposal_kind")
     end
@@ -527,7 +538,10 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     within("#stay_view_room_#{room_type.id}_101") do
       find("a[data-slot='stay-view-room-booking-item']").click
     end
-    within("#booking-summary-sheet") { click_in_overlay "Change room" }
+    within("#booking-summary-sheet") do
+      click_in_overlay "Actions"
+      click_in_overlay "Change room"
+    end
 
     within("#booking-room-sheet") do
       expect(page).to have_content("Change room")

@@ -30,7 +30,7 @@
               <% summary_actions.each do |summary_action| %>
                 <% action_booking = summary_action.target_booking %>
                 <% action_path = case summary_action.key
-                  when :check_in, :edit_check_in then hotel_booking_transaction_check_in_reservation_path(current_hotel, action_booking, return_to: return_to)
+                  when :check_in, :edit_check_in then hotel_booking_action_check_in_path(current_hotel, action_booking, return_to: return_to)
                   when :cancel then hotel_booking_action_cancel_booking_path(current_hotel, action_booking, return_to: return_to)
                   when :backdated_check_in then hotel_booking_transaction_booking_backdated_check_in_path(current_hotel, action_booking, return_to: return_to)
                   when :mark_no_show then hotel_booking_transaction_mark_no_show_path(current_hotel, action_booking, return_to: return_to)
@@ -44,7 +44,7 @@
                   when :warning then "text-amber-700 hover:bg-amber-50 focus-visible:bg-amber-50"
                   else "text-foreground hover:bg-muted focus-visible:bg-muted"
                   end %>
-                <% action_data = summary_action.key == :cancel ? { turbo_frame: "booking_action_sheet" } : { turbo_frame: "offcanvas_drawer", offcanvas_variant: summary_action.offcanvas_variant } %>
+                <% action_data = summary_action.key.in?([:cancel, :check_in, :edit_check_in]) ? { turbo_frame: "booking_action_sheet" } : { turbo_frame: "offcanvas_drawer", offcanvas_variant: summary_action.offcanvas_variant } %>
                 <%= link_to action_path, role: "menuitem", data: action_data, class: "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold focus-visible:outline-none #{action_class}" do %>
                   <%= cached_icon summary_action.icon, class: "size-4 shrink-0", aria: { hidden: true } %>
                   <span><%= summary_action.label %></span>

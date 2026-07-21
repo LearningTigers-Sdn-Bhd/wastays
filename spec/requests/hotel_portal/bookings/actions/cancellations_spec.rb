@@ -87,6 +87,9 @@ RSpec.describe "HotelPortal::Bookings::Actions cancellations", type: :request do
       expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
       expect(flash[:notice]).to eq("Booking cancelled successfully.")
       expect(booking.reload.status).to eq("cancelled")
+      expect(BookingAuditLog.where(auditable: booking, action_type: "cancel").last.metadata).to include(
+        "reason" => "Guest requested"
+      )
     end
 
     it "keeps the sheet open with an error when the reason is blank" do
@@ -136,6 +139,21 @@ RSpec.describe "HotelPortal::Bookings::Actions cancellations", type: :request do
       expect(response.body).to include('action="complete_sheet"')
       expect(flash[:notice]).to eq("2 bookings cancelled.")
       expect(booking.reload.status).to eq("cancelled")
+      expect(sibling.reload.status).to eq("cancelled")
+    end
+
+    it "cancels selected pending and overbooked group bookings" do
+      group = create(:group_booking, hotel: hotel, name: "Conference Group")
+      pending = create(:booking, hotel: hotel, group_booking: group, group_position: 1, status: "pending", guest_name: "Ada Lovelace")
+      create(:booking_room, booking: pending, room_type: room_type, room_number: "101")
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "overbooked", guest_name: "Grace Hopper")
+      create(:booking_room, booking: sibling, room_type: room_type, room_number: "102")
+
+      post hotel_booking_action_cancel_booking_path(hotel, pending),
+        params: { cancellation_reason: "Group plans changed", target_scope: "individual", booking_ids: [ pending.id, sibling.id ] }
+
+      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, pending, tab: "booking_details"))
+      expect(pending.reload.status).to eq("cancelled")
       expect(sibling.reload.status).to eq("cancelled")
     end
 

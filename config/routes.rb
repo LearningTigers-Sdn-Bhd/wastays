@@ -328,12 +328,10 @@ Rails.application.routes.draw do
 
       member do
         patch :move, to: "bookings/moves#update"
-        post :check_in, to: "bookings/check_ins#create"
         post :check_out, to: "bookings/checkouts#create"
         post :reinstate, to: "bookings/reinstatements#create"
         post :mark_no_show, to: "bookings/no_shows#create"
         post :repair_no_show_folio, to: "bookings/no_show_folio_repairs#create"
-        post :cancel, to: "bookings/cancellations#create"
         post :process_late_checkout, to: "bookings/checkouts#process_late_checkout"
         post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings/housekeeping_requests#complete", as: :complete_housekeeping_request
         post "complaint_requests/:complaint_request_id/resolve", to: "bookings/complaint_requests#resolve", as: :resolve_complaint_request
@@ -377,21 +375,13 @@ Rails.application.routes.draw do
       end
     end
     scope "booking-transactions", as: :booking_transaction, module: "bookings/transactions" do
-      match "quick-booking", to: "quick_bookings#show", via: [ :get, :post ], as: :quick_booking
-      match "new-booking", to: "new_bookings#show", via: [ :get, :post ], as: :new_booking
-      match "walk-in-check-in", to: "walk_in_check_ins#show", via: [ :get, :post ], as: :walk_in_check_in
-      match "backdated-check-in", to: "backdated_check_ins#show", via: [ :get, :post ], as: :backdated_check_in
       match "backdated-check-in/:booking_id", to: "backdated_check_ins#show", via: [ :get, :post ], as: :booking_backdated_check_in
-      get "show-booking/:booking_id", to: "show_bookings#show", as: :show_booking
-      get "show-booking/:booking_id/print-send", to: "show_bookings#print_send", as: :show_booking_print_send
-      get "check-in-reservation/:booking_id", to: "check_in_reservations#show", as: :check_in_reservation
       match "undo-check-in/:booking_id", to: "undo_check_ins#show", via: [ :get, :post ], as: :undo_check_in
       get "check-out/:booking_id", to: "check_outs#show", as: :check_out
       get "late-checkout/:booking_id", to: "late_checkouts#show", as: :late_checkout
       get "reinstate-no-show/:booking_id", to: "reinstate_no_shows#show", as: :reinstate_no_show
       get "mark-no-show/:booking_id", to: "mark_no_shows#show", as: :mark_no_show
       get "repair-no-show-folio/:booking_id", to: "repair_no_show_folios#show", as: :repair_no_show_folio
-      get "cancel-booking/:booking_id", to: "cancel_bookings#show", as: :cancel_booking
     end
     scope "booking-actions", as: :booking_action, module: "bookings/actions" do
       get "audit-trail/:booking_id", to: "audit_trails#show", as: :audit_trail
@@ -405,6 +395,7 @@ Rails.application.routes.draw do
       match "edit-room/:booking_id", to: "room_assignments#show", via: [ :get, :patch ], as: :edit_room
       match "edit-rate/:booking_id", to: "rate_changes#show", via: [ :get, :patch ], as: :edit_rate
       match "edit-booking/:booking_id", to: "booking_edits#show", via: [ :get, :patch ], as: :edit_booking
+      match "check-in/:booking_id", to: "check_ins#show", via: [ :get, :post ], as: :check_in
       match "cancel-booking/:booking_id", to: "cancellations#show", via: [ :get, :post ], as: :cancel_booking
       match "manage-guest/:booking_id", to: "guests#show", via: [ :get, :post, :patch ], as: :manage_guest
       match "remove-guest/:booking_id/:booking_guest_id", to: "guests#remove", via: [ :get, :delete ], as: :remove_guest

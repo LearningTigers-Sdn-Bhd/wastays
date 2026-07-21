@@ -69,10 +69,9 @@ module HotelPortal::StayViewHelper
     { turbo_frame: "booking_action_sheet" }
   end
 
-  # Cancellation has been migrated to the booking-action Sheet (see
-  # bookings/actions/cancellations). Other lifecycle actions still open the
-  # legacy Offcanvas until migrated.
-  def stay_view_cancel_booking_data
+  # Migrated lifecycle actions open in the booking-action Sheet. Remaining
+  # lifecycle actions keep using stay_view_action_data until their migration.
+  def stay_view_booking_sheet_data
     { turbo_frame: "booking_action_sheet" }
   end
 
@@ -202,7 +201,7 @@ module HotelPortal::StayViewHelper
     label = segment.status == :checkout_required && key == :check_out ? "Complete Checkout" : presentation.fetch(:label)
     href = case key
     when :check_in, :edit_check_in
-      hotel_booking_transaction_check_in_reservation_path(current_hotel, segment.booking_id, common)
+      hotel_booking_action_check_in_path(current_hotel, segment.booking_id, common)
     when :cancel
       hotel_booking_action_cancel_booking_path(current_hotel, segment.booking_id, common)
     when :backdated_check_in
@@ -220,7 +219,7 @@ module HotelPortal::StayViewHelper
     end
 
     action = presentation.except(:key).merge(label:, href:)
-    key == :cancel ? action.merge(data: stay_view_cancel_booking_data) : action
+    key.in?([ :cancel, :check_in, :edit_check_in ]) ? action.merge(data: stay_view_booking_sheet_data) : action
   end
 
   # Status quick-pick items for the room-status badge dropdown. Each opens the
