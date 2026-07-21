@@ -4,19 +4,14 @@ module HotelPortal
   module Bookings
     module Transactions
       class BackdatedCheckInsController < BaseController
-        before_action :set_booking, if: -> { params[:booking_id].present? && request.get? }
+        before_action :set_booking, if: -> { request.get? }
 
         def show
           return submit if request.post?
 
-          if @booking
-            return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: "Backdated check-in is only available while reviewing a missed arrival." unless @booking.status == "review_no_show"
+          return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: "Backdated check-in is only available while reviewing a missed arrival." unless @booking.status == "review_no_show"
 
-            render "hotel_portal/bookings/transactions/backdated_check_in/offcanvas"
-          else
-            build_booking(source: "walk_in")
-            render_new_booking(transaction: :backdated_check_in)
-          end
+          render "hotel_portal/bookings/transactions/backdated_check_in/offcanvas"
         end
 
         private
@@ -28,19 +23,8 @@ module HotelPortal
             return redirect_back fallback_location: hotel_front_desk_path(current_hotel, tab: "bookings", view: "list"), alert: "Backdated check-in reason is required."
           end
 
-          unless params[:booking_id].present?
-            result = create_staff_booking(booking_type: "backdated_check_in")
-            return complete_new_booking(result.booking, notice: result.group_booking ? "Backdated group check-in completed." : "Backdated check-in completed.") if result.success?
-
-            @booking = current_hotel.bookings.build(model_booking_params.merge(source: "walk_in"))
-            result.errors.each { |error| @booking.errors.add(:base, error) }
-            render_new_booking(transaction: :backdated_check_in, status: :unprocessable_content)
-            return
-          end
-
           booking = current_hotel.bookings.find(params[:booking_id])
-          return unless booking
-          if params[:booking_id].present? && booking.status != "review_no_show"
+          if booking.status != "review_no_show"
             return redirect_to hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"), alert: "Backdated check-in is only available while reviewing a missed arrival."
           end
 

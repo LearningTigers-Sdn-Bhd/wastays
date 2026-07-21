@@ -128,6 +128,40 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", type: :request
       expect(Booking.count).to eq(0)
     end
 
+    it "creates a backdated walk-in with historical payment, charges, and audit metadata" do
+      past_date = 1.day.ago.to_date
+      create(:night_audit, hotel: hotel, business_date: past_date, status: "completed")
+      create(:hotel_business_date, hotel: hotel, business_date: past_date, status: "closed")
+      grant_permission(role, "post_folio_charges")
+      grant_permission(role, "post_folio_payments")
+      grant_permission(role, "override_financial_date_lock")
+
+      expect {
+        post hotel_booking_action_backdated_check_in_path(hotel), params: {
+          booking: booking_params.merge(
+            check_in: past_date,
+            check_out: Date.current,
+            record_payment: "1",
+            payment_method: "cash",
+            payment_amount: "250.00"
+          ),
+          posting_date: past_date.to_s,
+          backdate_reason: "Manual offline check-in",
+          retroactive_reason: "Router was down"
+        }
+      }.to change(Booking, :count).by(1)
+
+      booking = Booking.last
+      expect(booking).to be_checked_in
+      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking))
+      expect(booking.payment_transactions.last.captured_at.to_date).to eq(past_date)
+      expect(booking.booking_folio.folio_transactions.charge).to all(have_attributes(posting_date: past_date))
+      expect(BookingAuditLog.where(auditable: booking, action_type: "check_in").last.metadata).to include(
+        "backdate_reason_category" => "Manual offline check-in",
+        "backdate_reason_details" => "Router was down"
+      )
+    end
+
     it "blocks creation without manage_bookings permission" do
       role.role_permissions.destroy_all
 

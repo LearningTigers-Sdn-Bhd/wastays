@@ -9,7 +9,8 @@
 > summary + group Print/Send**, which also established the **two-frame stacking
 > pattern** and the `click_in_overlay` system-spec helper, (4) **Cancellation**, and
 > (5) **guest management + structured internal notes**, and (6) the complete
-> **stay-editing family** (dates, room assignment/move, rate, and booking details).
+> **stay-editing family** (dates, room assignment/move, rate, and booking details),
+> and (7) **check-in + edit check-in details**.
 
 ## Stack / conventions (must follow)
 
@@ -117,7 +118,7 @@ Rules of thumb:
 
 ## Shipped #2 — Booking-creation family (New / Quick / Walk-in / Backdated)
 
-**Key discovery:** 7 of the 9 `new_booking/partials/*` were **dead code** (a superseded `booking-calc` form): `_header`, `_footer`, `_stay_details`, `_guest_information`, `_select_room`, `_errors`, `_guest_change_modal`. The live form only uses `_room_rate_table` + `_payment`, driven by the `booking-room-rows` Stimulus controller. **These 7 dead partials are a pending cleanup — untouched.**
+**Key discovery:** 7 of the 9 legacy `new_booking/partials/*` belonged to a superseded `booking-calc` form. The complete zero-caller legacy creation view tree and its orphan guest-autocomplete Stimulus controllers were removed after the Sheet implementation shipped.
 
 - Routes (GET+POST): `new-booking`, `quick-booking`, `walk-in-check-in`, `backdated-check-in` in the `booking-actions` scope.
 - **`bookings/actions/booking_creation_base_controller.rb`** — creation has **no `:booking_id`**, so it does NOT use `BaseController`. Ports the builders (`build_booking`, `create_staff_booking`, `staff_room_rows`, `booking_params`, `model_booking_params`), `authorize_manage_bookings!`, `include BookingActionCompletion`. Success → `complete_new_booking` (→ new booking's control panel). Failure → `render_new_booking_failure` (turbo-updates the `booking_action_sheet` frame with `_form`, `:unprocessable_content`).
@@ -128,7 +129,7 @@ Rules of thumb:
   - Stay View: `stay_view/board/_toolbar.html.erb` (Walk-in + Add booking) and `stay_view_helper.rb` (`stay_view_cell_actions` + `stay_view_room_slot_actions` — backdated/walk-in/new).
 - **Stay View mechanism:** action hashes carry intent-specific frame data. Creation and stay-editing actions target `booking_action_sheet`; remaining legacy housekeeping/room-block actions retain `stay_view_action_data` and the Offcanvas. Do not change the legacy helper globally until those remaining callers migrate.
 - Specs: `spec/requests/hotel_portal/bookings/actions/booking_creations_spec.rb` (GET all 4 into the sheet incl. side assertions; POST create→redirect; walk-in create→checked-in; Turbo→`complete_sheet`; invalid re-render; backdate-reason guard; permission block). Updated `stay_view_spec.rb` create scenarios to assert on `#booking-creation-sheet`. Updated legacy-launcher assertions in `manual_bookings_spec.rb`, `bookings_spec.rb`, `front_desk_spec.rb`.
-- Legacy `transactions` create controllers/views are now **zero-caller (dead but present)** for rollback.
+- Legacy `transactions` creation routes, controllers, views, and creation-only base-controller code were removed. The booking-specific existing-reservation backdated check-in remains in `transactions` until its lifecycle migration.
 
 **Known minor regression:** Quick's "More options → Full" is a plain `booking_action_sheet` frame-reload link (drops the legacy JS value-preservation on switch).
 
@@ -136,10 +137,11 @@ Rules of thumb:
 
 - Routes: `get "show-booking/:booking_id" → summaries#show` and `get "show-booking/:booking_id/print-send" → documents#show` in the `booking-actions` scope.
 - **`bookings/actions/overview_base_controller.rb < BaseController`** — read-only base for both: `skip_before_action :authorize_manage_bookings!` + `authorize_view_bookings!`, eager-loads the booking (and, for groups, the whole group) with folios/rooms/guests, builds `@presenter` (`BookingPresenter`) + `@panel_presenter` (`BookingControlPanelPresenter`).
-- **`summaries_controller.rb`** — the booking summary sheet (`#booking-summary-sheet`, right/lg). Standalone bookings show a Print/Send **dropdown** (`_print_send_menu`); group bookings show a Print/Send **link** targeting `booking_action_sheet_secondary` → stacks the documents sheet.
+- **`summaries_controller.rb`** — the booking summary sheet (`#booking-summary-sheet`, right/lg). Its single **Actions** dropdown groups Booking Control Panel, migrated lifecycle actions, stay editing, and document commands. Sheet actions target `booking_action_sheet_secondary`; group Print/Send therefore stacks the documents sheet above the summary.
 - **`documents_controller.rb`** — group Print/Send documents (`#booking-group-documents-sheet`, right/lg), rendered via the shared shell so it lands in whichever frame launched it. Non-group bookings redirect back to the summary with an alert. "Back to booking summary" is a `panels-ui--sheet#close` button (closes the stacked child, reveals the summary). **This is the reference implementation for stacking + standalone.**
 - Launcher: Stay View Room-View booking item now opens the summary sheet (`stay_view_helper#stay_view_booking_action_data` = `{ turbo_frame: "booking_action_sheet" }`).
 - Specs: `spec/requests/hotel_portal/bookings/actions/booking_overviews_spec.rb` (summary content + secondary-frame link; documents rendered into the secondary frame *and* standalone into the primary; close-button shape; non-group redirect). System stacking + focus-restoration flow in `stay_view_spec.rb` ("opens group documents…").
+- The zero-caller legacy Show Booking / Print-Send routes, controller, views, and request spec were removed.
 
 ## Shipped #4 — Cancellation
 
@@ -147,6 +149,7 @@ Rules of thumb:
 - `bookings/actions/cancellations_controller.rb` uses `Bookings::TransitionStatus`, preserves group targeting, rerenders invalid forms in the requesting frame, and completes primary or stacked Sheets correctly.
 - Launchers: booking-control-panel summary, Stay View lifecycle actions, and the booking summary Sheet (secondary frame).
 - Specs: `spec/requests/hotel_portal/bookings/actions/cancellations_spec.rb` plus the browser flow in `booking_control_panel_phase6_spec.rb`.
+- The zero-caller legacy cancellation GET/POST routes, controllers, and view were removed.
 
 ## Shipped #5 — Guest management + structured internal notes
 
@@ -170,15 +173,25 @@ Rules of thumb:
 - Stay View viewport restoration now persists scroll/focus across Sheet completion reloads. `data-viewport-settled` marks completion of the single initial restore/center frame; Sheet close clears a consumed focus request so Escape does not leak stale focus into a later refresh. Do not add a second `turbo:load` restore path.
 - Specs: request coverage in `spec/requests/hotel_portal/bookings/actions/{booking_dates,booking_edits,rate_changes,room_assignments}_spec.rb`, service coverage for rate selection/update behavior, and keyboard/drag/resize/focus/scroll browser coverage in `spec/system/hotel/stay_view_spec.rb`.
 
+## Shipped #7 — Check-in / edit check-in details
+
+- Route: `match "check-in/:booking_id" → check_ins#show` (GET+POST), exposed as `hotel_booking_action_check_in_path`.
+- `bookings/actions/check_ins_controller.rb` owns Sheet orchestration; `Bookings::ProcessCheckIn` validates hotel-local timestamps, allowlisted deposit methods, configured/available rooms, group selection, and atomic completion while continuing to use `Bookings::TransitionStatus` for lifecycle behavior.
+- Group UI is intentionally static: the left rail selects one, several, or all eligible children; the complete form remains fixed on the right. Shared timestamp/reason/tax/deposit values apply to selected children. The anchor room selector updates the anchor when selected; other children retain and validate their existing assignments.
+- Competing room assignments are serialized with transaction-scoped PostgreSQL advisory locks and revalidated inside the transaction. Check-in webhook/notification failures are logged without turning a committed check-in into an apparent request failure.
+- The form uses PanelsUI date-time, select-menu, switch, form-field, button, and Sheet primitives. Invalid submissions re-render the requesting frame with 422 and preserve submitted state.
+- Launchers migrated in the booking control panel, front-desk arrival list/cards, and Stay View. The legacy check-in transaction route/controller/view and resource POST controller/route were removed after caller count reached zero.
+- Specs: `spec/requests/hotel_portal/bookings/actions/check_ins_spec.rb` plus standalone and multi-child browser flows in `booking_control_panel_phase6_spec.rb`.
+
 ## Verification status
 
 Pre-stay-editing baseline: `bin/test bookings` → 580 examples, all pass; `booking_control_panel_phase6_spec.rb` → 11 examples, 0 failures, 2 pre-existing pending; Rubocop clean.
 
-Latest stay-editing verification: the original keyboard/focus/scroll flake passed 30 repeated runs, the selective-refresh scroll case passed 10 repeated runs, related focused Stay View examples passed, and `spec/system/panels_ui/sheet_spec.rb` passed 8/8. `git diff --check` was clean. A full post-migration domain/CI run has not yet been recorded in this handoff.
+Latest check-in verification: `bin/test bookings` passed 588 examples; `booking_control_panel_phase6_spec.rb` passed 13 examples with 2 pre-existing pending; focused check-in request coverage passed 23 examples; Rubocop and `git diff --check` were clean.
 
 ## Next actions (recommended order)
 
-1. Check-in and exception lifecycle (check in/edit time, existing-booking backdated check-in, undo check-in, mark no-show, reinstate).
+1. Exception lifecycle (existing-booking backdated check-in, undo check-in, mark no-show, reinstate).
 2. Late-checkout review, then full checkout last because it coordinates folios, early departure, audit blockers, groups, deposits, and side effects.
 3. Delete each remaining legacy action once its caller count hits zero; retire the offcanvas infrastructure last.
 

@@ -44,7 +44,9 @@ module Bookings
         )
       end
 
-      rate_plan = room_type.rate_plans.find(value)
+      rate_plan = room_type.rate_plans.find_by(id: value)
+      return Selection.new(rate_plan: nil, tier: :standard, token: "") unless rate_plan
+
       Selection.new(rate_plan:, tier: :standard, token: rate_plan.id.to_s)
     end
 

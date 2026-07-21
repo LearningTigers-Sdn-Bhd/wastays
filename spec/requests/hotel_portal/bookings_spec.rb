@@ -74,16 +74,6 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     end
   end
 
-  describe "GET /booking-transactions/new-booking" do
-    it "renders the offcanvas frame" do
-      get hotel_booking_transaction_new_booking_path(hotel), headers: { "Turbo-Frame" => "offcanvas_drawer" }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
-      expect(response.body).to include("Full Booking")
-    end
-  end
-
   describe "GET /show" do
     it "renders a staff-friendly filtered booking history" do
       create(
@@ -353,7 +343,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     end
   end
 
-  describe "POST /booking-transactions/new-booking" do
+  describe "POST /booking-actions/new-booking" do
     let(:room_type) { create(:room_type, hotel: hotel, quantity: 2, room_numbers: [ "101", "102" ], base_price: 100) }
     let(:booking_params) do
       {
@@ -375,54 +365,20 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       create(:room_rate, room_type: room_type, date: Date.current, price: 100, currency: hotel.default_currency.presence || "MYR")
     end
 
-    it "creates and redirects from the shared transaction sheet" do
-      post hotel_booking_transaction_new_booking_path(hotel), params: { booking: booking_params }
+    it "creates and redirects from the booking action sheet" do
+      post hotel_booking_action_new_booking_path(hotel), params: { booking: booking_params }
 
       expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last))
     end
 
-    it "renders validation errors inside the offcanvas frame" do
-      post hotel_booking_transaction_new_booking_path(hotel),
+    it "renders validation errors inside the booking action sheet" do
+      post hotel_booking_action_new_booking_path(hotel),
            params: { booking: booking_params.merge(guest_name: "") },
-           headers: { "Turbo-Frame" => "offcanvas_drawer" }
+           headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
+      expect(response.body).to include('target="booking_action_sheet"')
       expect(response.body).to include("Guest name can&#39;t be blank")
-    end
-  end
-
-  describe "POST /check_in" do
-    it "updates the booking status and redirects within the hotel path" do
-      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in", params: { checked_in_at: Time.current.to_s }
-      expect(response).to redirect_to(booking_details_path(booking))
-      expect(booking.reload.status).to eq("checked_in")
-      expect(booking.reload.checked_in_at).to be_present
-    end
-
-    it "checks in when the timestamp is submitted through booking params" do
-      checked_in_at = "2026-05-18T13:08"
-      expected_checked_in_at = Time.find_zone!(user.time_zone).parse(checked_in_at)
-
-      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
-           params: { booking: { checked_in_at: checked_in_at } }
-
-      expect(response).to redirect_to(booking_details_path(booking))
-      expect(booking.reload.status).to eq("checked_in")
-      expect(booking.checked_in_at.to_i).to eq(expected_checked_in_at.to_i)
-    end
-
-    it "completes the offcanvas back to booking details on turbo failures outside the reservation board" do
-      booking = create(:booking, hotel: hotel, status: "pending")
-
-      post "/hotel/#{hotel.id}/bookings/#{booking.id}/check_in",
-           params: { checked_in_at: Time.current.to_s },
-           headers: { "Accept" => "text/vnd.turbo-stream.html" }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(CGI.escapeHTML(booking_details_path(booking)))
-      expect(flash[:alert]).to eq("Cannot check in booking with status pending")
     end
   end
 
@@ -1059,13 +1015,6 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(flash[:alert]).to include("post_folio_charges")
       expect(booking.reload.status).to eq("review_due_out")
       expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
-    end
-  end
-
-  describe "POST /cancel" do
-    it "redirects within the hotel path" do
-      post "/hotel/#{hotel.id}/bookings/#{booking.id}/cancel", params: { cancellation_reason: "Guest requested cancellation" }
-      expect(response).to redirect_to(booking_details_path(booking))
     end
   end
 

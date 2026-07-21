@@ -64,7 +64,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
     end
   end
 
-  describe "POST /booking-transactions/new-booking" do
+  describe "POST /booking-actions/new-booking" do
     let(:valid_params) do
       {
         booking: {
@@ -82,7 +82,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
 
     it "creates a new booking and deducts inventory" do
       expect {
-        post hotel_booking_transaction_new_booking_path(hotel), params: valid_params
+        post hotel_booking_action_new_booking_path(hotel), params: valid_params
       }.to change(Booking, :count).by(1)
 
       expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last))
@@ -111,11 +111,12 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
     end
 
     it "renders quick booking as a compact room-row form" do
-      get hotel_booking_transaction_quick_booking_path(hotel)
+      get hotel_booking_action_quick_booking_path(hotel)
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Quick Booking", "Every row creates one room booking", "Confirm booking")
-      expect(response.body).to include('data-offcanvas-variant="right"')
+      expect(response.body).to include('dialog id="booking-creation-sheet"')
+      expect(response.body).to include('data-panels-ui-sheet-side="right"')
       expect(response.body).to include("bg-stone-50")
       expect(response.body).to include("Phone", "+60 12-345 6789", "guest@example.com")
       expect(response.body).not_to include(">Mobile</label>")
@@ -136,7 +137,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
       }
 
       expect {
-        post hotel_booking_transaction_quick_booking_path(hotel), params: params, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+        post hotel_booking_action_quick_booking_path(hotel), params: params, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
       }.not_to change(Booking, :count)
 
       expect(response).to have_http_status(:unprocessable_content)
@@ -161,7 +162,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
       }
 
       expect {
-        post hotel_booking_transaction_quick_booking_path(hotel), params: params, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+        post hotel_booking_action_quick_booking_path(hotel), params: params, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
       }.not_to change(Booking, :count)
 
       expect(response).to have_http_status(:unprocessable_content)
@@ -181,7 +182,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
       }
 
       expect {
-        post hotel_booking_transaction_quick_booking_path(hotel), params: params
+        post hotel_booking_action_quick_booking_path(hotel), params: params
       }.to change(Booking, :count).by(1)
 
       booking_room = Booking.last.booking_rooms.first
@@ -191,7 +192,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
     end
 
     it "hydrates the full booking form from nested quick booking params" do
-      get hotel_booking_transaction_new_booking_path(hotel), params: {
+      get hotel_booking_action_new_booking_path(hotel), params: {
         booking: {
           guest_name: "Quick Carry", guest_email: "carry@example.com", guest_phone: "60199887766",
           check_in: Date.current, check_out: Date.current + 2.days,
@@ -203,7 +204,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
       }
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Full Booking", "Quick Carry", "carry@example.com", "60199887766")
+      expect(response.body).to include("New Booking", "Quick Carry", "carry@example.com", "60199887766")
       decoded_body = CGI.unescapeHTML(response.body)
       expect(decoded_body).to include(%("room_type_id":"#{room_type.id}"), %("rate_plan_id":"#{rate_plan.id}"), %("room_number":"101"))
     end
@@ -222,7 +223,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
       }
 
       expect {
-        post hotel_booking_transaction_quick_booking_path(hotel), params: params
+        post hotel_booking_action_quick_booking_path(hotel), params: params
       }.to change(Booking, :count).by(2).and change(GroupBooking, :count).by(1)
 
       group = GroupBooking.last
@@ -245,7 +246,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
       }
 
       expect {
-        post hotel_booking_transaction_new_booking_path(hotel), params: params
+        post hotel_booking_action_new_booking_path(hotel), params: params
       }.to change(GroupDeposit, :count).by(1).and change(GroupDepositAllocation, :count).by(2)
 
       group = GroupBooking.last
