@@ -892,7 +892,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         booking = create(:booking, hotel: hotel)
         folio = create(:booking_folio, booking: booking, hotel: hotel)
         room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
-        recorded_at = Time.local(2026, 5, 6, 14, 35)
+        recorded_at = Time.find_zone!(user.time_zone).local(2026, 5, 6, 14, 35)
         create(:folio_transaction, booking_folio: folio, transaction_code: room_code,
           category: "accommodation", amount: 480, posting_date: start_date,
           posted_at: nil, created_at: recorded_at)
