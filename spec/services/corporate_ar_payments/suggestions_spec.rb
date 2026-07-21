@@ -16,9 +16,11 @@ RSpec.describe CorporateArPayments::Suggestions do
     expect(suggestions.first[:suggested_amount]).to eq("200.0")
   end
 
-  it "stops when remaining amount is zero" do
+  it "stops once the amount is fully allocated, without discarding invoices already covered" do
     suggestions = described_class.call(invoices: [ earlier_invoice, later_invoice ], amount: 50)
-    expect(suggestions).to be_nil
+    expect(suggestions.size).to eq(1)
+    expect(suggestions.first[:ar_invoice_id]).to eq(2)
+    expect(suggestions.first[:suggested_amount]).to eq("50.0")
   end
 
   it "returns empty when no invoices" do

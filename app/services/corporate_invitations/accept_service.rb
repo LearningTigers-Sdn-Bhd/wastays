@@ -25,14 +25,14 @@ module CorporateInvitations
         if existing_relationship
           message = existing_relationship.suspended? ?
             "This corporate relationship is suspended. Ask the hotel to reactivate it." :
-            "This Company & Government Account is already linked to the hotel."
+            "This Corporate Account is already linked to the hotel."
           raise AcceptanceError, message
         end
 
         relationship = @invitation.hotel.hotel_corporate_accounts.create!(
           corporate_account: user.account,
+          account_type: @invitation.account_type,
           relationship_type: @invitation.relationship_type,
-          direct_bill_enabled: @invitation.direct_bill_enabled,
           credit_limit: @invitation.credit_limit,
           credit_currency: @invitation.credit_currency,
           payment_terms_days: @invitation.payment_terms_days,
@@ -51,7 +51,7 @@ module CorporateInvitations
         e.record.errors.full_messages.to_sentence
       failure(message)
     rescue ActiveRecord::RecordNotUnique
-      failure("This Company & Government Account is already linked to the hotel.")
+      failure("This Corporate Account is already linked to the hotel.")
     end
 
     private
@@ -61,8 +61,8 @@ module CorporateInvitations
     def validate_existing_user!(user)
       return unless user
       raise AcceptanceError, "This email belongs to a hotel staff account. Use a separate corporate email." unless user.corporate?
-      raise AcceptanceError, "The Company & Government Account is unavailable." unless user.account&.corporate?
-      raise AcceptanceError, "The Company & Government Account is suspended." if user.account.status == "suspended"
+      raise AcceptanceError, "The Corporate Account is unavailable." unless user.account&.corporate?
+      raise AcceptanceError, "The Corporate Account is suspended." if user.account.status == "suspended"
       raise AcceptanceError, "Log in as #{user.email} to accept this invitation." unless @accepting_user == user
     end
 

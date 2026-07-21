@@ -10,7 +10,6 @@ RSpec.describe CorporateInvitations::CreateService do
     {
       email: "billing@acme.test",
       relationship_type: "direct_bill",
-      direct_bill_enabled: true,
       credit_limit: "5000",
       payment_terms_days: "30"
     }
@@ -54,6 +53,18 @@ RSpec.describe CorporateInvitations::CreateService do
 
     expect(invitation.reload.token_digest).not_to eq(old_digest)
     expect(invitation.relationship_type).to eq("direct_bill")
+  end
+
+  it "defaults account_type to company when not specified" do
+    result = described_class.new(hotel: hotel, invited_by_user: inviter, attributes: attributes).call
+
+    expect(result.invitation.account_type).to eq("company")
+  end
+
+  it "carries a specified account_type through to the invitation" do
+    result = described_class.new(hotel: hotel, invited_by_user: inviter, attributes: attributes.merge(account_type: "airline")).call
+
+    expect(result.invitation.account_type).to eq("airline")
   end
 
   it "blocks a suspended corporate account" do

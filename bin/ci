@@ -307,9 +307,34 @@ run_step "🗄️" "Parallel DB Setup" "bundle exec rake parallel:prepare"
 # instance per worker. Chrome is far heavier than a plain RSpec process, so
 # running one worker per CPU core saturates the machine and causes flaky
 # Ferrum timeouts/login races. Halve the worker count unless already pinned.
+#
+# CPU headroom alone isn't enough on memory-constrained boxes: each worker
+# runs its own Puma + Postgres connection + headless Chrome, which in
+# practice needs ~3GB of real memory to stay reliable. On an 8 CPU / 8GB
+# machine, nproc/2 alone still picks 4 workers and reproducibly times out;
+# capping by total memory as well brings that down to 2, which was verified
+# stable. Well-provisioned CI runners have enough memory that this cap
+# never binds tighter than the existing CPU-based halving.
 if [[ -z "${PARALLEL_TEST_PROCESSORS:-}" ]]; then
   ci_nprocessors=$(ruby -retc -e 'print Etc.nprocessors' 2>/dev/null || echo 4)
-  ci_worker_count=$(( ci_nprocessors / 2 ))
+  ci_cpu_worker_count=$(( ci_nprocessors / 2 ))
+  (( ci_cpu_worker_count < 2 )) && ci_cpu_worker_count=2
+
+  ci_total_mem_bytes=0
+  if [[ "$(uname)" == "Darwin" ]]; then
+    ci_total_mem_bytes=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
+  elif [[ -r /proc/meminfo ]]; then
+    ci_total_mem_kb=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
+    ci_total_mem_bytes=$(( ${ci_total_mem_kb:-0} * 1024 ))
+  fi
+
+  ci_worker_count="$ci_cpu_worker_count"
+  if (( ci_total_mem_bytes > 0 )); then
+    ci_mem_worker_count=$(( ci_total_mem_bytes / (3 * 1024 * 1024 * 1024) ))
+    (( ci_mem_worker_count < 1 )) && ci_mem_worker_count=1
+    (( ci_mem_worker_count < ci_worker_count )) && ci_worker_count="$ci_mem_worker_count"
+  fi
+
   (( ci_worker_count < 2 )) && ci_worker_count=2
   export PARALLEL_TEST_PROCESSORS="$ci_worker_count"
 fi

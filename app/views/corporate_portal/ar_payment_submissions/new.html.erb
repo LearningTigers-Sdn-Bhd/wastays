@@ -1,0 +1,114 @@
+<div class="mx-auto max-w-2xl space-y-6 pb-20">
+  <div>
+    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Payments</p>
+    <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-950">Submit Bank Transfer</h1>
+    <p class="mt-1 text-sm text-slate-600">Upload your transaction slip for the invoice(s) below. The hotel will verify it.</p>
+  </div>
+
+  <% if @ar_payment_submission.errors.any? %>
+    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+      <%= @ar_payment_submission.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <% if @lump_sum && @hotel_corporate_account.blank? %>
+    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+      Choose a hotel from Pay Account Balance to submit a bank transfer.
+      <%= link_to "Go to Pay Account Balance", pay_balance_corporate_ar_payments_path, class: "font-bold underline" %>
+    </div>
+  <% elsif !@lump_sum && @invoices.none? %>
+    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+      Select an outstanding invoice from Pay Invoices to submit a bank transfer.
+      <%= link_to "Go to Pay Invoices", pay_invoices_corporate_ar_payments_path, class: "font-bold underline" %>
+    </div>
+  <% elsif @lump_sum %>
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div class="px-6 py-5">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Outstanding balance</p>
+        <p class="mt-1.5 text-2xl font-black tabular-nums text-slate-950"><%= @currency %> <%= number_with_precision(@outstanding_total, precision: 2) %></p>
+        <p class="mt-1 text-xs text-slate-500"><%= @hotel_corporate_account.hotel.name %></p>
+      </div>
+    </section>
+
+    <%= form_with model: @ar_payment_submission, url: corporate_ar_payment_submissions_path, local: true, multipart: true, class: "space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" do |f| %>
+      <%= hidden_field_tag "ar_payment_submission[lump_sum]", "true" %>
+      <%= hidden_field_tag "ar_payment_submission[hotel_corporate_account_id]", @hotel_corporate_account.id %>
+      <%= hidden_field_tag "ar_payment_submission[currency]", @currency %>
+      <%= hidden_field_tag "ar_payment_submission[payment_method]", "bank_transfer" %>
+      <%= hidden_field_tag "ar_payment_submission[received_at]", Date.current %>
+
+      <div>
+        <%= f.label :reference_number, "Reference number", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.text_field :reference_number, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+      </div>
+      <div>
+        <label for="ar_payment_submission_amount" class="mb-1.5 block text-sm font-semibold text-slate-900">Amount paid</label>
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-bold text-slate-500"><%= @currency %></span>
+          <%= number_field_tag "ar_payment_submission[amount]", number_with_precision(@amount, precision: 2), id: "ar_payment_submission_amount", required: true, min: 0.01, step: "0.01", class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+        </div>
+      </div>
+      <div>
+        <%= f.label :slip, "Transaction slip (image or PDF)", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.file_field :slip, required: true, accept: "image/*,application/pdf", class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700" %>
+      </div>
+      <div>
+        <%= f.label :notes, "Note (optional)", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.text_area :notes, rows: 3, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <%= link_to "Cancel", pay_balance_corporate_ar_payments_path, class: "rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100" %>
+        <%= f.submit "Submit Bank Transfer", class: "rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-700" %>
+      </div>
+    <% end %>
+  <% else %>
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-200 px-6 py-4"><h2 class="text-sm font-bold text-slate-950">Paying</h2></div>
+      <dl class="divide-y divide-slate-100">
+        <% @invoices.each do |invoice| %>
+          <div class="flex items-center justify-between px-6 py-3 text-sm">
+            <dt class="font-semibold text-slate-700"><%= invoice.formatted_invoice_number %></dt>
+            <dd class="font-bold tabular-nums text-slate-950"><%= invoice.currency %> <%= number_with_precision(invoice.outstanding_amount, precision: 2) %></dd>
+          </div>
+        <% end %>
+      </dl>
+      <div class="flex items-center justify-between border-t border-slate-200 bg-slate-50/60 px-6 py-3">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total</p>
+        <p class="text-lg font-black tabular-nums text-slate-950"><%= @invoices.first.currency %> <%= number_with_precision(@invoices.sum(&:outstanding_amount), precision: 2) %></p>
+      </div>
+    </section>
+
+    <%= form_with model: @ar_payment_submission, url: corporate_ar_payment_submissions_path, local: true, multipart: true, class: "space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" do |f| %>
+      <% @invoices.each do |invoice| %>
+        <%= hidden_field_tag "ar_payment_submission[ar_invoice_ids][]", invoice.id %>
+      <% end %>
+      <div>
+        <%= f.label :reference_number, "Reference / transaction number", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.text_field :reference_number, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+      </div>
+      <div>
+        <%= f.label :received_at, "Date paid", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.date_field :received_at, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+      </div>
+      <div>
+        <%= f.label :payment_method, class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.select :payment_method, options_for_select(ArPayment::PAYMENT_METHODS.map { |method| [ method.humanize, method ] }, @ar_payment_submission.payment_method),
+          {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+      </div>
+      <div>
+        <%= f.label :slip, "Transaction slip (image or PDF)", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.file_field :slip, required: true, accept: "image/*,application/pdf", class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700" %>
+      </div>
+      <div>
+        <%= f.label :notes, "Notes (optional)", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.text_area :notes, rows: 3, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <%= link_to "Cancel", pay_invoices_corporate_ar_payments_path, class: "rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100" %>
+        <%= f.submit "Submit Bank Transfer", class: "rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-700" %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

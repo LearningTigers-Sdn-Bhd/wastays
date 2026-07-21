@@ -3,7 +3,6 @@ require_relative "../app/constraints/superadmin_constraint"
 Rails.application.routes.draw do
   mount RailsIcons::Engine, at: "/rails_icons"
   namespace :hotel_portal do
-    resources :agent_accounts
     get "room_blocks/create"
     get "room_blocks/destroy"
   end
@@ -148,15 +147,19 @@ Rails.application.routes.draw do
     get "dashboard", to: "dashboard#index", as: :dashboard
     resource :profile, only: [ :show ]
     resources :ar_invoices, only: [ :index, :show ], path: "invoices"
+    resources :ar_statements, only: [ :index, :show ], path: "statements"
     resources :ar_payments, only: [ :index, :show ], path: "payments" do
       collection do
         get :pay_invoices, path: "pay-invoices"
+        get :pay_balance, path: "pay-balance"
+        get :choose_method, path: "choose-method"
         post :review
         post :checkout_session
         get :verify
         post :verify
       end
     end
+    resources :ar_payment_submissions, only: [ :show, :new, :create ], path: "payment-submissions"
   end
 
   # Superadmin dashboard
@@ -276,19 +279,25 @@ Rails.application.routes.draw do
 
     resource :property_policy, only: [ :edit, :update ]
     scope "accounts-receivable" do
-      resources :corporate_accounts, only: [ :index, :new, :create ], path: "corporate-accounts" do
+      resources :corporate_accounts, only: [ :index, :new, :create, :edit, :update ], path: "corporate-accounts" do
         member do
           patch :suspend
           patch :reactivate
         end
       end
       get "aging", to: "ar_invoices#aging", as: :ar_aging
+      get "agent-summary", to: "ar_invoices#agent_summary", as: :ar_agent_summary
       resources :ar_invoices, only: [ :index, :show ], path: "invoices"
       resources :ar_statements, only: [ :index, :show ], path: "statements"
       resources :ar_payments, only: [ :index, :show, :new, :create ], path: "payments" do
         get :eligible_invoices, on: :collection
         resources :allocations, only: [ :create ], controller: "ar_payment_allocations" do
           resource :reversal, only: [ :create ], controller: "ar_payment_allocation_reversals"
+        end
+      end
+      resources :ar_payment_submissions, only: [ :show ], path: "payment-submissions" do
+        member do
+          patch :reject
         end
       end
     end
@@ -460,6 +469,8 @@ Rails.application.routes.draw do
         get :arrivals_departures, to: redirect { |params, request| "/hotel/#{params[:hotel_id]}/reports/guest_reports#{request.query_string.present? ? "?#{request.query_string}" : ""}" }
         get :daily_occupancy
         get :daily_revenue
+        get "daily_revenue/cell", to: "reports#daily_revenue_cell", as: :daily_revenue_cell
+        get "daily_revenue/source", to: "reports#daily_revenue_source_bookings", as: :daily_revenue_source_bookings
         get :managers_flash
         get :outstanding_balance
         get :deposit_liability
@@ -615,7 +626,12 @@ Rails.application.routes.draw do
     get "roles-and-permissions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions/%{id}/edit")
 
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
-    resources :rate_plans, only: %i[create destroy]
+    resources :rate_plans, only: %i[new create edit update destroy] do
+      member do
+        patch :archive
+        patch :unarchive
+      end
+    end
     resources :inventory_audit_logs, only: [ :index ]
     resources :global_search, only: [ :index ]
   end

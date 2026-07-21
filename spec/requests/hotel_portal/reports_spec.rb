@@ -813,6 +813,26 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Daily Revenue Report")
       expect(response.body).to include("Revenue by Source")
+      expect(response.body).to include("Daily Breakdown (#{hotel.default_currency})")
+    end
+
+    it "shows plain 0 instead of 0.00 for empty categories and links non-zero cells to the drill-down" do
+      booking = create(:booking, hotel: hotel, status: "confirmed", source: "walk_in")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: start_date)
+
+      get daily_revenue_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: start_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      doc = Nokogiri::HTML(response.body)
+      row = doc.at_css("tbody tr")
+      cells = row.css("td").map(&:text)
+
+      expect(cells).to include("MYR 0") # other_charges/tax are empty
+      expect(cells).not_to include(a_string_matching(/\AMYR 0\.00\z/))
+
+      accommodation_link = row.at_css("td:nth-child(3) a")
+      expect(accommodation_link["href"]).to eq(daily_revenue_cell_hotel_reports_path(hotel, date: start_date.to_s, category: "accommodation", date_preset: "custom"))
     end
 
     it "exports csv/xls/pdf" do
@@ -835,6 +855,76 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       role.permissions.delete(Permission.find_by!(slug: "view_reports"))
 
       get daily_revenue_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+    end
+  end
+
+  describe "GET /daily_revenue/cell" do
+    let(:date) { Date.new(2026, 5, 6) }
+
+    it "renders the underlying booking for an accommodation charge" do
+      booking = create(:booking, hotel: hotel, source: "walk_in", confirmation_token: "WS-CELL")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 120, posting_date: date)
+
+      get daily_revenue_cell_hotel_reports_path(hotel), params: { date: date.to_s, category: "accommodation", date_preset: "custom" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Accommodation")
+      expect(response.body).to include("WS-CELL")
+      expect(response.body).to include("120.00")
+    end
+
+    it "renders the underlying corporate account for an agent bank transfer" do
+      agent_account = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent")
+      create(:ar_payment, hotel: hotel, hotel_corporate_account: agent_account, payment_method: "bank_transfer", amount: 400, received_at: date)
+
+      get daily_revenue_cell_hotel_reports_path(hotel), params: { date: date.to_s, category: "agent_bank_transfer", date_preset: "custom" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include(agent_account.corporate_account.name)
+      expect(response.body).to include("400.00")
+    end
+
+    it "requires view_reports permission" do
+      role.permissions.delete(Permission.find_by!(slug: "view_reports"))
+
+      get daily_revenue_cell_hotel_reports_path(hotel), params: { date: date.to_s, category: "accommodation" }
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+    end
+
+    it "returns bad_request when date is missing" do
+      get daily_revenue_cell_hotel_reports_path(hotel), params: { category: "accommodation" }
+
+      expect(response).to have_http_status(:bad_request)
+    end
+  end
+
+  describe "GET /daily_revenue/source" do
+    let(:date) { Date.new(2026, 5, 6) }
+
+    it "lists the bookings behind a source's booking count" do
+      booking = create(:booking, hotel: hotel, source: "walk_in", guest_name: "Source Drilldown Guest", confirmation_token: "WS-SRC")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: date)
+
+      get daily_revenue_source_bookings_hotel_reports_path(hotel), params: { source: "Walk-in", start_date: date.to_s, end_date: date.to_s, date_preset: "custom" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Walk-in Bookings")
+      expect(response.body).to include("WS-SRC")
+      expect(response.body).to include("Source Drilldown Guest")
+      expect(response.body).to include(hotel_booking_path(hotel, booking))
+    end
+
+    it "requires view_reports permission" do
+      role.permissions.delete(Permission.find_by!(slug: "view_reports"))
+
+      get daily_revenue_source_bookings_hotel_reports_path(hotel), params: { source: "Walk-in", start_date: date.to_s, end_date: date.to_s }
 
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to eq("You are not authorized to perform this action.")

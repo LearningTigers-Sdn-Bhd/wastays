@@ -8,7 +8,6 @@ RSpec.describe CorporateInvitations::AcceptService do
       :corporate_invitation,
       email: "billing@acme.test",
       relationship_type: "direct_bill",
-      direct_bill_enabled: true,
       credit_limit: "5000",
       payment_terms_days: "30"
     )
@@ -92,6 +91,16 @@ RSpec.describe CorporateInvitations::AcceptService do
 
     expect(result).not_to be_success
     expect(result.error).to include("expired")
+  end
+
+  it "carries the invitation's account_type onto the relationship and generates an agent_code" do
+    invitation.update!(account_type: "travel_agent")
+
+    result = described_class.new(invitation: invitation, user_attributes: user_attributes).call
+
+    expect(result).to be_success
+    expect(result.relationship).to have_attributes(account_type: "travel_agent")
+    expect(result.relationship.agent_code).to match(/\A[A-Z0-9]{6}\z/)
   end
 
   it "rejects an existing suspended corporate account" do

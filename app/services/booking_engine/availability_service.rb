@@ -4,7 +4,7 @@ module BookingEngine
   class AvailabilityService
     PricingOption = Struct.new(:rate_plan, :currency, :total_price, :nightly_price, :nightly_rates, :winning_rule, keyword_init: true)
     AllocationOption = Struct.new(:rooms, :total_pax, :total_price, :currency, keyword_init: true)
-    AllocatedRoom = Struct.new(:room_type, :quantity, :pax, :adults, :children, :infants, :price_per_room, :pricing_summary, keyword_init: true)
+    AllocatedRoom = Struct.new(:room_type, :quantity, :pax, :adults, :children, :child_ages, :price_per_room, :pricing_summary, keyword_init: true)
 
     RULE_PRIORITY = {
       "ph" => 5, # Public Holiday
@@ -14,7 +14,7 @@ module BookingEngine
       "base" => 1 # Room Base Price
     }.freeze
 
-    attr_reader :params, :check_in, :check_out, :adults, :children, :infants, :room_count
+    attr_reader :params, :check_in, :check_out, :adults, :children, :room_count, :child_ages
 
     def initialize(params)
       @params = params
@@ -23,9 +23,9 @@ module BookingEngine
       @check_out = parse_date(params[:check_out]) || Date.tomorrow
       @adults = (params[:adults] || 2).to_i
       @children = (params[:children] || 0).to_i
-      @infants = (params[:infants] || 0).to_i
       @room_count = (params[:room_count] || 1).to_i
       @corporate_rate = [ true, "true", 1, "1" ].include?(params[:corporate_rate])
+      @child_ages = normalize_child_ages(params[:child_ages], @children)
     end
 
     def find_available_hotels
@@ -47,9 +47,8 @@ module BookingEngine
       return [] if stay_dates_list.empty?
 
       # 1. Basic occupancy filter and preload associations for performance
-      potential_room_types = hotel.room_types
-                                  .includes(:room_inventories, :room_rates, :rate_plans)
-                                  .where("max_adults >= ?", @adults)
+      potential_room_types = hotel.room_types.where("max_adults >= ?", @adults).to_a
+      preload_availability_data(potential_room_types)
 
       # 2. Date-based availability & rate check
       available_room_types = potential_room_types.select do |room_type|
@@ -152,12 +151,15 @@ module BookingEngine
     end
 
     def allocation_options_for_hotel(hotel)
-      total_pax = @adults + @children + @infants
+      total_pax = @adults + @children
       stay_dates_list = stay_dates
       return [] if stay_dates_list.empty?
 
       # 1. Get all potential room types with their availability
-      room_type_data = hotel.room_types.includes(:room_inventories, :room_rates, :rate_plans).map do |room_type|
+      potential_room_types = hotel.room_types.to_a
+      preload_availability_data(potential_room_types)
+
+      room_type_data = potential_room_types.map do |room_type|
         # Check inventory
         inventories = room_type.room_inventories.select { |inv| stay_dates_list.include?(inv.date) }
         available_qty = (inventories.count == stay_dates_list.count) ? inventories.map(&:quantity).min : 0
@@ -184,18 +186,18 @@ module BookingEngine
         req_rooms = [ req_rooms, @room_count ].max
 
         if req_rooms <= data[:available_qty]
-          occupancies = distribute_guests(@adults, @children, @infants, Array.new(req_rooms) { data[:room_type] })
+          occupancies = distribute_guests(@adults, @children, Array.new(req_rooms) { data[:room_type] }, child_ages: @child_ages)
 
           if occupancies.present?
-            grouped = occupancies.group_by { |occ| [ occ[:adults], occ[:children], occ[:infants] ] }
+            grouped = occupancies.group_by { |occ| [ occ[:adults], occ[:children], occ[:child_ages].to_a.sort ] }
 
             allocated_rooms = []
             total_price = 0.to_d
             currency = nil
 
-            grouped.each do |(r_adults, r_children, r_infants), list|
+            grouped.each do |(r_adults, r_children, r_child_ages), list|
               quantity = list.size
-              pricing = lowest_pricing_option_for(data[:room_type], adults: r_adults, children: r_children, infants: r_infants, room_count: 1)
+              pricing = lowest_pricing_option_for(data[:room_type], adults: r_adults, children: r_children, room_count: 1, child_ages: r_child_ages)
               next if pricing.blank?
 
               currency ||= pricing.currency
@@ -204,12 +206,12 @@ module BookingEngine
               allocated_rooms << AllocatedRoom.new(
                 room_type: data[:room_type],
                 quantity: quantity,
-                pax: r_adults + r_children + r_infants,
+                pax: r_adults + r_children,
                 adults: r_adults,
                 children: r_children,
-                infants: r_infants,
+                child_ages: r_child_ages,
                 price_per_room: pricing.total_price,
-                pricing_summary: pricing_summary_for(data[:room_type], adults: r_adults, children: r_children, infants: r_infants, room_count: 1)
+                pricing_summary: pricing_summary_for(data[:room_type], adults: r_adults, children: r_children, room_count: 1, child_ages: r_child_ages)
               )
             end
 
@@ -227,7 +229,7 @@ module BookingEngine
 
       # 3. Simple Greedy Mixed-Type Allocation
       sorted_data = room_type_data.map do |d|
-        pricing = lowest_pricing_option_for(d[:room_type], adults: d[:max_capacity], children: 0, infants: 0, room_count: 1)
+        pricing = lowest_pricing_option_for(d[:room_type], adults: d[:max_capacity], children: 0, room_count: 1)
         next nil if pricing.blank?
         d.merge(pricing: pricing)
       end.compact.sort_by { |d| [ -d[:max_capacity], d[:pricing].total_price ] }
@@ -235,11 +237,11 @@ module BookingEngine
       greedy_option = greedy_allocate(total_pax, sorted_data)
       options << greedy_option if greedy_option
 
-      options.uniq { |opt| opt.rooms.map { |r| [ r.room_type.id, r.quantity, r.adults, r.children, r.infants ] }.sort }.sort_by(&:total_price)
+      options.uniq { |opt| opt.rooms.map { |r| [ r.room_type.id, r.quantity, r.adults, r.children, r.child_ages.to_a.sort ] }.sort }.sort_by(&:total_price)
     end
 
-    def pricing_summary_for(room_type, rate_plan: nil, pax: nil, adults: nil, children: nil, infants: nil, room_count: nil)
-      option = rate_plan.present? ? pricing_option_for(room_type, rate_plan, pax: pax, adults: adults, children: children, infants: infants, room_count: room_count) : lowest_pricing_option_for(room_type, pax: pax, adults: adults, children: children, infants: infants, room_count: room_count)
+    def pricing_summary_for(room_type, rate_plan: nil, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: [])
+      option = rate_plan.present? ? pricing_option_for(room_type, rate_plan, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages) : lowest_pricing_option_for(room_type, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages)
       return {} if option.blank?
 
       display_name = option.rate_plan&.name
@@ -254,16 +256,23 @@ module BookingEngine
         total_price: option.total_price,
         nightly_price: option.nightly_price,
         nightly_rates: option.nightly_rates,
-        available_rate_plans: pricing_options_for(room_type, pax: pax, adults: adults, children: children, infants: infants, room_count: room_count).map(&:rate_plan).compact
+        available_rate_plans: pricing_options_for(room_type, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages).map(&:rate_plan).compact
       }
     end
 
-    def calculate_total_price(room_type, rate_plan: nil, pax: nil, adults: nil, children: nil, infants: nil, room_count: nil)
-      option = rate_plan.present? ? pricing_option_for(room_type, rate_plan, pax: pax, adults: adults, children: children, infants: infants, room_count: room_count) : lowest_pricing_option_for(room_type, pax: pax, adults: adults, children: children, infants: infants, room_count: room_count)
+    def calculate_total_price(room_type, rate_plan: nil, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: [])
+      option = rate_plan.present? ? pricing_option_for(room_type, rate_plan, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages) : lowest_pricing_option_for(room_type, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages)
       option&.total_price || 0.to_d
     end
 
     private
+
+    def per_child_price(price, rate_plan, age)
+      band = rate_plan.age_banded? ? rate_plan.band_for_age(age) : nil
+      return band.price_for(price) if band
+
+      price * (rate_plan.child_price_multiplier || 1.to_d)
+    end
 
     def human_rule_name(rule_type)
       case rule_type
@@ -289,16 +298,60 @@ module BookingEngine
       @stay_dates ||= (@check_in...@check_out).to_a
     end
 
+    # If the supplied ages don't match the children count, ignore them entirely
+    # and let pricing fall back to the rate plan's flat child_price_multiplier.
+    # A client-side mismatch should never break availability search.
+    def normalize_child_ages(raw_ages, children_count)
+      ages = Array(raw_ages).map(&:to_i)
+      return [] if ages.size != children_count
+      ages
+    end
+
+    # Preloads only the room_inventories/room_rates rows relevant to this
+    # search's date range, instead of every historical row for the room
+    # type. Unscoped `includes` here previously loaded a room type's full
+    # rate/inventory history on every search request.
+    def preload_availability_data(room_types)
+      return if room_types.empty?
+
+      ActiveRecord::Associations::Preloader.new(
+        records: room_types,
+        associations: :room_inventories,
+        scope: RoomInventory.where(date: stay_dates)
+      ).call
+
+      # Inclusive of @check_out: CTD (closed-to-departure) restrictions are
+      # keyed off the checkout date's own rate record, which falls outside
+      # the exclusive stay_dates range.
+      ActiveRecord::Associations::Preloader.new(
+        records: room_types,
+        associations: :room_rates,
+        scope: RoomRate.where(date: @check_in..@check_out)
+      ).call
+
+      ActiveRecord::Associations::Preloader.new(
+        records: room_types,
+        associations: :rate_plans
+      ).call
+
+      ActiveRecord::Associations::Preloader.new(
+        records: room_types,
+        associations: :room_type_rate_plans
+      ).call
+    end
+
     def nights
       stay_dates.length
     end
 
-    def distribute_guests(adults, children, infants, rooms)
+    def distribute_guests(adults, children, rooms, child_ages: [])
       num_rooms = rooms.size
       return nil if adults < num_rooms # Every room must have at least 1 adult
 
+      ages_pool = (child_ages.size == children) ? child_ages.dup : []
+
       occupancies = Array.new(num_rooms) do |i|
-        { room_type: rooms[i], adults: 0, children: 0, infants: 0 }
+        { room_type: rooms[i], adults: 0, children: 0, child_ages: [] }
       end
 
       # 1. Distribute 1 adult per room first
@@ -311,8 +364,7 @@ module BookingEngine
       # 2. Guest pool
       guest_pool = [
         { key: :adults, count: temp_adults },
-        { key: :children, count: children },
-        { key: :infants, count: infants }
+        { key: :children, count: children }
       ]
 
       guest_pool.each do |pool|
@@ -321,20 +373,16 @@ module BookingEngine
 
         num_rooms.times do |i|
           room_type = occupancies[i][:room_type]
-          current_total = occupancies[i][:adults] + occupancies[i][:children] + occupancies[i][:infants]
+          current_total = occupancies[i][:adults] + occupancies[i][:children]
           space_left = room_type.max_capacity - current_total
 
           # Enforce specific guest type limit for adults or children
           if pool[:key] == :adults
             specific_limit = room_type.max_adults.to_i
             current_specific = occupancies[i][:adults]
-          elsif pool[:key] == :children
+          else
             specific_limit = room_type.max_children.to_i
             current_specific = occupancies[i][:children]
-          else
-            # For infants, fallback to max_children or max_capacity
-            specific_limit = room_type.max_children.to_i
-            current_specific = occupancies[i][:infants]
           end
 
           specific_space = [ specific_limit - current_specific, 0 ].max
@@ -343,6 +391,9 @@ module BookingEngine
 
           to_add = [ space_left, temp_count ].min
           occupancies[i][pool[:key]] += to_add
+          if pool[:key] == :children && ages_pool.any?
+            occupancies[i][:child_ages].concat(ages_pool.shift(to_add))
+          end
           temp_count -= to_add
           break if temp_count <= 0
         end
@@ -353,23 +404,23 @@ module BookingEngine
       occupancies
     end
 
-    def pricing_options_for(room_type, pax: nil, adults: nil, children: nil, infants: nil, room_count: nil)
+    def pricing_options_for(room_type, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: [])
       candidate_rate_plans_for(room_type).filter_map do |rate_plan|
-        pricing_option_for(room_type, rate_plan, pax: pax, adults: adults, children: children, infants: infants, room_count: room_count)
+        pricing_option_for(room_type, rate_plan, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages)
       end
     end
 
-    def lowest_pricing_option_for(room_type, pax: nil, adults: nil, children: nil, infants: nil, room_count: nil)
-      pricing_options_for(room_type, pax: pax, adults: adults, children: children, infants: infants, room_count: room_count).sort_by { |opt|
+    def lowest_pricing_option_for(room_type, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: [])
+      pricing_options_for(room_type, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages).sort_by { |opt|
         [ -RULE_PRIORITY.fetch(opt.winning_rule, 0), opt.total_price ]
       }.first
     end
 
     def candidate_rate_plans_for(room_type)
       if room_type.hotel.pax_pricing_only?
-        room_type.rate_plans.where(sell_mode: "per_person").to_a
+        room_type.rate_plans.active.where(sell_mode: "per_person").to_a
       else
-        [ nil ] + room_type.rate_plans.where(sell_mode: "per_room").to_a
+        [ nil ] + room_type.rate_plans.active.where(sell_mode: "per_room").to_a
       end
     end
 
@@ -400,27 +451,27 @@ module BookingEngine
 
       selected_rooms = selected_rooms.sort_by { |rt| -rt.max_capacity }
 
-      occupancies = distribute_guests(@adults, @children, @infants, selected_rooms)
+      occupancies = distribute_guests(@adults, @children, selected_rooms, child_ages: @child_ages)
       return nil if occupancies.nil?
 
-      grouped = occupancies.group_by { |occ| [ occ[:room_type], occ[:adults], occ[:children], occ[:infants] ] }
+      grouped = occupancies.group_by { |occ| [ occ[:room_type], occ[:adults], occ[:children], occ[:child_ages].to_a.sort ] }
 
       allocated_items = []
-      grouped.each do |(room_type, r_adults, r_children, r_infants), list|
+      grouped.each do |(room_type, r_adults, r_children, r_child_ages), list|
         quantity = list.size
-        pricing = lowest_pricing_option_for(room_type, adults: r_adults, children: r_children, infants: r_infants, room_count: 1)
+        pricing = lowest_pricing_option_for(room_type, adults: r_adults, children: r_children, room_count: 1, child_ages: r_child_ages)
         next if pricing.blank?
 
         total_price += pricing.total_price * quantity
         allocated_items << AllocatedRoom.new(
           room_type: room_type,
           quantity: quantity,
-          pax: r_adults + r_children + r_infants,
+          pax: r_adults + r_children,
           adults: r_adults,
           children: r_children,
-          infants: r_infants,
+          child_ages: r_child_ages,
           price_per_room: pricing.total_price,
-          pricing_summary: pricing_summary_for(room_type, adults: r_adults, children: r_children, infants: r_infants, room_count: 1)
+          pricing_summary: pricing_summary_for(room_type, adults: r_adults, children: r_children, room_count: 1, child_ages: r_child_ages)
         )
       end
 
@@ -432,11 +483,11 @@ module BookingEngine
       )
     end
 
-    def pricing_option_for(room_type, rate_plan, pax: nil, adults: nil, children: nil, infants: nil, room_count: nil)
-      r_adults = (adults || pax || (@adults + @children + @infants)).to_i
+    def pricing_option_for(room_type, rate_plan, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: [])
+      r_adults = (adults || pax || (@adults + @children)).to_i
       r_children = (children || 0).to_i
-      r_infants = (infants || 0).to_i
-      r_pax = r_adults + r_children + r_infants
+      r_pax = r_adults + r_children
+      r_child_ages = Array(child_ages).map(&:to_i)
 
       room_count ||= @room_count
       currency = rate_plan&.currency.presence || room_type.hotel.default_currency.presence || "MYR"
@@ -475,18 +526,19 @@ module BookingEngine
 
       stay_dates.each do |date|
         rate = rates_by_date[date]
-        price = nightly_price_for(date, rate, room_type)
+        price = nightly_price_for(date, rate, room_type, rate_plan)
         return nil if price.nil? # Stay is restricted or unpriced on this date
 
         if rate_plan&.sell_mode == "per_person"
-          child_multiplier = rate_plan.child_price_multiplier || 1.to_d
-          infant_multiplier = rate_plan.infant_price_multiplier || 0.to_d
-
           adults_cost = r_adults * price
-          children_cost = r_children * price * child_multiplier
-          infants_cost = r_infants * price * infant_multiplier
+          children_cost =
+            if r_child_ages.size == r_children && r_child_ages.any?
+              r_child_ages.sum { |age| per_child_price(price, rate_plan, age) }
+            else
+              r_children * price * (rate_plan.child_price_multiplier || 1.to_d)
+            end
 
-          price = adults_cost + children_cost + infants_cost
+          price = adults_cost + children_cost
 
           if r_pax == 1
             supplement = rate&.single_supplement || rate_plan.single_supplement || 0.to_d
@@ -540,7 +592,9 @@ module BookingEngine
       )
     end
 
-    def nightly_price_for(date, rate, room_type)
+    def nightly_price_for(date, rate, room_type, rate_plan)
+      std_rate = nil
+
       if rate.nil? || rate.rate_plan_id.nil?
         std_rate = standard_rate_for(date, room_type)
         if std_rate.present?
@@ -567,9 +621,27 @@ module BookingEngine
           rate.price
         end
       else
-        # 3. Fallback to base price if no specific rate record exists
-        room_type.base_price.presence
+        # 3. Fallback to the Standard Rate's price (or the room type's flat
+        # base price), transformed through the rate plan's derived pricing
+        # (multiplier/offset) when applicable.
+        anchor = std_rate&.price || room_type.base_price.presence
+        derive_if_needed(rate_plan, room_type, anchor)
       end
+    end
+
+    def derive_if_needed(rate_plan, room_type, anchor_price)
+      return anchor_price if rate_plan.blank? || anchor_price.nil?
+
+      rtrp = room_type_rate_plan_for(room_type, rate_plan)
+      return anchor_price unless rtrp&.derives_price?
+
+      rtrp.derive_price(anchor_price) || anchor_price
+    end
+
+    def room_type_rate_plan_for(room_type, rate_plan)
+      @room_type_rate_plans_by_pair ||= {}
+      @room_type_rate_plans_by_pair[[ room_type.id, rate_plan.id ]] ||=
+        room_type.room_type_rate_plans.includes(:rate_plan).find { |rtrp| rtrp.rate_plan_id == rate_plan.id }
     end
 
     def standard_rate_for(date, room_type)

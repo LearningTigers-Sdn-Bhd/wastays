@@ -48,6 +48,7 @@
           <dd class="font-bold"><%= relationship.credit_currency %> <%= number_with_precision(@outstanding_by_relationship.fetch(relationship.id, 0), precision: 2) %></dd>
         </div>
       </dl>
+      <%= link_to "View statement", corporate_ar_statement_path(relationship), class: "mt-5 inline-flex items-center text-sm font-bold text-slate-900 hover:text-slate-700" %>
     </article>
   <% end %>
 </div>

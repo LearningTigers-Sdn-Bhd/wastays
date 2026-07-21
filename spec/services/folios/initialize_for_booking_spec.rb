@@ -81,6 +81,33 @@ RSpec.describe Folios::InitializeForBooking do
     expect(folio.folio_transactions).to be_empty
   end
 
+  it "routes the primary folio to the agent's ledger when booked via an active agent account" do
+    hotel_corporate_account = create(:hotel_corporate_account, hotel: booking.hotel, account_type: "travel_agent")
+    booking.update!(hotel_corporate_account: hotel_corporate_account)
+
+    folio = described_class.call(booking: booking, user: user)
+
+    expect(folio.payer_type).to eq("company")
+    expect(folio.folio_type).to eq("external")
+    expect(folio.hotel_corporate_account).to eq(hotel_corporate_account)
+    party = folio.booking_billing_party
+    expect(party).to be_present
+    expect(party.party_kind).to eq("company")
+    expect(party.hotel_corporate_account).to eq(hotel_corporate_account)
+    expect(booking.booking_billing_parties).to eq([ party ])
+  end
+
+  it "falls back to a guest folio when the linked agent account is suspended" do
+    hotel_corporate_account = create(:hotel_corporate_account, hotel: booking.hotel, account_type: "travel_agent", status: "suspended")
+    booking.update!(hotel_corporate_account: hotel_corporate_account)
+
+    folio = described_class.call(booking: booking, user: user)
+
+    expect(folio.payer_type).to eq("guest")
+    expect(folio.folio_type).to eq("guest")
+    expect(booking.booking_billing_parties).to be_empty
+  end
+
   it "does not let system confirmation bypass payment posting guards during night audit" do
     create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
     booking.hotel.current_business_date_record.update!(status: "audit_running")

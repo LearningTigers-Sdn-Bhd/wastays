@@ -8,7 +8,7 @@ RSpec.describe "CorporatePortal::Profiles", type: :request do
   before { sign_in_as(user) }
 
   it "shows the current corporate account profile and linked hotels" do
-    relationship = create(:hotel_corporate_account, corporate_account: user.account, direct_bill_enabled: true, credit_limit: 1000, credit_currency: "MYR")
+    relationship = create(:hotel_corporate_account, :direct_bill, corporate_account: user.account, credit_limit: 1000, credit_currency: "MYR")
     hidden = create(:hotel_corporate_account)
 
     get corporate_profile_path

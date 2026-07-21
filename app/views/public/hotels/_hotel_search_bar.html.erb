@@ -32,7 +32,6 @@
               data: { rate_calendar_target: "checkOut" }, class: "sr-only" %>
         </div>
 
-<% infants = local_assigns[:infants] || 0 %>
         <%# Guests segment — click to open stepper dropdown %>
         <div class="relative flex-none" data-controller="dropdown hotel-search-bar">
           <button type="button" data-action="click->dropdown#toggle"
@@ -42,12 +41,12 @@
             <div class="hidden sm:block">
               <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground leading-none mb-0.5">Guests</p>
               <p class="text-sm font-semibold text-foreground whitespace-nowrap" data-hotel-search-bar-target="display">
-                <%= adults %> Adults · <%= children %> Children<%= " · #{infants} Infant#{"s" if infants > 1}" if infants > 0 %>
+                <%= adults %> Adults · <%= children %> Children
               </p>
             </div>
             <%# Mobile compact display %>
             <span class="sm:hidden text-xs font-bold text-foreground" data-hotel-search-bar-target="compactDisplay">
-              <%= adults + children + infants %>
+              <%= adults + children %>
             </span>
             <svg class="w-3 h-3 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
           </button>
@@ -104,28 +103,14 @@
               </div>
             </div>
 
-            <%# Infants row %>
-            <div class="flex items-center justify-between py-2 border-t border-border">
-              <div>
-                <p class="text-sm font-semibold text-foreground">Infants</p>
-                <p class="text-xs text-muted-foreground">Age under 2</p>
-              </div>
-              <div class="flex items-center gap-x-3">
-                <button type="button"
-                        data-action="click->hotel-search-bar#step"
-                        data-hotel-search-bar-field-param="infants"
-                        data-hotel-search-bar-delta-param="-1"
-                        data-hotel-search-bar-min-param="0"
-                        data-hotel-search-bar-max-param="4"
-                        class="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors text-lg font-light">−</button>
-                <span data-hotel-search-bar-target="infantsCount" class="w-4 text-center text-sm font-bold text-foreground"><%= infants %></span>
-                <button type="button"
-                        data-action="click->hotel-search-bar#step"
-                        data-hotel-search-bar-field-param="infants"
-                        data-hotel-search-bar-delta-param="1"
-                        data-hotel-search-bar-min-param="0"
-                        data-hotel-search-bar-max-param="4"
-                        class="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors text-lg font-light">+</button>
+            <%# Child ages — one select per child, kept in sync with the Children stepper %>
+            <% child_ages = local_assigns[:child_ages] || [] %>
+            <div class="<%= "hidden" if children.zero? %> py-1 space-y-1.5" data-hotel-search-bar-target="childAgesWrapper">
+              <p class="text-xs text-neutral-text-secondary">Child ages</p>
+              <div class="flex flex-wrap gap-1.5" data-hotel-search-bar-target="childAgesContainer">
+                <% children.times do |i| %>
+                  <%= select_tag "child_ages[]", options_for_select((0..17).to_a, child_ages[i]), class: "rounded-lg border border-neutral-border text-xs px-2 py-1", data: { hotel_search_bar_target: "childAgeInput" } %>
+                <% end %>
               </div>
             </div>
 
@@ -133,7 +118,6 @@
 
           <%= f.hidden_field :adults, value: adults, data: { hotel_search_bar_target: "adultsInput" } %>
           <%= f.hidden_field :children, value: children, data: { hotel_search_bar_target: "childrenInput" } %>
-          <%= f.hidden_field :infants, value: infants, data: { hotel_search_bar_target: "infantsInput" } %>
           <%= f.hidden_field :room_count, value: 1 %>
         </div>
 

@@ -8,13 +8,14 @@ module CorporateArPayments
       new(**kwargs).call
     end
 
-    def initialize(user:, hotel_corporate_account_id:, invoice_ids:, amount:, currency:, gateway: nil)
+    def initialize(user:, hotel_corporate_account_id:, invoice_ids:, amount:, currency:, gateway: nil, lump_sum: false)
       @user = user
       @hotel_corporate_account_id = hotel_corporate_account_id
       @invoice_ids = Array(invoice_ids).reject(&:blank?).map(&:to_i).uniq
       @amount = amount.to_d
       @currency = currency.to_s
       @gateway = gateway.to_s.presence || "razorpay"
+      @lump_sum = ActiveModel::Type::Boolean.new.cast(lump_sum)
     end
 
     def call
@@ -34,7 +35,8 @@ module CorporateArPayments
         remittance_suggestions: remittance_suggestions,
         metadata: {
           source: "corporate_portal",
-          selected_invoice_ids: invoices.map(&:id)
+          lump_sum: @lump_sum,
+          selected_invoice_ids: @lump_sum ? [] : invoices.map(&:id)
         }
       )
 
@@ -47,10 +49,12 @@ module CorporateArPayments
 
     def validate_inputs
       return "Payment amount must be greater than zero." unless @amount.positive?
-      return "Select at least one unpaid invoice." if @invoice_ids.empty?
+      return "Select at least one unpaid invoice." if @invoice_ids.empty? && !@lump_sum
       return "Only Razorpay is available for corporate AR payments." unless @gateway == "razorpay"
       return "Corporate relationship is not available for payment." if relationship.blank? || !relationship.active?
       return "Currency is not available for this payment." if @currency.blank?
+      return nil if @lump_sum
+
       return "Selected invoices are not available for payment." if invoices.length != @invoice_ids.length
       return "Selected invoices must use one currency." if invoices.map(&:currency).uniq != [ @currency ]
 
@@ -65,12 +69,11 @@ module CorporateArPayments
       @invoices ||= begin
         return [] if relationship.blank?
 
-        relationship.hotel.ar_invoices
+        scope = relationship.hotel.ar_invoices
           .with_open_balance
-          .where(hotel_corporate_account: relationship, currency: @currency, id: @invoice_ids)
-          .includes(booking_folio: :booking)
-          .order(due_on: :asc, invoice_number: :asc)
-          .to_a
+          .where(hotel_corporate_account: relationship, currency: @currency)
+        scope = scope.where(id: @invoice_ids) unless @lump_sum
+        scope.includes(booking_folio: :booking).order(due_on: :asc, invoice_number: :asc).to_a
       end
     end
 

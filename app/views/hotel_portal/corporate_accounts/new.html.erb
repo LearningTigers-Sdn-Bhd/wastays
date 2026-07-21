@@ -31,6 +31,13 @@
               <p class="mt-1 text-xs font-medium text-muted-foreground">Invitations are tied to the recipient email, not a hotel-entered company name.</p>
             </div>
             <div>
+              <%= f.label :account_type, "Account type", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
+              <%= f.select :account_type,
+                HotelCorporateAccount::ACCOUNT_TYPES.map { |type| [ type.humanize, type ] },
+                { selected: @corporate_invitation.account_type },
+                class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
+            </div>
+            <div>
               <%= f.label :email, "Corporate contact email", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
               <%= f.email_field :email, value: @corporate_invitation.email, required: true, autocomplete: "email", class: "w-full rounded-xl border border-border px-4 py-3 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
             </div>
@@ -59,10 +66,6 @@
               <%= f.label :payment_terms_days, "Payment terms (days)", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
               <%= f.number_field :payment_terms_days, value: @corporate_invitation.payment_terms_days, min: 0, class: "w-full rounded-xl border border-border px-4 py-3 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
             </div>
-            <label class="flex items-center gap-3 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground">
-              <%= f.check_box :direct_bill_enabled, { checked: @corporate_invitation.direct_bill_enabled, class: "rounded border-border-interactive" } %>
-              Enable direct billing
-            </label>
           </section>
         </div>
       </div>

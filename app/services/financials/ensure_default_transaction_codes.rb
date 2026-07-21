@@ -55,25 +55,37 @@ module Financials
     end
 
     def call
-      DEFAULTS.each { |attributes| ensure_code!(attributes) }
+      # Query the model class directly (not the `@hotel.transaction_codes` association proxy):
+      # the association may already be cached/loaded (e.g. after a prior `destroy_all`), in
+      # which case `pluck` would silently serve stale in-memory data instead of hitting the DB.
+      existing_system_keys, existing_codes = TransactionCode.where(hotel_id: @hotel.id).pluck(:system_key, :code).transpose.then do |keys, codes|
+        [ (keys || []).to_set, (codes || []).to_set ]
+      end
+
+      now = Time.current
+      rows = DEFAULTS.filter_map do |attributes|
+        next if existing_system_keys.include?(attributes[:system_key])
+
+        code = available_code(attributes[:code], existing_codes)
+        existing_codes << code
+
+        attributes.merge(hotel_id: @hotel.id, code: code, system_required: true, active: true, created_at: now, updated_at: now)
+      end
+
+      TransactionCode.insert_all(rows, unique_by: :index_transaction_codes_on_hotel_id_and_system_key) if rows.any?
+      @hotel.transaction_codes.reset
+
       sync_primary_tax_codes!
     end
 
     private
 
-    def ensure_code!(attributes)
-      @hotel.transaction_codes.find_by(system_key: attributes[:system_key]) ||
-        @hotel.transaction_codes.create!(attributes.merge(code: available_code(attributes[:code]), system_required: true, active: true))
-    rescue ActiveRecord::RecordNotUnique
-      @hotel.transaction_codes.find_by!(system_key: attributes[:system_key])
-    end
-
-    def available_code(code)
-      return code unless @hotel.transaction_codes.exists?(code: code)
+    def available_code(code, existing_codes)
+      return code unless existing_codes.include?(code)
 
       suffix = 2
       candidate = "#{code}_#{suffix}"
-      while @hotel.transaction_codes.exists?(code: candidate)
+      while existing_codes.include?(candidate)
         suffix += 1
         candidate = "#{code}_#{suffix}"
       end

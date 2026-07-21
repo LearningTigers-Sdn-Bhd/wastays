@@ -11,7 +11,7 @@
      data-room-pax-price="<%= room_type.pax_rate_value %>"
      data-room-single-supplement="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.single_supplement&.to_f || 0.0) : 0 %>"
      data-room-child-multiplier="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.child_price_multiplier&.to_f || 1.0) : 1.0 %>"
-     data-room-infant-multiplier="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.infant_price_multiplier&.to_f || 0.0) : 0.0 %>"
+     data-room-age-bands="<%= (room_type.per_pax_billing? ? room_type.pricing_summary[:rate_plan]&.rate_plan_age_bands.to_a : []).map { |b| { minAge: b.min_age, maxAge: b.max_age, pricingMode: b.pricing_mode, value: b.price_value.to_f } }.to_json %>"
      data-room-max-capacity="<%= room_type.max_capacity %>"
      data-room-available-quantity="<%= available_qty %>">
   <div class="flex flex-col md:flex-row">
@@ -62,11 +62,6 @@
               <% end %>
               <% if room_type.rate_plan_child_multiplier.to_f != 1.0 %>
                 <div>Child Rate: <span class="font-bold text-indigo-950"><%= (room_type.rate_plan_child_multiplier.to_f * 100).to_i %>%</span></div>
-              <% end %>
-              <% if room_type.rate_plan_infant_multiplier.to_f > 0 %>
-                <div>Infant Rate: <span class="font-bold text-indigo-950"><%= (room_type.rate_plan_infant_multiplier.to_f * 100).to_i %>%</span></div>
-              <% else %>
-                <div>Infant Rate: <span class="font-bold text-indigo-950">Free</span></div>
               <% end %>
             </div>
           </div>

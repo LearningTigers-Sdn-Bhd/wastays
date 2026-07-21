@@ -68,7 +68,6 @@ module BookingEngine
           check_out: @quote.check_out,
           adults: @quote.adults,
           children: @quote.children,
-          infants: @quote.infants,
           hotel_snapshot: @quote.hotel_snapshot,
           cancellation_policy_snapshot: @quote.cancellation_policy_snapshot,
           status: "confirmed",
@@ -85,7 +84,7 @@ module BookingEngine
           tax_posting_snapshot: financial_snapshot.tax_posting_snapshot,
           reservation_number: reservation_num,
           receipt_number: receipt_num,
-          agent_account_id: @quote.agent_account_id
+          hotel_corporate_account_id: @quote.hotel_corporate_account_id
         )
 
 

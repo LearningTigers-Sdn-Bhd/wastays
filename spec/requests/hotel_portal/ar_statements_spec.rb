@@ -71,6 +71,31 @@ RSpec.describe "HotelPortal::ArStatements", type: :request do
     expect(response.body).not_to include("MYR 250.00")
   end
 
+  it "always shows the flat ledger on-screen regardless of report_type, and offers per-invoice charge breakdowns only via the Detail PDF download" do
+    room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
+    booking = create(:booking, hotel: hotel, confirmation_token: "BK-DETAIL", currency: "MYR", guest_name: "Mr. Detail Guest")
+    create(:booking_room, booking: booking, room_type: room_type, room_number: "301")
+    folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, hotel_corporate_account: relationship, currency: "MYR")
+    invoice = create(:ar_invoice, hotel: hotel, booking_folio: folio, hotel_corporate_account: relationship, amount: 120, outstanding_amount: 120, currency: "MYR", issued_on: Date.new(2026, 6, 5), due_on: Date.new(2026, 6, 20))
+    create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 120, posting_date: Date.new(2026, 6, 5), description: "Room Charges")
+
+    get hotel_ar_statement_path(hotel, relationship), params: { report_type: "detail" }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Statement Activity")
+    expect(response.body).not_to include("Invoice Details")
+    expect(response.body).not_to include("Report Type")
+
+    get hotel_ar_statement_path(hotel, relationship, format: :pdf), params: { report_type: "detail" }
+
+    expect(response).to have_http_status(:success)
+    text = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
+    expect(text).to include("ACCOUNT STATEMENT")
+    expect(text).not_to include("(DETAIL)")
+    expect(text).to include("Mr. Detail Guest")
+    expect(text.index("Billing Name")).to be < text.index("STATEMENT SUMMARY")
+  end
+
   it "returns unprocessable content for invalid dates and unavailable currencies" do
     get hotel_ar_statement_path(hotel, relationship), params: {
       start_date: "2026-06-30",

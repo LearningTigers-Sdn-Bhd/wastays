@@ -16,7 +16,7 @@ module HotelPortal
       respond_to do |format|
         format.html
         format.pdf do
-          pdf = ::Reports::AccountsReceivable::GenerateStatement.new(report: report, printed_by: current_user&.name).generate
+          pdf = ::Reports::AccountsReceivable::GenerateStatement.new(report: report, printed_by: current_user&.name, detail: detail_report?).generate
           send_data pdf,
             filename: statement_filename(report),
             type: "application/pdf",
@@ -50,8 +50,13 @@ module HotelPortal
         hotel_corporate_account: @hotel_corporate_account,
         start_date: params[:start_date].presence || default_start_date,
         end_date: params[:end_date].presence || business_date,
-        currency: params[:currency]
+        currency: params[:currency],
+        include_invoice_details: detail_report? && request.format.pdf?
       )
+    end
+
+    def detail_report?
+      params[:report_type] == "detail"
     end
 
     def available_currencies

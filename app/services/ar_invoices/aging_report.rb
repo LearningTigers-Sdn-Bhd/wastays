@@ -26,13 +26,14 @@ module ArInvoices
 
     Result = Struct.new(:hotel, :as_of_date, :rows, :totals, keyword_init: true)
 
-    def self.call(hotel:, as_of_date: nil)
-      new(hotel: hotel, as_of_date: as_of_date).call
+    def self.call(hotel:, as_of_date: nil, account_types: nil)
+      new(hotel: hotel, as_of_date: as_of_date, account_types: account_types).call
     end
 
-    def initialize(hotel:, as_of_date: nil)
+    def initialize(hotel:, as_of_date: nil, account_types: nil)
       @hotel = hotel
       @as_of_date = (as_of_date.presence || hotel.current_business_date).to_date
+      @account_types = Array(account_types).presence
     end
 
     def call
@@ -44,10 +45,13 @@ module ArInvoices
     private
 
     def invoices
-      @invoices ||= @hotel.ar_invoices
-        .with_open_balance
-        .includes(hotel_corporate_account: :corporate_account)
-        .to_a
+      @invoices ||= begin
+        scope = @hotel.ar_invoices
+          .with_open_balance
+          .includes(hotel_corporate_account: :corporate_account)
+        scope = scope.joins(:hotel_corporate_account).where(hotel_corporate_accounts: { account_type: @account_types }) if @account_types.present?
+        scope.to_a
+      end
     end
 
     def grouped_invoices

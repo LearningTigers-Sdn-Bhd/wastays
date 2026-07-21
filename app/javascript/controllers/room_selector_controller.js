@@ -5,14 +5,14 @@ export default class extends Controller {
   static values = {
     adults: Number,
     children: Number,
-    infants: Number,
     currency: String,
-    paxPricingOnly: Boolean
+    paxPricingOnly: Boolean,
+    childAges: Array
   }
 
   connect() {
     this.selections = {} // Format: { roomTypeId: quantity }
-    this.roomData = {} // Format: { roomTypeId: { price, paxPrice, name, maxCapacity, availableQty, singleSupplement, childMultiplier, infantMultiplier } }
+    this.roomData = {} // Format: { roomTypeId: { price, paxPrice, name, maxCapacity, availableQty, singleSupplement, childMultiplier } }
 
     this.initializeRoomData()
     this.updateUI()
@@ -33,17 +33,22 @@ export default class extends Controller {
 
       const singleSupplement = parseFloat(card.dataset.roomSingleSupplement || 0)
       const childMultiplier = parseFloat(card.dataset.roomChildMultiplier || 1)
-      const infantMultiplier = parseFloat(card.dataset.roomInfantMultiplier || 0)
+      let ageBands = []
+      try {
+        ageBands = JSON.parse(card.dataset.roomAgeBands || "[]")
+      } catch (e) {
+        ageBands = []
+      }
 
-      this.roomData[id] = { 
-        price, 
-        paxPrice, 
-        name, 
-        maxCapacity, 
+      this.roomData[id] = {
+        price,
+        paxPrice,
+        name,
+        maxCapacity,
         availableQty,
         singleSupplement,
         childMultiplier,
-        infantMultiplier
+        ageBands
       }
       this.selections[id] = 0
     })
@@ -77,26 +82,26 @@ export default class extends Controller {
     }
   }
 
-  distributeGuests(adults, children, infants, selectedRooms) {
+  distributeGuests(adults, children, selectedRooms, childAges = []) {
     const sortedRooms = [...selectedRooms].sort((a, b) => b.maxCapacity - a.maxCapacity)
     const numRooms = sortedRooms.length
     if (adults < numRooms) return null
+
+    const agesPool = childAges.length === children ? [...childAges] : []
 
     const occupancies = Array.from({ length: numRooms }, (_, i) => ({
       room: sortedRooms[i],
       adults: 1,
       children: 0,
-      infants: 0
+      childAges: []
     }))
 
     let tempAdults = adults - numRooms
     let tempChildren = children
-    let tempInfants = infants
 
     const guestPool = [
       { key: 'adults', count: tempAdults },
-      { key: 'children', count: tempChildren },
-      { key: 'infants', count: tempInfants }
+      { key: 'children', count: tempChildren }
     ]
 
     for (const pool of guestPool) {
@@ -105,7 +110,7 @@ export default class extends Controller {
 
       for (let i = 0; i < numRooms; i++) {
         const room = occupancies[i].room
-        const currentTotal = occupancies[i].adults + occupancies[i].children + occupancies[i].infants
+        const currentTotal = occupancies[i].adults + occupancies[i].children
         let spaceLeft = room.maxCapacity - currentTotal
 
         let specificLimit = room.maxCapacity
@@ -114,12 +119,9 @@ export default class extends Controller {
         if (pool.key === 'adults') {
           specificLimit = room.maxCapacity
           currentSpecific = occupancies[i].adults
-        } else if (pool.key === 'children') {
-          specificLimit = room.maxCapacity
-          currentSpecific = occupancies[i].children
         } else {
           specificLimit = room.maxCapacity
-          currentSpecific = occupancies[i].infants
+          currentSpecific = occupancies[i].children
         }
 
         const specificSpace = Math.max(specificLimit - currentSpecific, 0)
@@ -128,6 +130,9 @@ export default class extends Controller {
 
         const toAdd = Math.min(spaceLeft, count)
         occupancies[i][pool.key] += toAdd
+        if (pool.key === 'children' && agesPool.length > 0) {
+          occupancies[i].childAges.push(...agesPool.splice(0, toAdd))
+        }
         count -= toAdd
         if (count <= 0) break
       }
@@ -136,6 +141,14 @@ export default class extends Controller {
     }
 
     return occupancies
+  }
+
+  perChildPrice(paxPrice, ageBands, flatMultiplier, age) {
+    const band = ageBands.find((b) => age >= b.minAge && age <= b.maxAge)
+    if (band) {
+      return band.pricingMode === "amount" ? band.value : paxPrice * band.value
+    }
+    return paxPrice * flatMultiplier
   }
 
   updateUI() {
@@ -201,24 +214,27 @@ export default class extends Controller {
     if (totalRooms > 0) {
       if (this.paxPricingOnlyValue) {
         const occupancies = this.distributeGuests(
-          this.adultsValue, 
-          this.childrenValue, 
-          this.infantsValue, 
-          selectedRoomsList
+          this.adultsValue,
+          this.childrenValue,
+          selectedRoomsList,
+          this.hasChildAgesValue ? this.childAgesValue : []
         )
         if (occupancies) {
           occupancies.forEach(occ => {
             const room = occ.room
-            const roomPax = occ.adults + occ.children + occ.infants
-            
+            const roomPax = occ.adults + occ.children
+
             let roomPrice = occ.adults * room.paxPrice
-            roomPrice += occ.children * room.paxPrice * room.childMultiplier
-            roomPrice += occ.infants * room.paxPrice * room.infantMultiplier
-            
+            if (occ.childAges.length === occ.children && occ.childAges.length > 0) {
+              roomPrice += occ.childAges.reduce((sum, age) => sum + this.perChildPrice(room.paxPrice, room.ageBands, room.childMultiplier, age), 0)
+            } else {
+              roomPrice += occ.children * room.paxPrice * room.childMultiplier
+            }
+
             if (roomPax === 1) {
               roomPrice += room.singleSupplement
             }
-            
+
             totalPrice += roomPrice
           })
         } else {

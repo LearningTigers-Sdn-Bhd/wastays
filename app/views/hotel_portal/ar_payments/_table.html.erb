@@ -1,10 +1,10 @@
 <%= turbo_frame_tag "ar_payments_results" do %>
   <div class="hidden overflow-x-auto rounded-xl border border-border bg-card shadow-sm lg:block">
-    <table class="min-w-[1400px] divide-y divide-border">
+    <table class="w-full divide-y divide-border">
       <thead class="bg-muted/50">
         <tr>
-          <% [ "Received", "Reference", "Status", "Corporate Account", "Method", "Amount", "Allocated", "Unapplied" ].each do |heading| %>
-            <th scope="col" class="whitespace-nowrap px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground <%= "text-right" if heading.in?([ "Amount", "Allocated", "Unapplied" ]) %>"><%= heading %></th>
+          <% [ "Corporate Account", "Amount", "Status", "Reference" ].each do |heading| %>
+            <th scope="col" class="whitespace-nowrap px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground <%= "text-right" if heading == "Amount" %>"><%= heading %></th>
           <% end %>
         </tr>
       </thead>
@@ -13,21 +13,25 @@
           <% presenter.paginated_rows.each do |row| %>
             <tr class="group cursor-pointer transition hover:bg-muted/80"
                 role="link" tabindex="0" data-controller="clickable-row"
-                data-testid="ar-payment-row-<%= row.payment.id %>"
-                data-clickable-row-url-value="<%= hotel_ar_payment_path(current_hotel, row.payment) %>"
+                data-testid="payment-record-row-<%= row.kind %>-<%= row.reference %>"
+                data-clickable-row-url-value="<%= row.path(current_hotel) %>"
                 data-action="click->clickable-row#visit keydown->clickable-row#visitFromKeyboard">
-              <td class="whitespace-nowrap px-6 py-3 text-sm font-semibold text-foreground"><%= row.received_on %></td>
-              <td class="whitespace-nowrap px-6 py-3 text-sm font-black text-foreground group-hover:underline"><%= row.payment.reference_number %></td>
-              <td class="whitespace-nowrap px-6 py-3"><span class="inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider <%= row.status_class %>"><%= row.status_label %></span></td>
               <td class="whitespace-nowrap px-6 py-3 text-sm font-bold text-foreground"><%= row.account_name %></td>
-              <td class="whitespace-nowrap px-6 py-3 text-sm text-muted-foreground"><%= row.payment.payment_method.humanize %></td>
               <td class="whitespace-nowrap px-6 py-3 text-right text-sm font-black tabular-nums text-foreground"><%= row.amount_label %></td>
-              <td class="whitespace-nowrap px-6 py-3 text-right text-sm font-bold tabular-nums text-foreground"><%= row.allocated_label %></td>
-              <td class="whitespace-nowrap px-6 py-3 text-right text-sm font-black tabular-nums text-foreground"><%= row.unapplied_label %></td>
+              <td class="whitespace-nowrap px-6 py-3"><%= tag.span row.status_label, class: "inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider #{row.status_class}", title: row.status_title %></td>
+              <td class="whitespace-nowrap px-6 py-3 text-sm">
+                <span class="inline-flex items-center gap-1.5 font-black text-foreground group-hover:underline">
+                  <% if row.kind == :submission %>
+                    <%= cached_icon "upload", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
+                  <% end %>
+                  <%= row.reference %>
+                </span>
+                <p class="mt-0.5 text-xs font-medium text-muted-foreground"><%= row.method_label %> · <%= row.received_on %></p>
+              </td>
             </tr>
           <% end %>
         <% else %>
-          <tr><td colspan="8"><%= render "empty_state", presenter: presenter %></td></tr>
+          <tr><td colspan="4"><%= render "empty_state", presenter: presenter %></td></tr>
         <% end %>
       </tbody>
     </table>
@@ -38,18 +42,27 @@
       <% presenter.paginated_rows.each do |row| %>
         <article class="cursor-pointer rounded-xl border border-border bg-card p-4 shadow-sm"
                  role="link" tabindex="0" data-controller="clickable-row"
-                 data-testid="ar-payment-card-<%= row.payment.id %>"
-                 data-clickable-row-url-value="<%= hotel_ar_payment_path(current_hotel, row.payment) %>"
+                 data-testid="payment-record-card-<%= row.kind %>-<%= row.reference %>"
+                 data-clickable-row-url-value="<%= row.path(current_hotel) %>"
                  data-action="click->clickable-row#visit keydown->clickable-row#visitFromKeyboard">
           <div class="flex items-start justify-between gap-3">
-            <div><p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Reference</p><p class="mt-1 text-sm font-black text-foreground"><%= row.payment.reference_number %></p></div>
-            <span class="inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider <%= row.status_class %>"><%= row.status_label %></span>
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Corporate Account</p>
+              <p class="mt-1 text-sm font-bold text-foreground"><%= row.account_name %></p>
+            </div>
+            <p class="text-right text-sm font-black tabular-nums text-foreground"><%= row.amount_label %></p>
           </div>
-          <p class="mt-3 text-sm font-bold text-foreground"><%= row.account_name %></p>
-          <div class="mt-4 grid grid-cols-3 gap-3 border-t border-border pt-4 text-right">
-            <div><p class="text-[9px] font-bold uppercase text-muted-foreground">Amount</p><p class="mt-1 text-xs font-black"><%= row.amount_label %></p></div>
-            <div><p class="text-[9px] font-bold uppercase text-muted-foreground">Allocated</p><p class="mt-1 text-xs font-bold"><%= row.allocated_label %></p></div>
-            <div><p class="text-[9px] font-bold uppercase text-muted-foreground">Unapplied</p><p class="mt-1 text-xs font-black"><%= row.unapplied_label %></p></div>
+          <div class="mt-4 flex items-center justify-between border-t border-border pt-4">
+            <%= tag.span row.status_label, class: "inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider #{row.status_class}", title: row.status_title %>
+            <div class="text-right">
+              <p class="inline-flex items-center gap-1.5 text-xs font-black text-foreground">
+                <% if row.kind == :submission %>
+                  <%= cached_icon "upload", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
+                <% end %>
+                <%= row.reference %>
+              </p>
+              <p class="mt-0.5 text-[11px] font-medium text-muted-foreground"><%= row.method_label %> · <%= row.received_on %></p>
+            </div>
           </div>
         </article>
       <% end %>

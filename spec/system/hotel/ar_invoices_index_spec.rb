@@ -7,7 +7,7 @@ RSpec.describe "Hotel AR invoices index", type: :system, js: true do
   let(:hotel) { create(:hotel, account: account, status: "approved") }
   let(:user) { create(:user, account: account, email: "ar-manager@example.com") }
   let(:role) { create(:role, account: account) }
-  let(:relationship) { create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true) }
+  let(:relationship) { create(:hotel_corporate_account, :direct_bill, hotel: hotel) }
   let(:booking) { create(:booking, hotel: hotel, confirmation_token: "BK-AR-ROW") }
   let(:folio) do
     create(

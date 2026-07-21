@@ -39,7 +39,7 @@ RSpec.describe StayView::ResolveFinancialSignals do
       hotel: booking.hotel,
       corporate_account: create(:account, :corporate, name:),
       account_type:,
-      direct_bill_enabled:,
+      relationship_type: (direct_bill_enabled ? "direct_bill" : "standard"),
       status: "active"
     )
     party = create(

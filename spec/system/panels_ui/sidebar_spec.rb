@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "PanelsUI::Sidebar", type: :system do
-  before { visit "/system-design" }
+  before { visit_when_loaded "/system-design" }
 
   after do
     page.execute_script("window.localStorage.clear()")
@@ -14,9 +14,24 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
 
   let(:sidebar) { find("#sd-nav-sidebar") }
 
+  COLOR_PROPERTIES = %w[backgroundColor color borderColor].freeze
+
+  # Chrome can serialize the same resolved color as either oklch(...) or oklab(...)
+  # depending on how the declaring CSS rule computed it (e.g. color-mix() vs a literal
+  # value), even though the underlying color is identical. Route color properties
+  # through a canvas fillStyle round-trip so both sides normalize to the same rgb notation.
   def computed_style(selector, property)
-    page.evaluate_script(<<~JS)
+    value = page.evaluate_script(<<~JS)
       getComputedStyle(document.querySelector(#{selector.to_json}))[#{property.to_json}]
+    JS
+    return value unless COLOR_PROPERTIES.include?(property)
+
+    page.evaluate_script(<<~JS)
+      (function(value) {
+        const ctx = document.createElement("canvas").getContext("2d");
+        ctx.fillStyle = value;
+        return ctx.fillStyle;
+      })(#{value.to_json})
     JS
   end
 
@@ -76,7 +91,7 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
 
   it "uses the compact Shadcn-like rail and item geometry" do
     click_button "Toggle collapse"
-    sleep 0.2
+    wait_until("sidebar did not finish collapsing") { computed_style("#sd-nav-sidebar", "width") == "48px" }
     link = "#sd-nav-sidebar [data-sidebar-presentation='collapsed'] a[href='#arrivals']"
     group = "#sd-nav-sidebar-desktop-section-1-item-2-popover-trigger"
 
@@ -106,8 +121,11 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
     expect(group_hover).to eq(link_hover)
 
     page.execute_script("document.querySelector(#{group.to_json}).closest('[data-sidebar-group-item]').setAttribute('data-sidebar-active', '')")
-    sleep 0.2
     active_link = "#sd-nav-sidebar [data-sidebar-presentation='collapsed'] a[href='/system-design']"
+    wait_until("active group trigger did not finish transitioning") do
+      computed_color(group, "backgroundColor") == computed_color(active_link, "backgroundColor") &&
+        computed_color(group, "color") == computed_color(active_link, "color")
+    end
     expect(computed_color(group, "backgroundColor")).to eq(computed_color(active_link, "backgroundColor"))
     expect(computed_color(group, "color")).to eq(computed_color(active_link, "color"))
   end

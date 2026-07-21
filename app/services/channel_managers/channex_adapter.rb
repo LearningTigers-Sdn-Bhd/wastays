@@ -90,6 +90,11 @@ module ChannelManagers
     end
 
     def sync_rate_plan(rate_plan, room_type: nil)
+      # Per-person rate plans (including age-banded ones) are intentionally excluded from
+      # Channex sync: Channex only supports a single flat children/infants fee per rate plan,
+      # sourced from a property-level Hotel Policy, not per-band per-rate-plan pricing.
+      return nil if rate_plan.sell_mode == "per_person"
+
       client = Channex::Client.new
       property_id = mapping_for(@hotel).external_id
 

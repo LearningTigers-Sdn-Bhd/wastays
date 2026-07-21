@@ -12,6 +12,7 @@ require 'capybara/cuprite'
 require 'webmock/rspec'
 require 'view_component/test_helpers'
 require 'view_component/system_test_helpers'
+require 'test_prof/recipes/rspec/let_it_be'
 WebMock.disable_net_connect!(allow_localhost: true)
 # Add additional requires below this line. Rails is not loaded until this point!
 

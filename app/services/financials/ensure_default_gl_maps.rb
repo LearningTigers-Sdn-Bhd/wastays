@@ -35,22 +35,20 @@ module Financials
       missing_categories = FolioTransaction.gl_mappable_categories - mappings.keys
       raise KeyError, "Missing default General Ledger (GL) mappings for: #{missing_categories.join(', ')}" if missing_categories.any?
 
-      mappings.each do |category, data|
-        ensure_mapping!(category, data)
-      end
-    end
-
-    private
-
-    def ensure_mapping!(category, data)
-      @hotel.hotel_general_ledger_maps.find_by(transaction_category: category) ||
-        @hotel.hotel_general_ledger_maps.create!(
+      now = Time.current
+      rows = mappings.map do |category, data|
+        {
+          hotel_id: @hotel.id,
           transaction_category: category,
           gl_code: data[:code],
-          description: data[:desc]
-        )
-    rescue ActiveRecord::RecordNotUnique
-      @hotel.hotel_general_ledger_maps.find_by!(transaction_category: category)
+          description: data[:desc],
+          created_at: now,
+          updated_at: now
+        }
+      end
+
+      HotelGeneralLedgerMap.insert_all(rows, unique_by: :idx_hotel_gl_maps_on_hotel_and_category)
+      @hotel.hotel_general_ledger_maps.reset
     end
   end
 end

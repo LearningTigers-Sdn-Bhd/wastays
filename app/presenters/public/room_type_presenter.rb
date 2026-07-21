@@ -90,10 +90,6 @@ module Public
       pricing_summary[:rate_plan]&.child_price_multiplier
     end
 
-    def rate_plan_infant_multiplier
-      pricing_summary[:rate_plan]&.infant_price_multiplier
-    end
-
     def pax_rate_value
       return 0.0 unless pricing_summary[:rate_plan] && @availability_service
       rp = pricing_summary[:rate_plan]

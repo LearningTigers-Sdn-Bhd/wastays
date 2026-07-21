@@ -85,4 +85,47 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
     expect(report.totals[:total_charges]).to eq(125.to_d)
     expect(report.totals[:booking_count]).to eq(1)
   end
+
+  it "includes agent bank-transfer AR payments in the payment totals and net amount" do
+    hotel_corporate_account = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent")
+    create(:ar_payment, hotel: hotel, hotel_corporate_account: hotel_corporate_account, payment_method: "bank_transfer", amount: 400, received_at: start_date)
+    # Outside the date range - must not be included
+    create(:ar_payment, hotel: hotel, hotel_corporate_account: hotel_corporate_account, payment_method: "bank_transfer", amount: 999, received_at: start_date - 1.day)
+    # Different payment method - must not be counted as a bank transfer
+    create(:ar_payment, hotel: hotel, hotel_corporate_account: hotel_corporate_account, payment_method: "cheque", amount: 999, received_at: start_date)
+    # Different hotel - must not leak in
+    other_hotel_account = create(:hotel_corporate_account)
+    create(:ar_payment, hotel: other_hotel_account.hotel, hotel_corporate_account: other_hotel_account, payment_method: "bank_transfer", amount: 999, received_at: start_date)
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    row = report.rows.find { |r| r[:date] == start_date }
+    expect(row[:agent_bank_transfer]).to eq(400.to_d)
+    expect(row[:corporate_bank_transfer]).to eq(0.to_d)
+    expect(row[:total_payments]).to eq(400.to_d)
+    expect(row[:net_amount]).to eq(400.to_d)
+    expect(report.totals[:agent_bank_transfer]).to eq(400.to_d)
+    expect(report.totals[:total_payments]).to eq(400.to_d)
+  end
+
+  it "buckets airline bank transfers as agent transfers, and company/government ones as corporate transfers, without dropping either from the totals" do
+    airline_account = create(:hotel_corporate_account, hotel: hotel, account_type: "airline")
+    company_account = create(:hotel_corporate_account, hotel: hotel, account_type: "company")
+    government_account = create(:hotel_corporate_account, hotel: hotel, account_type: "government")
+
+    create(:ar_payment, hotel: hotel, hotel_corporate_account: airline_account, payment_method: "bank_transfer", amount: 150, received_at: start_date)
+    create(:ar_payment, hotel: hotel, hotel_corporate_account: company_account, payment_method: "bank_transfer", amount: 60, received_at: start_date)
+    create(:ar_payment, hotel: hotel, hotel_corporate_account: government_account, payment_method: "bank_transfer", amount: 40, received_at: start_date)
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    row = report.rows.find { |r| r[:date] == start_date }
+    expect(row[:agent_bank_transfer]).to eq(150.to_d)
+    expect(row[:corporate_bank_transfer]).to eq(100.to_d)
+    expect(row[:total_payments]).to eq(250.to_d)
+    expect(row[:net_amount]).to eq(250.to_d)
+    expect(report.totals[:agent_bank_transfer]).to eq(150.to_d)
+    expect(report.totals[:corporate_bank_transfer]).to eq(100.to_d)
+    expect(report.totals[:total_payments]).to eq(250.to_d)
+  end
 end

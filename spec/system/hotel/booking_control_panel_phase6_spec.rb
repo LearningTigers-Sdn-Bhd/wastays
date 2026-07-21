@@ -167,6 +167,7 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
   it "updates the reusable guest only from the explicit split-save option", js: true do
     visit hotel_booking_control_panel_path(hotel, booking, tab: "guest_details")
 
+    expect(page).to have_field("Full Name", wait: 10)
     fill_in "Full Name", with: "Shared Guest Name"
     save_options_trigger = find("button[aria-label='More save options']")
     save_options_trigger.click

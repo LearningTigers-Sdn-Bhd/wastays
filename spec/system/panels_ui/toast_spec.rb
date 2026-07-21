@@ -27,8 +27,7 @@ RSpec.describe "PanelsUI::Toast", type: :system do
     toast_id = page.evaluate_script(<<~JS)
       window.toast("Short-lived", { type: "default", duration: 300 })
     JS
-    sleep 0.6
-    expect(page).to have_no_css("##{toast_id}")
+    expect(page).to have_no_css("##{toast_id}", wait: 5)
     expect(page.evaluate_script("window.Toast")).to be_nil
   end
 end

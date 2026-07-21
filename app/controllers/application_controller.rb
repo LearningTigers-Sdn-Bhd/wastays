@@ -19,7 +19,7 @@ class ApplicationController < ActionController::Base
   private
 
   def current_agent_account
-    @current_agent_account ||= AgentAccount.find_by(id: session[:agent_account_id]) if session[:agent_account_id]
+    @current_agent_account ||= HotelCorporateAccount.find_by(id: session[:hotel_corporate_account_id]) if session[:hotel_corporate_account_id]
   end
 
   def set_current_request_id

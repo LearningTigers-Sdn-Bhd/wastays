@@ -10,8 +10,8 @@ RSpec.describe "Hotel AR aging", type: :system, js: true do
   let(:relationship) do
     create(
       :hotel_corporate_account,
+      :direct_bill,
       hotel: hotel,
-      direct_bill_enabled: true,
       corporate_account: create(:account, :corporate, name: "Atlas Holdings")
     )
   end

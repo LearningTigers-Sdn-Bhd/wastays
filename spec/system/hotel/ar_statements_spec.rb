@@ -37,7 +37,8 @@ RSpec.describe "Hotel AR statements", type: :system, js: true do
 
     expect(page).to have_content("USD 75.00")
     expect(page).not_to have_content("MYR 100.00")
-    expect(page).to have_link("Download PDF", href: /currency=USD/)
+    click_button "Download PDF"
+    expect(page).to have_link("Summary", href: /currency=USD/)
   end
 
   def create_invoice(currency:, amount:, token:)

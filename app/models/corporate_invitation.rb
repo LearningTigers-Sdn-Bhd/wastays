@@ -6,17 +6,21 @@ class CorporateInvitation < Invitation
     :direct_bill_enabled,
     :credit_limit,
     :credit_currency,
-    :payment_terms_days
+    :payment_terms_days,
+    :account_type
 
   default_scope { corporate }
 
   before_validation { self.kind = "corporate" }
   before_validation :default_credit_currency
+  before_validation :default_account_type
+  before_validation :sync_direct_bill_enabled
 
   validates :relationship_type, inclusion: { in: %w[standard direct_bill] }
   validates :credit_limit, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :payment_terms_days, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :credit_currency, presence: true, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
+  validates :account_type, inclusion: { in: HotelCorporateAccount::ACCOUNT_TYPES }
 
   def direct_bill_enabled
     ActiveModel::Type::Boolean.new.cast(super)
@@ -56,5 +60,13 @@ class CorporateInvitation < Invitation
 
   def default_credit_currency
     self.credit_currency ||= hotel&.default_currency
+  end
+
+  def default_account_type
+    self.account_type ||= "company"
+  end
+
+  def sync_direct_bill_enabled
+    self.direct_bill_enabled = relationship_type == "direct_bill"
   end
 end

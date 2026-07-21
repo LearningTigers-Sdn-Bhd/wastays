@@ -72,7 +72,7 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
     end
 
     it "combines search, corporate account, due date, and status filters" do
-      relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+      relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
       matching = create_ar_invoice_for(
         hotel: hotel,
         confirmation_token: "BK-FILTER-MATCH",
@@ -134,7 +134,7 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
 
   describe "GET /hotel/:hotel_id/accounts-receivable/aging" do
     it "renders the responsive currency-safe aging report with invoice handoff links" do
-      relationship = create(:hotel_corporate_account, hotel: hotel, credit_limit: 100, credit_currency: "MYR", direct_bill_enabled: true)
+      relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel, credit_limit: 100, credit_currency: "MYR")
       invoice = create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGING", folio_number: 601, amount: 90, relationship: relationship, due_on: Date.current - 10.days)
       create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGING-USD", folio_number: 602, amount: 25, relationship: relationship, due_on: Date.current - 40.days, currency: "USD")
       hidden = create_ar_invoice_for(hotel: other_hotel, confirmation_token: "BK-AGING-HIDDEN", folio_number: 960, amount: 999)
@@ -184,6 +184,37 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
     end
   end
 
+  describe "GET /hotel/:hotel_id/accounts-receivable/agent-summary" do
+    it "includes only travel_agent and airline accounts, excluding company/government" do
+      agent = create(:hotel_corporate_account, :direct_bill, hotel: hotel, account_type: "travel_agent",
+        corporate_account: create(:account, :corporate, name: "Sunset Travel Agency"))
+      company = create(:hotel_corporate_account, :direct_bill, hotel: hotel, account_type: "company",
+        corporate_account: create(:account, :corporate, name: "Acme Sdn Bhd"))
+      agent_invoice = create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGENT-SUMMARY", folio_number: 701, amount: 150, relationship: agent, due_on: Date.current - 5.days)
+      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-COMPANY-HIDDEN", folio_number: 702, amount: 500, relationship: company, due_on: Date.current - 5.days)
+
+      get hotel_ar_agent_summary_path(hotel)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Agent Summary Statement")
+      expect(response.body).to include(agent_invoice.corporate_account.name)
+      expect(response.body).to include("MYR 150.00")
+      expect(response.body).not_to include(company.corporate_account.name)
+    end
+
+    it "exports a PDF" do
+      agent = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent",
+        corporate_account: create(:account, :corporate, name: "Sunset Travel Agency"))
+      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGENT-PDF", folio_number: 703, amount: 200, relationship: agent, due_on: Date.current - 5.days)
+
+      get hotel_ar_agent_summary_path(hotel, format: :pdf)
+
+      expect(response).to have_http_status(:success)
+      expect(response.media_type).to eq("application/pdf")
+      expect(response.body).to start_with("%PDF")
+    end
+  end
+
   describe "GET /hotel/:hotel_id/accounts-receivable/payments" do
     it "renders hotel scoped AR payment rows" do
       invoice = create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-PAY-IDX", folio_number: 901, amount: 200)
@@ -193,7 +224,7 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       get hotel_ar_payments_path(hotel)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("AR Payments")
+      expect(response.body).to include("Payment Record")
       expect(response.body).to include("BANK-IDX-1")
       expect(response.body).to include(invoice.corporate_account.name)
       expect(response.body).to include("MYR 100.00")
@@ -385,7 +416,7 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
     status: "open"
   )
     booking = create(:booking, hotel: hotel, confirmation_token: confirmation_token, currency: currency)
-    relationship ||= create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+    relationship ||= create(:hotel_corporate_account, :direct_bill, hotel: hotel)
     folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: folio_number, hotel_corporate_account: relationship, currency: currency)
     create(:ar_invoice,
       hotel: hotel,
