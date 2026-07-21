@@ -68,5 +68,20 @@ RSpec.describe HotelPortal::Reports::DailyOccupancyReport, type: :service do
       expect(result.rows.first[:room_revenue]).to eq(120.to_d)
       expect(result.rows.first[:adr]).to eq(120.to_d)
     end
+
+    it "adds posted tax to room revenue for total revenue" do
+      room_type = create(:room_type, hotel: hotel, quantity: 5)
+      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date, check_out: start_date + 1.day, total_amount: 100)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 100)
+      booking_folio = create(:booking_folio, booking: booking)
+      create(:folio_transaction, booking_folio: booking_folio, category: "tax", posting_date: start_date, amount: 6)
+
+      result = described_class.new(hotel: hotel, start_date: start_date, end_date: start_date).call
+
+      expect(result.rows.first[:tax_amount]).to eq(6.to_d)
+      expect(result.rows.first[:total_revenue]).to eq(106.to_d)
+      expect(result.totals[:tax_amount]).to eq(6.to_d)
+      expect(result.totals[:total_revenue]).to eq(106.to_d)
+    end
   end
 end

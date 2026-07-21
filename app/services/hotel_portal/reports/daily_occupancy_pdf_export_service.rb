@@ -52,7 +52,9 @@ module HotelPortal
           [ "Occupancy", percentage(@report.totals[:occupancy_rate]) ],
           [ "Room Revenue", money(@report.totals[:room_revenue]) ],
           [ "Average Daily Rate (ADR)", money(@report.totals[:adr]) ],
-          [ "Revenue per Available Room (RevPAR)", money(@report.totals[:revpar]) ]
+          [ "Revenue per Available Room (RevPAR)", money(@report.totals[:revpar]) ],
+          [ "Tax", money(@report.totals[:tax_amount]) ],
+          [ "Total Revenue", money(@report.totals[:total_revenue]) ]
         ]
 
         card_gap = 10
@@ -104,12 +106,14 @@ module HotelPortal
             percentage(row[:occupancy_rate]),
             money(row[:room_revenue]),
             money(row[:adr]),
-            money(row[:revpar])
+            money(row[:revpar]),
+            money(row[:tax_amount]),
+            money(row[:total_revenue])
           ]
         end
 
         pdf.table(
-          [ [ "Date", "Rooms Sold", "Rooms Available", "Occupancy", "Room Revenue", "Average Daily Rate (ADR)", "Revenue per Available Room (RevPAR)" ] ] + table_rows,
+          [ [ "Date", "Rooms Sold", "Rooms Available", "Occupancy", "Room Revenue", "Average Daily Rate (ADR)", "Revenue per Available Room (RevPAR)", "Tax", "Total Revenue" ] ] + table_rows,
           width: pdf.bounds.width,
           cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] }
         ) do

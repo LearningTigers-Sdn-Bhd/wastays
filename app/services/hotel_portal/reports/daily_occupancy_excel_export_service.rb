@@ -44,12 +44,14 @@ module HotelPortal
         rows << spreadsheet_row([ "Room Revenue", money(@report.totals[:room_revenue]) ])
         rows << spreadsheet_row([ "Average Daily Rate (ADR)", money(@report.totals[:adr]) ])
         rows << spreadsheet_row([ "Revenue per Available Room (RevPAR)", money(@report.totals[:revpar]) ])
+        rows << spreadsheet_row([ "Tax", money(@report.totals[:tax_amount]) ])
+        rows << spreadsheet_row([ "Total Revenue", money(@report.totals[:total_revenue]) ])
         rows.join("\n")
       end
 
       def daily_rows
         rows = []
-        rows << spreadsheet_row([ "Date", "Rooms Sold", "Rooms Available", "Occupancy %", "Room Revenue", "Average Daily Rate (ADR)", "Revenue per Available Room (RevPAR)" ])
+        rows << spreadsheet_row([ "Date", "Rooms Sold", "Rooms Available", "Occupancy %", "Room Revenue", "Average Daily Rate (ADR)", "Revenue per Available Room (RevPAR)", "Tax", "Total Revenue" ])
 
         @report.rows.each do |row|
           rows << spreadsheet_row([
@@ -59,7 +61,9 @@ module HotelPortal
             percentage(row[:occupancy_rate]),
             money(row[:room_revenue]),
             money(row[:adr]),
-            money(row[:revpar])
+            money(row[:revpar]),
+            money(row[:tax_amount]),
+            money(row[:total_revenue])
           ])
         end
 

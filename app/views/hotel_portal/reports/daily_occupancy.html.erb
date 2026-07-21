@@ -28,7 +28,7 @@
     <% end %>
   </div>
 
-  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-5">
+  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-4 lg:grid-cols-7">
     <div class="p-6 md:border-r md:border-border">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Rooms Sold</p>
       <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground"><%= @report.totals[:rooms_sold] %></h2>
@@ -45,9 +45,17 @@
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Average Daily Rate (ADR)</p>
       <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:adr], precision: 2) %></h2>
     </div>
-    <div class="p-6">
+    <div class="p-6 md:border-r md:border-border">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Revenue per Available Room (RevPAR)</p>
       <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:revpar], precision: 2) %></h2>
+    </div>
+    <div class="bg-muted/30 p-6 md:border-r md:border-border">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tax</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:tax_amount], precision: 2) %></h2>
+    </div>
+    <div class="p-6">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Revenue</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:total_revenue], precision: 2) %></h2>
     </div>
   </div>
 
@@ -63,6 +71,8 @@
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Room Revenue</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Average Daily Rate (ADR)</th>
             <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Revenue per Available Room (RevPAR)</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Tax</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Total Revenue</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-border bg-card">
@@ -76,10 +86,12 @@
                 <td class="px-6 py-4 text-sm text-foreground">MYR <%= number_with_precision(row[:room_revenue], precision: 2) %></td>
                 <td class="px-6 py-4 text-sm text-foreground">MYR <%= number_with_precision(row[:adr], precision: 2) %></td>
                 <td class="px-6 py-4 text-sm text-foreground">MYR <%= number_with_precision(row[:revpar], precision: 2) %></td>
+                <td class="px-6 py-4 text-sm text-foreground">MYR <%= number_with_precision(row[:tax_amount], precision: 2) %></td>
+                <td class="px-6 py-4 text-sm text-foreground font-semibold">MYR <%= number_with_precision(row[:total_revenue], precision: 2) %></td>
               </tr>
             <% end %>
           <% else %>
-            <tr><td colspan="7" class="px-6 py-20 text-center text-sm font-medium text-muted-foreground">No occupancy data for this selected period.</td></tr>
+            <tr><td colspan="9" class="px-6 py-20 text-center text-sm font-medium text-muted-foreground">No occupancy data for this selected period.</td></tr>
           <% end %>
         </tbody>
       </table>

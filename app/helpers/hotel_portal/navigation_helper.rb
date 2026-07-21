@@ -10,7 +10,6 @@ module HotelPortal
 
       financial_nav_items = [
         NavItem.new(label: "Summary", path: hotel_reports_path(current_hotel), icon: "file-spreadsheet", active: controller_name == "reports" && action_name == "index", permission: "view_reports"),
-        NavItem.new(label: "Manager's Flash Report", path: managers_flash_hotel_reports_path(current_hotel), icon: "trending-up", active: controller_name == "reports" && action_name == "managers_flash", permission: "view_reports", plan_feature: "housekeeper_productivity"),
         NavItem.new(label: "Daily Report", path: daily_report_hotel_reports_path(current_hotel), icon: "coins", active: controller_name == "reports" && action_name == "daily_report", permission: "view_reports", plan_feature: "revenue_allocation_per_night"),
         NavItem.new(label: "Refund Report", path: refund_report_hotel_reports_path(current_hotel), icon: "credit-card", active: controller_name == "reports" && action_name == "refund_report", permission: "view_reports"),
         NavItem.new(label: "Extra Charge", path: extra_charge_hotel_reports_path(current_hotel), icon: "receipt", active: controller_name == "reports" && action_name == "extra_charge", permission: "view_reports"),

@@ -20,6 +20,7 @@ module HotelPortal
         sold_sum = rows.sum { |row| row[:rooms_sold] }
         available_sum = rows.sum { |row| row[:rooms_available] }
         revenue_sum = rows.sum { |row| row[:room_revenue] }
+        tax_sum = rows.sum { |row| row[:tax_amount] }
 
         Result.new(
           start_date: @start_date,
@@ -29,6 +30,8 @@ module HotelPortal
             rooms_sold: sold_sum,
             rooms_available: available_sum,
             room_revenue: revenue_sum,
+            tax_amount: tax_sum,
+            total_revenue: revenue_sum + tax_sum,
             occupancy_rate: ratio(sold_sum, available_sum),
             adr: ratio(revenue_sum, sold_sum),
             revpar: ratio(revenue_sum, available_sum)
@@ -48,12 +51,15 @@ module HotelPortal
           sold = month_rows.sum { |row| row[:rooms_sold].to_i }
           available = month_rows.sum { |row| row[:rooms_available].to_i }
           revenue = month_rows.sum { |row| row[:room_revenue].to_d }
+          tax = month_rows.sum { |row| row[:tax_amount].to_d }
 
           {
             date: month,
             rooms_sold: sold,
             rooms_available: available,
             room_revenue: revenue.round(2),
+            tax_amount: tax.round(2),
+            total_revenue: (revenue + tax).round(2),
             occupancy_rate: ratio(sold, available),
             adr: ratio(revenue, sold),
             revpar: ratio(revenue, available)
@@ -73,16 +79,29 @@ module HotelPortal
         end
 
         available = available_rooms_for(date)
+        tax = tax_by_posting_date[date] || 0.to_d
 
         {
           date: date,
           rooms_sold: sold,
           rooms_available: available,
           room_revenue: revenue,
+          tax_amount: tax,
+          total_revenue: revenue + tax,
           occupancy_rate: ratio(sold, available),
           adr: ratio(revenue, sold),
           revpar: ratio(revenue, available)
         }
+      end
+
+      def tax_by_posting_date
+        @tax_by_posting_date ||= FolioTransaction.joins(booking_folio: :booking)
+          .where(bookings: { hotel_id: @hotel.id })
+          .where(posting_date: @start_date..@end_date)
+          .where(category: "tax")
+          .group(:posting_date)
+          .sum(:amount)
+          .transform_keys(&:to_date)
       end
 
       def sold_bookings

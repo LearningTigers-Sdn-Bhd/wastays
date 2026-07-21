@@ -475,7 +475,10 @@ Rails.application.routes.draw do
           destination = "/hotel/#{params[:hotel_id]}/reports/daily_report"
           request.query_string.present? ? "#{destination}?#{request.query_string}" : destination
         }
-        get :managers_flash
+        get :managers_flash, to: redirect { |params, request|
+          destination = "/hotel/#{params[:hotel_id]}/reports/daily_occupancy"
+          request.query_string.present? ? "#{destination}?#{request.query_string}" : destination
+        }
         get :outstanding_balance
         get :deposit_liability
         get :folio_ledger

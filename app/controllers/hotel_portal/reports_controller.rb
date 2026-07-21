@@ -14,12 +14,11 @@ module HotelPortal
     DAILY_REPORT_TABS = %w[overview revenue cashier].freeze
     DAILY_REVENUE_FILTER_KEYS = %i[q transaction_type category transaction_code_id posting_source reversal_status].freeze
 
-    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_report daily_revenue_cell daily_revenue_source_bookings managers_flash outstanding_balance deposit_liability guest_reports folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
+    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_report daily_revenue_cell daily_revenue_source_bookings outstanding_balance deposit_liability guest_reports folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
     before_action :authorize_view_payouts!, only: %i[payouts]
     before_action -> { require_feature!("daily_occupancy_revenue") }, only: %i[daily_occupancy]
     before_action -> { require_feature!("arrivals_departures_list") }, only: %i[guest_reports]
     before_action -> { require_feature!("outstanding_balance_noshow") }, only: %i[outstanding_balance]
-    before_action -> { require_feature!("housekeeper_productivity") }, only: %i[managers_flash]
     before_action -> { require_feature!("booking_source_analysis") }, only: %i[breakdown]
     before_action -> { require_feature!("revenue_allocation_per_night") }, only: %i[daily_report daily_revenue_cell daily_revenue_source_bookings]
     before_action -> { require_feature!("excel_pdf_export") }, if: -> { %i[csv xls pdf].include?(request.format.symbol) }
@@ -271,40 +270,6 @@ module HotelPortal
         end_date: @report_end_date,
         source: params[:source]
       ).call
-    end
-
-    def managers_flash
-      @report_start_date, @report_end_date = parse_report_date_range
-      @report = HotelPortal::Reports::ManagersFlashReport.new(
-        hotel: current_hotel,
-        start_date: @report_start_date,
-        end_date: @report_end_date,
-        date_preset: params[:date_preset]
-      ).call
-
-      respond_to do |format|
-        format.html
-        format.csv do
-          csv = HotelPortal::Reports::ManagersFlashCsvExportService.new(report: @report).generate
-          send_data csv,
-            filename: "managers-flash-#{@report.start_date}-#{@report.end_date}.csv",
-            type: "text/csv"
-        end
-        format.any(:xls) do
-          workbook = HotelPortal::Reports::ManagersFlashExcelExportService.new(report: @report).generate
-          send_data workbook,
-            filename: "managers-flash-#{@report.start_date}-#{@report.end_date}.xls",
-            type: "application/vnd.ms-excel",
-            disposition: "attachment"
-        end
-        format.pdf do
-          pdf = HotelPortal::Reports::ManagersFlashPdfExportService.new(hotel: current_hotel, report: @report).generate
-          send_data pdf,
-            filename: "managers-flash-#{@report.start_date}-#{@report.end_date}.pdf",
-            type: "application/pdf",
-            disposition: "attachment"
-        end
-      end
     end
 
     def outstanding_balance
