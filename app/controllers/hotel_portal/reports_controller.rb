@@ -12,16 +12,17 @@ module HotelPortal
     GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards bibo meal_prep].freeze
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
     DAILY_REPORT_TABS = %w[overview revenue cashier].freeze
+    TAX_COMPLIANCE_TABS = %w[tourism_tax sst non_national].freeze
     DAILY_REVENUE_FILTER_KEYS = %i[q transaction_type category transaction_code_id posting_source reversal_status].freeze
 
-    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_report daily_revenue_cell daily_revenue_source_bookings outstanding_balance deposit_liability guest_reports folio_ledger journal_batches sst refund_report extra_charge non_national tourism_tax]
+    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_report daily_revenue_cell daily_revenue_source_bookings outstanding_balance deposit_liability guest_reports folio_ledger journal_batches tax_compliance refund_report extra_charge]
     before_action :authorize_view_payouts!, only: %i[payouts]
     before_action -> { require_feature!("daily_occupancy_revenue") }, only: %i[daily_occupancy]
     before_action -> { require_feature!("arrivals_departures_list") }, only: %i[guest_reports]
     before_action -> { require_feature!("outstanding_balance_noshow") }, only: %i[outstanding_balance]
     before_action -> { require_feature!("booking_source_analysis") }, only: %i[breakdown]
     before_action -> { require_feature!("revenue_allocation_per_night") }, only: %i[daily_report daily_revenue_cell daily_revenue_source_bookings]
-    before_action -> { require_feature!("excel_pdf_export") }, if: -> { %i[csv xls pdf].include?(request.format.symbol) }
+    before_action -> { require_feature!("excel_pdf_export") }, if: -> { %i[csv xls xlsx pdf].include?(request.format.symbol) }
 
     def index
       # Note: FinancialFiltering sets @start_date and @end_date
@@ -474,34 +475,29 @@ module HotelPortal
       end
     end
 
-    def sst
+    def tax_compliance
+      @active_tax_compliance_tab = TAX_COMPLIANCE_TABS.include?(params[:tab]) ? params[:tab] : "tourism_tax"
       @report_start_date, @report_end_date = parse_report_date_range
-      @report = HotelPortal::Reports::SstReport.new(
-        hotel: current_hotel,
-        start_date: @report_start_date,
-        end_date: @report_end_date,
-        date_preset: params[:date_preset]
-      ).call
+      @report = tax_compliance_report
+
+      filename_suffix = @active_tax_compliance_tab.tr("_", "-")
 
       respond_to do |format|
         format.html
         format.csv do
-          csv = HotelPortal::Reports::SstCsvExportService.new(report: @report).generate
-          send_data csv,
-            filename: "sst-report-#{@report.start_date}-#{@report.end_date}.csv",
+          send_data tax_compliance_csv_export_service.generate,
+            filename: "tax-compliance-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.csv",
             type: "text/csv"
         end
-        format.any(:xls) do
-          workbook = HotelPortal::Reports::SstExcelExportService.new(report: @report).generate
-          send_data workbook,
-            filename: "sst-report-#{@report.start_date}-#{@report.end_date}.xls",
-            type: "application/vnd.ms-excel",
+        format.xlsx do
+          send_data tax_compliance_excel_export_service.generate,
+            filename: "tax-compliance-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.xlsx",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             disposition: "attachment"
         end
         format.pdf do
-          pdf = HotelPortal::Reports::SstPdfExportService.new(hotel: current_hotel, report: @report).generate
-          send_data pdf,
-            filename: "sst-report-#{@report.start_date}-#{@report.end_date}.pdf",
+          send_data tax_compliance_pdf_export_service.generate,
+            filename: "tax-compliance-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.pdf",
             type: "application/pdf",
             disposition: "attachment"
         end
@@ -577,73 +573,55 @@ module HotelPortal
       end
     end
 
-    def non_national
-      @report_start_date, @report_end_date = parse_report_date_range
-      @report = HotelPortal::Reports::NonNationalReport.new(
-        hotel: current_hotel,
-        start_date: @report_start_date,
-        end_date: @report_end_date
-      ).call
-
-      respond_to do |format|
-        format.html
-        format.csv do
-          csv = HotelPortal::Reports::NonNationalCsvExportService.new(report: @report).generate
-          send_data csv,
-            filename: "non-national-report-#{@report.start_date}-#{@report.end_date}.csv",
-            type: "text/csv"
-        end
-        format.any(:xls) do
-          workbook = HotelPortal::Reports::NonNationalExcelExportService.new(report: @report).generate
-          send_data workbook,
-            filename: "non-national-report-#{@report.start_date}-#{@report.end_date}.xls",
-            type: "application/vnd.ms-excel",
-            disposition: "attachment"
-        end
-        format.pdf do
-          pdf = HotelPortal::Reports::NonNationalPdfExportService.new(hotel: current_hotel, report: @report).generate
-          send_data pdf,
-            filename: "non-national-report-#{@report.start_date}-#{@report.end_date}.pdf",
-            type: "application/pdf",
-            disposition: "attachment"
-        end
-      end
-    end
-
-    def tourism_tax
-      @report_start_date, @report_end_date = parse_report_date_range
-      @report = HotelPortal::Reports::TourismTaxReport.new(
-        hotel: current_hotel,
-        start_date: @report_start_date,
-        end_date: @report_end_date
-      ).call
-
-      respond_to do |format|
-        format.html
-        format.csv do
-          csv = HotelPortal::Reports::TourismTaxCsvExportService.new(report: @report).generate
-          send_data csv,
-            filename: "tourism-tax-report-#{@report.start_date}-#{@report.end_date}.csv",
-            type: "text/csv"
-        end
-        format.any(:xls) do
-          workbook = HotelPortal::Reports::TourismTaxExcelExportService.new(report: @report).generate
-          send_data workbook,
-            filename: "tourism-tax-report-#{@report.start_date}-#{@report.end_date}.xls",
-            type: "application/vnd.ms-excel",
-            disposition: "attachment"
-        end
-        format.pdf do
-          pdf = HotelPortal::Reports::TourismTaxPdfExportService.new(hotel: current_hotel, report: @report).generate
-          send_data pdf,
-            filename: "tourism-tax-report-#{@report.start_date}-#{@report.end_date}.pdf",
-            type: "application/pdf",
-            disposition: "attachment"
-        end
-      end
-    end
-
     private
+
+    def tax_compliance_report
+      case @active_tax_compliance_tab
+      when "sst"
+        HotelPortal::Reports::SstReport.new(
+          hotel: current_hotel,
+          start_date: @report_start_date,
+          end_date: @report_end_date,
+          date_preset: params[:date_preset]
+        ).call
+      when "non_national"
+        HotelPortal::Reports::NonNationalReport.new(
+          hotel: current_hotel,
+          start_date: @report_start_date,
+          end_date: @report_end_date
+        ).call
+      else
+        HotelPortal::Reports::TourismTaxReport.new(
+          hotel: current_hotel,
+          start_date: @report_start_date,
+          end_date: @report_end_date
+        ).call
+      end
+    end
+
+    def tax_compliance_csv_export_service
+      case @active_tax_compliance_tab
+      when "sst" then HotelPortal::Reports::SstCsvExportService.new(report: @report)
+      when "non_national" then HotelPortal::Reports::NonNationalCsvExportService.new(report: @report)
+      else HotelPortal::Reports::TourismTaxCsvExportService.new(report: @report)
+      end
+    end
+
+    def tax_compliance_excel_export_service
+      case @active_tax_compliance_tab
+      when "sst" then HotelPortal::Reports::SstExcelExportService.new(hotel: current_hotel, report: @report)
+      when "non_national" then HotelPortal::Reports::NonNationalExcelExportService.new(hotel: current_hotel, report: @report)
+      else HotelPortal::Reports::TourismTaxExcelExportService.new(hotel: current_hotel, report: @report)
+      end
+    end
+
+    def tax_compliance_pdf_export_service
+      case @active_tax_compliance_tab
+      when "sst" then HotelPortal::Reports::SstPdfExportService.new(hotel: current_hotel, report: @report)
+      when "non_national" then HotelPortal::Reports::NonNationalPdfExportService.new(hotel: current_hotel, report: @report)
+      else HotelPortal::Reports::TourismTaxPdfExportService.new(hotel: current_hotel, report: @report)
+      end
+    end
 
     def prepare_empty_charge_register
       @transaction_filters = params.permit(*DAILY_REVENUE_FILTER_KEYS).to_h.compact_blank

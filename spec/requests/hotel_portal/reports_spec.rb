@@ -359,90 +359,119 @@ RSpec.describe "HotelPortal::Reports", type: :request do
   end
 
   describe "GET /non_national" do
-    let(:start_date) { Date.new(2026, 7, 1) }
-    let(:end_date) { Date.new(2026, 7, 1) }
+    it "redirects to tax_compliance with tab=non_national (merged into that report)" do
+      get non_national_hotel_reports_path(hotel), params: { start_date: "2026-07-01", end_date: "2026-07-01" }
 
-    it "renders the non-national report with in-house foreign guests only" do
-      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, checked_in_at: Time.zone.local(2026, 6, 30, 15, 45, 0), guest_name: "Kenji Sato", guest_country: "Japan", guest_home_address: "1 Chome-1-2 Oshiage, Sumida City, Tokyo, Japan", confirmation_token: "WS-NONNAT")
-      guest = create(:guest, date_of_birth: Date.new(1990, 5, 20))
-      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
-      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Ahmad", guest_country: "Malaysia")
-
-      get non_national_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Non-National Report")
-      expect(response.body).to include("Kenji Sato")
-      expect(response.body).to include("Japan")
-      expect(response.body).to include("1 Chome-1-2 Oshiage, Sumida City, Tokyo, Japan")
-      expect(response.body).to include("Check In Time")
-      expect(response.body).to include("Date of Birth")
-      expect(response.body).to include("20 May 1990")
-      expect(response.body).not_to include("Ahmad")
+      expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/tax_compliance?tab=non_national&start_date=2026-07-01&end_date=2026-07-01")
     end
 
-    it "exports csv for the selected range" do
-      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, checked_in_at: Time.zone.local(2026, 6, 30, 14, 10, 0), guest_name: "CSV Foreigner", guest_country: "Singapore", guest_home_address: "25 Beach Road, Singapore", confirmation_token: "WS-CSV-NONNAT")
-      guest = create(:guest, date_of_birth: Date.new(1988, 12, 5))
-      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+    it "preserves csv format and ignores an incoming tab override" do
+      get non_national_hotel_reports_path(hotel, format: :csv), params: { tab: "sst", start_date: "2026-07-01" }
 
-      get non_national_hotel_reports_path(hotel, format: :csv), params: {
-        start_date: start_date.to_s,
-        end_date: end_date.to_s
-      }
-
-      expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("text/csv")
-      expect(response.headers["Content-Disposition"]).to include("non-national-report")
-      expect(response.body).to include("Full Name,Nationality,Date of Birth,Home Address,Check In Date,Check In Time,Check Out Date")
-      expect(response.body).to include("CSV Foreigner")
-      expect(response.body).to include("Singapore")
-      expect(response.body).to include("25 Beach Road, Singapore")
-      expect(response.body).to include("05 Dec 1988")
-      expect(response.body).to include("10:10 PM")
-    end
-
-    it "shows the actual check-in date for overlapping guests" do
-      create(:booking, hotel: hotel, status: "checked_in", check_in: Date.new(2026, 6, 30), check_out: Date.new(2026, 7, 2), guest_name: "Overlap Guest", guest_country: "Japan", tourism_tax_amount: 10)
-
-      get non_national_hotel_reports_path(hotel), params: { date_preset: "this_month" }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Overlap Guest")
-      expect(response.body).to include("30 Jun 2026")
+      expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/tax_compliance.csv?tab=non_national&start_date=2026-07-01")
     end
   end
 
   describe "GET /tourism_tax" do
+    it "redirects to tax_compliance with tab=tourism_tax (merged into that report)" do
+      get tourism_tax_hotel_reports_path(hotel), params: { start_date: "2026-07-01", end_date: "2026-07-01" }
+
+      expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/tax_compliance?tab=tourism_tax&start_date=2026-07-01&end_date=2026-07-01")
+    end
+
+    it "maps the legacy xls format to xlsx" do
+      get tourism_tax_hotel_reports_path(hotel, format: :xls), params: { start_date: "2026-07-01" }
+
+      expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/tax_compliance.xlsx?tab=tourism_tax&start_date=2026-07-01")
+    end
+  end
+
+  describe "GET /sst" do
+    it "redirects to tax_compliance with tab=sst (merged into that report)" do
+      get sst_hotel_reports_path(hotel), params: { start_date: "2026-07-01", end_date: "2026-07-01" }
+
+      expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/tax_compliance?tab=sst&start_date=2026-07-01&end_date=2026-07-01")
+    end
+
+    it "preserves pdf format" do
+      get sst_hotel_reports_path(hotel, format: :pdf), params: { start_date: "2026-07-01" }
+
+      expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/tax_compliance.pdf?tab=sst&start_date=2026-07-01")
+    end
+  end
+
+  describe "GET /tax_compliance" do
     let(:start_date) { Date.new(2026, 7, 1) }
     let(:end_date) { Date.new(2026, 7, 1) }
 
-    it "renders the tourism tax report with due and collected figures" do
+    it "defaults to the tourism_tax tab and renders it" do
       create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Kenji Sato", guest_country: "Japan", tourism_tax_amount: 20, tourism_tax_collected: true)
-      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Ahmad", guest_country: "Malaysia", tourism_tax_amount: 10, tourism_tax_collected: true)
 
-      get tourism_tax_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      get tax_compliance_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Tourism Tax Report")
+      expect(Capybara.string(response.body)).to have_text("Tax & Compliance")
       expect(response.body).to include("Kenji Sato")
       expect(response.body).to include("MYR 20.00")
     end
 
-    it "exports csv for the selected range" do
+    it "renders the sst tab" do
+      booking = create(:booking, hotel: hotel, guest_name: "Amira Yusof")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "tax", description: "Service Tax (SST 8%)", posting_date: start_date, amount: 16)
+
+      get tax_compliance_hotel_reports_path(hotel), params: { tab: "sst", start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Amira Yusof")
+    end
+
+    it "renders the non_national tab" do
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Overseas Guest", guest_country: "Japan")
+
+      get tax_compliance_hotel_reports_path(hotel), params: { tab: "non_national", start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Overseas Guest")
+    end
+
+    it "falls back to tourism_tax for an unknown tab" do
+      get tax_compliance_hotel_reports_path(hotel), params: { tab: "bogus", start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      page = Capybara.string(response.body)
+      expect(page).to have_css('[data-testid="tax-compliance-tab-tourism-tax"][aria-current="page"]')
+    end
+
+    it "exports csv for the active tab" do
       create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "CSV Foreigner", guest_country: "Singapore", tourism_tax_amount: 10, tourism_tax_collected: false, confirmation_token: "WS-CSV-TTX")
 
-      get tourism_tax_hotel_reports_path(hotel, format: :csv), params: {
-        start_date: start_date.to_s,
-        end_date: end_date.to_s
-      }
+      get tax_compliance_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
-      expect(response.headers["Content-Disposition"]).to include("tourism-tax-report")
-      expect(response.body).to include("Guest Name,Nationality,Booking Ref,Check In,Check Out,Nights,Tax Due (MYR),Tax Collected (MYR),Collection Status")
+      expect(response.headers["Content-Disposition"]).to include("tax-compliance-tourism-tax")
       expect(response.body).to include("CSV Foreigner")
-      expect(response.body).to include("Pending")
+    end
+
+    it "exports xlsx for the active tab" do
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Excel Foreigner", guest_country: "Japan", tourism_tax_amount: 15, tourism_tax_collected: true)
+
+      get tax_compliance_hotel_reports_path(hotel, format: :xlsx), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.headers["Content-Disposition"]).to include("tax-compliance-tourism-tax")
+      expect(response.headers["Content-Disposition"]).to include(".xlsx")
+    end
+
+    it "exports pdf for the active tab" do
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "PDF Foreigner", guest_country: "Japan", tourism_tax_amount: 15, tourism_tax_collected: true)
+
+      get tax_compliance_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
     end
   end
 

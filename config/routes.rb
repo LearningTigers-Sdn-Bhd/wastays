@@ -483,11 +483,30 @@ Rails.application.routes.draw do
         get :deposit_liability
         get :folio_ledger
         get :journal_batches
-        get :sst
         get :refund_report
         get :extra_charge
-        get :non_national
-        get :tourism_tax
+        get :tax_compliance
+        get :tourism_tax, to: redirect { |params, request|
+          format = params[:format].to_s
+          format = "xlsx" if format == "xls"
+          extension = format.present? ? ".#{format}" : ""
+          qs = request.query_string.split("&").reject { |pair| pair.start_with?("tab=") }.join("&")
+          "/hotel/#{params[:hotel_id]}/reports/tax_compliance#{extension}?tab=tourism_tax#{qs.present? ? "&#{qs}" : ""}"
+        }
+        get :sst, to: redirect { |params, request|
+          format = params[:format].to_s
+          format = "xlsx" if format == "xls"
+          extension = format.present? ? ".#{format}" : ""
+          qs = request.query_string.split("&").reject { |pair| pair.start_with?("tab=") }.join("&")
+          "/hotel/#{params[:hotel_id]}/reports/tax_compliance#{extension}?tab=sst#{qs.present? ? "&#{qs}" : ""}"
+        }
+        get :non_national, to: redirect { |params, request|
+          format = params[:format].to_s
+          format = "xlsx" if format == "xls"
+          extension = format.present? ? ".#{format}" : ""
+          qs = request.query_string.split("&").reject { |pair| pair.start_with?("tab=") }.join("&")
+          "/hotel/#{params[:hotel_id]}/reports/tax_compliance#{extension}?tab=non_national#{qs.present? ? "&#{qs}" : ""}"
+        }
       end
     end
     resources :night_audits, only: [ :index, :show, :create ] do

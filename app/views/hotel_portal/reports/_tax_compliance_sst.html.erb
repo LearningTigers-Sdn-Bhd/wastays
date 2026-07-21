@@ -1,0 +1,65 @@
+<div class="grid grid-cols-2 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-4">
+  <div class="p-6 md:border-r md:border-border">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Bookings</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground"><%= @report.totals[:booking_count] %></h2>
+  </div>
+  <div class="p-6 md:border-r md:border-border">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Taxable Amount</p>
+    <h2 class="text-2xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:taxable_amount], precision: 2) %></h2>
+  </div>
+  <div class="bg-muted/30 p-6 md:border-r md:border-border">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">SST Collected (8%)</p>
+    <h2 class="text-2xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:sst_amount], precision: 2) %></h2>
+  </div>
+  <div class="bg-muted/30 p-6">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Grand Total</p>
+    <h2 class="text-2xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:total_amount], precision: 2) %></h2>
+  </div>
+</div>
+
+<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+  <div class="overflow-x-auto">
+    <% grouped_rows = @date_preset == "this_year" ? @report.rows.group_by { |row| row[:report_month] } : { nil => @report.rows } %>
+    <% grouped_rows.each do |month, rows| %>
+      <% if month.present? %>
+        <div class="border-b border-border bg-muted px-6 py-3 text-sm font-bold text-foreground"><%= month.strftime("%B %Y") %></div>
+      <% end %>
+    <table class="min-w-full">
+      <thead class="bg-muted">
+        <tr>
+          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Invoice / Ref</th>
+          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Guest</th>
+          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Stay</th>
+          <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Taxable Amount</th>
+          <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">SST 8%</th>
+          <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Total</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border bg-card">
+        <% if rows.any? %>
+          <% rows.each do |row| %>
+            <tr class="hover:bg-muted/50">
+              <td class="px-6 py-4 text-sm font-semibold text-foreground"><%= row[:invoice_number] %></td>
+              <td class="px-6 py-4 text-sm text-foreground"><%= row[:guest_name] %></td>
+              <td class="px-6 py-4 text-sm text-foreground"><%= row[:stay_dates] %></td>
+              <td class="px-6 py-4 text-right text-sm text-foreground">MYR <%= number_with_precision(row[:taxable_amount], precision: 2) %></td>
+              <td class="px-6 py-4 text-right text-sm text-foreground">MYR <%= number_with_precision(row[:sst_amount], precision: 2) %></td>
+              <td class="px-6 py-4 text-right text-sm font-semibold text-foreground">MYR <%= number_with_precision(row[:total_amount], precision: 2) %></td>
+            </tr>
+          <% end %>
+          <% if month.nil? %>
+            <tr class="bg-muted font-semibold">
+              <td class="px-6 py-4 text-sm text-foreground" colspan="3">Total (<%= @report.totals[:booking_count] %> bookings)</td>
+              <td class="px-6 py-4 text-right text-sm text-foreground">MYR <%= number_with_precision(@report.totals[:taxable_amount], precision: 2) %></td>
+              <td class="px-6 py-4 text-right text-sm text-foreground">MYR <%= number_with_precision(@report.totals[:sst_amount], precision: 2) %></td>
+              <td class="px-6 py-4 text-right text-sm text-foreground">MYR <%= number_with_precision(@report.totals[:total_amount], precision: 2) %></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr><td colspan="6" class="px-6 py-20 text-center text-sm font-medium text-muted-foreground">No SST transactions found for this period.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+    <% end %>
+  </div>
+</div>
