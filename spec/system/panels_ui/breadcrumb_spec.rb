@@ -18,7 +18,7 @@ RSpec.describe "PanelsUI::Breadcrumb", type: :system do
 
     expect(page).to have_css("[role='menu']:popover-open")
     expect(toggle["aria-expanded"]).to eq("true")
-    expect(page).to have_link("Daily Revenue")
+    expect(page).to have_link("Daily Report")
   end
 
   it "closes the menu on outside click" do

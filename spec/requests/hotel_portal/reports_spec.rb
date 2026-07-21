@@ -800,64 +800,409 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
   end
 
-  describe "GET /daily_revenue" do
+  describe "GET /daily_report" do
     let(:start_date) { Date.new(2026, 5, 6) }
     let(:end_date) { Date.new(2026, 5, 7) }
 
-    it "renders daily revenue report for selected range" do
+    it "renders the Daily Report page for the selected range" do
       create(:booking, hotel: hotel, status: "confirmed", source: "walk_in", total_amount: 100, tourism_tax_applied: true, tourism_tax_amount: 10, created_at: Time.zone.local(2026, 5, 6, 10, 0))
-      create(:booking, hotel: hotel, status: "completed", source: "agoda", total_amount: 200, created_at: Time.zone.local(2026, 5, 7, 11, 0))
 
-      get daily_revenue_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      get "/hotel/#{hotel.id}/reports/daily_report", params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Daily Revenue Report")
-      expect(response.body).to include("Revenue by Source")
-      expect(response.body).to include("Daily Breakdown (#{hotel.default_currency})")
+      expect(response.body).to include("Daily Report")
     end
 
-    it "shows plain 0 instead of 0.00 for empty categories and links non-zero cells to the drill-down" do
-      booking = create(:booking, hotel: hotel, status: "confirmed", source: "walk_in")
-      folio = create(:booking_folio, booking: booking, hotel: hotel)
-      create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: start_date)
+    it "redirects the legacy Daily Revenue URL while preserving its query string" do
+      get "/hotel/#{hotel.id}/reports/daily_revenue", params: { tab: "cashier", start_date: start_date.to_s }
 
-      get daily_revenue_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: start_date.to_s }
-
-      expect(response).to have_http_status(:success)
-      doc = Nokogiri::HTML(response.body)
-      row = doc.at_css("tbody tr")
-      cells = row.css("td").map(&:text)
-
-      expect(cells).to include("MYR 0") # other_charges/tax are empty
-      expect(cells).not_to include(a_string_matching(/\AMYR 0\.00\z/))
-
-      accommodation_link = row.at_css("td:nth-child(3) a")
-      expect(accommodation_link["href"]).to eq(daily_revenue_cell_hotel_reports_path(hotel, date: start_date.to_s, category: "accommodation", date_preset: "custom"))
-    end
-
-    it "exports csv/xls/pdf" do
-      create(:booking, hotel: hotel, status: "confirmed", source: "walk_in", total_amount: 100, created_at: Time.zone.local(2026, 5, 6, 10, 0))
-
-      get daily_revenue_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
-      expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("text/csv")
-
-      get daily_revenue_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
-      expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
-
-      get daily_revenue_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
-      expect(response).to have_http_status(:success)
-      expect(response.content_type).to eq("application/pdf")
+      expect(response).to redirect_to(
+        "/hotel/#{hotel.id}/reports/daily_report?tab=cashier&start_date=#{start_date}"
+      )
     end
 
     it "requires view_reports permission" do
       role.permissions.delete(Permission.find_by!(slug: "view_reports"))
 
-      get daily_revenue_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      get daily_report_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+    end
+
+    it "skips Charge Register transformation for non-Revenue formats" do
+      expect(HotelPortal::Reports::DailyReportChargeRegister).not_to receive(:new)
+
+      %w[overview cashier].product([ nil, :csv, :xlsx, :pdf ]).each do |tab, format|
+        get daily_report_hotel_reports_path(hotel, format: format), params: {
+          tab: tab,
+          start_date: start_date.to_s,
+          end_date: end_date.to_s
+        }
+
+        expect(response).to have_http_status(:success)
+      end
+    end
+
+    describe "revenue tab" do
+      it "queries the Charge Register scope once without filters" do
+        expect(HotelPortal::Reports::DailyRevenueTransactionQuery).to receive(:new).once.and_call_original
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue",
+          start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response).to have_http_status(:success)
+      end
+
+      it "combines generated tax with its charge in the Charge Register" do
+        booking = create(:booking, hotel: hotel)
+        room_type = create(:room_type, hotel: hotel, name: "Deluxe King")
+        booking_room = create(:booking_room, booking: booking, room_type: room_type, room_number: "G01")
+        folio = create(:booking_folio, booking: booking, booking_room: booking_room, hotel: hotel)
+        room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+        sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+        charge = create(:folio_transaction, booking_folio: folio, transaction_code: room_code,
+          category: "accommodation", amount: 480, posting_date: start_date)
+        create(:folio_transaction, booking_folio: folio, transaction_code: sst_code,
+          category: "tax", amount: 38.40, posting_date: start_date,
+          metadata: { parent_folio_transaction_id: charge.id, tax_line: { type: "sst" } })
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue",
+          start_date: start_date.to_s, end_date: start_date.to_s)
+
+        document = Nokogiri::HTML(response.body)
+        rows = document.css('[data-testid="charge-register-row"]')
+        headers = document.css("[aria-labelledby='revenue-register-heading'] thead th").map { |header| header.text.strip }
+
+        expect(rows.size).to eq(1)
+        expect(headers).to eq(
+          [ "Date", "Service", "Booking / Folio", "Guest", "Status", "Base Amount", "Tax", "Total Amount" ]
+        )
+        expect(rows.sole.css("td")[1].text.squish).to eq("Room Revenue ROOM")
+        expect(rows.sole.css("td")[3].text.squish).to eq("#{booking.guest_name} G01 · Deluxe King")
+        expect(rows.sole.css("td")[3].at_css("span")["class"].split).to include("whitespace-nowrap")
+        expect(rows.sole.css("td")[5].text.squish).to eq("MYR 480.00")
+        expect(rows.sole.css("td")[6].text.squish).to eq("MYR 38.40")
+        expect(rows.sole.css("td")[7].text.squish).to eq("MYR 518.40")
+        expect(rows.sole.text).not_to include("TAX_SST")
+        expect(document.at_css("#revenue-register-heading").parent.text.squish).to include("Revenue Register", "1 transaction")
+      end
+
+      it "shows the recorded time beneath the posting date when posted_at is unavailable" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+        recorded_at = Time.find_zone!(user.time_zone).local(2026, 5, 6, 14, 35)
+        create(:folio_transaction, booking_folio: folio, transaction_code: room_code,
+          category: "accommodation", amount: 480, posting_date: start_date,
+          posted_at: nil, created_at: recorded_at)
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue",
+          start_date: start_date.to_s, end_date: start_date.to_s)
+
+        date_cell = Nokogiri::HTML(response.body).at_css('[data-testid="charge-register-row"] td')
+
+        expect(date_cell.text.squish).to eq("06 May 2026 2:35 PM")
+      end
+
+      it "does not show a room placeholder for an unassigned booking" do
+        booking = create(:booking, hotel: hotel, guest_name: "Unassigned Guest")
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+        create(:folio_transaction, booking_folio: folio, transaction_code: room_code,
+          category: "accommodation", amount: 480, posting_date: start_date)
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue",
+          start_date: start_date.to_s, end_date: start_date.to_s)
+
+        guest_cell = Nokogiri::HTML(response.body).at_css('[data-testid="charge-register-row"] td:nth-child(4)')
+
+        expect(guest_cell.text.squish).to eq("Unassigned Guest")
+      end
+
+      it "highlights negative Revenue Register amounts without coloring zero tax" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "adjustment",
+          category: "discount", amount: -40, posting_date: start_date)
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue",
+          start_date: start_date.to_s, end_date: start_date.to_s)
+
+        row = Nokogiri::HTML(response.body).at_css('[data-testid="charge-register-row"]')
+        amount_cells = row.css("td").to_a.last(3)
+
+        expect(amount_cells[0]["class"]).to include("text-destructive")
+        expect(amount_cells[1]["class"]).not_to include("text-destructive")
+        expect(amount_cells[2]["class"]).to include("text-destructive")
+      end
+
+      it "keeps attached tax when filtering the Charge Register by category" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+        sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+        charge = create(:folio_transaction, booking_folio: folio, transaction_code: room_code,
+          category: "accommodation", amount: 480, posting_date: start_date)
+        create(:folio_transaction, booking_folio: folio, transaction_code: sst_code,
+          category: "tax", amount: 38.40, posting_date: start_date,
+          metadata: { parent_folio_transaction_id: charge.id, tax_line: { type: "sst" } })
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue", category: "accommodation",
+          start_date: start_date.to_s, end_date: start_date.to_s)
+
+        row = Nokogiri::HTML(response.body).at_css('[data-testid="charge-register-row"]')
+
+        expect(row.text.squish).to include("MYR 480.00", "MYR 38.40")
+      end
+
+      it "keeps attached tax when filtering the Charge Register by transaction code" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+        sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+        charge = create(:folio_transaction, booking_folio: folio, transaction_code: room_code,
+          category: "accommodation", amount: 480, posting_date: start_date)
+        create(:folio_transaction, booking_folio: folio, transaction_code: sst_code,
+          category: "tax", amount: 38.40, posting_date: start_date,
+          metadata: { parent_folio_transaction_id: charge.id, tax_line: { type: "sst" } })
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue", transaction_code_id: room_code.id,
+          start_date: start_date.to_s, end_date: start_date.to_s)
+
+        row = Nokogiri::HTML(response.body).at_css('[data-testid="charge-register-row"]')
+
+        expect(row.text.squish).to include("MYR 480.00", "MYR 38.40")
+      end
+
+      it "does not show a charge when filtering the Charge Register by tax category" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+        sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+        charge = create(:folio_transaction, booking_folio: folio, transaction_code: room_code,
+          category: "accommodation", amount: 480, posting_date: start_date)
+        create(:folio_transaction, booking_folio: folio, transaction_code: sst_code,
+          category: "tax", amount: 38.40, posting_date: start_date,
+          metadata: { parent_folio_transaction_id: charge.id, tax_line: { type: "sst" } })
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue", category: "tax",
+          start_date: start_date.to_s, end_date: start_date.to_s)
+
+        document = Nokogiri::HTML(response.body)
+
+        expect(document.css('[data-testid="charge-register-row"]')).to be_empty
+        expect(document.at_css("#revenue-register-heading").parent.text.squish).to include("0 transactions")
+      end
+
+      it "shows the accrual charge register, scoped to charges/adjustments only" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        charge = create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 120, posting_date: start_date)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 360, posting_date: start_date)
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response).to have_http_status(:success)
+        expect(response.body.scan('data-testid="charge-register-row"').size).to eq(1)
+        expect(response.body).to include("120.00")
+        expect(charge.amount).to eq(120)
+      end
+
+      it "shows positive adjustments as revenue increases" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "adjustment", category: "correction", amount: 25, posting_date: start_date)
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response.body).to include("+ MYR 25.00", "Increases revenue")
+        expect(response.body).not_to include("- MYR 25.00")
+      end
+
+      it "includes adjustments and net revenue in Revenue by Source" do
+        booking = create(:booking, hotel: hotel, source: "walk_in")
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: start_date)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "adjustment", category: "discount", amount: -10, posting_date: start_date)
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        source_table = Nokogiri::HTML(response.body).at_css("[aria-labelledby='revenue-source-heading']")
+        expect(source_table.text).to include("Adjustments", "Net Revenue", "- MYR 10.00", "MYR 90.00")
+      end
+    end
+
+    describe "cashier sales tab" do
+      it "splits Advance and Settlement payment rows" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        bank_code = hotel.transaction_codes.find_by!(system_key: "bank_payment")
+        create(
+          :folio_transaction,
+          booking_folio: folio,
+          transaction_type: "payment",
+          category: "booking_payment",
+          amount: 100,
+          posting_date: start_date,
+          user: nil,
+          transaction_code: bank_code
+        )
+        create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 360, posting_date: start_date)
+
+        get daily_report_hotel_reports_path(hotel, tab: "cashier", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include("Advance")
+        expect(response.body).to include("Settlement")
+        expect(response.body).to include("Remarks")
+
+        headers = Nokogiri::HTML(response.body)
+          .css("[aria-labelledby='cashier-advance-heading'] thead th")
+          .map { |header| header.text.strip }
+        expect(headers).to eq([
+          "Date & Time", "Reservation", "Guest Details", "Folio", "Invoice",
+          "Payment Mode", "Received By", "Remarks", "Amount"
+        ])
+
+        advance_row = Nokogiri::HTML(response.body).at_css('[data-testid="advance-row"]')
+        advance_cells = advance_row.css("td")
+        expect(advance_cells.size).to eq(9)
+        expect(advance_cells[2].text.squish).to include(booking.guest_name, "Room —")
+        expect(advance_cells[3].text.strip).to eq(folio.folio_reference_display)
+        expect(advance_cells[4].text.strip).to eq("—")
+        expect(advance_row.text).to include("Bank Transfer Payment")
+
+        settlement_row = Nokogiri::HTML(response.body).at_css('[data-testid="settlement-row"]')
+        [ advance_row, settlement_row ].each do |row|
+          expect(row.css("td").last["class"].split).to include("whitespace-nowrap")
+        end
+      end
+
+      it "shows a refund under its resolved settlement mode" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "refund", amount: -25, posting_date: start_date, metadata: { refund_source: "cash" })
+
+        get daily_report_hotel_reports_path(hotel, tab: "cashier", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        settlement_row = Nokogiri::HTML(response.body).at_css('[data-testid="settlement-row"]')
+        expect(settlement_row.text).to include("Cash Payment")
+        expect(settlement_row.text).not_to include("Refund")
+      end
+
+      it "hides Razorpay payments from cashier rows and summary metrics" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        razorpay_payment = create(:payment_transaction, booking: booking, gateway: "razorpay")
+        create(
+          :folio_transaction,
+          booking_folio: folio,
+          transaction_type: "payment",
+          category: "gateway_payment",
+          amount: 999,
+          posting_date: start_date,
+          description: "Hidden Razorpay payment",
+          metadata: { payment_transaction_id: razorpay_payment.id, posting_source: "gateway_payment" }
+        )
+        create(
+          :folio_transaction,
+          booking_folio: folio,
+          transaction_type: "payment",
+          category: "cash",
+          amount: 100,
+          posting_date: start_date,
+          description: "Visible front desk cash"
+        )
+
+        get daily_report_hotel_reports_path(hotel, tab: "cashier", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        document = Nokogiri::HTML(response.body)
+        metrics = document.at_css('[aria-label="Cashier Sales metrics"]').text.squish
+        expect(document.css('[data-testid="settlement-row"]').size).to eq(1)
+        expect(response.body).to include("Visible front desk cash")
+        expect(response.body).not_to include("Hidden Razorpay payment", "999.00")
+        expect(metrics).to include("Cash Movements 1", "Total Collected MYR 100.00", "Net Cash MYR 100.00")
+      end
+    end
+
+    describe "csv export" do
+      it "exports only the combined KPI summary on the overview tab" do
+        get daily_report_hotel_reports_path(hotel, tab: "overview", format: :csv, start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response.body).to include("Revenue (Accrual)", "Cashier Sales (Cash Flow)", "Net Revenue", "Net Cash")
+        expect(response.body).not_to include("Posting Date", "Daily Breakdown")
+      end
+
+      it "exports the charge register on the revenue tab" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+        sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
+        charge = create(:folio_transaction, booking_folio: folio, transaction_code: room_code,
+          category: "accommodation", amount: 480, posting_date: start_date)
+        create(:folio_transaction, booking_folio: folio, transaction_code: sst_code,
+          category: "tax", amount: 38.40, posting_date: start_date,
+          metadata: { parent_folio_transaction_id: charge.id, tax_line: { type: "sst" } })
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue", format: :csv, start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include("Daily Breakdown", "Revenue by Source", "Revenue Register", "Posting Date", "Transaction Code")
+        expect(response.body).to include(
+          "Posting Date,Posted At,Service Name,Transaction Code,Booking Ref,Folio Number,Guest Name,Room Number,Room Type,Relationship Status,Base Amount,Tax,Total Amount,Currency"
+        )
+        expect(response.body).to include("480.00,38.40,518.40,MYR")
+        expect(response.body).not_to include("Transaction Type", "Category")
+        expect(response.body).not_to include("TAX_SST")
+        expect(response.body).not_to include("Cashier Summary")
+      end
+
+      it "exports the combined Advance + Settlement list on the cashier tab" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel, invoice_number: 20260506)
+        cash_code = hotel.transaction_codes.find_by!(system_key: "cash_payment")
+        create(
+          :folio_transaction,
+          booking_folio: folio,
+          transaction_type: "payment",
+          category: "cash",
+          amount: 100,
+          posting_date: start_date,
+          posted_at: Time.zone.local(2026, 5, 6, 14, 30),
+          description: "Cashier note",
+          user: nil,
+          transaction_code: cash_code
+        )
+
+        get daily_report_hotel_reports_path(hotel, tab: "cashier", format: :csv, start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include(
+          "Advance", "Settlement", "Cashier Summary", "Currency Summary",
+          "Date & Time,Reservation,Guest,Room,Folio,Invoice,Payment Mode,Received By,Remarks,Currency,Amount",
+          "Cash Payment", "20260506", "Cashier note"
+        )
+        expect(response.body).to include("#{start_date.iso8601}T")
+        expect(response.body).not_to include("#{start_date.iso8601} 2026-")
+        expect(response.body).not_to include("Room #", "Res. #", "Bill #")
+        expect(response.body).not_to include("Daily Breakdown", "Revenue Register")
+      end
+    end
+
+    describe "xlsx export" do
+      it "downloads a genuine xlsx workbook for the active tab" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100, posting_date: start_date)
+
+        get daily_report_hotel_reports_path(hotel, tab: "revenue", format: :xlsx, start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response).to have_http_status(:success)
+        expect(response.content_type).to eq("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        expect(response.headers["Content-Disposition"]).to include(".xlsx")
+        expect(response.body).to start_with("PK")
+      end
     end
   end
 
