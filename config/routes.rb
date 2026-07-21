@@ -308,10 +308,6 @@ Rails.application.routes.draw do
     resources :room_groups, except: [ :show ]
     get "stay-view", to: "stay_view/board#index", as: :stay_view
     scope "stay-view", module: :stay_view, as: :stay_view do
-      resources :bookings, only: [] do
-        resource :move, only: [ :edit, :update ], controller: "booking_moves"
-        resource :dates, only: [ :edit, :update ], controller: "booking_dates"
-      end
       get "rooms/:room_type_id/:room_number/status", to: "room_operations#edit", as: :room_status
       patch "rooms/:room_type_id/:room_number/status", to: "room_operations#update"
       resources :room_blocks, only: [ :new, :edit, :create, :update, :destroy ] do
@@ -386,11 +382,8 @@ Rails.application.routes.draw do
       match "walk-in-check-in", to: "walk_in_check_ins#show", via: [ :get, :post ], as: :walk_in_check_in
       match "backdated-check-in", to: "backdated_check_ins#show", via: [ :get, :post ], as: :backdated_check_in
       match "backdated-check-in/:booking_id", to: "backdated_check_ins#show", via: [ :get, :post ], as: :booking_backdated_check_in
-      match "edit-booking/:booking_id", to: "edit_bookings#show", via: [ :get, :patch ], as: :edit_booking
-      match "edit-booking-timeline/:booking_id", to: "edit_booking_timelines#show", via: [ :get, :patch ], as: :edit_booking_timeline
       get "show-booking/:booking_id", to: "show_bookings#show", as: :show_booking
       get "show-booking/:booking_id/print-send", to: "show_bookings#print_send", as: :show_booking_print_send
-      match "amend-stay/:booking_id", to: "amend_stays#show", via: [ :get, :patch ], as: :amend_stay
       get "check-in-reservation/:booking_id", to: "check_in_reservations#show", as: :check_in_reservation
       match "undo-check-in/:booking_id", to: "undo_check_ins#show", via: [ :get, :post ], as: :undo_check_in
       get "check-out/:booking_id", to: "check_outs#show", as: :check_out
@@ -408,6 +401,10 @@ Rails.application.routes.draw do
       match "quick-booking", to: "quick_bookings#show", via: [ :get, :post ], as: :quick_booking
       match "walk-in-check-in", to: "walk_in_check_ins#show", via: [ :get, :post ], as: :walk_in_check_in
       match "backdated-check-in", to: "backdated_check_ins#show", via: [ :get, :post ], as: :backdated_check_in
+      match "edit-dates/:booking_id", to: "booking_dates#show", via: [ :get, :patch ], as: :edit_dates
+      match "edit-room/:booking_id", to: "room_assignments#show", via: [ :get, :patch ], as: :edit_room
+      match "edit-rate/:booking_id", to: "rate_changes#show", via: [ :get, :patch ], as: :edit_rate
+      match "edit-booking/:booking_id", to: "booking_edits#show", via: [ :get, :patch ], as: :edit_booking
       match "cancel-booking/:booking_id", to: "cancellations#show", via: [ :get, :post ], as: :cancel_booking
       match "manage-guest/:booking_id", to: "guests#show", via: [ :get, :post, :patch ], as: :manage_guest
       match "remove-guest/:booking_id/:booking_guest_id", to: "guests#remove", via: [ :get, :delete ], as: :remove_guest

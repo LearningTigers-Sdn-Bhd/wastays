@@ -85,8 +85,8 @@ module HotelPortal
         {
           room_type_id: @room.room_type_id,
           room_number: @room.room_number,
-          move_url: (helpers.edit_hotel_stay_view_booking_move_path(helpers.current_hotel, segment.booking_id, common) if segment.capabilities.move_booking?),
-          dates_url: (helpers.edit_hotel_stay_view_booking_dates_path(helpers.current_hotel, segment.booking_id, common) if segment.capabilities.change_dates?)
+          move_url: (helpers.hotel_booking_action_edit_room_path(helpers.current_hotel, segment.booking_id, common.merge(proposal_kind: "move")) if segment.capabilities.move_booking?),
+          dates_url: (helpers.hotel_booking_action_edit_dates_path(helpers.current_hotel, segment.booking_id, common.merge(proposal_kind: "dates")) if segment.capabilities.change_dates?)
         }.compact
       end
 

@@ -5,13 +5,20 @@ export default class extends Controller {
 
   connect() {
     this.lifecycle = new AbortController()
-    this.pendingFocusId = this.focusRequests.get(this.storageKey) || null
+    this.pendingFocusId = this.focusRequests.get(this.storageKey) || this.storedFocusId
     window.addEventListener("stay-view:preserve", (event) => this.preserve(event), { signal: this.lifecycle.signal })
     window.addEventListener("offcanvas:closed", () => this.scheduleRestore(), { signal: this.lifecycle.signal })
+    window.addEventListener("panels-ui:sheet-closed", () => this.clearRestoredFocusRequest(), { signal: this.lifecycle.signal })
     document.addEventListener("turbo:before-stream-render", (event) => this.beforeStreamRender(event), { signal: this.lifecycle.signal })
+    this.element.addEventListener("click", (event) => this.preserveBookingAction(event), { signal: this.lifecycle.signal })
 
     const restored = this.restoreSnapshot()
-    if (!restored) window.requestAnimationFrame(() => this.centerToday())
+    if (!restored) {
+      window.requestAnimationFrame(() => {
+        this.centerToday()
+        this.element.dataset.viewportSettled = "true"
+      })
+    }
   }
 
   disconnect() {
@@ -22,8 +29,28 @@ export default class extends Controller {
 
   preserve(event) {
     this.pendingFocusId = event.detail?.focusId || this.pendingFocusId
-    if (this.pendingFocusId) this.focusRequests.set(this.storageKey, this.pendingFocusId)
+    if (this.pendingFocusId) {
+      this.focusRequests.set(this.storageKey, this.pendingFocusId)
+      try { sessionStorage.setItem(this.focusStorageKey, this.pendingFocusId) } catch (_) { /* Storage may be unavailable. */ }
+    }
     this.saveSnapshot()
+  }
+
+  preserveBookingAction(event) {
+    const trigger = event.target.closest("a[data-turbo-frame^='booking_action_sheet']")
+    if (!trigger?.id || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+
+    this.preserve({ detail: { focusId: trigger.id } })
+  }
+
+  clearRestoredFocusRequest() {
+    window.requestAnimationFrame(() => {
+      if (!this.pendingFocusId || document.activeElement?.id !== this.pendingFocusId) return
+
+      this.focusRequests.delete(this.storageKey)
+      try { sessionStorage.removeItem(this.focusStorageKey) } catch (_) { /* Storage may be unavailable. */ }
+      this.pendingFocusId = null
+    })
   }
 
   beforeStreamRender(event) {
@@ -59,6 +86,7 @@ export default class extends Controller {
       this.element.scrollLeft = snapshot.left || 0
       this.element.scrollTop = snapshot.top || 0
       this.restoreFocus()
+      this.element.dataset.viewportSettled = "true"
     })
     return true
   }
@@ -84,6 +112,7 @@ export default class extends Controller {
     this.element.scrollLeft = left
     this.element.scrollTop = top
     this.focusRequests.delete(this.storageKey)
+    try { sessionStorage.removeItem(this.focusStorageKey) } catch (_) { /* Storage may be unavailable. */ }
     this.pendingFocusId = null
   }
 
@@ -101,6 +130,14 @@ export default class extends Controller {
 
   get storageKey() {
     return `stay-view:${this.stateKeyValue || "timeline"}`
+  }
+
+  get focusStorageKey() {
+    return `${this.storageKey}:focus`
+  }
+
+  get storedFocusId() {
+    try { return sessionStorage.getItem(this.focusStorageKey) } catch (_) { return null }
   }
 
   get focusRequests() {

@@ -65,11 +65,29 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       expect(cancel["data-turbo-frame"]).to eq("booking_action_sheet_secondary")
     end
 
+    it "launches intent-scoped stay-editing actions into the secondary frame" do
+      role.permissions << manage_bookings
+
+      get hotel_booking_action_show_booking_path(hotel, booking, source: "stay_view", return_to: hotel_stay_view_path(hotel))
+
+      summary = Nokogiri::HTML(response.body).at_css("dialog#booking-summary-sheet")
+      edit_dates = summary.css("a").find { |candidate| candidate.text.squish == "Edit dates" }
+      uri = URI.parse(edit_dates["href"])
+
+      expect(uri.path).to eq(hotel_booking_action_edit_dates_path(hotel, booking))
+      expect(Rack::Utils.parse_nested_query(uri.query)).to include("source" => "stay_view", "return_to" => hotel_stay_view_path(hotel))
+      expect(edit_dates["data-turbo-frame"]).to eq("booking_action_sheet_secondary")
+
+      labels = summary.css("a").map { |anchor| anchor.text.squish }
+      expect(labels).to include("Edit dates", "Change room", "Change rate")
+    end
+
     it "hides Cancel from users without manage_bookings" do
       get hotel_booking_action_show_booking_path(hotel, booking)
 
       dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-summary-sheet")
       expect(dialog.css("a").map { |anchor| anchor.text.squish }).not_to include("Cancel booking")
+      expect(dialog.css("a").map { |anchor| anchor.text.squish }).not_to include("Edit dates")
     end
 
     it "shows management-only document actions to booking managers" do

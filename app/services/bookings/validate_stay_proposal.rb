@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-module StayView
-  class ValidateBookingProposal
+module Bookings
+  class ValidateStayProposal
     def self.call(booking:, room_type:, room_number:, check_in:, check_out:)
       new(booking:, room_type:, room_number:, check_in:, check_out:).call
     end
@@ -20,7 +20,7 @@ module StayView
       errors << "Select a configured room." unless room_type.room_numbers.map(&:to_s).include?(room_number)
       return errors.freeze if errors.any?
 
-      available = ::Bookings::AvailableRoomNumbers.new(
+      available = AvailableRoomNumbers.new(
         hotel: booking.hotel,
         room_type:,
         check_in:,

@@ -25,6 +25,16 @@ Turbo.StreamActions.complete_offcanvas = function() {
   }
 }
 
+// Hard page refresh for booking-action completions. Turbo's soft visit
+// (`Turbo.visit(url, { action: "replace" })`) does not reliably re-render
+// long-lived boards that live outside the sheet frame — Stay View's
+// `stay_view_board` Turbo Frame keeps its stale content after a stay is saved.
+// A full document load guarantees fresh state; Stay View's focus and scroll
+// restoration survive it via the viewport controller's sessionStorage snapshot.
+function refreshPage(url) {
+  window.location.assign(url)
+}
+
 // Sheet analog of complete_offcanvas for HotelPortal::Bookings::Actions.
 // Closes the booking-action Sheet (the native <dialog> restores focus to the
 // invoker and panels-ui--sheet-frame clears the frame on close), then navigates
@@ -43,6 +53,6 @@ Turbo.StreamActions.complete_sheet = function() {
   }
 
   if (url) {
-    setTimeout(() => Turbo.visit(url, { action: "replace" }), 325)
+    setTimeout(() => refreshPage(url), 325)
   }
 }

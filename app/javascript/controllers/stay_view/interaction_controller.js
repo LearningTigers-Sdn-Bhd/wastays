@@ -8,7 +8,7 @@ export default class extends Controller {
     longPress: { type: Number, default: 350 },
     dragThreshold: { type: Number, default: 6 },
     touchTolerance: { type: Number, default: 8 },
-    drawerId: { type: String, default: "offcanvas_drawer" }
+    sheetFrameId: { type: String, default: "booking_action_sheet" }
   }
 
   connect() {
@@ -244,16 +244,18 @@ export default class extends Controller {
     const url = new URL(baseUrl, window.location.origin)
     url.searchParams.set("booking[check_in]", proposal.checkIn)
     if (this.lastMode === "move") {
-      url.searchParams.set("booking[room_assignment]", `${proposal.roomTypeId}|${proposal.roomNumber}`)
+      url.searchParams.set("booking[check_out]", proposal.checkOut)
+      url.searchParams.set("booking[room_type_id]", proposal.roomTypeId)
+      url.searchParams.set("booking[room_number]", proposal.roomNumber)
     } else {
       url.searchParams.set("booking[check_out]", proposal.checkOut)
     }
 
     const returnFocusId = `${segment.id}-trigger`
     window.dispatchEvent(new CustomEvent("stay-view:preserve", { detail: { focusId: returnFocusId } }))
-    window.dispatchEvent(new CustomEvent("offcanvas:load", {
-      detail: { url: url.toString(), variant: "compact-right", returnFocusId, drawerId: this.drawerIdValue }
-    }))
+    const frame = document.getElementById(this.sheetFrameIdValue)
+    if (!frame) return
+    frame.src = url.toString()
     this.announce("Booking proposal ready for confirmation.")
   }
 

@@ -80,28 +80,33 @@ module HotelPortal::StayViewHelper
     { turbo_frame: "booking_action_sheet" }
   end
 
+  def stay_view_stay_edit_data
+    { turbo_frame: "booking_action_sheet" }
+  end
+
   def stay_view_booking_path(booking_id, return_to:, source: nil)
     hotel_booking_action_show_booking_path(current_hotel, booking_id, { return_to:, source: }.compact)
   end
 
   def stay_view_drawer_booking_actions(booking_id, capabilities:, return_to:)
     common = { return_to:, source: "stay_view" }
+    stay_view_stay_editing_actions(capabilities, booking_id, common)
+  end
+
+  # Intent-scoped Stay-editing entries (Dates / Room / Rate). Each opens its own
+  # Sheet; the launcher only targets the frame.
+  def stay_view_stay_editing_actions(capabilities, booking_id, common)
     actions = []
-    if capabilities.move_booking?
-      actions << {
-        label: "Move or reassign",
-        href: edit_hotel_stay_view_booking_move_path(current_hotel, booking_id, common),
-        icon: "move"
-      }
-    end
     if capabilities.change_dates?
-      actions << {
-        label: "Change dates",
-        href: edit_hotel_stay_view_booking_dates_path(current_hotel, booking_id, common),
-        icon: "calendar-range"
-      }
+      actions << { label: "Edit dates", href: hotel_booking_action_edit_dates_path(current_hotel, booking_id, common), icon: "calendar-range", data: stay_view_stay_edit_data }
     end
-    actions.map { |action| action.merge(data: stay_view_action_data) }
+    if capabilities.reassign_room? || capabilities.move_booking?
+      actions << { label: "Change room", href: hotel_booking_action_edit_room_path(current_hotel, booking_id, common), icon: "bed-double", data: stay_view_stay_edit_data }
+    end
+    if capabilities.manage_bookings?
+      actions << { label: "Change rate", href: hotel_booking_action_edit_rate_path(current_hotel, booking_id, common), icon: "tag", data: stay_view_stay_edit_data }
+    end
+    actions
   end
 
   def stay_view_cell_actions(room, cell, state)
@@ -176,12 +181,7 @@ module HotelPortal::StayViewHelper
         data: stay_view_booking_action_data
       }
     end
-    if segment.capabilities.move_booking?
-      actions << { label: "Move or reassign", href: edit_hotel_stay_view_booking_move_path(current_hotel, segment.booking_id, common), icon: "move" }
-    end
-    if segment.capabilities.change_dates?
-      actions << { label: "Change dates", href: edit_hotel_stay_view_booking_dates_path(current_hotel, segment.booking_id, common), icon: "calendar-range" }
-    end
+    actions.concat(stay_view_stay_editing_actions(segment.capabilities, segment.booking_id, common))
     actions.concat(stay_view_lifecycle_booking_actions(segment, common))
     actions.map { |action| action.merge(data: action.fetch(:data, stay_view_action_data)) }
   end

@@ -110,4 +110,41 @@ RSpec.describe Bookings::UpdateStayService do
 
     expect(result.success?).to be(true)
   end
+
+  it "preserves a manual override for date changes and clears it for an explicit rate change" do
+    original_plan = create(:rate_plan, room_type:, name: "Original")
+    replacement_plan = create(:rate_plan, room_type:, name: "Replacement")
+    booking_room.update!(rate_plan: original_plan)
+    booking.update!(manual_rate_override: 175)
+    current_rate_selection = Bookings::RateSelection.current(booking_room.reload).token
+
+    date_result = described_class.new(
+      booking:,
+      params: { check_out: Date.current + 2.days, rate_selection: current_rate_selection }
+    ).call
+    expect(date_result.success?).to be(true)
+    expect(booking.reload.manual_rate_override).to eq(175)
+
+    rate_result = described_class.new(
+      booking:,
+      params: { rate_selection: replacement_plan.id.to_s }
+    ).call
+    expect(rate_result.success?).to be(true)
+    expect(booking.reload.manual_rate_override).to be_nil
+    expect(booking_room.reload.rate_plan).to eq(replacement_plan)
+  end
+
+  it "stores a selected rate tier in the nightly snapshot" do
+    rate_plan = create(:rate_plan, room_type:, name: "Flexible")
+    create(:room_rate, room_type:, rate_plan:, date: Date.current, price: 100, walk_in_price: 125)
+
+    result = described_class.new(
+      booking:,
+      params: { rate_selection: Bookings::RateSelection.tier_token(:walk_in, rate_plan.id) }
+    ).call
+
+    expect(result.success?).to be(true)
+    expect(booking_room.reload.rate_plan).to eq(rate_plan)
+    expect(booking_room.nightly_rate_snapshot.dig(Date.current.iso8601, "rate_tier")).to eq("walk_in")
+  end
 end

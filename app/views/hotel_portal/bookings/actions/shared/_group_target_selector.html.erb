@@ -4,6 +4,7 @@
 <% selection_mode = local_assigns.fetch(:selection_mode, :checkbox).to_sym %>
 <% radio_mode = selection_mode == :radio %>
 <% selected_booking_ids = Array(local_assigns[:selected_booking_ids]).reject(&:blank?).map(&:to_s) %>
+<% target_scope = local_assigns.fetch(:target_scope, "individual").to_s %>
 
 <% if target_presenter.render? %>
   <div class="min-h-0 overflow-y-auto border-b border-border custom-scrollbar lg:col-start-1 lg:row-span-[99] lg:h-full lg:border-b-0 <%= 'lg:border-r' unless local_assigns[:embedded] %>" data-group-lifecycle-targets-target="rail">
@@ -12,11 +13,11 @@
         <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Perform <%= target_presenter.action_label %> on:</p>
         <div class="mt-4 flex flex-wrap gap-4 text-sm font-medium text-foreground">
           <label class="inline-flex items-center gap-2">
-            <%= radio_button_tag :target_scope, "group", false, data: { group_lifecycle_targets_target: "scope", action: "group-lifecycle-targets#scopeChanged" }, class: "size-4 border-border-interactive text-foreground focus:ring-ring" %>
+            <%= radio_button_tag :target_scope, "group", target_scope == "group", data: { group_lifecycle_targets_target: "scope", action: "group-lifecycle-targets#scopeChanged" }, class: "size-4 border-border-interactive text-foreground focus:ring-ring" %>
             <span>Group</span>
           </label>
           <label class="inline-flex items-center gap-2">
-            <%= radio_button_tag :target_scope, "individual", true, data: { group_lifecycle_targets_target: "scope", action: "group-lifecycle-targets#scopeChanged" }, class: "size-4 border-border-interactive text-foreground focus:ring-ring" %>
+            <%= radio_button_tag :target_scope, "individual", target_scope != "group", data: { group_lifecycle_targets_target: "scope", action: "group-lifecycle-targets#scopeChanged" }, class: "size-4 border-border-interactive text-foreground focus:ring-ring" %>
             <span>Individual Booking</span>
           </label>
         </div>

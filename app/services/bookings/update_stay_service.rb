@@ -11,6 +11,8 @@ module Bookings
       @room_type_id = @params.delete(:room_type_id)
       @room_number = @params.delete(:room_number)
       @rate_plan_id = @params.delete(:rate_plan_id)
+      @rate_selection_provided = @params.key?(:rate_selection)
+      @rate_selection_value = @params.delete(:rate_selection)
       @user = user
       @override = override
       @override_reason = override_reason
@@ -19,6 +21,7 @@ module Bookings
     def call
       return OpenStruct.new(success?: false, errors: [ "Status cannot be changed through stay update." ]) if @params.key?(:status)
       normalize_scheduled_stay!
+      prepare_rate_selection!
       guard_financially_relevant_change!
 
       failure_error = nil
@@ -33,6 +36,7 @@ module Bookings
         current_room = @booking.booking_rooms.first
         old_room_type_id = current_room&.room_type_id
         old_rate_plan_id = current_room&.rate_plan_id
+        current_rate_selection = RateSelection.current(current_room)
 
         # 2. Update Booking attributes (including dates and any other params)
         if @booking.update(@params)
@@ -41,27 +45,44 @@ module Bookings
 
           dates_changing = old_check_in != new_check_in || old_check_out != new_check_out
           room_type_changing = @room_type_id.present? && @room_type_id.to_i != old_room_type_id
-          rate_plan_changing = @rate_plan_id.present? && @rate_plan_id.to_i != old_rate_plan_id
+          rate_plan_changing = if @rate_selection_provided
+            @resolved_rate_selection.rate_plan&.id != old_rate_plan_id
+          else
+            @rate_plan_id.present? && @rate_plan_id.to_i != old_rate_plan_id
+          end
+          rate_tier_changing = @rate_selection_provided && @resolved_rate_selection.tier != current_rate_selection.tier
 
           # 3. Handle Financial and Inventory Changes if anything relevant changed
-          if dates_changing || room_type_changing || rate_plan_changing
+          if dates_changing || room_type_changing || rate_plan_changing || rate_tier_changing
             # Release old inventory using old dates and old room type
             InventoryManager.new(@booking).release_by_dates(old_check_in, old_check_out)
 
             # Determine new room type and rate plan
             new_room_type = room_type_changing ? @hotel.room_types.find(@room_type_id) : current_room&.room_type
-            new_rate_plan = @rate_plan_id.present? ? @hotel.rate_plans.find(@rate_plan_id) : current_room&.rate_plan
+            new_rate_plan = if @rate_selection_provided
+              @resolved_rate_selection.rate_plan
+            elsif @rate_plan_id.present?
+              @hotel.rate_plans.find(@rate_plan_id)
+            else
+              current_room&.rate_plan
+            end
 
             # Recalculate Price using BuildFinancialSnapshot (includes taxes)
             financial_snapshot = BuildFinancialSnapshot.new(
               hotel: @hotel,
+              booking: @booking,
               check_in: new_check_in,
               check_out: new_check_out,
               guest_country: @booking.guest_country,
               room_type: new_room_type,
               rate_plan: new_rate_plan,
+              rate_tier: effective_rate_tier(current_rate_selection),
               manual_total_amount: @booking.manual_rate_override
             ).call
+
+            nightly_rate_snapshot = financial_snapshot.nightly_rate_snapshot.transform_values do |entry|
+              entry.to_h.merge("rate_tier" => effective_rate_tier(current_rate_selection).to_s)
+            end
 
             # Update the booking room
             if current_room
@@ -70,7 +91,7 @@ module Bookings
                 room_type_snapshot: new_room_type.as_json,
                 rate_plan: new_rate_plan,
                 subtotal: financial_snapshot.room_total,
-                nightly_rate_snapshot: financial_snapshot.nightly_rate_snapshot
+                nightly_rate_snapshot:
               )
             end
 
@@ -184,6 +205,7 @@ module Bookings
       current_room = @booking.booking_rooms.first
       return true if @room_type_id.present? && @room_type_id.to_i != current_room&.room_type_id
       return true if @rate_plan_id.present? && @rate_plan_id.to_i != current_room&.rate_plan_id
+      return true if @rate_selection_provided && @rate_selection_changed
       return true if changed_booking_financial_field?
 
       nested_rooms = @params[:booking_rooms_attributes] || @params["booking_rooms_attributes"]
@@ -225,6 +247,31 @@ module Bookings
 
         @params[kind] = ScheduledStay.at_hotel_time(hotel: @hotel, value: @params[kind], kind: kind)
       end
+    end
+
+    def prepare_rate_selection!
+      # Callers commonly preload booking rooms for presentation. Reload here so
+      # rate comparisons are made against the persisted selection, not a stale
+      # inverse-association object retained by the caller.
+      current_room = @booking.booking_rooms.reload.first
+      return unless current_room
+
+      target_room_type = @room_type_id.present? ? @hotel.room_types.find(@room_type_id) : current_room.room_type
+      current_selection = RateSelection.current(current_room)
+      @resolved_rate_selection = if @rate_selection_provided
+        RateSelection.resolve(room_type: target_room_type, value: @rate_selection_value)
+      else
+        current_selection
+      end
+      @rate_selection_changed = @resolved_rate_selection.token != current_selection.token
+
+      if @rate_selection_provided && @rate_selection_changed && @booking.manual_rate_override.present?
+        @params[:manual_rate_override] = nil
+      end
+    end
+
+    def effective_rate_tier(current_selection)
+      @rate_selection_provided ? @resolved_rate_selection.tier : current_selection.tier
     end
 
     def extract_assigned_room_number

@@ -69,6 +69,23 @@
           <span>Cancel booking</span>
         <% end %>
       <% end %>
+
+      <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && booking.status.in?(HotelPortal::BookingLifecycleTargetPresenter::ELIGIBLE_STATUSES.fetch(:amend_stay)) %>
+        <% [
+             [ "Edit dates", hotel_booking_action_edit_dates_path(current_hotel, booking, navigation), "calendar-range" ],
+             [ "Change room", hotel_booking_action_edit_room_path(current_hotel, booking, navigation), "bed-double" ],
+             [ "Change rate", hotel_booking_action_edit_rate_path(current_hotel, booking, navigation), "tag" ]
+           ].each do |label, href, icon| %>
+          <%= render PanelsUI::Button.new(
+                href: href,
+                variant: :secondary,
+                size: :sm,
+                data: { turbo_frame: "booking_action_sheet_secondary" }) do %>
+            <%= app_icon icon, class: "size-4", aria: { hidden: true } %>
+            <span><%= label %></span>
+          <% end %>
+        <% end %>
+      <% end %>
     </div>
 
     <% if group_booking %>

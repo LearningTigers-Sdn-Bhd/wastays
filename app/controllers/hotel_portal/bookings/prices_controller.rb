@@ -40,18 +40,8 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
   private
 
   def parse_rate_selection(room_type, rate_plan_id)
-    return [ nil, :standard ] if rate_plan_id.blank?
-
-    if rate_plan_id.to_s.start_with?("tier_")
-      parts = rate_plan_id.to_s.split("_")
-      kind = parts[1] == "walk" ? :walk_in : parts[1].to_sym
-      real_plan_id = parts.last
-      plan = room_type.rate_plans.find_by(id: real_plan_id)
-      [ plan, kind ]
-    else
-      plan = room_type.rate_plans.find_by(id: rate_plan_id)
-      [ plan, :standard ]
-    end
+    selection = Bookings::RateSelection.resolve(room_type:, value: rate_plan_id)
+    [ selection.rate_plan, selection.tier ]
   end
 
   def authorize_view_bookings!

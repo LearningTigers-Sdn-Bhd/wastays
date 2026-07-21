@@ -193,6 +193,55 @@ export default class extends Controller {
     })
   }
 
+  // Replace a dynamic option set while keeping the native form value and the
+  // styled listbox in sync. Application controllers can call this through the
+  // Stimulus controller instance instead of reaching into SelectMenu internals.
+  replaceOptions(choices, selectedValue = "") {
+    this.close()
+    const normalized = Array.from(choices || []).map((choice) => ({
+      label: String(choice.label || ""),
+      value: String(choice.value ?? ""),
+      disabled: Boolean(choice.disabled)
+    }))
+
+    this.nativeTarget.replaceChildren(...normalized.map((choice) => {
+      const option = document.createElement("option")
+      option.value = choice.value
+      option.textContent = choice.label
+      option.disabled = choice.disabled
+      return option
+    }))
+
+    this.listboxTarget.replaceChildren(...normalized.map((choice, index) => {
+      const option = document.createElement("span")
+      option.id = `${this.nativeTarget.id}-option-${index}`
+      option.className = "panel-select-menu__option"
+      option.setAttribute("role", "option")
+      option.setAttribute("tabindex", "-1")
+      option.setAttribute("data-panels-ui--select-menu-target", "option")
+      option.dataset.value = choice.value
+      if (choice.disabled) option.setAttribute("aria-disabled", "true")
+
+      const label = document.createElement("span")
+      label.className = "panel-select-menu__option-label"
+      label.textContent = choice.label
+      option.append(label)
+
+      const check = document.createElement("span")
+      check.className = "panel-select-menu__check"
+      check.setAttribute("aria-hidden", "true")
+      option.append(check)
+      return option
+    }))
+
+    const selectable = normalized.find((choice) => choice.value === String(selectedValue) && !choice.disabled)
+    this.nativeTarget.value = selectable?.value || ""
+    this.nativeTarget.disabled = normalized.every((choice) => choice.disabled)
+    this.triggerTarget.disabled = this.nativeTarget.disabled
+    this.element.dataset.disabled = this.nativeTarget.disabled.toString()
+    this.syncFromNative()
+  }
+
   // Mirror the native value into the styled UI. Called on connect, on selection,
   // and whenever the native select changes (programmatically or via form reset).
   syncFromNative() {

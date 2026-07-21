@@ -5,7 +5,7 @@ module HotelPortal
     class BaseController < HotelPortal::BaseController
       include OffcanvasTransactionCompletion
 
-      helper_method :stay_view_state, :pointer_proposal?
+      helper_method :stay_view_state
 
       before_action :set_stay_view_context
 
@@ -94,16 +94,6 @@ module HotelPortal
         raise ActiveRecord::RecordNotFound unless room_type.room_numbers.map(&:to_s).include?(room_number.to_s)
 
         "#{room_type.id}:#{room_number}"
-      end
-
-      def pointer_proposal?
-        params[:proposal] == "pointer"
-      end
-
-      def validate_pointer_proposal(booking:, room_type:, room_number:, check_in:, check_out:)
-        ::StayView::ValidateBookingProposal.call(
-          booking:, room_type:, room_number:, check_in:, check_out:
-        ).each { |message| add_error(booking, message) }
       end
 
       def board_streams(board, message, affected_room_keys)
