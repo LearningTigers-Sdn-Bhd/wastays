@@ -177,6 +177,65 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     expect(sibling.reload.status).to eq("checked_in")
   end
 
+  it "resolves a folio beside its settlement fields and completes checkout", js: true do
+    role.permissions << Permission.find_or_create_by!(slug: "post_folio_payments") { |record| record.name = "Post folio payments" }
+    booking.update!(check_in: 2.hours.ago, check_out: Time.current)
+    booking.update_columns(status: "checkout_required", checked_in_at: 2.hours.ago)
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
+
+    relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+    company_folio = create(
+      :booking_folio,
+      :secondary,
+      booking: booking,
+      hotel: hotel,
+      name: "Company Folio",
+      hotel_corporate_account: relationship
+    )
+    create(:folio_transaction, booking_folio: company_folio, transaction_type: "charge", amount: 60)
+
+    visit hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
+    find("button[aria-label='Booking actions']").click
+    click_link "Complete Checkout"
+
+    expect(page).to have_css("dialog#booking-checkout-sheet[open]", wait: 3)
+    page.current_window.resize_to(390, 844)
+    expect(page.evaluate_script(<<~JS)).to be(true)
+      (() => {
+        const panel = document.querySelector('#booking-checkout-sheet [data-panels-ui--sheet-target="panel"]')
+        return panel.scrollWidth <= panel.clientWidth
+      })()
+    JS
+    page.current_window.resize_to(1400, 1400)
+
+    within("#booking-checkout-sheet") do
+      expect(page).to have_content("Resolve folios")
+      expect(page).to have_no_content("Settlement Details")
+
+      company_row = find("article", text: "Company Folio")
+      expect(company_row).to have_css(".panel-collapsible[data-state='closed']")
+      click_in_overlay company_row.find("button", text: "Resolve folio")
+      expect(company_row).to have_css(".panel-collapsible[data-state='open']")
+      click_in_overlay company_row.find(".panel-select-menu__trigger")
+      click_in_overlay find("[role='option']", text: "Pay Now", visible: true)
+
+      within(company_row) do
+        expect(page).to have_field("Payment method", with: "cash", visible: :all)
+        fill_in "Payment reference", with: "COUNTER-42"
+      end
+
+      deposit_switch = find("label.panel-switch", text: "Return at checkout")
+      click_in_overlay deposit_switch
+      expect(find("select[name='security_deposit_release_method']", visible: :all)).to be_disabled
+      click_in_overlay deposit_switch
+
+      click_in_overlay "Complete checkout"
+    end
+
+    expect(page).to have_no_css("dialog#booking-checkout-sheet", wait: 3)
+    expect(booking.reload.status).to eq("completed")
+  end
+
   it "adds and removes a guest through booking action Sheets", js: true do
     visit hotel_booking_control_panel_path(hotel, booking, tab: "guest_details")
 

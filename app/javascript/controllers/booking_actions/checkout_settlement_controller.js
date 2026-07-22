@@ -8,8 +8,8 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = [
     "submitButton",
-    "actionSelect",
-    "detailRow",
+    "actionControl",
+    "folioRow",
     "paymentFields",
     "reasonFields",
     "directBillFields",
@@ -65,8 +65,8 @@ export default class extends Controller {
     if (!this.hasSubmitButtonTarget) return
 
     let valid = true
-    if (this.hasBookingRowTarget) {
-      valid = valid && this.visibleBookingRows.length > 0 && this.visibleRequiredFieldsComplete
+    if (this.hasFolioRowTarget) {
+      valid = valid && this.visibleFolioRows.length > 0 && this.visibleRequiredFieldsComplete
     }
 
     this.submitButtonTarget.disabled = !valid
@@ -75,13 +75,10 @@ export default class extends Controller {
   }
 
   updateSettlementDetails() {
-    this.detailRowTargets.forEach((row) => {
+    this.folioRowTargets.forEach((row) => {
       const folioId = row.dataset.folioId
       const action = this.selectedActionFor(folioId)
-      const bookingVisible = this.rowBookingVisible(row)
-      const visible = bookingVisible && [ "pay_now", "direct_bill", "keep_open", "manager_review", "write_off_approval" ].includes(action)
 
-      row.classList.toggle("hidden", !visible)
       this.toggleFields(row, "paymentFields", action === "pay_now")
       this.toggleFields(row, "reasonFields", [ "keep_open", "manager_review", "write_off_approval" ].includes(action))
       this.toggleFields(row, "directBillFields", action === "direct_bill")
@@ -106,8 +103,11 @@ export default class extends Controller {
     this.bookingRowTargets.forEach((row) => {
       const visible = !emptyGroupSelection && (selected.includes(row.dataset.bookingId) || (selected.length === 0 && this.singleBookingMode))
       row.classList.toggle("hidden", !visible)
-      row.querySelectorAll("input, select, textarea").forEach((field) => {
-        if (field.name?.startsWith("checkout_bookings") || field.name?.startsWith("early_departures")) field.disabled = !visible
+      row.querySelectorAll("input, select, textarea, button").forEach((field) => {
+        if (!field.name?.startsWith("checkout_bookings") && !field.name?.startsWith("early_departures") && field.tagName !== "BUTTON") return
+
+        const permanentlyDisabled = field.closest("[data-permanent-disabled='true']") !== null
+        field.disabled = !visible || permanentlyDisabled
       })
     })
 
@@ -132,13 +132,14 @@ export default class extends Controller {
     let directBill = 0
     let keepOpen = 0
 
-    this.actionSelectTargets.forEach((select) => {
-      if (!this.rowBookingVisible(select.closest("[data-booking-actions--checkout-settlement-target~='bookingRow']"))) return
+    this.actionControlTargets.forEach((control) => {
+      if (!this.rowBookingVisible(control.closest("[data-booking-actions--checkout-settlement-target~='bookingRow']"))) return
 
-      const amount = this.amountForActionSelect(select)
-      if (select.value === "pay_now") collectNow += amount
-      if (select.value === "direct_bill") directBill += amount
-      if ([ "keep_open", "manager_review", "write_off_approval" ].includes(select.value)) keepOpen += 1
+      const action = this.controlValue(control)
+      const amount = this.amountForActionControl(control)
+      if (action === "pay_now") collectNow += amount
+      if (action === "direct_bill") directBill += amount
+      if ([ "keep_open", "manager_review", "write_off_approval" ].includes(action)) keepOpen += 1
     })
 
     if (this.hasCollectNowAmountTarget) this.collectNowAmountTarget.textContent = `${this.currencyValue} ${this.formatMoney(collectNow)}`
@@ -147,22 +148,26 @@ export default class extends Controller {
   }
 
   selectedActionFor(folioId) {
-    const select = this.actionSelectTargets.find((target) => target.dataset.folioId === folioId)
-    return select ? select.value : ""
+    const control = this.actionControlTargets.find((target) => target.dataset.folioId === folioId)
+    return control ? this.controlValue(control) : ""
   }
 
   toggleFields(row, targetName, enabled) {
     row.querySelectorAll(`[data-booking-actions--checkout-settlement-target='${targetName}']`).forEach((container) => {
       container.classList.toggle("hidden", !enabled)
-      container.querySelectorAll("input, select, textarea").forEach((input) => {
-        if (input.dataset.requiredForAction === "true") input.required = enabled
+      container.querySelectorAll("[data-conditional-required='true'] input, [data-conditional-required='true'] select, [data-required-for-action='true']").forEach((input) => {
+        input.required = enabled
       })
     })
   }
 
-  amountForActionSelect(select) {
-    const input = this.element.querySelector(`input[name$="[${select.dataset.folioId}][amount]"]`)
+  amountForActionControl(control) {
+    const input = this.element.querySelector(`input[name$="[${control.dataset.folioId}][amount]"]`)
     return this.roundMoney(Math.abs(Number.parseFloat(input?.value || "0")))
+  }
+
+  controlValue(control) {
+    return control.matches("select") ? control.value : (control.querySelector("select")?.value || "")
   }
 
   rowBookingVisible(row) {
@@ -180,12 +185,16 @@ export default class extends Controller {
     return this.hasBookingRowTarget ? this.bookingRowTargets.filter((row) => !row.classList.contains("hidden")) : []
   }
 
+  get visibleFolioRows() {
+    return this.hasFolioRowTarget ? this.folioRowTargets.filter((row) => !row.classList.contains("hidden")) : []
+  }
+
   get visibleBookingIds() {
     return [ ...new Set(this.visibleBookingRows.map((row) => row.dataset.bookingId).filter(Boolean)) ]
   }
 
   get visibleRequiredFieldsComplete() {
-    return this.visibleBookingRows.every((row) => {
+    return this.visibleFolioRows.every((row) => {
       return Array.from(row.querySelectorAll("input[required], select[required], textarea[required]")).every((field) => field.disabled || field.value.trim() !== "")
     })
   }

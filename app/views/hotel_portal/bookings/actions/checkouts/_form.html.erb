@@ -7,14 +7,10 @@
 <% checkout_bookings = group_checkout ? target_presenter.rows.select(&:eligible).map(&:booking) : [ booking ] %>
 <% checkout_bookings = [ booking ] if checkout_bookings.empty? %>
 <% checkout_sheets = checkout_bookings.index_with { |checkout_booking| checkout_sheet_presenter(checkout_booking) } %>
-<% selected_booking_ids = Array(params[:booking_ids]).reject(&:blank?).map(&:to_s) %>
-<% selected_booking_ids = [ booking.id.to_s ] if group_checkout && selected_booking_ids.empty? %>
-<% selected_count = group_checkout ? selected_booking_ids.size : 0 %>
-<% selected_sheets = group_checkout ? checkout_sheets.select { |cb, _s| selected_booking_ids.include?(cb.id.to_s) } : checkout_sheets %>
-<% collect_now = selected_sheets.values.sum { |sheet| sheet.folio_rows.select { |row| row.default_action == "pay_now" }.sum { |row| row.balance.to_d } } %>
-<% direct_bill_total = selected_sheets.values.sum { |sheet| sheet.folio_rows.select { |row| row.default_action == "direct_bill" }.sum { |row| row.balance.to_d } } %>
-<% keep_open_count = selected_sheets.values.sum { |sheet| sheet.folio_rows.count { |row| row.default_action.in?(HotelPortal::Bookings::Actions::Checkouts::SheetPresenter::EXCEPTION_ACTIONS) } } %>
+<% form_state = checkout_form_state(bookings: checkout_bookings, sheets: checkout_sheets) %>
+<% selected_booking_ids = form_state.selected_booking_ids %>
 <% all_held_deposits = checkout_sheets.values.flat_map(&:held_deposits) %>
+<% early_departure_bookings = checkout_bookings.select { |checkout_booking| checkout_business_date < checkout_booking.check_out.to_date } %>
 <% ns = "booking-actions--checkout-settlement" %>
 
 <div data-controller="panels-ui--sheet-frame">
@@ -26,114 +22,141 @@
         description: group_checkout ? booking.group_booking.name : booking.guest_name,
         body_class: "p-0") do |sheet| %>
     <% sheet.with_body do %>
-      <div class="flex h-full min-h-0 flex-col bg-muted"
+      <div class="flex h-full min-h-0 flex-col"
            data-controller="group-lifecycle-targets <%= ns %>"
            data-action="<%= ns %>:charge-changed-><%= ns %>#updateEarlyDepartureCharge group-lifecycle-targets:changed-><%= ns %>#syncBookingSections"
            data-<%= ns %>-currency-value="<%= currency %>"
            data-<%= ns %>-group-checkout-value="<%= group_checkout %>">
-        <%= form_with url: hotel_booking_action_checkout_path(current_hotel, booking), method: :post, class: "flex min-h-0 flex-1 flex-col overflow-hidden" do |f| %>
+        <%= form_with url: hotel_booking_action_checkout_path(current_hotel, booking), method: :post,
+              id: "booking-checkout-form", class: "flex min-h-0 flex-1 flex-col overflow-hidden" do %>
           <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
           <%= hidden_field_tag :source, params[:source] if params[:source].present? %>
 
-          <div class="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[22rem_minmax(0,1fr)]">
-            <aside class="min-h-0 overflow-y-auto border-b border-border bg-card lg:border-b-0 lg:border-r">
-              <% if group_checkout %>
+          <div class="min-h-0 flex-1 overflow-hidden <%= group_checkout ? 'grid grid-cols-1 lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[22rem_minmax(0,1fr)]' : '' %>">
+            <% if group_checkout %>
+              <aside class="min-h-0 overflow-y-auto border-b border-border bg-muted/30 lg:border-b-0 lg:border-r">
                 <%= render "hotel_portal/bookings/actions/shared/group_target_selector",
-                      target_presenter: target_presenter, master_detail: true, selected_booking_ids: selected_booking_ids, embedded: true %>
-              <% else %>
-                <% room = booking.booking_rooms.first %>
-                <div class="border-b border-border px-5 py-4">
-                  <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Booking</p>
-                  <p class="mt-2 text-sm font-black text-foreground">Booking #<%= booking.formatted_reservation_number.presence || booking.confirmation_token %></p>
-                  <p class="mt-1 text-xs font-semibold text-muted-foreground"><%= room&.room_type&.name.presence || room&.room_type_snapshot.to_h["name"].presence || "Room type unavailable" %> - <%= room&.room_number.presence || "Unassigned room" %></p>
-                  <p class="mt-1 text-xs text-muted-foreground"><%= booking.guest_name %> · <%= booking.status.humanize %></p>
-                </div>
-              <% end %>
-            </aside>
+                      target_presenter: target_presenter,
+                      master_detail: true,
+                      selected_booking_ids: selected_booking_ids,
+                      embedded: true %>
+              </aside>
+            <% end %>
 
-            <section class="flex min-h-0 flex-col overflow-y-auto bg-card">
-              <div class="flex min-h-full flex-col space-y-0">
-                <div class="border-b border-border bg-card px-5 py-3" data-<%= ns %>-target="requiresSelection">
-                  <div class="grid gap-3 text-xs sm:grid-cols-4">
-                    <% if group_checkout %>
-                      <div><p class="font-bold uppercase tracking-wider text-muted-foreground">Selected</p><p class="mt-0.5 font-black text-foreground" data-<%= ns %>-target="selectedCount"><%= selected_count %> <%= 'booking'.pluralize(selected_count) %></p></div>
-                    <% end %>
-                    <div><p class="font-bold uppercase tracking-wider text-muted-foreground">Collect Now</p><p class="mt-0.5 font-black text-foreground" data-<%= ns %>-target="collectNowAmount"><%= currency %> <%= format('%.2f', collect_now) %></p></div>
-                    <div><p class="font-bold uppercase tracking-wider text-muted-foreground">Direct Bill</p><p class="mt-0.5 font-black text-foreground" data-<%= ns %>-target="directBillAmount"><%= currency %> <%= format('%.2f', direct_bill_total) %></p></div>
-                    <div><p class="font-bold uppercase tracking-wider text-muted-foreground">Keep Open</p><p class="mt-0.5 font-black text-foreground" data-<%= ns %>-target="keepOpenCount"><%= pluralize(keep_open_count, "folio") %></p></div>
-                  </div>
-                </div>
-
-                <% if checkout_error.present? %>
-                  <div class="border-b border-destructive/30 bg-destructive/10 px-5 py-3 text-sm font-semibold text-destructive" role="alert" aria-live="polite"><%= checkout_error %></div>
+            <main class="h-full min-h-0 overflow-y-auto custom-scrollbar">
+              <div class="space-y-8 px-4 py-6 sm:px-6">
+                <% unless group_checkout %>
+                  <% room = booking.booking_rooms.first %>
+                  <section aria-labelledby="checkout-booking-heading" class="space-y-1">
+                    <h3 id="checkout-booking-heading" class="text-base font-semibold">Booking #<%= booking.formatted_reservation_number.presence || booking.confirmation_token %></h3>
+                    <p class="text-sm text-muted-foreground">
+                      <%= room&.room_type&.name.presence || room&.room_type_snapshot.to_h["name"].presence || "Room type unavailable" %>
+                      · <%= room&.room_number.presence || "Unassigned room" %>
+                      · <%= booking.status.humanize %>
+                    </p>
+                  </section>
                 <% end %>
 
-                <div class="hidden min-h-0 flex-1 items-center justify-center bg-muted px-5 py-16 text-center" data-<%= ns %>-target="emptySelection">
+                <dl class="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4" data-<%= ns %>-target="requiresSelection">
+                  <% if group_checkout %>
+                    <div>
+                      <dt class="text-sm text-muted-foreground">Selected bookings</dt>
+                      <dd class="mt-1 text-sm font-medium tabular-nums" data-<%= ns %>-target="selectedCount"><%= form_state.selected_count %> <%= "booking".pluralize(form_state.selected_count) %></dd>
+                    </div>
+                  <% end %>
                   <div>
-                    <p class="text-sm font-black uppercase tracking-wider text-foreground">Please select the bookings</p>
-                    <p class="mt-1 text-xs font-semibold text-muted-foreground">Choose at least one eligible booking from the left rail to review checkout details and folios.</p>
+                    <dt class="text-sm text-muted-foreground">Collect now</dt>
+                    <dd class="mt-1 text-sm font-medium tabular-nums" data-<%= ns %>-target="collectNowAmount"><%= currency %> <%= format("%.2f", form_state.collect_now_total) %></dd>
                   </div>
-                </div>
+                  <div>
+                    <dt class="text-sm text-muted-foreground">Direct bill</dt>
+                    <dd class="mt-1 text-sm font-medium tabular-nums" data-<%= ns %>-target="directBillAmount"><%= currency %> <%= format("%.2f", form_state.direct_bill_total) %></dd>
+                  </div>
+                  <div>
+                    <dt class="text-sm text-muted-foreground">Keep open</dt>
+                    <dd class="mt-1 text-sm font-medium tabular-nums" data-<%= ns %>-target="keepOpenCount"><%= pluralize(form_state.keep_open_count, "folio") %></dd>
+                  </div>
+                </dl>
 
-                <% early_departure_bookings = checkout_bookings.select { |cb| checkout_business_date < cb.check_out.to_date } %>
-                <% current_early_departure = early_departure_bookings.any? %>
-                <div class="grid items-stretch gap-px border-b border-border bg-muted <%= early_departure_bookings.one? ? "xl:grid-cols-2" : "sm:grid-cols-2 xl:grid-cols-3" if current_early_departure %>" data-<%= ns %>-target="requiresSelection">
-                  <%= render "hotel_portal/bookings/actions/checkouts/details", form: f, booking: booking, presenter: @presenter %>
-                  <% early_departure_bookings.each do |early_booking| %>
-                    <% early_booking_visible = !group_checkout || selected_booking_ids.include?(early_booking.id.to_s) %>
-                    <%= render "hotel_portal/bookings/actions/checkouts/early_departure", booking: early_booking, currency: currency, visible: early_booking_visible, ns: ns %>
+                <% if checkout_error.present? %>
+                  <%= render PanelsUI::Alert.new(tone: :destructive, title: "Checkout could not be completed", role: :alert, aria: { live: "assertive" }) do |alert| %>
+                    <% alert.with_description { checkout_error } %>
+                  <% end %>
+                <% end %>
+
+                <div class="hidden" data-<%= ns %>-target="emptySelection">
+                  <%= render PanelsUI::Alert.new(tone: :info, title: "Select at least one booking") do |alert| %>
+                    <% alert.with_description { "Choose an eligible booking from the group rail to review its checkout details and folios." } %>
                   <% end %>
                 </div>
 
-                <div class="divide-y divide-border border-b border-border">
-                  <%= render "hotel_portal/bookings/actions/checkouts/folio_list", checkout_sheets: checkout_sheets, selected_booking_ids: selected_booking_ids, group_checkout: group_checkout, ns: ns %>
-                  <div class="h-3 bg-muted" aria-hidden="true"></div>
-                  <%= render "hotel_portal/bookings/actions/checkouts/settlement_details", checkout_sheets: checkout_sheets, selected_booking_ids: selected_booking_ids, group_checkout: group_checkout, ns: ns %>
+                <div class="space-y-8" data-<%= ns %>-target="requiresSelection">
+                  <%= fields_for "booking", OpenStruct.new(checked_out_at: form_state.checked_out_at) do |booking_form| %>
+                    <section aria-labelledby="checkout-details-heading" class="space-y-4">
+                      <div>
+                        <h3 id="checkout-details-heading" class="text-base font-semibold">Checkout details</h3>
+                        <p class="mt-1 text-sm text-muted-foreground">Confirm the actual departure time before resolving the booking folios.</p>
+                      </div>
+                      <%= render PanelsUI::FormField.new(
+                            form: booking_form,
+                            attribute: :checked_out_at,
+                            label: "Check-out date and time",
+                            hint: "Scheduled checkout: #{booking.check_out.strftime('%d %b %Y')}",
+                            required: booking.checkout_required?) do |field| %>
+                        <% field.with_date_time_picker(value: form_state.checked_out_at, minute_step: 5) %>
+                      <% end %>
+                    </section>
+                  <% end %>
+
+                  <% if early_departure_bookings.any? %>
+                    <section aria-labelledby="early-departure-heading" class="space-y-4">
+                      <div>
+                        <h3 id="early-departure-heading" class="text-base font-semibold">Early departure</h3>
+                        <p class="mt-1 text-sm text-muted-foreground">These bookings leave before their scheduled date. Pending stay charges post automatically at checkout — toggle a booking to add an extra charge.</p>
+                      </div>
+                      <div class="divide-y divide-border rounded-lg border border-border [&>*]:px-4 [&>*]:py-3">
+                        <% early_departure_bookings.each do |early_booking| %>
+                          <%= render "hotel_portal/bookings/actions/checkouts/early_departure",
+                                booking: early_booking,
+                                currency: currency,
+                                visible: !group_checkout || form_state.selected?(early_booking),
+                                values: form_state.early_departure_values(early_booking),
+                                ns: ns %>
+                        <% end %>
+                      </div>
+                    </section>
+                  <% end %>
+
+                  <%= render "hotel_portal/bookings/actions/checkouts/folio_resolver",
+                        checkout_sheets: checkout_sheets,
+                        form_state: form_state,
+                        group_checkout: group_checkout,
+                        ns: ns %>
+
+                  <% if all_held_deposits.any? %>
+                    <%= render "hotel_portal/bookings/actions/checkouts/security_deposit",
+                          checkout_sheets: checkout_sheets,
+                          deposits: all_held_deposits,
+                          form_state: form_state,
+                          currency: currency %>
+                  <% end %>
                 </div>
-
-                <% if all_held_deposits.any? %>
-                  <% release_security_deposit = params[:release_security_deposit].nil? || params[:release_security_deposit] == "1" %>
-                  <% release_method = params[:security_deposit_release_method].presence || "cash" %>
-                  <section class="border-b border-border bg-card" data-controller="payment-toggle">
-                    <div class="flex items-start justify-between gap-4 border-b border-border px-4 py-3">
-                      <div class="flex min-w-0 items-start gap-2.5">
-                        <%= app_icon "shield-check", class: "mt-0.5 size-4 shrink-0 text-emerald-700", aria: { hidden: true } %>
-                        <div>
-                          <h3 class="text-sm font-bold text-foreground">Security Deposit</h3>
-                          <p class="mt-0.5 text-xs font-semibold text-muted-foreground"><%= currency %> <%= format('%.2f', all_held_deposits.sum { |deposit| deposit.amount.to_d }) %> held independently from the folio.</p>
-                          <p class="mt-0.5 text-[11px] text-muted-foreground">Return security deposits at checkout.</p>
-                        </div>
-                      </div>
-                      <div class="flex shrink-0 items-center">
-                        <%= hidden_field_tag :release_security_deposit, "0", id: nil %>
-                        <label class="relative inline-flex cursor-pointer items-center">
-                          <%= check_box_tag :release_security_deposit, "1", release_security_deposit, class: "peer sr-only", role: "switch", aria: { label: "Return security deposit at checkout" }, data: { payment_toggle_target: "checkbox", action: "change->payment-toggle#toggle" } %>
-                          <span class="block h-6 w-11 rounded-full bg-muted transition peer-checked:bg-emerald-600 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-border-interactive after:bg-card after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-border"></span>
-                        </label>
-                      </div>
-                    </div>
-                    <div class="grid gap-3 px-4 py-3 sm:grid-cols-2 <%= "opacity-50" unless release_security_deposit %>" data-payment-toggle-target="container">
-                      <div>
-                        <%= label_tag :security_deposit_release_method, "Method", class: "mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground" %>
-                        <%= select_tag :security_deposit_release_method, options_for_select(checkout_sheets.values.first.security_deposit_release_method_options, release_method), disabled: !release_security_deposit, class: "w-full rounded-md border border-border-interactive bg-card px-3 py-2 text-xs font-semibold text-foreground focus:border-ring focus:outline-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground", data: { payment_toggle_target: "field" } %>
-                      </div>
-                      <div>
-                        <%= label_tag :security_deposit_release_reference, "Reference", class: "mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground" %>
-                        <%= text_field_tag :security_deposit_release_reference, params[:security_deposit_release_reference], placeholder: "Optional receipt/reference", disabled: !release_security_deposit, class: "w-full rounded-md border border-border-interactive bg-card px-3 py-2 text-xs font-semibold text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground", data: { payment_toggle_target: "field" } %>
-                      </div>
-                    </div>
-                  </section>
-                <% end %>
               </div>
-            </section>
-          </div>
-
-          <div class="z-10 flex shrink-0 items-center justify-end gap-2 border-t border-border bg-card px-4 py-3 sm:px-6">
-            <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted" data-action="panels-ui--sheet#close">Cancel</button>
-            <%= submit_tag(group_checkout ? "Complete group checkout" : "Complete checkout", class: "cursor-pointer rounded-md bg-primary px-5 py-2 text-sm font-bold text-primary-foreground transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50", data: { turbo_submits_with: "Checking out…", "#{ns}-target": "submitButton" }) %>
+            </main>
           </div>
         <% end %>
       </div>
+    <% end %>
+
+    <% sheet.with_footer do %>
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            type: :submit,
+            form: "booking-checkout-form",
+            data: { turbo_submits_with: "Checking out…", "#{ns}-target": "submitButton" }) do %>
+        <%= group_checkout ? "Complete group checkout" : "Complete checkout" %>
+      <% end %>
     <% end %>
   <% end %>
 </div>

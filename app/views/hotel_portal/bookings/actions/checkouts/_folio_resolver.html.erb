@@ -1,0 +1,59 @@
+<% ns = local_assigns.fetch(:ns) %>
+<% sheets = local_assigns.fetch(:checkout_sheets) %>
+<% form_state = local_assigns.fetch(:form_state) %>
+<% group_checkout = local_assigns.fetch(:group_checkout, false) %>
+
+<section aria-labelledby="folio-resolver-heading" class="space-y-4">
+  <div>
+    <h3 id="folio-resolver-heading" class="text-base font-semibold">Resolve folios</h3>
+    <p class="mt-1 text-sm text-muted-foreground">Folios needing a decision open automatically. Open any other folio to change how it settles.</p>
+  </div>
+
+  <div class="space-y-4" data-testid="folio-resolver-list">
+    <% sheets.each do |checkout_booking, sheet| %>
+      <% room = checkout_booking.booking_rooms.first %>
+      <% booking_visible = !group_checkout || form_state.selected?(checkout_booking) %>
+      <% room_type_name = room&.room_type&.name.presence || room&.room_type_snapshot.to_h["name"].presence || "Room type unavailable" %>
+      <% room_number = room&.room_number.presence || "Unassigned room" %>
+      <% folio_count = sheet.folio_rows.size %>
+
+      <% card_locals = { ns: ns, checkout_booking: checkout_booking, sheet: sheet, form_state: form_state, booking_visible: booking_visible } %>
+
+      <% if group_checkout %>
+        <div class="<%= 'hidden' unless booking_visible %>"
+             data-<%= ns %>-target="bookingRow"
+             data-booking-id="<%= checkout_booking.id %>">
+          <%= render PanelsUI::Collapsible.new(
+                id: "checkout-booking-#{checkout_booking.id}",
+                open: true,
+                heading_level: 3,
+                region: true,
+                class: "overflow-hidden rounded-lg border border-border bg-card",
+                trigger_class: "group items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50",
+                content_class: "space-y-3 border-t border-border bg-muted/20 p-3"
+              ) do |group_card| %>
+            <% group_card.with_trigger do %>
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-semibold"><%= room_number %> · <%= room_type_name %></span>
+                <span class="mt-0.5 block truncate text-xs text-muted-foreground"><%= checkout_booking.guest_name %></span>
+              </span>
+              <span class="shrink-0 text-xs text-muted-foreground tabular-nums"><%= pluralize(folio_count, "folio") %> · <%= sheet.money(sheet.booking_balance) %></span>
+              <%= app_icon "chevron-down", class: "panel-collapsible__indicator size-4 shrink-0 text-muted-foreground", aria: { hidden: true } %>
+            <% end %>
+            <% group_card.with_body do %>
+              <% sheet.folio_rows.each do |row| %>
+                <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row %>
+              <% end %>
+            <% end %>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="space-y-3">
+          <% sheet.folio_rows.each do |row| %>
+            <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row %>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</section>

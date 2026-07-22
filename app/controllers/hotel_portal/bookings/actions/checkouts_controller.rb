@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "ostruct"
+
 module HotelPortal
   module Bookings
     module Actions
@@ -14,7 +16,7 @@ module HotelPortal
       class CheckoutsController < BaseController
         include GroupLifecycleTargeting
 
-        helper_method :checkout_sheet_presenter, :checkout_early_checkout_lines, :checkout_penalty_folio_id
+        helper_method :checkout_sheet_presenter, :checkout_early_checkout_lines, :checkout_penalty_folio_id, :checkout_form_state
 
         def show
           return complete if request.post?
@@ -144,6 +146,18 @@ module HotelPortal
             hotel: current_hotel,
             user: current_user,
             early_checkout_lines: checkout_early_checkout_lines(booking)
+          )
+        end
+
+        def checkout_form_state(bookings:, sheets:)
+          @checkout_form_state ||= HotelPortal::Bookings::Actions::Checkouts::FormState.new(
+            anchor_booking: @booking,
+            bookings: bookings,
+            sheets: sheets,
+            checked_out_at_default: @presenter.checked_out_at_form_value,
+            params: params,
+            submitted: request.post?,
+            group: @booking.group_booking_id.present?
           )
         end
 

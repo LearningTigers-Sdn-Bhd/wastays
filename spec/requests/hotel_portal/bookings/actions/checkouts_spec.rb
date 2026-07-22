@@ -51,11 +51,33 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
 
       expect(dialog).to be_present
       expect(dialog["data-panels-ui-sheet-side"]).to eq("bottom")
-      expect(dialog.text).to include("Checkout", "Folio List")
+      expect(dialog.text).to include("Checkout", "Resolve folios")
+      expect(dialog.text).not_to include("Folio List", "Settlement Details")
       expect(dialog.at_css("[data-controller~='booking-actions--checkout-settlement']")).to be_present
-      expect(dialog.at_css("input[name='checked_out_at']")).to be_present
+      expect(dialog.at_css("input[name='booking[checked_out_at]']")).to be_present
+      expect(dialog.at_css(".panel-date-time-picker")).to be_present
+      expect(dialog.at_css("[data-booking-actions--checkout-settlement-target~='folioRow'] .panel-select-menu")).to be_present
+      expect(dialog.at_css("[data-booking-actions--checkout-settlement-target~='folioRow'] .panel-collapsible[data-state='closed']")).to be_present
+      expect(dialog.at_css("button.panel-collapsible__trigger[aria-expanded='false']").text).to include("Resolve folio")
+      expect(dialog.at_css("button.panel-button[type='submit'][form='booking-checkout-form']")).to be_present
+      expect(dialog.css("section.bg-card")).to be_empty
+      resolver_list = dialog.at_css("[data-testid='folio-resolver-list']")
+      expect(resolver_list["class"]).not_to include("divide-y", "border-y")
       expect(response.body).not_to include("<!DOCTYPE html>")
       expect(response.body).not_to include("offcanvas")
+    end
+
+    it "renders held-deposit controls through PanelsUI with top-level parameter names" do
+      folio = booking.booking_folios.first
+      create(:deposit, booking: booking, hotel: hotel, booking_folio: folio, amount: 125, status: "held")
+
+      get hotel_booking_action_checkout_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-checkout-sheet")
+      expect(dialog.at_css("input.panel-switch__input[name='release_security_deposit'][role='switch']")).to be_present
+      expect(dialog.at_css("select[name='security_deposit_release_method']")).to be_present
+      expect(dialog.at_css("input[name='security_deposit_release_reference']")).to be_present
     end
 
     it "renders the group target selector for a group booking" do
@@ -114,6 +136,48 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("dialog", "Cannot check out with Guest Folio balance of MYR 50.00.")
+    end
+
+    it "preserves submitted resolver, early-departure, timestamp, and deposit values after failure" do
+      booking.update!(check_out: Date.current + 2.days)
+      folio = booking.booking_folios.first
+      create(:folio_transaction, booking_folio: folio, amount: 50, transaction_type: "charge")
+      create(:deposit, booking: booking, hotel: hotel, booking_folio: folio, amount: 125, status: "held")
+      stub_checkout(success: false, error: "Payment reference is required.")
+
+      post hotel_booking_action_checkout_path(hotel, booking),
+        params: {
+          booking: { checked_out_at: "" },
+          checkout_bookings: {
+            booking.id => {
+              folios: {
+                folio.id => {
+                  action: "pay_now",
+                  amount: "50.00",
+                  payment_method: "bank_transfer",
+                  payment_reference: ""
+                }
+              }
+            }
+          },
+          early_departures: {
+            booking.id => { apply_charge: "true", type: "percentage", value: "25", charge_amount: "12.50" }
+          },
+          release_security_deposit: "1",
+          security_deposit_release_method: "bank_transfer",
+          security_deposit_release_reference: "DEP-42"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+      document = Nokogiri::HTML(response.body)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(document.at_css("input[name='booking[checked_out_at]']")["value"]).to eq("")
+      expect(document.at_css("select[name='checkout_bookings[#{booking.id}][folios][#{folio.id}][payment_method]'] option[selected]")["value"]).to eq("bank_transfer")
+      expect(document.at_css("input[name='checkout_bookings[#{booking.id}][folios][#{folio.id}][payment_reference]']")["value"]).to eq("")
+      expect(document.at_css("input[name='early_departures[#{booking.id}][apply_charge]'][value='true']")).to be_present
+      expect(document.at_css("input[name='early_departures[#{booking.id}][value]']")["value"]).to eq("25")
+      expect(document.at_css("select[name='security_deposit_release_method'] option[selected]")["value"]).to eq("bank_transfer")
+      expect(document.at_css("input[name='security_deposit_release_reference']")["value"]).to eq("DEP-42")
     end
 
     it "blocks checkout-required submission without a timestamp" do

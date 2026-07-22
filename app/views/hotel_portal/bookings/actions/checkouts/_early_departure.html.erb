@@ -1,67 +1,65 @@
 <% ns = local_assigns.fetch(:ns) %>
-<% ed = "booking-actions--early-departure" %>
+<% values = local_assigns.fetch(:values) %>
+<% early_departure = "booking-actions--early-departure" %>
 <% nights = (booking.check_out.to_date - booking.check_in.to_date).to_i %>
 <% suggested_charge = nights.positive? ? (booking.total_amount.to_d / nights).round(2) : 0 %>
-<% field_prefix = "early_departures[#{booking.id}]" %>
+<% field_scope = "early_departures[#{booking.id}]" %>
 <% visible = local_assigns.fetch(:visible, true) %>
+<% room = booking.booking_rooms.first %>
 
-<section class="flex h-full flex-col bg-card <%= "hidden" unless visible %>"
-         data-checkout-card="early-departure"
+<article class="space-y-3 <%= 'hidden' unless visible %>"
          data-<%= ns %>-target="bookingRow"
          data-booking-id="<%= booking.id %>"
-         data-controller="<%= ed %>"
-         data-<%= ed %>-booking-id-value="<%= booking.id %>"
-         data-<%= ed %>-base-amount-value="<%= suggested_charge %>"
-         data-<%= ed %>-currency-value="<%= currency %>"
-         data-<%= ed %>-event-prefix-value="<%= ns %>"
-         data-<%= ed %>-target-folio-id-value="<%= checkout_penalty_folio_id(booking) %>">
-  <div class="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5">
-    <h3 class="text-xs font-bold uppercase tracking-wider text-foreground">Early Departure</h3>
-    <span class="rounded-md bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-blue-700">Early</span>
-  </div>
-  <div class="flex flex-1 flex-col p-4">
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <p class="text-[11px] text-muted-foreground">
-        <% if booking.group_booking_id.present? %>
-          <span class="font-semibold text-foreground"><%= booking.booking_rooms.first&.room_number.presence || "Unassigned room" %></span> ·
-        <% end %>
-        Scheduled checkout: <span class="font-semibold text-foreground"><%= booking.check_out.strftime("%d %b %Y") %></span>
-      </p>
-      <div class="grid grid-cols-2 gap-1.5">
-        <label class="cursor-pointer rounded-md border border-border-interactive bg-card px-3 py-2 text-center transition has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-800">
-          <%= radio_button_tag "#{field_prefix}[apply_charge]", "false", true, disabled: !visible, class: "sr-only", data: { action: "change->#{ed}#updateUI", "#{ed}-target": "chargeChoice" } %>
-          <span class="text-[11px] font-bold">No charge</span>
-        </label>
-        <label class="cursor-pointer rounded-md border border-border-interactive bg-card px-3 py-2 text-center transition has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-800">
-          <%= radio_button_tag "#{field_prefix}[apply_charge]", "true", false, disabled: !visible, class: "sr-only", data: { action: "change->#{ed}#updateUI", "#{ed}-target": "chargeChoice" } %>
-          <span class="text-[11px] font-bold">Apply early departure charge</span>
-        </label>
+         data-controller="<%= early_departure %>"
+         data-<%= early_departure %>-booking-id-value="<%= booking.id %>"
+         data-<%= early_departure %>-base-amount-value="<%= suggested_charge %>"
+         data-<%= early_departure %>-currency-value="<%= currency %>"
+         data-<%= early_departure %>-event-prefix-value="<%= ns %>"
+         data-<%= early_departure %>-target-folio-id-value="<%= checkout_penalty_folio_id(booking) %>">
+  <%= fields_for field_scope, OpenStruct.new(values) do |departure_form| %>
+    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div class="min-w-0">
+        <h4 class="text-sm font-medium">
+          <%= room&.room_number.presence || "Unassigned room" %> · <%= booking.guest_name %>
+          <span class="ml-2 align-middle"><%= render PanelsUI::Badge.new(label: "Early departure", variant: :info, size: :sm) %></span>
+        </h4>
+        <p class="mt-0.5 text-xs text-muted-foreground">Scheduled checkout: <%= booking.check_out.strftime("%d %b %Y") %></p>
       </div>
-    </div>
-    <p class="mt-2 text-[11px] leading-relaxed text-muted-foreground">Guest is checking out before the scheduled date. Pending charges will post when checkout is completed.</p>
 
-    <div class="mt-3 hidden border-t border-border pt-3" data-<%= ed %>-target="customFields">
-      <div class="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_1fr_auto]">
-        <div>
-          <label class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Charge type</label>
-          <%= select_tag "#{field_prefix}[type]", options_for_select([ [ "Fixed Amount", "amount" ], [ "Percentage (%)", "percentage" ] ], "amount"),
-              disabled: !visible,
-              class: "w-full rounded-md border border-border-interactive bg-card px-2.5 py-2 text-xs font-semibold text-foreground focus:border-ring focus:outline-none",
-              data: { action: "change->#{ed}#updateCalculation" } %>
-        </div>
-        <div>
-          <label class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Value</label>
-          <%= number_field_tag "#{field_prefix}[value]", nil, step: 0.01, placeholder: "0.00",
-              disabled: !visible,
-              class: "w-full rounded-md border border-border-interactive bg-card px-2.5 py-2 text-xs font-semibold text-foreground focus:border-ring focus:outline-none",
-              data: { action: "input->#{ed}#updateCalculation" } %>
-        </div>
-        <div class="min-w-28 rounded-md bg-muted px-3 py-2 text-right">
-          <p class="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Total charge</p>
-          <p class="text-xs font-bold tabular-nums text-foreground" data-<%= ed %>-target="displayAmount"><%= currency %> 0.00</p>
+      <%= render PanelsUI::RadioGroup.new(
+            form: departure_form,
+            attribute: :apply_charge,
+            label: "Early-departure charge",
+            selected: values[:apply_charge],
+            disabled: !visible,
+            orientation: :horizontal,
+            size: :sm,
+            class: "shrink-0 [&_legend]:sr-only",
+            options: [
+              { label: "No additional charge", value: "false" },
+              { label: "Apply a charge", value: "true" }
+            ],
+            data: { action: "change->#{early_departure}#updateUI" }) %>
+    </div>
+
+    <div class="space-y-3 <%= 'hidden' unless values[:apply_charge] == 'true' %>" data-<%= early_departure %>-target="customFields">
+      <div class="grid gap-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_1fr] sm:items-end">
+        <%= render PanelsUI::FormField.new(form: departure_form, attribute: :type, label: "Charge type", size: :sm, disabled: !visible) do |field| %>
+          <% field.with_select_menu(
+               [ [ "Fixed amount", "amount" ], [ "Percentage (%)", "percentage" ] ],
+               selected: values[:type],
+               data: { action: "change->#{early_departure}#updateCalculation" }) %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form: departure_form, attribute: :value, label: "Value", size: :sm, disabled: !visible) do |field| %>
+          <% field.with_input(type: :number, value: values[:value], min: 0, step: 0.01, placeholder: "0.00", data: { action: "input->#{early_departure}#updateCalculation" }) %>
+        <% end %>
+        <div class="flex items-center justify-end gap-2 pb-1">
+          <span class="text-sm text-muted-foreground">Additional charge</span>
+          <span class="text-sm font-medium tabular-nums" data-<%= early_departure %>-target="displayAmount"><%= currency %> <%= format("%.2f", values[:charge_amount].to_d) %></span>
         </div>
       </div>
-      <%= hidden_field_tag "#{field_prefix}[charge_amount]", 0, disabled: !visible, data: { "#{ed}-target": "amountInput" } %>
     </div>
-  </div>
-</section>
+    <%= departure_form.hidden_field :charge_amount, value: values[:charge_amount], data: { "#{early_departure}-target": "amountInput" } %>
+  <% end %>
+</article>
+</content>

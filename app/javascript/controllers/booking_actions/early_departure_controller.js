@@ -5,7 +5,7 @@ import { Controller } from "@hotwired/stimulus"
 // early-departure penalty and announces it — including the folio it routes to —
 // so the settlement controller can fold it into that folio's amount.
 export default class extends Controller {
-  static targets = ["chargeChoice", "customFields", "amountInput", "displayAmount"]
+  static targets = ["customFields", "amountInput", "displayAmount"]
   static values = {
     baseAmount: Number,
     currency: { type: String, default: "MYR" },
@@ -19,7 +19,7 @@ export default class extends Controller {
   }
 
   updateUI() {
-    const choice = this.chargeChoiceTargets.find((radio) => radio.checked).value
+    const choice = this.element.querySelector(`[name="early_departures[${this.bookingIdValue}][apply_charge]"]:checked`)?.value || "false"
 
     if (choice === "true") {
       this.customFieldsTarget.classList.remove("hidden")
