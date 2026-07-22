@@ -30,7 +30,7 @@ end %>
         title: sheet_title,
         body_class: "p-0") do |sheet| %>
     <% sheet.with_body do %>
-      <div class="flex h-full flex-col bg-muted" data-controller="booking-room-rows"
+      <div class="flex h-full flex-col" data-controller="booking-room-rows"
            data-booking-room-rows-availability-url-value="<%= availability_hotel_bookings_path(current_hotel) %>"
            data-booking-room-rows-rate-options-url-value="<%= rate_options_hotel_bookings_path(current_hotel) %>"
            data-booking-room-rows-price-url-value="<%= stay_price_hotel_bookings_path(current_hotel) %>"
@@ -40,11 +40,14 @@ end %>
           <%= f.hidden_field :check_in, value: check_in_value, data: { booking_room_rows_target: "checkIn" } %>
           <%= f.hidden_field :check_out, value: check_out_value, data: { booking_room_rows_target: "checkOut" } %>
 
-          <div class="min-h-0 flex-1 overflow-y-auto p-2.5">
-            <div class="grid gap-2.5 <%= "xl:grid-cols-[minmax(0,1fr)_360px]" unless quick %>">
-              <main class="min-w-0 rounded-md border border-border bg-card">
-                <section class="space-y-4 p-4 lg:p-5">
-                  <h3 class="text-sm font-bold text-foreground">Stay details</h3>
+          <div class="min-h-0 flex-1 overflow-y-auto">
+            <div class="grid <%= "xl:min-h-full xl:grid-cols-[minmax(0,1fr)_360px]" unless quick %>">
+              <main class="min-w-0 space-y-8 p-4 lg:p-6">
+                <section class="space-y-4">
+                  <div>
+                    <h3 class="text-base font-semibold text-foreground">Stay details</h3>
+                    <p class="mt-1 text-sm text-muted-foreground">When the guest stays and how the booking reached you.</p>
+                  </div>
                   <div class="grid gap-4 md:grid-cols-2 <%= "xl:grid-cols-[2fr_1fr]" unless quick %>">
                     <%= render PanelsUI::FormField.new(form: f, attribute: :stay_range, label: "Check-in → Check-out") do |field| %>
                       <% field.with_date_time_picker(
@@ -76,14 +79,14 @@ end %>
                   <% unless quick %>
                     <div class="<%= initial_type == 'backdated_check_in' ? '' : 'hidden' %> rounded-md border-l-2 border-amber-400 bg-amber-50 p-4" data-booking-room-rows-target="backdateFields">
                       <div class="grid gap-4 md:grid-cols-3">
-                        <div><%= label_tag :posting_date, "Posting date", class: "mb-1.5 block text-sm font-medium text-foreground" %><%= date_field_tag :posting_date, params[:posting_date] || current_hotel.current_business_date, class: "booking-form__control" %></div>
+                        <div><%= label_tag :posting_date, "Posting date", class: "mb-1.5 block text-sm font-medium text-foreground" %><%= date_field_tag :posting_date, params[:posting_date] || current_hotel.current_business_date, class: "panel-input" %></div>
                         <%= render PanelsUI::FormField.new(form: f, attribute: :backdate_reason, label: "Reason") do |field| %>
                           <% field.with_select_menu(
                                [["Guest arrived earlier", "Guest arrived earlier but was not checked in"], ["System / internet issue", "System / internet issue"], ["Manual offline check-in", "Manual offline check-in"], ["Other", "Other"]],
                                selected: params.dig(:booking, :backdate_reason).presence || params[:backdate_reason],
                                prompt: "Select reason") %>
                         <% end %>
-                        <div><%= label_tag :retroactive_reason, "Details", class: "mb-1.5 block text-sm font-medium text-foreground" %><%= text_field_tag :retroactive_reason, params[:retroactive_reason], class: "booking-form__control", placeholder: "Optional unless Other" %></div>
+                        <div><%= label_tag :retroactive_reason, "Details", class: "mb-1.5 block text-sm font-medium text-foreground" %><%= text_field_tag :retroactive_reason, params[:retroactive_reason], class: "panel-input", placeholder: "Optional unless Other" %></div>
                       </div>
                     </div>
                   <% end %>
@@ -91,8 +94,11 @@ end %>
 
                 <%= render "hotel_portal/bookings/actions/booking_creations/partials/room_rate_table", f: f %>
 
-                <section class="space-y-4 border-t border-border p-4 lg:p-5">
-                  <h3 class="text-sm font-bold text-foreground">Guest information</h3>
+                <section class="space-y-4">
+                  <div>
+                    <h3 class="text-base font-semibold text-foreground">Guest information</h3>
+                    <p class="mt-1 text-sm text-muted-foreground">Primary guest contact and identity details.</p>
+                  </div>
                   <div class="grid gap-4 md:grid-cols-3">
                     <%= render PanelsUI::FormField.new(form: f, attribute: :guest_name, label: "Guest name") do |field| %>
                       <% field.with_input(required: true, placeholder: "Full name") %>
@@ -105,8 +111,13 @@ end %>
                     <% end %>
                   </div>
                   <div class="grid gap-4 md:grid-cols-2">
-                    <%= render PanelsUI::FormField.new(form: f, attribute: :guest_date_of_birth, label: "Date of birth") do |field| %>
-                      <% field.with_input(type: :date, required: true) %>
+                    <%= render PanelsUI::FormField.new(form: f, attribute: :guest_date_of_birth, label: "Date of birth", required: true) do |field| %>
+                      <% field.with_date_picker(
+                           value: @booking.guest_date_of_birth.to_s.presence,
+                           max: Date.yesterday,
+                           caption_layout: :dropdown,
+                           year_range: (Date.current.year - 120)..Date.current.year,
+                           placeholder: "Select date of birth") %>
                     <% end %>
                     <%= render PanelsUI::FormField.new(form: f, attribute: :guest_country, label: "Nationality") do |field| %>
                       <% field.with_combobox(
@@ -119,12 +130,15 @@ end %>
                 </section>
 
                 <% if quick %>
-                  <section class="border-t border-border p-4 lg:p-5">
+                  <section>
                     <%= render "hotel_portal/bookings/actions/booking_creations/partials/billing_summary" %>
                   </section>
                 <% else %>
-                  <section class="space-y-3 border-t border-border p-4 lg:p-5">
-                    <h3 class="text-sm font-bold text-foreground">Notes</h3>
+                  <section class="space-y-4">
+                    <div>
+                      <h3 class="text-base font-semibold text-foreground">Notes</h3>
+                      <p class="mt-1 text-sm text-muted-foreground">Special requests or internal remarks for this booking.</p>
+                    </div>
                     <%= render PanelsUI::FormField.new(form: f, attribute: :internal_notes, label: "Internal notes", label_hidden: true) do |field| %>
                       <% field.with_text_area(rows: 3, placeholder: "Special requests or internal notes") %>
                     <% end %>
@@ -133,12 +147,12 @@ end %>
               </main>
 
               <% unless quick %>
-                <aside class="rounded-md border border-border bg-card">
-                  <div class="xl:sticky xl:top-0 xl:max-h-[calc(100vh-9rem)] xl:overflow-y-auto">
-                    <section class="p-4 lg:p-5">
+                <aside class="bg-muted/30">
+                  <div class="space-y-8 p-4 lg:p-6 xl:sticky xl:top-0 xl:max-h-[calc(100vh-9rem)] xl:overflow-y-auto">
+                    <section>
                       <%= render "hotel_portal/bookings/actions/booking_creations/partials/billing_summary" %>
                     </section>
-                    <section class="space-y-4 border-t border-border p-4 lg:p-5">
+                    <section class="space-y-4">
                       <%= render PanelsUI::FormField.new(form: f, attribute: :bill_to, label: "Bill to") do |field| %>
                         <% field.with_select_menu(
                              [["Guest", "guest"], ["Corporate", "corporate"]],
@@ -164,7 +178,7 @@ end %>
                               description: "Off: tourism tax stays on the guest folio.") %>
                       </div>
                     </section>
-                    <section class="border-t border-border p-4 lg:p-5">
+                    <section>
                       <%= render "hotel_portal/bookings/actions/booking_creations/partials/payment", f: f %>
                     </section>
                   </div>

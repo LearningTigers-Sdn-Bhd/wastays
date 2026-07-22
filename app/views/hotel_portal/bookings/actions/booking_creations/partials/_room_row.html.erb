@@ -34,9 +34,13 @@
         <% field.with_select_menu([["Select room later", ""]], selected: "", class: "min-w-0") %>
       <% end %>
     </div>
+    <%= render PanelsUI::FormField.new(form: rf, attribute: :adults, label: "Adults", label_hidden: true, required: true, class: "min-w-0") do |field| %>
+      <% field.with_input(type: :number, value: values[:adults] || 1, min: 1) %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form: rf, attribute: :children, label: "Children", label_hidden: true, required: true, class: "min-w-0") do |field| %>
+      <% field.with_input(type: :number, value: values[:children] || 0, min: 0) %>
+    <% end %>
   <% end %>
-  <%= number_field_tag "booking[rooms][#{index}][adults]", values[:adults] || 1, min: 1, required: true, class: "booking-form__control", "aria-label": "Adults" %>
-  <%= number_field_tag "booking[rooms][#{index}][children]", values[:children] || 0, min: 0, required: true, class: "booking-form__control", "aria-label": "Children" %>
   <div class="justify-end text-right text-sm font-semibold tabular-nums text-foreground" data-role="rate">0.00</div>
   <button type="button" class="rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:invisible" aria-label="Remove room" data-role="remove" data-action="booking-room-rows#remove"><%= cached_icon("x", class: "size-4 mx-auto") %></button>
 </div>

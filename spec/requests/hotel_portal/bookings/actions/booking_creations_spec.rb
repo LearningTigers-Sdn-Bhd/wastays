@@ -130,6 +130,16 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
       expect(Booking.count).to eq(0)
     end
 
+    it "re-renders the sheet form with a submitted date of birth without raising" do
+      post hotel_booking_action_new_booking_path(hotel),
+        params: { booking: booking_params.except(:room_type_id).merge(guest_date_of_birth: "1990-05-20") },
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("1990-05-20")
+      expect(Booking.count).to eq(0)
+    end
+
     it "requires a backdate reason before creating a backdated booking" do
       post hotel_booking_action_backdated_check_in_path(hotel),
         params: { booking: booking_params, backdate_reason: "" },
