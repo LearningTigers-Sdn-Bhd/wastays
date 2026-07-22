@@ -50,20 +50,29 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
     end
 
-    it "exports financial performance csv/xls/pdf" do
+    it "exports financial performance csv/xlsx/pdf" do
       create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 300, margin_amount: 30, net_amount: 270, created_at: Time.zone.local(2026, 5, 6, 12, 0))
 
       get "/hotel/#{hotel.id}/reports.csv"
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
 
-      get "/hotel/#{hotel.id}/reports.xls"
+      get "/hotel/#{hotel.id}/reports.xlsx"
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
+      expect(response.content_type).to eq("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
 
       get "/hotel/#{hotel.id}/reports.pdf"
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
+    end
+
+    it "links to xlsx instead of legacy xls" do
+      get hotel_reports_path(hotel), params: { start_date: "2026-05-06", end_date: "2026-05-08" }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_link("Export Excel", href: hotel_reports_path(hotel, start_date: "2026-05-06", end_date: "2026-05-08", q: nil, date_preset: "custom", format: :xlsx))
+      expect(response.body).not_to match(/\.xls(?:\?|"|')/)
     end
 
     it "parses date_range and preserves the query in resolved export links" do
@@ -346,17 +355,15 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "exports Excel for the default arrivals tab" do
       create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, guest_name: "Excel Guest", confirmation_token: "WS-XLS")
 
-      get guest_reports_hotel_reports_path(hotel, format: :xls), params: {
+      get guest_reports_hotel_reports_path(hotel, format: :xlsx), params: {
         start_date: start_date.to_s,
         end_date: end_date.to_s
       }
 
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
-      expect(response.headers["Content-Disposition"]).to include(".xls")
-      expect(response.body).to include('ss:Name="Arrivals"')
-      expect(response.body).not_to include('ss:Name="Departures"')
-      expect(response.body).to include("Excel Guest")
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.headers["Content-Disposition"]).to include(".xlsx")
+      expect(response.body).to start_with("PK")
     end
   end
 
@@ -379,12 +386,6 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get tourism_tax_hotel_reports_path(hotel), params: { start_date: "2026-07-01", end_date: "2026-07-01" }
 
       expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/tax_compliance?tab=tourism_tax&start_date=2026-07-01&end_date=2026-07-01")
-    end
-
-    it "maps the legacy xls format to xlsx" do
-      get tourism_tax_hotel_reports_path(hotel, format: :xls), params: { start_date: "2026-07-01" }
-
-      expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/tax_compliance.xlsx?tab=tourism_tax&start_date=2026-07-01")
     end
   end
 
@@ -774,18 +775,17 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.headers["Content-Disposition"]).to include(".pdf")
     end
 
-    it "exports XLS" do
+    it "exports XLSX" do
       room_type = create(:room_type, hotel: hotel, quantity: 10)
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 120.0)
 
-      get daily_occupancy_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      get daily_occupancy_hotel_reports_path(hotel, format: :xlsx), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
-      expect(response.headers["Content-Disposition"]).to include(".xls")
-      expect(response.body).to include('ss:Name="Summary"')
-      expect(response.body).to include('ss:Name="Daily Occupancy"')
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.headers["Content-Disposition"]).to include(".xlsx")
+      expect(response.body).to start_with("PK")
     end
   end
 
@@ -836,18 +836,17 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.headers["Content-Disposition"]).to include(".pdf")
     end
 
-    it "exports XLS" do
+    it "exports XLSX" do
       booking = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "Excel Outstanding")
       folio = create(:booking_folio, booking: booking, hotel: hotel)
       create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
 
-      get outstanding_balance_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      get outstanding_balance_hotel_reports_path(hotel, format: :xlsx), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
-      expect(response.headers["Content-Disposition"]).to include(".xls")
-      expect(response.body).to include('ss:Name="Summary"')
-      expect(response.body).to include('ss:Name="Outstanding Balances"')
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.headers["Content-Disposition"]).to include(".xlsx")
+      expect(response.body).to start_with("PK")
     end
   end
 
@@ -894,7 +893,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).not_to include("Other Deposit Guest")
     end
 
-    it "exports csv/xls/pdf" do
+    it "exports csv/xlsx/pdf" do
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: as_of_date + 1.day, check_out: as_of_date + 2.days, guest_name: "Export Deposit")
       folio = create(:booking_folio, booking: booking, hotel: hotel)
       create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 250, posting_date: as_of_date - 1.day)
@@ -904,10 +903,10 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.content_type).to include("text/csv")
       expect(response.body).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Booking Payment,Earned,Refunds,Remaining Liability,Latest Payment Date")
 
-      get deposit_liability_hotel_reports_path(hotel, format: :xls), params: { as_of_date: as_of_date.to_s }
+      get deposit_liability_hotel_reports_path(hotel, format: :xlsx), params: { as_of_date: as_of_date.to_s }
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
-      expect(response.body).to include('ss:Name="Deposit Liability"')
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
 
       get deposit_liability_hotel_reports_path(hotel, format: :pdf), params: { as_of_date: as_of_date.to_s }
       expect(response).to have_http_status(:success)
@@ -1420,12 +1419,13 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include("20.00")
     end
 
-    it "exports xls and pdf" do
+    it "exports xlsx and pdf" do
       create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 300, margin_amount: 30, net_amount: 270, created_at: Time.zone.local(2026, 5, 6, 12, 0))
 
-      get breakdown_hotel_reports_path(hotel, format: :xls), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
+      get breakdown_hotel_reports_path(hotel, format: :xlsx), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
 
       get breakdown_hotel_reports_path(hotel, format: :pdf), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
       expect(response).to have_http_status(:success)
@@ -1490,16 +1490,17 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       )
     end
 
-    it "exports csv/xls/pdf for upcoming tab" do
+    it "exports csv/xlsx/pdf for upcoming tab" do
       create(:booking, hotel: hotel, status: "completed", payment_status: "captured", net_amount: 120, checked_out_at: Time.zone.local(2026, 5, 7, 10, 0), payout_batch_id: nil)
 
       get payouts_hotel_reports_path(hotel, format: :csv), params: { tab: "upcoming" }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
 
-      get payouts_hotel_reports_path(hotel, format: :xls), params: { tab: "upcoming" }
+      get payouts_hotel_reports_path(hotel, format: :xlsx), params: { tab: "upcoming" }
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
 
       get payouts_hotel_reports_path(hotel, format: :pdf), params: { tab: "upcoming" }
       expect(response).to have_http_status(:success)
@@ -1631,7 +1632,44 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(picker["data-action"]).to include("change->date-preset#submitDate")
       expect(page).to have_no_button("Filter")
       expect(page).to have_link("Export CSV", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :csv))
+      expect(page).to have_link("Export Excel", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :xlsx))
+      expect(page).to have_link("Export PDF", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :pdf))
       expect(page).to have_css('[data-controller~="panels-ui--dropdown-menu"]')
+    end
+
+    it "exports XLSX and PDF" do
+      create(:journal_batch, hotel: hotel, business_date: Date.new(2026, 5, 7))
+
+      get journal_batches_hotel_reports_path(hotel, format: :xlsx), params: { start_date: "2026-05-01", end_date: "2026-05-31" }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
+
+      get journal_batches_hotel_reports_path(hotel, format: :pdf), params: { start_date: "2026-05-01", end_date: "2026-05-31" }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+    end
+  end
+
+  describe "GET /folio_ledger exports" do
+    let(:posting_date) { Date.new(2026, 5, 7) }
+
+    before do
+      booking = create(:booking, hotel: hotel)
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, posting_date: posting_date, amount: 120)
+    end
+
+    it "exports genuine XLSX and branded PDF files" do
+      get folio_ledger_hotel_reports_path(hotel, format: :xlsx), params: { start_date: posting_date.to_s, end_date: posting_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
+
+      get folio_ledger_hotel_reports_path(hotel, format: :pdf), params: { start_date: posting_date.to_s, end_date: posting_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+      expect(response.body).to start_with("%PDF")
     end
   end
 end

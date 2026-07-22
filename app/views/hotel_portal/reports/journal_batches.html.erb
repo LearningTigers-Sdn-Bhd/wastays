@@ -15,7 +15,11 @@
           <% if feature_enabled_for_hotel?("excel_pdf_export") %>
             <%= render "export_dropdown",
               menu_id: "journal-batches-export",
-              items: [["Export CSV", journal_batches_hotel_reports_path(current_hotel, start_date: @report_start_date, end_date: @report_end_date, format: :csv)]] %>
+              items: [
+                ["Export PDF", journal_batches_hotel_reports_path(current_hotel, start_date: @report_start_date, end_date: @report_end_date, format: :pdf)],
+                ["Export Excel", journal_batches_hotel_reports_path(current_hotel, start_date: @report_start_date, end_date: @report_end_date, format: :xlsx)],
+                ["Export CSV", journal_batches_hotel_reports_path(current_hotel, start_date: @report_start_date, end_date: @report_end_date, format: :csv)]
+              ] %>
           <% end %>
         </div>
       <% end %>

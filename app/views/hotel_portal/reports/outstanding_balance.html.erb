@@ -18,7 +18,7 @@
           show_export: feature_enabled_for_hotel?("excel_pdf_export"), export_menu_id: "outstanding-balance-export",
           export_items: [
             ["Export PDF", outstanding_balance_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :pdf)],
-            ["Export Excel", outstanding_balance_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :xls)],
+            ["Export Excel", outstanding_balance_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :xlsx)],
             ["Export CSV", outstanding_balance_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :csv)]
           ] %>
       <% end %>

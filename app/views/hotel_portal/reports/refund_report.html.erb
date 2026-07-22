@@ -18,7 +18,7 @@
           show_export: feature_enabled_for_hotel?("excel_pdf_export"), export_menu_id: "refund-report-export",
           export_items: [
             ["Export PDF", refund_report_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :pdf)],
-            ["Export Excel", refund_report_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :xls)],
+            ["Export Excel", refund_report_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :xlsx)],
             ["Export CSV", refund_report_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :csv)]
           ] %>
       <% end %>

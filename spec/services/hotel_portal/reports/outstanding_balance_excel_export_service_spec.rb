@@ -1,12 +1,15 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "zip"
 
 RSpec.describe HotelPortal::Reports::OutstandingBalanceExcelExportService do
   describe "#generate" do
     it "builds summary and details worksheets" do
       report = double(
         "report",
+        start_date: Date.new(2026, 5, 7),
+        end_date: Date.new(2026, 5, 8),
         rows: [
           {
             guest_name: "Guest A",
@@ -25,12 +28,14 @@ RSpec.describe HotelPortal::Reports::OutstandingBalanceExcelExportService do
         }
       )
 
-      xml = described_class.new(report: report).generate
+      hotel = instance_double(Hotel, name: "Sample Hotel", default_currency: "MYR")
+      content = described_class.new(hotel: hotel, report: report).generate
+      xml = []
+      Zip::File.open_buffer(StringIO.new(content)) { |archive| archive.each { |entry| xml << entry.get_input_stream.read if entry.name.end_with?(".xml") } }
+      text = xml.join.force_encoding(Encoding::UTF_8)
 
-      expect(xml).to include("<?xml version=\"1.0\"?>")
-      expect(xml).to include('Worksheet ss:Name="Summary"')
-      expect(xml).to include('Worksheet ss:Name="Outstanding Balances"')
-      expect(xml).to include("220.00")
+      expect(content).to start_with("PK")
+      expect(text).to include("Outstanding Balance Report", "Outstanding Bookings", "Guest A")
     end
   end
 end

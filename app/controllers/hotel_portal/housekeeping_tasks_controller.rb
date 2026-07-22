@@ -41,13 +41,19 @@ module HotelPortal
           filename: "housekeeping-tasks-#{@selected_date}.pdf",
           type: "application/pdf"
         end
-        format.xls do
-          send_data ::Reports::HousekeepingTasksXlsGenerator.new(
+        format.xlsx do
+          send_data ::Reports::HousekeepingTasksExcelGenerator.new(
             hotel: current_hotel,
-            room_groups: @room_groups
+            room_groups: @room_groups,
+            selected_date: @selected_date
           ).call,
-          filename: "housekeeping-tasks-#{@selected_date}.xls",
-          type: "application/vnd.ms-excel"
+          filename: "housekeeping-tasks-#{@selected_date}.xlsx",
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        end
+        format.csv do
+          send_data ::Reports::HousekeepingTasksCsvGenerator.new(room_groups: @room_groups).call,
+            filename: "housekeeping-tasks-#{@selected_date}.csv",
+            type: "text/csv; charset=utf-8"
         end
       end
     end

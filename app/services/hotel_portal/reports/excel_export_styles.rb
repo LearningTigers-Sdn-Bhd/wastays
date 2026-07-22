@@ -10,7 +10,7 @@ module HotelPortal
       }.freeze
 
       FONT_SIZES = {
-        title: 16, kpi_value: 13, section: 12, body: 11
+        title: 18, kpi_value: 13, section: 12, body: 11
       }.freeze
     end
   end

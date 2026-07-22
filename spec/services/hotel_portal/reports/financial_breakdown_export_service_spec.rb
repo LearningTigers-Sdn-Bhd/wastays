@@ -1,43 +1,38 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "csv"
+require "zip"
+require "pdf-reader"
 
-RSpec.describe HotelPortal::Reports::FinancialBreakdownExportService do
-  let(:hotel) { instance_double(Hotel, name: "Sample Hotel") }
-  let(:booking) do
-    instance_double(
-      Booking,
-      confirmation_token: "WS-ABC",
-      guest_name: "Guest A",
-      status: "confirmed",
-      check_in: Date.new(2026, 5, 6),
-      check_out: Date.new(2026, 5, 7),
-      total_amount: 300.to_d,
-      tax_total: 20.to_d,
-      margin_amount: 30.to_d,
-      net_amount: 270.to_d,
-      currency: "MYR",
-      booking_folio: nil
+RSpec.describe "Financial Breakdown export services" do
+  let(:hotel) { instance_double(Hotel, name: "Sample Hotel", default_currency: "MYR") }
+  let(:report) do
+    HotelPortal::Reports::FinancialBreakdownExportResult.new(
+      start_date: Date.new(2026, 5, 6), end_date: Date.new(2026, 5, 7),
+      rows: [ { booking_reference: "WS-ABC", guest_name: "Guest A", status: "confirmed", check_in: Date.new(2026, 5, 6), check_out: Date.new(2026, 5, 7), gross: 300, taxes: 20, margin: 30, net: 270, currency: "MYR" } ]
     )
   end
-  let(:service) do
-    described_class.new(bookings: [ booking ], hotel: hotel, start_date: Date.new(2026, 5, 6), end_date: Date.new(2026, 5, 7))
+
+  it "generates safe CSV with totals" do
+    content = HotelPortal::Reports::FinancialBreakdownCsvExportService.new(hotel: hotel, report: report).generate
+    rows = CSV.parse(content.delete_prefix("\uFEFF"))
+    expect(content).to start_with("\uFEFF")
+    expect(rows.first).to eq([ "Booking Reference", "Guest Name", "Status", "Check In", "Check Out", "Gross", "Taxes", "Margin", "Net", "Currency" ])
+    expect(rows.last).to eq([ "TOTAL", nil, nil, nil, nil, "300.00", "20.00", "30.00", "270.00", "MYR" ])
   end
 
-  it "generates csv" do
-    csv = service.generate_csv
-    expect(csv).to include("Booking Ref,Guest Name,Status,Check In,Check Out,Gross,Taxes,Margin,Net,Currency")
-    expect(csv).to include("20.00")
+  it "generates a genuine XLSX workbook" do
+    content = HotelPortal::Reports::FinancialBreakdownExcelExportService.new(hotel: hotel, report: report).generate
+    expect(content).to start_with("PK")
+    xml = []
+    Zip::File.open_buffer(StringIO.new(content)) { |archive| archive.each { |entry| xml << entry.get_input_stream.read if entry.name.end_with?(".xml") } }
+    expect(xml.join.force_encoding(Encoding::UTF_8)).to include("Financial Breakdown", "Booking Details", "WS-ABC", "Taxes")
   end
 
-  it "generates xls" do
-    xls = service.generate_xls
-    expect(xls).to include('Worksheet ss:Name="Financial Breakdown"')
-    expect(xls).to include("<Data ss:Type=\"String\">Taxes</Data>")
-    expect(xls).to include("<Data ss:Type=\"String\">20.00</Data>")
-  end
-
-  it "generates pdf" do
-    expect(service.generate_pdf).to start_with("%PDF")
+  it "generates a branded PDF" do
+    content = HotelPortal::Reports::FinancialBreakdownPdfExportService.new(hotel: hotel, report: report).generate
+    text = PDF::Reader.new(StringIO.new(content)).pages.map(&:text).join
+    expect(text).to include("FINANCIAL BREAKDOWN", "Booking Details", "WS-ABC", "MYR 270.00", "Page 1 of 1")
   end
 end

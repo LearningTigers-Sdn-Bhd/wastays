@@ -1,31 +1,20 @@
 # frozen_string_literal: true
 
-require "csv"
-
 module HotelPortal
   module Reports
     class JournalBatchCsvExportService
       def initialize(batches:)
-        @batches = batches
+        @table = JournalBatchExportTable.new(batches: batches)
+        @csv = Exports::CsvReportSupport.new
       end
 
       def generate
-        CSV.generate(headers: true) do |csv|
-          csv << [ "Business Date", "General Ledger Code (GL Code)", "Type", "Debit", "Credit", "Description", "Finalized At" ]
-
-          @batches.each do |batch|
-            batch.entries.each do |entry|
-              csv << [
-                batch.business_date,
-                entry.gl_code,
-                entry.transaction_type,
-                entry.debit_amount,
-                entry.credit_amount,
-                entry.description,
-                batch.finalized_at
-              ]
-            end
+        @csv.generate do |csv|
+          csv << JournalBatchExportTable::HEADERS
+          @table.rows.each do |row|
+            csv << [ @csv.date(row[0]), @csv.text(row[1]), @csv.text(row[2]), @csv.money(row[3]), @csv.money(row[4]), @csv.text(row[5]), @csv.text(row[6]&.iso8601) ]
           end
+          csv << [ "TOTAL", nil, nil, @csv.money(@table.total_debit), @csv.money(@table.total_credit), nil, nil ]
         end
       end
     end

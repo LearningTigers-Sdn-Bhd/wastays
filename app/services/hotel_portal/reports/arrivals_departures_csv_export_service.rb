@@ -1,45 +1,30 @@
 # frozen_string_literal: true
 
-require "csv"
-
 module HotelPortal
   module Reports
     class ArrivalsDeparturesCsvExportService
       def initialize(report:, tab: "arrivals")
         @report = report
         @tab = tab.to_s
+        @csv = Exports::CsvReportSupport.new
       end
 
       def generate
-        CSV.generate(headers: true) do |csv|
-          csv << headers_for_active_tab
-          if @tab == "bibo"
-            @report.boat_ins.each do |row|
-              csv << [ "Boat-in", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ]
-            end
-            @report.boat_outs.each do |row|
-              csv << [ "Boat-out", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ]
-            end
-          elsif @tab == "meal_prep"
-            @report.records.each do |row|
-              csv << [
-                row[:type],
-                row[:guest_name],
-                row[:confirmation_token],
-                row[:pax],
-                row[:room_type],
-                row[:room_number],
-                row[:formatted_boat_time]
-              ]
-            end
-            csv << []
-            csv << [ "", "", "", "", "", "Total Pax", @report.total_pax ]
-          else
-            rows_for_active_tab.each do |row|
-              csv << values_for_active_tab(row)
-            end
-          end
+        @csv.generate do |csv|
+          csv << export_headers
+          export_rows.each { |row| csv << row.map { |value| @csv.text(value) } }
         end
+      end
+
+      def export_headers = headers_for_active_tab
+
+      def export_rows
+        return @report.boat_ins.map { |row| [ "Boat-in", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ] } +
+          @report.boat_outs.map { |row| [ "Boat-out", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ] } if @tab == "bibo"
+        return @report.records.map { |row| [ row[:type], row[:guest_name], row[:confirmation_token], row[:pax], row[:room_type], row[:room_number], row[:formatted_boat_time] ] } +
+          [ [], [ "", "", "", "", "", "Total Pax", @report.total_pax ] ] if @tab == "meal_prep"
+
+        rows_for_active_tab.map { |row| values_for_active_tab(row) }
       end
 
       private

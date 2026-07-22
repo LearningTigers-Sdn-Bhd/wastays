@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe HotelPortal::Reports::SstPdfExportService do
   describe "#generate" do
     it "returns a valid PDF binary" do
-      hotel = instance_double(Hotel, name: "Sample Hotel")
+      hotel = instance_double(Hotel, name: "Sample Hotel", default_currency: "MYR")
       report = double(
         "report",
         start_date: Date.new(2026, 5, 1),

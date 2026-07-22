@@ -1,5 +1,18 @@
 <div class="w-full space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(title: "Notification Logs", description: "Review notification attempts and resend when needed.") %>
+  <%= render PanelsUI::PageHeader.new(title: "Notification Logs", description: "Review notification attempts and resend when needed.") do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::DropdownMenu.new(id: "notification-logs-export-menu", placement: :bottom_end, class: "w-44") do |menu| %>
+        <% menu.with_trigger(variant: :neutral, size: :md, class: "w-full sm:w-auto") do %>
+          <%= cached_icon "download", class: "size-4" %>
+          Export
+        <% end %>
+        <% export_filters = { query: params[:query], notification_type: params[:notification_type], channel: params[:channel], status: params[:status] } %>
+        <% menu.with_item(href: hotel_notification_logs_path(current_hotel, **export_filters, format: :pdf), variant: :default, data: { turbo: false }) { "Export PDF" } %>
+        <% menu.with_item(href: hotel_notification_logs_path(current_hotel, **export_filters, format: :xlsx), variant: :default, data: { turbo: false }) { "Export Excel" } %>
+        <% menu.with_item(href: hotel_notification_logs_path(current_hotel, **export_filters, format: :csv), variant: :default, data: { turbo: false }) { "Export CSV" } %>
+      <% end %>
+    <% end %>
+  <% end %>
 
   <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
     <div class="border-b border-border bg-muted/70 px-6 py-6 sm:px-8">

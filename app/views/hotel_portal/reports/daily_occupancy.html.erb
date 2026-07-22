@@ -21,7 +21,7 @@
           export_menu_id: "daily-occupancy-export",
           export_items: [
             ["Export PDF", daily_occupancy_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :pdf)],
-            ["Export Excel", daily_occupancy_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :xls)],
+            ["Export Excel", daily_occupancy_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :xlsx)],
             ["Export CSV", daily_occupancy_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :csv)]
           ] %>
       <% end %>

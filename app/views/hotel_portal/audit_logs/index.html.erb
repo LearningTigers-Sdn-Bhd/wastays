@@ -7,7 +7,7 @@
           Export
         <% end %>
         <% menu.with_item(href: hotel_audit_logs_path(current_hotel, format: :pdf, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), variant: :default, data: { turbo: false }) { "Export PDF" } %>
-        <% menu.with_item(href: hotel_audit_logs_path(current_hotel, format: :xls, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), variant: :default, data: { turbo: false }) { "Export Excel" } %>
+        <% menu.with_item(href: hotel_audit_logs_path(current_hotel, format: :xlsx, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), variant: :default, data: { turbo: false }) { "Export Excel" } %>
         <% menu.with_item(href: hotel_audit_logs_path(current_hotel, format: :csv, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), variant: :default, data: { turbo: false }) { "Export CSV" } %>
       <% end %>
     <% end %>

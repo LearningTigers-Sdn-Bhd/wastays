@@ -13,7 +13,7 @@
           show_export: feature_enabled_for_hotel?("excel_pdf_export"), export_menu_id: "deposit-liability-export",
           export_items: [
             ["Export PDF", deposit_liability_hotel_reports_path(current_hotel, as_of_date: @report.as_of_date, date_preset: @date_preset, format: :pdf)],
-            ["Export Excel", deposit_liability_hotel_reports_path(current_hotel, as_of_date: @report.as_of_date, date_preset: @date_preset, format: :xls)],
+            ["Export Excel", deposit_liability_hotel_reports_path(current_hotel, as_of_date: @report.as_of_date, date_preset: @date_preset, format: :xlsx)],
             ["Export CSV", deposit_liability_hotel_reports_path(current_hotel, as_of_date: @report.as_of_date, date_preset: @date_preset, format: :csv)]
           ] %>
       <% end %>

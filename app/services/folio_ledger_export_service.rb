@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require "csv"
-require "cgi"
-
 # Exports a hotel's folio ledger for a given date range.
 # Sources data from FolioTransaction records (not booking snapshots) to give
 # a true accounting-ready view of charges, payments, adjustments, and taxes.
@@ -28,6 +25,9 @@ class FolioLedgerExportService
     "Night Audit ID",
     "Posted At"
   ].freeze
+  PDF_HEADERS = [ "Date", "Invoice", "Folio", "Booking Ref", "Guest", "Type", "GL Code", "Description", "Amount", "Currency" ].freeze
+  PDF_COLUMN_INDEXES = [ 0, 1, 2, 3, 4, 6, 8, 9, 10, 11 ].freeze
+  PDF_COLUMN_WIDTHS = [ 60, 75, 70, 80, 90, 65, 60, 160, 70, 47 ].freeze
 
   def initialize(hotel:, start_date:, end_date:)
     @hotel      = hotel
@@ -36,35 +36,49 @@ class FolioLedgerExportService
   end
 
   def generate_csv
-    CSV.generate(headers: true) do |csv|
+    support = HotelPortal::Reports::Exports::CsvReportSupport.new
+    support.generate do |csv|
       csv << CSV_HEADERS
-      each_row { |row| csv << row }
+      export_rows.each do |row|
+        csv << row.each_with_index.map do |value, index|
+          case index
+          when 0 then support.date(value)
+          when 10 then support.money(value)
+          when 15 then support.text(value&.iso8601)
+          else support.text(value)
+          end
+        end
+      end
     end
   end
 
-  def generate_xls
-    rows_xml = [ spreadsheet_row(CSV_HEADERS) ]
-    each_row { |row| rows_xml << spreadsheet_row(row) }
+  def generate_xlsx
+    HotelPortal::Reports::Exports::ExcelReportBuilder.new(
+      hotel: @hotel, title: "Folio Ledger", period_label: period_label
+    ).generate do |builder|
+      sheet = builder.add_sheet(name: "Folio Ledger", widths: [ 14, 18, 18, 18, 22, 14, 16, 18, 20, 28, 14, 12, 14, 18, 16, 22 ], orientation: :landscape)
+      builder.add_header(sheet: sheet)
+      builder.add_summary(sheet: sheet, metrics: summary_metrics)
+      builder.add_table(
+        sheet: sheet, section_title: "Ledger Transactions", headers: CSV_HEADERS,
+        rows: export_rows, column_types: %i[date text text text text text text text text text money text text text text datetime],
+        total_row: nil, empty_message: "No folio transactions found for this period."
+      )
+    end
+  end
 
-    <<~XML
-      <?xml version="1.0"?>
-      <?mso-application progid="Excel.Sheet"?>
-      <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-        xmlns:o="urn:schemas-microsoft-com:office:office"
-        xmlns:x="urn:schemas-microsoft-com:office:excel"
-        xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-        <Worksheet ss:Name="Folio Ledger">
-          <Table>
-            #{rows_xml.join("\n")}
-          </Table>
-        </Worksheet>
-        <Worksheet ss:Name="Summary">
-          <Table>
-            #{summary_rows_xml}
-          </Table>
-        </Worksheet>
-      </Workbook>
-    XML
+  def generate_pdf
+    builder = HotelPortal::Reports::Exports::PdfReportBuilder.new(
+      hotel: @hotel, title: "Folio Ledger", period_label: period_label, page_layout: :landscape
+    )
+    builder.add_header
+    builder.add_summary(summary_metrics.map { |label, value, currency| [ label, currency ? "#{currency} #{format_money(value)}" : value.to_s ] })
+    builder.add_table(
+      section_title: "Ledger Transactions", headers: PDF_HEADERS,
+      rows: export_rows.map { |row| pdf_row(row) }, numeric_columns: [ 8 ], total_row: nil,
+      empty_message: "No folio transactions found for this period.", column_widths: PDF_COLUMN_WIDTHS
+    )
+    builder.render
   end
 
   # Returns aggregated totals for UI display (used by reports controller).
@@ -97,8 +111,8 @@ class FolioLedgerExportService
     @gl_maps_by_category ||= @hotel.hotel_general_ledger_maps.index_by(&:transaction_category)
   end
 
-  def each_row(&block)
-    transactions.each do |txn|
+  def export_rows
+    @export_rows ||= transactions.map do |txn|
       folio   = txn.booking_folio
       booking = folio.booking
 
@@ -107,7 +121,7 @@ class FolioLedgerExportService
                     (txn.category == "tax" ? derive_tax_type(txn) : "")
 
       row = [
-        txn.posting_date.iso8601,
+        txn.posting_date,
         booking.formatted_invoice_number.to_s,
         folio.folio_reference_display.to_s,
         booking.confirmation_token,
@@ -117,15 +131,13 @@ class FolioLedgerExportService
         txn.category,
         gl_code_for(txn, tax_type),
         txn.description.to_s,
-        txn.amount.to_f.round(2),
+        txn.amount.to_d,
         txn.currency.presence || booking.currency.presence || "MYR",
         tax_type,
         txn.metadata["posting_source"].to_s,
         txn.metadata["night_audit_id"].to_s,
-        txn.posted_at&.iso8601.to_s
+        txn.posted_at
       ]
-
-      block.call(row)
     end
   end
 
@@ -141,31 +153,28 @@ class FolioLedgerExportService
     "tax"
   end
 
-  # ──────────────────────────────────────────────
-  # XLS helpers
-  # ──────────────────────────────────────────────
-
-  def summary_rows_xml
+  def summary_metrics
     t = totals
-    rows = [
-      spreadsheet_row([ "Period", "#{@start_date.iso8601} to #{@end_date.iso8601}" ]),
-      spreadsheet_row([ "Room Revenue",      format_money(t[:room_revenue]) ]),
-      spreadsheet_row([ "Tax Revenue",       format_money(t[:tax_revenue]) ]),
-      spreadsheet_row([ "Other Charges",     format_money(t[:other_charges]) ]),
-      spreadsheet_row([ "Total Payments",    format_money(t[:total_payments]) ]),
-      spreadsheet_row([ "Total Refunds",     format_money(t[:total_refunds]) ]),
-      spreadsheet_row([ "Total Adjustments", format_money(t[:total_adjustments]) ])
+    currency = @hotel.default_currency.presence || "MYR"
+    [
+      [ "Room Revenue", t[:room_revenue], currency ], [ "Tax Revenue", t[:tax_revenue], currency ],
+      [ "Other Charges", t[:other_charges], currency ], [ "Total Payments", t[:total_payments], currency ],
+      [ "Total Refunds", t[:total_refunds], currency ], [ "Total Adjustments", t[:total_adjustments], currency ]
     ]
-    rows.join("\n")
   end
 
-  def spreadsheet_row(values)
-    cells = values.map do |value|
-      escaped = CGI.escapeHTML(value.to_s)
-      %(<Cell><Data ss:Type="String">#{escaped}</Data></Cell>)
-    end.join
-    %(<Row>#{cells}</Row>)
+  def pdf_row(row)
+    PDF_COLUMN_INDEXES.map do |index|
+      value = row[index]
+      case index
+      when 0 then value.strftime("%d %b %Y")
+      when 10 then format_money(value)
+      else value.presence || "-"
+      end
+    end
   end
+
+  def period_label = @start_date == @end_date ? @start_date.strftime("%d %b %Y") : "#{@start_date.strftime('%d %b %Y')} - #{@end_date.strftime('%d %b %Y')}"
 
   def format_money(value)
     format("%.2f", value.to_d)

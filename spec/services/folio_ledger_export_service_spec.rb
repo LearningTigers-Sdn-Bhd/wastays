@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "pdf-reader"
 
 RSpec.describe FolioLedgerExportService do
   let(:hotel) { create(:hotel) }
@@ -17,10 +18,37 @@ RSpec.describe FolioLedgerExportService do
     end
   end
 
-  describe "#generate_xls" do
-    it "returns XML string" do
-      expect(service.generate_xls).to be_a(String)
-      expect(service.generate_xls).to include("Workbook")
+  describe "#generate_xlsx" do
+    it "returns a genuine XLSX workbook" do
+      content = service.generate_xlsx
+
+      expect(content).to start_with("PK")
+      expect(content.bytesize).to be > 1_000
+    end
+  end
+
+  describe "#generate_pdf" do
+    it "returns a branded PDF with page numbering" do
+      content = service.generate_pdf
+      text = PDF::Reader.new(StringIO.new(content)).pages.map(&:text).join("\n")
+
+      expect(content).to start_with("%PDF")
+      expect(text).to include("FOLIO LEDGER", hotel.name, "Page 1 of 1")
+    end
+
+    it "uses a reduced accounting-focused table that remains legible" do
+      create(:folio_transaction,
+        booking_folio: folio,
+        transaction_type: :charge,
+        category: "accommodation",
+        amount: 100,
+        posting_date: start_date,
+        gl_code: "0010")
+
+      text = PDF::Reader.new(StringIO.new(service.generate_pdf)).pages.map(&:text).join("\n")
+
+      expect(text).to include("Invoice", "Folio", "Booking Ref", "GL Code", "Amount", "Currency")
+      expect(text).not_to include("Night Audit ID", "Posting Source", "Posted At")
     end
   end
 
@@ -41,7 +69,7 @@ RSpec.describe FolioLedgerExportService do
         posting_date: start_date,
         gl_code: "SNAP-ROOM")
 
-      csv = CSV.parse(service.generate_csv, headers: true)
+      csv = CSV.parse(service.generate_csv.delete_prefix("\uFEFF"), headers: true)
 
       expect(csv.first["General Ledger Code (GL Code)"]).to eq("SNAP-ROOM")
     end
@@ -56,7 +84,7 @@ RSpec.describe FolioLedgerExportService do
         posting_date: start_date)
       transaction.update_column(:gl_code, nil)
 
-      csv = CSV.parse(service.generate_csv, headers: true)
+      csv = CSV.parse(service.generate_csv.delete_prefix("\uFEFF"), headers: true)
 
       expect(csv.first["General Ledger Code (GL Code)"]).to eq("HOTEL-FB")
     end
@@ -71,7 +99,7 @@ RSpec.describe FolioLedgerExportService do
       transaction.update_column(:gl_code, nil)
       hotel.hotel_general_ledger_maps.find_by!(transaction_category: "other").destroy!
 
-      csv = CSV.parse(service.generate_csv, headers: true)
+      csv = CSV.parse(service.generate_csv.delete_prefix("\uFEFF"), headers: true)
 
       expect(csv.first["General Ledger Code (GL Code)"]).to eq("9999")
     end

@@ -149,6 +149,33 @@ RSpec.describe "HotelPortal::NotificationLogs", type: :request do
 
       expect(response).to redirect_to(root_path)
     end
+
+    it "exports the filtered logs as csv, xlsx, and pdf" do
+      booking = create(:booking, hotel: hotel, status: "checked_in", confirmation_token: "WS-EXPORT001")
+      create(:notification_delivery,
+        hotel: hotel,
+        booking: booking,
+        notification_type: "check_in_confirmation",
+        channel: "email",
+        status: "failed",
+        trigger_event: "booking_checked_in",
+        error_message: "Mailbox unavailable")
+
+      get hotel_notification_logs_path(hotel, format: :csv), params: { status: "failed" }
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("text/csv")
+      expect(response.body).to include("WS-EXPORT001", "Mailbox unavailable")
+
+      get hotel_notification_logs_path(hotel, format: :xlsx), params: { status: "failed" }
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
+
+      get hotel_notification_logs_path(hotel, format: :pdf), params: { status: "failed" }
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("application/pdf")
+      expect(response.body).to start_with("%PDF")
+    end
   end
 
   describe "POST /hotel/:hotel_id/notification_logs/:id/resend" do

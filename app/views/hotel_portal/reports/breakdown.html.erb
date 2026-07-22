@@ -5,7 +5,7 @@
         <% if feature_enabled_for_hotel?("excel_pdf_export") %>
           <%= render "export_dropdown", menu_id: "financial-breakdown-export", items: [
             ["Export PDF", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :pdf)],
-            ["Export Excel", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :xls)],
+            ["Export Excel", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :xlsx)],
             ["Export CSV", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :csv)]
           ] %>
         <% end %>

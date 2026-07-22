@@ -44,7 +44,7 @@ RSpec.describe "HotelPortal::AuditLogs", type: :request do
       expect(response.body).to include("Operation Audit Logs")
     end
 
-    it "exports csv/xls/pdf" do
+    it "exports csv/xlsx/pdf" do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin")
       create(
         :inventory_audit_log,
@@ -60,9 +60,10 @@ RSpec.describe "HotelPortal::AuditLogs", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
 
-      get "/hotel/#{hotel.id}/audit_logs.xls"
+      get "/hotel/#{hotel.id}/audit_logs.xlsx"
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
+      expect(response.media_type).to eq("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
 
       get "/hotel/#{hotel.id}/audit_logs.pdf"
       expect(response).to have_http_status(:success)

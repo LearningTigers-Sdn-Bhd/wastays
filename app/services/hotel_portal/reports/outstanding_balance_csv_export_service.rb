@@ -1,28 +1,22 @@
 # frozen_string_literal: true
 
-require "csv"
-
 module HotelPortal
   module Reports
     class OutstandingBalanceCsvExportService
       def initialize(report:)
         @report = report
+        @csv = Exports::CsvReportSupport.new
       end
 
       def generate
-        CSV.generate(headers: true) do |csv|
+        @csv.generate do |csv|
           csv << [ "Guest Name", "Booking Ref", "Stay", "Rooms", "Room Numbers", "Payment Status", "Outstanding Amount", "Notes" ]
 
           @report.rows.each do |row|
             csv << [
-              row[:guest_name],
-              row[:confirmation_token],
-              row[:stay_dates],
-              row[:room_details],
-              row[:room_numbers],
-              row[:payment_status],
-              money(row[:outstanding_amount]),
-              row[:latest_note]
+              @csv.text(row[:guest_name]), @csv.text(row[:confirmation_token]), @csv.text(row[:stay_dates]),
+              @csv.text(row[:room_details]), @csv.text(row[:room_numbers]), @csv.text(row[:payment_status]),
+              @csv.money(row[:outstanding_amount]), @csv.text(row[:latest_note])
             ]
           end
 
@@ -33,16 +27,10 @@ module HotelPortal
             nil,
             nil,
             nil,
-            money(@report.totals[:outstanding_amount]),
+            @csv.money(@report.totals[:outstanding_amount]),
             nil
           ]
         end
-      end
-
-      private
-
-      def money(value)
-        format("%.2f", value.to_d)
       end
     end
   end

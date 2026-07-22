@@ -7,7 +7,7 @@
     <% else %>
       <%= render "export_dropdown", menu_id: "paid-payouts-export", items: [
         ["Export PDF", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :pdf)],
-        ["Export Excel", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :xls)],
+        ["Export Excel", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :xlsx)],
         ["Export CSV", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :csv)]
       ] %>
     <% end %>

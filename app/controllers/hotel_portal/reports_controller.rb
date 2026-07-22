@@ -22,7 +22,7 @@ module HotelPortal
     before_action -> { require_feature!("outstanding_balance_noshow") }, only: %i[outstanding_balance]
     before_action -> { require_feature!("booking_source_analysis") }, only: %i[breakdown]
     before_action -> { require_feature!("revenue_allocation_per_night") }, only: %i[daily_report daily_revenue_cell daily_revenue_source_bookings]
-    before_action -> { require_feature!("excel_pdf_export") }, if: -> { %i[csv xls xlsx pdf].include?(request.format.symbol) }
+    before_action -> { require_feature!("excel_pdf_export") }, if: -> { %i[csv xlsx pdf].include?(request.format.symbol) }
 
     def index
       # Note: FinancialFiltering sets @start_date and @end_date
@@ -44,20 +44,29 @@ module HotelPortal
       respond_to do |format|
         format.html
         format.csv do
-          csv = financial_performance_export_service.generate_csv
+          csv = HotelPortal::Reports::FinancialPerformanceCsvExportService.new(
+            hotel: current_hotel,
+            report: financial_performance_export_result
+          ).generate
           send_data csv,
             filename: "financial-performance-#{@start_date}-#{@end_date}.csv",
-            type: "text/csv"
+            type: "text/csv; charset=utf-8"
         end
-        format.any(:xls) do
-          workbook = financial_performance_export_service.generate_xls
+        format.xlsx do
+          workbook = HotelPortal::Reports::FinancialPerformanceExcelExportService.new(
+            hotel: current_hotel,
+            report: financial_performance_export_result
+          ).generate
           send_data workbook,
-            filename: "financial-performance-#{@start_date}-#{@end_date}.xls",
-            type: "application/vnd.ms-excel",
+            filename: "financial-performance-#{@start_date}-#{@end_date}.xlsx",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             disposition: "attachment"
         end
         format.pdf do
-          pdf = financial_performance_export_service.generate_pdf
+          pdf = HotelPortal::Reports::FinancialPerformancePdfExportService.new(
+            hotel: current_hotel,
+            report: financial_performance_export_result
+          ).generate
           send_data pdf,
             filename: "financial-performance-#{@start_date}-#{@end_date}.pdf",
             type: "application/pdf",
@@ -89,20 +98,29 @@ module HotelPortal
       respond_to do |format|
         format.html
         format.csv do
-          csv = payouts_export_service.generate_csv
+          csv = HotelPortal::Reports::PayoutsCsvExportService.new(
+            hotel: current_hotel,
+            report: payouts_export_result
+          ).generate
           send_data csv,
             filename: "payouts-#{@active_tab}-#{Date.current}.csv",
-            type: "text/csv"
+            type: "text/csv; charset=utf-8"
         end
-        format.any(:xls) do
-          workbook = payouts_export_service.generate_xls
+        format.xlsx do
+          workbook = HotelPortal::Reports::PayoutsExcelExportService.new(
+            hotel: current_hotel,
+            report: payouts_export_result
+          ).generate
           send_data workbook,
-            filename: "payouts-#{@active_tab}-#{Date.current}.xls",
-            type: "application/vnd.ms-excel",
+            filename: "payouts-#{@active_tab}-#{Date.current}.xlsx",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             disposition: "attachment"
         end
         format.pdf do
-          pdf = payouts_export_service.generate_pdf
+          pdf = HotelPortal::Reports::PayoutsPdfExportService.new(
+            hotel: current_hotel,
+            report: payouts_export_result
+          ).generate
           send_data pdf,
             filename: "payouts-#{@active_tab}-#{Date.current}.pdf",
             type: "application/pdf",
@@ -127,17 +145,19 @@ module HotelPortal
           end
         end
         format.csv do
-          send_data breakdown_export_service.generate_csv, filename: "financial-breakdown-#{@start_date}-#{@end_date}.csv"
+          send_data HotelPortal::Reports::FinancialBreakdownCsvExportService.new(hotel: current_hotel, report: financial_breakdown_export_result).generate,
+            filename: "financial-breakdown-#{@start_date}-#{@end_date}.csv",
+            type: "text/csv; charset=utf-8"
         end
-        format.any(:xls) do
-          workbook = breakdown_export_service.generate_xls
+        format.xlsx do
+          workbook = HotelPortal::Reports::FinancialBreakdownExcelExportService.new(hotel: current_hotel, report: financial_breakdown_export_result).generate
           send_data workbook,
-            filename: "financial-breakdown-#{@start_date}-#{@end_date}.xls",
-            type: "application/vnd.ms-excel",
+            filename: "financial-breakdown-#{@start_date}-#{@end_date}.xlsx",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             disposition: "attachment"
         end
         format.pdf do
-          pdf = breakdown_export_service.generate_pdf
+          pdf = HotelPortal::Reports::FinancialBreakdownPdfExportService.new(hotel: current_hotel, report: financial_breakdown_export_result).generate
           send_data pdf,
             filename: "financial-breakdown-#{@start_date}-#{@end_date}.pdf",
             type: "application/pdf",
@@ -161,13 +181,13 @@ module HotelPortal
           csv = HotelPortal::Reports::DailyOccupancyCsvExportService.new(report: @report).generate
           send_data csv,
             filename: "daily-occupancy-#{@report.start_date}-#{@report.end_date}.csv",
-            type: "text/csv"
+            type: "text/csv; charset=utf-8"
         end
-        format.any(:xls) do
-          workbook = HotelPortal::Reports::DailyOccupancyExcelExportService.new(report: @report).generate
+        format.xlsx do
+          workbook = HotelPortal::Reports::DailyOccupancyExcelExportService.new(hotel: current_hotel, report: @report).generate
           send_data workbook,
-            filename: "daily-occupancy-#{@report.start_date}-#{@report.end_date}.xls",
-            type: "application/vnd.ms-excel",
+            filename: "daily-occupancy-#{@report.start_date}-#{@report.end_date}.xlsx",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             disposition: "attachment"
         end
         format.pdf do
@@ -287,13 +307,13 @@ module HotelPortal
           csv = HotelPortal::Reports::OutstandingBalanceCsvExportService.new(report: @report).generate
           send_data csv,
             filename: "outstanding-balance-#{@report.start_date}-#{@report.end_date}.csv",
-            type: "text/csv"
+            type: "text/csv; charset=utf-8"
         end
-        format.any(:xls) do
-          workbook = HotelPortal::Reports::OutstandingBalanceExcelExportService.new(report: @report).generate
+        format.xlsx do
+          workbook = HotelPortal::Reports::OutstandingBalanceExcelExportService.new(hotel: current_hotel, report: @report).generate
           send_data workbook,
-            filename: "outstanding-balance-#{@report.start_date}-#{@report.end_date}.xls",
-            type: "application/vnd.ms-excel",
+            filename: "outstanding-balance-#{@report.start_date}-#{@report.end_date}.xlsx",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             disposition: "attachment"
         end
         format.pdf do
@@ -319,13 +339,13 @@ module HotelPortal
           csv = HotelPortal::Reports::DepositLiabilityCsvExportService.new(report: @report).generate
           send_data csv,
             filename: "deposit-liability-#{@report.as_of_date}.csv",
-            type: "text/csv"
+            type: "text/csv; charset=utf-8"
         end
-        format.any(:xls) do
-          workbook = HotelPortal::Reports::DepositLiabilityExcelExportService.new(report: @report).generate
+        format.xlsx do
+          workbook = HotelPortal::Reports::DepositLiabilityExcelExportService.new(hotel: current_hotel, report: @report).generate
           send_data workbook,
-            filename: "deposit-liability-#{@report.as_of_date}.xls",
-            type: "application/vnd.ms-excel",
+            filename: "deposit-liability-#{@report.as_of_date}.xlsx",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             disposition: "attachment"
         end
         format.pdf do
@@ -403,15 +423,15 @@ module HotelPortal
           csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
           send_data csv,
             filename: "guest-reports-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.csv",
-            type: "text/csv"
+            type: "text/csv; charset=utf-8"
         end
-        format.any(:xls) do
+        format.xlsx do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
+          workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(hotel: current_hotel, report: report_to_export, tab: @active_guest_report_tab).generate
           send_data workbook,
-            filename: "guest-reports-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.xls",
-            type: "application/vnd.ms-excel",
+            filename: "guest-reports-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.xlsx",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             disposition: "attachment"
         end
         format.pdf do
@@ -444,12 +464,18 @@ module HotelPortal
         format.csv do
           send_data service.generate_csv,
             filename: "folio-ledger-#{@start_date}-#{@end_date}.csv",
-            type: "text/csv"
+            type: "text/csv; charset=utf-8"
         end
-        format.any(:xls) do
-          send_data service.generate_xls,
-            filename: "folio-ledger-#{@start_date}-#{@end_date}.xls",
-            type: "application/vnd.ms-excel",
+        format.xlsx do
+          send_data service.generate_xlsx,
+            filename: "folio-ledger-#{@start_date}-#{@end_date}.xlsx",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            disposition: "attachment"
+        end
+        format.pdf do
+          send_data service.generate_pdf,
+            filename: "folio-ledger-#{@start_date}-#{@end_date}.pdf",
+            type: "application/pdf",
             disposition: "attachment"
         end
       end
@@ -470,7 +496,25 @@ module HotelPortal
           csv = HotelPortal::Reports::JournalBatchCsvExportService.new(batches: @batches).generate
           send_data csv,
             filename: "journal-batches-#{@report_start_date}-#{@report_end_date}.csv",
-            type: "text/csv"
+            type: "text/csv; charset=utf-8"
+        end
+        format.xlsx do
+          workbook = HotelPortal::Reports::JournalBatchExcelExportService.new(
+            hotel: current_hotel, batches: @batches, start_date: @report_start_date, end_date: @report_end_date
+          ).generate
+          send_data workbook,
+            filename: "journal-batches-#{@report_start_date}-#{@report_end_date}.xlsx",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            disposition: "attachment"
+        end
+        format.pdf do
+          pdf = HotelPortal::Reports::JournalBatchPdfExportService.new(
+            hotel: current_hotel, batches: @batches, start_date: @report_start_date, end_date: @report_end_date
+          ).generate
+          send_data pdf,
+            filename: "journal-batches-#{@report_start_date}-#{@report_end_date}.pdf",
+            type: "application/pdf",
+            disposition: "attachment"
         end
       end
     end
@@ -519,13 +563,13 @@ module HotelPortal
           csv = HotelPortal::Reports::RefundReportCsvExportService.new(report: @report).generate
           send_data csv,
             filename: "refund-report-#{@report.start_date}-#{@report.end_date}.csv",
-            type: "text/csv"
+            type: "text/csv; charset=utf-8"
         end
-        format.any(:xls) do
-          workbook = HotelPortal::Reports::RefundReportExcelExportService.new(report: @report).generate
+        format.xlsx do
+          workbook = HotelPortal::Reports::RefundReportExcelExportService.new(hotel: current_hotel, report: @report).generate
           send_data workbook,
-            filename: "refund-report-#{@report.start_date}-#{@report.end_date}.xls",
-            type: "application/vnd.ms-excel",
+            filename: "refund-report-#{@report.start_date}-#{@report.end_date}.xlsx",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             disposition: "attachment"
         end
         format.pdf do
@@ -726,38 +770,85 @@ module HotelPortal
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_payouts", hotel: current_hotel)
     end
 
-    def financial_performance_export_service
-      @financial_performance_export_service ||= HotelPortal::Reports::FinancialPerformanceExportService.new(
-        hotel: current_hotel,
+    def financial_performance_export_result
+      @financial_performance_export_result ||= HotelPortal::Reports::FinancialPerformanceExportResult.new(
         start_date: @start_date,
         end_date: @end_date,
-        total_gross: @total_gross,
-        total_margin: @total_margin,
-        total_net: @total_net,
-        booking_count: @booking_count,
-        daily_data: Booking.daily_analytics(@start_date, @end_date, query: params[:q], base_scope: @base_bookings).index_by { |row| row[:date] }
+        totals: {
+          gross: @total_gross,
+          margin: @total_margin,
+          net: @total_net,
+          booking_count: @booking_count
+        },
+        rows: Booking.daily_analytics(@start_date, @end_date, query: params[:q], base_scope: @base_bookings).map do |row|
+          {
+            date: row.fetch(:date),
+            booking_count: row.fetch(:booking_count),
+            gross: row.fetch(:revenue),
+            margin: row.fetch(:margin),
+            net: row.fetch(:net)
+          }
+        end
       )
     end
 
-    def breakdown_export_service
-      @breakdown_export_service ||= HotelPortal::Reports::FinancialBreakdownExportService.new(
-        bookings: @bookings,
-        hotel: current_hotel,
+    def financial_breakdown_export_result
+      @financial_breakdown_export_result ||= HotelPortal::Reports::FinancialBreakdownExportResult.new(
         start_date: @start_date,
-        end_date: @end_date
+        end_date: @end_date,
+        rows: @bookings.map do |booking|
+          {
+            booking_reference: booking.confirmation_token,
+            guest_name: booking.guest_name,
+            status: booking.status,
+            check_in: booking.check_in,
+            check_out: booking.check_out,
+            gross: booking.total_amount,
+            taxes: booking.tax_total,
+            margin: booking.margin_amount,
+            net: booking.net_amount,
+            currency: booking.currency.presence || current_hotel.default_currency
+          }
+        end
       )
     end
 
-    def payouts_export_service
+    def payouts_export_result
+      @payouts_export_result ||= begin
       history_scope = current_hotel.payout_batches_for_reports(start_date: @paid_start_date, end_date: @paid_end_date)
-      HotelPortal::Reports::PayoutsExportService.new(
-        hotel: current_hotel,
+      HotelPortal::Reports::PayoutsExportResult.new(
         active_tab: @active_tab,
-        upcoming_bookings: @upcoming_bookings,
-        upcoming_payout_amount: @upcoming_payout_amount,
-        processing_batches: @processing_batches,
-        payout_history: history_scope
+        upcoming_rows: @upcoming_bookings.map do |booking|
+          {
+            booking_reference: booking.confirmation_token,
+            checked_out_at: booking.checked_out_at,
+            status: booking.payout_status,
+            net_amount: booking.net_amount
+          }
+        end,
+        processing_rows: @processing_batches.map do |batch|
+          {
+            period_start: batch.period_start,
+            period_end: batch.period_end,
+            status: batch.status,
+            reference: batch.payout_reference,
+            net_amount: batch.amount
+          }
+        end,
+        paid_rows: history_scope.map do |batch|
+          {
+            period_start: batch.period_start,
+            period_end: batch.period_end,
+            settled_at: batch.payout_at,
+            status: batch.status,
+            reference: batch.payout_reference,
+            net_amount: batch.amount
+          }
+        end,
+        paid_start_date: @paid_start_date,
+        paid_end_date: @paid_end_date
       )
+      end
     end
 
     def payout_tab_label(tab)

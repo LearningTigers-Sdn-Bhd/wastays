@@ -21,7 +21,7 @@
             export_menu_id: "guest-reports-export",
             export_items: [
               ["Export PDF", guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :pdf)],
-              ["Export Excel", guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :xls)],
+              ["Export Excel", guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :xlsx)],
               ["Export CSV", guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :csv)]
             ] %>
         </div>
