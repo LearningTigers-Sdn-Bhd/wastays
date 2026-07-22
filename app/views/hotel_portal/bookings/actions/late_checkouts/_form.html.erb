@@ -5,7 +5,7 @@
   <%= render PanelsUI::Sheet.new(
         id: "booking-late-checkout-sheet",
         side: :right,
-        size: :lg,
+        size: group ? :xl : :lg,
         title: "Review late checkout",
         description: booking.guest_name,
         body_class: "p-0") do |sheet| %>

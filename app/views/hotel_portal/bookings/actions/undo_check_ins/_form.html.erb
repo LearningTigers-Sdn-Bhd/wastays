@@ -6,7 +6,7 @@
   <%= render PanelsUI::Sheet.new(
         id: "booking-undo-check-in-sheet",
         side: :right,
-        size: :lg,
+        size: group ? :xl : :md,
         title: "Undo check-in",
         description: booking.guest_name,
         body_class: "p-0") do |sheet| %>

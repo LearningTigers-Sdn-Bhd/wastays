@@ -6,7 +6,7 @@
   <%= render PanelsUI::Sheet.new(
         id: "review-backdated-check-in-sheet",
         side: :right,
-        size: :lg,
+        size: group ? :xl : :md,
         title: "Backdated check-in",
         description: booking.guest_name,
         body_class: "p-0") do |sheet| %>

@@ -11,7 +11,7 @@
   <%= render PanelsUI::Sheet.new(
         id: "booking-reinstate-sheet",
         side: :right,
-        size: :xl,
+        size: group ? :xl : :lg,
         title: "Reinstate no-show",
         description: booking.guest_name,
         body_class: "p-0") do |sheet| %>

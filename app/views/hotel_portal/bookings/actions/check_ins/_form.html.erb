@@ -6,7 +6,7 @@
   <%= render PanelsUI::Sheet.new(
         id: "booking-check-in-sheet",
         side: :right,
-        size: :full,
+        size: group ? :xl : :lg,
         title: @editing_check_in ? "Edit check-in details" : (group ? "Check in guests" : "Check in guest"),
         description: @booking.guest_name,
         body_class: "p-0") do |sheet| %>

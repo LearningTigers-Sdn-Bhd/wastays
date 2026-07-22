@@ -6,7 +6,7 @@
   <%= render PanelsUI::Sheet.new(
         id: "booking-cancellation-sheet",
         side: :right,
-        size: :lg,
+        size: group ? :xl : :md,
         title: "Cancel booking",
         description: booking.guest_name,
         body_class: "p-0") do |sheet| %>

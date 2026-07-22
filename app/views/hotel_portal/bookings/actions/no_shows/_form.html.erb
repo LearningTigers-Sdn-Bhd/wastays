@@ -6,7 +6,7 @@
   <%= render PanelsUI::Sheet.new(
         id: "booking-no-show-sheet",
         side: :right,
-        size: :lg,
+        size: group ? :xl : :md,
         title: "Mark as no-show",
         description: booking.guest_name,
         body_class: "p-0") do |sheet| %>
