@@ -205,12 +205,22 @@ module HotelPortal
             relationship.present? && relationship.active? && relationship.direct_bill_enabled?
           end
 
+          # Who is responsible for settling this folio — a concrete party rather
+          # than the folio type, so the folio card reads "WS-…/1 · Faiz Hakim"
+          # (guest) or "· Acme Sdn Bhd" (company) instead of echoing the title.
           def payer_label_for(folio)
             text = [ folio.name, folio.display_name ].join(" ").downcase
             return "Agent" if text.match?(/agent|travel/)
             return "Hotel" if text.match?(/house/)
 
-            folio.payer_display_label
+            case folio.payer_type
+            when "company"
+              folio.hotel_corporate_account&.corporate_account&.name.presence || folio.payer_display_label
+            when "guest"
+              booking.guest_name.presence || folio.payer_display_label
+            else
+              folio.payer_display_label
+            end
           end
 
           def status_label_for(folio, balance)

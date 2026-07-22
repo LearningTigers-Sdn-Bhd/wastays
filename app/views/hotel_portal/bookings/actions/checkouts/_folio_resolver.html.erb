@@ -34,7 +34,7 @@
                 region: true,
                 class: "overflow-hidden rounded-lg border border-border bg-card",
                 trigger_class: "group items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50",
-                content_class: "divide-y divide-border border-t border-border px-4"
+                content_class: "border-t border-border"
               ) do |group_card| %>
             <% group_card.with_trigger do %>
               <span class="min-w-0 flex-1">
@@ -45,14 +45,16 @@
               <%= app_icon "chevron-down", class: "panel-collapsible__indicator size-4 shrink-0 text-muted-foreground", aria: { hidden: true } %>
             <% end %>
             <% group_card.with_body do %>
-              <% if early_departure %>
-                <div class="py-3">
-                  <%= render "hotel_portal/bookings/actions/checkouts/early_departure", **early_departure_locals %>
-                </div>
-              <% end %>
-              <% sheet.folio_rows.each do |row| %>
-                <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row, bordered: false %>
-              <% end %>
+              <div class="divide-y divide-border px-4">
+                <% if early_departure %>
+                  <div class="py-3">
+                    <%= render "hotel_portal/bookings/actions/checkouts/early_departure", **early_departure_locals %>
+                  </div>
+                <% end %>
+                <% sheet.folio_rows.each do |row| %>
+                  <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row, bordered: false %>
+                <% end %>
+              </div>
             <% end %>
           <% end %>
         </div>
