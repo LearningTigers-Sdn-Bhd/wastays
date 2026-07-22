@@ -41,7 +41,7 @@ module Folios
     private
 
     def folio_attributes
-      folio_number = HotelCounter.increment!(hotel: @hotel, type: "folio")
+      folio_number = Folios::NextFolioNumber.call(hotel: @hotel)
       ensure_folio_account_reference!(folio_number)
 
       {

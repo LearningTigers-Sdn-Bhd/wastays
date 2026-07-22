@@ -56,7 +56,7 @@ module Folios
     end
 
     def create_folio!
-      folio_number = HotelCounter.increment!(hotel: @booking.hotel, type: "folio")
+      folio_number = Folios::NextFolioNumber.call(hotel: @booking.hotel)
       @booking.assign_folio_account_reference_from!(folio_number)
       billing_party = agent_billing_party
 
