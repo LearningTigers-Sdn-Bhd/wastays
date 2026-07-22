@@ -93,6 +93,13 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", :business_day, type: 
       document = Nokogiri::HTML(response.body)
       expect(response.body).to include("Perform Check-in on:", "Ada Lovelace", "Grace Hopper")
       expect(document.css("[data-group-lifecycle-targets-target='panel']")).to be_empty
+
+      # Each selectable row needs a unique id so its label targets its own control
+      # (a shared id makes every label toggle the first checkbox).
+      target_ids = document.css("input[name='booking_ids[]']").map { |input| input["id"] }
+      expect(target_ids).to all(be_present)
+      expect(target_ids.uniq).to eq(target_ids)
+      expect(document.css("label[for^='group-target-']").map { |label| label["for"] }).to match_array(target_ids)
       expect(document.at_css("select[name='check_in[room_assignments][#{booking.booking_rooms.first.id}][room_number]']")).to be_present
       expect(document.css("select[name*='[room_assignments]']").size).to eq(1)
       expect(response.body).to include("Record a security deposit", "Tourism tax collected")
