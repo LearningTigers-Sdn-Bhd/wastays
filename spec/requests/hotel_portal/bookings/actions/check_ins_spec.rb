@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "HotelPortal::Bookings::Actions check-ins", type: :request do
+RSpec.describe "HotelPortal::Bookings::Actions check-ins", :business_day, type: :request do
   let(:hotel) { create(:hotel, status: "approved", tourism_tax_enabled: true, tourism_tax_amount: 10.0) }
   let(:other_hotel) { create(:hotel, status: "approved") }
   let(:user) { create(:user, account: hotel.account) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "HotelPortal booking transactions", type: :request do
+RSpec.describe "HotelPortal booking transactions", :business_day, type: :request do
   let(:hotel) { create(:hotel) }
   let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "101" ]) }
   let(:user) { create(:user) }
