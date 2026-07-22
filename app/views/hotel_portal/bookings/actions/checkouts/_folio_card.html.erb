@@ -4,19 +4,18 @@
 <% row = local_assigns.fetch(:row) %>
 <% form_state = local_assigns.fetch(:form_state) %>
 <% booking_visible = local_assigns.fetch(:booking_visible, true) %>
+<% bordered = local_assigns.fetch(:bordered, true) %>
 <% badge_tones = { "emerald" => :success, "amber" => :warning, "rose" => :destructive, "slate" => :neutral } %>
 <% exception_actions = HotelPortal::Bookings::Actions::Checkouts::SheetPresenter::EXCEPTION_ACTIONS %>
 <% values = form_state.folio_values(checkout_booking, row) %>
 <% field_scope = "checkout_bookings[#{checkout_booking.id}][folios][#{row.folio.id}]" %>
 <% single_action = row.action_options.one? %>
-<% guest_folio = row.folio.folio_type.to_s == "guest" && row.folio.payer_type.to_s == "guest" %>
 <% credit_exposure = ArInvoices::CreditExposure.call(hotel_corporate_account: row.folio.hotel_corporate_account, pending_amount: row.balance, pending_currency: row.folio.currency) if row.folio.hotel_corporate_account.present? && row.balance.to_d.positive? %>
 
-<article class="rounded-lg border border-border bg-card p-3 <%= 'hidden' unless booking_visible %>"
+<article class="<%= bordered ? 'rounded-lg border border-border bg-card p-3' : 'py-3' %> <%= 'hidden' unless booking_visible %>"
          data-<%= ns %>-target="bookingRow folioRow"
          data-booking-id="<%= checkout_booking.id %>"
-         data-folio-id="<%= row.folio.id %>"
-         data-folio-guest="<%= guest_folio %>">
+         data-folio-id="<%= row.folio.id %>">
   <div class="flex items-center gap-3">
     <span class="min-w-0 flex-1">
       <span class="block truncate text-sm font-medium"><%= row.name %></span>

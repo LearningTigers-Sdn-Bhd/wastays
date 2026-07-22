@@ -233,34 +233,6 @@ RSpec.describe "Booking control panel Phase 6", type: :system do
     expect(booking.reload.status).to eq("completed")
   end
 
-  it "bulk-resolves guest folios to pay now and completes checkout", js: true do
-    role.permissions << Permission.find_or_create_by!(slug: "post_folio_payments") { |record| record.name = "Post folio payments" }
-    booking.update!(check_in: 2.hours.ago, check_out: Time.current)
-    booking.update_columns(status: "checkout_required", checked_in_at: 2.hours.ago)
-    BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
-
-    guest_folio = booking.booking_folios.find_by(is_primary: true)
-    create(:folio_transaction, booking_folio: guest_folio, transaction_type: "charge", amount: 120)
-
-    visit hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
-    find("button[aria-label='Booking actions']").click
-    click_link "Complete Checkout"
-    expect(page).to have_css("dialog#booking-checkout-sheet[open]", wait: 3)
-
-    within("#booking-checkout-sheet") do
-      click_in_overlay "Resolve all guest folios · Pay now / Cash"
-
-      within(find("article[data-folio-guest='true']")) do
-        expect(page).to have_field("Payment method", with: "cash", visible: :all)
-      end
-
-      click_in_overlay "Complete checkout"
-    end
-
-    expect(page).to have_no_css("dialog#booking-checkout-sheet", wait: 3)
-    expect(booking.reload.status).to eq("completed")
-  end
-
   it "adds and removes a guest through booking action Sheets", js: true do
     visit hotel_booking_control_panel_path(hotel, booking, tab: "guest_details")
 

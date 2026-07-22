@@ -4,20 +4,11 @@
 <% group_checkout = local_assigns.fetch(:group_checkout, false) %>
 <% currency = local_assigns.fetch(:currency) %>
 <% checkout_business_date = local_assigns.fetch(:checkout_business_date) %>
-<% any_guest_payable = sheets.values.any? { |sheet| sheet.folio_rows.any? { |row| row.folio.folio_type.to_s == "guest" && row.folio.payer_type.to_s == "guest" && row.action_options.any? { |option| option.last == "pay_now" } } } %>
 
 <section aria-labelledby="folio-resolver-heading" class="space-y-4">
-  <div class="flex flex-wrap items-start justify-between gap-3">
-    <div>
-      <h3 id="folio-resolver-heading" class="text-base font-semibold">Resolve folios</h3>
-      <p class="mt-1 text-sm text-muted-foreground">Choose how each folio settles. Guest folios default to Pay Now.</p>
-    </div>
-    <% if any_guest_payable %>
-      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
-            data: { action: "#{ns}#resolveAllGuestFolios" }) do %>
-        Resolve all guest folios · Pay now / Cash
-      <% end %>
-    <% end %>
+  <div>
+    <h3 id="folio-resolver-heading" class="text-base font-semibold">Resolve folios</h3>
+    <p class="mt-1 text-sm text-muted-foreground">Choose how each folio settles. Guest folios default to Pay Now.</p>
   </div>
 
   <div class="space-y-4" data-testid="folio-resolver-list">
@@ -43,7 +34,7 @@
                 region: true,
                 class: "overflow-hidden rounded-lg border border-border bg-card",
                 trigger_class: "group items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50",
-                content_class: "space-y-3 border-t border-border bg-muted/20 p-3"
+                content_class: "divide-y divide-border border-t border-border px-4"
               ) do |group_card| %>
             <% group_card.with_trigger do %>
               <span class="min-w-0 flex-1">
@@ -55,12 +46,12 @@
             <% end %>
             <% group_card.with_body do %>
               <% if early_departure %>
-                <div class="rounded-lg border border-info/40 bg-info/5 p-3">
+                <div class="py-3">
                   <%= render "hotel_portal/bookings/actions/checkouts/early_departure", **early_departure_locals %>
                 </div>
               <% end %>
               <% sheet.folio_rows.each do |row| %>
-                <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row %>
+                <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row, bordered: false %>
               <% end %>
             <% end %>
           <% end %>
@@ -68,12 +59,12 @@
       <% else %>
         <div class="space-y-3">
           <% if early_departure %>
-            <div class="rounded-lg border border-info/40 bg-info/5 p-3">
+            <div class="rounded-lg border border-border bg-card p-3">
               <%= render "hotel_portal/bookings/actions/checkouts/early_departure", **early_departure_locals %>
             </div>
           <% end %>
           <% sheet.folio_rows.each do |row| %>
-            <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row %>
+            <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row, bordered: true %>
           <% end %>
         </div>
       <% end %>
