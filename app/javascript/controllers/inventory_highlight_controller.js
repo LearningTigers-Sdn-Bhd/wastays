@@ -65,7 +65,7 @@ export default class extends Controller {
 
     // Reset dynamic classes from header
     header.classList.remove(
-      "bg-indigo-600", "bg-indigo-50/60", "bg-indigo-100/70", "bg-slate-50", 
+      "bg-indigo-600", "bg-indigo-50/60", "bg-indigo-100/70", "bg-slate-50", "bg-muted",
       "text-white", "ring-1", "ring-inset", "ring-indigo-700"
     )
 
@@ -80,9 +80,9 @@ export default class extends Controller {
       if (addClass) el.classList.add(addClass)
     }
 
-    const dayColors = ["text-indigo-200", "text-indigo-400", "text-indigo-600", "text-slate-400"]
-    const numColors = ["text-white", "text-indigo-700", "text-slate-700"]
-    const monthColors = ["text-indigo-200", "text-white", "text-slate-400"]
+    const dayColors = ["text-indigo-200", "text-indigo-400", "text-indigo-600", "text-slate-400", "text-muted-foreground"]
+    const numColors = ["text-white", "text-indigo-700", "text-slate-700", "text-foreground"]
+    const monthColors = ["text-indigo-200", "text-white", "text-slate-400", "text-muted-foreground"]
 
     if (isActive) {
       // Hovered (Active) state
