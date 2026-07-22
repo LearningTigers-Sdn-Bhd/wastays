@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Booking control panel Phase 6", type: :system do
+RSpec.describe "Booking control panel Phase 6", :business_day, type: :system do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "hotel_staff", email: "phase6@example.com") }
   let(:hotel) { create(:hotel, account: account, status: "approved") }
