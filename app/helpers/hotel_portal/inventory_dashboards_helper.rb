@@ -10,6 +10,42 @@ module HotelPortal
       }.compact
     end
 
+    def inventory_navigation_state(room_type_id:, view_currencies:, display_currency:, active_tab:, active_subtab:, range_mode:, days:, month:)
+      {
+        view_currencies: view_currencies,
+        display_currency: display_currency,
+        room_type_id: room_type_id,
+        tab: active_tab,
+        subtab: active_subtab,
+        days: range_mode == "month" ? "month" : days,
+        month: range_mode == "month" ? inventory_month_param(month) : nil
+      }.compact
+    end
+
+    def inventory_last_synced_at_label(time = Time.current)
+      time.strftime("%-I:%M %p")
+    end
+
+    def inventory_month_param(date)
+      date.strftime("%Y-%m")
+    end
+
+    def inventory_month_label(date)
+      date.strftime("%B %Y")
+    end
+
+    def inventory_date_range_label(start_date, end_date)
+      "#{start_date.strftime('%b %-d')} – #{end_date.strftime('%b %-d, %Y')}"
+    end
+
+    def inventory_date_header_parts(date)
+      {
+        day: date.strftime("%a"),
+        num: date.strftime("%d"),
+        month: date.strftime("%b")
+      }
+    end
+
     def inventory_calendar_currencies
       CurrencyCatalog::COMMON_CODES
     end

@@ -1,18 +1,19 @@
-<%# 
+<%#
   # This partial should be rendered inside a turbo-frame with id "inventory_calendar_frame"
   active_tab ||= params[:tab].presence || "calendar"
   active_subtab ||= params[:subtab].presence || "pricing"
 %>
 <%
-  navigation_state = {
+  navigation_state = inventory_navigation_state(
+    room_type_id: @calendar.selected_room_type_id,
     view_currencies: @view_currencies,
     display_currency: @display_currency,
-    room_type_id: @calendar.selected_room_type_id,
-    tab: active_tab,
-    subtab: active_subtab,
-    days: @range_mode == "month" ? "month" : @days,
-    month: @range_mode == "month" ? @month.strftime("%Y-%m") : nil
-  }.compact
+    active_tab: active_tab,
+    active_subtab: active_subtab,
+    range_mode: @range_mode,
+    days: @days,
+    month: @month
+  )
 %>
 
 <%= render PanelsUI::Tabs.new(id: "inventory-tabs", active: active_tab, variant: :line, url: { param: "tab" }, aria_label: "Rates and inventory sections") do |tabs| %>
@@ -41,7 +42,7 @@
       <div class="flex items-center gap-3.5 rounded-xl border border-border bg-card p-3 shadow-lg">
         <div class="flex items-center gap-1">
           <span class="hidden text-xs text-muted-foreground sm:block">
-            Last synced <%= Time.current.strftime("%-I:%M %p") %>
+            Last synced <%= inventory_last_synced_at_label %>
           </span>
         </div>
         <button type="button"
@@ -60,7 +61,7 @@
     <div class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm" data-inventory-calendar-target="topPanel">
       <!-- Date navigation -->
       <div class="flex items-center gap-1 rounded-lg border border-border bg-muted p-1">
-        <% prev_target = @range_mode == "month" ? { month: (@month.prev_month).strftime("%Y-%m") } : { start_date: @start_date - @days.days } %>
+        <% prev_target = @range_mode == "month" ? { month: inventory_month_param(@month.prev_month) } : { start_date: @start_date - @days.days } %>
         <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(prev_target)),
                     class: "rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-card hover:text-foreground hover:shadow-sm",
                     title: @range_mode == "month" ? "Previous month" : "Previous #{@days} days" do %>
@@ -69,9 +70,9 @@
         <% if @range_mode == "month" %>
           <label class="relative flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm font-medium text-foreground hover:bg-card hover:shadow-sm">
             <%= cached_icon "calendar", class: "h-4 w-4 text-muted-foreground", stroke_width: 2.5 %>
-            <span class="tabular-nums"><%= @month.strftime("%B %Y") %></span>
+            <span class="tabular-nums"><%= inventory_month_label(@month) %></span>
             <input type="month"
-                   value="<%= @month.strftime("%Y-%m") %>"
+                   value="<%= inventory_month_param(@month) %>"
                    class="absolute inset-0 cursor-pointer opacity-0"
                    data-inventory-calendar-target="navMonth"
                    data-action="change->inventory-calendar#navigateMonth">
@@ -79,7 +80,7 @@
         <% else %>
           <label class="relative flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm font-medium text-foreground hover:bg-card hover:shadow-sm">
             <%= cached_icon "calendar", class: "h-4 w-4 text-muted-foreground", stroke_width: 2.5 %>
-            <span class="tabular-nums"><%= @start_date.strftime("%b %-d") %> – <%= @end_date.strftime("%b %-d, %Y") %></span>
+            <span class="tabular-nums"><%= inventory_date_range_label(@start_date, @end_date) %></span>
             <input type="date"
                    value="<%= @start_date %>"
                    class="absolute inset-0 cursor-pointer opacity-0"
@@ -87,7 +88,7 @@
                    data-action="change->inventory-calendar#navigate">
           </label>
         <% end %>
-        <% next_target = @range_mode == "month" ? { month: (@month.next_month).strftime("%Y-%m") } : { start_date: @start_date + @days.days } %>
+        <% next_target = @range_mode == "month" ? { month: inventory_month_param(@month.next_month) } : { start_date: @start_date + @days.days } %>
         <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(next_target)),
                     class: "rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-card hover:text-foreground hover:shadow-sm",
                     title: @range_mode == "month" ? "Next month" : "Next #{@days} days" do %>
@@ -95,7 +96,7 @@
         <% end %>
       </div>
 
-      <% today_target = @range_mode == "month" ? { month: Date.current.strftime("%Y-%m") } : { start_date: Date.current } %>
+      <% today_target = @range_mode == "month" ? { month: inventory_month_param(Date.current) } : { start_date: Date.current } %>
       <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(today_target)),
                   class: "rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:border-border-interactive hover:bg-muted" do %>
         Today
@@ -111,7 +112,7 @@
                     class: "rounded-md px-3 py-1 text-sm font-medium transition-all #{@range_mode == 'days' && @days == 21 ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}" do %>
           21 days
         <% end %>
-        <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(days: "month", month: (@range_mode == "month" ? @month : Date.current.beginning_of_month).strftime("%Y-%m"))),
+        <%= link_to hotel_inventory_index_path(current_hotel, navigation_state.merge(days: "month", month: inventory_month_param(@range_mode == "month" ? @month : Date.current.beginning_of_month))),
                     class: "rounded-md px-3 py-1 text-sm font-medium transition-all #{@range_mode == 'month' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}" do %>
           Month
         <% end %>
@@ -191,15 +192,17 @@
                   num_class = weekend ? "text-sm font-bold tabular-nums text-indigo-700" : "text-sm font-semibold tabular-nums text-foreground"
 
                   month_class = "ml-1 text-[12px] font-medium text-muted-foreground"
+
+                  date_header = inventory_date_header_parts(date)
                 %>
                 <th class="<%= th_class %>"
                     data-inventory-highlight-target="columnHeader"
                     data-column-id="<%= date %>"
                     data-is-weekend="<%= weekend %>">
-                  <div class="<%= day_class %>" data-day-label><%= date.strftime("%a") %></div>
+                  <div class="<%= day_class %>" data-day-label><%= date_header[:day] %></div>
                   <div class="<%= num_class %>" data-num-label>
-                    <%= date.strftime("%d") %>
-                    <span class="<%= month_class %>" data-month-label><%= date.strftime("%b") %></span>
+                    <%= date_header[:num] %>
+                    <span class="<%= month_class %>" data-month-label><%= date_header[:month] %></span>
                   </div>
                 </th>
               <% end %>
@@ -225,12 +228,12 @@
                         <div class="min-w-0 flex-1">
                           <div class="flex items-center gap-2 flex-wrap">
                             <span class="truncate text-sm font-semibold text-foreground" data-original-color="text-foreground" data-highlight-color="text-primary-foreground"><%= row.label %></span>
-                            <span class="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground uppercase tracking-wider select-none border border-border/60">
-                              Base: <%= @hotel_base_currency %> <%= number_with_precision(row.room_type.base_price, precision: 2) %>
-                            </span>
                           </div>
                           <div class="text-[11px] text-muted-foreground mt-0.5" data-original-color="text-muted-foreground" data-highlight-color="text-indigo-200">
-                            <%= pluralize(row.room_type.quantity, "unit") %> · <%= @calendar.connected_channels.size %> channels
+                            <%= pluralize(row.room_type.quantity, "unit") %> · <%= @hotel_base_currency %> <%= number_with_precision(row.room_type.base_price, precision: 2) %>
+                            <% unless @calendar.connected_channels.size > 0 %>
+                              · <%= @calendar.connected_channels.size %> channels
+                            <% end %>
                           </div>
                         </div>
                       </button>
