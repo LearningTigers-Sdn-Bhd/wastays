@@ -395,7 +395,6 @@ Rails.application.routes.draw do
       match "edit-dates/:booking_id", to: "booking_dates#show", via: [ :get, :patch ], as: :edit_dates
       match "edit-room/:booking_id", to: "room_assignments#show", via: [ :get, :patch ], as: :edit_room
       match "edit-rate/:booking_id", to: "rate_changes#show", via: [ :get, :patch ], as: :edit_rate
-      match "edit-booking/:booking_id", to: "booking_edits#show", via: [ :get, :patch ], as: :edit_booking
       match "check-in/:booking_id", to: "check_ins#show", via: [ :get, :post ], as: :check_in
       match "cancel-booking/:booking_id", to: "cancellations#show", via: [ :get, :post ], as: :cancel_booking
       match "mark-no-show/:booking_id", to: "no_shows#show", via: [ :get, :post ], as: :mark_no_show
