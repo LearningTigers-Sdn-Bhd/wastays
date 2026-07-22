@@ -41,7 +41,7 @@ module HotelPortal
         inventory = room_type.room_inventories.find_by(date: date)
 
         total_capacity = room_type.quantity
-        remaining = inventory&.status == "closed" ? 0 : (inventory&.quantity || total_capacity)
+        available_capacity = inventory&.quantity || total_capacity
 
         # Count actual sold rooms from bookings
         sold = @hotel.bookings.revenue_generating
@@ -49,6 +49,8 @@ module HotelPortal
                      .where(booking_rooms: { room_type_id: room_type.id })
                      .where(":date >= check_in::date AND :date < check_out::date", date: date)
                      .count
+
+        remaining = inventory&.status == "closed" ? 0 : [ available_capacity - sold, 0 ].max
 
         percentage = total_capacity > 0 ? (sold.to_f / total_capacity * 100).round : 0
 

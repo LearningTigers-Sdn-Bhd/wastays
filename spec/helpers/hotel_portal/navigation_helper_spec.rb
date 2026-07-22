@@ -12,8 +12,8 @@ RSpec.describe HotelPortal::NavigationHelper, type: :helper do
       helper.define_singleton_method(:current_user) { current_user }
     end
 
-    it "shows help without the admin portal for hotel users" do
-      expect(helper.hotel_sidebar_footer_items.map(&:label)).to eq([ "Help & support" ])
+    it "has no footer items for regular hotel users" do
+      expect(helper.hotel_sidebar_footer_items).to eq([])
     end
 
     it "adds the external admin portal destination for superadmins" do
@@ -21,7 +21,7 @@ RSpec.describe HotelPortal::NavigationHelper, type: :helper do
 
       items = helper.hotel_sidebar_footer_items
 
-      expect(items.map(&:label)).to eq([ "Help & support", "Go to Admin Portal" ])
+      expect(items.map(&:label)).to eq([ "Go to Admin Portal" ])
       expect(items.last).to be_external
     end
   end

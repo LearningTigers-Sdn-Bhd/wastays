@@ -48,7 +48,9 @@ module HotelPortal
           date_label: day[:date].strftime("%a, %b %d"),
           percent: day[:percent],
           sold: day[:sold],
-          total: day[:total] || 0
+          total: day[:total] || 0,
+          percent_text_class: occupancy_percent_text_class(day[:percent]),
+          percent_bar_class: occupancy_percent_bar_class(day[:percent])
         }
       end
     end
@@ -60,6 +62,24 @@ module HotelPortal
     def pending_actions_label
       count = pending_actions_count
       "#{ActionController::Base.helpers.pluralize(count, 'guest')} pending review."
+    end
+
+    private
+
+    def occupancy_percent_text_class(percent)
+      case percent
+      when 80..Float::INFINITY then "text-emerald-600"
+      when 40...80 then "text-amber-600"
+      else "text-rose-600"
+      end
+    end
+
+    def occupancy_percent_bar_class(percent)
+      case percent
+      when 80..Float::INFINITY then "bg-emerald-500"
+      when 40...80 then "bg-amber-500"
+      else "bg-rose-500"
+      end
     end
   end
 end

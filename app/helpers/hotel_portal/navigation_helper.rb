@@ -90,9 +90,7 @@ module HotelPortal
 
 
     def hotel_sidebar_footer_items
-      items = [
-        NavItem.new(label: "Help & support", path: help_center_path, search_text: "Help Support", icon: "circle-question-mark", active: false)
-      ]
+      items = []
       if current_user.superadmin?
         items << NavItem.new(label: "Go to Admin Portal", path: admin_dashboard_path, icon: "external-link", external: true)
       end

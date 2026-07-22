@@ -414,10 +414,17 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
   end
 
   it "shows the booking source in the popover when present" do
-    render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment.with(source_label: "Walk-in")))
+    render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment.with(source: "walk_in", source_label: "Walk-in")))
 
     expect(page).to have_css("#stay-view-booking-1-panel dt", text: "Source", visible: :all)
     expect(page).to have_css("#stay-view-booking-1-panel dd", text: "Walk-in", visible: :all)
+  end
+
+  it "renders a colored OTA badge for a recognized channel source" do
+    render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment.with(source: "booking.com", source_label: "Booking.com")))
+
+    expect(page).to have_css("#stay-view-booking-1-panel dd", text: "Booking.com", visible: :all)
+    expect(page.find("#stay-view-booking-1-panel", visible: :all)).to have_css("span[role='img']", text: "B", visible: :all)
   end
 
   it "renders financial attention on the bar and full details in the popover" do

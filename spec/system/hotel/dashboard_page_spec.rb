@@ -18,12 +18,11 @@ RSpec.describe 'Hotel dashboard page', type: :system do
   it 'shows the hotel dashboard content' do
     visit hotel_dashboard_path(hotel)
 
-    expect(page).to have_content('Dashboard')
+    expect(page).to have_content('Revenue (This Month)')
     expect(page).to have_content('Arrival Board')
-    expect(page).to have_content('Action Required')
     expect(page).to have_content('7-Day Occupancy')
     expect(page).to have_content('Recent Bookings')
-    expect(page).to have_link('View all bookings', href: hotel_front_desk_path(hotel, tab: "bookings", view: "list"))
-    expect(page.body.index('7-Day Occupancy')).to be < page.body.index('Action Required')
+    expect(page).to have_link('Go to Front Desk Bookings', href: hotel_front_desk_path(hotel, tab: "bookings", view: "rooms"))
+    expect(page.body.index('Arrival Board')).to be < page.body.index('Recent Bookings')
   end
 end

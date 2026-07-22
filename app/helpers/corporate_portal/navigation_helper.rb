@@ -69,8 +69,7 @@ module CorporatePortal
 
     def corporate_sidebar_footer_items
       @_corporate_sidebar_footer_items ||= [
-        PanelsUI::Navigation::Item.new(label: "Homepage", path: root_path, search_text: "Homepage Website", icon: "house", active: false),
-        PanelsUI::Navigation::Item.new(label: "Help & support", path: help_center_path, search_text: "Help Support FAQ", icon: "circle-question-mark", active: false)
+        PanelsUI::Navigation::Item.new(label: "Homepage", path: root_path, search_text: "Homepage Website", icon: "house", active: false)
       ]
     end
 

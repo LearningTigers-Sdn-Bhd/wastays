@@ -103,6 +103,7 @@ module BookingEngine
         cancellation_policy_snapshot: @quote.cancellation_policy_snapshot,
         status: "confirmed",
         payment_status: payment_received? ? "captured" : "pending",
+        source: "direct",
         margin_rate: margin_rate,
         margin_amount: margin_amount,
         net_amount: total - margin_amount,

@@ -12,9 +12,10 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
   before do
     driven_by(:cuprite)
 
-    permission = Permission.find_by(slug: "view_reports") ||
-      create(:permission, name: "View Reports", slug: "view_reports")
-    create(:role_permission, role: role, permission: permission)
+    %w[view_reports view_bookings].each do |slug|
+      permission = Permission.find_by(slug: slug) || create(:permission, name: slug.tr("_", " ").titleize, slug: slug)
+      create(:role_permission, role: role, permission: permission)
+    end
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
 
     sign_in_through_ui(user)
@@ -37,11 +38,11 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
     within("#hotel-sidebar") do
       expect(page).to have_no_css(".panel-sidebar__flyout[data-state='open']")
 
-      help_link = find("[data-sidebar-presentation='collapsed'] a.panel-sidebar__link", text: "Help & support")
-      help_link.hover
+      dashboard_link = find("[data-sidebar-presentation='collapsed'] a.panel-sidebar__link", text: "Dashboard")
+      dashboard_link.hover
 
-      expect(page).to have_css("[role='tooltip'][data-state='open']", text: "Help & support", visible: :visible)
-      expect(help_link[:title]).to be_blank
+      expect(page).to have_css("[role='tooltip'][data-state='open']", text: "Dashboard", visible: :visible)
+      expect(dashboard_link[:title]).to be_blank
 
       financial_group = find("button.panel-sidebar__group-trigger[aria-label='Financial']", visible: :all)
       financial_group.hover
