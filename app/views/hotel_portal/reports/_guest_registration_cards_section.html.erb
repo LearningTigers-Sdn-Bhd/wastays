@@ -1,44 +1,64 @@
-<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-  <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Cards</p>
-    <h2 class="text-2xl font-bold tracking-tight text-foreground"><%= @grc_total_count %></h2>
-  </div>
-  <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Signed</p>
-    <h2 class="text-2xl font-bold tracking-tight text-emerald-700"><%= @grc_signed_count %></h2>
-  </div>
-  <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Draft</p>
-    <h2 class="text-2xl font-bold tracking-tight text-amber-700"><%= @grc_draft_count %></h2>
-  </div>
-</div>
+<%= render HotelPortal::Reports::MetricStrip.new(
+      metrics: [
+        { label: "Total cards", value: @grc_total_count.to_s, detail: "Selected period" },
+        { label: "Signed", value: @grc_signed_count.to_s, detail: "Completed cards", detail_variant: :success },
+        { label: "Draft", value: @grc_draft_count.to_s, detail: "Awaiting signature", detail_variant: :warning }
+      ],
+      aria_label: "Registration card summary"
+    ) %>
 
-<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-  <div class="border-b border-border bg-muted/50 px-6 py-5">
-    <%= form_with url: form_url, method: :get, class: "flex flex-col gap-3 lg:flex-row lg:items-end", data: { controller: "auto-submit", turbo_frame: "grc_results", turbo_action: "advance" } do |f| %>
-      <% hidden_fields.each do |name, value| %>
-        <%= hidden_field_tag name, value %>
-      <% end %>
-      <div class="w-full lg:flex-1">
-        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Search</label>
-        <%= f.search_field :q, value: @grc_query, placeholder: "Search GRC no, guest name, or booking ref...", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm", data: { action: "input->auto-submit#submit" } %>
-      </div>
-      <div class="w-full sm:w-56">
-        <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Status</label>
-        <%= select_tag :status, options_for_select([ [ "All", "" ], [ "Draft", "draft" ], [ "Signed", "signed" ] ], @status_filter), class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
-      </div>
+<section class="rounded-lg border border-border bg-card p-3" aria-label="Registration card filters">
+  <%= form_with url: form_url, method: :get,
+        class: "flex flex-col gap-3 lg:flex-row lg:items-end",
+        data: { controller: "auto-submit", turbo_frame: "grc_results", turbo_action: "advance" } do |form| %>
+    <% hidden_fields.each do |name, value| %>
+      <%= hidden_field_tag name, value %>
     <% end %>
-  </div>
 
-  <%= turbo_frame_tag "grc_results" do %>
+    <%= render PanelsUI::FormField.new(
+          form: form,
+          attribute: :q,
+          label: "Search",
+          size: :sm,
+          class: "w-full lg:flex-1"
+        ) do |field| %>
+      <% field.with_input(
+           type: :search,
+           value: @grc_query,
+           placeholder: "Search GRC no, guest name, or booking ref…",
+           data: { action: "input->auto-submit#submit" }) %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(
+          form: form,
+          attribute: :status,
+          label: "Status",
+          size: :sm,
+          class: "w-full sm:w-56"
+        ) do |field| %>
+      <% field.with_select_menu(
+           [ [ "All", "" ], [ "Draft", "draft" ], [ "Signed", "signed" ] ],
+           selected: @status_filter,
+           data: { action: "change->auto-submit#submitNow" }) %>
+    <% end %>
+  <% end %>
+</section>
+
+<%= turbo_frame_tag "grc_results", class: "block" do %>
+  <section class="space-y-3" aria-labelledby="registration-card-records-heading">
+    <h2 id="registration-card-records-heading" class="text-base font-semibold text-foreground">Registration card records</h2>
+
     <%= render PanelsUI::Table.new(
-          caption: "Guest Registration Cards",
+          caption: "Guest registration cards",
+          density: :compact,
+          header_style: :sentence,
           hoverable: true,
-          wrapper_class: "border-0 bg-transparent rounded-none"
+          class: "min-w-[880px] print:min-w-0 print:w-auto",
+          wrapper_class: "rounded-lg border border-border bg-card print:overflow-visible"
         ) do |table| %>
       <% table.with_header do %>
         <tr>
-          <th scope="col">GRC No.</th>
+          <th scope="col">GRC no.</th>
           <th scope="col">Guest</th>
           <th scope="col">Stay</th>
           <th scope="col">Status</th>
@@ -49,42 +69,39 @@
         <% if @grc_cards.any? %>
           <% @grc_cards.each do |card| %>
             <% booking = card.booking %>
-            <tr>
-              <th scope="row" class="font-black text-foreground">
+            <tr class="align-top">
+              <th scope="row" class="whitespace-nowrap font-semibold text-foreground">
                 <%= booking.guest_registration_card_number_display %>
               </th>
               <td>
                 <p class="font-semibold text-foreground"><%= booking.guest_name %></p>
-                <p class="text-xs text-muted-foreground"><%= booking.confirmation_token %></p>
+                <p class="mt-1 font-mono text-xs text-muted-foreground"><%= booking.confirmation_token %></p>
               </td>
               <td class="whitespace-nowrap text-foreground">
-                <%= l(booking.check_in.to_date) %> -> <%= l(booking.check_out.to_date) %>
+                <%= l(booking.check_in.to_date) %> → <%= l(booking.check_out.to_date) %>
               </td>
-              <td>
-                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold <%= card.signed? ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' %>">
-                  <%= card.status.titleize %>
-                </span>
+              <td class="whitespace-nowrap">
+                <%= render PanelsUI::Badge.new(
+                      label: card.status.titleize,
+                      variant: card.signed? ? :success : :warning,
+                      size: :lg,
+                      shape: :rounded
+                    ) %>
               </td>
               <td class="text-right">
                 <div class="inline-flex items-center gap-2">
-                  <%= link_to "View", hotel_booking_guest_registration_card_path(current_hotel, booking), class: "inline-flex rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted", data: { turbo: false } %>
-                  <%= link_to "Print / Save as PDF", hotel_booking_guest_registration_card_path(current_hotel, booking), class: "inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover", data: { turbo: false } %>
+                  <%= link_to "View", hotel_booking_guest_registration_card_path(current_hotel, booking), class: "inline-flex rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive", data: { turbo: false } %>
+                  <%= link_to "Print / save as PDF", hotel_booking_guest_registration_card_path(current_hotel, booking), class: "inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive", data: { turbo: false } %>
                 </div>
               </td>
             </tr>
           <% end %>
         <% else %>
-          <tr>
-            <td colspan="5" class="h-32 text-center text-sm text-muted-foreground">
-              No guest registration cards found.
-            </td>
-          </tr>
+          <%= render "table_empty_state", colspan: 5, message: "No guest registration cards found." %>
         <% end %>
       <% end %>
     <% end %>
 
-    <div class="flex justify-center border-t border-border bg-muted/50 px-6 py-4 sm:px-8">
-      <%= paginate @grc_cards if @grc_cards.respond_to?(:total_pages) %>
-    </div>
-  <% end %>
-</div>
+    <%= render "table_pagination", collection: @grc_cards %>
+  </section>
+<% end %>

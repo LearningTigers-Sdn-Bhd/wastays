@@ -1,80 +1,75 @@
-<div class="w-full space-y-3.5">
-  <div>
-    <%= render PanelsUI::PageHeader.new(title: "Monthly Refund Report") do |header| %>
-      <% header.with_caption do %>
-        <p class="text-sm font-medium text-muted-foreground">
-          <%= current_hotel.name %> ·
-          <% if @report.start_date == @report.end_date %>
-            <%= @report.start_date.strftime("%A, %d %b %Y") %>
-          <% else %>
-            <%= @report.start_date.strftime("%d %b %Y") %> - <%= @report.end_date.strftime("%d %b %Y") %>
-          <% end %>
-        </p>
+<div class="w-full space-y-4" data-slot="report-page" data-report="refund">
+  <%= render PanelsUI::PageHeader.new(title: "Monthly refund report") do |header| %>
+    <% header.with_caption do %>
+      <p class="text-sm font-medium text-muted-foreground">
+        <%= current_hotel.name %> ·
+        <% if @report.start_date == @report.end_date %>
+          <%= @report.start_date.strftime("%A, %d %b %Y") %>
+        <% else %>
+          <%= @report.start_date.strftime("%d %b %Y") %> - <%= @report.end_date.strftime("%d %b %Y") %>
+        <% end %>
+      </p>
+    <% end %>
+    <% header.with_actions do %>
+      <%= render "preset_report_actions",
+        form_url: refund_report_hotel_reports_path(current_hotel), form_id: "refund-report-range-form",
+        date_preset: @date_preset, start_date: @report.start_date, end_date: @report.end_date,
+        show_export: feature_enabled_for_hotel?("excel_pdf_export"), export_menu_id: "refund-report-export",
+        export_items: [
+          ["Export PDF", refund_report_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :pdf)],
+          ["Export Excel", refund_report_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :xlsx)],
+          ["Export CSV", refund_report_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :csv)]
+        ] %>
+    <% end %>
+  <% end %>
+
+  <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+    { label: "Refund count", value: @report.totals[:refund_count].to_s, detail: "Selected period" },
+    { label: "Total refund", value: "- MYR #{number_with_precision(@report.totals[:total_amount], precision: 2)}", detail: "Amount out", detail_variant: :destructive }
+  ]) %>
+
+  <section class="space-y-3" aria-labelledby="refund-records-heading">
+    <h2 id="refund-records-heading" class="text-base font-semibold text-foreground">Refund records</h2>
+
+    <%= render PanelsUI::Table.new(
+          caption: "Refund records",
+          density: :compact,
+          header_style: :sentence,
+          hoverable: true,
+          wrapper_class: "rounded-lg border border-border bg-card"
+        ) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col"><%= @date_preset == "this_year" ? "Month" : "Date" %></th>
+          <th scope="col">Room</th>
+          <th scope="col">Guest</th>
+          <th scope="col">Booking</th>
+          <th scope="col">Refund method</th>
+          <th scope="col">Reference</th>
+          <th scope="col">Status</th>
+          <th scope="col">Reason</th>
+          <th scope="col" class="text-right">Refund</th>
+        </tr>
       <% end %>
-      <% header.with_actions do %>
-        <%= render "preset_report_actions",
-          form_url: refund_report_hotel_reports_path(current_hotel), form_id: "refund-report-range-form",
-          date_preset: @date_preset, start_date: @report.start_date, end_date: @report.end_date,
-          show_export: feature_enabled_for_hotel?("excel_pdf_export"), export_menu_id: "refund-report-export",
-          export_items: [
-            ["Export PDF", refund_report_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :pdf)],
-            ["Export Excel", refund_report_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :xlsx)],
-            ["Export CSV", refund_report_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :csv)]
-          ] %>
+      <% table.with_body do %>
+        <% if @report.rows.any? %>
+          <% @report.rows.each do |row| %>
+            <tr class="align-top">
+              <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= @date_preset == "this_year" ? row[:month_label] : row[:date].strftime("%d %b %Y") %></th>
+              <td><%= row[:room] %></td>
+              <td class="whitespace-nowrap"><%= row[:guest_name] %></td>
+              <td class="whitespace-nowrap font-medium"><%= row[:booking_reference] %></td>
+              <td class="whitespace-nowrap"><%= row[:refund_method] %></td>
+              <td class="whitespace-nowrap"><%= row[:reference] %></td>
+              <td class="whitespace-nowrap"><%= row[:status] %></td>
+              <td><%= row[:reason] %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums text-destructive">- MYR <%= number_with_precision(row[:refund_amount], precision: 2) %></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <%= render "table_empty_state", colspan: 9, message: "No refund data for this selected period." %>
+        <% end %>
       <% end %>
     <% end %>
-  </div>
-
-  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-2">
-    <div class="p-6 md:border-r md:border-border">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Refund Count</p>
-      <h2 class="text-2xl font-bold tabular-nums tracking-tight text-foreground"><%= @report.totals[:refund_count] %></h2>
-    </div>
-    <div class="bg-muted/30 p-6">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Refund</p>
-      <h2 class="text-2xl font-bold tabular-nums tracking-tight text-red-600">MYR <%= number_with_precision(@report.totals[:total_amount], precision: 2) %></h2>
-    </div>
-  </div>
-
-  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-    <div class="border-b border-border px-6 py-5">
-      <h2 class="text-lg font-bold tracking-tight text-foreground">Refund Records</h2>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="bg-muted">
-          <tr>
-            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"><%= @date_preset == "this_year" ? "Month" : "Date" %></th>
-            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Room</th>
-            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Guest</th>
-            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Booking</th>
-            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Refund Method</th>
-            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Reference</th>
-            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
-            <th class="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Reason</th>
-            <th class="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Refund</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border bg-card">
-          <% if @report.rows.any? %>
-            <% @report.rows.each do |row| %>
-              <tr class="hover:bg-muted/50">
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-foreground"><%= @date_preset == "this_year" ? row[:month_label] : row[:date].strftime("%d %b %Y") %></td>
-                <td class="px-4 py-3 text-sm text-foreground"><%= row[:room] %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground"><%= row[:guest_name] %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-foreground"><%= row[:booking_reference] %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground"><%= row[:refund_method] %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground"><%= row[:reference] %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground"><%= row[:status] %></td>
-                <td class="px-4 py-3 text-sm text-foreground"><%= row[:reason] %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-semibold text-red-600">MYR <%= number_with_precision(row[:refund_amount], precision: 2) %></td>
-              </tr>
-            <% end %>
-          <% else %>
-            <tr><td colspan="9" class="px-6 py-20 text-center text-sm font-medium text-muted-foreground">No refund data for this selected period.</td></tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
+  </section>
 </div>

@@ -1,59 +1,53 @@
-<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-  <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Guests</p>
-    <h2 class="text-2xl font-bold tracking-tight text-foreground"><%= @report.totals[:guest_count] %></h2>
-  </div>
-  <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Tax Due</p>
-    <h2 class="text-2xl font-bold tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:total_due], precision: 2) %></h2>
-  </div>
-  <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Tax Collected</p>
-    <h2 class="text-2xl font-bold tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:total_collected], precision: 2) %></h2>
-  </div>
-</div>
+<%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+  { label: "Guests", value: @report.totals[:guest_count].to_s, detail: "Selected period" },
+  { label: "Total tax due", value: "MYR #{number_with_precision(@report.totals[:total_due], precision: 2)}", detail: "Selected period" },
+  { label: "Total tax collected", value: "MYR #{number_with_precision(@report.totals[:total_collected], precision: 2)}", detail: "Selected period" }
+]) %>
 
-<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-  <div class="overflow-x-auto">
-    <table class="min-w-full">
-      <thead class="bg-muted">
+<section class="space-y-3" aria-labelledby="tourism-tax-records-heading">
+  <h2 id="tourism-tax-records-heading" class="text-base font-semibold text-foreground">Tourism tax records</h2>
+
+  <%= render PanelsUI::Table.new(
+        caption: "Tourism tax records",
+        density: :compact,
+        header_style: :sentence,
+        hoverable: true,
+        class: "min-w-[1120px]",
+        wrapper_class: "rounded-lg border border-border bg-card"
+      ) do |table| %>
+    <% table.with_header do %>
         <tr>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Guest Name</th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Nationality</th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Booking Ref</th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Check In</th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Check Out</th>
-          <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Nights</th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Room Numbers</th>
-          <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Tax Due</th>
-          <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Tax Collected</th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Collection Status</th>
+          <th scope="col">Guest name</th>
+          <th scope="col">Nationality</th>
+          <th scope="col">Booking ref</th>
+          <th scope="col">Check in</th>
+          <th scope="col">Check out</th>
+          <th scope="col" class="text-right">Nights</th>
+          <th scope="col">Room numbers</th>
+          <th scope="col" class="text-right">Tax due</th>
+          <th scope="col" class="text-right">Tax collected</th>
+          <th scope="col">Collection status</th>
         </tr>
-      </thead>
-      <tbody class="divide-y divide-border bg-card">
+    <% end %>
+    <% table.with_body do %>
         <% if @report.rows.any? %>
           <% @report.rows.each do |row| %>
-            <tr class="hover:bg-muted/50">
-              <td class="px-6 py-4 text-sm font-semibold text-foreground"><%= row[:guest_name] %></td>
-              <td class="px-6 py-4 text-sm text-foreground"><%= row[:guest_country] %></td>
-              <td class="px-6 py-4 text-sm font-mono text-muted-foreground"><%= row[:booking_reference] %></td>
-              <td class="px-6 py-4 text-sm text-foreground"><%= row[:check_in].strftime("%d %b %Y") %></td>
-              <td class="px-6 py-4 text-sm text-foreground"><%= row[:check_out].strftime("%d %b %Y") %></td>
-              <td class="px-6 py-4 text-right text-sm font-semibold text-foreground"><%= row[:nights] %></td>
-              <td class="px-6 py-4 text-sm text-foreground"><%= row[:room_numbers] %></td>
-              <td class="px-6 py-4 text-right text-sm font-semibold text-foreground">MYR <%= number_with_precision(row[:tax_due], precision: 2) %></td>
-              <td class="px-6 py-4 text-right text-sm font-semibold text-foreground">MYR <%= number_with_precision(row[:tax_collected], precision: 2) %></td>
-              <td class="px-6 py-4 text-sm text-foreground"><%= row[:collection_status] %></td>
+            <tr class="align-top">
+              <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= row[:guest_name] %></th>
+              <td><%= row[:guest_country] %></td>
+              <td class="whitespace-nowrap font-mono text-xs text-muted-foreground"><%= row[:booking_reference] %></td>
+              <td class="whitespace-nowrap"><%= row[:check_in].strftime("%d %b %Y") %></td>
+              <td class="whitespace-nowrap"><%= row[:check_out].strftime("%d %b %Y") %></td>
+              <td class="text-right font-semibold tabular-nums"><%= row[:nights] %></td>
+              <td><%= row[:room_numbers] %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:tax_due], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:tax_collected], precision: 2) %></td>
+              <td class="whitespace-nowrap"><%= row[:collection_status] %></td>
             </tr>
           <% end %>
         <% else %>
-          <tr>
-            <td colspan="10" class="px-6 py-16 text-center text-sm font-medium text-muted-foreground">
-              No tourism tax bookings found for this selected period.
-            </td>
-          </tr>
+          <%= render "table_empty_state", colspan: 10, message: "No tourism tax bookings found for this selected period." %>
         <% end %>
-      </tbody>
-    </table>
-  </div>
-</div>
+    <% end %>
+  <% end %>
+</section>

@@ -113,21 +113,6 @@ module HotelPortal::ReportsHelper
     end
   end
 
-  def meal_prep_title(meal_type)
-    meal_type.present? ? "Meal Prep — #{meal_type.titleize}" : "Meal Prep"
-  end
-
-  def meal_prep_transfer_class(type)
-    case type
-    when "Boat-in"
-      "bg-[#e0f2fe] text-[#0369a1]"
-    when "Boat-out"
-      "bg-[#fee2e2] text-[#b91c1c]"
-    else
-      "bg-slate-100 text-slate-700"
-    end
-  end
-
   def meal_prep_display_meals(meal_type_string, selected_meal_type)
     meals = meal_type_string.to_s.split(", ")
     if selected_meal_type.present?

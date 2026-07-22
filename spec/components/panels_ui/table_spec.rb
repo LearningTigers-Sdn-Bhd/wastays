@@ -65,6 +65,25 @@ RSpec.describe PanelsUI::Table, type: :component do
     expect(page).to have_css("table.panel-table[data-density='default']")
   end
 
+  it "supports opt-in sentence-case headers without changing the default" do
+    render_table(header_style: :sentence, density: :compact) { |table| with_required_slots(table) }
+    expect(page).to have_css("table.panel-table[data-header-style='sentence'][data-density='compact']")
+
+    render_table(header_style: :unknown) { |table| with_required_slots(table) }
+    expect(page).to have_css("table.panel-table[data-header-style='default']")
+  end
+
+  it "keeps the compact legacy header size unless sentence-case headers are requested" do
+    stylesheet = Rails.root.join("app/assets/tailwind/panel/table.css").read
+
+    expect(stylesheet).to match(
+      /\.panel-table thead th\s*\{[^}]*font-size:\s*0\.6875rem;/m
+    )
+    expect(stylesheet).to match(
+      /\.panel-table\[data-header-style="sentence"\] thead th\s*\{[^}]*font-size:\s*0\.75rem;/m
+    )
+  end
+
   it "merges table and wrapper classes and preserves standard HTML attributes" do
     render_table(
       class: "min-w-[48rem]",

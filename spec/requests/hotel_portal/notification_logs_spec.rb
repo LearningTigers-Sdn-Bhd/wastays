@@ -30,10 +30,72 @@ RSpec.describe "HotelPortal::NotificationLogs", type: :request do
 
       get hotel_notification_logs_path(hotel)
 
+      page = Capybara.string(response.body)
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Notification Logs")
+      expect(response.body).to include("Notification logs")
       expect(response.body).to include(booking.confirmation_token)
       expect(response.body).to include("Check in confirmation")
+      expect(page).to have_css("[data-slot='report-page'][data-report='notification-logs']")
+      expect(page).to have_css("form[data-controller='auto-submit'][data-turbo-frame='notification_logs_results']")
+      expect(page).to have_css("turbo-frame#notification_logs_results")
+      expect(page).to have_css(".panel-select-menu select.panel-select-menu__native", count: 3)
+      expect(page).to have_no_css("select:not(.panel-select-menu__native)")
+      expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
+      expect(page).to have_css("h1", exact_text: "Notification logs")
+      caption = page.find(".panel-page-header__caption")
+      expect(caption).to have_text(hotel.name)
+      expect(caption).to have_text("All notification records")
+      expect(page).to have_css("turbo-frame#notification_logs_results", count: 1)
+      expect(page).to have_css("turbo-frame#notification_logs_results #notification-logs-export-menu")
+      expect(page).to have_css(
+        "turbo-frame#notification_logs_results form#notification-logs-filter-form" \
+        "[data-controller='auto-submit'][data-turbo-permanent]"
+      )
+      expect(page).to have_css("select#notification_type option[value='']", exact_text: "All types", visible: :all)
+      expect(page).to have_css("select#channel option[value='']", exact_text: "All channels", visible: :all)
+      expect(page).to have_css("select#status option[value='']", exact_text: "All statuses", visible: :all)
+      expect(page).to have_css(
+        "a[href='#{hotel_notification_logs_path(hotel)}'][data-turbo-frame='_top'][data-turbo='false']",
+        text: "Reset"
+      )
+      expect(page).to have_button("Resend", exact: true)
+      expect(page).to have_css("button[command='show-modal'][commandfor^='resend-modal-']", text: "Resend")
+      expect(page).to have_css("dialog[id^='resend-modal-'][data-controller='panels-ui--dialog']")
+      expect(page).to have_css("form[action='#{resend_hotel_notification_log_path(hotel, NotificationDelivery.last)}'][method='post']")
+      expect(page).to have_css("textarea[name='resend_reason'][required]")
+      expect(page).to have_button("Confirm resend")
+      expect(page).to have_no_css("[onclick]")
+    end
+
+    it "generates unique resend field, label, and hint ids without changing the parameter name" do
+      booking = create(:booking, hotel: hotel, status: "checked_in")
+      deliveries = %w[sent failed].map do |status|
+        create(
+          :notification_delivery,
+          hotel: hotel,
+          booking: booking,
+          notification_type: "check_in_confirmation",
+          channel: "email",
+          status: status,
+          trigger_event: "booking_checked_in"
+        )
+      end
+
+      get hotel_notification_logs_path(hotel)
+
+      page = Capybara.string(response.body)
+      textareas = page.all("textarea[name='resend_reason']")
+      expect(textareas.size).to eq(deliveries.size)
+      expect(textareas.map { |textarea| textarea[:id] }).to eq(textareas.map { |textarea| textarea[:id] }.uniq)
+      expect(textareas.map { |textarea| textarea[:id] }).to contain_exactly(
+        *deliveries.map { |delivery| "resend_#{delivery.id}_resend_reason" }
+      )
+
+      textareas.each do |textarea|
+        expect(page).to have_css("label##{textarea[:id]}-label[for='#{textarea[:id]}']", text: "Reason")
+        expect(textarea["aria-describedby"]).to eq("#{textarea[:id]}-hint")
+        expect(page).to have_css("p##{textarea[:id]}-hint", text: "Explain why this notification needs to be resent.")
+      end
     end
 
     it "filters by status" do
@@ -56,9 +118,14 @@ RSpec.describe "HotelPortal::NotificationLogs", type: :request do
 
       get hotel_notification_logs_path(hotel), params: { status: "failed" }
 
+      page = Capybara.string(response.body)
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("timeout")
       expect(response.body).not_to include("No notification logs found")
+      expect(page).to have_select("status", selected: "Failed", visible: :all)
+      expect(page).to have_link("Export CSV", href: hotel_notification_logs_path(hotel, status: "failed", format: :csv))
+      expect(page).to have_link("Export Excel", href: hotel_notification_logs_path(hotel, status: "failed", format: :xlsx))
+      expect(page).to have_link("Export PDF", href: hotel_notification_logs_path(hotel, status: "failed", format: :pdf))
     end
 
     it "filters by search query" do
@@ -148,6 +215,27 @@ RSpec.describe "HotelPortal::NotificationLogs", type: :request do
       get hotel_notification_logs_path(hotel)
 
       expect(response).to redirect_to(root_path)
+    end
+
+    it "hides resend controls without manage bookings permission" do
+      RolePermission.find_by(role: role, permission: Permission.find_by!(slug: "manage_bookings")).destroy!
+      booking = create(:booking, hotel: hotel, status: "checked_in")
+      create(
+        :notification_delivery,
+        hotel: hotel,
+        booking: booking,
+        notification_type: "check_in_confirmation",
+        channel: "email",
+        status: "failed",
+        trigger_event: "booking_checked_in"
+      )
+
+      get hotel_notification_logs_path(hotel)
+
+      page = Capybara.string(response.body)
+      expect(response).to have_http_status(:ok)
+      expect(page).to have_no_button("Resend")
+      expect(page).to have_no_css("dialog[id^='resend-modal-']")
     end
 
     it "exports the filtered logs as csv, xlsx, and pdf" do

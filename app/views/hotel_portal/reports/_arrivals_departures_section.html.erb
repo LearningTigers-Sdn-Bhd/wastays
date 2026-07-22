@@ -1,22 +1,23 @@
-<div class="space-y-4 print:space-y-3 print:break-inside-avoid">
-  <div class="px-4 md:px-0">
-    <h2 class="text-base font-semibold text-foreground"><%= title %></h2>
-  </div>
+<section class="space-y-3 print:space-y-3 print:break-inside-avoid" aria-labelledby="guest-list-heading">
+  <h2 id="guest-list-heading" class="text-base font-semibold text-foreground"><%= title %></h2>
 
   <%= render PanelsUI::Table.new(
         caption: title,
+        density: :compact,
+        header_style: :sentence,
         hoverable: true,
-        wrapper_class: "rounded-lg border border-border bg-card"
+        class: "min-w-[960px] print:min-w-0 print:w-auto",
+        wrapper_class: "rounded-lg border border-border bg-card print:overflow-visible"
       ) do |table| %>
     <% table.with_header do %>
       <tr>
-        <th scope="col">Guest / Ref</th>
+        <th scope="col">Guest / ref</th>
         <th scope="col">Rooms</th>
         <th scope="col">Stay</th>
         <th scope="col"><%= type == :arrival ? "Readiness" : "Departure" %></th>
         <% if local_assigns[:show_boat_departure] %>
           <th scope="col">
-            <%= type == :arrival ? "Boat Arrival" : "Boat Departure" %>
+            <%= type == :arrival ? "Boat arrival" : "Boat departure" %>
           </th>
         <% end %>
         <th scope="col">Notes</th>
@@ -63,12 +64,8 @@
           </tr>
         <% end %>
       <% else %>
-        <tr>
-          <td colspan="<%= local_assigns[:show_boat_departure] ? 6 : 5 %>" class="h-32 text-center text-sm text-muted-foreground">
-            <%= empty_message %>
-          </td>
-        </tr>
+        <%= render "table_empty_state", colspan: (local_assigns[:show_boat_departure] ? 6 : 5), message: empty_message %>
       <% end %>
     <% end %>
   <% end %>
-</div>
+</section>

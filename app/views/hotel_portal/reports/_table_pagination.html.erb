@@ -1,0 +1,5 @@
+<% if collection.respond_to?(:total_pages) && collection.total_pages > 1 %>
+  <nav class="flex justify-center border-t border-border px-3 py-2" aria-label="Report pagination" data-slot="report-pagination">
+    <%= paginate collection %>
+  </nav>
+<% end %>

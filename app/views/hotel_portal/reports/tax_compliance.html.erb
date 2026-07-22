@@ -1,6 +1,6 @@
 <% export_disabled = @report.rows.empty? %>
-<div class="w-full space-y-6">
-  <%= render PanelsUI::PageHeader.new(title: "Tax & Compliance") do |header| %>
+<div class="w-full space-y-4" data-slot="report-page" data-report="tax-compliance">
+  <%= render PanelsUI::PageHeader.new(title: "Tax & compliance") do |header| %>
     <% header.with_caption do %>
       <p class="text-sm text-muted-foreground">
         <%= current_hotel.name %> ·
@@ -35,10 +35,10 @@
         id: "tax-compliance-tabs",
         active: @active_tax_compliance_tab,
         variant: :line,
-        aria_label: "Tax & Compliance sections") do |tabs| %>
-    <% tabs.with_tab(name: "tourism_tax", label: "Tourism Tax", href: tax_compliance_hotel_reports_path(current_hotel, preserved_params.merge(tab: "tourism_tax")), data: { testid: "tax-compliance-tab-tourism-tax" }) %>
+        aria_label: "Tax and compliance sections") do |tabs| %>
+    <% tabs.with_tab(name: "tourism_tax", label: "Tourism tax", href: tax_compliance_hotel_reports_path(current_hotel, preserved_params.merge(tab: "tourism_tax")), data: { testid: "tax-compliance-tab-tourism-tax" }) %>
     <% tabs.with_tab(name: "sst", label: "SST", href: tax_compliance_hotel_reports_path(current_hotel, preserved_params.merge(tab: "sst")), data: { testid: "tax-compliance-tab-sst" }) %>
-    <% tabs.with_tab(name: "non_national", label: "Non-National", href: tax_compliance_hotel_reports_path(current_hotel, preserved_params.merge(tab: "non_national")), data: { testid: "tax-compliance-tab-non-national" }) %>
+    <% tabs.with_tab(name: "non_national", label: "Non-national", href: tax_compliance_hotel_reports_path(current_hotel, preserved_params.merge(tab: "non_national")), data: { testid: "tax-compliance-tab-non-national" }) %>
   <% end %>
 
   <% case @active_tax_compliance_tab %>

@@ -1,8 +1,19 @@
-<div class="w-full space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(title: "Journal Batches", description: "Summarized daily transaction batches by General Ledger Code (GL Code).") do |header| %>
+<div class="w-full space-y-4" data-slot="report-page" data-report="journal-batches">
+  <%= render PanelsUI::PageHeader.new(title: "Journal batches", description: "Summarized daily transaction batches by general ledger code (GL code).") do |header| %>
+    <% header.with_caption do %>
+      <p class="text-sm font-medium text-muted-foreground">
+        <%= current_hotel.name %> ·
+        <% if @report_start_date == @report_end_date %>
+          <%= @report_start_date.strftime("%A, %d %b %Y") %>
+        <% else %>
+          <%= @report_start_date.strftime("%d %b %Y") %> - <%= @report_end_date.strftime("%d %b %Y") %>
+        <% end %>
+      </p>
+    <% end %>
     <% header.with_actions do %>
-      <%= form_with url: journal_batches_hotel_reports_path(current_hotel), method: :get, local: true, class: "flex flex-col gap-3 md:flex-row md:items-center", data: { controller: "date-preset" } do |f| %>
-        <%= render PanelsUI::FormField.new(form: f, attribute: :date_range, label: "Date Range", label_hidden: true, class: "w-full md:w-64") do |field| %>
+      <%= form_with url: journal_batches_hotel_reports_path(current_hotel), method: :get, local: true,
+            class: "flex flex-col gap-2 sm:flex-row sm:items-end", data: { controller: "date-preset" } do |f| %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :date_range, label: "Date range", label_hidden: true, size: :sm, class: "w-full sm:w-64") do |field| %>
           <% field.with_date_picker(
                range: true,
                months: 2,
@@ -11,89 +22,108 @@
                placeholder: "Date range",
                data: { action: "change->date-preset#submitDate" }) %>
         <% end %>
-        <div class="flex gap-2">
-          <% if feature_enabled_for_hotel?("excel_pdf_export") %>
-            <%= render "export_dropdown",
-              menu_id: "journal-batches-export",
-              items: [
-                ["Export PDF", journal_batches_hotel_reports_path(current_hotel, start_date: @report_start_date, end_date: @report_end_date, format: :pdf)],
-                ["Export Excel", journal_batches_hotel_reports_path(current_hotel, start_date: @report_start_date, end_date: @report_end_date, format: :xlsx)],
-                ["Export CSV", journal_batches_hotel_reports_path(current_hotel, start_date: @report_start_date, end_date: @report_end_date, format: :csv)]
-              ] %>
-          <% end %>
-        </div>
+        <% if feature_enabled_for_hotel?("excel_pdf_export") %>
+          <%= render "export_dropdown",
+            menu_id: "journal-batches-export",
+            items: [
+              ["Export PDF", journal_batches_hotel_reports_path(current_hotel, start_date: @report_start_date, end_date: @report_end_date, format: :pdf)],
+              ["Export Excel", journal_batches_hotel_reports_path(current_hotel, start_date: @report_start_date, end_date: @report_end_date, format: :xlsx)],
+              ["Export CSV", journal_batches_hotel_reports_path(current_hotel, start_date: @report_start_date, end_date: @report_end_date, format: :csv)]
+            ] %>
+        <% end %>
       <% end %>
     <% end %>
   <% end %>
 
-  <div class="space-y-6">
+  <section class="space-y-4" aria-label="Journal batches">
     <% if @paginated_batches.any? %>
       <% @paginated_batches.each do |batch| %>
-        <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-          <div class="bg-muted/50 px-6 py-4 flex items-center justify-between border-b border-border">
-            <div class="flex items-center gap-4">
-              <h3 class="text-lg font-bold text-foreground"><%= batch.business_date.strftime("%d %b %Y") %></h3>
-              <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 uppercase tracking-wider border border-emerald-100">
-                <%= batch.status %>
-              </span>
+        <% status_variant = case batch.status
+                            when "finalized" then :success
+                            when "pending" then :warning
+                            else :neutral
+                            end %>
+        <section aria-labelledby="journal-batch-<%= batch.id %>-heading">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 id="journal-batch-<%= batch.id %>-heading" class="text-base font-semibold text-foreground">
+                <%= batch.business_date.strftime("%d %b %Y") %>
+              </h2>
+              <%= render PanelsUI::Badge.new(label: batch.status.humanize, variant: status_variant, size: :sm) %>
             </div>
-            <span class="text-xs font-medium text-muted-foreground italic">
+            <p class="text-xs text-muted-foreground">
               Finalized at <%= batch.finalized_at&.strftime("%d %b %Y %H:%M") %>
-            </span>
+            </p>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="min-w-full">
-              <thead class="bg-muted">
+          <%= render PanelsUI::Table.new(
+                caption: "Journal entries for #{batch.business_date.strftime('%d %b %Y')}",
+                density: :compact,
+                header_style: :sentence,
+                hoverable: true,
+                wrapper_class: "rounded-b-lg border-x border-b border-border bg-card"
+              ) do |table| %>
+            <% table.with_header do %>
+              <tr>
+                <th scope="col">General ledger code (GL code)</th>
+                <th scope="col">Type</th>
+                <th scope="col" class="text-right">Debit</th>
+                <th scope="col" class="text-right">Credit</th>
+                <th scope="col">Description</th>
+              </tr>
+            <% end %>
+            <% table.with_body do %>
+              <% batch.entries.each do |entry| %>
                 <tr>
-                  <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">General Ledger Code (GL Code)</th>
-                  <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Type</th>
-                  <th class="px-6 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Debit</th>
-                  <th class="px-6 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Credit</th>
-                  <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Description</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-border">
-                <% batch.entries.each do |entry| %>
-                  <tr class="hover:bg-muted/50 transition-colors">
-                    <td class="px-6 py-4 text-sm font-bold text-foreground"><%= entry.gl_code %></td>
-                    <td class="px-6 py-4 text-sm font-medium text-muted-foreground uppercase"><%= entry.transaction_type %></td>
-                    <td class="px-6 py-4 text-sm text-right tabular-nums <%= entry.debit_amount > 0 ? 'font-bold text-foreground' : 'text-muted-foreground' %>">
-                      <%= number_with_precision(entry.debit_amount, precision: 2) %>
-                    </td>
-                    <td class="px-6 py-4 text-sm text-right tabular-nums <%= entry.credit_amount > 0 ? 'font-bold text-emerald-700' : 'text-muted-foreground' %>">
-                      <%= number_with_precision(entry.credit_amount, precision: 2) %>
-                    </td>
-                    <td class="px-6 py-4 text-xs text-muted-foreground"><%= entry.description %></td>
-                  </tr>
-                <% end %>
-                <tr class="bg-muted/30">
-                  <td colspan="2" class="px-6 py-3 text-xs font-bold uppercase text-foreground">Total</td>
-                  <td class="px-6 py-3 text-sm text-right font-black text-foreground">
-                    <%= number_with_precision(batch.entries.sum(:debit_amount), precision: 2) %>
+                  <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= entry.gl_code %></th>
+                  <td class="whitespace-nowrap text-muted-foreground"><%= entry.transaction_type.humanize %></td>
+                  <td class="whitespace-nowrap text-right tabular-nums <%= entry.debit_amount.positive? ? 'font-semibold text-foreground' : 'text-muted-foreground' %>">
+                    <%= number_with_precision(entry.debit_amount, precision: 2) %>
                   </td>
-                  <td class="px-6 py-3 text-sm text-right font-black text-emerald-700">
-                    <%= number_with_precision(batch.entries.sum(:credit_amount), precision: 2) %>
+                  <td class="whitespace-nowrap text-right tabular-nums <%= entry.credit_amount.positive? ? 'font-semibold text-foreground' : 'text-muted-foreground' %>">
+                    <%= number_with_precision(entry.credit_amount, precision: 2) %>
                   </td>
-                  <td></td>
+                  <td class="text-muted-foreground"><%= entry.description %></td>
                 </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+              <% end %>
+            <% end %>
+            <% table.with_footer do %>
+              <tr class="bg-muted/55">
+                <th scope="row" colspan="2" class="text-xs font-semibold text-foreground">Total</th>
+                <td class="whitespace-nowrap text-right font-semibold tabular-nums text-foreground">
+                  <%= number_with_precision(batch.entries.sum(:debit_amount), precision: 2) %>
+                </td>
+                <td class="whitespace-nowrap text-right font-semibold tabular-nums text-foreground">
+                  <%= number_with_precision(batch.entries.sum(:credit_amount), precision: 2) %>
+                </td>
+                <td></td>
+              </tr>
+            <% end %>
+          <% end %>
+        </section>
       <% end %>
 
-      <div class="py-10 flex justify-center">
-        <%= paginate @paginated_batches %>
-      </div>
+      <%= render "table_pagination", collection: @paginated_batches %>
     <% else %>
-      <div class="py-32 text-center bg-card rounded-2xl border border-dashed border-border-interactive">
-        <div class="size-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-          <svg class="size-8 text-primary-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
-        </div>
-        <h3 class="text-sm font-bold text-foreground uppercase tracking-widest">No journal batches found</h3>
-        <p class="mt-1 text-sm text-muted-foreground">Try adjusting your date range or complete a Night Audit to generate batches.</p>
-      </div>
+      <%= render PanelsUI::Table.new(
+            caption: "Journal batches",
+            density: :compact,
+            header_style: :sentence,
+            wrapper_class: "rounded-lg border border-border bg-card"
+          ) do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">General ledger code (GL code)</th>
+            <th scope="col">Type</th>
+            <th scope="col" class="text-right">Debit</th>
+            <th scope="col" class="text-right">Credit</th>
+            <th scope="col">Description</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <%= render "table_empty_state", colspan: 5, message: "No journal batches found. Adjust the date range or complete a night audit to generate batches." %>
+        <% end %>
+      <% end %>
     <% end %>
-  </div>
+  </section>
 </div>

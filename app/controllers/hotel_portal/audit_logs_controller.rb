@@ -4,6 +4,9 @@ class HotelPortal::AuditLogsController < HotelPortal::BaseController
   before_action -> { require_feature!("full_audit_trail") }
 
   def index
+    @start_date = parse_audit_date(params[:start_date])
+    @end_date = parse_audit_date(params[:end_date])
+    @period_label = period_label
     @logs = filtered_logs
 
     respond_to do |format|
@@ -34,18 +37,28 @@ class HotelPortal::AuditLogsController < HotelPortal::BaseController
     logs = current_hotel.inventory_audit_logs.includes(:room_type, :user).order(created_at: :desc)
     logs = logs.where(room_type_id: params[:room_type_id]) if params[:room_type_id].present?
     logs = logs.where(action_type: params[:action_type]) if params[:action_type].present?
-    if params[:start_date].present? && params[:end_date].present?
-      logs = logs.where(created_at: params[:start_date].to_date.beginning_of_day..params[:end_date].to_date.end_of_day)
-    end
+    logs = logs.where("created_at >= ?", @start_date.beginning_of_day) if @start_date
+    logs = logs.where("created_at <= ?", @end_date.end_of_day) if @end_date
     logs
   end
 
   def period_label
-    return "All records" unless params[:start_date].present? && params[:end_date].present?
+    if @start_date && @end_date
+      return @start_date.strftime("%d %b %Y") if @start_date == @end_date
 
-    start_date = params[:start_date].to_date
-    end_date = params[:end_date].to_date
-    start_date == end_date ? start_date.strftime("%d %b %Y") : "#{start_date.strftime('%d %b %Y')} - #{end_date.strftime('%d %b %Y')}"
+      return "#{@start_date.strftime('%d %b %Y')} - #{@end_date.strftime('%d %b %Y')}"
+    end
+
+    return "From #{@start_date.strftime('%d %b %Y')}" if @start_date
+    return "Through #{@end_date.strftime('%d %b %Y')}" if @end_date
+
+    "All records"
+  end
+
+  def parse_audit_date(value)
+    Date.iso8601(value.to_s)
+  rescue Date::Error, TypeError
+    nil
   end
 
   def export_filename(extension) = "operation-logs-#{Date.current}.#{extension}"

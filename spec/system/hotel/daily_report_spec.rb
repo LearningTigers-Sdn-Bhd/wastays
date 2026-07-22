@@ -38,10 +38,12 @@ RSpec.describe "Daily Report: Revenue vs Cashier Sales", type: :system, js: true
 
   it "shows multi-night accrual charges on their stay dates and payment on its cash-movement date" do
     visit daily_report_hotel_reports_path(hotel, start_date: today - 2.days, end_date: today)
-    expect(page).to have_content("Daily Report")
+    expect(page).to have_content("Daily report")
+    expect(page).to have_css("[data-slot='report-page'][data-report='daily-report']")
 
     click_link "Revenue"
     expect(page).to have_current_path(%r{tab=revenue})
+    expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
     expect(page).to have_content("Room Revenue")
     expect(page).to have_css('[data-testid="charge-register-row"]', count: 2)
     register = find("[aria-labelledby='revenue-register-heading']")
@@ -54,7 +56,7 @@ RSpec.describe "Daily Report: Revenue vs Cashier Sales", type: :system, js: true
     expect(page).to have_content((today - 2.days).strftime("%d %b %Y"))
     expect(page).to have_content((today - 1.day).strftime("%d %b %Y"))
 
-    click_link "Cashier Sales"
+    click_link "Cashier sales"
     expect(page).to have_current_path(%r{tab=cashier})
     expect(page).to have_content("Settlement")
     expect(page).to have_css('[data-testid="settlement-row"]', count: 1)

@@ -1,100 +1,93 @@
-<div class="w-full space-y-3.5">
-  <div>
-    <%= render PanelsUI::PageHeader.new(title: "Daily Occupancy Report") do |header| %>
-      <% header.with_caption do %>
-        <p class="text-sm font-medium text-muted-foreground">
-          <%= current_hotel.name %> ·
-          <% if @report.start_date == @report.end_date %>
-            <%= @report.start_date.strftime("%A, %d %b %Y") %>
-          <% else %>
-            <%= @report.start_date.strftime("%d %b %Y") %> - <%= @report.end_date.strftime("%d %b %Y") %>
-          <% end %>
-        </p>
+<div class="w-full space-y-4" data-slot="report-page" data-report="daily-occupancy">
+  <%= render PanelsUI::PageHeader.new(title: "Daily occupancy report") do |header| %>
+    <% header.with_caption do %>
+      <p class="text-sm font-medium text-muted-foreground">
+        <%= current_hotel.name %> ·
+        <% if @report.start_date == @report.end_date %>
+          <%= @report.start_date.strftime("%A, %d %b %Y") %>
+        <% else %>
+          <%= @report.start_date.strftime("%d %b %Y") %> - <%= @report.end_date.strftime("%d %b %Y") %>
+        <% end %>
+      </p>
+    <% end %>
+    <% header.with_actions do %>
+      <%= render "preset_report_actions",
+        form_url: daily_occupancy_hotel_reports_path(current_hotel),
+        form_id: "daily-occupancy-range-form",
+        date_preset: @date_preset,
+        start_date: @report.start_date,
+        end_date: @report.end_date,
+        export_menu_id: "daily-occupancy-export",
+        export_items: [
+          ["Export PDF", daily_occupancy_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :pdf)],
+          ["Export Excel", daily_occupancy_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :xlsx)],
+          ["Export CSV", daily_occupancy_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :csv)]
+        ] %>
+    <% end %>
+  <% end %>
+
+  <div class="space-y-2">
+    <%= render HotelPortal::Reports::MetricStrip.new(
+          aria_label: "Occupancy summary",
+          metrics: [
+            { label: "Rooms sold", value: @report.totals[:rooms_sold].to_s },
+            { label: "Rooms available", value: @report.totals[:rooms_available].to_s },
+            { label: "Occupancy", value: number_to_percentage(@report.totals[:occupancy_rate] * 100, precision: 2) },
+            { label: "Average daily rate (ADR)", value: "MYR #{number_with_precision(@report.totals[:adr], precision: 2)}" }
+          ]
+        ) %>
+    <%= render HotelPortal::Reports::MetricStrip.new(
+          aria_label: "Revenue summary",
+          metrics: [
+            { label: "Revenue per available room (RevPAR)", value: "MYR #{number_with_precision(@report.totals[:revpar], precision: 2)}" },
+            { label: "Tax", value: "MYR #{number_with_precision(@report.totals[:tax_amount], precision: 2)}" },
+            { label: "Total revenue", value: "MYR #{number_with_precision(@report.totals[:total_revenue], precision: 2)}" }
+          ]
+        ) %>
+  </div>
+
+  <section class="space-y-3" aria-labelledby="daily-occupancy-heading">
+    <h2 id="daily-occupancy-heading" class="text-base font-semibold text-foreground">Occupancy details</h2>
+
+    <%= render PanelsUI::Table.new(
+          caption: "Occupancy details",
+          density: :compact,
+          header_style: :sentence,
+          hoverable: true,
+          wrapper_class: "rounded-lg border border-border bg-card"
+        ) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col"><%= @date_preset == "this_year" ? "Month" : "Date" %></th>
+          <th scope="col" class="text-right">Rooms sold</th>
+          <th scope="col" class="text-right">Rooms available</th>
+          <th scope="col" class="text-right">Occupancy</th>
+          <th scope="col" class="text-right">Room revenue</th>
+          <th scope="col" class="text-right">Average daily rate (ADR)</th>
+          <th scope="col" class="text-right">Revenue per available room (RevPAR)</th>
+          <th scope="col" class="text-right">Tax</th>
+          <th scope="col" class="text-right">Total revenue</th>
+        </tr>
       <% end %>
-      <% header.with_actions do %>
-        <%= render "preset_report_actions",
-          form_url: daily_occupancy_hotel_reports_path(current_hotel),
-          form_id: "daily-occupancy-range-form",
-          date_preset: @date_preset,
-          start_date: @report.start_date,
-          end_date: @report.end_date,
-          export_menu_id: "daily-occupancy-export",
-          export_items: [
-            ["Export PDF", daily_occupancy_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :pdf)],
-            ["Export Excel", daily_occupancy_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :xlsx)],
-            ["Export CSV", daily_occupancy_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, format: :csv)]
-          ] %>
+      <% table.with_body do %>
+        <% if @report.rows.any? %>
+          <% @report.rows.each do |row| %>
+            <tr>
+              <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= @date_preset == "this_year" ? row[:date].strftime("%B %Y") : row[:date].strftime("%d %b %Y") %></th>
+              <td class="text-right tabular-nums"><%= row[:rooms_sold] %></td>
+              <td class="text-right tabular-nums"><%= row[:rooms_available] %></td>
+              <td class="whitespace-nowrap text-right tabular-nums"><%= number_to_percentage(row[:occupancy_rate] * 100, precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_precision(row[:room_revenue], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_precision(row[:adr], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_precision(row[:revpar], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_precision(row[:tax_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:total_revenue], precision: 2) %></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <%= render "table_empty_state", colspan: 9, message: "No occupancy data for this selected period." %>
+        <% end %>
       <% end %>
     <% end %>
-  </div>
-
-  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-4 lg:grid-cols-7">
-    <div class="p-6 md:border-r md:border-border">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Rooms Sold</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground"><%= @report.totals[:rooms_sold] %></h2>
-    </div>
-    <div class="bg-muted/30 p-6 md:border-r md:border-border">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Rooms Available</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground"><%= @report.totals[:rooms_available] %></h2>
-    </div>
-    <div class="p-6 md:border-r md:border-border">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Occupancy</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground"><%= number_to_percentage(@report.totals[:occupancy_rate] * 100, precision: 2) %></h2>
-    </div>
-    <div class="bg-muted/30 p-6 md:border-r md:border-border">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Average Daily Rate (ADR)</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:adr], precision: 2) %></h2>
-    </div>
-    <div class="p-6 md:border-r md:border-border">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Revenue per Available Room (RevPAR)</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:revpar], precision: 2) %></h2>
-    </div>
-    <div class="bg-muted/30 p-6 md:border-r md:border-border">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tax</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:tax_amount], precision: 2) %></h2>
-    </div>
-    <div class="p-6">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Revenue</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:total_revenue], precision: 2) %></h2>
-    </div>
-  </div>
-
-  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-    <div class="overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="bg-muted">
-          <tr>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"><%= @date_preset == "this_year" ? "Month" : "Date" %></th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Rooms Sold</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Rooms Available</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Occupancy</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Room Revenue</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Average Daily Rate (ADR)</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Revenue per Available Room (RevPAR)</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Tax</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Total Revenue</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border bg-card">
-          <% if @report.rows.any? %>
-            <% @report.rows.each do |row| %>
-              <tr>
-                <td class="px-6 py-4 text-sm font-semibold text-foreground"><%= @date_preset == "this_year" ? row[:date].strftime("%B %Y") : row[:date].strftime("%d %b %Y") %></td>
-                <td class="px-6 py-4 text-sm text-foreground"><%= row[:rooms_sold] %></td>
-                <td class="px-6 py-4 text-sm text-foreground"><%= row[:rooms_available] %></td>
-                <td class="px-6 py-4 text-sm text-foreground"><%= number_to_percentage(row[:occupancy_rate] * 100, precision: 2) %></td>
-                <td class="px-6 py-4 text-sm text-foreground">MYR <%= number_with_precision(row[:room_revenue], precision: 2) %></td>
-                <td class="px-6 py-4 text-sm text-foreground">MYR <%= number_with_precision(row[:adr], precision: 2) %></td>
-                <td class="px-6 py-4 text-sm text-foreground">MYR <%= number_with_precision(row[:revpar], precision: 2) %></td>
-                <td class="px-6 py-4 text-sm text-foreground">MYR <%= number_with_precision(row[:tax_amount], precision: 2) %></td>
-                <td class="px-6 py-4 text-sm text-foreground font-semibold">MYR <%= number_with_precision(row[:total_revenue], precision: 2) %></td>
-              </tr>
-            <% end %>
-          <% else %>
-            <tr><td colspan="9" class="px-6 py-20 text-center text-sm font-medium text-muted-foreground">No occupancy data for this selected period.</td></tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
+  </section>
 </div>
