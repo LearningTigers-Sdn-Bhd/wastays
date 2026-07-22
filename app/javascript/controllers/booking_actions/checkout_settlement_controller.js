@@ -74,6 +74,33 @@ export default class extends Controller {
     this.submitButtonTarget.classList.toggle("opacity-50", !valid)
   }
 
+  // Bulk shortcut: set every visible guest folio that can pay now to pay_now/cash,
+  // so the common group checkout needs no per-folio interaction.
+  resolveAllGuestFolios(event) {
+    event?.preventDefault()
+
+    this.folioRowTargets.forEach((row) => {
+      if (row.dataset.folioGuest !== "true" || row.classList.contains("hidden")) return
+
+      const action = row.querySelector("select[name$='[action]']")
+      if (!action || action.disabled) return
+      if (!Array.from(action.options).some((option) => option.value === "pay_now")) return
+
+      if (action.value !== "pay_now") {
+        action.value = "pay_now"
+        action.dispatchEvent(new Event("change", { bubbles: true }))
+      }
+
+      const method = row.querySelector("select[name$='[payment_method]']")
+      if (method && Array.from(method.options).some((option) => option.value === "cash") && method.value !== "cash") {
+        method.value = "cash"
+        method.dispatchEvent(new Event("change", { bubbles: true }))
+      }
+    })
+
+    this.updateSettlementDetails()
+  }
+
   updateSettlementDetails() {
     this.folioRowTargets.forEach((row) => {
       const folioId = row.dataset.folioId

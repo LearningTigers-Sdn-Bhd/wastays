@@ -10,7 +10,6 @@
 <% form_state = checkout_form_state(bookings: checkout_bookings, sheets: checkout_sheets) %>
 <% selected_booking_ids = form_state.selected_booking_ids %>
 <% all_held_deposits = checkout_sheets.values.flat_map(&:held_deposits) %>
-<% early_departure_bookings = checkout_bookings.select { |checkout_booking| checkout_business_date < checkout_booking.check_out.to_date } %>
 <% ns = "booking-actions--checkout-settlement" %>
 
 <div data-controller="panels-ui--sheet-frame">
@@ -43,103 +42,91 @@
               </aside>
             <% end %>
 
-            <main class="h-full min-h-0 overflow-y-auto custom-scrollbar">
-              <div class="space-y-8 px-4 py-6 sm:px-6">
+            <main class="flex h-full min-h-0 flex-col">
+              <%# Pinned context — checkout date + live totals stay visible while the folio list scrolls %>
+              <div class="shrink-0 space-y-3 border-b border-border bg-card px-4 py-3 sm:px-6">
                 <% unless group_checkout %>
                   <% room = booking.booking_rooms.first %>
-                  <section aria-labelledby="checkout-booking-heading" class="space-y-1">
-                    <h3 id="checkout-booking-heading" class="text-base font-semibold">Booking #<%= booking.formatted_reservation_number.presence || booking.confirmation_token %></h3>
-                    <p class="text-sm text-muted-foreground">
+                  <div>
+                    <h3 class="text-sm font-semibold">Booking #<%= booking.formatted_reservation_number.presence || booking.confirmation_token %></h3>
+                    <p class="text-xs text-muted-foreground">
                       <%= room&.room_type&.name.presence || room&.room_type_snapshot.to_h["name"].presence || "Room type unavailable" %>
                       · <%= room&.room_number.presence || "Unassigned room" %>
                       · <%= booking.status.humanize %>
                     </p>
-                  </section>
+                  </div>
                 <% end %>
 
-                <dl class="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4" data-<%= ns %>-target="requiresSelection">
-                  <% if group_checkout %>
-                    <div>
-                      <dt class="text-sm text-muted-foreground">Selected bookings</dt>
-                      <dd class="mt-1 text-sm font-medium tabular-nums" data-<%= ns %>-target="selectedCount"><%= form_state.selected_count %> <%= "booking".pluralize(form_state.selected_count) %></dd>
+                <div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+                  <div class="min-w-[15rem] flex-1">
+                    <%= fields_for "booking", OpenStruct.new(checked_out_at: form_state.checked_out_at) do |booking_form| %>
+                      <%= render PanelsUI::FormField.new(
+                            form: booking_form,
+                            attribute: :checked_out_at,
+                            label: "Check-out date and time",
+                            hint: "Scheduled checkout: #{booking.check_out.strftime('%d %b %Y')}",
+                            required: booking.checkout_required?,
+                            size: :sm) do |field| %>
+                        <% field.with_date_time_picker(value: form_state.checked_out_at, minute_step: 5) %>
+                      <% end %>
+                    <% end %>
+                  </div>
+
+                  <dl class="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+                    <% if group_checkout %>
+                      <div class="flex items-baseline gap-1.5">
+                        <dt class="text-xs text-muted-foreground">Selected</dt>
+                        <dd class="text-sm font-semibold tabular-nums" data-<%= ns %>-target="selectedCount"><%= form_state.selected_count %> <%= "booking".pluralize(form_state.selected_count) %></dd>
+                      </div>
+                    <% end %>
+                    <div class="flex items-baseline gap-1.5">
+                      <dt class="text-xs text-muted-foreground">Collect now</dt>
+                      <dd class="text-sm font-semibold tabular-nums" data-<%= ns %>-target="collectNowAmount"><%= currency %> <%= format("%.2f", form_state.collect_now_total) %></dd>
                     </div>
-                  <% end %>
-                  <div>
-                    <dt class="text-sm text-muted-foreground">Collect now</dt>
-                    <dd class="mt-1 text-sm font-medium tabular-nums" data-<%= ns %>-target="collectNowAmount"><%= currency %> <%= format("%.2f", form_state.collect_now_total) %></dd>
-                  </div>
-                  <div>
-                    <dt class="text-sm text-muted-foreground">Direct bill</dt>
-                    <dd class="mt-1 text-sm font-medium tabular-nums" data-<%= ns %>-target="directBillAmount"><%= currency %> <%= format("%.2f", form_state.direct_bill_total) %></dd>
-                  </div>
-                  <div>
-                    <dt class="text-sm text-muted-foreground">Keep open</dt>
-                    <dd class="mt-1 text-sm font-medium tabular-nums" data-<%= ns %>-target="keepOpenCount"><%= pluralize(form_state.keep_open_count, "folio") %></dd>
-                  </div>
-                </dl>
+                    <div class="flex items-baseline gap-1.5">
+                      <dt class="text-xs text-muted-foreground">Direct bill</dt>
+                      <dd class="text-sm font-semibold tabular-nums" data-<%= ns %>-target="directBillAmount"><%= currency %> <%= format("%.2f", form_state.direct_bill_total) %></dd>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                      <dt class="text-xs text-muted-foreground">Keep open</dt>
+                      <dd class="text-sm font-semibold tabular-nums" data-<%= ns %>-target="keepOpenCount"><%= pluralize(form_state.keep_open_count, "folio") %></dd>
+                    </div>
+                  </dl>
+                </div>
 
                 <% if checkout_error.present? %>
                   <%= render PanelsUI::Alert.new(tone: :destructive, title: "Checkout could not be completed", role: :alert, aria: { live: "assertive" }) do |alert| %>
                     <% alert.with_description { checkout_error } %>
                   <% end %>
                 <% end %>
+              </div>
 
-                <div class="hidden" data-<%= ns %>-target="emptySelection">
-                  <%= render PanelsUI::Alert.new(tone: :info, title: "Select at least one booking") do |alert| %>
-                    <% alert.with_description { "Choose an eligible booking from the group rail to review its checkout details and folios." } %>
-                  <% end %>
-                </div>
+              <%# Scroll region — only the folio work scrolls %>
+              <div class="min-h-0 flex-1 overflow-y-auto custom-scrollbar">
+                <div class="px-4 py-6 sm:px-6">
+                  <div class="hidden" data-<%= ns %>-target="emptySelection">
+                    <%= render PanelsUI::Alert.new(tone: :info, title: "Select at least one booking") do |alert| %>
+                      <% alert.with_description { "Choose an eligible booking from the group rail to review its checkout details and folios." } %>
+                    <% end %>
+                  </div>
 
-                <div class="space-y-8" data-<%= ns %>-target="requiresSelection">
-                  <%= fields_for "booking", OpenStruct.new(checked_out_at: form_state.checked_out_at) do |booking_form| %>
-                    <section aria-labelledby="checkout-details-heading" class="space-y-4">
-                      <div>
-                        <h3 id="checkout-details-heading" class="text-base font-semibold">Checkout details</h3>
-                        <p class="mt-1 text-sm text-muted-foreground">Confirm the actual departure time before resolving the booking folios.</p>
-                      </div>
-                      <%= render PanelsUI::FormField.new(
-                            form: booking_form,
-                            attribute: :checked_out_at,
-                            label: "Check-out date and time",
-                            hint: "Scheduled checkout: #{booking.check_out.strftime('%d %b %Y')}",
-                            required: booking.checkout_required?) do |field| %>
-                        <% field.with_date_time_picker(value: form_state.checked_out_at, minute_step: 5) %>
-                      <% end %>
-                    </section>
-                  <% end %>
-
-                  <% if early_departure_bookings.any? %>
-                    <section aria-labelledby="early-departure-heading" class="space-y-4">
-                      <div>
-                        <h3 id="early-departure-heading" class="text-base font-semibold">Early departure</h3>
-                        <p class="mt-1 text-sm text-muted-foreground">These bookings leave before their scheduled date. Pending stay charges post automatically at checkout — toggle a booking to add an extra charge.</p>
-                      </div>
-                      <div class="divide-y divide-border rounded-lg border border-border [&>*]:px-4 [&>*]:py-3">
-                        <% early_departure_bookings.each do |early_booking| %>
-                          <%= render "hotel_portal/bookings/actions/checkouts/early_departure",
-                                booking: early_booking,
-                                currency: currency,
-                                visible: !group_checkout || form_state.selected?(early_booking),
-                                values: form_state.early_departure_values(early_booking),
-                                ns: ns %>
-                        <% end %>
-                      </div>
-                    </section>
-                  <% end %>
-
-                  <%= render "hotel_portal/bookings/actions/checkouts/folio_resolver",
-                        checkout_sheets: checkout_sheets,
-                        form_state: form_state,
-                        group_checkout: group_checkout,
-                        ns: ns %>
-
-                  <% if all_held_deposits.any? %>
-                    <%= render "hotel_portal/bookings/actions/checkouts/security_deposit",
+                  <div class="space-y-8" data-<%= ns %>-target="requiresSelection">
+                    <%= render "hotel_portal/bookings/actions/checkouts/folio_resolver",
                           checkout_sheets: checkout_sheets,
-                          deposits: all_held_deposits,
                           form_state: form_state,
-                          currency: currency %>
-                  <% end %>
+                          group_checkout: group_checkout,
+                          currency: currency,
+                          checkout_business_date: checkout_business_date,
+                          ns: ns %>
+
+                    <% if all_held_deposits.any? %>
+                      <%= render "hotel_portal/bookings/actions/checkouts/security_deposit",
+                            checkout_sheets: checkout_sheets,
+                            deposits: all_held_deposits,
+                            form_state: form_state,
+                            currency: currency %>
+                    <% end %>
+                  </div>
                 </div>
               </div>
             </main>

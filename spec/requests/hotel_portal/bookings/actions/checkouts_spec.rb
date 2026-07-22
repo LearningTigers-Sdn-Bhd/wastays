@@ -57,8 +57,9 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
       expect(dialog.at_css("input[name='booking[checked_out_at]']")).to be_present
       expect(dialog.at_css(".panel-date-time-picker")).to be_present
       expect(dialog.at_css("[data-booking-actions--checkout-settlement-target~='folioRow'] .panel-select-menu")).to be_present
-      expect(dialog.at_css("[data-booking-actions--checkout-settlement-target~='folioRow'] .panel-collapsible[data-state='closed']")).to be_present
-      expect(dialog.at_css("button.panel-collapsible__trigger[aria-expanded='false']").text).to include("Resolve folio")
+      # Settlement controls render inline on the folio row (no expand step)
+      expect(dialog.at_css("[data-booking-actions--checkout-settlement-target~='folioRow'] [data-booking-actions--checkout-settlement-target='paymentFields']")).to be_present
+      expect(dialog.css("[data-booking-actions--checkout-settlement-target~='folioRow'] .panel-collapsible")).to be_empty
       expect(dialog.at_css("button.panel-button[type='submit'][form='booking-checkout-form']")).to be_present
       expect(dialog.css("section.bg-card")).to be_empty
       resolver_list = dialog.at_css("[data-testid='folio-resolver-list']")
