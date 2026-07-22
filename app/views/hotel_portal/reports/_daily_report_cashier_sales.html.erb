@@ -1,8 +1,10 @@
-<section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Cashier Sales metrics">
-  <%= render PanelsUI::MetricCard.new(label: "Cash Movements", value: @cashier_report.totals[:movement_count].to_s, detail: "Payments and refunds") %>
-  <%= render PanelsUI::MetricCard.new(label: "Total Collected", value: "MYR #{number_with_precision(@cashier_report.totals[:total_collected], precision: 2)}", detail: "Amount in") %>
-  <%= render PanelsUI::MetricCard.new(label: "Total Refunded", value: "- MYR #{number_with_precision(@cashier_report.totals[:total_refunded], precision: 2)}", detail: "Amount out", detail_variant: :destructive) %>
-  <%= render PanelsUI::MetricCard.new(label: "Net Cash", value: "MYR #{number_with_precision(@cashier_report.totals[:net_cash], precision: 2)}", detail: "Collected less refunded", detail_variant: :success) %>
+<section aria-label="Cashier Sales metrics">
+  <%= render "daily_report_metric_row", metrics: [
+    { label: "Cash Movements", value: @cashier_report.totals[:movement_count].to_s, detail: "Payments and refunds" },
+    { label: "Total Collected", value: "MYR #{number_with_precision(@cashier_report.totals[:total_collected], precision: 2)}", detail: "Amount in" },
+    { label: "Total Refunded", value: "- MYR #{number_with_precision(@cashier_report.totals[:total_refunded], precision: 2)}", detail: "Amount out", detail_variant: :destructive },
+    { label: "Net Cash", value: "MYR #{number_with_precision(@cashier_report.totals[:net_cash], precision: 2)}", detail: "Collected less refunded", detail_variant: :success }
+  ] %>
 </section>
 
 <% [ [ "Advance", @advance_rows, @advance_transactions ], [ "Settlement", @settlement_rows, @settlement_transactions ] ].each do |title, rows, transactions| %>

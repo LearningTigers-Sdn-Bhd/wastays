@@ -1,0 +1,12 @@
+<div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+  <% metrics.each_with_index do |metric, index| %>
+    <% detail_class = { success: "text-success", destructive: "text-destructive" }.fetch(metric[:detail_variant], "text-muted-foreground") %>
+    <div class="p-6 <%= "bg-muted/30" if index.odd? %> <%= "lg:border-r lg:border-border" if index < metrics.size - 1 %>">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><%= metric[:label] %></p>
+      <h2 class="text-2xl font-bold tracking-tight text-foreground"><%= metric[:value] %></h2>
+      <% if metric[:detail].present? %>
+        <p class="mt-2 text-xs font-medium <%= detail_class %>"><%= metric[:detail] %></p>
+      <% end %>
+    </div>
+  <% end %>
+</div>

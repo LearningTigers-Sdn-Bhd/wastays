@@ -19,40 +19,59 @@
           show_export: feature_enabled_for_hotel?("excel_pdf_export"), export_menu_id: "extra-charge-export",
           export_items: [
             ["Export PDF", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :pdf)],
-            ["Export Excel", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :xls)],
+            ["Export Excel", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :xlsx)],
             ["Export CSV", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :csv)]
           ] %>
       <% end %>
     <% end %>
   </div>
 
-  <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Active Tab</p>
-      <h2 class="text-2xl font-bold tracking-tight text-foreground"><%= @active_extra_charge_tab == "fb" ? "F&B" : "Non-F&B" %></h2>
-    </div>
-    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+  <% preserved_params = { start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset } %>
+  <%= render PanelsUI::Tabs.new(
+        id: "extra-charge-tabs",
+        active: @active_extra_charge_tab,
+        variant: :line,
+        aria_label: "Extra Charge sections") do |tabs| %>
+    <% tabs.with_tab(name: "fb", label: "F&B", href: extra_charge_hotel_reports_path(current_hotel, preserved_params.merge(tab: "fb")), data: { testid: "extra-charge-tab-fb" }) %>
+    <% tabs.with_tab(name: "non_fb", label: "Non-F&B", href: extra_charge_hotel_reports_path(current_hotel, preserved_params.merge(tab: "non_fb")), data: { testid: "extra-charge-tab-non-fb" }) %>
+  <% end %>
+
+  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-2">
+    <div class="p-6 md:border-r md:border-border">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Transactions</p>
       <h2 class="text-2xl font-bold tracking-tight text-foreground"><%= @report.totals[:transaction_count] %></h2>
     </div>
-    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <div class="bg-muted/30 p-6">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Amount</p>
       <h2 class="text-2xl font-bold tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:total_amount], precision: 2) %></h2>
     </div>
   </div>
 
-  <div class="flex flex-wrap items-center gap-2">
-    <% {
-      "fb" => { label: "F&B" },
-      "non_fb" => { label: "Non-F&B" }
-    }.each do |tab, config| %>
-      <% active = @active_extra_charge_tab == tab %>
-      <%= link_to extra_charge_hotel_reports_path(current_hotel, tab: tab, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset),
-        class: "inline-flex h-10 items-center whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition #{active ? 'border-blue-600 bg-blue-600 text-primary-foreground shadow-sm' : 'border-border bg-card text-foreground hover:border-border-interactive hover:bg-muted'}" do %>
-        <span><%= config[:label] %></span>
-      <% end %>
-    <% end %>
-  </div>
+  <% if @date_preset == "this_year" %>
+    <section class="space-y-4" aria-labelledby="extra-charge-monthly-breakdown-heading">
+      <h2 id="extra-charge-monthly-breakdown-heading" class="text-base font-semibold">Monthly Breakdown</h2>
+      <div class="overflow-x-auto rounded-xl border border-border">
+        <table class="min-w-full">
+          <thead class="bg-muted">
+            <tr>
+              <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Month</th>
+              <th class="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Transactions</th>
+              <th class="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Total Amount</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border bg-card">
+            <% @report.monthly_rows.each do |row| %>
+              <tr class="hover:bg-muted/50">
+                <td class="whitespace-nowrap px-4 py-3 text-sm font-semibold text-foreground"><%= row[:date].strftime("%b %Y") %></td>
+                <td class="px-4 py-3 text-right text-sm text-foreground"><%= row[:transaction_count] %></td>
+                <td class="px-4 py-3 text-right text-sm font-semibold text-foreground">MYR <%= number_with_precision(row[:total_amount], precision: 2) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  <% end %>
 
   <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
     <div class="overflow-x-auto">

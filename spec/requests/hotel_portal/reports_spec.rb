@@ -2,6 +2,8 @@
 
 require 'rails_helper'
 require "nokogiri"
+require "pdf-reader"
+require "zip"
 
 RSpec.describe "HotelPortal::Reports", type: :request do
   let(:plan) { create(:plan) }
@@ -476,6 +478,43 @@ RSpec.describe "HotelPortal::Reports", type: :request do
   end
 
   describe "GET /extra_charge" do
+    def create_extra_charge_export_rows
+      booking = create(:booking, hotel: hotel, guest_name: "Export Guest")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, category: "fb", description: "F&B export charge", amount: 20, posting_date: Date.new(2026, 6, 15))
+      create(:folio_transaction, booking_folio: folio, category: "other", description: "Non-F&B export charge", amount: 15, posting_date: Date.new(2026, 6, 15))
+    end
+
+    def xlsx_text(content)
+      entries = {}
+      Zip::File.open_buffer(StringIO.new(content)) do |archive|
+        archive.each { |entry| entries[entry.name] = entry.get_input_stream.read }
+      end
+
+      shared_strings = if (content = entries["xl/sharedStrings.xml"])
+        Nokogiri::XML(content).xpath("//xmlns:si").map { |string| string.xpath(".//xmlns:t").map(&:text).join }
+      else
+        []
+      end
+
+      entries.filter_map do |name, worksheet|
+        next unless name.match?(%r{\Axl/worksheets/.+\.xml\z})
+
+        document = Nokogiri::XML(worksheet)
+        document.xpath("//xmlns:c").filter_map do |cell|
+          inline_text = cell.xpath("./xmlns:is//xmlns:t").map(&:text).join
+          next inline_text if inline_text.present?
+          next shared_strings.fetch(cell.at_xpath("./xmlns:v")&.text.to_i) if cell["t"] == "s"
+
+          cell.at_xpath("./xmlns:v")&.text
+        end.join("\n")
+      end.join("\n")
+    end
+
+    def pdf_text(content)
+      PDF::Reader.new(StringIO.new(content)).pages.map(&:text).join("\n")
+    end
+
     it "renders the extra charge report page" do
       booking = create(:booking, hotel: hotel, guest_name: "FB Guest")
       folio = create(:booking_folio, booking: booking, hotel: hotel)
@@ -491,6 +530,18 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include("FB Guest")
       expect(response.body).to include("Restaurant")
       expect(response.body).to include("MYR 20.00")
+    end
+
+    it "links to xlsx and not xls exports" do
+      get extra_charge_hotel_reports_path(hotel), params: {
+        tab: "fb",
+        start_date: "2026-06-15",
+        end_date: "2026-06-15"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include(".xlsx")
+      expect(response.body).not_to match(/\.xls(?:\?|\"|')/)
     end
 
     it "defaults to today on first load" do
@@ -529,10 +580,21 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include("MYR 15.00")
     end
 
+    it "shows a monthly breakdown when this year is selected" do
+      travel_to(Time.zone.local(2026, 7, 22, 10, 0, 0)) do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, category: "fb", amount: 40, posting_date: Date.new(2026, 5, 7))
+
+        get extra_charge_hotel_reports_path(hotel), params: { date_preset: "this_year" }
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include("Monthly Breakdown", "May 2026", "MYR 40.00")
+      end
+    end
+
     it "exports csv for the active tab only" do
-      booking = create(:booking, hotel: hotel, guest_name: "CSV Guest")
-      folio = create(:booking_folio, booking: booking, hotel: hotel)
-      create(:folio_transaction, booking_folio: folio, category: "fb", description: "Restaurant", amount: 20, posting_date: Date.new(2026, 6, 15))
+      create_extra_charge_export_rows
 
       get extra_charge_hotel_reports_path(hotel, format: :csv), params: {
         tab: "fb",
@@ -541,9 +603,43 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       }
 
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("text/csv")
-      expect(response.headers["Content-Disposition"]).to include("extra-charge-report-fb")
-      expect(response.body).to include("Restaurant")
+      expect(response.content_type).to eq("text/csv")
+      expect(response.headers["Content-Disposition"]).to include("extra-charge-report-fb-2026-06-15-2026-06-15.csv")
+      expect(response.body).to include("F&B export charge")
+      expect(response.body).not_to include("Non-F&B export charge")
+    end
+
+    it "exports xlsx for the active tab only" do
+      create_extra_charge_export_rows
+
+      get extra_charge_hotel_reports_path(hotel, format: :xlsx), params: {
+        tab: "fb",
+        start_date: "2026-06-15",
+        end_date: "2026-06-15"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.headers["Content-Disposition"]).to include("extra-charge-report-fb-2026-06-15-2026-06-15.xlsx")
+      expect(response.body).to start_with("PK")
+      expect(xlsx_text(response.body)).to include("F&B export charge")
+      expect(xlsx_text(response.body)).not_to include("Non-F&B export charge")
+    end
+
+    it "exports pdf for the active tab only" do
+      create_extra_charge_export_rows
+
+      get extra_charge_hotel_reports_path(hotel, format: :pdf), params: {
+        tab: "fb",
+        start_date: "2026-06-15",
+        end_date: "2026-06-15"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+      expect(response.headers["Content-Disposition"]).to include("extra-charge-report-fb-2026-06-15-2026-06-15.pdf")
+      expect(pdf_text(response.body)).to include("F&B export charge")
+      expect(pdf_text(response.body)).not_to include("Non-F&B export charge")
     end
   end
 

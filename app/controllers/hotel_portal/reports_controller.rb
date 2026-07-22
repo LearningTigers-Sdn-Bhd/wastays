@@ -545,28 +545,29 @@ module HotelPortal
         hotel: current_hotel,
         start_date: @report_start_date,
         end_date: @report_end_date,
-        tab: @active_extra_charge_tab
+        tab: @active_extra_charge_tab,
+        date_preset: params[:date_preset]
       ).call
 
       respond_to do |format|
         format.html
         format.csv do
-          csv = HotelPortal::Reports::ExtraChargeCsvExportService.new(report: @report).generate
+          csv = HotelPortal::Reports::ExtraChargeCsvExportService.new(hotel: current_hotel, report: @report).generate
           send_data csv,
-            filename: "extra-charge-report-#{@active_extra_charge_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.csv",
+            filename: extra_charge_export_filename("csv"),
             type: "text/csv"
         end
-        format.any(:xls) do
-          workbook = HotelPortal::Reports::ExtraChargeExcelExportService.new(report: @report).generate
+        format.xlsx do
+          workbook = HotelPortal::Reports::ExtraChargeExcelExportService.new(hotel: current_hotel, report: @report).generate
           send_data workbook,
-            filename: "extra-charge-report-#{@active_extra_charge_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.xls",
-            type: "application/vnd.ms-excel",
+            filename: extra_charge_export_filename("xlsx"),
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             disposition: "attachment"
         end
         format.pdf do
           pdf = HotelPortal::Reports::ExtraChargePdfExportService.new(hotel: current_hotel, report: @report).generate
           send_data pdf,
-            filename: "extra-charge-report-#{@active_extra_charge_tab.tr('_', '-')}-#{@report.start_date}-#{@report.end_date}.pdf",
+            filename: extra_charge_export_filename("pdf"),
             type: "application/pdf",
             disposition: "attachment"
         end
@@ -574,6 +575,11 @@ module HotelPortal
     end
 
     private
+
+    def extra_charge_export_filename(extension)
+      tab = @active_extra_charge_tab.tr("_", "-")
+      "extra-charge-report-#{tab}-#{@report.start_date}-#{@report.end_date}.#{extension}"
+    end
 
     def tax_compliance_report
       case @active_tax_compliance_tab
