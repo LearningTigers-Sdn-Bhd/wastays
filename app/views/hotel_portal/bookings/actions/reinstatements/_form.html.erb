@@ -66,8 +66,8 @@
         <% end %>
 
         <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
-          <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-action="panels-ui--sheet#close">Cancel</button>
-          <%= submit_tag "Reinstate & check in", class: "rounded-md bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground", data: { turbo_submits_with: "Reinstating…" } %>
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Reinstating…" }) do %>Reinstate &amp; check in<% end %>
         </div>
       <% end %>
     <% end %>

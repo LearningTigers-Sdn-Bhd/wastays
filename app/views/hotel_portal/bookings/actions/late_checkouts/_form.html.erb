@@ -16,7 +16,7 @@
           <%= render "hotel_portal/bookings/actions/shared/group_target_selector",
                 target_presenter: HotelPortal::BookingLifecycleTargetPresenter.new(booking: booking, action: :late_checkout) %>
           <% if group %><div class="min-h-0 overflow-y-auto custom-scrollbar"><% end %>
-          <div class="space-y-6 p-6"
+          <div class="space-y-6 p-4"
                data-controller="booking-actions--late-checkout"
                data-booking-actions--late-checkout-base-amount-value="<%= @presenter.suggested_late_checkout_amount %>"
                data-booking-actions--late-checkout-currency-value="<%= @presenter.currency %>">
@@ -25,8 +25,8 @@
           <% if group %></div><% end %>
         </div>
         <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
-          <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-action="panels-ui--sheet#close">Cancel</button>
-          <%= submit_tag "Process late checkout", class: "rounded-md bg-amber-600 px-5 py-2.5 text-sm font-bold text-primary-foreground", data: { turbo_submits_with: "Processing…" } %>
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :warning, data: { turbo_submits_with: "Processing…" }) do %>Process late checkout<% end %>
         </div>
       <% end %>
     <% end %>

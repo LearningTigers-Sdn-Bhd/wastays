@@ -13,9 +13,11 @@
             <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
             <div class="min-h-0 flex-1 overflow-y-auto">
               <div class="space-y-5 p-6">
-                <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                  This posts an audited correction for tourism tax charged when this booking was marked as a no-show. Other no-show charges and taxes remain unchanged.
-                </div>
+                <%= render PanelsUI::Alert.new(tone: :warning) do |alert| %>
+                  <% alert.with_description do %>
+                    This posts an audited correction for tourism tax charged when this booking was marked as a no-show. Other no-show charges and taxes remain unchanged.
+                  <% end %>
+                <% end %>
 
                 <section class="rounded-2xl border border-border p-5">
                   <div class="flex items-center justify-between gap-4">
@@ -40,15 +42,15 @@
               </div>
             </div>
             <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
-              <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-action="panels-ui--sheet#close">Cancel</button>
-              <%= submit_tag "Remove tourism tax", class: "rounded-md bg-amber-600 px-5 py-2.5 text-sm font-bold text-primary-foreground", data: { turbo_submits_with: "Removing…" } %>
+              <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+              <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :warning, data: { turbo_submits_with: "Removing…" }) do %>Remove tourism tax<% end %>
             </div>
           <% end %>
         <% else %>
           <div class="p-6">
             <div class="rounded-xl border border-border bg-muted p-4 text-sm text-muted-foreground">This booking has no no-show tourism tax to repair.</div>
             <div class="mt-5 flex justify-end">
-              <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-action="panels-ui--sheet#close">Close</button>
+              <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Close<% end %>
             </div>
           </div>
         <% end %>

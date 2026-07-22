@@ -17,44 +17,44 @@
         <div class="min-h-0 flex-1 <%= group ? 'grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none' : 'overflow-y-auto' %>" data-controller="backdate-reason-validation">
           <%= render "hotel_portal/bookings/actions/shared/group_target_selector", target_presenter: target_presenter %>
           <% if group %><div class="min-h-0 overflow-y-auto custom-scrollbar"><% end %>
+          <%# backdate_reason / retroactive_reason are top-level params (not booking-scoped),
+              so drive their PanelsUI controls with a blank-scope builder to keep the flat field names. %>
+          <% reason_values = Struct.new(:backdate_reason, :retroactive_reason).new(params[:backdate_reason], params[:retroactive_reason]) %>
+          <% reason_form = ActionView::Helpers::FormBuilder.new("", reason_values, self, {}) %>
           <div class="space-y-5 p-6">
             <% if booking.errors.any? %>
               <div class="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert"><%= booking.errors.full_messages.to_sentence %></div>
             <% end %>
             <div>
-              <span class="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Scheduled check-in</span>
-              <p class="text-sm font-semibold text-foreground"><%= booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %></p>
+              <span class="mb-1 block text-sm font-medium text-muted-foreground">Scheduled check-in</span>
+              <p class="text-sm font-medium text-foreground"><%= booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %></p>
             </div>
+            <%= render PanelsUI::FormField.new(form: reason_form, attribute: :backdate_reason, label: "Backdate reason", required: true) do |field| %>
+              <% field.with_select_menu(
+                   [ "Guest arrived earlier but was not checked in",
+                     "System / internet issue",
+                     "Manual offline check-in",
+                     "Night audit correction",
+                     "Booking was created late",
+                     "Room was occupied before system update",
+                     "Other" ].map { |reason| { label: reason, value: reason } },
+                   include_blank: true, prompt: "Select reason",
+                   data: { action: "change->backdate-reason-validation#toggle" }) %>
+            <% end %>
             <div>
-              <%= label_tag :backdate_reason, "Backdate reason", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground" %>
-              <%= select_tag :backdate_reason, options_for_select([
-                    [ "Guest arrived earlier but was not checked in", "Guest arrived earlier but was not checked in" ],
-                    [ "System / internet issue", "System / internet issue" ],
-                    [ "Manual offline check-in", "Manual offline check-in" ],
-                    [ "Night audit correction", "Night audit correction" ],
-                    [ "Booking was created late", "Booking was created late" ],
-                    [ "Room was occupied before system update", "Room was occupied before system update" ],
-                    [ "Other", "Other" ]
-                  ], params[:backdate_reason]), include_blank: "Select reason", required: true,
-                  data: { backdate_reason_validation_target: "select", action: "change->backdate-reason-validation#toggle" },
-                  class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:border-ring focus:ring-ring" %>
-            </div>
-            <div>
-              <div class="mb-2 flex items-center justify-between">
-                <%= label_tag :retroactive_reason, "Reason details", class: "block text-xs font-bold uppercase tracking-wider text-muted-foreground" %>
-                <span data-backdate-reason-validation-target="optionalBadge" class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Optional</span>
+              <div class="mb-1.5 flex items-center justify-between">
+                <%= label_tag :retroactive_reason, "Reason details", class: "text-sm font-medium text-foreground" %>
+                <span data-backdate-reason-validation-target="optionalBadge" class="text-xs text-muted-foreground">Optional</span>
               </div>
-              <%= text_area_tag :retroactive_reason, params[:retroactive_reason], rows: 4,
-                    placeholder: "Explain why this check-in is being recorded after the business date was closed.",
-                    data: { backdate_reason_validation_target: "details" },
-                    class: "w-full resize-y rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:border-ring focus:ring-ring" %>
+              <%= render PanelsUI::TextArea.new(form: reason_form, attribute: :retroactive_reason, rows: 4,
+                    placeholder: "Explain why this check-in is being recorded after the business date was closed.") %>
             </div>
           </div>
           <% if group %></div><% end %>
         </div>
         <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
-          <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-action="panels-ui--sheet#close">Cancel</button>
-          <%= submit_tag "Complete backdated check-in", class: "rounded-md bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground", data: { turbo_submits_with: "Checking in…" } %>
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Checking in…" }) do %>Complete backdated check-in<% end %>
         </div>
       <% end %>
     <% end %>

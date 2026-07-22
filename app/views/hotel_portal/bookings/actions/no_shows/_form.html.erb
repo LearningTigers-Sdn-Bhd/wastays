@@ -11,28 +11,31 @@
         description: booking.guest_name,
         body_class: "p-0") do |sheet| %>
     <% sheet.with_body do %>
-      <%= form_with url: hotel_booking_action_mark_no_show_path(current_hotel, booking), method: :post, class: "flex h-full min-h-0 flex-col", data: { controller: "group-lifecycle-targets" } do %>
+      <%= form_with url: hotel_booking_action_mark_no_show_path(current_hotel, booking), method: :post, class: "flex h-full min-h-0 flex-col", data: { controller: "group-lifecycle-targets" } do |f| %>
         <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
         <div class="min-h-0 flex-1 <%= group ? 'grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none' : 'overflow-y-auto' %>">
           <%= render "hotel_portal/bookings/actions/shared/group_target_selector", target_presenter: target_presenter %>
           <% if group %><div class="min-h-0 overflow-y-auto custom-scrollbar"><% end %>
-          <div class="p-6">
+          <div class="p-4">
             <% if booking.errors.any? %>
               <div class="mb-5 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert"><%= booking.errors.full_messages.to_sentence %></div>
             <% end %>
-            <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-              This finalizes the no-show, posts the standard first-night no-show charges, excludes tourism tax, and releases the assigned room and remaining inventory. Any settled folio closes automatically.
-            </div>
+            <%= render PanelsUI::Alert.new(tone: :warning) do |alert| %>
+              <% alert.with_description do %>
+                This finalizes the no-show, posts the standard first-night no-show charges, excludes tourism tax, and releases the assigned room and remaining inventory. Any settled folio closes automatically.
+              <% end %>
+            <% end %>
             <div class="mt-5">
-              <%= label_tag :no_show_reason, "No-show reason", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground" %>
-              <%= text_area_tag :no_show_reason, params[:no_show_reason], required: true, rows: 5, class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:border-ring focus:ring-ring", placeholder: group ? "Explain why the selected group bookings are being finalized as no-show." : "Explain why this booking is being finalized as no-show." %>
+              <%= render PanelsUI::FormField.new(form: f, attribute: :no_show_reason, label: "No-show reason", required: true) do |field| %>
+                <% field.with_text_area(value: params[:no_show_reason], rows: 5, placeholder: group ? "Explain why the selected group bookings are being finalized as no-show." : "Explain why this booking is being finalized as no-show.") %>
+              <% end %>
             </div>
           </div>
           <% if group %></div><% end %>
         </div>
         <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
-          <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-action="panels-ui--sheet#close">Cancel</button>
-          <%= submit_tag "Confirm no-show", class: "rounded-md bg-rose-600 px-5 py-2.5 text-sm font-bold text-primary-foreground", data: { turbo_submits_with: "Marking…" } %>
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, data: { turbo_submits_with: "Marking…" }) do %>Confirm no-show<% end %>
         </div>
       <% end %>
     <% end %>

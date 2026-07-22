@@ -11,26 +11,27 @@
         description: booking.guest_name,
         body_class: "p-0") do |sheet| %>
     <% sheet.with_body do %>
-      <%= form_with url: hotel_booking_action_undo_check_in_path(current_hotel, booking), method: :post, class: "flex h-full min-h-0 flex-col", data: { controller: "group-lifecycle-targets" } do %>
+      <%= form_with url: hotel_booking_action_undo_check_in_path(current_hotel, booking), method: :post, class: "flex h-full min-h-0 flex-col", data: { controller: "group-lifecycle-targets" } do |f| %>
         <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
         <div class="min-h-0 flex-1 <%= group ? 'grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none' : 'overflow-y-auto' %>">
           <%= render "hotel_portal/bookings/actions/shared/group_target_selector", target_presenter: target_presenter %>
           <% if group %><div class="min-h-0 overflow-y-auto custom-scrollbar"><% end %>
-          <div class="p-6">
+          <div class="p-4">
             <% if booking.errors.any? %>
               <div class="mb-5 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert"><%= booking.errors.full_messages.to_sentence %></div>
             <% end %>
             <p class="text-sm text-muted-foreground">This reverts the check-in status back to confirmed and releases the room assignment. Folio charges posted during the stay are not removed automatically.</p>
             <div class="mt-5">
-              <%= label_tag :retroactive_reason, "Reason to change", class: "mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground" %>
-              <%= text_field_tag :retroactive_reason, params[:retroactive_reason], required: true, class: "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground focus:border-ring focus:ring-ring", placeholder: group ? "Provide a reason for reverting these check-ins." : "Provide a reason for reverting this check-in." %>
+              <%= render PanelsUI::FormField.new(form: f, attribute: :retroactive_reason, label: "Reason to change", required: true) do |field| %>
+                <% field.with_input(value: params[:retroactive_reason], placeholder: group ? "Provide a reason for reverting these check-ins." : "Provide a reason for reverting this check-in.") %>
+              <% end %>
             </div>
           </div>
           <% if group %></div><% end %>
         </div>
         <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
-          <button type="button" class="rounded-md px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground" data-action="panels-ui--sheet#close">Cancel</button>
-          <%= submit_tag "Undo check-in", class: "rounded-md bg-rose-600 px-5 py-2.5 text-sm font-bold text-primary-foreground", data: { turbo_submits_with: "Reverting…" } %>
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, data: { turbo_submits_with: "Reverting…" }) do %>Undo check-in<% end %>
         </div>
       <% end %>
     <% end %>
