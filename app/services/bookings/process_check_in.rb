@@ -123,7 +123,7 @@ module Bookings
 
       room_keys.each do |key|
         lock_id = Digest::SHA256.digest(key.join(":"))[0, 8].unpack1("q>")
-        ActiveRecord::Base.connection.execute("SELECT pg_advisory_xact_lock(#{lock_id})")
+        ActiveRecord::Base.connection.exec_query("SELECT pg_advisory_xact_lock($1)", "advisory_lock", [ lock_id ])
       end
     end
 
