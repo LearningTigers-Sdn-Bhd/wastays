@@ -1,135 +1,216 @@
-<div class="w-full space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(title: "Notification Logs", description: "Review notification attempts and resend when needed.") %>
-
-  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-    <div class="border-b border-border bg-muted/70 px-6 py-6 sm:px-8">
-      <%= form_with url: hotel_notification_logs_path(current_hotel), method: :get, class: "flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between", data: { controller: "auto-submit", turbo_frame: "notification_logs_results" } do |f| %>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-1">
-          <div>
-            <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Search</label>
-            <%= f.text_field :query, value: params[:query], placeholder: "Booking ref, guest, phone, error...", autocomplete: "off", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { action: "input->auto-submit#submit" } %>
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Notification Type</label>
-            <%= f.select :notification_type, [["Pre-Arrival Notification", "pre_arrival_notification"], ["Check-In Confirmation", "check_in_confirmation"], ["Post-Stay Review Request", "post_stay_review_request"], ["Check-Out Receipt Message", "check_out_receipt_message"], ["In-Stay Guest Messaging", "in_stay_guest_messaging"]], { include_blank: "All Types", selected: params[:notification_type] }, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Channel</label>
-            <%= f.select :channel, [["WhatsApp", "whatsapp"], ["Email", "email"]], { include_blank: "All Channels", selected: params[:channel] }, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Status</label>
-            <%= f.select :status, [["Pending", "pending"], ["Sent", "sent"], ["Failed", "failed"], ["Skipped", "skipped"]], { include_blank: "All Statuses", selected: params[:status] }, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 lg:mb-0.5">
-          <%= link_to "Reset", hotel_notification_logs_path(current_hotel), class: "inline-flex items-center rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted" %>
-        </div>
+<div class="w-full space-y-4" data-slot="report-page" data-report="notification-logs">
+  <%= turbo_frame_tag "notification_logs_results", class: "block space-y-4" do %>
+  <%= render PanelsUI::PageHeader.new(title: "Notification logs", description: "Review notification attempts and resend when needed.") do |header| %>
+    <% header.with_caption do %>
+      <p class="text-sm font-medium text-muted-foreground"><%= current_hotel.name %> · All notification records</p>
+    <% end %>
+    <% header.with_actions do %>
+      <% export_filters = { query: params[:query], notification_type: params[:notification_type], channel: params[:channel], status: params[:status] } %>
+      <%= render PanelsUI::DropdownMenu.new(id: "notification-logs-export-menu", placement: :bottom_end) do |menu| %>
+        <% menu.with_trigger(variant: :secondary) do %>
+          <%= cached_icon "download", class: "me-2 size-4" %>
+          Export
+          <%= cached_icon "chevron-down", class: "ms-2 size-4", aria: { hidden: "true" } %>
+        <% end %>
+        <% menu.with_item(href: hotel_notification_logs_path(current_hotel, **export_filters, format: :pdf), data: { turbo: false }) { "Export PDF" } %>
+        <% menu.with_item(href: hotel_notification_logs_path(current_hotel, **export_filters, format: :xlsx), data: { turbo: false }) { "Export Excel" } %>
+        <% menu.with_item(href: hotel_notification_logs_path(current_hotel, **export_filters, format: :csv), data: { turbo: false }) { "Export CSV" } %>
       <% end %>
-    </div>
+    <% end %>
+  <% end %>
 
-    <%= turbo_frame_tag "notification_logs_results" do %>
-      <div class="overflow-x-auto">
-        <table class="min-w-full table-fixed">
-          <colgroup>
-            <col class="w-[18%]">
-            <col class="w-[15%]">
-            <col class="w-[12%]">
-            <col class="w-[12%]">
-            <col class="w-[20%]">
-            <col class="w-[15%]">
-            <col class="w-[8%]">
-          </colgroup>
-          <thead class="bg-muted">
-            <tr>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Time</th>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Booking</th>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Type</th>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Channel</th>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Error</th>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-border bg-card">
-            <% if @logs.any? %>
-              <% @logs.each_with_index do |log, index| %>
-                <tr class="align-top transition-colors hover:bg-muted/80 <%= index.even? ? 'bg-card' : 'bg-muted/55' %>">
-                  <td class="px-6 py-4 sm:px-8">
-                    <span class="text-sm font-medium text-foreground"><%= log.created_at.strftime("%d %b %Y") %></span>
-                    <span class="block text-[10px] font-bold text-muted-foreground"><%= log.created_at.strftime("%I:%M %p") %></span>
-                  </td>
-                  <td class="px-6 py-4">
-                    <span class="text-sm font-semibold text-foreground"><%= log.booking.confirmation_token %></span>
-                    <span class="block text-xs text-muted-foreground"><%= log.payload["guest_name"] || log.booking.guest_name %></span>
-                  </td>
-                  <td class="px-6 py-4">
-                    <span class="text-sm text-foreground font-medium"><%= log.notification_type.to_s.humanize %></span>
-                    <% if log.notification_type == "pre_arrival_notification" && log.payload.to_h["stage"].present? %>
-                      <span class="block text-xs font-semibold text-muted-foreground uppercase"><%= log.payload.to_h["stage"] %></span>
-                    <% end %>
-                    <% if log.notification_type == "in_stay_guest_messaging" && log.payload.to_h["rule_key"].present? %>
-                      <span class="block text-xs font-semibold text-muted-foreground uppercase"><%= log.payload.to_h["rule_key"] %></span>
-                    <% end %>
-                  </td>
-                  <td class="px-6 py-4">
-                    <span class="text-sm text-foreground font-medium"><%= log.channel.to_s.humanize %></span>
-                  </td>
-                  <td class="px-6 py-4">
-                    <% status_class = case log.status
-                                      when "sent" then "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                      when "failed" then "border-red-200 bg-red-50 text-red-700"
-                                      when "skipped" then "border-border-interactive bg-muted text-foreground"
-                                      else "border-amber-200 bg-amber-50 text-amber-700"
-                                      end %>
-                    <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider <%= status_class %>"><%= log.status %></span>
-                  </td>
-                  <td class="px-6 py-4">
-                    <span class="text-sm text-muted-foreground"><%= log.error_message.presence || "-" %></span>
-                  </td>
-                  <td class="px-6 py-4 sm:px-8">
-                    <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && log.status.in?(%w[sent failed skipped]) %>
-                      <button type="button" onclick="document.getElementById('resend-modal-<%= log.id %>').showModal()" class="inline-flex items-center rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted">
-                        Resend
-                      </button>
+  <%= render HotelPortal::Reports::MetricStrip.new(
+        aria_label: "Notification delivery summary",
+        metrics: [
+          { label: "Total records", value: @notification_summary[:total].to_s, detail: "Current filters" },
+          { label: "Failed", value: @notification_summary[:failed].to_s, detail: "Current filters · needs attention", detail_variant: :destructive },
+          { label: "Pending", value: @notification_summary[:pending].to_s, detail: "Current filters · awaiting delivery", detail_variant: :warning },
+          { label: "Sent", value: @notification_summary[:sent].to_s, detail: "Current filters · delivered", detail_variant: :success }
+        ]
+      ) %>
 
-                      <dialog id="resend-modal-<%= log.id %>" class="fixed inset-0 m-auto rounded-2xl p-0 w-[min(92vw,28rem)] max-w-md shadow-2xl backdrop:bg-primary/50" onclick="if(event.target===this){this.close()}">
-                        <div class="border-b border-border px-5 py-4">
-                          <h3 class="text-sm font-bold text-foreground">Resend Notification</h3>
-                          <p class="mt-1 text-xs text-muted-foreground">Booking <%= log.booking.confirmation_token %> · <%= log.channel.humanize %></p>
-                        </div>
-                        <%= form_with url: resend_hotel_notification_log_path(current_hotel, log), method: :post, class: "space-y-4 px-5 py-4" do |rf| %>
-                          <p class="text-xs text-muted-foreground">This creates a new resend log entry for audit tracking.</p>
-                          <div>
-                            <%= rf.label :resend_reason, "Reason", class: "mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground" %>
-                            <%= rf.text_area :resend_reason, required: true, rows: 3, placeholder: "Why are you resending this notification?", class: "w-full rounded-xl border border-border px-3 py-2 text-sm text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
-                          </div>
-                          <div class="flex items-center justify-end gap-2 border-t border-border pt-3">
-                            <button type="button" class="rounded-lg px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted" onclick="this.closest('dialog').close()">Cancel</button>
-                            <%= rf.submit "Confirm Resend", class: "inline-flex items-center rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary-hover" %>
+  <section class="rounded-lg border border-border bg-card p-3" aria-label="Notification log filters">
+    <%= form_with url: hotel_notification_logs_path(current_hotel), method: :get,
+          id: "notification-logs-filter-form",
+          class: "flex flex-col gap-3 xl:flex-row xl:items-end",
+          data: { controller: "auto-submit", turbo_frame: "notification_logs_results", turbo_permanent: true } do |f| %>
+      <div class="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <%= render PanelsUI::FormField.new(form: f, attribute: :query, label: "Search", size: :sm) do |field| %>
+          <% field.with_input(
+               type: :search,
+               value: params[:query],
+               placeholder: "Booking ref, guest, phone, error…",
+               autocomplete: "off",
+               data: { action: "input->auto-submit#submit" }) %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :notification_type, label: "Notification type", size: :sm) do |field| %>
+          <% field.with_select_menu(
+               [
+                 { label: "All types", value: "" },
+                 { label: "Pre-arrival notification", value: "pre_arrival_notification" },
+                 { label: "Check-in confirmation", value: "check_in_confirmation" },
+                 { label: "Post-stay review request", value: "post_stay_review_request" },
+                 { label: "Check-out receipt message", value: "check_out_receipt_message" },
+                 { label: "In-stay guest messaging", value: "in_stay_guest_messaging" }
+               ],
+               selected: params[:notification_type],
+               data: { action: "change->auto-submit#submitNow" }) %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :channel, label: "Channel", size: :sm) do |field| %>
+          <% field.with_select_menu(
+               [
+                 { label: "All channels", value: "" },
+                 { label: "WhatsApp", value: "whatsapp" },
+                 { label: "Email", value: "email" }
+               ],
+               selected: params[:channel],
+               data: { action: "change->auto-submit#submitNow" }) %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :status, label: "Status", size: :sm) do |field| %>
+          <% field.with_select_menu(
+               [
+                 { label: "All statuses", value: "" },
+                 { label: "Pending", value: "pending" },
+                 { label: "Sent", value: "sent" },
+                 { label: "Failed", value: "failed" },
+                 { label: "Skipped", value: "skipped" }
+               ],
+               selected: params[:status],
+               data: { action: "change->auto-submit#submitNow" }) %>
+        <% end %>
+      </div>
+      <%= render PanelsUI::Button.new(
+            href: hotel_notification_logs_path(current_hotel),
+            variant: :secondary,
+            size: :sm,
+            data: { turbo_frame: "_top", turbo: false }
+          ) do %>
+        Reset
+      <% end %>
+    <% end %>
+  </section>
+
+    <section class="space-y-3" aria-labelledby="notification-log-records-heading">
+      <h2 id="notification-log-records-heading" class="text-base font-semibold text-foreground">Notification log records</h2>
+
+      <%= render PanelsUI::Table.new(
+            caption: "Notification logs",
+            density: :compact,
+            header_style: :sentence,
+            hoverable: true,
+            class: "min-w-[64rem] table-fixed",
+            wrapper_class: "rounded-lg border border-border bg-card"
+          ) do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col" class="w-[16%]">Time</th>
+            <th scope="col" class="w-[15%]">Booking</th>
+            <th scope="col" class="w-[16%]">Type</th>
+            <th scope="col" class="w-[10%]">Channel</th>
+            <th scope="col" class="w-[11%]">Status</th>
+            <th scope="col" class="w-[22%]">Error</th>
+            <th scope="col" class="w-[10%]">Actions</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% if @logs.any? %>
+            <% @logs.each do |log| %>
+              <% status_variant = case log.status
+                                  when "sent" then :success
+                                  when "failed" then :destructive
+                                  when "skipped" then :neutral
+                                  else :warning
+                                  end %>
+              <tr class="align-top">
+                <td class="whitespace-nowrap">
+                  <span class="font-medium text-foreground"><%= log.created_at.strftime("%d %b %Y") %></span>
+                  <span class="block text-xs text-muted-foreground"><%= log.created_at.strftime("%I:%M %p") %></span>
+                </td>
+                <td>
+                  <span class="font-semibold text-foreground"><%= log.booking.confirmation_token %></span>
+                  <span class="block text-xs text-muted-foreground"><%= log.payload["guest_name"] || log.booking.guest_name %></span>
+                </td>
+                <td>
+                  <span class="font-medium text-foreground"><%= log.notification_type.to_s.humanize %></span>
+                  <% if log.notification_type == "pre_arrival_notification" && log.payload.to_h["stage"].present? %>
+                    <span class="block text-xs font-semibold text-muted-foreground"><%= log.payload.to_h["stage"] %></span>
+                  <% end %>
+                  <% if log.notification_type == "in_stay_guest_messaging" && log.payload.to_h["rule_key"].present? %>
+                    <span class="block text-xs font-semibold text-muted-foreground"><%= log.payload.to_h["rule_key"] %></span>
+                  <% end %>
+                </td>
+                <td class="font-medium text-foreground"><%= log.channel.to_s.humanize %></td>
+                <td>
+                  <%= render PanelsUI::Badge.new(label: log.status.humanize, variant: status_variant, size: :sm) %>
+                </td>
+                <td class="text-muted-foreground"><%= log.error_message.presence || "—" %></td>
+                <td>
+                  <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && log.status.in?(%w[sent failed skipped]) %>
+                    <%= render PanelsUI::Button.new(
+                          as: :button,
+                          type: :button,
+                          variant: :secondary,
+                          size: :xs,
+                          command: "show-modal",
+                          commandfor: "resend-modal-#{log.id}"
+                        ) do %>
+                      Resend
+                    <% end %>
+
+                    <%= form_with url: resend_hotel_notification_log_path(current_hotel, log), method: :post do |rf| %>
+                      <%= render PanelsUI::Dialog.new(
+                            id: "resend-modal-#{log.id}",
+                            title: "Resend notification",
+                            description: "Booking #{log.booking.confirmation_token} · #{log.channel.humanize}",
+                            size: :sm
+                          ) do |dialog| %>
+                        <% dialog.with_body do %>
+                          <div class="space-y-3">
+                            <p class="text-sm text-muted-foreground">This creates a new resend log entry for audit tracking.</p>
+                            <%= render PanelsUI::FormField.new(
+                                  form: rf,
+                                  attribute: "resend_#{log.id}_resend_reason",
+                                  label: "Reason",
+                                  hint: "Explain why this notification needs to be resent.",
+                                  required: true
+                                ) do |field| %>
+                              <% field.with_text_area(
+                                   rows: 3,
+                                   name: "resend_reason",
+                                   placeholder: "Why are you resending this notification?"
+                                 ) %>
+                            <% end %>
                           </div>
                         <% end %>
-                      </dialog>
-                    <% else %>
-                      <span class="text-xs text-muted-foreground">-</span>
+                        <% dialog.with_footer do %>
+                          <%= render PanelsUI::Button.new(
+                                as: :button,
+                                type: :button,
+                                variant: :secondary,
+                                size: :sm,
+                                data: { action: "panels-ui--dialog#close" }
+                              ) do %>
+                            Cancel
+                          <% end %>
+                          <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :sm) do %>
+                            Confirm resend
+                          <% end %>
+                        <% end %>
+                      <% end %>
                     <% end %>
-                  </td>
-                </tr>
-              <% end %>
-            <% else %>
-              <tr>
-                <td colspan="7" class="px-6 py-20 text-center sm:px-8">
-                  <p class="text-sm font-medium text-muted-foreground italic">No notification logs found matching your criteria.</p>
+                  <% else %>
+                    <span class="text-xs text-muted-foreground">—</span>
+                  <% end %>
                 </td>
               </tr>
             <% end %>
-          </tbody>
-        </table>
-      </div>
+          <% else %>
+            <%= render "hotel_portal/reports/table_empty_state", colspan: 7, message: "No notification logs found matching your criteria." %>
+          <% end %>
+        <% end %>
+      <% end %>
 
-      <div class="px-6 py-4 border-t border-border bg-muted/50 flex justify-center sm:px-8">
-        <%= paginate @logs %>
-      </div>
-    <% end %>
-  </div>
+      <%= render "hotel_portal/reports/table_pagination", collection: @logs %>
+    </section>
+  <% end %>
 </div>

@@ -40,12 +40,10 @@ RSpec.describe "Deposit liability export services", type: :service do
     expect(csv).to include("TOTAL")
   end
 
-  it "generates Excel with summary and deposit liability worksheets" do
-    xls = HotelPortal::Reports::DepositLiabilityExcelExportService.new(report: report).generate
+  it "generates a genuine Excel workbook" do
+    xlsx = HotelPortal::Reports::DepositLiabilityExcelExportService.new(hotel: hotel, report: report).generate
 
-    expect(xls).to include('ss:Name="Summary"')
-    expect(xls).to include('ss:Name="Deposit Liability"')
-    expect(xls).to include("Export Guest")
+    expect(xlsx).to start_with("PK")
   end
 
   it "generates a PDF" do

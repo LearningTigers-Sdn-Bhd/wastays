@@ -7,7 +7,7 @@
     <% else %>
       <%= render "export_dropdown", menu_id: "upcoming-payouts-export", items: [
         ["Export PDF", payouts_hotel_reports_path(current_hotel, tab: "upcoming", format: :pdf)],
-        ["Export Excel", payouts_hotel_reports_path(current_hotel, tab: "upcoming", format: :xls)],
+        ["Export Excel", payouts_hotel_reports_path(current_hotel, tab: "upcoming", format: :xlsx)],
         ["Export CSV", payouts_hotel_reports_path(current_hotel, tab: "upcoming", format: :csv)]
       ] %>
     <% end %>

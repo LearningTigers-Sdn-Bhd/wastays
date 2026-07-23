@@ -1,80 +1,34 @@
 # frozen_string_literal: true
 
-require "cgi"
-
 module HotelPortal
   module Reports
     class OutstandingBalanceExcelExportService
-      XML_HEADER = %(<?xml version="1.0"?>).freeze
+      HEADERS = [ "Guest Name", "Booking Ref", "Stay", "Rooms", "Room Numbers", "Payment Status", "Outstanding Amount", "Notes" ].freeze
 
-      def initialize(report:)
+      def initialize(hotel:, report:)
+        @hotel = hotel
         @report = report
       end
 
       def generate
-        <<~XML
-          #{XML_HEADER}
-          <?mso-application progid="Excel.Sheet"?>
-          <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-            xmlns:o="urn:schemas-microsoft-com:office:office"
-            xmlns:x="urn:schemas-microsoft-com:office:excel"
-            xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-            <Worksheet ss:Name="Summary">
-              <Table>
-                #{summary_rows}
-              </Table>
-            </Worksheet>
-            <Worksheet ss:Name="Outstanding Balances">
-              <Table>
-                #{detail_rows}
-              </Table>
-            </Worksheet>
-          </Workbook>
-        XML
+        Exports::ExcelReportBuilder.new(hotel: @hotel, title: "Outstanding Balance Report", period_label: period_label).generate do |builder|
+          sheet = builder.add_sheet(name: "Outstanding Balances", widths: [ 24, 18, 24, 24, 16, 18, 20, 30 ], orientation: :landscape)
+          builder.add_header(sheet: sheet)
+          builder.add_summary(sheet: sheet, metrics: [ [ "Outstanding Bookings", @report.totals[:booking_count], nil ], [ "Outstanding Amount", @report.totals[:outstanding_amount], currency ] ])
+          builder.add_table(
+            sheet: sheet, section_title: "Outstanding Bookings", headers: HEADERS,
+            rows: @report.rows.map { |row| row.values_at(:guest_name, :confirmation_token, :stay_dates, :room_details, :room_numbers, :payment_status, :outstanding_amount, :latest_note) },
+            column_types: %i[text text text text text text money text],
+            total_row: [ "TOTAL", nil, nil, nil, nil, nil, @report.totals[:outstanding_amount], nil ],
+            empty_message: "No outstanding bookings for the selected period."
+          )
+        end
       end
 
       private
 
-      def summary_rows
-        rows = []
-        rows << spreadsheet_row([ "Metric", "Value" ])
-        rows << spreadsheet_row([ "Outstanding Bookings", @report.totals[:booking_count] ])
-        rows << spreadsheet_row([ "Outstanding Amount", money(@report.totals[:outstanding_amount]) ])
-        rows.join("\n")
-      end
-
-      def detail_rows
-        rows = []
-        rows << spreadsheet_row([ "Guest Name", "Booking Ref", "Stay", "Rooms", "Room Numbers", "Payment Status", "Outstanding Amount", "Notes" ])
-
-        @report.rows.each do |row|
-          rows << spreadsheet_row([
-            row[:guest_name],
-            row[:confirmation_token],
-            row[:stay_dates],
-            row[:room_details],
-            row[:room_numbers],
-            row[:payment_status],
-            money(row[:outstanding_amount]),
-            row[:latest_note]
-          ])
-        end
-
-        rows.join("\n")
-      end
-
-      def spreadsheet_row(values)
-        cells = values.map do |value|
-          escaped = CGI.escapeHTML(value.to_s)
-          %(<Cell><Data ss:Type="String">#{escaped}</Data></Cell>)
-        end.join
-
-        %(<Row>#{cells}</Row>)
-      end
-
-      def money(value)
-        format("%.2f", value.to_d)
-      end
+      def period_label = @report.start_date == @report.end_date ? @report.start_date.strftime("%d %b %Y") : "#{@report.start_date.strftime('%d %b %Y')} - #{@report.end_date.strftime('%d %b %Y')}"
+      def currency = @hotel.default_currency.presence || "MYR"
     end
   end
 end

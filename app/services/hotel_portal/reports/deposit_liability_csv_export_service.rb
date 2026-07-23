@@ -1,35 +1,26 @@
 # frozen_string_literal: true
 
-require "csv"
-
 module HotelPortal
   module Reports
     class DepositLiabilityCsvExportService
       def initialize(report:)
         @report = report
+        @csv = Exports::CsvReportSupport.new
       end
 
       def generate
-        CSV.generate(headers: true) do |csv|
+        @csv.generate do |csv|
           csv << headers
 
           @report.rows.each do |row|
             csv << [
-              row[:guest_name],
-              row[:confirmation_token],
-              row[:stay_dates],
-              row[:booking_status],
-              row[:room_details],
-              row[:folio_number],
-              money(row[:booking_payment_amount]),
-              money(row[:earned_amount]),
-              money(row[:refund_amount]),
-              money(row[:remaining_liability]),
-              row[:latest_deposit_posting_date]&.iso8601
+              @csv.text(row[:guest_name]), @csv.text(row[:confirmation_token]), @csv.text(row[:stay_dates]), @csv.text(row[:booking_status]),
+              @csv.text(row[:room_details]), @csv.text(row[:folio_number]), @csv.money(row[:booking_payment_amount]), @csv.money(row[:earned_amount]),
+              @csv.money(row[:refund_amount]), @csv.money(row[:remaining_liability]), @csv.date(row[:latest_deposit_posting_date])
             ]
           end
 
-          csv << [ "TOTAL", nil, nil, nil, nil, nil, money(@report.totals[:booking_payment_amount]), money(@report.totals[:earned_amount]), money(@report.totals[:refund_amount]), money(@report.totals[:remaining_liability]), nil ]
+          csv << [ "TOTAL", nil, nil, nil, nil, nil, *@report.totals.values_at(:booking_payment_amount, :earned_amount, :refund_amount, :remaining_liability).map { |value| @csv.money(value) }, nil ]
         end
       end
 
@@ -37,10 +28,6 @@ module HotelPortal
 
       def headers
         [ "Guest Name", "Booking Ref", "Stay", "Status", "Rooms", "Folio", "Booking Payment", "Earned", "Refunds", "Remaining Liability", "Latest Payment Date" ]
-      end
-
-      def money(value)
-        format("%.2f", value.to_d)
       end
     end
   end

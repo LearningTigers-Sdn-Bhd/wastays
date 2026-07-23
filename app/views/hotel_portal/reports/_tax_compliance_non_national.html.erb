@@ -1,0 +1,53 @@
+<%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+  { label: "In-house foreign guests", value: @report.totals[:guest_count].to_s, detail: "Selected period" },
+  { label: "Total nights", value: @report.totals[:nights].to_s, detail: "Selected period" }
+]) %>
+
+<section class="space-y-3" aria-labelledby="non-national-records-heading">
+  <h2 id="non-national-records-heading" class="text-base font-semibold text-foreground">Non-national guest records</h2>
+
+  <%= render PanelsUI::Table.new(
+        caption: "Non-national guest records",
+        density: :compact,
+        header_style: :sentence,
+        hoverable: true,
+        class: "min-w-[1040px]",
+        wrapper_class: "rounded-lg border border-border bg-card"
+      ) do |table| %>
+    <% table.with_header do %>
+        <tr>
+          <th scope="col">Full name</th>
+          <th scope="col">Nationality</th>
+          <th scope="col">Date of birth</th>
+          <th scope="col">Home address</th>
+          <th scope="col">Check in date</th>
+          <th scope="col">Check in time</th>
+          <th scope="col">Check out date</th>
+        </tr>
+    <% end %>
+    <% table.with_body do %>
+        <% if @report.rows.any? %>
+          <% report_rows_grouped_by_month(@report.rows, date_preset: @date_preset) { |row| row[:check_in] }.each do |month, rows| %>
+            <% if month %>
+              <tr class="bg-muted/55" data-slot="report-month-group">
+                <th scope="rowgroup" colspan="7" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
+              </tr>
+            <% end %>
+          <% rows.each do |row| %>
+            <tr class="align-top">
+              <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= row[:guest_name] %></th>
+              <td><%= row[:guest_country] %></td>
+              <td class="whitespace-nowrap"><%= row[:date_of_birth]&.strftime("%d %b %Y") || "-" %></td>
+              <td class="min-w-64"><%= row[:guest_home_address].presence || "-" %></td>
+              <td class="whitespace-nowrap"><%= row[:check_in].strftime("%d %b %Y") %></td>
+              <td class="whitespace-nowrap"><%= row[:checked_in_at]&.strftime("%I:%M %p") || "-" %></td>
+              <td class="whitespace-nowrap"><%= row[:check_out].strftime("%d %b %Y") %></td>
+            </tr>
+          <% end %>
+          <% end %>
+        <% else %>
+          <%= render "table_empty_state", colspan: 7, message: "No in-house foreign guests found for this selected period." %>
+        <% end %>
+    <% end %>
+  <% end %>
+</section>

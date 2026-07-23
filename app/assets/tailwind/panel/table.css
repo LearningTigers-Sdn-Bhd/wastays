@@ -33,6 +33,14 @@
     text-transform: uppercase;
   }
 
+  .panel-table[data-header-style="sentence"] thead th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1rem;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
   .panel-table tbody th,
   .panel-table tbody td,
   .panel-table tfoot th,

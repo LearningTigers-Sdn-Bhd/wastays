@@ -9,7 +9,6 @@ module HotelPortal
         @hotel = hotel
         @start_date = start_date.to_date
         @end_date = end_date.to_date
-        @date_preset = date_preset.to_s
       end
 
       def call
@@ -21,7 +20,7 @@ module HotelPortal
           .where(transaction_type: :payment, category: "refund", voided_by_transaction_id: nil)
           .order(posting_date: :desc, created_at: :desc)
 
-        rows = monthly? ? monthly_rows(transactions) : daily_rows(transactions)
+        rows = transactions.map { |transaction| transaction_row(transaction) }
 
         Result.new(
           start_date: @start_date,
@@ -35,35 +34,6 @@ module HotelPortal
       end
 
       private
-
-      def monthly?
-        @date_preset == "this_year"
-      end
-
-      def daily_rows(transactions)
-        transactions.map { |transaction| transaction_row(transaction) }
-      end
-
-      def monthly_rows(transactions)
-        grouped = transactions.group_by { |transaction| transaction.posting_date.to_date.beginning_of_month }
-
-        months = (@start_date.beginning_of_month..@end_date.beginning_of_month).select { |date| date.day == 1 }.uniq
-        months.map do |month_start|
-          month_transactions = grouped[month_start] || []
-          {
-            date: month_start,
-            month_label: month_start.strftime("%B %Y"),
-            booking_reference: month_transactions.map { |transaction| transaction.booking_folio.booking.confirmation_token }.uniq.join(", ").presence || "—",
-            guest_name: month_transactions.map { |transaction| transaction.booking_folio.booking.guest_name }.uniq.join(", ").presence || "—",
-            room: month_transactions.map { |transaction| room_label(transaction.booking_folio.booking) }.uniq.join(", ").presence || "—",
-            refund_method: month_transactions.map { |transaction| refund_method_label(transaction, transaction.booking_folio.booking.refund_request) }.uniq.join(", ").presence || "—",
-            reference: month_transactions.map { |transaction| refund_reference(transaction.metadata.to_h, transaction.booking_folio.booking.refund_request) }.uniq.join(", ").presence || "—",
-            status: month_transactions.map { |transaction| transaction.booking_folio.booking.refund_request&.status&.humanize || "Recorded" }.uniq.join(", ").presence || "—",
-            reason: month_transactions.map { |transaction| transaction.booking_folio.booking.refund_request&.reason.presence || transaction.description }.uniq.join(" | ").presence || "—",
-            refund_amount: month_transactions.sum { |transaction| transaction.amount.to_d.abs }.round(2)
-          }
-        end
-      end
 
       def transaction_row(transaction)
         booking = transaction.booking_folio.booking

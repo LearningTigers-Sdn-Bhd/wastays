@@ -10,16 +10,8 @@ module HotelPortal
         "Payment Mode", "Received By", "Remarks", "Currency", "Amount"
       ].freeze
 
-      COLORS = {
-        ink: "18332F",
-        primary: "205B4E",
-        primary_light: "E7F1ED",
-        muted: "667772",
-        border: "D9E4DF",
-        stripe: "F5F8F7",
-        white: "FFFFFF",
-        negative: "A33636"
-      }.freeze
+      COLORS = ExcelExportStyles::COLORS
+      FONT_SIZES = ExcelExportStyles::FONT_SIZES
 
       def initialize(hotel:, tab:, revenue_report:, cashier_report:, charge_register: [])
         @hotel = hotel
@@ -49,58 +41,58 @@ module HotelPortal
         styles = @workbook.styles
         @styles = {
           title: styles.add_style(
-            bg_color: COLORS[:primary], fg_color: COLORS[:white], b: true, sz: 16,
+            bg_color: COLORS[:primary], fg_color: COLORS[:white], b: true, sz: FONT_SIZES[:title],
             alignment: { vertical: :center }
           ),
-          metadata: styles.add_style(fg_color: COLORS[:muted], sz: 9),
+          metadata: styles.add_style(fg_color: COLORS[:muted], sz: FONT_SIZES[:body]),
           section: styles.add_style(
-            bg_color: COLORS[:primary_light], fg_color: COLORS[:ink], b: true, sz: 11,
+            bg_color: COLORS[:primary_light], fg_color: COLORS[:ink], b: true, sz: FONT_SIZES[:section],
             border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] }
           ),
           header: styles.add_style(
-            bg_color: COLORS[:ink], fg_color: COLORS[:white], b: true, sz: 10,
+            bg_color: COLORS[:ink], fg_color: COLORS[:white], b: true, sz: FONT_SIZES[:body],
             alignment: { vertical: :center, wrap_text: true }
           ),
           body: styles.add_style(
-            fg_color: COLORS[:ink], sz: 10,
+            fg_color: COLORS[:ink], sz: FONT_SIZES[:body],
             border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] },
             alignment: { vertical: :top }
           ),
           body_alt: styles.add_style(
-            bg_color: COLORS[:stripe], fg_color: COLORS[:ink], sz: 10,
+            bg_color: COLORS[:stripe], fg_color: COLORS[:ink], sz: FONT_SIZES[:body],
             border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] },
             alignment: { vertical: :top }
           ),
           date: styles.add_style(
-            fg_color: COLORS[:ink], sz: 10, format_code: "yyyy-mm-dd",
+            fg_color: COLORS[:ink], sz: FONT_SIZES[:body], format_code: "yyyy-mm-dd",
             border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] }
           ),
           datetime: styles.add_style(
-            fg_color: COLORS[:ink], sz: 10, format_code: "yyyy-mm-dd hh:mm",
+            fg_color: COLORS[:ink], sz: FONT_SIZES[:body], format_code: "yyyy-mm-dd hh:mm",
             border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] }
           ),
           integer: styles.add_style(
-            fg_color: COLORS[:ink], sz: 10, format_code: "#,##0",
+            fg_color: COLORS[:ink], sz: FONT_SIZES[:body], format_code: "#,##0",
             border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] },
             alignment: { horizontal: :right }
           ),
           money: styles.add_style(
-            fg_color: COLORS[:ink], sz: 10, format_code: "#,##0.00;[Red]-#,##0.00",
+            fg_color: COLORS[:ink], sz: FONT_SIZES[:body], format_code: "#,##0.00;[Red]-#,##0.00",
             border: { style: :thin, color: COLORS[:border], edges: [ :bottom ] },
             alignment: { horizontal: :right }
           ),
           total_label: styles.add_style(
-            bg_color: COLORS[:primary_light], fg_color: COLORS[:ink], b: true, sz: 10,
+            bg_color: COLORS[:primary_light], fg_color: COLORS[:ink], b: true, sz: FONT_SIZES[:body],
             border: { style: :thin, color: COLORS[:primary], edges: [ :top ] }
           ),
           total_number: styles.add_style(
-            bg_color: COLORS[:primary_light], fg_color: COLORS[:ink], b: true, sz: 10,
+            bg_color: COLORS[:primary_light], fg_color: COLORS[:ink], b: true, sz: FONT_SIZES[:body],
             format_code: "#,##0.00;[Red]-#,##0.00",
             border: { style: :thin, color: COLORS[:primary], edges: [ :top ] },
             alignment: { horizontal: :right }
           ),
-          kpi_label: styles.add_style(fg_color: COLORS[:muted], sz: 10),
-          kpi_value: styles.add_style(fg_color: COLORS[:ink], b: true, sz: 11, format_code: "#,##0.00;[Red]-#,##0.00")
+          kpi_label: styles.add_style(fg_color: COLORS[:muted], sz: FONT_SIZES[:body]),
+          kpi_value: styles.add_style(fg_color: COLORS[:ink], b: true, sz: FONT_SIZES[:kpi_value], format_code: "#,##0.00;[Red]-#,##0.00")
         }
       end
 
@@ -241,7 +233,7 @@ module HotelPortal
         sheet.add_row([ "Metric", "Value", "Currency" ], style: Array.new(3, @styles[:header]))
         metrics.each do |label, value, currency|
           value_style = value.is_a?(Integer) ? @styles[:integer] : @styles[:kpi_value]
-          sheet.add_row([ label, value, currency ], style: [ @styles[:kpi_label], value_style, @styles[:body] ], height: 20)
+          sheet.add_row([ label, value, currency ], style: [ @styles[:kpi_label], value_style, @styles[:body] ], height: 22)
         end
       end
 
@@ -257,14 +249,14 @@ module HotelPortal
             datetime_columns: datetime_columns,
             integer_columns: integer_columns
           )
-          sheet.add_row(values, style: styles, height: 20)
+          sheet.add_row(values, style: styles, height: 22)
         end
 
         if total_row
           styles = Array.new(headers.size, @styles[:total_label])
           money_columns.each { |index| styles[index] = @styles[:total_number] }
           integer_columns.each { |index| styles[index] = @styles[:total_label] }
-          sheet.add_row(total_row, style: styles, height: 20)
+          sheet.add_row(total_row, style: styles, height: 22)
         end
 
         last_data_row = header_row + [ rows.size, 1 ].max

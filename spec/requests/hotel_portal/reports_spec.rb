@@ -2,6 +2,8 @@
 
 require 'rails_helper'
 require "nokogiri"
+require "pdf-reader"
+require "zip"
 
 RSpec.describe "HotelPortal::Reports", type: :request do
   let(:plan) { create(:plan) }
@@ -42,39 +44,165 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     sign_in_as(user)
   end
 
-  describe "GET /index" do
-    it "returns http success" do
-      get "/hotel/#{hotel.id}/reports"
+  it "shows contextual information beside every report heading" do
+    {
+      guest_reports_hotel_reports_path(hotel) => "Guest reports",
+      tax_compliance_hotel_reports_path(hotel) => "Tax & compliance",
+      extra_charge_hotel_reports_path(hotel) => "Extra charge report",
+      daily_occupancy_hotel_reports_path(hotel) => "Daily occupancy report",
+      outstanding_balance_hotel_reports_path(hotel) => "Outstanding balance report",
+      deposit_liability_hotel_reports_path(hotel) => "Deposit liability report",
+      daily_report_hotel_reports_path(hotel) => "Daily report",
+      refund_report_hotel_reports_path(hotel) => "Monthly refund report"
+    }.each do |path, title|
+      get path
+
       expect(response).to have_http_status(:success)
+      expect(Capybara.string(response.body)).to have_css("button[aria-label='About #{title}']")
+    end
+  end
+
+  it "presents this year as monthly periods across report pages" do
+    travel_to(Time.zone.local(2026, 7, 23, 10, 0, 0)) do
+      booking = create(
+        :booking,
+        hotel: hotel,
+        status: "checked_in",
+        payment_status: "captured",
+        check_in: Date.new(2026, 5, 6),
+        check_out: Date.new(2026, 5, 8),
+        guest_country: "Japan",
+        tourism_tax_amount: 20,
+        tourism_tax_collected: true,
+        created_at: Time.zone.local(2026, 5, 7, 10, 0, 0)
+      )
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100, posting_date: Date.new(2026, 5, 7))
+      create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 100, posting_date: Date.new(2026, 5, 7))
+
+      [
+        breakdown_hotel_reports_path(hotel),
+        guest_reports_hotel_reports_path(hotel, tab: "in_house"),
+        tax_compliance_hotel_reports_path(hotel, tab: "tourism_tax"),
+        daily_report_hotel_reports_path(hotel, tab: "cashier"),
+        daily_report_hotel_reports_path(hotel, tab: "revenue")
+      ].each do |path|
+        get path, params: { date_preset: "this_year" }
+
+        expect(response).to have_http_status(:success)
+        expect(Capybara.string(response.body)).to have_css("[data-slot='report-month-group']", text: "May 2026")
+      end
+    end
+  end
+
+  describe "GET /index" do
+    it "presents an overview for every report group" do
+      get hotel_reports_path(hotel)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css("h1", exact_text: "Reports summary")
+      expect(page).to have_css("[data-slot='reports-summary-group']", count: 4)
+
+      [ "Financial", "Tax & compliance", "Guest operations", "Accounting" ].each do |label|
+        expect(page).to have_css("h2", exact_text: label)
+      end
+      expect(page).to have_no_link("View report")
+
+      expect(page).to have_text("Booking date")
+      expect(page).to have_text("Posting date")
+      expect(page).to have_text("Stay date")
+      expect(page).to have_text("Business date")
     end
 
-    it "exports financial performance csv/xls/pdf" do
+    it "does not render duplicate report actions" do
+      get hotel_reports_path(hotel)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_no_link("View report")
+    end
+
+    it "returns http success" do
+      get "/hotel/#{hotel.id}/reports"
+
+      page = Capybara.string(response.body)
+      expect(response).to have_http_status(:success)
+      expect(page).to have_css("[data-slot='report-page'][data-report='reports-summary']")
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 16)
+      expect(page).to have_css("[data-slot='reports-summary-group']", count: 4)
+      expect(page).to have_css(".panel-page-header__actions", text: "Time period")
+      expect(page).to have_no_css("section[aria-label='Reports summary filters']")
+      expect(page).to have_no_css(".panel-form-field[data-size='md'] input[type='search']")
+      expect(page).to have_no_css("table.panel-table")
+    end
+
+    it "uses sentence-case report copy" do
+      get hotel_reports_path(hotel), params: {
+        date_preset: "custom",
+        start_date: "2026-05-01",
+        end_date: "2026-05-31"
+      }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css("h1", exact_text: "Reports summary")
+      expect(page).to have_css("turbo-frame#reports_content .panel-page-header__caption")
+      caption = page.find(".panel-page-header__caption")
+      expect(caption).to have_text(hotel.name)
+      expect(caption).to have_text("01 May 2026 - 31 May 2026")
+      expect(page).to have_css("h2", exact_text: "Financial")
+      expect(page).to have_css("h2", exact_text: "Tax & compliance")
+      expect(page).to have_css("h2", exact_text: "Guest operations")
+      expect(page).to have_css("h2", exact_text: "Accounting")
+      expect(page).to have_field("Time period", visible: :all)
+      expect(page).to have_no_field("Time Period", visible: :all)
+      expect(response.body).to include("Date range")
+      expect(response.body).not_to include("Date Range")
+    end
+
+    it "keeps the financial summary free of a detailed ledger" do
+      create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 300, margin_amount: 30, net_amount: 270, created_at: Time.zone.local(2026, 5, 6, 12, 0))
+
+      get hotel_reports_path(hotel), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_no_link("View report")
+      expect(page).to have_no_css("[data-slot='daily-ledger-trigger']")
+    end
+
+    it "exports financial performance csv/xlsx/pdf" do
       create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 300, margin_amount: 30, net_amount: 270, created_at: Time.zone.local(2026, 5, 6, 12, 0))
 
       get "/hotel/#{hotel.id}/reports.csv"
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
 
-      get "/hotel/#{hotel.id}/reports.xls"
+      get "/hotel/#{hotel.id}/reports.xlsx"
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
+      expect(response.content_type).to eq("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
 
       get "/hotel/#{hotel.id}/reports.pdf"
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
     end
 
-    it "parses date_range and preserves the query in resolved export links" do
+    it "does not offer a financial-only export from the cross-report summary" do
+      get hotel_reports_path(hotel), params: { start_date: "2026-05-06", end_date: "2026-05-08" }
+
+      expect(response.body).not_to include("Export Excel")
+      expect(response.body).not_to include("Export CSV")
+    end
+
+    it "parses date_range without rendering detailed report actions" do
       get hotel_reports_path(hotel), params: { date_range: "2026-05-06/2026-05-08", q: "A&B" }
 
       page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
       expect(page).to have_css('select[name="date_preset"] option[selected][value="custom"]')
       expect(page).to have_css('input[name="date_range"][value="2026-05-06/2026-05-08"]', visible: :all)
-      expect(page).to have_link("Export CSV", href: hotel_reports_path(hotel, start_date: "2026-05-06", end_date: "2026-05-08", q: "A&B", date_preset: "custom", format: :csv))
+      expect(page).to have_no_link("View report")
     end
 
-    it "prefers resolved export dates over a relative preset" do
+    it "prefers resolved dates over a relative preset" do
       get hotel_reports_path(hotel), params: {
         date_preset: "today",
         start_date: "2026-05-06",
@@ -83,23 +211,76 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
-      expect(page).to have_link(
-        "Export CSV",
-        href: hotel_reports_path(
-          hotel,
-          start_date: "2026-05-06",
-          end_date: "2026-05-08",
-          q: nil,
-          date_preset: "today",
-          format: :csv
-        )
-      )
+      expect(page).to have_css(".panel-page-header__caption", text: "06 May 2026 - 08 May 2026")
+      expect(page).to have_no_link("View report")
     end
   end
 
   describe "GET /guest_reports" do
     let(:start_date) { Date.new(2026, 5, 7) }
     let(:end_date) { Date.new(2026, 5, 8) }
+
+    it "renders compact guest reports anatomy for every active tab" do
+      hotel.update!(allow_boat_information: true)
+
+      {
+        "arrivals" => { tables: 1, metrics: 4 },
+        "in_house" => { tables: 1, metrics: 4 },
+        "departures" => { tables: 1, metrics: 4 },
+        "checkout" => { tables: 1, metrics: 4 },
+        "registration_cards" => { tables: 1, metrics: 3 },
+        "bibo" => { tables: 2, metrics: 0 },
+        "meal_prep" => { tables: 1, metrics: 0 }
+      }.each do |tab, expected|
+        get guest_reports_hotel_reports_path(hotel), params: {
+          start_date: start_date.to_s,
+          end_date: end_date.to_s,
+          tab: tab
+        }
+
+        page = Capybara.string(response.body)
+        expect(response).to have_http_status(:success)
+        expect(page).to have_css("[data-slot='report-page'][data-report='guest-reports']")
+        expect(page).to have_css("#guest-reports-tabs.tabs-root--line")
+        expect(page).to have_css(
+          "table.panel-table[data-density='compact'][data-header-style='sentence']",
+          count: expected[:tables]
+        )
+        expect(page).to have_css(
+          "[data-slot='report-metric-strip'] .panel-metric-card",
+          count: expected[:metrics]
+        )
+        if tab == "registration_cards"
+          expect(page).to have_css(
+            "[data-slot='report-metric-strip'] ~ section[aria-label='Registration card filters']"
+          )
+        end
+      end
+    end
+
+    it "keeps guest table screen widths but removes table and wrapper constraints for print" do
+      hotel.update!(allow_boat_information: true)
+      screen_widths = {
+        "arrivals" => "min-w-[960px]",
+        "registration_cards" => "min-w-[880px]",
+        "bibo" => "min-w-[720px]",
+        "meal_prep" => "min-w-[760px]"
+      }
+
+      screen_widths.each do |tab, screen_width|
+        get guest_reports_hotel_reports_path(hotel), params: {
+          start_date: start_date.to_s,
+          end_date: end_date.to_s,
+          tab: tab
+        }
+
+        page = Capybara.string(response.body)
+        page.all("table.panel-table").each do |table|
+          expect(table[:class].split).to include(screen_width, "print:min-w-0", "print:w-auto")
+          expect(table.find(:xpath, "..")[:class].split).to include("print:overflow-visible")
+        end
+      end
+    end
 
     it "renders the guest reports page for the selected date range" do
       create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, guest_name: "Arriving Guest", confirmation_token: "WS-ARR")
@@ -109,10 +290,50 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get guest_reports_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Guest Reports")
-      expect(response.body).to include("Expected Arrivals")
+      expect(response.body).to include("Guest reports")
+      expect(response.body).to include("Expected arrivals")
       expect(response.body).to include("Arriving Guest")
       expect(response.body).not_to include("Wrong Date")
+    end
+
+    it "renders and exports the police report from guest reports" do
+      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Police Guest", confirmation_token: "POLICE-123")
+      guest = create(:guest, name: "Police Guest", country: "Malaysia", document_type: "ic", government_id: "900101135555")
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+
+      get guest_reports_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s, tab: "police_report" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Police report records", "Police Guest", "POLICE-123", "Nights stayed")
+      expect(Capybara.string(response.body)).to have_no_css("[data-slot='report-metric-strip']")
+      expect(Capybara.string(response.body)).to have_css("th", text: "Nights stayed")
+      expect(Capybara.string(response.body)).to have_css("th", text: "Guest")
+      expect(Capybara.string(response.body)).to have_css("th", text: "Guest details")
+      expect(Capybara.string(response.body)).to have_css("th", text: "Contact")
+      expect(Capybara.string(response.body)).to have_css("th", text: "Scheduled check-in")
+
+      get guest_reports_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s, tab: "police_report" }
+
+      expect(response.content_type).to eq("application/pdf")
+      expect(response.body).to start_with("%PDF")
+    end
+
+    it "separates police report rows by month for This Year" do
+      create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 5, 10), check_out: Date.new(2026, 5, 12), guest_name: "May police guest")
+      create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 6, 10), check_out: Date.new(2026, 6, 12), guest_name: "June police guest")
+
+      get guest_reports_hotel_reports_path(hotel), params: { date_preset: "this_year", start_date: "2026-01-01", end_date: "2026-12-31", tab: "police_report" }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css("[data-slot='report-month-group']", text: "May 2026")
+      expect(page).to have_css("[data-slot='report-month-group']", text: "June 2026")
+    end
+
+    it "uses the approved empty state for police report periods without stays" do
+      get guest_reports_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s, tab: "police_report" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("No guest stays in this selected period.")
     end
 
     it "redirects the legacy arrivals_departures URL to guest reports" do
@@ -132,8 +353,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Guest Reports")
-      expect(response.body).to include("Expected Arrivals")
+      expect(response.body).to include("Guest reports")
+      expect(response.body).to include("Expected arrivals")
       expect(response.body).to include("Arriving Guest")
     end
 
@@ -148,12 +369,12 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Guest Reports")
-      expect(response.body).to include("In-House Guests")
+      expect(response.body).to include("Guest reports")
+      expect(response.body).to include("In-house guests")
       expect(response.body).to include("In House Guest")
     end
 
-    it "renders registration cards tab with date filtering and no export menu" do
+    it "renders the registration cards tab from guest reports with date filtering and no export menu" do
       matching_booking = create(:booking, hotel: hotel, guest_name: "Current GRC", check_in: start_date, check_out: start_date + 1.day)
       old_booking = create(:booking, hotel: hotel, guest_name: "Old GRC", check_in: start_date - 1.month, check_out: start_date - 1.month + 1.day)
       create(:guest_registration_card, :signed, booking: matching_booking, hotel: hotel)
@@ -166,13 +387,15 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Registration Cards")
+      expect(response.body).to include("Registration cards")
       expect(response.body).to include("Current GRC")
       expect(response.body).not_to include("Old GRC")
       expect(response.body).to include(hotel_booking_guest_registration_card_path(hotel, matching_booking))
       expect(response.body).not_to include("Export PDF")
       expect(response.body).not_to include("Export Excel")
       expect(response.body).not_to include("Export CSV")
+      expect(Capybara.string(response.body)).to have_css(".panel-select-menu select.panel-select-menu__native[name='status']", visible: :all)
+      expect(Capybara.string(response.body)).to have_no_css("select[name='status']:not(.panel-select-menu__native)", visible: :all)
     end
 
     it "filters and searches registration cards from guest reports" do
@@ -212,7 +435,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
         expect(response).to have_http_status(:success)
         expect(selected["value"]).to eq("today")
-        expect(response.body).to include("In-House Guests")
+        expect(response.body).to include("In-house guests")
       end
     end
 
@@ -344,109 +567,188 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "exports Excel for the default arrivals tab" do
       create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: start_date + 1.day, guest_name: "Excel Guest", confirmation_token: "WS-XLS")
 
-      get guest_reports_hotel_reports_path(hotel, format: :xls), params: {
+      get guest_reports_hotel_reports_path(hotel, format: :xlsx), params: {
         start_date: start_date.to_s,
         end_date: end_date.to_s
       }
 
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
-      expect(response.headers["Content-Disposition"]).to include(".xls")
-      expect(response.body).to include('ss:Name="Arrivals"')
-      expect(response.body).not_to include('ss:Name="Departures"')
-      expect(response.body).to include("Excel Guest")
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.headers["Content-Disposition"]).to include(".xlsx")
+      expect(response.body).to start_with("PK")
     end
   end
 
   describe "GET /non_national" do
-    let(:start_date) { Date.new(2026, 7, 1) }
-    let(:end_date) { Date.new(2026, 7, 1) }
+    it "redirects to tax_compliance with tab=non_national (merged into that report)" do
+      get non_national_hotel_reports_path(hotel), params: { start_date: "2026-07-01", end_date: "2026-07-01" }
 
-    it "renders the non-national report with in-house foreign guests only" do
-      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, checked_in_at: Time.zone.local(2026, 6, 30, 15, 45, 0), guest_name: "Kenji Sato", guest_country: "Japan", guest_home_address: "1 Chome-1-2 Oshiage, Sumida City, Tokyo, Japan", confirmation_token: "WS-NONNAT")
-      guest = create(:guest, date_of_birth: Date.new(1990, 5, 20))
-      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
-      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Ahmad", guest_country: "Malaysia")
-
-      get non_national_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Non-National Report")
-      expect(response.body).to include("Kenji Sato")
-      expect(response.body).to include("Japan")
-      expect(response.body).to include("1 Chome-1-2 Oshiage, Sumida City, Tokyo, Japan")
-      expect(response.body).to include("Check In Time")
-      expect(response.body).to include("Date of Birth")
-      expect(response.body).to include("20 May 1990")
-      expect(response.body).not_to include("Ahmad")
+      expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/tax_compliance?tab=non_national&start_date=2026-07-01&end_date=2026-07-01")
     end
 
-    it "exports csv for the selected range" do
-      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, checked_in_at: Time.zone.local(2026, 6, 30, 14, 10, 0), guest_name: "CSV Foreigner", guest_country: "Singapore", guest_home_address: "25 Beach Road, Singapore", confirmation_token: "WS-CSV-NONNAT")
-      guest = create(:guest, date_of_birth: Date.new(1988, 12, 5))
-      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+    it "preserves csv format and ignores an incoming tab override" do
+      get non_national_hotel_reports_path(hotel, format: :csv), params: { tab: "sst", start_date: "2026-07-01" }
 
-      get non_national_hotel_reports_path(hotel, format: :csv), params: {
-        start_date: start_date.to_s,
-        end_date: end_date.to_s
-      }
-
-      expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("text/csv")
-      expect(response.headers["Content-Disposition"]).to include("non-national-report")
-      expect(response.body).to include("Full Name,Nationality,Date of Birth,Home Address,Check In Date,Check In Time,Check Out Date")
-      expect(response.body).to include("CSV Foreigner")
-      expect(response.body).to include("Singapore")
-      expect(response.body).to include("25 Beach Road, Singapore")
-      expect(response.body).to include("05 Dec 1988")
-      expect(response.body).to include("10:10 PM")
-    end
-
-    it "shows the actual check-in date for overlapping guests" do
-      create(:booking, hotel: hotel, status: "checked_in", check_in: Date.new(2026, 6, 30), check_out: Date.new(2026, 7, 2), guest_name: "Overlap Guest", guest_country: "Japan", tourism_tax_amount: 10)
-
-      get non_national_hotel_reports_path(hotel), params: { date_preset: "this_month" }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Overlap Guest")
-      expect(response.body).to include("30 Jun 2026")
+      expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/tax_compliance.csv?tab=non_national&start_date=2026-07-01")
     end
   end
 
   describe "GET /tourism_tax" do
+    it "redirects to tax_compliance with tab=tourism_tax (merged into that report)" do
+      get tourism_tax_hotel_reports_path(hotel), params: { start_date: "2026-07-01", end_date: "2026-07-01" }
+
+      expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/tax_compliance?tab=tourism_tax&start_date=2026-07-01&end_date=2026-07-01")
+    end
+  end
+
+  describe "GET /sst" do
+    it "redirects to tax_compliance with tab=sst (merged into that report)" do
+      get sst_hotel_reports_path(hotel), params: { start_date: "2026-07-01", end_date: "2026-07-01" }
+
+      expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/tax_compliance?tab=sst&start_date=2026-07-01&end_date=2026-07-01")
+    end
+
+    it "preserves pdf format" do
+      get sst_hotel_reports_path(hotel, format: :pdf), params: { start_date: "2026-07-01" }
+
+      expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/tax_compliance.pdf?tab=sst&start_date=2026-07-01")
+    end
+  end
+
+  describe "GET /tax_compliance" do
     let(:start_date) { Date.new(2026, 7, 1) }
     let(:end_date) { Date.new(2026, 7, 1) }
 
-    it "renders the tourism tax report with due and collected figures" do
-      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Kenji Sato", guest_country: "Japan", tourism_tax_amount: 20, tourism_tax_collected: true)
-      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Ahmad", guest_country: "Malaysia", tourism_tax_amount: 10, tourism_tax_collected: true)
+    it "renders compact report anatomy for every tax compliance tab" do
+      {
+        "tourism_tax" => 3,
+        "sst" => 4,
+        "non_national" => 2
+      }.each do |tab, metric_count|
+        get tax_compliance_hotel_reports_path(hotel), params: {
+          tab: tab,
+          start_date: start_date.to_s,
+          end_date: end_date.to_s
+        }
 
-      get tourism_tax_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+        page = Capybara.string(response.body)
+        expect(response).to have_http_status(:success)
+        expect(page).to have_css("[data-slot='report-page'][data-report='tax-compliance']")
+        expect(page).to have_css("#tax-compliance-tabs.tabs-root--line")
+        expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: metric_count)
+        expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
+      end
+    end
+
+    it "defaults to the tourism_tax tab and renders it" do
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Kenji Sato", guest_country: "Japan", tourism_tax_amount: 20, tourism_tax_collected: true)
+
+      get tax_compliance_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Tourism Tax Report")
+      expect(Capybara.string(response.body)).to have_text("Tax & compliance")
       expect(response.body).to include("Kenji Sato")
       expect(response.body).to include("MYR 20.00")
     end
 
-    it "exports csv for the selected range" do
+    it "renders the sst tab" do
+      booking = create(:booking, hotel: hotel, guest_name: "Amira Yusof")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "tax", description: "Service Tax (SST 8%)", posting_date: start_date, amount: 16)
+
+      get tax_compliance_hotel_reports_path(hotel), params: { tab: "sst", start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Amira Yusof")
+    end
+
+    it "renders the non_national tab" do
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Overseas Guest", guest_country: "Japan")
+
+      get tax_compliance_hotel_reports_path(hotel), params: { tab: "non_national", start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Overseas Guest")
+    end
+
+    it "falls back to tourism_tax for an unknown tab" do
+      get tax_compliance_hotel_reports_path(hotel), params: { tab: "bogus", start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      page = Capybara.string(response.body)
+      expect(page).to have_css('[data-testid="tax-compliance-tab-tourism-tax"][aria-current="page"]')
+    end
+
+    it "exports csv for the active tab" do
       create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "CSV Foreigner", guest_country: "Singapore", tourism_tax_amount: 10, tourism_tax_collected: false, confirmation_token: "WS-CSV-TTX")
 
-      get tourism_tax_hotel_reports_path(hotel, format: :csv), params: {
-        start_date: start_date.to_s,
-        end_date: end_date.to_s
-      }
+      get tax_compliance_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
-      expect(response.headers["Content-Disposition"]).to include("tourism-tax-report")
-      expect(response.body).to include("Guest Name,Nationality,Booking Ref,Check In,Check Out,Nights,Tax Due (MYR),Tax Collected (MYR),Collection Status")
+      expect(response.headers["Content-Disposition"]).to include("tax-compliance-tourism-tax")
       expect(response.body).to include("CSV Foreigner")
-      expect(response.body).to include("Pending")
+    end
+
+    it "exports xlsx for the active tab" do
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Excel Foreigner", guest_country: "Japan", tourism_tax_amount: 15, tourism_tax_collected: true)
+
+      get tax_compliance_hotel_reports_path(hotel, format: :xlsx), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.headers["Content-Disposition"]).to include("tax-compliance-tourism-tax")
+      expect(response.headers["Content-Disposition"]).to include(".xlsx")
+    end
+
+    it "exports pdf for the active tab" do
+      create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "PDF Foreigner", guest_country: "Japan", tourism_tax_amount: 15, tourism_tax_collected: true)
+
+      get tax_compliance_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
     end
   end
 
   describe "GET /extra_charge" do
+    def create_extra_charge_export_rows
+      booking = create(:booking, hotel: hotel, guest_name: "Export Guest")
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, category: "fb", description: "F&B export charge", amount: 20, posting_date: Date.new(2026, 6, 15))
+      create(:folio_transaction, booking_folio: folio, category: "other", description: "Non-F&B export charge", amount: 15, posting_date: Date.new(2026, 6, 15))
+    end
+
+    def xlsx_text(content)
+      entries = {}
+      Zip::File.open_buffer(StringIO.new(content)) do |archive|
+        archive.each { |entry| entries[entry.name] = entry.get_input_stream.read }
+      end
+
+      shared_strings = if (content = entries["xl/sharedStrings.xml"])
+        Nokogiri::XML(content).xpath("//xmlns:si").map { |string| string.xpath(".//xmlns:t").map(&:text).join }
+      else
+        []
+      end
+
+      entries.filter_map do |name, worksheet|
+        next unless name.match?(%r{\Axl/worksheets/.+\.xml\z})
+
+        document = Nokogiri::XML(worksheet)
+        document.xpath("//xmlns:c").filter_map do |cell|
+          inline_text = cell.xpath("./xmlns:is//xmlns:t").map(&:text).join
+          next inline_text if inline_text.present?
+          next shared_strings.fetch(cell.at_xpath("./xmlns:v")&.text.to_i) if cell["t"] == "s"
+
+          cell.at_xpath("./xmlns:v")&.text
+        end.join("\n")
+      end.join("\n")
+    end
+
+    def pdf_text(content)
+      PDF::Reader.new(StringIO.new(content)).pages.map(&:text).join("\n")
+    end
+
     it "renders the extra charge report page" do
       booking = create(:booking, hotel: hotel, guest_name: "FB Guest")
       folio = create(:booking_folio, booking: booking, hotel: hotel)
@@ -457,11 +759,27 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         end_date: "2026-06-15"
       }
 
+      page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Extra Charge Report")
-      expect(response.body).to include("FB Guest")
-      expect(response.body).to include("Restaurant")
-      expect(response.body).to include("MYR 20.00")
+      expect(page).to have_css("[data-slot='report-page'][data-report='extra-charge']")
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 2)
+      expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
+      expect(page).to have_css("h1", exact_text: "Extra charge report")
+      expect(page).to have_text("FB Guest")
+      expect(page).to have_text("Restaurant")
+      expect(page).to have_text("MYR 20.00")
+    end
+
+    it "links to xlsx and not xls exports" do
+      get extra_charge_hotel_reports_path(hotel), params: {
+        tab: "fb",
+        start_date: "2026-06-15",
+        end_date: "2026-06-15"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include(".xlsx")
+      expect(response.body).not_to match(/\.xls(?:\?|\"|')/)
     end
 
     it "defaults to today on first load" do
@@ -500,10 +818,28 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include("MYR 15.00")
     end
 
+    it "shows a monthly breakdown when this year is selected" do
+      travel_to(Time.zone.local(2026, 7, 22, 10, 0, 0)) do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, category: "fb", amount: 40, posting_date: Date.new(2026, 5, 7))
+
+        get extra_charge_hotel_reports_path(hotel), params: { date_preset: "this_year" }
+
+        page = Capybara.string(response.body)
+        expect(response).to have_http_status(:success)
+        expect(page).to have_text("Monthly breakdown")
+        expect(page).to have_text("May 2026")
+        expect(page).to have_text("MYR 40.00")
+        expect(page.all("table.panel-table").map { |table| table.find("caption", visible: :all).text }).to eq([
+          "Monthly breakdown",
+          "Charge details"
+        ])
+      end
+    end
+
     it "exports csv for the active tab only" do
-      booking = create(:booking, hotel: hotel, guest_name: "CSV Guest")
-      folio = create(:booking_folio, booking: booking, hotel: hotel)
-      create(:folio_transaction, booking_folio: folio, category: "fb", description: "Restaurant", amount: 20, posting_date: Date.new(2026, 6, 15))
+      create_extra_charge_export_rows
 
       get extra_charge_hotel_reports_path(hotel, format: :csv), params: {
         tab: "fb",
@@ -512,9 +848,43 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       }
 
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("text/csv")
-      expect(response.headers["Content-Disposition"]).to include("extra-charge-report-fb")
-      expect(response.body).to include("Restaurant")
+      expect(response.content_type).to eq("text/csv")
+      expect(response.headers["Content-Disposition"]).to include("extra-charge-report-fb-2026-06-15-2026-06-15.csv")
+      expect(response.body).to include("F&B export charge")
+      expect(response.body).not_to include("Non-F&B export charge")
+    end
+
+    it "exports xlsx for the active tab only" do
+      create_extra_charge_export_rows
+
+      get extra_charge_hotel_reports_path(hotel, format: :xlsx), params: {
+        tab: "fb",
+        start_date: "2026-06-15",
+        end_date: "2026-06-15"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.headers["Content-Disposition"]).to include("extra-charge-report-fb-2026-06-15-2026-06-15.xlsx")
+      expect(response.body).to start_with("PK")
+      expect(xlsx_text(response.body)).to include("F&B export charge")
+      expect(xlsx_text(response.body)).not_to include("Non-F&B export charge")
+    end
+
+    it "exports pdf for the active tab only" do
+      create_extra_charge_export_rows
+
+      get extra_charge_hotel_reports_path(hotel, format: :pdf), params: {
+        tab: "fb",
+        start_date: "2026-06-15",
+        end_date: "2026-06-15"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+      expect(response.headers["Content-Disposition"]).to include("extra-charge-report-fb-2026-06-15-2026-06-15.pdf")
+      expect(pdf_text(response.body)).to include("F&B export charge")
+      expect(pdf_text(response.body)).not_to include("Non-F&B export charge")
     end
   end
 
@@ -535,9 +905,14 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       get daily_occupancy_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
+      page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Daily Occupancy Report")
-      expect(response.body).to include("Rooms Sold")
+      expect(page).to have_css("[data-slot='report-page'][data-report='daily-occupancy']")
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 7)
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card__detail", count: 7)
+      expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
+      expect(page).to have_css("h1", exact_text: "Daily occupancy report")
+      expect(page).to have_text("Rooms sold")
     end
 
     it "renders the two-month date_range component for a custom preset" do
@@ -597,7 +972,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get daily_occupancy_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Daily Occupancy Report")
+      expect(response.body).to include("Daily occupancy report")
       bookings.each { |booking| expect(response.body).not_to include(booking.confirmation_token) }
     end
 
@@ -649,18 +1024,17 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.headers["Content-Disposition"]).to include(".pdf")
     end
 
-    it "exports XLS" do
+    it "exports XLSX" do
       room_type = create(:room_type, hotel: hotel, quantity: 10)
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 120.0)
 
-      get daily_occupancy_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      get daily_occupancy_hotel_reports_path(hotel, format: :xlsx), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
-      expect(response.headers["Content-Disposition"]).to include(".xls")
-      expect(response.body).to include('ss:Name="Summary"')
-      expect(response.body).to include('ss:Name="Daily Occupancy"')
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.headers["Content-Disposition"]).to include(".xlsx")
+      expect(response.body).to start_with("PK")
     end
   end
 
@@ -680,10 +1054,34 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       get outstanding_balance_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
+      page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Outstanding Balance Report")
-      expect(response.body).to include("Unpaid Guest")
-      expect(response.body).not_to include("Paid Guest")
+      expect(page).to have_css("[data-slot='report-page'][data-report='outstanding-balance']")
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 2)
+      expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
+      expect(page).to have_css("h1", exact_text: "Outstanding balance report")
+      expect(page).to have_css("select[name='date_preset'] option[value='this_year']", text: "This Year", visible: :all)
+      expect(page).to have_link("WS-UNPAID", href: hotel_booking_control_panel_path(hotel, unpaid, tab: "booking_details"))
+      expect(page).to have_text("Unpaid Guest")
+      expect(page).to have_no_text("Paid Guest")
+    end
+
+    it "uses one table with month divider rows for this year" do
+      travel_to(Time.zone.local(2026, 7, 23, 10, 0, 0)) do
+        [ Date.new(2026, 4, 14), Date.new(2026, 5, 14) ].each do |check_in|
+          booking = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: check_in, check_out: check_in + 1.day)
+          folio = create(:booking_folio, booking: booking, hotel: hotel)
+          create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100, posting_date: check_in)
+        end
+
+        get outstanding_balance_hotel_reports_path(hotel), params: { date_preset: "this_year" }
+
+        page = Capybara.string(response.body)
+        table = page.find("[aria-labelledby='outstanding-bookings-heading'] table")
+        expect(page).to have_css("[aria-labelledby='outstanding-bookings-heading'] table", count: 1)
+        expect(table).to have_css("[data-slot='report-month-group']", text: "April 2026")
+        expect(table).to have_css("[data-slot='report-month-group']", text: "May 2026")
+      end
     end
 
     it "exports CSV" do
@@ -711,18 +1109,17 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.headers["Content-Disposition"]).to include(".pdf")
     end
 
-    it "exports XLS" do
+    it "exports XLSX" do
       booking = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: start_date, check_out: start_date + 1.day, guest_name: "Excel Outstanding")
       folio = create(:booking_folio, booking: booking, hotel: hotel)
       create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
 
-      get outstanding_balance_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      get outstanding_balance_hotel_reports_path(hotel, format: :xlsx), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
-      expect(response.headers["Content-Disposition"]).to include(".xls")
-      expect(response.body).to include('ss:Name="Summary"')
-      expect(response.body).to include('ss:Name="Outstanding Balances"')
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.headers["Content-Disposition"]).to include(".xlsx")
+      expect(response.body).to start_with("PK")
     end
   end
 
@@ -740,10 +1137,15 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       get deposit_liability_hotel_reports_path(hotel), params: { as_of_date: as_of_date.to_s }
 
+      page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Deposit Liability Report")
-      expect(response.body).to include("Deposit Guest")
-      expect(response.body).not_to include("Gateway Guest")
+      expect(page).to have_css("[data-slot='report-page'][data-report='deposit-liability']")
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 5)
+      expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
+      expect(page).to have_css("h1", exact_text: "Deposit liability report")
+      expect(page).to have_link("WS-DEP", href: hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(page).to have_text("Deposit Guest")
+      expect(page).to have_no_text("Gateway Guest")
     end
 
     it "renders one auto-submitting single-date picker for a custom date" do
@@ -755,6 +1157,12 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       picker = page.find('[data-panels-ui--date-picker-mode-value="single"]')
       expect(picker["data-action"]).to include("change->date-preset#submitDate")
       expect(page).to have_no_button("Apply")
+      expect(page).to have_field("Time period", visible: :all)
+      expect(page).to have_no_css("select[name='date_preset'] option[value='this_year']", visible: :all)
+      expect(page).to have_no_css("select[name='date_preset'] option[value='all_time']", visible: :all)
+      expect(page).to have_css("select[name='date_preset'] option[value='custom']", text: "Custom Date", visible: :all)
+      expect(response.body).to include("As of date")
+      expect(page).to have_no_field("As Of Date", visible: :all)
     end
 
     it "does not show bookings from another hotel" do
@@ -769,7 +1177,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).not_to include("Other Deposit Guest")
     end
 
-    it "exports csv/xls/pdf" do
+    it "exports csv/xlsx/pdf" do
       booking = create(:booking, hotel: hotel, status: "confirmed", check_in: as_of_date + 1.day, check_out: as_of_date + 2.days, guest_name: "Export Deposit")
       folio = create(:booking_folio, booking: booking, hotel: hotel)
       create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 250, posting_date: as_of_date - 1.day)
@@ -779,10 +1187,10 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.content_type).to include("text/csv")
       expect(response.body).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Booking Payment,Earned,Refunds,Remaining Liability,Latest Payment Date")
 
-      get deposit_liability_hotel_reports_path(hotel, format: :xls), params: { as_of_date: as_of_date.to_s }
+      get deposit_liability_hotel_reports_path(hotel, format: :xlsx), params: { as_of_date: as_of_date.to_s }
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
-      expect(response.body).to include('ss:Name="Deposit Liability"')
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
 
       get deposit_liability_hotel_reports_path(hotel, format: :pdf), params: { as_of_date: as_of_date.to_s }
       expect(response).to have_http_status(:success)
@@ -809,8 +1217,18 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       get "/hotel/#{hotel.id}/reports/daily_report", params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
+      page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Daily Report")
+      expect(response.body).to include("Daily report")
+      expect(page).to have_css("[data-slot='report-page'][data-report='daily-report']")
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 8)
+      expect(page).to have_css("#daily-report-tabs.tabs-root--line nav.tabs-list--line")
+      expect(page).to have_link("Cashier sales")
+      expect(page.text).to include("Revenue (accrual)", "Bookings engaged", "Total charges", "Net revenue")
+      expect(page.text).to include("Cashier sales (cash flow)", "Cash movements", "Total collected", "Total refunded", "Net cash")
+      expect(page).to have_css("form[data-slot='report-toolbar']")
+      expect(page).to have_css("[data-slot='report-export']")
+      expect(page).to have_select("date_preset")
     end
 
     it "redirects the legacy Daily Revenue URL while preserving its query string" do
@@ -845,6 +1263,16 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     describe "revenue tab" do
+      it "renders compact sentence-style report tables" do
+        get daily_report_hotel_reports_path(hotel, tab: "revenue",
+          start_date: start_date.to_s, end_date: start_date.to_s)
+
+        page = Capybara.string(response.body)
+        expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']", count: 3)
+        expect(page.text).to include("Daily breakdown", "Revenue by source", "Revenue register")
+        expect(page.text).to include("Other charges", "Total charges", "Net revenue", "Booking / folio", "Base amount", "Total amount")
+      end
+
       it "queries the Charge Register scope once without filters" do
         expect(HotelPortal::Reports::DailyRevenueTransactionQuery).to receive(:new).once.and_call_original
 
@@ -876,7 +1304,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
         expect(rows.size).to eq(1)
         expect(headers).to eq(
-          [ "Date", "Service", "Booking / Folio", "Guest", "Status", "Base Amount", "Tax", "Total Amount" ]
+          [ "Date", "Service", "Booking / folio", "Guest", "Status", "Base amount", "Tax", "Total amount" ]
         )
         expect(rows.sole.css("td")[1].text.squish).to eq("Room Revenue ROOM")
         expect(rows.sole.css("td")[3].text.squish).to eq("#{booking.guest_name} G01 · Deluxe King")
@@ -885,7 +1313,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         expect(rows.sole.css("td")[6].text.squish).to eq("MYR 38.40")
         expect(rows.sole.css("td")[7].text.squish).to eq("MYR 518.40")
         expect(rows.sole.text).not_to include("TAX_SST")
-        expect(document.at_css("#revenue-register-heading").parent.text.squish).to include("Revenue Register", "1 transaction")
+        expect(document.at_css("#revenue-register-heading").parent.text.squish).to include("Revenue register", "1 transaction")
       end
 
       it "shows the recorded time beneath the posting date when posted_at is unavailable" do
@@ -1029,11 +1457,31 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         get daily_report_hotel_reports_path(hotel, tab: "revenue", start_date: start_date.to_s, end_date: start_date.to_s)
 
         source_table = Nokogiri::HTML(response.body).at_css("[aria-labelledby='revenue-source-heading']")
-        expect(source_table.text).to include("Adjustments", "Net Revenue", "- MYR 10.00", "MYR 90.00")
+        expect(source_table.text).to include("Adjustments", "Net revenue", "- MYR 10.00", "MYR 90.00")
       end
     end
 
     describe "cashier sales tab" do
+      it "renders compact sentence-style report tables" do
+        get daily_report_hotel_reports_path(hotel, tab: "cashier",
+          start_date: start_date.to_s, end_date: start_date.to_s)
+
+        page = Capybara.string(response.body)
+        expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']", count: 4)
+        expect(page.text).to include("Cashier summary", "Currency summary")
+
+        document = Nokogiri::HTML(response.body)
+        cashier_summary_headers = document
+          .css("[aria-labelledby='cashier-summary-heading'] thead th")
+          .map { |header| header.text.strip }
+        currency_summary_headers = document
+          .css("[aria-labelledby='currency-summary-heading'] thead th")
+          .map { |header| header.text.strip }
+
+        expect(cashier_summary_headers).to eq([ "Mode", "Currency", "Description", "Amount (in)", "Amount (out)", "Balance" ])
+        expect(currency_summary_headers).to eq([ "Currency", "Description", "Amount (in)", "Amount (out)", "Balance" ])
+      end
+
       it "splits Advance and Settlement payment rows" do
         booking = create(:booking, hotel: hotel)
         folio = create(:booking_folio, booking: booking, hotel: hotel)
@@ -1061,8 +1509,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
           .css("[aria-labelledby='cashier-advance-heading'] thead th")
           .map { |header| header.text.strip }
         expect(headers).to eq([
-          "Date & Time", "Reservation", "Guest Details", "Folio", "Invoice",
-          "Payment Mode", "Received By", "Remarks", "Amount"
+          "Date & time", "Reservation", "Guest details", "Folio", "Invoice",
+          "Payment mode", "Received by", "Remarks", "Amount"
         ])
 
         advance_row = Nokogiri::HTML(response.body).at_css('[data-testid="advance-row"]')
@@ -1118,11 +1566,11 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         get daily_report_hotel_reports_path(hotel, tab: "cashier", start_date: start_date.to_s, end_date: start_date.to_s)
 
         document = Nokogiri::HTML(response.body)
-        metrics = document.at_css('[aria-label="Cashier Sales metrics"]').text.squish
+        metrics = document.at_css('[aria-label="Cashier sales summary"]').text.squish
         expect(document.css('[data-testid="settlement-row"]').size).to eq(1)
         expect(response.body).to include("Visible front desk cash")
         expect(response.body).not_to include("Hidden Razorpay payment", "999.00")
-        expect(metrics).to include("Cash Movements 1", "Total Collected MYR 100.00", "Net Cash MYR 100.00")
+        expect(metrics).to include("Cash movements 1", "Total collected MYR 100.00", "Net cash MYR 100.00")
       end
     end
 
@@ -1260,7 +1708,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get daily_revenue_source_bookings_hotel_reports_path(hotel), params: { source: "Walk-in", start_date: date.to_s, end_date: date.to_s, date_preset: "custom" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Walk-in Bookings")
+      expect(response.body).to include("Walk-in bookings")
       expect(response.body).to include("WS-SRC")
       expect(response.body).to include("Source Drilldown Guest")
       expect(response.body).to include(hotel_booking_path(hotel, booking))
@@ -1277,57 +1725,67 @@ RSpec.describe "HotelPortal::Reports", type: :request do
   end
 
   describe "GET /managers_flash" do
-    let(:start_date) { Date.new(2026, 5, 6) }
-    let(:end_date) { Date.new(2026, 5, 7) }
+    it "redirects to daily_occupancy (merged into that report)" do
+      get managers_flash_hotel_reports_path(hotel), params: { start_date: "2026-05-06", end_date: "2026-05-07" }
 
-    it "renders the manager flash report for the selected range" do
-      room_type = create(:room_type, hotel: hotel, quantity: 10)
-      create_grouped_room_bookings(
-        count: 2,
-        hotel: hotel,
-        booking_attributes: { status: "confirmed", check_in: start_date, check_out: end_date + 1.day },
-        room_attributes: { room_type: room_type, subtotal: 200.0 }
-      )
-
-      get managers_flash_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Manager Flash Report")
-      expect(response.body).to include("Total Revenue")
-    end
-
-    it "exports csv/xls/pdf" do
-      get managers_flash_hotel_reports_path(hotel, format: :csv), params: { start_date: start_date.to_s, end_date: end_date.to_s }
-      expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("text/csv")
-
-      get managers_flash_hotel_reports_path(hotel, format: :xls), params: { start_date: start_date.to_s, end_date: end_date.to_s }
-      expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
-
-      get managers_flash_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s }
-      expect(response).to have_http_status(:success)
-      expect(response.content_type).to eq("application/pdf")
+      expect(response).to redirect_to("/hotel/#{hotel.to_param}/reports/daily_occupancy?start_date=2026-05-06&end_date=2026-05-07")
     end
   end
 
   describe "GET /breakdown" do
     it "renders the financial breakdown table with taxes" do
-      create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 320, tax_lines: [ { "name" => "SST", "amount" => "20.00" } ], margin_amount: 30, net_amount: 290, created_at: Time.zone.local(2026, 5, 6, 12, 0))
+      booking = create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 320, tax_lines: [ { "name" => "SST", "amount" => "20.00" } ], margin_amount: 30, net_amount: 290, created_at: Time.zone.local(2026, 5, 6, 12, 0))
 
       get breakdown_hotel_reports_path(hotel), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
 
+      page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Taxes")
       expect(response.body).to include("20.00")
+      expect(page).to have_css("[data-slot='report-page'][data-report='financial-breakdown']")
+      expect(page).to have_css(".panel-form-field[data-size='md'] input[type='search']")
+      expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
+      expect(page).to have_css("[data-slot='report-date-group']", text: "06 May 2026")
+      expect(page).to have_link(
+        "##{booking.confirmation_token}",
+        href: hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
+      )
     end
 
-    it "exports xls and pdf" do
+    it "uses sentence-case report copy" do
+      get breakdown_hotel_reports_path(hotel), params: {
+        date_preset: "custom",
+        start_date: "2026-05-01",
+        end_date: "2026-05-31"
+      }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css("h1", exact_text: "Financial breakdown")
+      expect(page).to have_css("turbo-frame#breakdown_results .panel-page-header__caption")
+      caption = page.find(".panel-page-header__caption")
+      expect(caption).to have_text(hotel.name)
+      expect(caption).to have_text("01 May 2026 - 31 May 2026")
+      expect(page.all("table.panel-table thead th").map(&:text)).to eq(
+        [ "Booking reference", "Guest name", "Status", "Gross price", "Taxes", "Margin", "Net payout" ]
+      )
+    end
+
+    it "renders essential booking status at a readable badge size" do
+      create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 320, margin_amount: 30, net_amount: 290)
+
+      get breakdown_hotel_reports_path(hotel)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css(".panel-badge-rounded[data-size='lg']", text: "confirmed")
+    end
+
+    it "exports xlsx and pdf" do
       create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 300, margin_amount: 30, net_amount: 270, created_at: Time.zone.local(2026, 5, 6, 12, 0))
 
-      get breakdown_hotel_reports_path(hotel, format: :xls), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
+      get breakdown_hotel_reports_path(hotel, format: :xlsx), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
 
       get breakdown_hotel_reports_path(hotel, format: :pdf), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
       expect(response).to have_http_status(:success)
@@ -1392,16 +1850,17 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       )
     end
 
-    it "exports csv/xls/pdf for upcoming tab" do
+    it "exports csv/xlsx/pdf for upcoming tab" do
       create(:booking, hotel: hotel, status: "completed", payment_status: "captured", net_amount: 120, checked_out_at: Time.zone.local(2026, 5, 7, 10, 0), payout_batch_id: nil)
 
       get payouts_hotel_reports_path(hotel, format: :csv), params: { tab: "upcoming" }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
 
-      get payouts_hotel_reports_path(hotel, format: :xls), params: { tab: "upcoming" }
+      get payouts_hotel_reports_path(hotel, format: :xlsx), params: { tab: "upcoming" }
       expect(response).to have_http_status(:success)
-      expect(response.content_type).to include("application/vnd.ms-excel")
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
 
       get payouts_hotel_reports_path(hotel, format: :pdf), params: { tab: "upcoming" }
       expect(response).to have_http_status(:success)
@@ -1448,15 +1907,19 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       get refund_report_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
+      page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Monthly Refund Report")
-      expect(response.body).to include("Refund Guest")
-      expect(response.body).to include("WS-RFD")
-      expect(response.body).to include("Deluxe King")
-      expect(response.body).to include("Bank transfer")
-      expect(response.body).to include("BNK-123")
-      expect(response.body).to include("Guest cancelled")
-      expect(response.body).to include("80.00")
+      expect(page).to have_css("[data-slot='report-page'][data-report='refund']")
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 2)
+      expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
+      expect(page).to have_css("h1", exact_text: "Monthly refund report")
+      expect(page).to have_text("Refund Guest")
+      expect(page).to have_text("WS-RFD")
+      expect(page).to have_text("Deluxe King")
+      expect(page).to have_text("Bank transfer")
+      expect(page).to have_text("BNK-123")
+      expect(page).to have_text("Guest cancelled")
+      expect(page).to have_text("80.00")
     end
 
     it "does not include refunds from another hotel or outside range" do
@@ -1501,7 +1964,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).not_to include("Old Refund Guest")
     end
 
-    it "groups this year refunds by month" do
+    it "groups individual this year refunds under their month" do
       booking = create(:booking, hotel: hotel, guest_name: "Monthly Guest", confirmation_token: "WS-MON")
       folio = create(:booking_folio, booking: booking, hotel: hotel)
       create(
@@ -1515,25 +1978,97 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       get refund_report_hotel_reports_path(hotel), params: { date_preset: "this_year" }
 
+      page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Month")
-      expect(response.body).to include("May 2026")
-      expect(response.body).not_to include("07 May 2026")
+      expect(page).to have_css("thead th", exact_text: "Date")
+      expect(page).to have_css("[data-slot='report-month-group']", text: "May 2026")
+      expect(page).to have_text("07 May 2026")
+      expect(page).to have_text("Monthly Guest")
+      expect(page).to have_no_text("January 2026")
     end
   end
 
   describe "GET /journal_batches" do
     it "uses an auto-submitting two-month range picker and CSV dropdown" do
+      batch = create(
+        :journal_batch,
+        hotel: hotel,
+        business_date: Date.new(2026, 5, 7),
+        status: "finalized",
+        finalized_at: Time.zone.local(2026, 5, 8, 2, 30)
+      )
+      create(
+        :journal_batch_entry,
+        journal_batch: batch,
+        gl_code: "4010",
+        transaction_type: "charge",
+        debit_amount: 125,
+        credit_amount: 125,
+        description: "Room charge summary"
+      )
+
       get journal_batches_hotel_reports_path(hotel), params: { date_range: "2026-05-01/2026-05-31" }
 
       page = Capybara.string(response.body)
       picker = page.find('[data-panels-ui--date-picker-mode-value="range"]')
       expect(response).to have_http_status(:success)
+      expect(page).to have_css("[data-slot='report-page'][data-report='journal-batches']")
+      expect(page).to have_css("h1", exact_text: "Journal batches")
+      caption = page.find(".panel-page-header__caption")
+      expect(caption).to have_text(hotel.name)
+      expect(caption).to have_text("01 May 2026 - 31 May 2026")
+      expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 3)
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card__detail", count: 3)
       expect(picker["data-panels-ui--date-picker-months-value"]).to eq("2")
       expect(picker["data-action"]).to include("change->date-preset#submitDate")
       expect(page).to have_no_button("Filter")
+      expect(page).to have_text("07 May 2026")
+      expect(page).to have_text("Finalized at")
+      expect(page).to have_css(".panel-badge[data-variant='success']", text: "Finalized")
+      expect(page).to have_css("thead th", exact_text: "General ledger code (GL code)")
+      expect(page).to have_text("4010")
+      expect(page).to have_text("Room charge summary")
+      expect(page).to have_text("125.00", count: 6)
       expect(page).to have_link("Export CSV", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :csv))
+      expect(page).to have_link("Export Excel", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :xlsx))
+      expect(page).to have_link("Export PDF", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :pdf))
       expect(page).to have_css('[data-controller~="panels-ui--dropdown-menu"]')
+    end
+
+    it "exports XLSX and PDF" do
+      create(:journal_batch, hotel: hotel, business_date: Date.new(2026, 5, 7))
+
+      get journal_batches_hotel_reports_path(hotel, format: :xlsx), params: { start_date: "2026-05-01", end_date: "2026-05-31" }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
+
+      get journal_batches_hotel_reports_path(hotel, format: :pdf), params: { start_date: "2026-05-01", end_date: "2026-05-31" }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+    end
+  end
+
+  describe "GET /folio_ledger exports" do
+    let(:posting_date) { Date.new(2026, 5, 7) }
+
+    before do
+      booking = create(:booking, hotel: hotel)
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, posting_date: posting_date, amount: 120)
+    end
+
+    it "exports genuine XLSX and branded PDF files" do
+      get folio_ledger_hotel_reports_path(hotel, format: :xlsx), params: { start_date: posting_date.to_s, end_date: posting_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to include("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
+
+      get folio_ledger_hotel_reports_path(hotel, format: :pdf), params: { start_date: posting_date.to_s, end_date: posting_date.to_s }
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to eq("application/pdf")
+      expect(response.body).to start_with("%PDF")
     end
   end
 end

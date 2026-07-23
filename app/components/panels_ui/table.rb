@@ -7,15 +7,17 @@ module PanelsUI
     renders_one :footer
 
     DENSITIES = %i[default compact].freeze
+    HEADER_STYLES = %i[default sentence].freeze
 
     style base: "panel-table w-full",
           defaults: {}
 
-    def initialize(caption:, density: :default, striped: false, hoverable: false,
+    def initialize(caption:, density: :default, header_style: :default, striped: false, hoverable: false,
                    sticky_header: false, bordered: true, wrapper_class: nil,
                    class: nil, **attributes)
       @caption = caption
       @density = DENSITIES.include?(density) ? density : :default
+      @header_style = HEADER_STYLES.include?(header_style) ? header_style : :default
       @striped = striped
       @hoverable = hoverable
       @sticky_header = sticky_header
@@ -43,6 +45,7 @@ module PanelsUI
         class: class_for(class_override: @class),
         data: data.merge(
           density: @density,
+          header_style: @header_style,
           striped: @striped.to_s,
           hoverable: @hoverable.to_s,
           sticky_header: @sticky_header.to_s,

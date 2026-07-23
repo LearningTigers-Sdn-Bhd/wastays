@@ -25,7 +25,7 @@ RSpec.describe HotelPortal::Reports::TourismTaxCsvExportService do
       )
 
       csv = described_class.new(report: report).generate
-      rows = CSV.parse(csv, headers: true)
+      rows = CSV.parse(csv.delete_prefix("\uFEFF"), headers: true)
 
       expect(rows.headers).to include("Guest Name", "Tax Due (MYR)", "Collection Status")
       expect(rows[0]["Guest Name"]).to eq("Kenji Sato")

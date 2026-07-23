@@ -1,125 +1,125 @@
-<div class="w-full space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(title: "Financial Breakdown", description: "Detailed transaction log for your records.") do |header| %>
-    <% header.with_actions do %>
-      <div class="inline-flex gap-x-2">
+<div class="w-full space-y-4" data-slot="report-page" data-report="financial-breakdown">
+  <%= turbo_frame_tag "breakdown_results", class: "block space-y-4" do %>
+    <%= render PanelsUI::PageHeader.new(title: "Financial breakdown", description: "Detailed transaction log for your records.") do |header| %>
+      <% header.with_caption do %>
+        <p class="text-sm font-medium text-muted-foreground">
+          <%= current_hotel.name %> ·
+          <% if @start_date == @end_date %>
+            <%= @start_date.strftime("%A, %d %b %Y") %>
+          <% else %>
+            <%= @start_date.strftime("%d %b %Y") %> - <%= @end_date.strftime("%d %b %Y") %>
+          <% end %>
+        </p>
+      <% end %>
+    <% end %>
+
+    <section class="rounded-lg border border-border bg-card p-3" aria-label="Financial breakdown filters">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
+        <%= render "preset_report_actions",
+          form_url: breakdown_hotel_reports_path(current_hotel),
+          date_preset: @date_preset,
+          start_date: @start_date,
+          end_date: @end_date,
+          export_menu_id: "financial-breakdown-export",
+          export_items: [],
+          show_export: false,
+          hidden_params: { q: params[:q] },
+          class_name: "flex w-full flex-col gap-2 sm:flex-row sm:items-end lg:w-auto" %>
+
+        <%= form_with url: breakdown_hotel_reports_path(current_hotel), method: :get,
+              class: "w-full lg:min-w-64 lg:flex-1",
+              data: { controller: "auto-submit", turbo_frame: "breakdown_results" } do |form| %>
+          <%= hidden_field_tag :date_preset, @date_preset %>
+          <%= hidden_field_tag :start_date, @start_date %>
+          <%= hidden_field_tag :end_date, @end_date %>
+          <%= render PanelsUI::FormField.new(form: form, attribute: :q, label: "Search records") do |field| %>
+            <% field.with_input(
+                 type: :search,
+                 value: params[:q],
+                 placeholder: "Guest, email, or reference token…",
+                 data: { action: "input->auto-submit#submit" }) %>
+          <% end %>
+        <% end %>
+
         <% if feature_enabled_for_hotel?("excel_pdf_export") %>
           <%= render "export_dropdown", menu_id: "financial-breakdown-export", items: [
             ["Export PDF", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :pdf)],
-            ["Export Excel", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :xls)],
+            ["Export Excel", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :xlsx)],
             ["Export CSV", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :csv)]
           ] %>
         <% end %>
       </div>
-    <% end %>
-  <% end %>
+    </section>
 
-  <%= turbo_frame_tag "breakdown_results" do %>
-    <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-      <!-- Filters & Search -->
-      <div class="border-b border-border bg-muted/70 px-6 py-5 sm:px-8">
-        <%= form_with url: breakdown_hotel_reports_path(current_hotel), method: :get, class: "flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-end", data: { controller: "auto-submit date-preset", turbo_frame: "breakdown_results" } do |f| %>
-          <%= render PanelsUI::FormField.new(form: f, attribute: :date_preset, label: "Time Period", class: "flex-1 max-w-xs") do |field| %>
-            <% field.with_select_menu(date_preset_options, selected: @date_preset, data: { action: "change->date-preset#toggleCustom" }) %>
-          <% end %>
+    <section class="space-y-3" aria-labelledby="financial-breakdown-heading">
+      <h2 id="financial-breakdown-heading" class="text-base font-semibold text-foreground">Booking records</h2>
 
-          <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'flex' : 'hidden' %> w-full max-w-md items-end">
-            <%= render PanelsUI::FormField.new(form: f, attribute: :date_range, label: "Date Range", label_hidden: true) do |field| %>
-              <% field.with_date_picker(
-                   range: true,
-                   months: 2,
-                   responsive_months: true,
-                   value: "#{@start_date.iso8601}/#{@end_date.iso8601}",
-                   placeholder: "Date range",
-                   data: { action: "change->date-preset#submitDate" }) %>
-            <% end %>
-          </div>
-
-          <div class="flex-1">
-            <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Search Records</label>
-            <div class="relative">
-              <div class="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
-                <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-              </div>
-              <%= f.text_field :q, value: params[:q], placeholder: "Guest, email, or reference token...", class: "w-full rounded-xl border border-border bg-card ps-11 pe-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { action: "input->auto-submit#submit" } %>
-            </div>
-          </div>
+      <%= render PanelsUI::Table.new(
+            caption: "Financial breakdown",
+            density: :compact,
+            header_style: :sentence,
+            hoverable: true,
+            wrapper_class: "rounded-lg border border-border bg-card"
+          ) do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Booking reference</th>
+            <th scope="col">Guest name</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-right">Gross price</th>
+            <th scope="col" class="text-right">Taxes</th>
+            <th scope="col" class="text-right">Margin</th>
+            <th scope="col" class="text-right">Net payout</th>
+          </tr>
         <% end %>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="min-w-full table-fixed">
-          <colgroup>
-            <col class="w-[15%]">
-            <col class="w-[20%]">
-            <col class="w-[13%]">
-            <col class="w-[13%]">
-            <col class="w-[13%]">
-            <col class="w-[13%]">
-            <col class="w-[13%]">
-          </colgroup>
-          <thead class="bg-muted">
-            <tr>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Booking Reference</th>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Guest Name</th>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
-              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Gross Price</th>
-              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Taxes</th>
-              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Margin</th>
-              <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Net Payout</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-border bg-card">
-            <% if @grouped_bookings.any? %>
-              <% @grouped_bookings.each do |date, bookings| %>
-                <tr class="bg-muted/80">
-                  <td colspan="7" class="px-6 py-2.5 sm:px-8 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                    <%= date.strftime("%d %b %Y") %>
-                  </td>
-                </tr>
-                <% bookings.each_with_index do |presenter, index| %>
-                  <tr class="align-top transition-colors hover:bg-muted/80">
-                    <td class="px-6 py-4 sm:px-8">
-                      <%= link_to "##{presenter.confirmation_token}", hotel_booking_control_panel_path(current_hotel, presenter.booking, tab: "booking_details"), class: "text-sm font-mono font-bold text-foreground hover:underline", data: { turbo: false } %>
-                    </td>
-                    <td class="px-6 py-4">
-                      <span class="text-sm font-semibold text-foreground"><%= presenter.guest_name %></span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= booking_status_class(presenter.status).gsub('bg-', 'border-').gsub('text-', 'text-') %> bg-opacity-10">
-                        <%= presenter.status %>
-                      </span>
-                    </td>
-                    <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-muted-foreground">
-                      RM <%= presenter.total_amount %>
-                    </td>
-                    <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-muted-foreground">
-                      <%= presenter.tax_total %>
-                    </td>
-                    <td class="px-6 py-4 text-right whitespace-nowrap text-sm font-medium text-red-500">
-                      - <%= presenter.margin_amount %>
-                    </td>
-                    <td class="px-6 py-4 text-right whitespace-nowrap sm:px-8">
-                      <span class="text-sm font-bold text-emerald-700">RM <%= presenter.net_amount %></span>
-                    </td>
-                  </tr>
-                <% end %>
-              <% end %>
-            <% else %>
-              <tr>
-                <td colspan="7" class="px-6 py-20 text-center sm:px-8">
-                  <p class="text-sm font-medium text-muted-foreground italic">No bookings found for the selected criteria.</p>
-                </td>
+        <% table.with_body do %>
+          <% if @grouped_bookings.any? %>
+            <% status_variants = {
+              "confirmed" => :success,
+              "review_no_show" => :warning,
+              "checked_in" => :info,
+              "completed" => :success,
+              "cancelled" => :destructive,
+              "no_show" => :warning,
+              "pending" => :warning
+            } %>
+            <% @grouped_bookings.each do |date, bookings| %>
+              <tr class="bg-muted/55" data-slot="<%= @date_preset == 'this_year' ? 'report-month-group' : 'report-date-group' %>">
+                <th scope="rowgroup" colspan="7" class="text-xs font-semibold text-muted-foreground">
+                  <%= date.strftime(@date_preset == "this_year" ? "%B %Y" : "%d %b %Y") %>
+                </th>
               </tr>
+              <% bookings.each do |presenter| %>
+                <tr class="align-top">
+                  <th scope="row" class="whitespace-nowrap">
+                    <%= link_to "##{presenter.confirmation_token}",
+                          hotel_booking_control_panel_path(current_hotel, presenter.booking, tab: "booking_details"),
+                          class: "font-mono text-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive",
+                          data: { turbo: false } %>
+                  </th>
+                  <td class="font-medium text-foreground"><%= presenter.guest_name %></td>
+                  <td class="whitespace-nowrap">
+                    <%= render PanelsUI::Badge.new(
+                          label: presenter.status,
+                          variant: status_variants.fetch(presenter.status, :neutral),
+                          size: :lg,
+                          shape: :rounded
+                        ) %>
+                  </td>
+                  <td class="whitespace-nowrap text-right tabular-nums text-muted-foreground">RM <%= presenter.total_amount %></td>
+                  <td class="whitespace-nowrap text-right tabular-nums text-muted-foreground"><%= presenter.tax_total %></td>
+                  <td class="whitespace-nowrap text-right tabular-nums text-muted-foreground">- <%= presenter.margin_amount %></td>
+                  <td class="whitespace-nowrap text-right font-semibold tabular-nums text-foreground">RM <%= presenter.net_amount %></td>
+                </tr>
+              <% end %>
             <% end %>
-          </tbody>
-        </table>
-      </div>
-
-      <% if @paginated_bookings&.total_pages.to_i > 1 %>
-        <div class="px-6 py-4 border-t border-border bg-muted/50 sm:px-8">
-          <%= paginate @paginated_bookings %>
-        </div>
+          <% else %>
+            <%= render "table_empty_state", colspan: 7, message: "No bookings found for the selected criteria." %>
+          <% end %>
+        <% end %>
       <% end %>
-    </div>
+
+      <%= render "table_pagination", collection: @paginated_bookings %>
+    </section>
   <% end %>
 </div>

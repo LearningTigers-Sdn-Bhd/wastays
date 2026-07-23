@@ -5,21 +5,29 @@ class HotelPortal::NotificationLogsController < HotelPortal::BaseController
   before_action :authorize_manage_bookings!, only: [ :resend ]
 
   def index
-    @logs = current_hotel.notification_deliveries.includes(:booking).order(created_at: :desc)
+    @logs = filtered_logs
+    @notification_summary = notification_summary(@logs)
 
-    if params[:query].present?
-      query = "%#{ActiveRecord::Base.sanitize_sql_like(params[:query].to_s.strip.downcase)}%"
-      @logs = @logs.joins(:booking).where(
-        "LOWER(bookings.confirmation_token) LIKE :q OR LOWER(bookings.guest_name) LIKE :q OR LOWER(bookings.guest_email) LIKE :q OR LOWER(bookings.guest_phone) LIKE :q OR LOWER(COALESCE(notification_deliveries.error_message, '')) LIKE :q",
-        q: query
-      )
+    respond_to do |format|
+      format.html { @logs = @logs.page(params[:page]).per(20) }
+      format.csv do
+        send_data HotelPortal::Reports::NotificationLogCsvExportService.new(logs: @logs).generate,
+          filename: export_filename("csv"), type: "text/csv; charset=utf-8"
+      end
+      format.xlsx do
+        send_data HotelPortal::Reports::NotificationLogExcelExportService.new(
+          hotel: current_hotel, logs: @logs, period_label: "All records"
+        ).generate,
+          filename: export_filename("xlsx"),
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      end
+      format.pdf do
+        send_data HotelPortal::Reports::NotificationLogPdfExportService.new(
+          hotel: current_hotel, logs: @logs, period_label: "All records"
+        ).generate,
+          filename: export_filename("pdf"), type: "application/pdf"
+      end
     end
-
-    @logs = @logs.where(notification_type: params[:notification_type]) if params[:notification_type].present?
-    @logs = @logs.where(channel: params[:channel]) if params[:channel].present?
-    @logs = @logs.where(status: params[:status]) if params[:status].present?
-
-    @logs = @logs.page(params[:page]).per(20)
   end
 
   def resend
@@ -66,6 +74,36 @@ class HotelPortal::NotificationLogsController < HotelPortal::BaseController
   end
 
   private
+
+  def filtered_logs
+    logs = current_hotel.notification_deliveries.includes(:booking).order(created_at: :desc)
+
+    if params[:query].present?
+      query = "%#{ActiveRecord::Base.sanitize_sql_like(params[:query].to_s.strip.downcase)}%"
+      logs = logs.joins(:booking).where(
+        "LOWER(bookings.confirmation_token) LIKE :q OR LOWER(bookings.guest_name) LIKE :q OR LOWER(bookings.guest_email) LIKE :q OR LOWER(bookings.guest_phone) LIKE :q OR LOWER(COALESCE(notification_deliveries.error_message, '')) LIKE :q",
+        q: query
+      )
+    end
+
+    logs = logs.where(notification_type: params[:notification_type]) if params[:notification_type].present?
+    logs = logs.where(channel: params[:channel]) if params[:channel].present?
+    logs = logs.where(status: params[:status]) if params[:status].present?
+    logs
+  end
+
+  def notification_summary(logs)
+    counts = logs.reorder(nil).group(:status).count
+
+    {
+      total: counts.values.sum,
+      failed: counts.fetch("failed", 0),
+      pending: counts.fetch("pending", 0),
+      sent: counts.fetch("sent", 0)
+    }
+  end
+
+  def export_filename(extension) = "notification-logs-#{Date.current}.#{extension}"
 
   def authorize_view_notification_logs!
     raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_audit_logs", hotel: current_hotel)

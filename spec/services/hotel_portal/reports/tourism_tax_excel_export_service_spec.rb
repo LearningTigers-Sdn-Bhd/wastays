@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "zip"
+require "nokogiri"
 
 RSpec.describe HotelPortal::Reports::TourismTaxExcelExportService do
   describe "#generate" do
-    it "builds workbook content" do
+    it "builds an xlsx workbook with tourism tax rows and totals" do
+      hotel = create(:hotel, name: "Sample Hotel")
       report = double(
         "report",
         start_date: Date.new(2026, 7, 1),
@@ -25,12 +28,16 @@ RSpec.describe HotelPortal::Reports::TourismTaxExcelExportService do
         totals: { guest_count: 1, total_due: 20, total_collected: 20 }
       )
 
-      xml = described_class.new(report: report).generate
+      content = described_class.new(hotel: hotel, report: report).generate
 
-      expect(xml).to include("<Workbook")
-      expect(xml).to include("Tourism Tax")
-      expect(xml).to include("Kenji Sato")
-      expect(xml).to include("20.00")
+      entries = {}
+      Zip::File.open_buffer(StringIO.new(content)) do |archive|
+        archive.each { |entry| entries[entry.name] = entry.get_input_stream.read }
+      end
+      shared_strings = Nokogiri::XML(entries.fetch("xl/sharedStrings.xml")).xpath("//xmlns:si").map { |s| s.xpath(".//xmlns:t").map(&:text).join }
+
+      expect(shared_strings).to include("Kenji Sato", "Japan", "BK-001", "Collected")
+      expect(entries.fetch("xl/workbook.xml")).to include("Tourism Tax")
     end
   end
 end

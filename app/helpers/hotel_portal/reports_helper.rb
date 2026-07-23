@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 module HotelPortal::ReportsHelper
+  def report_rows_grouped_by_month(rows, date_preset:, &date_for)
+    return { nil => rows } unless date_preset == "this_year"
+
+    rows.group_by { |row| date_for.call(row).to_date.beginning_of_month }
+  end
+
   def daily_report_adjustment_presentation(amount)
     amount = amount.to_d
     if amount.positive?
@@ -36,12 +42,13 @@ module HotelPortal::ReportsHelper
     end
   end
 
-  def guest_report_tabs_data(report, bibo_report, active_tab, grc_total_count, current_hotel, date_preset)
+  def guest_report_tabs_data(report, bibo_report, police_report, active_tab, grc_total_count, current_hotel, date_preset)
     tabs = [
       { label: "Arrivals", value: "arrivals", count: report.arrival_count },
       { label: "In-House", value: "in_house", count: report.in_house_count },
       { label: "Departures", value: "departures", count: report.departure_count },
       { label: "Checkout", value: "checkout", count: report.checkout_count },
+      { label: "Police report", value: "police_report", count: police_report.rows.size },
       { label: "Registration Cards", value: "registration_cards", count: grc_total_count }
     ]
 
@@ -70,7 +77,7 @@ module HotelPortal::ReportsHelper
   end
 
   def show_metrics_cards?(active_tab)
-    !%w[registration_cards bibo meal_prep].include?(active_tab)
+    !%w[registration_cards police_report bibo meal_prep].include?(active_tab)
   end
 
   def format_report_boat_time(boat_departure, hotel)
@@ -110,21 +117,6 @@ module HotelPortal::ReportsHelper
       "#{base} bg-white/20 text-white"
     else
       "#{base} bg-slate-100 text-slate-500"
-    end
-  end
-
-  def meal_prep_title(meal_type)
-    meal_type.present? ? "Meal Prep — #{meal_type.titleize}" : "Meal Prep"
-  end
-
-  def meal_prep_transfer_class(type)
-    case type
-    when "Boat-in"
-      "bg-[#e0f2fe] text-[#0369a1]"
-    when "Boat-out"
-      "bg-[#fee2e2] text-[#b91c1c]"
-    else
-      "bg-slate-100 text-slate-700"
     end
   end
 

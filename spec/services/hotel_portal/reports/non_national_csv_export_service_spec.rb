@@ -22,7 +22,7 @@ RSpec.describe HotelPortal::Reports::NonNationalCsvExportService do
       )
 
       csv = described_class.new(report: report).generate
-      rows = CSV.parse(csv, headers: true)
+      rows = CSV.parse(csv.delete_prefix("\uFEFF"), headers: true)
 
       expect(rows.headers).to include("Full Name", "Nationality", "Date of Birth")
       expect(rows[0]["Full Name"]).to eq("Kenji Sato")

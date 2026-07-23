@@ -1,87 +1,37 @@
 # frozen_string_literal: true
 
-require "cgi"
-
 module HotelPortal
   module Reports
     class DepositLiabilityExcelExportService
-      XML_HEADER = %(<?xml version="1.0"?>).freeze
+      HEADERS = [ "Guest Name", "Booking Ref", "Stay", "Status", "Rooms", "Folio", "Booking Payment", "Earned", "Refunds", "Remaining Liability", "Latest Payment Date" ].freeze
 
-      def initialize(report:)
+      def initialize(hotel:, report:)
+        @hotel = hotel
         @report = report
       end
 
       def generate
-        <<~XML
-          #{XML_HEADER}
-          <?mso-application progid="Excel.Sheet"?>
-          <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-            xmlns:o="urn:schemas-microsoft-com:office:office"
-            xmlns:x="urn:schemas-microsoft-com:office:excel"
-            xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-            <Worksheet ss:Name="Summary">
-              <Table>
-                #{summary_rows}
-              </Table>
-            </Worksheet>
-            <Worksheet ss:Name="Deposit Liability">
-              <Table>
-                #{detail_rows}
-              </Table>
-            </Worksheet>
-          </Workbook>
-        XML
+        Exports::ExcelReportBuilder.new(hotel: @hotel, title: "Deposit Liability Report", period_label: "As of #{@report.as_of_date.strftime('%d %b %Y')}").generate do |builder|
+          sheet = builder.add_sheet(name: "Deposit Liability", widths: [ 22, 18, 24, 14, 22, 16, 18, 14, 14, 20, 20 ], orientation: :landscape)
+          builder.add_header(sheet: sheet)
+          builder.add_summary(sheet: sheet, metrics: summary_metrics)
+          builder.add_table(
+            sheet: sheet, section_title: "Open Deposit Liabilities", headers: HEADERS,
+            rows: @report.rows.map { |row| row.values_at(:guest_name, :confirmation_token, :stay_dates, :booking_status, :room_details, :folio_number, :booking_payment_amount, :earned_amount, :refund_amount, :remaining_liability, :latest_deposit_posting_date) },
+            column_types: %i[text text text text text text money money money money date],
+            total_row: [ "TOTAL", nil, nil, nil, nil, nil, *@report.totals.values_at(:booking_payment_amount, :earned_amount, :refund_amount, :remaining_liability), nil ],
+            empty_message: "No deposit liabilities for this as-of date."
+          )
+        end
       end
 
       private
 
-      def summary_rows
-        rows = []
-        rows << spreadsheet_row([ "Metric", "Value" ])
-        rows << spreadsheet_row([ "As Of Date", @report.as_of_date.iso8601 ])
-        rows << spreadsheet_row([ "Bookings With Liability", @report.totals[:booking_count] ])
-        rows << spreadsheet_row([ "Booking Payments", money(@report.totals[:booking_payment_amount]) ])
-        rows << spreadsheet_row([ "Earned", money(@report.totals[:earned_amount]) ])
-        rows << spreadsheet_row([ "Refunds", money(@report.totals[:refund_amount]) ])
-        rows << spreadsheet_row([ "Remaining Liability", money(@report.totals[:remaining_liability]) ])
-        rows.join("\n")
+      def summary_metrics
+        [ [ "Bookings", @report.totals[:booking_count], nil ], [ "Booking Payments", @report.totals[:booking_payment_amount], currency ], [ "Earned", @report.totals[:earned_amount], currency ], [ "Refunds", @report.totals[:refund_amount], currency ], [ "Remaining Liability", @report.totals[:remaining_liability], currency ] ]
       end
 
-      def detail_rows
-        rows = []
-        rows << spreadsheet_row([ "Guest Name", "Booking Ref", "Stay", "Status", "Rooms", "Folio", "Booking Payment", "Earned", "Refunds", "Remaining Liability", "Latest Payment Date" ])
-
-        @report.rows.each do |row|
-          rows << spreadsheet_row([
-            row[:guest_name],
-            row[:confirmation_token],
-            row[:stay_dates],
-            row[:booking_status],
-            row[:room_details],
-            row[:folio_number],
-            money(row[:booking_payment_amount]),
-            money(row[:earned_amount]),
-            money(row[:refund_amount]),
-            money(row[:remaining_liability]),
-            row[:latest_deposit_posting_date]&.iso8601
-          ])
-        end
-
-        rows.join("\n")
-      end
-
-      def spreadsheet_row(values)
-        cells = values.map do |value|
-          escaped = CGI.escapeHTML(value.to_s)
-          %(<Cell><Data ss:Type="String">#{escaped}</Data></Cell>)
-        end.join
-
-        %(<Row>#{cells}</Row>)
-      end
-
-      def money(value)
-        format("%.2f", value.to_d)
-      end
+      def currency = @hotel.default_currency.presence || "MYR"
     end
   end
 end

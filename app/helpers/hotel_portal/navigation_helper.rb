@@ -10,7 +10,6 @@ module HotelPortal
 
       financial_nav_items = [
         NavItem.new(label: "Summary", path: hotel_reports_path(current_hotel), icon: "file-spreadsheet", active: controller_name == "reports" && action_name == "index", permission: "view_reports"),
-        NavItem.new(label: "Manager's Flash Report", path: managers_flash_hotel_reports_path(current_hotel), icon: "trending-up", active: controller_name == "reports" && action_name == "managers_flash", permission: "view_reports", plan_feature: "housekeeper_productivity"),
         NavItem.new(label: "Daily Report", path: daily_report_hotel_reports_path(current_hotel), icon: "coins", active: controller_name == "reports" && action_name == "daily_report", permission: "view_reports", plan_feature: "revenue_allocation_per_night"),
         NavItem.new(label: "Refund Report", path: refund_report_hotel_reports_path(current_hotel), icon: "credit-card", active: controller_name == "reports" && action_name == "refund_report", permission: "view_reports"),
         NavItem.new(label: "Extra Charge", path: extra_charge_hotel_reports_path(current_hotel), icon: "receipt", active: controller_name == "reports" && action_name == "extra_charge", permission: "view_reports"),
@@ -19,14 +18,6 @@ module HotelPortal
         NavItem.new(label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), icon: "landmark", active: controller_name == "reports" && action_name == "deposit_liability", permission: "view_reports")
       ]
       financial_nav_active = financial_nav_items.any?(&:active)
-
-      guest_compliance_nav_items = [
-        NavItem.new(label: "Tourism Tax", path: tourism_tax_hotel_reports_path(current_hotel), icon: "calculator", active: controller_name == "reports" && action_name == "tourism_tax", permission: "view_reports"),
-        NavItem.new(label: "SST", path: sst_hotel_reports_path(current_hotel), icon: "calculator", active: controller_name == "reports" && action_name == "sst", permission: "view_reports"),
-        NavItem.new(label: "Non-National", path: non_national_hotel_reports_path(current_hotel), icon: "map-pin", active: controller_name == "reports" && action_name == "non_national", permission: "view_reports"),
-        NavItem.new(label: "Guest Reports", path: guest_reports_hotel_reports_path(current_hotel), icon: "users", active: controller_name == "reports" && action_name == "guest_reports", permission: "view_reports", plan_feature: "arrivals_departures_list")
-      ]
-      guest_compliance_nav_active = guest_compliance_nav_items.any?(&:active)
 
       accounts_receivable_nav_items = [
         NavItem.new(label: "Corporate Accounts", path: hotel_corporate_accounts_path(current_hotel), search_text: "Corporate Accounts Government Direct Bill Credit Terms External Payers Accounts Receivable", active: controller_name.in?(%w[corporate_accounts corporate_invitations]), icon: "building-2", permission: "manage_corporate_accounts"),
@@ -83,7 +74,8 @@ module HotelPortal
         ]),
         NavSection.new(label: "Reports", items: [
           NavItem.new(label: "Financial", path: hotel_reports_path(current_hotel), search_text: "Reports Financial Summary Manager Flash Daily Report Revenue Cashier Sales Refund Extra Charge Daily Occupancy Outstanding Balance Deposit Liability", active: financial_nav_active, icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),
-          NavItem.new(label: "Tax & Compliance", path: tourism_tax_hotel_reports_path(current_hotel), search_text: "Reports Tax Compliance Tourism Tax SST Non National Guest Reports", active: guest_compliance_nav_active, icon: "calculator", children: guest_compliance_nav_items, permission: "view_reports"),
+          NavItem.new(label: "Tax & Compliance", path: tax_compliance_hotel_reports_path(current_hotel), search_text: "Reports Tax Compliance Tourism Tax SST Non National", active: controller_name == "reports" && action_name == "tax_compliance", icon: "calculator", permission: "view_reports"),
+          NavItem.new(label: "Guest Reports", path: guest_reports_hotel_reports_path(current_hotel), search_text: "Reports Guest Reports Arrivals Departures Checkout Registration Cards", active: controller_name == "reports" && action_name == "guest_reports", icon: "users", permission: "view_reports", plan_feature: "arrivals_departures_list"),
           NavItem.new(label: "Accounting", path: journal_batches_hotel_reports_path(current_hotel), search_text: "Reports Accounting Journal Batches", active: journal_batches_active, icon: "book-open", children: journal_batch_items, permission: "view_reports"),
           NavItem.new(label: "Operation Logs", path: hotel_audit_logs_path(current_hotel), search_text: "Operation Logs Audit Tracking History Security", icon: "file-text", active: controller_name == "audit_logs", permission: "view_audit_logs", plan_feature: "full_audit_trail"),
           NavItem.new(label: "Notification Logs", path: hotel_notification_logs_path(current_hotel), search_text: "Notification Logs History Sent Alerts Logs", icon: "bell", active: controller_name == "notification_logs", permission: "view_audit_logs")

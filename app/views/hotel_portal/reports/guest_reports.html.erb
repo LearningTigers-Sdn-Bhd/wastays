@@ -1,6 +1,6 @@
-<div class="w-full space-y-5 print:max-w-none print:pb-0 print:space-y-4">
+<div class="w-full space-y-4 print:max-w-none print:pb-0 print:space-y-4" data-slot="report-page" data-report="guest-reports">
   <div class="print:px-0">
-    <%= render PanelsUI::PageHeader.new(title: "Guest Reports", class: "print:block") do |header| %>
+    <%= render PanelsUI::PageHeader.new(title: "Guest reports", description: "Review arrivals, in-house guests, departures, registration cards, and operational guest lists.", class: "print:block") do |header| %>
       <% header.with_caption do %>
         <p class="text-sm font-medium text-muted-foreground print:text-xs">
           <%= current_hotel.name %> ·
@@ -21,7 +21,7 @@
             export_menu_id: "guest-reports-export",
             export_items: [
               ["Export PDF", guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :pdf)],
-              ["Export Excel", guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :xls)],
+              ["Export Excel", guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :xlsx)],
               ["Export CSV", guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :csv)]
             ] %>
         </div>
@@ -30,16 +30,26 @@
   </div>
 
   <div class="print:hidden">
+    <% guest_tab_labels = {
+      "arrivals" => "Arrivals",
+      "in_house" => "In-house",
+      "departures" => "Departures",
+      "checkout" => "Checkout",
+      "police_report" => "Police report",
+      "registration_cards" => "Registration cards",
+      "bibo" => "Boat transfers",
+      "meal_prep" => "Meal prep"
+    } %>
     <%= render PanelsUI::Tabs.new(
           id: "guest-reports-tabs",
           active: @active_guest_report_tab,
           variant: :line,
           aria_label: "Guest reports"
         ) do |tabs| %>
-      <% guest_report_tabs_data(@report, @bibo_report, @active_guest_report_tab, @grc_total_count, current_hotel, @date_preset).each do |tab| %>
+      <% guest_report_tabs_data(@report, @bibo_report, @police_report, @active_guest_report_tab, @grc_total_count, current_hotel, @date_preset).each do |tab| %>
         <% tabs.with_tab(
              name: tab[:value],
-             label: tab[:label],
+             label: guest_tab_labels.fetch(tab[:value]),
              count: tab[:count],
              href: tab[:path]
            ) %>
@@ -48,68 +58,64 @@
   </div>
 
   <% if show_metrics_cards?(@active_guest_report_tab) %>
-    <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-2 xl:grid-cols-4 print:grid-cols-2 print:rounded-none print:shadow-none">
-      <div class="p-6 md:border-r md:border-border print:p-3">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Arrivals</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground print:text-xl"><%= @report.arrival_count %></h2>
-      </div>
-      <div class="bg-muted/30 p-6 xl:border-r xl:border-border print:p-3 print:bg-card">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">In-House</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground print:text-xl"><%= @report.in_house_count %></h2>
-      </div>
-      <div class="p-6 md:border-r md:border-border print:p-3">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Departures</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground print:text-xl"><%= @report.departure_count %></h2>
-      </div>
-      <div class="bg-muted/30 p-6 print:p-3 print:bg-card">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Checkout</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground print:text-xl"><%= @report.checkout_count %></h2>
-      </div>
-    </div>
+    <%= render HotelPortal::Reports::MetricStrip.new(
+          metrics: [
+            { label: "Arrivals", value: @report.arrival_count.to_s, detail: "Selected period" },
+            { label: "In-house", value: @report.in_house_count.to_s, detail: "Selected period" },
+            { label: "Departures", value: @report.departure_count.to_s, detail: "Selected period" },
+            { label: "Checkout", value: @report.checkout_count.to_s, detail: "Selected period" }
+          ],
+          aria_label: "Guest report summary",
+          class: "print:grid-cols-2"
+        ) %>
   <% end %>
 
   <% if @active_guest_report_tab == "arrivals" %>
     <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
-      title: "Expected Arrivals",
+      title: "Expected arrivals",
       empty_message: "No arrivals scheduled for this selected period.",
       rows: @report.arrivals,
       type: :arrival,
+      date_preset: @date_preset,
       show_boat_departure: current_hotel.allow_boat_information?
     } %>
   <% elsif @active_guest_report_tab == "in_house" %>
     <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
-      title: "In-House Guests",
+      title: "In-house guests",
       empty_message: "No in-house guests for this selected period.",
       rows: @report.in_house,
       type: :departure,
+      date_preset: @date_preset,
       show_boat_departure: current_hotel.allow_boat_information?
     } %>
   <% elsif @active_guest_report_tab == "departures" %>
     <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
-      title: "Expected Departures",
+      title: "Expected departures",
       empty_message: "No departures scheduled for this selected period.",
       rows: @report.departures,
       type: :departure,
+      date_preset: @date_preset,
       show_boat_departure: current_hotel.allow_boat_information?
     } %>
   <% elsif @active_guest_report_tab == "checkout" %>
     <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
-      title: "Checked-Out Guests",
+      title: "Checked-out guests",
       empty_message: "No checked-out guests for this selected period.",
       rows: @report.checkout,
-      type: :departure
+      type: :departure,
+      date_preset: @date_preset
     } %>
   <% elsif @active_guest_report_tab == "bibo" %>
     <%= render partial: "hotel_portal/reports/bibo_section", locals: {
       report: @bibo_report
     } %>
   <% elsif @active_guest_report_tab == "meal_prep" %>
-    <div class="space-y-6">
-      <div class="px-4 md:px-0 print:hidden">
+    <div class="space-y-3">
+      <div class="print:hidden">
         <%= render PanelsUI::Tabs.new(
               id: "meal-type-tabs",
               active: params[:meal_type],
-              variant: :pill,
+              variant: :line,
               aria_label: "Meal types"
             ) do |tabs| %>
           <% %w[breakfast lunch dinner].each do |m_type| %>
@@ -127,6 +133,8 @@
         report: @meal_prep_report
       } %>
     </div>
+  <% elsif @active_guest_report_tab == "police_report" %>
+    <%= render "hotel_portal/reports/police_report_section", report: @police_report, date_preset: @date_preset %>
   <% else %>
     <%= render "hotel_portal/reports/guest_registration_cards_section",
       form_url: guest_reports_hotel_reports_path(current_hotel),

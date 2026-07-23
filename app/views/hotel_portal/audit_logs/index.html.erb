@@ -1,110 +1,104 @@
-<div class="w-full space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(title: "Operation Audit Logs", description: "Trace every change made to your hotel's rates and inventory.") do |header| %>
+<div class="w-full space-y-4" data-slot="report-page" data-report="operation-logs">
+  <%= render PanelsUI::PageHeader.new(title: "Operation audit logs", description: "Trace every change made to your hotel's rates and inventory.") do |header| %>
+    <% header.with_caption do %>
+      <p class="text-sm font-medium text-muted-foreground"><%= current_hotel.name %> · <%= @period_label %></p>
+    <% end %>
     <% header.with_actions do %>
-      <%= render PanelsUI::DropdownMenu.new(id: "audit-logs-export-menu", placement: :bottom_end, class: "w-44") do |menu| %>
-        <% menu.with_trigger(variant: :neutral, size: :md, class: "w-full sm:w-auto") do %>
-          <%= cached_icon "download", class: "size-4" %>
+      <%= render PanelsUI::DropdownMenu.new(id: "audit-logs-export-menu", placement: :bottom_end) do |menu| %>
+        <% menu.with_trigger(variant: :secondary) do %>
+          <%= cached_icon "download", class: "me-2 size-4" %>
           Export
+          <%= cached_icon "chevron-down", class: "ms-2 size-4", aria: { hidden: "true" } %>
         <% end %>
-        <% menu.with_item(href: hotel_audit_logs_path(current_hotel, format: :pdf, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), variant: :default, data: { turbo: false }) { "Export PDF" } %>
-        <% menu.with_item(href: hotel_audit_logs_path(current_hotel, format: :xls, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), variant: :default, data: { turbo: false }) { "Export Excel" } %>
-        <% menu.with_item(href: hotel_audit_logs_path(current_hotel, format: :csv, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: params[:start_date], end_date: params[:end_date]), variant: :default, data: { turbo: false }) { "Export CSV" } %>
+        <% menu.with_item(href: hotel_audit_logs_path(current_hotel, format: :pdf, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: @start_date, end_date: @end_date), data: { turbo: false }) { "Export PDF" } %>
+        <% menu.with_item(href: hotel_audit_logs_path(current_hotel, format: :xlsx, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: @start_date, end_date: @end_date), data: { turbo: false }) { "Export Excel" } %>
+        <% menu.with_item(href: hotel_audit_logs_path(current_hotel, format: :csv, room_type_id: params[:room_type_id], action_type: params[:action_type], start_date: @start_date, end_date: @end_date), data: { turbo: false }) { "Export CSV" } %>
       <% end %>
     <% end %>
   <% end %>
 
-  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-    <!-- Filters -->
-    <div class="border-b border-border bg-muted/70 px-6 py-6 sm:px-8">
-      <%= form_with url: hotel_audit_logs_path(current_hotel), method: :get, class: "flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between" do |f| %>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-1">
-          <div>
-            <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Room Type</label>
-            <%= f.select :room_type_id, current_hotel.room_types.map { |rt| [rt.name, rt.id] }, { include_blank: "All Room Types", selected: params[:room_type_id] }, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Action Type</label>
-            <%= f.select :action_type, [['Bulk Rate Update', 'bulk_rate_update'], ['Bulk Inventory Update', 'bulk_inventory_update']], { include_blank: "All Actions", selected: params[:action_type] }, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Start Date</label>
-            <%= f.date_field :start_date, value: params[:start_date], class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">End Date</label>
-            <%= f.date_field :end_date, value: params[:end_date], class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 lg:mb-0.5">
-          <%= link_to "Reset", hotel_audit_logs_path(current_hotel), class: "inline-flex items-center rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted" %>
-          <%= f.submit "Apply Filters", class: "inline-flex items-center rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover whitespace-nowrap" %>
-        </div>
-      <% end %>
-    </div>
+  <section class="rounded-lg border border-border bg-card p-3" aria-label="Operation log filters">
+    <%= form_with url: hotel_audit_logs_path(current_hotel), method: :get, class: "flex flex-col gap-3 xl:flex-row xl:items-end" do |f| %>
+      <div class="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <%= render PanelsUI::FormField.new(form: f, attribute: :room_type_id, label: "Room type", size: :sm) do |field| %>
+          <% field.with_select_menu(
+               [{ label: "All room types", value: "" }] + current_hotel.room_types.map { |room_type| { label: room_type.name, value: room_type.id } },
+               selected: params[:room_type_id]) %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :action_type, label: "Action type", size: :sm) do |field| %>
+          <% field.with_select_menu(
+               [
+                 { label: "All actions", value: "" },
+                 { label: "Bulk rate update", value: "bulk_rate_update" },
+                 { label: "Bulk inventory update", value: "bulk_inventory_update" }
+               ],
+               selected: params[:action_type]) %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :start_date, label: "Start date", size: :sm) do |field| %>
+          <% field.with_date_picker(value: @start_date&.iso8601, linked_to: :end_date, placeholder: "Start date") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :end_date, label: "End date", size: :sm) do |field| %>
+          <% field.with_date_picker(value: @end_date&.iso8601, min: @start_date&.iso8601, placeholder: "End date") %>
+        <% end %>
+      </div>
+      <div class="flex items-center gap-2">
+        <%= render PanelsUI::Button.new(href: hotel_audit_logs_path(current_hotel), variant: :secondary, size: :sm) do %>
+          Reset
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :sm) do %>
+          Apply filters
+        <% end %>
+      </div>
+    <% end %>
+  </section>
 
-    <!-- Table -->
-    <div class="overflow-x-auto">
-      <table class="min-w-full table-fixed">
-        <colgroup>
-          <col class="w-[18%]">
-          <col class="w-[15%]">
-          <col class="w-[15%]">
-          <col class="w-[20%]">
-          <col class="w-[32%]">
-        </colgroup>
-        <thead class="bg-muted">
-          <tr>
-            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Time</th>
-            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">User</th>
-            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Action</th>
-            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Details</th>
-            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Value Change</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border bg-card">
-          <% if @logs.any? %>
-            <% @logs.each_with_index do |log, index| %>
-              <tr class="align-top transition-colors hover:bg-muted/80 <%= index.even? ? 'bg-card' : 'bg-muted/55' %>">
-                <td class="px-6 py-4 sm:px-8">
-                  <span class="text-sm font-medium text-foreground"><%= log.created_at.strftime("%d %b %Y") %></span>
-                  <span class="block text-[10px] font-bold text-muted-foreground"><%= log.created_at.strftime("%I:%M %p") %></span>
-                </td>
-                <td class="px-6 py-4">
-                  <span class="text-sm font-semibold text-foreground"><%= log.user.name %></span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <%
-                    action_class = case log.action_type
-                    when 'bulk_rate_update' then 'border-purple-200 bg-purple-50 text-purple-700'
-                    when 'bulk_inventory_update' then 'border-blue-200 bg-blue-50 text-blue-700'
-                    else 'border-border bg-muted text-foreground'
-                    end
-                  %>
-                  <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider <%= action_class %>">
-                    <%= log.action_type.titleize %>
-                  </span>
-                </td>
-                <td class="px-6 py-4">
-                  <span class="text-sm text-foreground font-medium"><%= log.display_details %></span>
-                </td>
-                <td class="px-6 py-4 sm:px-8">
-                  <span class="text-sm font-mono text-muted-foreground leading-relaxed"><%= log.display_value_change %></span>
-                </td>
-              </tr>
-            <% end %>
-          <% else %>
-            <tr>
-              <td colspan="5" class="px-6 py-20 text-center sm:px-8">
-                <p class="text-sm font-medium text-muted-foreground italic">No audit logs found matching your criteria.</p>
+  <section class="space-y-3" aria-labelledby="operation-log-records-heading">
+    <h2 id="operation-log-records-heading" class="text-base font-semibold text-foreground">Operation log records</h2>
+
+    <%= render PanelsUI::Table.new(
+          caption: "Operation audit logs",
+          density: :compact,
+          header_style: :sentence,
+          hoverable: true,
+          class: "min-w-[52rem] table-fixed",
+          wrapper_class: "rounded-lg border border-border bg-card"
+        ) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col" class="w-[18%]">Time</th>
+          <th scope="col" class="w-[15%]">User</th>
+          <th scope="col" class="w-[17%]">Action</th>
+          <th scope="col" class="w-[20%]">Details</th>
+          <th scope="col" class="w-[30%]">Value change</th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% if @logs.any? %>
+          <% @logs.each do |log| %>
+            <% action_variant = case log.action_type
+                                when "bulk_rate_update" then :accent
+                                when "bulk_inventory_update" then :info
+                                else :neutral
+                                end %>
+            <tr class="align-top">
+              <td class="whitespace-nowrap">
+                <span class="font-medium text-foreground"><%= log.created_at.strftime("%d %b %Y") %></span>
+                <span class="block text-xs text-muted-foreground"><%= log.created_at.strftime("%I:%M %p") %></span>
               </td>
+              <td class="font-semibold text-foreground"><%= log.user.name %></td>
+              <td class="whitespace-nowrap">
+                <%= render PanelsUI::Badge.new(label: log.action_type.titleize, variant: action_variant, size: :sm) %>
+              </td>
+              <td class="text-foreground"><%= log.display_details %></td>
+              <td class="font-mono text-xs leading-5 text-muted-foreground"><%= log.display_value_change %></td>
             </tr>
           <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% else %>
+          <%= render "hotel_portal/reports/table_empty_state", colspan: 5, message: "No audit logs found matching your criteria." %>
+        <% end %>
+      <% end %>
+    <% end %>
 
-    <div class="px-6 py-4 border-t border-border bg-muted/50 flex justify-center sm:px-8">
-      <%= paginate @logs %>
-    </div>
-  </div>
+    <%= render "hotel_portal/reports/table_pagination", collection: @logs %>
+  </section>
 </div>

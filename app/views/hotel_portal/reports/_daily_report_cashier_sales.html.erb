@@ -1,131 +1,149 @@
-<section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Cashier Sales metrics">
-  <%= render PanelsUI::MetricCard.new(label: "Cash Movements", value: @cashier_report.totals[:movement_count].to_s, detail: "Payments and refunds") %>
-  <%= render PanelsUI::MetricCard.new(label: "Total Collected", value: "MYR #{number_with_precision(@cashier_report.totals[:total_collected], precision: 2)}", detail: "Amount in") %>
-  <%= render PanelsUI::MetricCard.new(label: "Total Refunded", value: "- MYR #{number_with_precision(@cashier_report.totals[:total_refunded], precision: 2)}", detail: "Amount out", detail_variant: :destructive) %>
-  <%= render PanelsUI::MetricCard.new(label: "Net Cash", value: "MYR #{number_with_precision(@cashier_report.totals[:net_cash], precision: 2)}", detail: "Collected less refunded", detail_variant: :success) %>
-</section>
+<%= render "daily_report_metric_row", aria_label: "Cashier sales summary", metrics: [
+  { label: "Cash movements", value: @cashier_report.totals[:movement_count].to_s, detail: "Payments and refunds" },
+  { label: "Total collected", value: "MYR #{number_with_precision(@cashier_report.totals[:total_collected], precision: 2)}", detail: "Amount in" },
+  { label: "Total refunded", value: "- MYR #{number_with_precision(@cashier_report.totals[:total_refunded], precision: 2)}", detail: "Amount out", detail_variant: :destructive },
+  { label: "Net cash", value: "MYR #{number_with_precision(@cashier_report.totals[:net_cash], precision: 2)}", detail: "Collected less refunded", detail_variant: :success }
+] %>
 
-<% [ [ "Advance", @advance_rows, @advance_transactions ], [ "Settlement", @settlement_rows, @settlement_transactions ] ].each do |title, rows, transactions| %>
-  <section class="space-y-4" aria-labelledby="cashier-<%= title.downcase %>-heading">
-    <h2 id="cashier-<%= title.downcase %>-heading" class="text-base font-semibold"><%= title %></h2>
-    <div class="overflow-hidden rounded-xl border border-border bg-card">
-      <div class="overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="bg-muted">
-          <tr>
-            <% HotelPortal::Reports::DailyReportTransactionRow::CASHIER_VISUAL_HEADERS.each_with_index do |heading, index| %>
-              <th class="px-4 py-3 text-sm font-medium text-muted-foreground <%= index == 8 ? "text-right" : "text-left" %>"><%= heading %></th>
-            <% end %>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border bg-card" data-testid="<%= title.downcase %>-rows">
-          <% if rows.present? %>
-            <% rows.each do |row| %>
-              <tr class="hover:bg-muted/50" data-testid="<%= title.downcase %>-row">
-                <td class="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
-                  <%= row.posting_date.strftime("%d %b %Y") %>
-                  <% if row.posted_at %><span class="block text-xs"><%= row.posted_at.strftime("%H:%M") %></span><% end %>
-                </td>
-                <td class="px-4 py-3 text-sm text-foreground"><%= row.booking_reference %></td>
-                <td class="px-4 py-3 text-sm text-foreground">
-                  <%= row.guest_name %>
-                  <span class="block text-xs text-muted-foreground">Room <%= row.room_number %></span>
-                </td>
-                <td class="px-4 py-3 text-sm text-foreground"><%= row.folio_number %></td>
-                <td class="px-4 py-3 text-sm text-foreground"><%= row.invoice_number %></td>
-                <td class="px-4 py-3 text-sm text-foreground"><%= row.settlement_mode %></td>
-                <td class="px-4 py-3 text-sm text-foreground"><%= row.received_by %></td>
-                <td class="px-4 py-3 text-sm text-foreground"><%= row.description %></td>
-                <td class="px-4 py-3 text-sm font-semibold text-foreground text-right whitespace-nowrap"><%= row.currency %> <%= number_with_precision(row.signed_amount, precision: 2) %></td>
+<% [["Advance", @advance_rows, @advance_transactions], ["Settlement", @settlement_rows, @settlement_transactions]].each do |title, rows, transactions| %>
+  <section class="space-y-3" aria-labelledby="cashier-<%= title.downcase %>-heading">
+    <h2 id="cashier-<%= title.downcase %>-heading" class="text-base font-semibold text-foreground"><%= title %></h2>
+    <%= render PanelsUI::Table.new(
+          caption: "#{title} payments",
+          density: :compact,
+          header_style: :sentence,
+          hoverable: true,
+          wrapper_class: "rounded-lg border border-border bg-card",
+          data: { testid: "#{title.downcase}-rows" }
+        ) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <% ["Date & time", "Reservation", "Guest details", "Folio", "Invoice", "Payment mode", "Received by", "Remarks", "Amount"].each_with_index do |heading, index| %>
+            <th scope="col" class="<%= index == 8 ? "text-right" : "text-left" %>"><%= heading %></th>
+          <% end %>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% if rows.present? %>
+          <% report_rows_grouped_by_month(rows, date_preset: @date_preset, &:posting_date).each do |month, period_rows| %>
+            <% if month %>
+              <tr class="bg-muted/55" data-slot="report-month-group">
+                <th scope="rowgroup" colspan="9" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
               </tr>
             <% end %>
-          <% else %>
-            <tr><td colspan="9" class="px-6 py-20 text-center text-sm text-muted-foreground">No <%= title.downcase %> payments found for this selected period.</td></tr>
+          <% period_rows.each do |row| %>
+            <tr data-testid="<%= title.downcase %>-row">
+              <td class="whitespace-nowrap text-muted-foreground">
+                <%= row.posting_date.strftime("%d %b %Y") %>
+                <% if row.posted_at %><span class="block text-xs"><%= row.posted_at.strftime("%H:%M") %></span><% end %>
+              </td>
+              <td><%= row.booking_reference %></td>
+              <td>
+                <%= row.guest_name %>
+                <span class="block text-xs text-muted-foreground">Room <%= row.room_number %></span>
+              </td>
+              <td><%= row.folio_number %></td>
+              <td><%= row.invoice_number %></td>
+              <td><%= row.settlement_mode %></td>
+              <td><%= row.received_by %></td>
+              <td><%= row.description %></td>
+              <td class="whitespace-nowrap text-right font-semibold"><%= row.currency %> <%= number_with_precision(row.signed_amount, precision: 2) %></td>
+            </tr>
           <% end %>
-        </tbody>
-      </table>
-      </div>
-      <% if transactions.present? %>
-        <div class="border-t border-border px-4 py-3 flex justify-center">
-          <%= paginate transactions, param_name: "#{title.downcase}_page" %>
-        </div>
+          <% end %>
+        <% else %>
+          <%= render "table_empty_state", colspan: 9, message: "No #{title.downcase} payments found for this selected period." %>
+        <% end %>
       <% end %>
-    </div>
+    <% end %>
+    <% if transactions.respond_to?(:total_pages) && transactions.total_pages > 1 %>
+      <nav class="flex justify-center border-t border-border px-3 py-2" aria-label="<%= title %> report pagination" data-slot="report-pagination">
+        <%= paginate transactions, param_name: "#{title.downcase}_page" %>
+      </nav>
+    <% end %>
   </section>
 <% end %>
 
-<section class="space-y-4" aria-labelledby="cashier-summary-heading">
-  <h2 id="cashier-summary-heading" class="text-base font-semibold">Cashier Summary</h2>
-  <div class="overflow-x-auto rounded-xl border border-border bg-card">
-    <table class="min-w-full">
-      <thead class="bg-muted">
-        <tr>
-          <% ["Mode", "Currency", "Description", "Amount (IN)", "Amount (OUT)", "Balance"].each_with_index do |heading, index| %>
-            <th class="px-6 py-4 text-sm font-medium text-muted-foreground <%= index >= 3 ? "text-right" : "text-left" %>"><%= heading %></th>
-          <% end %>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-border bg-card">
-        <% if @cashier_report.mode_summary_rows.any? %>
-          <% @cashier_report.mode_summary_rows.group_by { |row| row[:mode] }.each do |mode, rows| %>
-            <% rows.each do |row| %>
-              <tr>
-                <td class="px-6 py-4 text-sm text-foreground"><%= row[:mode] %></td>
-                <td class="px-6 py-4 text-sm text-foreground"><%= row[:currency] %></td>
-                <td class="px-6 py-4 text-sm text-foreground"><%= row[:section] %></td>
-                <td class="px-6 py-4 text-sm text-foreground text-right"><%= number_with_precision(row[:amount_in], precision: 2) %></td>
-                <td class="px-6 py-4 text-sm text-foreground text-right"><%= number_with_precision(row[:amount_out], precision: 2) %></td>
-                <td class="px-6 py-4 text-sm text-foreground text-right"><%= number_with_precision(row[:balance], precision: 2) %></td>
-              </tr>
-            <% end %>
-            <% total = @cashier_report.mode_totals.find { |t| t[:mode] == mode } %>
-            <tr class="bg-muted/40 font-semibold">
-              <td class="px-6 py-4 text-sm text-foreground" colspan="3"><%= mode %> Total</td>
-              <td class="px-6 py-4 text-sm text-foreground text-right"><%= number_with_precision(total[:amount_in], precision: 2) %></td>
-              <td class="px-6 py-4 text-sm text-foreground text-right"><%= number_with_precision(total[:amount_out], precision: 2) %></td>
-              <td class="px-6 py-4 text-sm text-foreground text-right"><%= number_with_precision(total[:balance], precision: 2) %></td>
+<section class="space-y-3" aria-labelledby="cashier-summary-heading">
+  <h2 id="cashier-summary-heading" class="text-base font-semibold text-foreground">Cashier summary</h2>
+  <%= render PanelsUI::Table.new(
+        caption: "Cashier summary",
+        density: :compact,
+        header_style: :sentence,
+        hoverable: true,
+        wrapper_class: "rounded-lg border border-border bg-card"
+      ) do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <% ["Mode", "Currency", "Description", "Amount (in)", "Amount (out)", "Balance"].each_with_index do |heading, index| %>
+          <th scope="col" class="<%= index >= 3 ? "text-right" : "text-left" %>"><%= heading %></th>
+        <% end %>
+      </tr>
+    <% end %>
+    <% table.with_body do %>
+      <% if @cashier_report.mode_summary_rows.any? %>
+        <% @cashier_report.mode_summary_rows.group_by { |row| row[:mode] }.each do |mode, rows| %>
+          <% rows.each do |row| %>
+            <tr>
+              <td><%= row[:mode] %></td>
+              <td><%= row[:currency] %></td>
+              <td><%= row[:section] %></td>
+              <td class="text-right"><%= number_with_precision(row[:amount_in], precision: 2) %></td>
+              <td class="text-right"><%= number_with_precision(row[:amount_out], precision: 2) %></td>
+              <td class="text-right"><%= number_with_precision(row[:balance], precision: 2) %></td>
             </tr>
           <% end %>
-        <% else %>
-          <tr><td colspan="6" class="px-6 py-20 text-center text-sm text-muted-foreground">No cashier activity for this selected period.</td></tr>
+          <% total = @cashier_report.mode_totals.find { |item| item[:mode] == mode } %>
+          <tr class="bg-muted/40 font-semibold">
+            <th scope="row" colspan="3"><%= mode %> total</th>
+            <td class="text-right"><%= number_with_precision(total[:amount_in], precision: 2) %></td>
+            <td class="text-right"><%= number_with_precision(total[:amount_out], precision: 2) %></td>
+            <td class="text-right"><%= number_with_precision(total[:balance], precision: 2) %></td>
+          </tr>
         <% end %>
-      </tbody>
-    </table>
-  </div>
+      <% else %>
+        <%= render "table_empty_state", colspan: 6, message: "No cashier activity for this selected period." %>
+      <% end %>
+    <% end %>
+  <% end %>
 </section>
 
-<section class="space-y-4" aria-labelledby="currency-summary-heading">
-  <h2 id="currency-summary-heading" class="text-base font-semibold">Currency Summary</h2>
-  <div class="overflow-x-auto rounded-xl border border-border bg-card">
-    <table class="min-w-full">
-      <thead class="bg-muted">
-        <tr>
-          <% ["Currency", "Description", "Amount (IN)", "Amount (OUT)", "Balance"].each_with_index do |heading, index| %>
-            <th class="px-6 py-4 text-sm font-medium text-muted-foreground <%= index >= 2 ? "text-right" : "text-left" %>"><%= heading %></th>
-          <% end %>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-border bg-card">
-        <% if @cashier_report.currency_summary_rows.any? %>
-          <% @cashier_report.currency_summary_rows.each do |row| %>
-            <tr>
-              <td class="px-6 py-4 text-sm text-foreground"><%= row[:currency] %></td>
-              <td class="px-6 py-4 text-sm text-foreground"><%= row[:section] %></td>
-              <td class="px-6 py-4 text-sm text-foreground text-right"><%= number_with_precision(row[:amount_in], precision: 2) %></td>
-              <td class="px-6 py-4 text-sm text-foreground text-right"><%= number_with_precision(row[:amount_out], precision: 2) %></td>
-              <td class="px-6 py-4 text-sm text-foreground text-right"><%= number_with_precision(row[:balance], precision: 2) %></td>
-            </tr>
-          <% end %>
-          <tr class="bg-muted/40 font-semibold">
-            <td class="px-6 py-4 text-sm text-foreground" colspan="2">Grand Total</td>
-            <td class="px-6 py-4 text-sm text-foreground text-right"><%= number_with_precision(@cashier_report.grand_total[:amount_in], precision: 2) %></td>
-            <td class="px-6 py-4 text-sm text-foreground text-right"><%= number_with_precision(@cashier_report.grand_total[:amount_out], precision: 2) %></td>
-            <td class="px-6 py-4 text-sm text-foreground text-right"><%= number_with_precision(@cashier_report.grand_total[:balance], precision: 2) %></td>
-          </tr>
-        <% else %>
-          <tr><td colspan="5" class="px-6 py-20 text-center text-sm text-muted-foreground">No cashier activity for this selected period.</td></tr>
+<section class="space-y-3" aria-labelledby="currency-summary-heading">
+  <h2 id="currency-summary-heading" class="text-base font-semibold text-foreground">Currency summary</h2>
+  <%= render PanelsUI::Table.new(
+        caption: "Currency summary",
+        density: :compact,
+        header_style: :sentence,
+        hoverable: true,
+        wrapper_class: "rounded-lg border border-border bg-card"
+      ) do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <% ["Currency", "Description", "Amount (in)", "Amount (out)", "Balance"].each_with_index do |heading, index| %>
+          <th scope="col" class="<%= index >= 2 ? "text-right" : "text-left" %>"><%= heading %></th>
         <% end %>
-      </tbody>
-    </table>
-  </div>
+      </tr>
+    <% end %>
+    <% table.with_body do %>
+      <% if @cashier_report.currency_summary_rows.any? %>
+        <% @cashier_report.currency_summary_rows.each do |row| %>
+          <tr>
+            <td><%= row[:currency] %></td>
+            <td><%= row[:section] %></td>
+            <td class="text-right"><%= number_with_precision(row[:amount_in], precision: 2) %></td>
+            <td class="text-right"><%= number_with_precision(row[:amount_out], precision: 2) %></td>
+            <td class="text-right"><%= number_with_precision(row[:balance], precision: 2) %></td>
+          </tr>
+        <% end %>
+        <tr class="bg-muted/40 font-semibold">
+          <th scope="row" colspan="2">Grand total</th>
+          <td class="text-right"><%= number_with_precision(@cashier_report.grand_total[:amount_in], precision: 2) %></td>
+          <td class="text-right"><%= number_with_precision(@cashier_report.grand_total[:amount_out], precision: 2) %></td>
+          <td class="text-right"><%= number_with_precision(@cashier_report.grand_total[:balance], precision: 2) %></td>
+        </tr>
+      <% else %>
+        <%= render "table_empty_state", colspan: 5, message: "No cashier activity for this selected period." %>
+      <% end %>
+    <% end %>
+  <% end %>
 </section>

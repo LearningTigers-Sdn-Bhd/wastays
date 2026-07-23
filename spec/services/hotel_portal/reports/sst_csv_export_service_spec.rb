@@ -28,7 +28,7 @@ RSpec.describe HotelPortal::Reports::SstCsvExportService do
       )
 
       csv = described_class.new(report: report).generate
-      rows = CSV.parse(csv, headers: true)
+      rows = CSV.parse(csv.delete_prefix("\uFEFF"), headers: true)
 
       expect(rows.headers).to eq([ "Invoice / Ref", "Guest Name", "Check-In", "Check-Out", "Taxable Amount (MYR)", "SST 8% (MYR)", "Total (MYR)" ])
       expect(rows[0]["Invoice / Ref"]).to eq("INV-001")

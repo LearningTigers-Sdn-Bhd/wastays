@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "csv"
 
 RSpec.describe HotelPortal::Reports::DepositLiabilityCsvExportService do
   let(:report) do
@@ -35,7 +36,7 @@ RSpec.describe HotelPortal::Reports::DepositLiabilityCsvExportService do
   describe "#generate" do
     it "generates a CSV with correct headers and data" do
       csv_content = subject.generate
-      rows = CSV.parse(csv_content)
+      rows = CSV.parse(csv_content.delete_prefix("\uFEFF"))
 
       expect(rows[0]).to eq([ "Guest Name", "Booking Ref", "Stay", "Status", "Rooms", "Folio", "Booking Payment", "Earned", "Refunds", "Remaining Liability", "Latest Payment Date" ])
 

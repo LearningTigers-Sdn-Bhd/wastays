@@ -58,6 +58,12 @@ RSpec.describe HotelPortal::Reports::DailyReportExcelExportService do
     styles.at_xpath("//xmlns:numFmt[@numFmtId='#{format_id}']")&.[]("formatCode")
   end
 
+  def font_size(entries, style_id)
+    styles = Nokogiri::XML(entries.fetch("xl/styles.xml"))
+    font_id = styles.xpath("//xmlns:cellXfs/xmlns:xf")[style_id.to_i]["fontId"]
+    styles.xpath("//xmlns:fonts/xmlns:font")[font_id.to_i].at_xpath("./xmlns:sz")["val"].to_f
+  end
+
   it "generates tab-scoped xlsx worksheets with analytical spreadsheet features" do
     booking = create(:booking, hotel: hotel)
     room_type = create(:room_type, hotel: hotel, name: "Deluxe King")
@@ -116,10 +122,19 @@ RSpec.describe HotelPortal::Reports::DailyReportExcelExportService do
     overview_entries = workbook_entries(overview)
     revenue_entries = workbook_entries(revenue)
     cashier_entries = workbook_entries(cashier_content)
+    overview_rows = worksheet_rows(overview_entries, worksheet_xml(overview_entries, "Overview"))
+    metadata_cell = overview_rows.find { |row| row["A"]&.fetch(:value)&.start_with?("Reporting period:") }.fetch("A")
+    section_cell = overview_rows.find { |row| row["A"]&.fetch(:value) == "Revenue (Accrual)" }.fetch("A")
+    metric_header = overview_rows.find { |row| row["A"]&.fetch(:value) == "Metric" }.fetch("A")
+    kpi_value = overview_rows.find { |row| row["A"]&.fetch(:value) == "Total Charges" }.fetch("B")
 
     expect(sheet_names(overview_entries)).to eq([ "Overview" ])
     expect(sheet_names(revenue_entries)).to eq([ "Daily Breakdown", "Revenue by Source", "Revenue Register" ])
     expect(sheet_names(cashier_entries)).to eq([ "Advance", "Settlement", "Cashier Summary", "Currency Summary" ])
+    expect(font_size(overview_entries, metadata_cell.fetch(:style))).to eq(11)
+    expect(font_size(overview_entries, section_cell.fetch(:style))).to eq(12)
+    expect(font_size(overview_entries, metric_header.fetch(:style))).to eq(11)
+    expect(font_size(overview_entries, kpi_value.fetch(:style))).to eq(13)
 
     revenue_xml = revenue_entries.values_at(*revenue_entries.keys.grep(%r{xl/worksheets/sheet\d+\.xml})).join
     cashier_xml = cashier_entries.values_at(*cashier_entries.keys.grep(%r{xl/worksheets/sheet\d+\.xml})).join
@@ -134,9 +149,9 @@ RSpec.describe HotelPortal::Reports::DailyReportExcelExportService do
 
     expect(revenue_xml).to include("<autoFilter", "state=\"frozen\"")
     expect(cashier_xml).to include("<autoFilter", "state=\"frozen\"")
-    expect(revenue_entries.fetch("xl/styles.xml")).to include('<sz val="10"/>')
+    expect(revenue_entries.fetch("xl/styles.xml")).to include('<sz val="11"/>')
     expect(revenue_xml).to include('zoomScale="100"')
-    expect(revenue_xml).to match(/<row[^>]+ht="20"/)
+    expect(revenue_xml).to match(/<row[^>]+ht="22"/)
     expect(workbook_text).to include(
       "Daily Report", "Room Revenue", "Currency", "Amount", "Tax",
       "Paid at front desk", "Aisha Cashier", "Advance deposit", "Bank Transfer Payment"

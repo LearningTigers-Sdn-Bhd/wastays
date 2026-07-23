@@ -1,4 +1,5 @@
 require "rails_helper"
+require "pdf-reader"
 
 RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
   let(:account) { create(:account) }
@@ -121,28 +122,40 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       expect(response.body).to include("Trash")
     end
 
-    it "exports housekeeping tasks report to PDF format" do
+    it "exports the filtered housekeeping board as csv, xlsx, and pdf" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
       create(:housekeeping_request, booking: booking, room_number: "101", status: "in_progress", request_details: "Need water")
+      create(:housekeeping_request, booking: booking, room_number: "202", status: "in_progress", request_details: "Fresh towels")
+      selected_date = Date.new(2026, 7, 21)
 
-      get hotel_housekeeping_tasks_path(hotel, format: :pdf)
-
+      get hotel_housekeeping_tasks_path(hotel, format: :csv), params: { date: selected_date, q: "101" }
       expect(response).to have_http_status(:ok)
-      expect(response.content_type).to include("application/pdf")
-      expect(response.body).to be_present
+      expect(response.media_type).to eq("text/csv")
+      expect(response.body).to include("Need water")
+      expect(response.body).not_to include("Fresh towels")
+      expect(response.headers["Content-Disposition"]).to include("housekeeping-tasks-2026-07-21.csv")
+
+      get hotel_housekeeping_tasks_path(hotel, format: :xlsx), params: { date: selected_date, q: "101" }
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      expect(response.body).to start_with("PK")
+      expect(response.headers["Content-Disposition"]).to include("housekeeping-tasks-2026-07-21.xlsx")
+
+      get hotel_housekeeping_tasks_path(hotel, format: :pdf), params: { date: selected_date, q: "101" }
+      pdf_text = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("application/pdf")
+      expect(pdf_text).to include("HOUSEKEEPING TASKS", "Need water", "Page 1 of 1")
+      expect(pdf_text).not_to include("Fresh towels")
     end
 
-    it "exports housekeeping tasks report to XLS format" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      create(:housekeeping_request, booking: booking, room_number: "101", status: "in_progress", request_details: "Need water")
+    it "does not expose the removed legacy xls format" do
+      expect(Mime::Type.lookup_by_extension(:xls)).to be_nil
 
       get hotel_housekeeping_tasks_path(hotel, format: :xls)
 
-      expect(response).to have_http_status(:ok)
-      expect(response.content_type).to include("application/vnd.ms-excel")
-      expect(response.body).to include("Housekeeping Tasks")
+      expect(response).to have_http_status(:not_acceptable)
     end
   end
 

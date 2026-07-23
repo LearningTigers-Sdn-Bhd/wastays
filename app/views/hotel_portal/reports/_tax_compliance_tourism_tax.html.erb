@@ -1,0 +1,60 @@
+<%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+  { label: "Guests", value: @report.totals[:guest_count].to_s, detail: "Selected period" },
+  { label: "Total tax due", value: "MYR #{number_with_precision(@report.totals[:total_due], precision: 2)}", detail: "Selected period" },
+  { label: "Total tax collected", value: "MYR #{number_with_precision(@report.totals[:total_collected], precision: 2)}", detail: "Selected period" }
+]) %>
+
+<section class="space-y-3" aria-labelledby="tourism-tax-records-heading">
+  <h2 id="tourism-tax-records-heading" class="text-base font-semibold text-foreground">Tourism tax records</h2>
+
+  <%= render PanelsUI::Table.new(
+        caption: "Tourism tax records",
+        density: :compact,
+        header_style: :sentence,
+        hoverable: true,
+        class: "min-w-[1120px]",
+        wrapper_class: "rounded-lg border border-border bg-card"
+      ) do |table| %>
+    <% table.with_header do %>
+        <tr>
+          <th scope="col">Guest name</th>
+          <th scope="col">Nationality</th>
+          <th scope="col">Booking ref</th>
+          <th scope="col">Check in</th>
+          <th scope="col">Check out</th>
+          <th scope="col" class="text-right">Nights</th>
+          <th scope="col">Room numbers</th>
+          <th scope="col" class="text-right">Tax due</th>
+          <th scope="col" class="text-right">Tax collected</th>
+          <th scope="col">Collection status</th>
+        </tr>
+    <% end %>
+    <% table.with_body do %>
+        <% if @report.rows.any? %>
+          <% report_rows_grouped_by_month(@report.rows, date_preset: @date_preset) { |row| row[:check_in] }.each do |month, rows| %>
+            <% if month %>
+              <tr class="bg-muted/55" data-slot="report-month-group">
+                <th scope="rowgroup" colspan="10" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
+              </tr>
+            <% end %>
+          <% rows.each do |row| %>
+            <tr class="align-top">
+              <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= row[:guest_name] %></th>
+              <td><%= row[:guest_country] %></td>
+              <td class="whitespace-nowrap font-mono text-xs text-muted-foreground"><%= row[:booking_reference] %></td>
+              <td class="whitespace-nowrap"><%= row[:check_in].strftime("%d %b %Y") %></td>
+              <td class="whitespace-nowrap"><%= row[:check_out].strftime("%d %b %Y") %></td>
+              <td class="text-right font-semibold tabular-nums"><%= row[:nights] %></td>
+              <td><%= row[:room_numbers] %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:tax_due], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:tax_collected], precision: 2) %></td>
+              <td class="whitespace-nowrap"><%= row[:collection_status] %></td>
+            </tr>
+          <% end %>
+          <% end %>
+        <% else %>
+          <%= render "table_empty_state", colspan: 10, message: "No tourism tax bookings found for this selected period." %>
+        <% end %>
+    <% end %>
+  <% end %>
+</section>

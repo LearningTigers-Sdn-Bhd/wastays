@@ -1,96 +1,113 @@
-<div class="w-full space-y-3.5">
-  <div>
-    <%= render PanelsUI::PageHeader.new(title: "Extra Charge Report") do |header| %>
-      <% header.with_caption do %>
-        <p class="text-sm font-medium text-muted-foreground">
-          <%= current_hotel.name %> ·
-          <% if @report.start_date == @report.end_date %>
-            <%= @report.start_date.strftime("%A, %d %b %Y") %>
-          <% else %>
-            <%= @report.start_date.strftime("%d %b %Y") %> - <%= @report.end_date.strftime("%d %b %Y") %>
-          <% end %>
-        </p>
-      <% end %>
-      <% header.with_actions do %>
-        <%= render "preset_report_actions",
-          form_url: extra_charge_hotel_reports_path(current_hotel), date_preset: @date_preset,
-          start_date: @report.start_date, end_date: @report.end_date,
-          hidden_params: { tab: @active_extra_charge_tab },
-          show_export: feature_enabled_for_hotel?("excel_pdf_export"), export_menu_id: "extra-charge-export",
-          export_items: [
-            ["Export PDF", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :pdf)],
-            ["Export Excel", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :xls)],
-            ["Export CSV", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :csv)]
-          ] %>
-      <% end %>
+<div class="w-full space-y-4" data-slot="report-page" data-report="extra-charge">
+  <%= render PanelsUI::PageHeader.new(title: "Extra charge report", description: "Review food, beverage, and other posted charges for the selected period.") do |header| %>
+    <% header.with_caption do %>
+      <p class="text-sm font-medium text-muted-foreground">
+        <%= current_hotel.name %> ·
+        <% if @report.start_date == @report.end_date %>
+          <%= @report.start_date.strftime("%A, %d %b %Y") %>
+        <% else %>
+          <%= @report.start_date.strftime("%d %b %Y") %> - <%= @report.end_date.strftime("%d %b %Y") %>
+        <% end %>
+      </p>
     <% end %>
-  </div>
-
-  <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Active Tab</p>
-      <h2 class="text-2xl font-bold tracking-tight text-foreground"><%= @active_extra_charge_tab == "fb" ? "F&B" : "Non-F&B" %></h2>
-    </div>
-    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Transactions</p>
-      <h2 class="text-2xl font-bold tracking-tight text-foreground"><%= @report.totals[:transaction_count] %></h2>
-    </div>
-    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Amount</p>
-      <h2 class="text-2xl font-bold tracking-tight text-foreground">MYR <%= number_with_precision(@report.totals[:total_amount], precision: 2) %></h2>
-    </div>
-  </div>
-
-  <div class="flex flex-wrap items-center gap-2">
-    <% {
-      "fb" => { label: "F&B" },
-      "non_fb" => { label: "Non-F&B" }
-    }.each do |tab, config| %>
-      <% active = @active_extra_charge_tab == tab %>
-      <%= link_to extra_charge_hotel_reports_path(current_hotel, tab: tab, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset),
-        class: "inline-flex h-10 items-center whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition #{active ? 'border-blue-600 bg-blue-600 text-primary-foreground shadow-sm' : 'border-border bg-card text-foreground hover:border-border-interactive hover:bg-muted'}" do %>
-        <span><%= config[:label] %></span>
-      <% end %>
+    <% header.with_actions do %>
+      <%= render "preset_report_actions",
+        form_url: extra_charge_hotel_reports_path(current_hotel), date_preset: @date_preset,
+        start_date: @report.start_date, end_date: @report.end_date,
+        hidden_params: { tab: @active_extra_charge_tab },
+        show_export: feature_enabled_for_hotel?("excel_pdf_export"), export_menu_id: "extra-charge-export",
+        export_items: [
+          ["Export PDF", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :pdf)],
+          ["Export Excel", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :xlsx)],
+          ["Export CSV", extra_charge_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_extra_charge_tab, format: :csv)]
+        ] %>
     <% end %>
-  </div>
+  <% end %>
 
-  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-    <div class="overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="bg-muted">
+  <% preserved_params = { start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset } %>
+  <%= render PanelsUI::Tabs.new(
+        id: "extra-charge-tabs",
+        active: @active_extra_charge_tab,
+        variant: :line,
+        aria_label: "Extra charge sections") do |tabs| %>
+    <% tabs.with_tab(name: "fb", label: "F&B", href: extra_charge_hotel_reports_path(current_hotel, preserved_params.merge(tab: "fb")), data: { testid: "extra-charge-tab-fb" }) %>
+    <% tabs.with_tab(name: "non_fb", label: "Non-F&B", href: extra_charge_hotel_reports_path(current_hotel, preserved_params.merge(tab: "non_fb")), data: { testid: "extra-charge-tab-non-fb" }) %>
+  <% end %>
+
+  <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+    { label: "Transactions", value: @report.totals[:transaction_count].to_s, detail: "Selected line" },
+    { label: "Total amount", value: "MYR #{number_with_precision(@report.totals[:total_amount], precision: 2)}", detail: "Selected period" }
+  ]) %>
+
+  <% if @date_preset == "this_year" %>
+    <section class="space-y-3" aria-labelledby="extra-charge-monthly-breakdown-heading">
+      <h2 id="extra-charge-monthly-breakdown-heading" class="text-base font-semibold text-foreground">Monthly breakdown</h2>
+
+      <%= render PanelsUI::Table.new(
+            caption: "Monthly breakdown",
+            density: :compact,
+            header_style: :sentence,
+            wrapper_class: "rounded-lg border border-border bg-card"
+          ) do |table| %>
+        <% table.with_header do %>
           <tr>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Posting Date</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Guest / Booking</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Folio</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Description</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Category</th>
-            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Amount</th>
+            <th scope="col">Month</th>
+            <th scope="col" class="text-right">Transactions</th>
+            <th scope="col" class="text-right">Total amount</th>
           </tr>
-        </thead>
-        <tbody class="divide-y divide-border bg-card">
-          <% if @report.rows.any? %>
-            <% @report.rows.each do |row| %>
-              <tr class="hover:bg-muted/50">
-                <td class="px-6 py-4 text-sm font-medium text-foreground"><%= row[:posting_date].strftime("%d %b %Y") %></td>
-                <td class="px-6 py-4">
-                  <p class="text-sm font-semibold text-foreground"><%= row[:guest_name] %></p>
-                  <p class="mt-1 text-xs font-mono text-muted-foreground"><%= row[:booking_reference] %></p>
-                </td>
-                <td class="px-6 py-4 text-sm text-foreground"><%= row[:folio_number] %></td>
-                <td class="px-6 py-4 text-sm text-foreground"><%= row[:description] %></td>
-                <td class="px-6 py-4 text-sm font-semibold text-foreground"><%= row[:category].to_s == "fb" ? "F&B" : row[:category].to_s.upcase %></td>
-                <td class="px-6 py-4 text-right text-sm font-semibold text-foreground">MYR <%= number_with_precision(row[:amount], precision: 2) %></td>
-              </tr>
-            <% end %>
-          <% else %>
+        <% end %>
+        <% table.with_body do %>
+          <% @report.monthly_rows.each do |row| %>
             <tr>
-              <td colspan="6" class="px-6 py-16 text-center text-sm font-medium text-muted-foreground">
-                No extra charges found for this selected period.
-              </td>
+              <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= row[:date].strftime("%b %Y") %></th>
+              <td class="text-right tabular-nums"><%= row[:transaction_count] %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:total_amount], precision: 2) %></td>
             </tr>
           <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
+        <% end %>
+      <% end %>
+    </section>
+  <% end %>
+
+  <section class="space-y-3" aria-labelledby="extra-charge-details-heading">
+    <h2 id="extra-charge-details-heading" class="text-base font-semibold text-foreground">Charge details</h2>
+
+    <%= render PanelsUI::Table.new(
+          caption: "Charge details",
+          density: :compact,
+          header_style: :sentence,
+          hoverable: true,
+          wrapper_class: "rounded-lg border border-border bg-card"
+        ) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Posting date</th>
+          <th scope="col">Guest / booking</th>
+          <th scope="col">Folio</th>
+          <th scope="col">Description</th>
+          <th scope="col">Category</th>
+          <th scope="col" class="text-right">Amount</th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% if @report.rows.any? %>
+          <% @report.rows.each do |row| %>
+            <tr class="align-top">
+              <th scope="row" class="whitespace-nowrap font-medium text-foreground"><%= row[:posting_date].strftime("%d %b %Y") %></th>
+              <td>
+                <p class="font-semibold text-foreground"><%= row[:guest_name] %></p>
+                <p class="mt-1 font-mono text-xs text-muted-foreground"><%= row[:booking_reference] %></p>
+              </td>
+              <td><%= row[:folio_number] %></td>
+              <td><%= row[:description] %></td>
+              <td class="font-semibold"><%= row[:category].to_s == "fb" ? "F&B" : row[:category].to_s.upcase %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:amount], precision: 2) %></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <%= render "table_empty_state", colspan: 6, message: "No extra charges found for this selected period." %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
 </div>

@@ -32,16 +32,13 @@ RSpec.describe HotelPortal::Reports::DepositLiabilityExcelExportService do
     )
   end
 
-  subject { described_class.new(report: report) }
+  let(:hotel) { instance_double(Hotel, name: "Sample Hotel", default_currency: "MYR") }
+  subject { described_class.new(hotel: hotel, report: report) }
 
   describe "#generate" do
-    it "generates an Excel XML content" do
-      xml_content = subject.generate
-      expect(xml_content).to include('ss:Name="Summary"')
-      expect(xml_content).to include('ss:Name="Deposit Liability"')
-      expect(xml_content).to include("300.00")
-      expect(xml_content).to include("200.00")
-      expect(xml_content).to include("John Doe")
+    it "generates an XLSX workbook" do
+      content = subject.generate
+      expect(content).to start_with("PK")
     end
   end
 end

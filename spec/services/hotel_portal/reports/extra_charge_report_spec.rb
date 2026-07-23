@@ -63,5 +63,26 @@ RSpec.describe HotelPortal::Reports::ExtraChargeReport, type: :service do
 
       expect(result.rows).to be_empty
     end
+
+    it "builds a summary row for every month when this year is selected" do
+      booking = create(:booking, hotel: hotel)
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, category: "fb", amount: 25, posting_date: Date.new(2026, 1, 15))
+      create(:folio_transaction, booking_folio: folio, category: "fb", amount: 40, posting_date: Date.new(2026, 3, 10))
+      create(:folio_transaction, booking_folio: folio, category: "fb", amount: 10, posting_date: Date.new(2026, 3, 20))
+
+      result = described_class.new(
+        hotel: hotel,
+        start_date: Date.new(2026, 1, 1),
+        end_date: Date.new(2026, 12, 31),
+        tab: "fb",
+        date_preset: "this_year"
+      ).call
+
+      expect(result.monthly_rows.size).to eq(12)
+      expect(result.monthly_rows.first).to eq(date: Date.new(2026, 1, 1), transaction_count: 1, total_amount: 25.to_d)
+      expect(result.monthly_rows.second).to eq(date: Date.new(2026, 2, 1), transaction_count: 0, total_amount: 0.to_d)
+      expect(result.monthly_rows.third).to eq(date: Date.new(2026, 3, 1), transaction_count: 2, total_amount: 50.to_d)
+    end
   end
 end
