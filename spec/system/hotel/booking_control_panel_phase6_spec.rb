@@ -183,7 +183,7 @@ RSpec.describe "Booking control panel Phase 6", :business_day, type: :system do
     booking.update_columns(status: "checkout_required", checked_in_at: 2.hours.ago)
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
 
-    relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
     company_folio = create(
       :booking_folio,
       :secondary,
@@ -213,7 +213,10 @@ RSpec.describe "Booking control panel Phase 6", :business_day, type: :system do
       expect(page).to have_no_content("Settlement Details")
 
       company_row = find("article", text: "Company Folio")
-      click_in_overlay company_row.find(".panel-select-menu__trigger")
+      resolution_trigger = company_row.find(
+        "[data-booking-actions--checkout-settlement-target~='actionControl'] .panel-select-menu__trigger"
+      )
+      click_in_overlay resolution_trigger
       click_in_overlay find("[role='option']", text: "Pay Now", visible: true)
 
       within(company_row) do
