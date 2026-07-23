@@ -4,9 +4,9 @@
 if ENV['TEST_ENV_NUMBER'].nil? || ENV['TEST_ENV_NUMBER'].empty?
   require "simplecov"
   SimpleCov.start "rails" do
-    add_filter "/bin/"
-    add_filter "/db/"
-    add_filter "/spec/" # Ignore spec directory
+    skip "/bin/"
+    skip "/db/"
+    skip "/spec/" # Ignore spec directory
   end
   SimpleCov.command_name "rspec-#{ENV['TEST_ENV_NUMBER'] || 0}"
 end
