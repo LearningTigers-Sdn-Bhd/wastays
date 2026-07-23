@@ -9,6 +9,7 @@
 @import "./panel/radio.css";
 @import "./panel/switch.css";
 @import "./panel/input.css";
+@import "./panel/autocomplete.css";
 @import "./panel/text-area.css";
 @import "./panel/native-select.css";
 @import "./panel/select-menu.css";

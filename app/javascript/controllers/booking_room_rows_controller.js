@@ -46,7 +46,17 @@ export default class extends Controller {
   stayChanged() {
     this.updateNights()
     this.rowTargets.forEach((row) => {
-      if (this.readValue(this.roleEl(row, "room-type"))) this.loadRow(row)
+      if (!this.readValue(this.roleEl(row, "room-type"))) return
+
+      const rateEl = this.roleEl(row, "rate-plan")
+      const roomEl = this.roleEl(row, "room-number")
+      this.loadRow(row, {
+        rate_plan_id: this.readValue(rateEl) || row.dataset.pendingRatePlanId,
+        rate_plan_label: this.selectedLabel(rateEl) || row.dataset.pendingRatePlanLabel,
+        room_number: this.readValue(roomEl) || row.dataset.pendingRoomNumber,
+        room_label: this.selectedLabel(roomEl) || row.dataset.pendingRoomLabel,
+        notify_unavailable: true
+      })
     })
   }
 
@@ -69,6 +79,8 @@ export default class extends Controller {
   }
 
   async loadRow(row, preserved = {}) {
+    const requestId = String((Number(row.dataset.loadRequestId) || 0) + 1)
+    row.dataset.loadRequestId = requestId
     const roomTypeId = this.readValue(this.roleEl(row, "room-type"))
     const rateEl = this.roleEl(row, "rate-plan")
     const roomEl = this.roleEl(row, "room-number")
@@ -76,6 +88,7 @@ export default class extends Controller {
       this.resetRowTotals(row)
       return
     }
+    if (preserved.notify_unavailable) this.rememberPendingSelections(row, preserved)
     this.resetRowTotals(row)
     this.setChoices(rateEl, [{ label: "Loading rates…", value: "" }])
     this.setChoices(roomEl, [{ label: "Checking rooms…", value: "" }])
@@ -88,6 +101,8 @@ export default class extends Controller {
       if (!availabilityResponse.ok || !ratesResponse.ok) throw new Error("Room availability could not be loaded")
       const availability = await availabilityResponse.json()
       const rates = await ratesResponse.json()
+      if (row.dataset.loadRequestId !== requestId) return
+
       const selectedElsewhere = this.rowTargets
         .filter((candidate) => candidate !== row)
         .map((candidate) => this.readValue(this.roleEl(candidate, "room-number")))
@@ -102,7 +117,9 @@ export default class extends Controller {
           }
         })
       )
-      this.setChoices(roomEl, roomChoices, preserved.room_number || "")
+      const preservedRoomNumber = String(preserved.room_number || "")
+      const roomStillAvailable = roomChoices.some((choice) => choice.value === preservedRoomNumber && !choice.disabled)
+      this.setChoices(roomEl, roomChoices, roomStillAvailable ? preservedRoomNumber : "")
 
       const rateTotals = {}
       const rateChoices = [{ label: "Select rate", value: "" }].concat(
@@ -114,9 +131,23 @@ export default class extends Controller {
         })
       )
       row.dataset.rateTotals = JSON.stringify(rateTotals)
-      this.setChoices(rateEl, rateChoices, preserved.rate_plan_id || "")
+      const preservedRatePlanId = String(preserved.rate_plan_id || "")
+      const rateStillAvailable = rateChoices.some((choice) => choice.value === preservedRatePlanId)
+      this.setChoices(rateEl, rateChoices, rateStillAvailable ? preservedRatePlanId : "")
+
+      if (preserved.notify_unavailable) {
+        this.notifyUnavailableSelections({
+          roomUnavailable: Boolean(preservedRoomNumber) && !roomStillAvailable,
+          roomLabel: preserved.room_label || preservedRoomNumber,
+          rateUnavailable: Boolean(preservedRatePlanId) && !rateStillAvailable,
+          rateLabel: preserved.rate_plan_label || "Selected rate plan"
+        })
+        this.forgetPendingSelections(row)
+      }
       this.recalcRow(row)
     } catch (error) {
+      if (row.dataset.loadRequestId !== requestId) return
+      this.forgetPendingSelections(row)
       this.setChoices(rateEl, [{ label: "Rates unavailable", value: "" }])
       this.setChoices(roomEl, [{ label: error.message, value: "" }])
     }
@@ -151,6 +182,7 @@ export default class extends Controller {
     row.dataset.grandTotal = "0.00"
     row.dataset.priceRequestKey = ""
     this.roleEl(row, "rate").textContent = "0.00"
+    this.resetPriceBreakdown(row)
     this.updateTotals()
   }
 
@@ -184,6 +216,36 @@ export default class extends Controller {
     if (!target) return ""
     const inner = target.querySelector?.("select, input, textarea")
     return inner ? inner.value : (target.value ?? "")
+  }
+
+  selectedLabel(target) {
+    const select = target?.querySelector?.("select")
+    return select?.selectedOptions?.[0]?.textContent?.trim() || ""
+  }
+
+  rememberPendingSelections(row, preserved) {
+    row.dataset.pendingRatePlanId = preserved.rate_plan_id || ""
+    row.dataset.pendingRatePlanLabel = preserved.rate_plan_label || ""
+    row.dataset.pendingRoomNumber = preserved.room_number || ""
+    row.dataset.pendingRoomLabel = preserved.room_label || ""
+  }
+
+  forgetPendingSelections(row) {
+    delete row.dataset.pendingRatePlanId
+    delete row.dataset.pendingRatePlanLabel
+    delete row.dataset.pendingRoomNumber
+    delete row.dataset.pendingRoomLabel
+  }
+
+  notifyUnavailableSelections({ roomUnavailable, roomLabel, rateUnavailable, rateLabel }) {
+    if (!roomUnavailable && !rateUnavailable) return
+
+    const selections = []
+    if (roomUnavailable) selections.push(`Room ${roomLabel}`)
+    if (rateUnavailable) selections.push(rateLabel)
+    const subject = selections.length === 2 ? selections.join(" and ") : selections[0]
+    const verb = selections.length === 2 ? "are" : "is"
+    window.toast?.(`${subject} ${verb} no longer available for the selected dates. Please choose again.`, { type: "error" })
   }
 
   // Replace a SelectMenu's option set at runtime. Prefers the controller's public
@@ -272,6 +334,7 @@ export default class extends Controller {
 
     const requestKey = params.toString()
     row.dataset.priceRequestKey = requestKey
+    this.setPriceBreakdownStatus(row, "Calculating…")
 
     try {
       const response = await fetch(`${this.priceUrlValue}?${params}`)
@@ -290,10 +353,123 @@ export default class extends Controller {
       row.dataset.tourismTaxTotal = tourismTaxTotal.toFixed(2)
       row.dataset.grandTotal = grandTotal.toFixed(2)
       this.roleEl(row, "rate").textContent = grandTotal.toFixed(2)
+      this.populatePriceBreakdown(row, data)
       this.updateTotals()
     } catch (error) {
+      if (row.dataset.priceRequestKey !== requestKey) return
       console.error("Row price calculation failed:", error)
+      this.setPriceBreakdownStatus(row, "Rate breakdown unavailable.")
     }
+  }
+
+  resetPriceBreakdown(row) {
+    const status = this.breakdownEl(row, "breakdown-status")
+    const details = this.breakdownEl(row, "breakdown-details")
+    if (status) {
+      status.textContent = "Select a room type, dates, and rate plan."
+      status.classList.remove("hidden")
+    }
+    details?.classList.add("hidden")
+  }
+
+  setPriceBreakdownStatus(row, message) {
+    const status = this.breakdownEl(row, "breakdown-status")
+    const details = this.breakdownEl(row, "breakdown-details")
+    if (status) {
+      status.textContent = message
+      status.classList.remove("hidden")
+    }
+    details?.classList.add("hidden")
+  }
+
+  populatePriceBreakdown(row, data) {
+    const status = this.breakdownEl(row, "breakdown-status")
+    const details = this.breakdownEl(row, "breakdown-details")
+    const nightly = this.breakdownEl(row, "nightly-breakdown")
+    const taxes = this.breakdownEl(row, "tax-breakdown")
+    if (!details || !nightly || !taxes) return
+
+    const snapshot = data.nightly_rate_snapshot || {}
+    const taxLines = data.tax_lines || []
+    const firstNight = Object.values(snapshot)[0] || {}
+    const currency = firstNight.currency || taxLines[0]?.currency || "MYR"
+
+    nightly.replaceChildren(this.buildBreakdownHeading("Nightly rates"))
+    Object.entries(snapshot)
+      .sort(([firstDate], [secondDate]) => firstDate.localeCompare(secondDate))
+      .forEach(([date, rate]) => {
+        nightly.appendChild(this.buildBreakdownRow(this.formatBreakdownDate(date), rate.price, currency))
+      })
+    nightly.appendChild(this.buildBreakdownRow("Room subtotal", data.room_total, currency, true))
+
+    taxes.replaceChildren(this.buildBreakdownHeading("Taxes"))
+    const payableTaxes = taxLines.filter((tax) => !this.isTourismTax(tax))
+    if (payableTaxes.length === 0) {
+      taxes.appendChild(this.buildBreakdownRow("Taxes", 0, currency))
+    } else {
+      payableTaxes.forEach((tax) => {
+        taxes.appendChild(this.buildBreakdownRow(tax.name || "Tax", tax.amount, tax.currency || currency))
+      })
+    }
+
+    const total = this.breakdownEl(row, "breakdown-total")
+    if (total) total.textContent = this.formatBreakdownMoney(currency, data.total_amount)
+
+    const tourismTax = Number(data.tourism_tax_total || 0)
+    const tourismRow = this.breakdownEl(row, "tourism-tax-breakdown")
+    const tourismAmount = this.breakdownEl(row, "tourism-tax-amount")
+    if (tourismRow) {
+      tourismRow.classList.toggle("hidden", tourismTax <= 0)
+      tourismRow.classList.toggle("flex", tourismTax > 0)
+    }
+    if (tourismAmount) tourismAmount.textContent = this.formatBreakdownMoney(currency, tourismTax)
+
+    status?.classList.add("hidden")
+    details.classList.remove("hidden")
+  }
+
+  breakdownEl(row, role) {
+    return row.querySelector(`[data-role='price-breakdown'] [data-role='${role}']`)
+  }
+
+  buildBreakdownHeading(text) {
+    const heading = document.createElement("p")
+    heading.className = "pb-0.5 text-xs font-semibold text-foreground"
+    heading.textContent = text
+    return heading
+  }
+
+  buildBreakdownRow(labelText, amount, currency, strong = false) {
+    const item = document.createElement("div")
+    item.className = `flex items-center justify-between gap-3 ${strong ? "font-medium text-foreground" : "text-muted-foreground"}`
+
+    const label = document.createElement("span")
+    label.className = "min-w-0 truncate"
+    label.textContent = labelText
+
+    const value = document.createElement("span")
+    value.className = `shrink-0 whitespace-nowrap ${strong ? "font-semibold" : "font-medium text-foreground"}`
+    value.textContent = this.formatBreakdownMoney(currency, amount)
+
+    item.append(label, value)
+    return item
+  }
+
+  formatBreakdownDate(date) {
+    return new Intl.DateTimeFormat(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC"
+    }).format(new Date(`${date}T00:00:00Z`))
+  }
+
+  formatBreakdownMoney(currency, amount) {
+    return `${currency} ${Number(amount || 0).toFixed(2)}`
+  }
+
+  isTourismTax(tax) {
+    return [tax.type, tax.primary_tax_key].some((value) => ["tourism_tax", "ttx"].includes(String(value || "")))
   }
 
   updateRemoveButtons() {

@@ -25,9 +25,18 @@ module HotelPortal
             adults: 2, source: source
           )
           @booking.assign_attributes(model_booking_params.compact_blank) if params[:booking].present?
-          @initial_room_rows = params[:booking].present? ? staff_room_rows.map(&:to_h) : [ {} ]
           @room_type_id = params[:room_type_id]
           @room_number = params[:room_number]
+          @initial_room_rows =
+            if params[:booking].present?
+              staff_room_rows.map(&:to_h)
+            elsif @room_type_id.present? || @room_number.present?
+              # Timeline cells / room cards pass the room as top-level params, not
+              # under booking[...]; seed the first row so the room preselects.
+              [ { room_type_id: @room_type_id, room_number: @room_number }.compact_blank ]
+            else
+              [ {} ]
+            end
           @room_types = current_hotel.room_types.order(:name)
         end
 

@@ -32,12 +32,24 @@ module HotelPortal
 
     def search
       @guests = Guests::GuestQuery.new(hotel: current_hotel, params: { query: params[:q] }).call.limit(10)
-      guests_json = @guests.map do |guest|
-        guest.as_json(only: [ :id, :name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth ]).merge(
-          blacklisted: guest.blacklisted_at?(current_hotel)
-        )
+      results = @guests.map do |guest|
+        contact = [ guest.email, guest.phone ].compact_blank.join(" · ")
+        {
+          value: guest.id,
+          label: guest.name,
+          description: contact,
+          data: {
+            name: guest.name,
+            email: guest.email,
+            phone: guest.phone,
+            country: guest.country,
+            gender: guest.gender,
+            date_of_birth: guest.date_of_birth&.iso8601,
+            blacklisted: guest.blacklisted_at?(current_hotel)
+          }
+        }
       end
-      render json: guests_json
+      render json: { results: results }
     end
 
     def check_banned

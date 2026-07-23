@@ -30,7 +30,47 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
 
       expect(response).to have_http_status(:success)
       json = JSON.parse(response.body)
-      expect(json.first["name"]).to eq("Existing Guest")
+      result = json.fetch("results").first
+      expect(result).to include(
+        "value" => existing_guest.id,
+        "label" => "Existing Guest"
+      )
+      expect(result.fetch("data")).to include(
+        "name" => "Existing Guest",
+        "email" => "existing@example.com"
+      )
+    end
+
+    it "searches exact encrypted email and phone values" do
+      existing_guest.update!(phone: "+60112223333")
+
+      get search_hotel_guests_path(hotel, q: "existing@example.com")
+      expect(JSON.parse(response.body).fetch("results").pluck("value")).to include(existing_guest.id)
+
+      get search_hotel_guests_path(hotel, q: "+60112223333")
+      expect(JSON.parse(response.body).fetch("results").pluck("value")).to include(existing_guest.id)
+    end
+
+    it "limits results to ten guests visible to the hotel and includes blacklist metadata" do
+      blacklisted_guest = create(
+        :guest,
+        created_by_hotel: hotel,
+        name: "Searchable Blacklisted",
+        metadata: { "blacklisted_hotel_ids" => [ hotel.id ] },
+        blacklisted: true
+      )
+      10.times { |index| create(:guest, created_by_hotel: hotel, name: "Searchable Guest #{index}") }
+      hidden_guest = create(:guest, created_by_hotel: create(:hotel), name: "Searchable Hidden")
+
+      get search_hotel_guests_path(hotel, q: "Searchable")
+
+      results = JSON.parse(response.body).fetch("results")
+      expect(results.size).to eq(10)
+      expect(results.pluck("value")).not_to include(hidden_guest.id)
+
+      get search_hotel_guests_path(hotel, q: "Searchable Blacklisted")
+      result = JSON.parse(response.body).fetch("results").find { |item| item["value"] == blacklisted_guest.id }
+      expect(result.dig("data", "blacklisted")).to be(true)
     end
   end
 

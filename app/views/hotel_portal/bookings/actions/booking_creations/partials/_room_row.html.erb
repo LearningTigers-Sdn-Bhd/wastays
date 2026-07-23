@@ -4,7 +4,8 @@
     resolves — no native <select>, no <template> cloning. %>
 <% values = local_assigns.fetch(:values, {}).symbolize_keys %>
 <% room_type_choices = @room_types.map { |room_type| [ room_type.name, room_type.id ] }.presence || [ [ "No room types available", "" ] ] %>
-<div class="grid grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_1fr_36px] items-center gap-3 border-b border-border px-3 py-3 last:border-b-0"
+<% popover_index = index.to_s.parameterize(separator: "-").presence || "0" %>
+<div class="grid grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_1fr_36px] items-center gap-1.5 border-b border-border px-3 py-3 last:border-b-0"
      data-booking-room-rows-target="row"
      data-preserved-room-type="<%= values[:room_type_id] %>"
      data-preserved-rate-plan="<%= values[:rate_plan_id] %>"
@@ -41,6 +42,40 @@
       <% field.with_input(type: :number, value: values[:children] || 0, min: 0) %>
     <% end %>
   <% end %>
-  <div class="justify-end text-right text-sm font-semibold tabular-nums text-foreground" data-role="rate">0.00</div>
+  <div class="flex items-center justify-end gap-1 text-right text-sm font-semibold tabular-nums text-foreground">
+    <span data-role="rate">0.00</span>
+    <%= render PanelsUI::Popover.new(
+          id: "booking-room-rate-breakdown-#{popover_index}",
+          placement: :left,
+          trigger_on: :hover,
+          delay: 100,
+          close_delay: 150,
+          class: "w-72 p-0") do |popover| %>
+      <% popover.with_trigger(
+           unstyled: true,
+           aria_label: "Show rate breakdown",
+           class: "inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring") do %>
+        <%= cached_icon("info", class: "size-3.5") %>
+      <% end %>
+      <div class="w-72 text-left font-normal tabular-nums" data-role="price-breakdown">
+        <div class="border-b border-border px-3 py-2.5">
+          <p class="text-sm font-semibold text-foreground">Rate breakdown</p>
+          <p class="mt-0.5 text-xs text-muted-foreground" data-role="breakdown-status">Select a room type, dates, and rate plan.</p>
+        </div>
+        <div class="hidden space-y-3 px-3 py-2.5 text-xs" data-role="breakdown-details">
+          <div class="space-y-1" data-role="nightly-breakdown"></div>
+          <div class="space-y-1 border-t border-border pt-2" data-role="tax-breakdown"></div>
+          <div class="flex items-center justify-between gap-3 border-t border-border pt-2 text-sm font-semibold text-foreground">
+            <span>Total</span>
+            <span class="whitespace-nowrap" data-role="breakdown-total">MYR 0.00</span>
+          </div>
+          <div class="hidden items-center justify-between gap-3 rounded-md bg-warning/10 px-2 py-1.5 text-warning-foreground" data-role="tourism-tax-breakdown">
+            <span>Tourism tax (collect at check-in)</span>
+            <span class="whitespace-nowrap font-medium" data-role="tourism-tax-amount">MYR 0.00</span>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
   <button type="button" class="rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:invisible" aria-label="Remove room" data-role="remove" data-action="booking-room-rows#remove"><%= cached_icon("x", class: "size-4 mx-auto") %></button>
 </div>

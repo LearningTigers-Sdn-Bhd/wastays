@@ -240,24 +240,17 @@ module Bookings
     end
 
     def sync_guest(booking, guest = nil)
+      explicitly_selected = guest.present?
+
       if create_new_guest_intent?
         guest = create_new_guest!(booking)
       elsif !guest
-        guest_result = GuestArrival::CreateOrMatchGuest.new(
-          name: booking.guest_name,
-          email: booking.guest_email,
-          phone: booking.guest_phone,
-          country: booking.guest_country.presence || @hotel.country,
-          gender: booking.guest_gender,
-          document_type: booking.guest_document_type,
-          government_id: booking.guest_government_id,
-          date_of_birth: booking.guest_date_of_birth,
-          created_by_hotel_id: @hotel.id
-        ).call
-        guest = guest_result.guest if guest_result.success?
+        guest = automatically_matched_guest(booking) || create_new_guest!(booking)
       end
 
-      update_guest_from_booking!(guest, booking) if guest && update_existing_guest_intent?
+      if guest && explicitly_selected && update_existing_guest_intent?
+        update_guest_from_booking!(guest, booking)
+      end
 
       if guest && !booking.booking_guests.exists?(guest: guest)
         booking.booking_guests.create!(guest: guest, is_primary: true)
@@ -266,6 +259,15 @@ module Bookings
 
     def create_new_guest_intent?
       @guest_update_intent == "create_new"
+    end
+
+    def automatically_matched_guest(booking)
+      email = normalized_email(booking.guest_email)
+      guest = Guest.find_by(email: email) if email.present?
+      return guest if guest
+
+      phone = normalized_phone(booking.guest_phone)
+      Guest.find_by(phone: phone) if phone.present?
     end
 
     def update_existing_guest_intent?
@@ -321,12 +323,6 @@ module Bookings
       updates[:phone] = booking.guest_phone if booking.guest_phone.present? && guest.phone != booking.guest_phone
       updates[:country] = booking.guest_country if booking.guest_country.present? && guest.country != booking.guest_country
       updates[:gender] = booking.guest_gender if booking.guest_gender.present? && guest.gender != booking.guest_gender
-      if booking.guest_document_type.present? && guest.document_type != booking.guest_document_type
-        updates[:document_type] = booking.guest_document_type
-      end
-      if booking.guest_government_id.present? && guest.government_id != booking.guest_government_id
-        updates[:government_id] = booking.guest_government_id
-      end
       if booking.guest_date_of_birth.present? && guest.date_of_birth != booking.guest_date_of_birth
         updates[:date_of_birth] = booking.guest_date_of_birth
       end

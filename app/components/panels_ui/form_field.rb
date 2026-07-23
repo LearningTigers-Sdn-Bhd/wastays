@@ -46,6 +46,7 @@ module PanelsUI
       native_select: ->(choices = nil, **attributes) { build_native_select(choices, **attributes) },
       select_menu: ->(choices = nil, **attributes) { build_select_menu(choices, **attributes) },
       combobox: ->(choices = nil, **attributes) { build_combobox(choices, **attributes) },
+      autocomplete: ->(**attributes) { build_autocomplete(**attributes) },
       multi_select: ->(choices = nil, **attributes) { build_multi_select(choices, **attributes) }
     }
     renders_many :addons, ->(align:, variant: :bordered, **attributes) {
@@ -78,6 +79,7 @@ module PanelsUI
     def with_native_select(...) = with_control_native_select(...)
     def with_select_menu(...) = with_control_select_menu(...)
     def with_combobox(...) = with_control_combobox(...)
+    def with_autocomplete(...) = with_control_autocomplete(...)
     def with_multi_select(...) = with_control_multi_select(...)
 
     def control_id
@@ -196,6 +198,11 @@ module PanelsUI
     def build_combobox(choices, **attributes)
       @control_kind = :combobox
       Combobox.new(choices: choices, **attributes, **control_options.except(:readonly))
+    end
+
+    def build_autocomplete(**attributes)
+      @control_kind = :autocomplete
+      Autocomplete.new(**attributes, **control_options)
     end
 
     def build_multi_select(choices, **attributes)

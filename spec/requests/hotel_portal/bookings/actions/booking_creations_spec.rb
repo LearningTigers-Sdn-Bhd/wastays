@@ -33,6 +33,33 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
       expect(dialog["data-panels-ui-sheet-side"]).to eq("bottom")
       expect(dialog.text).to include("New Booking", "Stay details", "Guest information")
       expect(dialog.at_css('[data-action="click->offcanvas#close"]')).to be_nil
+
+      stay_window = dialog.at_css('[data-role="stay-window-fields"]')
+      classification = dialog.at_css('[data-role="booking-classification-fields"]')
+      expect(stay_window.parent["class"]).to include("md:grid-cols-2")
+      expect(stay_window["class"]).to include("grid-cols-3")
+      expect(stay_window.element_children.first["class"]).to include("col-span-2")
+      expect(classification["class"]).to include("grid-cols-2")
+      nights = stay_window.at_css('output[data-booking-room-rows-target="nights"]')
+      expect(nights["class"]).to include("panel-input")
+      expect(nights["aria-labelledby"]).to eq("booking_nights_label")
+
+      guest_primary = dialog.at_css('[data-role="guest-primary-fields"]')
+      guest_contacts = dialog.at_css('[data-role="guest-contact-fields"]')
+      guest_demographics = dialog.at_css('[data-role="guest-demographic-fields"]')
+      expect(guest_primary["class"]).to include("md:grid-cols-2")
+      expect(guest_contacts["class"]).to include("md:grid-cols-2")
+      expect(guest_demographics["class"]).to include("md:grid-cols-3")
+      expect(guest_demographics.at_css('select[name="booking[guest_gender]"] option[value="female"]')).to be_present
+
+      guest_autocompletes = dialog.css(".panel-autocomplete")
+      expect(guest_autocompletes.size).to eq(3)
+      expect(guest_autocompletes.map { |node| node.at_css("input")["name"] }).to contain_exactly(
+        "booking[guest_name]", "booking[guest_email]", "booking[guest_phone]"
+      )
+      expect(dialog.at_css('input[name="booking[existing_guest_id]"]')).to be_present
+      expect(dialog.at_css('input[name="booking[guest_update_intent]"][value="update_existing"]')).to be_present
+      expect(dialog.at_css('[data-booking-guest-autofill-target="profileRow"]')["hidden"]).not_to be_nil
     end
 
     it "renders the Quick Booking sheet on the right" do
@@ -42,6 +69,8 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
       dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet")
       expect(dialog["data-panels-ui-sheet-side"]).to eq("right")
       expect(dialog.text).to include("Quick Booking")
+      expect(dialog.css(".panel-autocomplete")).to be_empty
+      expect(dialog.at_css('input[name="booking[existing_guest_id]"]')).to be_nil
     end
 
     it "renders a single server-rendered room row on demand" do
@@ -54,6 +83,24 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
       expect(row).to be_present
       expect(row.at_css("[data-role='room-type'] select[name='booking[rooms][3][room_type_id]']")).to be_present
       expect(row.at_css("[data-role='rate-plan'] select")).to be_present
+      popover = row.at_css("#booking-room-rate-breakdown-3")
+      expect(popover["data-panels-ui--popover-trigger-on-value"]).to eq("hover")
+      expect(popover.at_css("button[aria-label='Show rate breakdown'] svg")).to be_present
+      expect(popover.at_css("[data-role='nightly-breakdown']")).to be_present
+      expect(popover.at_css("[data-role='tax-breakdown']")).to be_present
+      expect(popover.at_css("[data-role='breakdown-total']").text).to eq("MYR 0.00")
+    end
+
+    it "preselects the clicked room when opened from a stay-view cell or room card" do
+      get hotel_booking_action_walk_in_check_in_path(hotel),
+          params: { room_type_id: room_type.id, room_number: "101", source: "stay_view" },
+          headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response).to have_http_status(:success)
+      row = Nokogiri::HTML(response.body).at_css("[data-booking-room-rows-target='row']")
+      expect(row).to be_present
+      expect(row["data-preserved-room-number"]).to eq("101")
+      expect(row.at_css("[data-role='room-type'] select option[selected]")["value"]).to eq(room_type.id.to_s)
     end
 
     it "renders the Backdated Check-in sheet with the backdate fields" do
@@ -83,6 +130,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
         check_in: Date.current,
         check_out: Date.current + 1.day,
         adults: 1,
+        guest_gender: "female",
         room_type_id: room_type.id,
         room_number: "101"
       }
@@ -95,6 +143,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
 
       expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last))
       expect(flash[:notice]).to eq("Booking created successfully.")
+      expect(Booking.last.guest_gender).to eq("female")
     end
 
     it "creates and immediately checks in a walk-in booking" do
