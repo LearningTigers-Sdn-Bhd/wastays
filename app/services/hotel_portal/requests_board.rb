@@ -52,7 +52,7 @@ module HotelPortal
                  requested_at: req.requested_at,
                  status: req.metadata&.dig("workflow_status").presence || HousekeepingTasks.checkout_workflow_status_for(req.status),
                  complete_url: hotel_complete_checkout_request_path(hotel, req.id),
-                 booking_url: hotel_booking_control_panel_path(hotel, booking, tab: "housekeeping_requests")
+                 booking_url: hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests")
                }
              end
            end
@@ -146,7 +146,7 @@ module HotelPortal
         internal_notes: request.respond_to?(:internal_notes_list) ? request.internal_notes_list : [],
         archive_url: hotel_archive_request_path(hotel, kind: kind, request_id: request.id),
         update_url: hotel_request_status_path(hotel, kind: kind, request_id: request.id),
-        booking_url: hotel_booking_control_panel_path(hotel, booking, tab: "housekeeping_requests")
+        booking_url: hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests")
       }
     end
 

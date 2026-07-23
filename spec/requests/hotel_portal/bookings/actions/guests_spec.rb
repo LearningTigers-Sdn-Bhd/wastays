@@ -54,7 +54,7 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
   it "updates an inline guest snapshot and redirects to the selected workspace" do
     booking_guest = create(:booking_guest, booking:, is_primary: false)
     original_name = booking_guest.guest.name
-    return_to = hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
+    return_to = hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
 
     patch hotel_booking_action_manage_guest_path(hotel, booking, mode: "edit_additional", booking_guest_id: booking_guest.id), params: {
       return_to:,
@@ -96,7 +96,7 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
 
     patch hotel_booking_action_set_primary_guest_path(hotel, booking, replacement)
 
-    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", booking_guest_id: replacement.id))
+    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: replacement.id))
     expect(replacement.reload).to be_primary
     expect(original.reload).not_to be_primary
   end

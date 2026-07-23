@@ -196,7 +196,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
         post hotel_booking_action_new_booking_path(hotel), params: { booking: booking_params }
       }.to change(Booking, :count).by(1)
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, Booking.last))
       expect(flash[:notice]).to eq("Booking created successfully.")
       expect(Booking.last.guest_gender).to eq("female")
     end
@@ -207,7 +207,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
       }.to change(Booking, :count).by(1)
 
       expect(Booking.last).to be_checked_in
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, Booking.last))
       expect(flash[:notice]).to eq("Walk-in guest checked in successfully.")
     end
 
@@ -219,7 +219,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="complete_sheet"')
       expect(response.body).to include('target="booking_action_sheet"')
-      expect(response.body).to include(CGI.escapeHTML(hotel_booking_control_panel_path(hotel, Booking.last)))
+      expect(response.body).to include(CGI.escapeHTML(hotel_booking_workspace_path(hotel, Booking.last)))
     end
 
     it "re-renders the sheet form with errors when creation fails" do
@@ -279,7 +279,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
 
       booking = Booking.last
       expect(booking).to be_checked_in
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking))
       expect(booking.payment_transactions.last.captured_at.to_date).to eq(past_date)
       expect(booking.booking_folio.folio_transactions.charge).to all(have_attributes(posting_date: past_date))
       expect(BookingAuditLog.where(auditable: booking, action_type: "check_in").last.metadata).to include(

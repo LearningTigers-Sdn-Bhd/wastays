@@ -14,7 +14,7 @@
     </div>
 
     <% if folio_show.can_manage_billing_instructions? %>
-      <%= link_to billing_routes_hotel_booking_control_panel_path(hotel, booking),
+      <%= link_to billing_routes_hotel_booking_workspace_path(hotel, booking),
           class: "inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary-hover",
           data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %>
         <%= cached_icon "plus", class: "size-3" %>

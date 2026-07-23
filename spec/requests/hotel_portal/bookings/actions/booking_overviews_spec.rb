@@ -43,7 +43,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       expect(dialog["data-panels-ui-sheet-side"]).to eq("right")
       expect(dialog["class"]).to include("w-[36rem]")
       expect(dialog.text).to include("Ada Lovelace", "Booking No.", "Stay summary", booking.formatted_reservation_number, "Garden Suite", "MYR 480.00")
-      expect(dialog.text).to include("Actions", "Booking Control Panel", "Receipt", "Resend Confirmation")
+      expect(dialog.text).to include("Actions", "Booking Workspace", "Receipt", "Resend Confirmation")
       expect(dialog.text).not_to include("Guest Registration Card")
       control_labels = dialog.css("a, button").map { |control| control.text.squish }
       expect(control_labels).to include("Actions")

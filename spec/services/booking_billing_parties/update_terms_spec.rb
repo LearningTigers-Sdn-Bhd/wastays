@@ -33,7 +33,7 @@ RSpec.describe BookingBillingParties::UpdateTerms do
       created_by: actor,
       updated_by: actor
     )
-    expect(audit_log).to have_attributes(hotel: party.hotel, user: actor, category: "financial", source: "booking_control_panel")
+    expect(audit_log).to have_attributes(hotel: party.hotel, user: actor, category: "financial", source: "booking_workspace")
     expect(audit_log.new_value).to include(
       "settlement_type" => "cash_bank",
       "purchase_order_reference" => "PO-123",

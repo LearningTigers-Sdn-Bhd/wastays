@@ -62,8 +62,8 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       expect(response.body).not_to include("View Invoice")
       expect(response.body).to include("View Booking")
       expect(response.body).to include("View Folio")
-      expect(response.body).to include(hotel_booking_control_panel_path(hotel, invoice.booking, tab: "booking_details"))
-      expect(response.body).to include(CGI.escapeHTML(hotel_booking_control_panel_path(hotel, invoice.booking, tab: "folio_operations", folio_id: invoice.booking_folio_id)))
+      expect(response.body).to include(hotel_booking_workspace_path(hotel, invoice.booking, tab: "booking_details"))
+      expect(response.body).to include(CGI.escapeHTML(hotel_booking_workspace_path(hotel, invoice.booking, tab: "folio_operations", folio_id: invoice.booking_folio_id)))
       payment_link = document.css("a").find { |link| link.text.squish == "Record Received Payment" && link["href"].include?("ar_invoice_id=#{invoice.id}") }
       expect(payment_link["href"]).to eq(new_hotel_ar_payment_path(hotel, ar_invoice_id: invoice.id, hotel_corporate_account_id: invoice.hotel_corporate_account_id))
       expect(document.at_css("table")["class"]).to include("min-w-[1400px]")
@@ -338,8 +338,8 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       expect(response.body).to include("MYR 450.00")
       expect(response.body).not_to include("<pre")
       expect(document.at_css("a[href='#{hotel_corporate_accounts_path(hotel)}']")).to be_present
-      expect(document.at_css("a[href='#{hotel_booking_control_panel_path(hotel, invoice.booking, tab: "booking_details")}']")).to be_present
-      expect(document.at_css("a[href='#{hotel_booking_control_panel_path(hotel, invoice.booking, tab: "folio_operations", folio_id: invoice.booking_folio_id)}']")).to be_present
+      expect(document.at_css("a[href='#{hotel_booking_workspace_path(hotel, invoice.booking, tab: "booking_details")}']")).to be_present
+      expect(document.at_css("a[href='#{hotel_booking_workspace_path(hotel, invoice.booking, tab: "folio_operations", folio_id: invoice.booking_folio_id)}']")).to be_present
       expect(payment_link["href"]).to eq(new_hotel_ar_payment_path(hotel, ar_invoice_id: invoice.id, hotel_corporate_account_id: invoice.hotel_corporate_account_id))
       expect(allocation_row_header.text.squish).to eq("BANK-SHOW-1")
     end

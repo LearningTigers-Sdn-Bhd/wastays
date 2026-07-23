@@ -22,13 +22,13 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
   end
 
   def booking_details_path(**params)
-    hotel_booking_control_panel_path(hotel, booking, { tab: "booking_details" }.merge(params))
+    hotel_booking_workspace_path(hotel, booking, { tab: "booking_details" }.merge(params))
   end
 
   def folio_operations_path(folio_id = nil, **params)
     query = { tab: "folio_operations" }.merge(params)
     query[:folio_id] = folio_id if folio_id.present?
-    hotel_booking_control_panel_path(hotel, booking, query)
+    hotel_booking_workspace_path(hotel, booking, query)
   end
 
   def post_transaction(params)
@@ -256,7 +256,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       expect(response.media_type).to eq("text/vnd.turbo-stream.html")
       expect(response.body).to include(%(action="complete_offcanvas"))
       expect(response.body).to include(%(target="offcanvas_drawer"))
-      expect(response.body).to include(hotel_booking_control_panel_path(hotel, booking))
+      expect(response.body).to include(hotel_booking_workspace_path(hotel, booking))
       expect(response.body).to include("folio_id=#{folio.id}")
       expect(response.body).to include("tab=folio_operations")
     end

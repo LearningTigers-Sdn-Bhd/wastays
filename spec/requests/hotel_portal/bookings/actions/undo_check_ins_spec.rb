@@ -74,7 +74,7 @@ RSpec.describe "HotelPortal::Bookings::Actions undo check-ins", :business_day, t
       post hotel_booking_action_undo_check_in_path(hotel, booking),
         params: { retroactive_reason: "Checked in by mistake" }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(flash[:notice]).to eq("Check-in undone successfully.")
       expect(booking.reload.status).to eq("confirmed")
     end

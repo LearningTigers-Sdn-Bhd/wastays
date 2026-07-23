@@ -349,34 +349,33 @@ Rails.application.routes.draw do
       resource :tourism_tax_voucher, only: [ :show ], module: :bookings do
         post :issue
       end
-    end
-    resources :booking_control_panels, only: :show, param: :booking_id, path: "booking-control-panels" do
-      member do
+
+      resource :workspace, only: :show, module: :bookings do
         get :audit_trail
-        patch :update_room_rate, controller: :booking_control_panel_actions
-        get :new_folio_window, controller: :booking_control_panel_actions
-        post :create_folio_window, controller: :booking_control_panel_actions
-        get "folio_windows/:folio_id/edit", action: :edit_folio_window, controller: :booking_control_panel_actions, as: :edit_folio_window
-        patch "folio_windows/:folio_id", action: :update_folio_window, controller: :booking_control_panel_actions, as: :update_folio_window
-        post "folio_windows/:folio_id/close", action: :close_folio_window, controller: :booking_control_panel_actions, as: :close_folio_window
-        post "folio_windows/:folio_id/reopen", action: :reopen_folio_window, controller: :booking_control_panel_actions, as: :reopen_folio_window
-        post :add_billing_party, controller: :booking_control_panel_actions
-        patch :update_billing_terms, controller: :booking_control_panel_actions
-        patch :archive_billing_party, controller: :booking_control_panel_actions
-        post :apply_routing, controller: :booking_control_panel_actions
-        get :billing_routes, controller: :booking_control_panel_actions
-        post :preview_billing_routes, controller: :booking_control_panel_actions
-        post :apply_billing_routes, controller: :booking_control_panel_actions
-        get :group_billing_routes, controller: :booking_control_panel_actions
-        post :preview_group_billing_routes, controller: :booking_control_panel_actions
-        post :apply_group_billing_routes, controller: :booking_control_panel_actions
-        post :allocate_deposit, controller: :booking_control_panel_actions
-        post :refund_deposit, controller: :booking_control_panel_actions
-        post :reverse_deposit_allocation, controller: :booking_control_panel_actions
-        post :collect_security_deposit, controller: :booking_control_panel_actions
-        post :release_security_deposits, controller: :booking_control_panel_actions
-        post :complete_housekeeping_request, controller: :booking_control_panel_actions
-        post :resolve_complaint_request, controller: :booking_control_panel_actions
+        patch :update_room_rate, controller: :workspace_actions
+        get :new_folio_window, controller: :workspace_actions
+        post :create_folio_window, controller: :workspace_actions
+        get "folio_windows/:folio_id/edit", action: :edit_folio_window, controller: :workspace_actions, as: :edit_folio_window
+        patch "folio_windows/:folio_id", action: :update_folio_window, controller: :workspace_actions, as: :update_folio_window
+        post "folio_windows/:folio_id/close", action: :close_folio_window, controller: :workspace_actions, as: :close_folio_window
+        post "folio_windows/:folio_id/reopen", action: :reopen_folio_window, controller: :workspace_actions, as: :reopen_folio_window
+        post :add_billing_party, controller: :workspace_actions
+        patch :update_billing_terms, controller: :workspace_actions
+        patch :archive_billing_party, controller: :workspace_actions
+        post :apply_routing, controller: :workspace_actions
+        get :billing_routes, controller: :workspace_actions
+        post :preview_billing_routes, controller: :workspace_actions
+        post :apply_billing_routes, controller: :workspace_actions
+        get :group_billing_routes, controller: :workspace_actions
+        post :preview_group_billing_routes, controller: :workspace_actions
+        post :apply_group_billing_routes, controller: :workspace_actions
+        post :allocate_deposit, controller: :workspace_actions
+        post :refund_deposit, controller: :workspace_actions
+        post :reverse_deposit_allocation, controller: :workspace_actions
+        post :collect_security_deposit, controller: :workspace_actions
+        post :release_security_deposits, controller: :workspace_actions
+        post :complete_housekeeping_request, controller: :workspace_actions
+        post :resolve_complaint_request, controller: :workspace_actions
       end
     end
     scope "booking-actions", as: :booking_action, module: "bookings/actions" do

@@ -27,11 +27,11 @@ RSpec.describe BookingGuest, type: :model do
     expect(booking_guest.reload.email_snapshot).to eq("private@example.test")
   end
 
-  it "keeps malformed encrypted-looking snapshots out of control-panel display" do
+  it "keeps malformed encrypted-looking snapshots out of workspace display" do
     booking_guest = create(:booking_guest, email_snapshot: "safe@example.test")
     ActiveRecord::Base.connection.execute("UPDATE booking_guests SET email_snapshot = '{\"p\":malformed}' WHERE id = #{booking_guest.id}")
 
-    presenter = HotelPortal::BookingControlPanelPresenter.new(booking_guest.booking, params: { tab: "guest_details", booking_guest_id: booking_guest.id })
+    presenter = HotelPortal::Bookings::WorkspacePresenter.new(booking_guest.booking, params: { tab: "guest_details", booking_guest_id: booking_guest.id })
 
     expect(presenter.guest_display(booking_guest.reload)[:email]).to eq("—")
   end

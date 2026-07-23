@@ -1,7 +1,0 @@
-<%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "right", offcanvas_label: "Audit Trail" } do %>
-  <div class="flex h-full min-h-0 flex-col bg-card">
-    <div class="min-h-0 flex-1 overflow-y-auto pt-12">
-      <%= render "hotel_portal/booking_control_panels/audit_trails/panel", booking: @booking, presenter: @presenter, audit_logs: @audit_logs, audit_history: @audit_history, closeable: true %>
-    </div>
-  </div>
-<% end %>

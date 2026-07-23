@@ -95,7 +95,7 @@ module BookingBillingParties
 
     def record_audit!(party)
       BookingAuditLog.create!(hotel: @booking.hotel, auditable: @booking, user: @actor,
-        action_type: "billing_party_added", category: "financial", source: "booking_control_panel",
+        action_type: "billing_party_added", category: "financial", source: "booking_workspace",
         occurred_at: Time.current, new_value: { billing_party_id: party.id, party: party.display_name })
     end
 

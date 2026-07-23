@@ -1,0 +1,19 @@
+<div class="divide-y divide-border">
+  <% presenter.audit_tree_groups.each do |group| %>
+    <details open>
+      <summary class="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-foreground hover:bg-muted">
+        <span><%= group.label %></span>
+        <span class="text-[11px] font-semibold text-muted-foreground"><%= group.description %></span>
+      </summary>
+      <div class="space-y-1 px-3 pb-3">
+        <% group.rows.each do |row| %>
+          <% scope_params = row.kind == "audit" ? { audit_scope: row.id } : { audit_scope: row.kind, "#{row.kind}_id" => row.id } %>
+          <%= link_to hotel_booking_workspace_path(current_hotel, booking, { tab: presenter.active_tab }.merge(scope_params)), data: { turbo_frame: "booking_workspace", turbo_action: "advance" }, class: "block rounded-lg px-3 py-2 text-sm #{row.active ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"}" do %>
+            <span class="block font-bold"><%= row.label %></span>
+            <span class="block truncate text-xs opacity-75"><%= row.description %></span>
+          <% end %>
+        <% end %>
+      </div>
+    </details>
+  <% end %>
+</div>

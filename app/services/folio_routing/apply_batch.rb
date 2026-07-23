@@ -69,7 +69,7 @@ module FolioRouting
         raise ActiveRecord::Rollback if @error
 
         BookingAuditLog.create!(hotel: @booking.hotel, auditable: @booking, user: @actor,
-          action_type: "billing_routes_changed", category: "financial", source: "booking_control_panel",
+          action_type: "billing_routes_changed", category: "financial", source: "booking_workspace",
           occurred_at: Time.current, new_value: { routes: @routes, confirmation: @confirmation,
             forecast_confirmation: @forecast_confirmation, reason: @reason })
         batch.update!(completed_at: Time.current)

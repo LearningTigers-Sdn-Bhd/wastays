@@ -16,13 +16,13 @@ RSpec.describe "HotelPortal::Folios", type: :request do
   end
 
   def booking_details_path(booking, **params)
-    hotel_booking_control_panel_path(hotel, booking, { tab: "booking_details" }.merge(params))
+    hotel_booking_workspace_path(hotel, booking, { tab: "booking_details" }.merge(params))
   end
 
   def folio_operations_path(booking, folio_id: nil, **params)
     query = { tab: "folio_operations" }.merge(params)
     query[:folio_id] = folio_id if folio_id.present?
-    hotel_booking_control_panel_path(hotel, booking, query)
+    hotel_booking_workspace_path(hotel, booking, query)
   end
 
   describe "GET /hotel/:hotel_id/folios" do
@@ -48,8 +48,8 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include("sticky right-0")
       expect(response.body).to include("View Folio")
       expect(response.body).to include("View Booking")
-      expect(response.body).to include(CGI.escapeHTML(hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", folio_id: booking.booking_folio.id)))
-      expect(response.body).to include(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(response.body).to include(CGI.escapeHTML(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: booking.booking_folio.id)))
+      expect(response.body).to include(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(response.body).to include("MYR 120.00")
       expect(response.body).to include("Balance Due")
       expect(response.body).to include("data-controller=\"dropdown\"")
@@ -64,12 +64,12 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).not_to include("type=\"submit\" class=\"inline-flex items-center justify-center rounded-lg bg-primary")
     end
 
-    it "links View Folio directly to the control-panel folio context" do
+    it "links View Folio directly to the workspace folio context" do
       booking = create_booking_with_folio(guest_name: "Amir Hakim", confirmation_token: "BK-8891", folio_number: 232, charges: 120)
 
       get hotel_folios_path(hotel)
 
-      expect(response.body).to include(%(href="#{CGI.escapeHTML(hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", folio_id: booking.booking_folio.id))}"))
+      expect(response.body).to include(%(href="#{CGI.escapeHTML(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: booking.booking_folio.id))}"))
     end
 
     it "renders Needs Attention above the search toolbar" do
@@ -242,7 +242,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       get folio_operations_path(booking, origin: "folios")
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('data-testid="booking-control-panel"')
+      expect(response.body).to include('data-testid="booking-workspace"')
       expect(response.body).to include("Folio Operations")
       expect(response.body).to include(%(href="#{folio_operations_path(booking)}"))
       expect(response.body).to include('id="folio-operations-heading"')
@@ -267,7 +267,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(body).to include('id="folio-operations-heading"')
-      expect(body).to include('data-testid="booking-control-panel"')
+      expect(body).to include('data-testid="booking-workspace"')
       expect(body).to include("Guest Folio")
       expect(body).to include(%(href="#{booking_details_path(booking)}"))
       expect(body).not_to include("Go to Booking")
@@ -427,13 +427,13 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       get folio_operations_path(open_booking)
 
       open_html = Nokogiri::HTML(response.body)
-      expect(open_html.at_css('[data-testid="booking-control-panel"]')).to be_present
+      expect(open_html.at_css('[data-testid="booking-workspace"]')).to be_present
       expect(open_html.at_css(%(a[href="#{invoice_hotel_folio_path(hotel, open_booking, format: :pdf)}"]))).to be_nil
 
       get folio_operations_path(completed_booking)
 
       completed_html = Nokogiri::HTML(response.body)
-      expect(completed_html.at_css('[data-testid="booking-control-panel"]')).to be_present
+      expect(completed_html.at_css('[data-testid="booking-workspace"]')).to be_present
     end
 
     it "renders one horizontal ledger table with posted balance as a section summary only" do
@@ -472,7 +472,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('id="folio-operations-heading"')
-      expect(response.body).to include('data-testid="booking-control-panel"')
+      expect(response.body).to include('data-testid="booking-workspace"')
       expect(response.body).to include("Company Folio")
       expect(ledger).to include("Company Charge")
       expect(ledger).not_to include("Room Charge")
@@ -488,7 +488,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       breadcrumb_tab = html.at_css("[data-tabs-breadcrumb-label]")
 
       expect(response).to have_http_status(:success)
-      expect(html.at_css('[data-testid="booking-control-panel"]')).to be_present
+      expect(html.at_css('[data-testid="booking-workspace"]')).to be_present
       expect(response.body).to include("Folio Operations")
     end
 
@@ -502,7 +502,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       ledger_panel = html.at_css("[data-testid='folio-ledger-panel']")
       billing_panel = html.at_css("[data-testid='folio-billing-instructions-panel']")
 
-      expect(html.at_css('[data-testid="booking-control-panel"]')).to be_present
+      expect(html.at_css('[data-testid="booking-workspace"]')).to be_present
       expect(response.body).to include("Guest Folio")
     end
 
@@ -519,7 +519,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       body = response.body
 
       expect(response).to have_http_status(:success)
-      expect(body).to include('data-testid="booking-control-panel"')
+      expect(body).to include('data-testid="booking-workspace"')
       expect(body).to include("Folio Operations")
     end
 
@@ -534,7 +534,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       get folio_operations_path(booking)
 
       html = Nokogiri::HTML(response.body)
-      expect(html.at_css('[data-testid="booking-control-panel"]')).to be_present
+      expect(html.at_css('[data-testid="booking-workspace"]')).to be_present
       expect(response.body).to include("Folio Operations")
       expect(room_code.transaction_code_taxes).to exist
     end
@@ -559,7 +559,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       booking = create_booking_with_folio(guest_name: "Rule Manager", confirmation_token: "BK-RULE", folio_number: 635)
       code = create(:transaction_code, hotel: hotel, code: "ROOM-R", name: "Room Charge", category: "accommodation")
       rule = create(:folio_routing_rule, booking:, hotel:, transaction_code: code, target_folio: booking.booking_folio)
-      destination = billing_routes_hotel_booking_control_panel_path(hotel, booking)
+      destination = billing_routes_hotel_booking_workspace_path(hotel, booking)
 
       get new_routing_rule_hotel_folio_path(hotel, booking, origin: "folios")
       expect(response).to redirect_to(destination)
@@ -625,7 +625,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.media_type).to eq("text/vnd.turbo-stream.html")
       expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(hotel_booking_control_panel_path(hotel, booking))
+      expect(response.body).to include(hotel_booking_workspace_path(hotel, booking))
       expect(response.body).to include("tab=folio_operations")
     end
 
@@ -763,7 +763,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.media_type).to eq("text/vnd.turbo-stream.html")
       expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(hotel_booking_control_panel_path(hotel, booking))
+      expect(response.body).to include(hotel_booking_workspace_path(hotel, booking))
       expect(response.body).to include("tab=folio_operations")
       expect(folio.reload.name).to eq("Guest Main Turbo")
 

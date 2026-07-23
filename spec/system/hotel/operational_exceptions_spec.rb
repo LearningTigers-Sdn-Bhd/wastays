@@ -55,7 +55,7 @@ RSpec.describe "Operational Exceptions", type: :system do
       click_button "Process late checkout"
 
       expect(page).to have_current_path(
-        hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
+        hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
       )
       expect(booking.reload.status).to eq("checked_in")
       expect(folio.reload.outstanding_balance).to eq(174.99)

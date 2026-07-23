@@ -108,7 +108,7 @@ The 15 `reports/*` pages are collapsed — they are identical: header ✓, inlin
 | ar_statements/show | ✓ | ✓ partial | ✓ **T** |
 | arrivals/index | ✓ | ✓ inline | ✓ **T** |
 | audit_logs/index | ✓ | ✓ inline | ✓ **T** |
-| booking_control_panels/show | – | – | ✓ **W+R** (workspace) |
+| workspaces/show | – | – | ✓ **W+R** (workspace) |
 | bookings/board/index | ✓ | ✓ partial | ✓ **T** |
 | bookings/index/index | ✓ | ✓ inline | ✓ **T+X** (edge-bleed) |
 | checked_out_guests/index | ✓ | ✓ inline | ✓ **T** |
@@ -213,7 +213,7 @@ Corporate is the **most consistent** portal — AR pages already use extracted
    negative margins large enough to escape `panel-page`'s `p-4` returns
    nothing. No full-bleed override exists — nothing to normalize.
 4. **`W` workspace (`full_height_page` → `p-0`) — one page, now padded to match.**
-   Only `hotel_portal/booking_control_panels/show` opts in; its `work_area` is a
+   Only `hotel_portal/bookings/workspaces/show` opts in; its `work_area` is a
    genuine full-height flex-fill workspace (divided `grid min-h-0 flex-1`, internal
    `overflow-y-auto` panes, `h-dvh` drawer) that requires the `full_height_page`
    wiring — removing it would collapse the internal scroll regions. So the opt-in

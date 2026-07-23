@@ -125,7 +125,7 @@ module HotelPortal
               requires_input: INPUT_ACTIONS.include?(default_action),
               requires_payment: default_action == "pay_now",
               requires_reason: EXCEPTION_ACTIONS.include?(default_action),
-              ledger_path: hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", folio_id: folio.id)
+              ledger_path: hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id)
             )
           end
 

@@ -22,7 +22,7 @@ module HotelPortal
 
     def new
       @active_folio = sheet_folio
-      return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations"), alert: "Booking has no open folio." if @active_folio.blank?
+      return redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "folio_operations"), alert: "Booking has no open folio." if @active_folio.blank?
 
       @open_folios = @booking.booking_folios.open.order(is_primary: :desc, folio_sequence: :asc, folio_number: :asc, id: :asc).to_a
       @transaction_type = params[:transaction_type].to_s
@@ -31,7 +31,7 @@ module HotelPortal
       @redirect_to_folio = params[:redirect_to_folio] == "true"
       @folio_origin = params[:folio_origin].presence
       assign_sheet_config
-      return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations", folio_id: @active_folio.id), alert: "You do not have permission to post this folio transaction." unless allowed_to_view_posting_sheet?
+      return redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "folio_operations", folio_id: @active_folio.id), alert: "You do not have permission to post this folio transaction." unless allowed_to_view_posting_sheet?
 
       render "hotel_portal/folios/transactions/offcanvas"
     end
@@ -79,7 +79,7 @@ module HotelPortal
 
     def reverse
       unless @booking.booking_folio
-        return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations"), alert: "Booking has no folio."
+        return redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "folio_operations"), alert: "Booking has no folio."
       end
 
       transaction = booking_transaction_scope.find(params[:id])
@@ -148,12 +148,12 @@ module HotelPortal
 
     def redirect_after_post(options = {})
       active_folio_id = options.delete(:active_folio_id)
-      destination = if params[:folio_origin] == "booking_control_panel"
-        hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations", folio_id: active_folio_id)
+      destination = if params[:folio_origin] == "booking_workspace"
+        hotel_booking_workspace_path(current_hotel, @booking, tab: "folio_operations", folio_id: active_folio_id)
       elsif params[:redirect_to_folio] == "true"
-        hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations", folio_id: active_folio_id)
+        hotel_booking_workspace_path(current_hotel, @booking, tab: "folio_operations", folio_id: active_folio_id)
       else
-        hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details")
+        hotel_booking_workspace_path(current_hotel, @booking, tab: "booking_details")
       end
 
       respond_to do |format|

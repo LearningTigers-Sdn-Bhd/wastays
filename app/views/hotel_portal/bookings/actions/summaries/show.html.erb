@@ -52,7 +52,7 @@
         </div>
         <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div><dt class="text-xs text-muted-foreground">Group reservation number</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_booking_number %></dd></div>
-          <div><dt class="text-xs text-muted-foreground">Group status</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_status_counts.map { |status, count| "#{count} #{HotelPortal::BookingControlPanelPresenter::STATUS_LABELS.fetch(status, status.humanize)}" }.to_sentence %></dd></div>
+          <div><dt class="text-xs text-muted-foreground">Group status</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_status_counts.map { |status, count| "#{count} #{HotelPortal::Bookings::WorkspacePresenter::STATUS_LABELS.fetch(status, status.humanize)}" }.to_sentence %></dd></div>
           <div><dt class="text-xs text-muted-foreground">Arrival</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.summary_items.to_h["Arrival"] %></dd></div>
           <div><dt class="text-xs text-muted-foreground">Departure</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.summary_items.to_h["Departure"] %></dd></div>
           <div><dt class="text-xs text-muted-foreground">Rooms</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= pluralize(presenter.child_bookings.size, "room") %></dd></div>

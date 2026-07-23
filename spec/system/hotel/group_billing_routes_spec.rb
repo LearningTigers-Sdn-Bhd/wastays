@@ -31,7 +31,7 @@ RSpec.describe "Group billing routes", type: :system do
     create(:booking_folio, booking: sibling, hotel: hotel, is_primary: true)
     code = create(:transaction_code, hotel: hotel, kind: "charge", code: "GRPX", name: "Group charge")
 
-    visit hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences")
+    visit hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences")
     click_button "Change Billing Routes"
     click_link "Group Billing Routes"
 
@@ -52,7 +52,7 @@ RSpec.describe "Group billing routes", type: :system do
       expect(page).to have_css(row_selector, visible: :visible, count: 2, wait: 5)
       expect(page).to have_button("Review & Apply", disabled: true)
     end
-    expect(page).to have_current_path(hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences"))
+    expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences"))
   end
 
   xit "applies a routing change across group siblings and closes the offcanvas", js: true do
@@ -67,7 +67,7 @@ RSpec.describe "Group billing routes", type: :system do
     create(:booking_folio, booking: sibling, hotel: hotel, is_primary: true, booking_billing_party: sibling_guest.booking_billing_party)
     code = create(:transaction_code, hotel: hotel, kind: "charge", code: "GRPY", name: "Group charge two")
 
-    visit hotel_booking_control_panel_path(hotel, booking, tab: "billing_preferences")
+    visit hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences")
     click_button "Change Billing Routes"
     click_link "Group Billing Routes"
 

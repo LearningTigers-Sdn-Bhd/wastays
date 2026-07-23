@@ -106,7 +106,7 @@ RSpec.describe "HotelPortal::Bookings::Actions reinstatements", :business_day, t
       post hotel_booking_action_reinstate_no_show_path(hotel, booking),
         params: { retroactive_reason: "Guest arrived late", booking: { booking_rooms_attributes: { "0" => { room_type_id: room_type.id, room_number: "101" } } } }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(flash[:notice]).to eq("Booking reinstated and checked in successfully.")
     end
 

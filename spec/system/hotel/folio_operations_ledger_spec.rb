@@ -18,7 +18,7 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
   end
 
   it "expands and collapses upcoming charges while posted entries remain visible" do
-    visit hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations")
+    visit hotel_booking_workspace_path(hotel, booking, tab: "folio_operations")
 
     trigger = find('[data-folio-ledger-section-param="forecasted"]')
     expect(trigger["aria-expanded"]).to eq("false")

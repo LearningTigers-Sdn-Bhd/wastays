@@ -1,0 +1,9 @@
+<section aria-labelledby="billing-preferences-heading">
+  <header class="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+    <div><p class="text-xs font-semibold text-muted-foreground">Booking No. <%= presenter.group_overview? ? presenter.group_booking_number : presenter.booking_number %></p><h2 id="billing-preferences-heading" class="mt-1 text-lg font-bold text-foreground">Billing Preferences</h2><p class="mt-1 text-sm text-muted-foreground">Register billing parties and settlement terms. Routing is managed separately.</p></div>
+  </header>
+
+  <div class="p-5">
+    <%= render "hotel_portal/bookings/workspaces/billing_preferences/party_list", booking: booking, presenter: presenter %>
+  </div>
+</section>

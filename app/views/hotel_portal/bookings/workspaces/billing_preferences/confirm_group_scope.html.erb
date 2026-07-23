@@ -1,0 +1,43 @@
+<%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "right" } do %>
+  <div class="flex h-full min-h-0 flex-col bg-card">
+    <%= render "hotel_portal/shared/offcanvas/content_header",
+      title: "Apply to the whole group?",
+      subtitle: "Booking No. #{@booking.formatted_reservation_number.presence || '—'} · Billing Preferences",
+      icon: cached_icon("user", stroke_width: 2.5, class: "size-5") %>
+
+    <% if flash.now[:alert].present? %>
+      <div class="border-b border-rose-200 bg-rose-50 px-6 py-3 text-sm font-semibold text-rose-800"><%= flash.now[:alert] %></div>
+    <% end %>
+
+    <div class="min-h-0 flex-1 overflow-auto p-6">
+      <p class="text-sm text-muted-foreground">This booking is part of a group of <%= @group_bookings.size %> bookings. Choose whether to add this billing party to this booking only, or to every booking in the group.</p>
+
+      <ul class="mt-4 divide-y divide-border rounded-lg border border-border">
+        <% @group_bookings.each do |member| %>
+          <% room = member.booking_rooms.first %>
+          <li class="px-4 py-3 text-sm text-foreground">
+            <%= room&.room_number.present? ? "Room #{room.room_number}" : "Unassigned room" %> · Booking No. <%= member.formatted_reservation_number.presence || "—" %> · <%= member.guest_name %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+
+    <div class="sticky bottom-0 z-30 flex shrink-0 items-center justify-end gap-3 border-t border-border bg-card px-6 py-4">
+      <button type="button" class="rounded-md border border-border-interactive px-4 py-2 text-sm font-semibold text-foreground" data-action="offcanvas#close">Cancel</button>
+      <%= form_with url: add_billing_party_hotel_booking_workspace_path(current_hotel, @booking), method: :post, class: "inline" do %>
+        <% @billing_party_attributes.each do |key, value| %>
+          <%= hidden_field_tag "billing_party[#{key}]", value %>
+        <% end %>
+        <%= hidden_field_tag :scope, "booking" %>
+        <%= submit_tag "This booking only", class: "rounded-md border border-border-interactive bg-card px-4 py-2 text-sm font-semibold" %>
+      <% end %>
+      <%= form_with url: add_billing_party_hotel_booking_workspace_path(current_hotel, @booking), method: :post, class: "inline" do %>
+        <% @billing_party_attributes.each do |key, value| %>
+          <%= hidden_field_tag "billing_party[#{key}]", value %>
+        <% end %>
+        <%= hidden_field_tag :scope, "group" %>
+        <%= submit_tag "All #{@group_bookings.size} bookings in this group", class: "rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" %>
+      <% end %>
+    </div>
+  </div>
+<% end %>

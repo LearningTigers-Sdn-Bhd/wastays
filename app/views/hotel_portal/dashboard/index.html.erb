@@ -114,7 +114,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   <% @today_arrivals.limit(6).each do |booking| %>
                     <% booking_presenter = HotelPortal::BookingPresenter.new(booking, @current_hotel) %>
-                    <div class="flex flex-col gap-y-3 p-4 bg-card rounded-xl border border-border hover:border-border-interactive transition-colors cursor-pointer" onclick="Turbo.visit('<%= hotel_booking_control_panel_path(@current_hotel, booking, tab: "booking_details") %>')">
+                    <div class="flex flex-col gap-y-3 p-4 bg-card rounded-xl border border-border hover:border-border-interactive transition-colors cursor-pointer" onclick="Turbo.visit('<%= hotel_booking_workspace_path(@current_hotel, booking, tab: "booking_details") %>')">
                       <div class="flex items-center justify-between gap-x-3">
                         <div class="min-w-0">
                           <div class="flex items-center gap-x-1.5">
@@ -140,7 +140,7 @@
                           </div>
                           <p class="text-xs font-medium text-muted-foreground truncate"><%= booking_presenter.room_display_text %></p>
                         </div>
-                        <%= link_to hotel_booking_control_panel_path(@current_hotel, booking, tab: "booking_details"), class: "shrink-0 text-muted-foreground hover:text-foreground transition-colors" do %>
+                        <%= link_to hotel_booking_workspace_path(@current_hotel, booking, tab: "booking_details"), class: "shrink-0 text-muted-foreground hover:text-foreground transition-colors" do %>
                           <%= cached_icon "chevron-right", class: "size-4" %>
                         <% end %>
                       </div>
@@ -171,7 +171,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   <% @tomorrow_arrivals.limit(6).each do |booking| %>
                     <% booking_presenter = HotelPortal::BookingPresenter.new(booking, @current_hotel) %>
-                    <div class="flex flex-col gap-y-3 p-4 bg-card rounded-xl border border-border hover:border-border-interactive transition-colors cursor-pointer" onclick="Turbo.visit('<%= hotel_booking_control_panel_path(@current_hotel, booking, tab: "booking_details") %>')">
+                    <div class="flex flex-col gap-y-3 p-4 bg-card rounded-xl border border-border hover:border-border-interactive transition-colors cursor-pointer" onclick="Turbo.visit('<%= hotel_booking_workspace_path(@current_hotel, booking, tab: "booking_details") %>')">
                       <div class="flex items-center justify-between gap-x-3">
                         <div class="min-w-0">
                           <div class="flex items-center gap-x-1.5">
@@ -197,7 +197,7 @@
                           </div>
                           <p class="text-xs font-medium text-muted-foreground truncate"><%= booking_presenter.room_display_text %></p>
                         </div>
-                        <%= link_to hotel_booking_control_panel_path(@current_hotel, booking, tab: "booking_details"), class: "shrink-0 text-muted-foreground hover:text-foreground transition-colors" do %>
+                        <%= link_to hotel_booking_workspace_path(@current_hotel, booking, tab: "booking_details"), class: "shrink-0 text-muted-foreground hover:text-foreground transition-colors" do %>
                           <%= cached_icon "chevron-right", class: "size-4" %>
                         <% end %>
                       </div>
@@ -258,7 +258,7 @@
                 <% if @recent_bookings.any? %>
                   <% @recent_bookings.each do |booking| %>
                     <% booking_presenter = HotelPortal::BookingPresenter.new(booking, @current_hotel) %>
-                    <tr class="group cursor-pointer <%= booking.blacklisted? ? 'bg-rose-100' : 'odd:bg-card even:bg-muted/60 hover:bg-muted/70 transition-colors' %>" onclick="Turbo.visit('<%= hotel_booking_control_panel_path(@current_hotel, booking, tab: "booking_details") %>')">
+                    <tr class="group cursor-pointer <%= booking.blacklisted? ? 'bg-rose-100' : 'odd:bg-card even:bg-muted/60 hover:bg-muted/70 transition-colors' %>" onclick="Turbo.visit('<%= hotel_booking_workspace_path(@current_hotel, booking, tab: "booking_details") %>')">
                       <td class="whitespace-nowrap py-4 pr-8 <%= booking.blacklisted? ? 'border-l-4 border-l-rose-600 pl-7' : 'pl-8' %>">
                         <div class="flex items-center gap-x-2">
                           <%= render "hotel_portal/front_desk/booking_source_icon", source: booking.source %>
@@ -319,7 +319,7 @@
             <% if @recent_bookings.any? %>
               <% @recent_bookings.each do |booking| %>
                 <% booking_presenter = HotelPortal::BookingPresenter.new(booking, @current_hotel) %>
-                <div class="p-6 space-y-4 cursor-pointer <%= booking.blacklisted? ? 'bg-rose-100 border-t-4 border-t-rose-600 pt-5' : '' %>" onclick="Turbo.visit('<%= hotel_booking_control_panel_path(@current_hotel, booking, tab: "booking_details") %>')">
+                <div class="p-6 space-y-4 cursor-pointer <%= booking.blacklisted? ? 'bg-rose-100 border-t-4 border-t-rose-600 pt-5' : '' %>" onclick="Turbo.visit('<%= hotel_booking_workspace_path(@current_hotel, booking, tab: "booking_details") %>')">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-x-2">
                       <span class="font-mono text-sm font-semibold text-foreground">#<%= booking_presenter.confirmation_token %></span>

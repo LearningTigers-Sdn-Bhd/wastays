@@ -85,7 +85,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
         post hotel_booking_action_new_booking_path(hotel), params: valid_params
       }.to change(Booking, :count).by(1)
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, Booking.last))
       expect(Booking.last.booking_folio).to be_present
       expect(BookingFolio.where(booking: Booking.last).count).to eq(1)
 
@@ -187,7 +187,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
       booking_room = Booking.last.booking_rooms.first
       expect(booking_room.room_number).to eq("101")
       expect(booking_room.rate_plan_id).to eq(rate_plan.id)
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, Booking.last))
     end
 
     it "hydrates the full booking form from nested quick booking params" do
@@ -231,7 +231,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
       group = GroupBooking.last
       expect(BookingRoom.where(booking: group.bookings).pluck(:room_number)).to contain_exactly("101", "102")
       expect(group.bookings.pluck(:payment_status)).to all(eq("pending"))
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, group.bookings.first, scope: "group"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, group.bookings.first, scope: "group"))
     end
 
     it "records one group deposit and allocates it across child folios" do
@@ -291,7 +291,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
 
       # Old date inventory should be released (back to 10)
       expect(room_type.room_inventories.find_by(date: Date.current).quantity).to eq(10)

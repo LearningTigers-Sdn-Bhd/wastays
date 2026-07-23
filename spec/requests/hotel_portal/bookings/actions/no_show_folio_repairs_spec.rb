@@ -96,14 +96,14 @@ RSpec.describe "HotelPortal::Bookings::Actions no-show folio repairs", :business
 
       post hotel_booking_action_repair_no_show_folio_path(hotel, booking)
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(flash[:notice]).to include("Tourism tax of MYR 10.00 was removed from the no-show folio.")
     end
 
     it "reports the idempotent outcome when there is nothing to repair" do
       post hotel_booking_action_repair_no_show_folio_path(hotel, booking)
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(flash[:notice]).to eq("No-show folio already has no tourism tax to repair.")
     end
 

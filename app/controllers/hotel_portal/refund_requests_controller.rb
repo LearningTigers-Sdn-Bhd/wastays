@@ -27,7 +27,7 @@ class HotelPortal::RefundRequestsController < HotelPortal::BaseController
   def create
     @eligibility = Refunds::Eligibility.new(@booking).call
     unless @eligibility.success?
-      redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), alert: @eligibility.error
+      redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "booking_details"), alert: @eligibility.error
       return
     end
 
@@ -36,7 +36,7 @@ class HotelPortal::RefundRequestsController < HotelPortal::BaseController
     @refund_request.status = "pending"
 
     if @refund_request.save
-      redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), notice: "Refund request submitted to Superadmin."
+      redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "booking_details"), notice: "Refund request submitted to Superadmin."
     else
       @presenter = RefundRequestPresenter.new(@refund_request)
       render :new, status: :unprocessable_entity
@@ -53,7 +53,7 @@ class HotelPortal::RefundRequestsController < HotelPortal::BaseController
     override_breadcrumbs(
       { label: "Operations" },
       { label: "Reservations", path: hotel_front_desk_path(current_hotel, tab: "bookings", view: "list") },
-      { label: @booking.confirmation_token, path: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details") },
+      { label: @booking.confirmation_token, path: hotel_booking_workspace_path(current_hotel, @booking, tab: "booking_details") },
       { label: "Refund Request" }
     )
   end

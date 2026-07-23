@@ -23,13 +23,13 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
   end
 
   def booking_details_path(booking, **params)
-    hotel_booking_control_panel_path(hotel, booking, { tab: "booking_details" }.merge(params))
+    hotel_booking_workspace_path(hotel, booking, { tab: "booking_details" }.merge(params))
   end
 
   def folio_operations_path(booking, folio_id: nil, **params)
     query = { tab: "folio_operations" }.merge(params)
     query[:folio_id] = folio_id if folio_id.present?
-    hotel_booking_control_panel_path(hotel, booking, query)
+    hotel_booking_workspace_path(hotel, booking, query)
   end
 
   describe "GET /index" do
@@ -92,7 +92,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get booking_details_path(booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('data-testid="booking-control-panel"')
+      expect(response.body).to include('data-testid="booking-workspace"')
       expect(response.body).to include("Booking Details")
       expect(response.body).to include(booking.confirmation_token)
     end
@@ -113,11 +113,11 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     end
 
     it "renders URL-addressable booking show tab panels" do
-      get hotel_booking_control_panel_path(hotel, booking, tab: "housekeeping_requests")
+      get hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests")
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('data-testid="booking-control-panel"')
-      expect(response.body).to include('data-testid="booking-control-panel"')
+      expect(response.body).to include('data-testid="booking-workspace"')
+      expect(response.body).to include('data-testid="booking-workspace"')
     end
 
     it "renders reference IDs, booking source, and the refreshed guest records table" do
@@ -143,7 +143,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response.body).to include(booking.formatted_guest_registration_number)
       expect(response.body).to include("OTA-55")
       expect(response.body).to include("CM-66")
-      expect(response.body).to include('data-testid="booking-control-panel"')
+      expect(response.body).to include('data-testid="booking-workspace"')
     end
 
     it "renders empty reference values and hides the guest-record warning when occupancy is fully registered" do
@@ -163,7 +163,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       create(:complaint_request, booking: booking, status: "pending", complaint_details: "Broken AC")
       get booking_details_path(booking)
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('data-testid="booking-control-panel"')
+      expect(response.body).to include('data-testid="booking-workspace"')
       expect(response.body).to include("Booking Details")
     end
 
@@ -211,7 +211,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include('id="folio-operations-heading"')
       expect(response.body).to include("Guest Folio")
-      expect(response.body).to include('data-testid="booking-control-panel"')
+      expect(response.body).to include('data-testid="booking-workspace"')
       expect(response.body).to include("SGD 150.00")
       expect(response.body).to include("Upcoming Charges")
       expect(response.body).to include("Room charge")
@@ -275,7 +275,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
     it "creates and redirects from the booking action sheet" do
       post hotel_booking_action_new_booking_path(hotel), params: { booking: booking_params }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, Booking.last))
     end
 
     it "renders validation errors inside the booking action sheet" do

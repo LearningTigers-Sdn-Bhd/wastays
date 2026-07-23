@@ -24,7 +24,7 @@ RSpec.describe Bookings::SetPrimaryGuest do
       user: actor,
       action_type: "update",
       category: "other",
-      source: "booking_control_panel"
+      source: "booking_workspace"
     )
     expect(audit_log.old_value).to eq("primary_booking_guest_id" => previous.id)
     expect(audit_log.new_value).to eq("primary_booking_guest_id" => selected.id)

@@ -28,7 +28,7 @@ module Bookings
           user: @actor,
           action_type: "update",
           category: "other",
-          source: "booking_control_panel",
+          source: "booking_workspace",
           old_value: { primary_booking_guest_id: previous&.id },
           new_value: { primary_booking_guest_id: @booking_guest.id }
         )

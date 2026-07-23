@@ -24,7 +24,7 @@ module HotelPortal
         end
 
         def set_return_to
-          @return_to = booking_action_return_to(fallback: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"))
+          @return_to = booking_action_return_to(fallback: hotel_booking_workspace_path(current_hotel, @booking, tab: "booking_details"))
         end
 
         def complete_action(notice: nil, alert: nil)

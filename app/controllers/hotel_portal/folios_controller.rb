@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# LEGACY: frozen pending booking-control-panel migration. Do not add features here.
+# LEGACY: frozen pending booking-workspace migration. Do not add features here.
 
 module HotelPortal
   class FoliosController < BaseController
@@ -30,7 +30,7 @@ module HotelPortal
       booking = current_hotel.bookings.find(params[:booking_id])
       query = { tab: "folio_operations" }
       query[:folio_id] = params[:active_folio_id] if params[:active_folio_id].present?
-      redirect_to hotel_booking_control_panel_path(current_hotel, booking, query), status: :moved_permanently
+      redirect_to hotel_booking_workspace_path(current_hotel, booking, query), status: :moved_permanently
     end
 
     def new_window
@@ -73,12 +73,12 @@ module HotelPortal
 
       if result.success?
         respond_with_offcanvas_completion(
-          hotel_booking_control_panel_path(current_hotel, booking, tab: "folio_operations", folio_id: result.folio.id),
+          hotel_booking_workspace_path(current_hotel, booking, tab: "folio_operations", folio_id: result.folio.id),
           notice: "Folio window created."
         )
       else
         respond_with_offcanvas_completion(
-          hotel_booking_control_panel_path(current_hotel, booking, tab: "folio_operations"),
+          hotel_booking_workspace_path(current_hotel, booking, tab: "folio_operations"),
           alert: result.error
         )
       end
@@ -95,7 +95,7 @@ module HotelPortal
       )
 
       respond_with_offcanvas_completion(
-        hotel_booking_control_panel_path(current_hotel, booking, tab: "folio_operations", folio_id: folio.id),
+        hotel_booking_workspace_path(current_hotel, booking, tab: "folio_operations", folio_id: folio.id),
         **(result.success? ? { notice: "Folio window updated." } : { alert: result.error })
       )
     end
@@ -111,7 +111,7 @@ module HotelPortal
         settlement_method: folio_window_params[:settlement_method]
       )
 
-      redirect_to hotel_booking_control_panel_path(current_hotel, booking, tab: "folio_operations", folio_id: folio.id),
+      redirect_to hotel_booking_workspace_path(current_hotel, booking, tab: "folio_operations", folio_id: folio.id),
         result.success? ? { notice: "Folio window closed." } : { alert: result.error }
     end
 
@@ -121,14 +121,14 @@ module HotelPortal
       folio = booking.booking_folios.find(params[:folio_id])
       result = ::Folios::ReopenFolio.call(folio: folio, user: current_user, reason: folio_window_params[:reason])
 
-      redirect_to hotel_booking_control_panel_path(current_hotel, booking, tab: "folio_operations", folio_id: folio.id),
+      redirect_to hotel_booking_workspace_path(current_hotel, booking, tab: "folio_operations", folio_id: folio.id),
         result.success? ? { notice: "Folio window reopened." } : { alert: result.error }
     end
 
     def invoice
       @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions, booking_rooms: :room_type).find(params[:booking_id])
       unless @booking.booking_folio&.status == "closed"
-        return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations"), alert: "Folio invoice is only available for checked-out bookings with a closed folio."
+        return redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "folio_operations"), alert: "Folio invoice is only available for checked-out bookings with a closed folio."
       end
 
       send_data ::Reports::Bookings::GenerateInvoice.new(booking: @booking, printed_by: current_user&.name).generate,
@@ -139,7 +139,7 @@ module HotelPortal
 
     def ledger
       @booking = current_hotel.bookings.includes(:booking_rooms, booking_folios: [ { folio_transactions: :transaction_code }, { hotel_corporate_account: :corporate_account } ]).find(params[:booking_id])
-      return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations"), alert: "Booking has no folio." unless @booking.booking_folio
+      return redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "folio_operations"), alert: "Booking has no folio." unless @booking.booking_folio
 
       ledger_report = ::Reports::Bookings::GenerateFolioLedger.new(booking: @booking, printed_by: current_user&.name)
       filename = "folio-ledger-#{@booking.folio_account_reference_display.presence || @booking.confirmation_token}"

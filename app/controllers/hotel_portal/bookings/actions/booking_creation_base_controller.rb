@@ -50,7 +50,7 @@ module HotelPortal
 
         def complete_new_booking(booking, notice:)
           scope = booking.group_booking_id? ? "group" : nil
-          complete_booking_action(destination: hotel_booking_control_panel_path(current_hotel, booking, scope: scope), notice: notice)
+          complete_booking_action(destination: hotel_booking_workspace_path(current_hotel, booking, scope: scope), notice: notice)
         end
 
         def render_new_booking(transaction:, status: :ok)

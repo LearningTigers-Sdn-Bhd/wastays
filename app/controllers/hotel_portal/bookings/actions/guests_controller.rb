@@ -28,7 +28,7 @@ module HotelPortal
 
         def set_primary
           result = ::Bookings::SetPrimaryGuest.call(booking: @booking, booking_guest: @booking_guest, actor: current_user)
-          @return_to = hotel_booking_control_panel_path(current_hotel, @booking, tab: "guest_details", booking_guest_id: @booking_guest.id)
+          @return_to = hotel_booking_workspace_path(current_hotel, @booking, tab: "guest_details", booking_guest_id: @booking_guest.id)
           result.success? ? complete_action(notice: "Primary guest updated.") : complete_action(alert: result.error)
         end
 
@@ -57,7 +57,7 @@ module HotelPortal
         end
 
         def set_return_to
-          fallback = hotel_booking_control_panel_path(
+          fallback = hotel_booking_workspace_path(
             current_hotel,
             @booking,
             tab: "guest_details",

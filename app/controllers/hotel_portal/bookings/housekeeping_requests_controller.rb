@@ -13,9 +13,9 @@ class HotelPortal::Bookings::HousekeepingRequestsController < HotelPortal::BaseC
     )
 
     if updater.call
-      redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "housekeeping_requests"), notice: "Housekeeping request completed."
+      redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "housekeeping_requests"), notice: "Housekeeping request completed."
     else
-      redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "housekeeping_requests"), alert: "Failed to update request."
+      redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "housekeeping_requests"), alert: "Failed to update request."
     end
   end
 

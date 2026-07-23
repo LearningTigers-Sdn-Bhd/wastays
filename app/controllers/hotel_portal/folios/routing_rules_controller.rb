@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# LEGACY: frozen pending booking-control-panel migration. Do not add features here.
+# LEGACY: frozen pending booking-workspace migration. Do not add features here.
 
 module HotelPortal
   module Folios
@@ -34,7 +34,7 @@ module HotelPortal
       private
 
       def canonical_billing_routes_path
-        billing_routes_hotel_booking_control_panel_path(current_hotel, @booking)
+        billing_routes_hotel_booking_workspace_path(current_hotel, @booking)
       end
 
       def set_booking
@@ -165,7 +165,7 @@ module HotelPortal
       end
 
       def folio_path_for_billing
-        hotel_booking_control_panel_path(
+        hotel_booking_workspace_path(
           current_hotel,
           @booking,
           tab: "billing_preferences",

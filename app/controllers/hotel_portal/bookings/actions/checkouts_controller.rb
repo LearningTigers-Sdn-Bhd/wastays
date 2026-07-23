@@ -203,7 +203,7 @@ module HotelPortal
         end
 
         def checkout_success_path
-          booking_action_return_to(fallback: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details", checkout_success: true))
+          booking_action_return_to(fallback: hotel_booking_workspace_path(current_hotel, @booking, tab: "booking_details", checkout_success: true))
         end
 
         def render_checkout_error(error)
@@ -225,7 +225,7 @@ module HotelPortal
           @booking = current_hotel.bookings
                                   .includes(
                                     :deposits,
-                                    booking_folios: [ :folio_forecasted_charges, { folio_transactions: :user }, { hotel_corporate_account: :corporate_account } ]
+                                    booking_folios: [ :hotel, :folio_forecasted_charges, { folio_transactions: :user }, { hotel_corporate_account: :corporate_account } ]
                                   )
                                   .find(params[:booking_id])
           @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)

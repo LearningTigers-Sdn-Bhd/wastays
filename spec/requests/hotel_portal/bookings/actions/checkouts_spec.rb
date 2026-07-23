@@ -124,7 +124,7 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
       post hotel_booking_action_checkout_path(hotel, booking),
         params: { booking: { checked_out_at: Time.current.strftime("%Y-%m-%dT%H:%M") } }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details", checkout_success: true))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details", checkout_success: true))
       expect(flash[:notice]).to eq("Guest has been checked out.")
     end
 
