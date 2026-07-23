@@ -171,7 +171,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     within("#stay_view_room_#{room_type.id}_101-priority-panel") do
       find("input[name='room_status[priority]'][role='switch']", visible: :all).set(true)
       fill_in "Priority note", with: "Prepare before noon"
-      click_button "Apply"
+      click_in_overlay "Apply"
     end
 
     expect(page).to have_css("##{priority_trigger_id}:focus", wait: 10)
@@ -186,7 +186,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     find("##{dnd_trigger_id}").click
     within("#stay_view_room_#{room_type.id}_101-dnd-panel") do
       find("input[name='room_status[dnd]'][role='switch']", visible: :all).set(true)
-      click_button "Apply"
+      click_in_overlay "Apply"
     end
 
     expect(page).to have_css("##{dnd_trigger_id}:focus", wait: 10)
@@ -197,7 +197,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     find("##{priority_trigger_id}").click
     within("#stay_view_room_#{room_type.id}_101-priority-panel") do
       find("input[name='room_status[priority]'][role='switch']", visible: :all).set(false)
-      click_button "Apply"
+      click_in_overlay "Apply"
     end
 
     expect(page).to have_css("##{priority_trigger_id}:focus", wait: 10)
@@ -236,11 +236,11 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     menu_id = "stay_view_room_#{room_type.id}_102-#{Date.current.iso8601}-cell-actions-menu"
     expect(page).to have_css("##{menu_id}", text: "Walk-in check-in", visible: :visible)
-    within("##{menu_id}") { click_link "Add booking" }
+    within("##{menu_id}") { click_in_overlay "Add booking" }
 
     within("#booking-creation-sheet") do
-      expect(find("#booking_check_in").value).to start_with(Date.current.iso8601)
-      expect(find("#booking_check_out").value).to start_with((Date.current + 1.day).iso8601)
+      expect(find("#booking_check_in", visible: :all).value).to start_with(Date.current.iso8601)
+      expect(find("#booking_check_out", visible: :all).value).to start_with((Date.current + 1.day).iso8601)
     end
   end
 
@@ -273,8 +273,8 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     book.send_keys(:enter)
 
     within("#booking-creation-sheet") do
-      expect(find("#booking_check_in").value).to start_with(Date.current.iso8601)
-      expect(find("#booking_check_out").value).to start_with((Date.current + 1.day).iso8601)
+      expect(find("#booking_check_in", visible: :all).value).to start_with(Date.current.iso8601)
+      expect(find("#booking_check_out", visible: :all).value).to start_with((Date.current + 1.day).iso8601)
     end
   end
 
@@ -296,16 +296,17 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
       expect(Rack::Utils.parse_nested_query(URI.parse(item[:href]).query)).to include("source" => "stay_view")
       item.click
     end
-    within("#offcanvas_drawer") do
+    within("#stay-view-room-block-sheet") do
       expect(page).to have_content("Edit room block")
       expect(find("#room_block_reason").value).to eq("Repair the balcony door")
-      click_button "Finish block"
+      click_in_overlay "Finish block"
     end
 
     expect(page).to have_css(
       "#stay_view_room_#{room_type.id}_102[data-room-state='vacant'] [data-slot='stay-view-room-activity']",
       text: "No activity today"
     )
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_102-title:focus")
     expect(block.reload.completed_at).to be_present
   end
 
@@ -324,14 +325,18 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(status_trigger[:"aria-label"]).to eq("Room status: Dirty — change")
     status_trigger.click
     within("#stay_view_room_#{room_type.id}_102-status-menu") do
-      click_link "Ready"
+      click_in_overlay "Ready"
     end
 
-    within("#offcanvas_drawer") do
+    within("#stay-view-room-status-sheet") do
       expect(page).to have_content("Change room status")
       expect(page).to have_content("Room 102")
       expect(find("#room_status_status", visible: :all).value).to eq("ready")
+      fill_in "Reason or note", with: "Room inspected and ready"
+      click_in_overlay "Update status"
     end
+    expect(page).to have_no_css("dialog#stay-view-room-status-sheet", wait: 3)
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_102-status-trigger:focus")
   end
 
   it "shows authorized projected financial signals in Timeline and Room views" do
@@ -398,27 +403,29 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_css(housekeeping_panel, text: "Fresh towels", visible: :visible)
     expect(page).to have_css("#{housekeeping_panel} [role='alert']", text: "Do not enter / do not clean", visible: :visible)
 
-    within(housekeeping_panel) { click_link "Assign" }
-    within("#offcanvas_drawer") do
+    within(housekeeping_panel) { click_in_overlay "Assign" }
+    within("#stay-view-housekeeping-assignment-sheet") do
       expect(page).to have_content("updates all active housekeeping requests")
       find("#assignment_assigned_to-trigger").click
       find("[role='option']", text: "Sam Lee").click
-      click_button "Save assignment"
+      click_in_overlay "Save assignment"
     end
-    expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 3)
+    expect(page).to have_no_css("dialog#stay-view-housekeeping-assignment-sheet", wait: 3)
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_101-housekeeping-trigger:focus")
     expect(housekeeping_request.reload.metadata).to include("assigned_to_name" => "Sam Lee")
 
     within("#stay_view_room_#{room_type.id}_101") do
       find("button[aria-label='1 active housekeeping request']").click
     end
-    within(housekeeping_panel) { click_link "Update status" }
-    within("#offcanvas_drawer") do
+    within(housekeeping_panel) { click_in_overlay "Update status" }
+    within("#stay-view-housekeeping-status-sheet") do
       find("#housekeeping_request_status-trigger").click
       find("[role='option']", text: "Completed").click
-      click_button "Update status"
+      click_in_overlay "Update status"
     end
 
     expect(page).to have_no_css("button[aria-label='1 active housekeeping request']")
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_101-title:focus")
     expect(housekeeping_request.reload.status).to eq("completed")
     expect(hotel.room_statuses.find_by(room_type:, room_number: "101").status).to eq("ready")
   end
