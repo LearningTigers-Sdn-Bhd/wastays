@@ -54,7 +54,6 @@ module HotelPortal
       def timestamp(value)
         value&.in_time_zone(@hotel.hotel_time_zone)&.strftime("%d %b %Y\n%I:%M %p") || "-"
       end
-
     end
   end
 end
