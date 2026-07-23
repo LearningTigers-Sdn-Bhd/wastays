@@ -3,9 +3,7 @@
 module HotelPortal
   module StayView
     class BaseController < HotelPortal::BaseController
-      include OffcanvasTransactionCompletion
-
-      helper_method :stay_view_state, :pointer_proposal?
+      helper_method :stay_view_state
 
       before_action :set_stay_view_context
 
@@ -15,8 +13,27 @@ module HotelPortal
 
       def set_stay_view_context
         fallback = hotel_stay_view_path(current_hotel)
-        @return_to = offcanvas_return_to(fallback:)
+        @return_to = stay_view_return_to(fallback:)
         @stay_view_state = ::StayView::BoardState.new(hotel: current_hotel, params: state_source)
+      end
+
+      def stay_view_return_to(fallback:)
+        candidate = params[:return_to].presence
+        return fallback if candidate.blank?
+
+        uri = URI.parse(candidate)
+        if uri.host.present? || uri.scheme.present?
+          return fallback unless "#{uri.scheme}://#{uri.host}#{":#{uri.port}" unless uri.default_port == uri.port}" == request.base_url
+
+          uri = URI.parse(uri.request_uri)
+        end
+
+        return fallback if uri.path.blank?
+        return fallback unless uri.path.start_with?("/hotel/#{current_hotel.to_param}/")
+
+        uri.to_s
+      rescue URI::InvalidURIError
+        fallback
       end
 
       def state_source
@@ -64,7 +81,7 @@ module HotelPortal
         respond_to do |format|
           format.turbo_stream do
             render turbo_stream: turbo_stream.update(
-              "offcanvas_drawer",
+              requesting_sheet_frame,
               partial: partial
             ), status: :unprocessable_content
           end
@@ -96,16 +113,6 @@ module HotelPortal
         "#{room_type.id}:#{room_number}"
       end
 
-      def pointer_proposal?
-        params[:proposal] == "pointer"
-      end
-
-      def validate_pointer_proposal(booking:, room_type:, room_number:, check_in:, check_out:)
-        ::StayView::ValidateBookingProposal.call(
-          booking:, room_type:, room_number:, check_in:, check_out:
-        ).each { |message| add_error(booking, message) }
-      end
-
       def board_streams(board, message, affected_room_keys)
         streams = selective_timeline_streams(board, affected_room_keys)
         streams ||= [
@@ -116,9 +123,13 @@ module HotelPortal
           )
         ]
         streams + [
-          helpers.turbo_stream_action_tag(:complete_offcanvas, target: "offcanvas_drawer"),
-          toast_stream(message, type: :success)
+          toast_stream(message, type: :success),
+          helpers.turbo_stream_action_tag(:complete_sheet, target: requesting_sheet_frame)
         ]
+      end
+
+      def requesting_sheet_frame
+        turbo_frame_request_id.presence || "booking_action_sheet"
       end
 
       def selective_timeline_streams(board, affected_room_keys)

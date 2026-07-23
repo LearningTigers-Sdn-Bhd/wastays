@@ -1,0 +1,23 @@
+<% form_id = "delete-booking-internal-note-form" %>
+<% footer = capture do %>
+  <div class="flex w-full items-center justify-end gap-2">
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Keep note<% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, variant: :destructive, data: { turbo_submits_with: "Deleting…" }) do %>Delete note<% end %>
+  </div>
+<% end %>
+
+<%= render "hotel_portal/bookings/actions/shared/sheet",
+      id: "booking-internal-note-deletion-sheet",
+      title: "Delete internal note",
+      description: @booking.guest_name,
+      side: :right,
+      size: :sm,
+      footer: footer do %>
+  <%= form_with url: hotel_booking_action_delete_internal_note_path(current_hotel, @booking, @note), method: :delete, id: form_id do %>
+    <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+    <div class="space-y-3 text-sm">
+      <p class="text-foreground">Delete this internal note and its edit history?</p>
+      <p class="text-muted-foreground">The deletion remains recorded in the booking audit trail.</p>
+    </div>
+  <% end %>
+<% end %>

@@ -78,9 +78,9 @@ export default class extends Controller {
   syncRows() {
     this.rowTargets.forEach((row) => {
       const active = row.dataset.bookingId === this.activeBookingId
+      // The checked-state highlight is owned by CSS (:has(:checked)); the JS only
+      // maintains the accessible selected state for the active master-detail row.
       row.setAttribute("aria-selected", String(active))
-      row.classList.toggle("font-semibold", active)
-      row.classList.toggle("text-slate-950", active)
     })
   }
 
@@ -91,10 +91,10 @@ export default class extends Controller {
       const complete = this.panelComplete(bookingId)
       badge.hidden = !selected
       badge.textContent = complete ? "Configured" : "Incomplete"
-      badge.classList.toggle("bg-emerald-50", complete)
-      badge.classList.toggle("text-emerald-700", complete)
-      badge.classList.toggle("bg-amber-50", !complete)
-      badge.classList.toggle("text-amber-700", !complete)
+      badge.classList.toggle("bg-success", complete)
+      badge.classList.toggle("text-success-foreground", complete)
+      badge.classList.toggle("bg-warning", !complete)
+      badge.classList.toggle("text-warning-foreground", !complete)
     })
   }
 

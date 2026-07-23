@@ -8,7 +8,8 @@ FactoryBot.define do
     folio_type { "guest" }
     payer_type { "guest" }
     hotel_corporate_account { payer_type == "company" ? association(:hotel_corporate_account, hotel: hotel) : nil }
-    is_primary { true }
+    # Only the guest folio is ever primary; external/house folios are secondary.
+    is_primary { folio_type == "guest" }
     currency { booking.currency.presence || "MYR" }
     opened_at { Time.current }
     status { "open" }

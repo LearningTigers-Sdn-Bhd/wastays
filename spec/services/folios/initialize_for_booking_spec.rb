@@ -45,6 +45,21 @@ RSpec.describe Folios::InitializeForBooking do
     }.not_to change(FolioTransaction, :count)
   end
 
+  it "returns the winner's folio when a concurrent insert wins the race" do
+    existing_folio = described_class.call(booking: booking, user: user)
+
+    # Simulate the race: our existence check sees no folio (so we attempt the
+    # insert), but the partial unique index rejects it because the winner's
+    # primary folio already exists. Reload then hands back the winner's folio.
+    allow(booking).to receive(:booking_folio).and_return(nil, existing_folio)
+
+    result = nil
+    expect {
+      result = described_class.call(booking: booking, user: user)
+    }.not_to raise_error
+    expect(result).to eq(existing_folio)
+  end
+
   it "rolls back folio creation when captured payments cannot be synced" do
     create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
     failed_result = OpenStruct.new(success?: false, error: "posting blocked")

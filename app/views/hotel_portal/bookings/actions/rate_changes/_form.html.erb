@@ -1,0 +1,89 @@
+<% currency = @booking.currency.presence || current_hotel.default_currency.presence || "MYR" %>
+<% current_room_total = @room&.subtotal.to_d %>
+<% current_tax_total = Booking.non_tourism_tax_total_for(@booking.tax_lines) %>
+
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "booking-rate-sheet",
+        side: :right,
+        size: :lg,
+        title: "Change rate",
+        description: @booking.guest_name,
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with scope: :booking,
+            url: hotel_booking_action_edit_rate_path(current_hotel, @booking),
+            method: :patch,
+            class: "flex h-full min-h-0 flex-col",
+            data: {
+              controller: "booking-actions--stay-price",
+              action: "change->booking-actions--stay-price#changed",
+              booking_actions__stay_price_url_value: stay_price_hotel_bookings_path(current_hotel),
+              booking_actions__stay_price_guest_country_value: @booking.guest_country.presence || current_hotel.country
+            } do |form| %>
+        <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+        <%= hidden_field_tag :source, params[:source] if params[:source].present? %>
+        <%# Dates and room are fixed on this sheet; carried only so the price preview can resolve. %>
+        <%= form.hidden_field :check_in, value: @check_in_value %>
+        <%= form.hidden_field :check_out, value: @check_out_value %>
+        <%= hidden_field_tag "booking[room_type_id]", @room_type_id %>
+
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          <div class="space-y-6 p-6">
+            <% if @booking.errors.any? %>
+              <div class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert" aria-live="polite">
+                <p class="font-semibold">The rate could not be updated.</p>
+                <ul class="mt-2 list-disc space-y-1 pl-5">
+                  <% @booking.errors.full_messages.each do |message| %><li><%= message %></li><% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <section aria-labelledby="current-stay-heading" class="space-y-3">
+              <h3 id="current-stay-heading" class="text-base font-semibold">Current stay</h3>
+              <dl class="grid gap-3 rounded-md border border-border bg-muted p-4 text-sm sm:grid-cols-2">
+                <div><dt class="text-xs text-muted-foreground">Room</dt><dd class="mt-1 font-medium text-foreground"><%= @room&.room_type&.name || "Unassigned" %> · <%= @room&.room_number || "Unassigned" %></dd></div>
+                <div><dt class="text-xs text-muted-foreground">Current rate</dt><dd class="mt-1 font-medium text-foreground"><%= @room&.rate_plan&.name.presence || "Base rate" %></dd></div>
+              </dl>
+            </section>
+
+            <section aria-labelledby="rate-heading" class="space-y-4">
+              <div>
+                <h3 id="rate-heading" class="text-base font-semibold">Rate</h3>
+                <p class="mt-1 text-sm text-muted-foreground">Estimated value refreshes when the rate changes.</p>
+              </div>
+              <%= render PanelsUI::FormField.new(form:, attribute: :rate_selection, label: "Rate") do |field| %>
+                <% field.with_select_menu(@rate_choices, selected: @rate_selection, prompt: "Select a rate") %>
+              <% end %>
+            </section>
+
+            <% if @booking.manual_rate_override.present? %>
+              <div class="rounded-md border border-border bg-muted p-4 text-sm">
+                <p class="font-medium text-foreground">Manual rate override: <%= currency %> <%= number_with_precision(@booking.manual_rate_override, precision: 2) %></p>
+                <p class="mt-1 text-muted-foreground">It stays in place for date or room changes and is cleared only when you choose a different rate.</p>
+              </div>
+            <% end %>
+
+            <section aria-labelledby="estimated-value-heading" class="space-y-3">
+              <div class="flex items-center justify-between gap-3">
+                <h3 id="estimated-value-heading" class="text-base font-semibold">Estimated value</h3>
+                <p class="text-xs text-muted-foreground" role="status" aria-live="polite" data-booking-actions--stay-price-target="calculationStatus">Current estimate</p>
+              </div>
+              <dl class="divide-y divide-border rounded-md border border-border text-sm">
+                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Room</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="roomTotal"><%= number_with_precision(current_room_total, precision: 2) %></span></dd></div>
+                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Taxes & charges</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="taxTotal"><%= number_with_precision(current_tax_total, precision: 2) %></span></dd></div>
+                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="font-medium text-foreground">Estimated total</dt><dd class="font-semibold text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="estimatedTotal"><%= number_with_precision(@booking.total_amount, precision: 2) %></span></dd></div>
+              </dl>
+              <p class="text-xs text-muted-foreground">Future forecasted charges are recalculated. Charges already posted to a folio remain financial records.</p>
+            </section>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Saving…" }) do %>Save changes<% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

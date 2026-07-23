@@ -1,23 +1,32 @@
-<div class="flex h-full flex-col bg-card">
-  <%= render "hotel_portal/stay_view/sheet_header", title: "Update task status", subtitle: "Room #{@room_key.split(":", 2).last}" %>
-  <%= form_with model: @housekeeping_request, url: hotel_stay_view_housekeeping_request_status_path(current_hotel, @housekeeping_request), method: :patch, class: "flex min-h-0 flex-1 flex-col", data: { turbo_stream: true } do |form| %>
-    <%= render "hotel_portal/stay_view/state_fields", state: stay_view_state, return_to: @return_to %>
-    <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
-      <%= render "hotel_portal/stay_view/errors", record: @housekeeping_request, title: "The housekeeping status could not be updated." %>
-      <div>
-        <p class="text-xs text-muted-foreground">Task</p>
-        <p class="mt-1 break-words text-sm text-foreground"><%= @housekeeping_request.request_details %></p>
-      </div>
-      <%= render PanelsUI::FormField.new(form:, attribute: :status, label: "Task status", required: true) do |field| %>
-        <% field.with_select_menu(
-          HotelPortal::StayView::HousekeepingStatusesController::ALLOWED_STATUSES.map { |status| { label: status.humanize, value: status } },
-          selected: @housekeeping_request.status
-        ) %>
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "stay-view-housekeeping-status-sheet",
+        side: :right,
+        size: :md,
+        title: "Update task status",
+        description: "Room #{@room_key.split(":", 2).last}",
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with model: @housekeeping_request, url: hotel_stay_view_housekeeping_request_status_path(current_hotel, @housekeeping_request), method: :patch, class: "flex h-full min-h-0 flex-col", data: { turbo_stream: true } do |form| %>
+        <%= render "hotel_portal/stay_view/state_fields", state: stay_view_state, return_to: @return_to %>
+        <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
+          <%= render "hotel_portal/stay_view/errors", record: @housekeeping_request, title: "The housekeeping status could not be updated." %>
+          <div>
+            <p class="text-xs text-muted-foreground">Task</p>
+            <p class="mt-1 break-words text-sm text-foreground"><%= @housekeeping_request.request_details %></p>
+          </div>
+          <%= render PanelsUI::FormField.new(form:, attribute: :status, label: "Task status", required: true) do |field| %>
+            <% field.with_select_menu(
+              HotelPortal::StayView::HousekeepingStatusesController::ALLOWED_STATUSES.map { |status| { label: status.humanize, value: status } },
+              selected: @housekeeping_request.status
+            ) %>
+          <% end %>
+        </div>
+        <div class="flex justify-end gap-2 border-t border-border p-4">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Updating…" }) do %>Update status<% end %>
+        </div>
       <% end %>
-    </div>
-    <div class="flex justify-end gap-2 border-t border-border p-4">
-      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "click->offcanvas#close" }) do %>Cancel<% end %>
-      <%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Update status<% end %>
-    </div>
+    <% end %>
   <% end %>
 </div>

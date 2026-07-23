@@ -1,0 +1,23 @@
+<% form_id = "remove-booking-guest-form" %>
+<% footer = capture do %>
+  <div class="flex w-full items-center justify-end gap-2">
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Keep guest<% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, variant: :destructive, data: { turbo_submits_with: "Removing…" }) do %>Remove guest<% end %>
+  </div>
+<% end %>
+
+<%= render "hotel_portal/bookings/actions/shared/sheet",
+      id: "booking-guest-removal-sheet",
+      title: "Remove guest",
+      description: @booking_guest.name_snapshot.presence || @booking_guest.guest.name,
+      side: :right,
+      size: :sm,
+      footer: footer do %>
+  <%= form_with url: hotel_booking_action_remove_guest_path(current_hotel, @booking, @booking_guest), method: :delete, id: form_id do %>
+    <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+    <div class="space-y-3 text-sm">
+      <p class="text-foreground">Remove this guest from the booking?</p>
+      <p class="text-muted-foreground">A guest who owns a folio or financial history cannot be removed until ownership is reassigned.</p>
+    </div>
+  <% end %>
+<% end %>

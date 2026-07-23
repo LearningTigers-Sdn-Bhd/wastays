@@ -118,8 +118,17 @@ module Bookings
       amount = @params[:charge_amount].to_d
       return failure("Charge amount must be greater than zero.") unless amount.positive?
 
+      # The manual early-departure penalty follows the same billing route as the
+      # room charges — to whatever folio that route targets, falling back to the
+      # primary folio when unrouted.
+      route = Folios::ResolveTargetFolio.call(
+        booking: @booking,
+        transaction_code: @booking.hotel.transaction_codes.find_by(system_key: "room_revenue")
+      )
+      return failure(route.error) unless route.success?
+
       Folios::PostCategoryCharge.call(
-        folio: @booking.booking_folio,
+        folio: route.folio,
         user: @user,
         category: "early_departure_charge",
         amount: amount,

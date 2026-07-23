@@ -1,0 +1,50 @@
+<%#
+  Reusable shell for booking-action Sheets.
+
+  Lazy-loaded into a booking-action Turbo Frame; panels-ui--sheet-frame auto-opens
+  the native <dialog> on connect and clears its own frame on close.
+
+  The sheet renders into whichever frame requested it (echoing the Turbo-Frame
+  request header, default `booking_action_sheet`). That single knob decides the
+  behaviour of the launcher, not this shell:
+    * launch into `booking_action_sheet`            -> top-level sheet
+    * launch into `booking_action_sheet_secondary`  -> stacks above the primary
+    * launch into the frame already showing a sheet -> replaces it (multistep)
+
+  Locals:
+    id          - dialog id (required)
+    title:      - visible title, OR
+    aria_label: - accessible label when there is no visible title
+    size:       - :sm | :md | :lg | :full (default :md)
+    side:       - :right | :left | :top | :bottom (default :right)
+    description:- optional sub-heading
+    body_class: - optional class override for the body region
+    dismissible:- default true
+    frame:      - target frame id (default: requesting frame or booking_action_sheet)
+
+  Yields the sheet body via the block.
+%>
+<% dismissible = local_assigns.fetch(:dismissible, true) %>
+<% frame = local_assigns.fetch(:frame) { turbo_frame_request_id.presence || "booking_action_sheet" } %>
+<%= turbo_frame_tag frame do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: id,
+          side: local_assigns.fetch(:side, :right),
+          size: local_assigns.fetch(:size, :md),
+          title: local_assigns[:title],
+          aria_label: local_assigns[:aria_label],
+          description: local_assigns[:description],
+          dismissible: dismissible,
+          body_class: local_assigns[:body_class]) do |sheet| %>
+      <% sheet.with_body do %>
+        <%= yield %>
+      <% end %>
+      <% if local_assigns[:footer].present? %>
+        <% sheet.with_footer do %>
+          <%= footer %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

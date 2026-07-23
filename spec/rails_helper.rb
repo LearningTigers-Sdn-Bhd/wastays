@@ -105,6 +105,16 @@ RSpec.configure do |config|
   config.after(:each) do
     travel_back
   end
+
+  # cuprite clears cookies on session reset but not sessionStorage/localStorage,
+  # so stay-view persists scroll + focus state (keyed by a board query that
+  # repeats across examples) leaks into later examples. Clear web storage after
+  # each system example to keep them isolated.
+  config.after(:each, type: :system) do
+    page.execute_script("window.sessionStorage.clear(); window.localStorage.clear();")
+  rescue StandardError
+    # The page may be on about:blank or storage may be unavailable — nothing to clear.
+  end
 end
 
 def chrome_available?

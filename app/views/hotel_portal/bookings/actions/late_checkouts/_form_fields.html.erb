@@ -1,0 +1,67 @@
+<%= render PanelsUI::RadioGroup.new(
+      form: form, attribute: :charge_type,
+      label: "Do you approve this booking late checkout?",
+      orientation: :horizontal,
+      size: :sm,
+      selected: params[:charge_type] || "charge",
+      options: [
+        { label: "Yes, approve with charges", value: "charge" },
+        { label: "No, reject it", value: "none" }
+      ],
+      data: { action: "change->booking-actions--late-checkout#updateUI" }) %>
+
+<div data-booking-actions--late-checkout-target="chargeSection" class="space-y-4">
+  <%= render PanelsUI::RadioGroup.new(
+        form: form, attribute: :charge_calculation,
+        label: "Charge calculation",
+        variant: :card,
+        size: :sm,
+        selected: params[:charge_calculation] || "standard",
+        options: [
+          { label: "Current rate charge", value: "standard",
+            description: "Current booking property rate for the extended date including taxes." },
+          { label: "Additional charge", value: "custom",
+            description: "Impose an additional charge on the current property rate for the extended date including taxes." }
+        ],
+        data: { action: "change->booking-actions--late-checkout#updateUI" }) %>
+
+  <div data-booking-actions--late-checkout-target="standardSection"
+       class="flex items-center justify-between rounded-md border border-border bg-muted/50 px-4 py-3">
+    <span class="text-sm text-muted-foreground">Total charge</span>
+    <span class="text-sm font-medium text-foreground"><%= presenter.currency %> <%= number_with_precision(presenter.suggested_late_checkout_amount, precision: 2) %></span>
+  </div>
+
+  <div data-booking-actions--late-checkout-target="customSection"
+       class="hidden space-y-4 rounded-md border border-border bg-muted/50 p-4">
+    <div class="grid grid-cols-2 gap-4">
+      <%= render PanelsUI::FormField.new(form: form, attribute: :custom_type, label: "Adjustment type", size: :sm) do |field| %>
+        <% field.with_select_menu(
+             [ { label: "Fixed amount", value: "amount" }, { label: "Percentage (%)", value: "percentage" } ],
+             selected: params[:custom_type] || "amount",
+             data: { action: "change->booking-actions--late-checkout#updateCalculation" }) %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form: form, attribute: :custom_value, label: "Amount / %", size: :sm) do |field| %>
+        <% field.with_input(type: :number, step: 0.01, value: params[:custom_value], placeholder: "0.00",
+             data: { action: "input->booking-actions--late-checkout#updateCalculation" }) %>
+      <% end %>
+    </div>
+    <div class="flex items-center justify-between border-t border-border pt-3">
+      <div>
+        <p class="text-sm text-foreground">Calculated total</p>
+        <p class="text-xs text-muted-foreground">Rate + taxes + adjustment</p>
+      </div>
+      <span class="text-sm font-medium text-foreground" data-booking-actions--late-checkout-target="displayAmount"><%= presenter.currency %> 0.00</span>
+    </div>
+  </div>
+</div>
+
+<%= form.hidden_field :amount, data: { "booking-actions--late-checkout-target": "amountInput" } %>
+
+<div data-booking-actions--late-checkout-target="checkoutSection">
+  <%= render PanelsUI::FormField.new(
+        form: form, attribute: :check_out, label: "Checkout period", size: :sm,
+        hint: "Updating this will change the booking's scheduled checkout date and time.") do |field| %>
+    <% field.with_date_time_picker(
+         value: booking.check_out.in_time_zone(booking.hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")) %>
+  <% end %>
+</div>

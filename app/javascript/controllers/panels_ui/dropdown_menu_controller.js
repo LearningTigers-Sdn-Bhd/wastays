@@ -73,6 +73,10 @@ export default class extends Controller {
     if (restoreFocus) this.triggerTarget.focus()
   }
 
+  restoreTriggerFocus() {
+    this.triggerTarget.focus()
+  }
+
   onPopoverToggle(event) {
     if (event.target !== this.menuTarget || event.newState !== "closed") return
 

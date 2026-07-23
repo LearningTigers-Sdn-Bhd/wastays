@@ -83,12 +83,6 @@ module HotelPortal
       respond_with_folio_result(result, folio: folio, notice: "Folio window reopened.")
     end
 
-    def set_primary_guest
-      booking_guest = @booking.booking_guests.find(params[:booking_guest_id])
-      result = ::Bookings::SetPrimaryGuest.call(booking: @booking, booking_guest: booking_guest, actor: current_user)
-      redirect_with_result(result, tab: "guest_details", booking_guest_id: booking_guest.id)
-    end
-
     def update_room_rate
       result = if room_rate_params[:room_number].present? && room_rate_params.except(:room_number, :override, :override_reason).empty?
         ::Bookings::AssignRoom.new(

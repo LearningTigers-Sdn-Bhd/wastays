@@ -54,7 +54,7 @@ module Bookings
       ).call
 
       {
-        id: "tier_#{tier}_#{@room_type.id}", # Match virtual ID format: tier_[tier_type]_[room_type_id]
+        id: RateSelection.tier_token(tier, rate_plan.id),
         name: label,
         currency: rate_plan.currency,
         total_amount: total.to_d.to_s("F"),

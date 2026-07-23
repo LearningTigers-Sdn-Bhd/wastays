@@ -1,0 +1,34 @@
+<% booking = local_assigns.fetch(:booking) { @booking } %>
+<% group = booking.group_booking_id? %>
+
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "booking-late-checkout-sheet",
+        side: :right,
+        size: group ? :xl : :lg,
+        title: "Review late checkout",
+        description: booking.guest_name,
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with url: hotel_booking_action_late_checkout_path(current_hotel, booking), method: :post, class: "flex h-full min-h-0 flex-col", data: { controller: "group-lifecycle-targets" } do |f| %>
+        <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+        <div class="min-h-0 flex-1 <%= group ? 'grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none' : 'overflow-y-auto' %>">
+          <%= render "hotel_portal/bookings/actions/shared/group_target_selector",
+                target_presenter: HotelPortal::BookingLifecycleTargetPresenter.new(booking: booking, action: :late_checkout) %>
+          <% if group %><div class="min-h-0 overflow-y-auto custom-scrollbar"><% end %>
+          <div class="space-y-6 p-4"
+               data-controller="booking-actions--late-checkout"
+               data-booking-actions--late-checkout-base-amount-value="<%= @presenter.suggested_late_checkout_amount %>"
+               data-booking-actions--late-checkout-currency-value="<%= @presenter.currency %>">
+            <%= render "hotel_portal/bookings/actions/late_checkouts/form_fields", form: f, booking: booking, presenter: @presenter %>
+          </div>
+          <% if group %></div><% end %>
+        </div>
+        <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :warning, data: { turbo_submits_with: "Processing…" }) do %>Process late checkout<% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

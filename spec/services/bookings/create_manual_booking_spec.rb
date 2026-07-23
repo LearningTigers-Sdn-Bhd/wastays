@@ -155,8 +155,8 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(guest.phone).to eq("+60999999999")
     expect(guest.country).to eq("Singapore")
     expect(guest.gender).to eq("female")
-    expect(guest.document_type).to eq("passport")
-    expect(guest.government_id).to eq("new-passport")
+    expect(guest.document_type).to eq("ic")
+    expect(guest.government_id).to eq("old-ic")
   end
 
   it "rejects a selected guest that is not visible to the hotel" do
@@ -172,7 +172,7 @@ RSpec.describe Bookings::CreateManualBooking do
     }.not_to change(Booking, :count)
   end
 
-  it "matches manual guest details by email instead of creating a duplicate" do
+  it "matches manual guest details by email without changing the guest profile" do
     guest = create(:guest, created_by_hotel: hotel, name: "Repeat Guest", email: "repeat@example.com", phone: "+60222222222")
     params.merge!(
       guest_name: "Repeat Guest Updated",
@@ -193,8 +193,41 @@ RSpec.describe Bookings::CreateManualBooking do
     }.not_to change(Guest, :count)
 
     guest.reload
-    expect(guest.name).to eq("Repeat Guest Updated")
+    expect(guest.name).to eq("Repeat Guest")
     expect(guest.phone).to eq("+60222222222")
+  end
+
+  it "matches manual guest details by phone without changing the guest profile" do
+    guest = create(:guest, created_by_hotel: hotel, name: "Repeat Guest", email: "repeat@example.com", phone: "+60222222222")
+    params.merge!(
+      guest_name: "Booking Snapshot Name",
+      guest_email: "different@example.com",
+      guest_phone: "+60222222222",
+      guest_update_intent: "update_existing"
+    )
+
+    expect {
+      result = subject.call
+      expect(result.success?).to be true
+      expect(result.booking.guests).to contain_exactly(guest)
+    }.not_to change(Guest, :count)
+
+    expect(guest.reload.attributes.slice("name", "email", "phone")).to eq(
+      "name" => "Repeat Guest",
+      "email" => "repeat@example.com",
+      "phone" => "+60222222222"
+    )
+  end
+
+  it "does not match a guest by name alone" do
+    existing = create(:guest, created_by_hotel: hotel, name: "Shared Name", email: "old@example.com", phone: "+60111111111")
+    params.merge!(guest_name: "Shared Name", guest_email: "new@example.com", guest_phone: "+60222222222")
+
+    expect {
+      result = subject.call
+      expect(result.success?).to be true
+      expect(result.booking.guests).not_to include(existing)
+    }.to change(Guest, :count).by(1)
   end
 
   it "persists date of birth when creating a matched guest from manual booking details" do
@@ -258,6 +291,41 @@ RSpec.describe Bookings::CreateManualBooking do
 
     expect(result.success?).to be true
     expect(guest.reload.date_of_birth).to eq(Date.new(1992, 4, 5))
+  end
+
+  it "does not erase selected guest profile values when submitted values are blank" do
+    guest = create(
+      :guest,
+      created_by_hotel: hotel,
+      name: "Existing Guest",
+      email: "existing@example.com",
+      phone: "+60111111111",
+      country: "Malaysia",
+      gender: "female",
+      date_of_birth: Date.new(1990, 1, 2)
+    )
+    params.merge!(
+      existing_guest_id: guest.id,
+      guest_update_intent: "update_existing",
+      guest_name: "",
+      guest_email: "",
+      guest_phone: "",
+      guest_country: "",
+      guest_gender: "",
+      guest_date_of_birth: ""
+    )
+
+    result = subject.call
+
+    expect(result.success?).to be true
+    expect(guest.reload.attributes.slice("name", "email", "phone", "country", "gender", "date_of_birth")).to eq(
+      "name" => "Existing Guest",
+      "email" => "existing@example.com",
+      "phone" => "+60111111111",
+      "country" => "Malaysia",
+      "gender" => "female",
+      "date_of_birth" => Date.new(1990, 1, 2)
+    )
   end
 
   it "defaults selected guest changes to keep existing when intent is blank" do

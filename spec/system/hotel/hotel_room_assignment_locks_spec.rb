@@ -69,19 +69,19 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
         expect(page).to have_select("Room Number", with_options: [ "207" ])
       end
 
-      # Simulating a race condition via the shared Check-In transaction sheet.
-      page.execute_script("document.getElementById('offcanvas_drawer').src = '#{hotel_booking_transaction_check_in_reservation_path(hotel, booking)}'")
-      expect(page).to have_css("#offcanvas_drawer select[name*='room_number']")
+      # Simulating a race condition via the Check-In Sheet.
+      page.execute_script("document.getElementById('booking_action_sheet').src = '#{hotel_booking_action_check_in_path(hotel, booking)}'")
+      expect(page).to have_css("#booking-check-in-sheet select[name*='room_number']", visible: :all)
 
-      within("#offcanvas_drawer") do
+      within("#booking-check-in-sheet") do
         # We need to set the room_type_id for the controller to work
         container = find("div[data-controller~='room-lock']", match: :first)
         execute_script("arguments[0].dataset.roomLockRoomTypeIdValue = '#{room_type.id}'", container)
 
         # Use JS to set value since it might not be in the select options due to the lock
-        execute_script("document.querySelector('#offcanvas_drawer select[name*=\"room_number\"]').value = '206'")
+        execute_script("document.querySelector('#booking-check-in-sheet select[name*=\"room_number\"]').value = '206'")
         # Trigger change
-        execute_script("document.querySelector('#offcanvas_drawer [name*=\"room_number\"]').dispatchEvent(new Event('change', { bubbles: true }))")
+        execute_script("document.querySelector('#booking-check-in-sheet [name*=\"room_number\"]').dispatchEvent(new Event('change', { bubbles: true }))")
       end
 
       # Wait for the alert modal to be opened

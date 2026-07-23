@@ -1,0 +1,19 @@
+<p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Billing summary</p>
+<div class="mt-4 space-y-3 border-y border-border py-4 text-sm text-foreground">
+  <div class="flex justify-between">
+    <span>Room charges</span>
+    <strong class="text-foreground">MYR <span data-booking-room-rows-target="roomTotal">0.00</span></strong>
+  </div>
+  <div class="flex justify-between">
+    <span>Taxes</span>
+    <strong class="text-foreground">MYR <span data-booking-room-rows-target="taxTotal">0.00</span></strong>
+  </div>
+  <div class="hidden justify-between text-amber-700" data-booking-room-rows-target="tourismTaxRow">
+    <span>Tourism tax (collect at check-in)</span>
+    <strong>MYR <span data-booking-room-rows-target="tourismTaxTotal">0.00</span></strong>
+  </div>
+  <div class="flex justify-between border-t border-border pt-3 text-base">
+    <span>Total</span>
+    <strong class="text-foreground">MYR <span data-booking-room-rows-target="grandTotal">0.00</span></strong>
+  </div>
+</div>

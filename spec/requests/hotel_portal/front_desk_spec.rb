@@ -484,9 +484,8 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
 
         action = response.parsed_body.at_xpath("//a[normalize-space()='Audit trail']")
         expect(action).to be_present, "expected Audit trail on #{tab}"
-        expect(action["href"]).to eq(audit_trail_hotel_booking_control_panel_path(hotel, record))
-        expect(action["data-turbo-frame"]).to eq("offcanvas_drawer")
-        expect(action["data-offcanvas-variant"]).to eq("right")
+        expect(action["href"]).to eq(hotel_booking_action_audit_trail_path(hotel, record))
+        expect(action["data-turbo-frame"]).to eq("booking_action_sheet")
         menu = action.ancestors.find { |ancestor| ancestor["role"] == "menu" }
         expect(menu.css('[role="separator"]').size).to eq(1)
         group = action.ancestors.find { |ancestor| ancestor["role"] == "group" }
@@ -586,7 +585,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(document.css("form input[name='in_house_page']").length).to be >= 1
     end
 
-    it "uses system typography and preserves arrival mobile fields and permitted drawer actions" do
+    it "uses system typography and preserves arrival mobile fields and permitted Sheet actions" do
       grant_arrival_permission
       grant_booking_permission
       confirmed = booking(status: "confirmed", confirmation_token: "MOBILE-CONFIRMED", check_in: hotel_today)
@@ -600,14 +599,34 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(mobile.text).to include("2 adults, 0 children", "Not Required", "No documents")
       check_in_link = mobile.css("a").find { |link| link.text.strip == "Check In" }
       expect(check_in_link["href"]).to include("return_to=")
-      expect(check_in_link["data-offcanvas-variant"]).to eq("right")
+      expect(check_in_link["data-turbo-frame"]).to eq("booking_action_sheet")
+      expect(check_in_link["data-offcanvas-variant"]).to be_nil
       expect(mobile.text).to include("Checked in", "Edit Time")
       edit_time_link = mobile.css("a").find { |link| link.text.strip == "Edit Time" }
       expect(edit_time_link["href"]).to include(checked_in.id.to_s)
+      expect(edit_time_link["data-turbo-frame"]).to eq("booking_action_sheet")
       expect(response.body).to include(confirmed.confirmation_token)
     end
 
-    it "keeps mobile lifecycle drawer paths, variants, and checkout fields" do
+    it "opens checkout actions in the booking action sheet" do
+      grant_booking_permission
+      active = booking(status: "checked_in", confirmation_token: "SHEET-ACTIVE", checked_in_at: Time.current, check_out: Date.current)
+
+      [
+        { tab: "in_house", view: "list", in_house_query: active.confirmation_token },
+        { tab: "in_house", view: "rooms", in_house_query: active.confirmation_token },
+        { tab: "departures", view: "rooms", departure_query: active.confirmation_token }
+      ].each do |query|
+        get hotel_front_desk_path(hotel), params: query
+
+        checkout_link = response.parsed_body.at_xpath("//a[normalize-space()='Check out']")
+        expect(checkout_link).to be_present, "expected checkout link for #{query.inspect}"
+        expect(checkout_link["href"]).to include(hotel_booking_action_checkout_path(hotel, active), "return_to=")
+        expect(checkout_link["data-turbo-frame"]).to eq("booking_action_sheet")
+      end
+    end
+
+    it "keeps mobile lifecycle sheet paths and checkout fields" do
       late = booking(status: "review_due_out", confirmation_token: "MOBILE-LATE", checked_in_at: Time.current)
       checkout = booking(status: "checkout_required", confirmation_token: "MOBILE-CHECKOUT", checked_in_at: Time.current)
       departed = booking(status: "completed", confirmation_token: "MOBILE-DEPARTED", checked_in_at: Time.current, checked_out_at: Time.current)
@@ -617,9 +636,9 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       late_link = mobile.css("a").find { |link| link.text.strip == "Review late checkout" }
       checkout_link = mobile.css("a").find { |link| link.text.strip == "Complete checkout" }
       expect(late_link["href"]).to include(late.id.to_s, "return_to=")
-      expect(late_link["data-offcanvas-variant"]).to eq("right")
+      expect(late_link["data-turbo-frame"]).to eq("booking_action_sheet")
       expect(checkout_link["href"]).to include(checkout.id.to_s, "return_to=")
-      expect(checkout_link["data-offcanvas-variant"]).to eq("fullscreen-bottom")
+      expect(checkout_link["data-turbo-frame"]).to eq("booking_action_sheet")
 
       get hotel_front_desk_path(hotel), params: { tab: "checkout", view: "list", checkout_query: "MOBILE" }
       mobile = Nokogiri::HTML(response.body).at_css("#front-desk-results section > .lg\\:hidden")

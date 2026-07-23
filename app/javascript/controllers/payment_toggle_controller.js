@@ -11,7 +11,8 @@ export default class extends Controller {
     const enabled = this.checkboxTarget.checked
 
     this.fieldTargets.forEach((field) => {
-      field.disabled = !enabled
+      const controls = field.matches("input, select, textarea, button") ? [field] : field.querySelectorAll("input, select, textarea, button")
+      controls.forEach((control) => { control.disabled = !enabled })
     })
 
     this.containerTargets.forEach((container) => {

@@ -25,6 +25,7 @@ module HotelPortal
           id: @room.dom_id,
           data: {
             "stay-view--interaction-target": "row",
+            stay_view_room: true,
             room_type_id: @room.room_type_id,
             room_number: @room.room_number
           }
@@ -60,7 +61,7 @@ module HotelPortal
             render BookingBar.new(
               segment:,
               href: helpers.stay_view_booking_path(segment.booking_id, return_to:, source: "stay_view"),
-              link_attributes: { data: helpers.stay_view_action_data },
+              link_attributes: { data: helpers.stay_view_booking_action_data },
               interaction: interaction_for(segment)
             )
           end
@@ -85,8 +86,8 @@ module HotelPortal
         {
           room_type_id: @room.room_type_id,
           room_number: @room.room_number,
-          move_url: (helpers.edit_hotel_stay_view_booking_move_path(helpers.current_hotel, segment.booking_id, common) if segment.capabilities.move_booking?),
-          dates_url: (helpers.edit_hotel_stay_view_booking_dates_path(helpers.current_hotel, segment.booking_id, common) if segment.capabilities.change_dates?)
+          move_url: (helpers.hotel_booking_action_edit_room_path(helpers.current_hotel, segment.booking_id, common.merge(proposal_kind: "move")) if segment.capabilities.move_booking?),
+          dates_url: (helpers.hotel_booking_action_edit_dates_path(helpers.current_hotel, segment.booking_id, common.merge(proposal_kind: "dates")) if segment.capabilities.change_dates?)
         }.compact
       end
 

@@ -6,7 +6,7 @@
       <p class="mt-1 text-sm text-muted-foreground">Booking, stay, and financial information.</p>
     </div>
     <% if presenter.can_manage_bookings?(current_user) %>
-      <%= link_to "Edit Stay", hotel_booking_transaction_amend_stay_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }, class: "rounded-md border border-border-interactive bg-card px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" %>
+      <%= link_to "Edit Dates", hotel_booking_action_edit_dates_path(current_hotel, booking, return_to: request.fullpath), data: { turbo_frame: "booking_action_sheet" }, class: "rounded-md border border-border-interactive bg-card px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" %>
     <% end %>
   </header>
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_21_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -242,7 +242,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
     t.datetime "occurred_at", null: false
     t.index ["auditable_type", "auditable_id", "occurred_at"], name: "idx_booking_audit_logs_on_auditable_time"
     t.index ["auditable_type", "auditable_id"], name: "index_booking_audit_logs_on_auditable"
-    t.index ["category", "occurred_at"], name: "idx_booking_audit_logs_on_category_time"
     t.index ["hotel_id", "category", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_category_time"
     t.index ["hotel_id", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_time"
     t.index ["hotel_id"], name: "index_booking_audit_logs_on_hotel_id"
@@ -327,6 +326,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
     t.index ["hotel_id", "invoice_number"], name: "index_booking_folios_on_hotel_id_and_invoice_number", unique: true, where: "(invoice_number IS NOT NULL)"
     t.index ["hotel_id", "status"], name: "index_booking_folios_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_booking_folios_on_hotel_id"
+    t.check_constraint "folio_type::text <> 'guest'::text OR payer_type::text = 'guest'::text", name: "booking_folios_guest_type_is_guest_payer"
     t.check_constraint "folio_type::text = ANY (ARRAY['guest'::character varying, 'external'::character varying, 'house'::character varying]::text[])", name: "booking_folios_folio_type_allowed"
     t.check_constraint "payer_type::text = ANY (ARRAY['guest'::character varying, 'company'::character varying, 'agent'::character varying, 'hotel'::character varying, 'custom'::character varying]::text[])", name: "booking_folios_payer_type_allowed"
     t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'closed'::character varying, 'voided'::character varying]::text[])", name: "booking_folios_status_allowed"
@@ -1248,22 +1248,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
     t.bigint "salesperson_id"
     t.date "onboarding_start_date"
     t.date "onboarding_end_date"
-    t.jsonb "amenities", default: [], null: false
     t.boolean "ai_provider_enabled", default: false
     t.string "ai_provider_name"
     t.text "ai_provider_key"
+    t.jsonb "amenities", default: [], null: false
     t.string "slug", null: false
     t.string "ai_concierge_tone", default: "basic", null: false
     t.boolean "sst_enabled", default: false, null: false
     t.string "hotel_prefix"
     t.string "time_zone"
+    t.time "business_starts_at", default: "2000-01-01 08:00:00", null: false
+    t.time "business_ends_at", default: "2000-01-01 02:00:00", null: false
+    t.integer "arrival_grace_period", default: 7200, null: false
     t.string "contact_phone"
     t.string "contact_email"
     t.string "whatsapp_number"
     t.boolean "concierge_enabled", default: true, null: false
-    t.time "business_starts_at", default: "2000-01-01 08:00:00", null: false
-    t.time "business_ends_at", default: "2000-01-01 02:00:00", null: false
-    t.integer "arrival_grace_period", default: 7200, null: false
     t.string "pre_suspension_status"
     t.bigint "plan_id"
     t.string "google_map_link"
@@ -1271,10 +1271,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
     t.boolean "pax_pricing_only", default: false, null: false
     t.boolean "allow_pax_pricing", default: false, null: false
     t.jsonb "guest_registration_card_fields"
+    t.text "description"
     t.boolean "allow_boat_information", default: true, null: false
     t.jsonb "boat_in_times", default: [], null: false
     t.jsonb "boat_out_times", default: [], null: false
-    t.text "description"
     t.index ["account_id"], name: "index_hotels_on_account_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true
@@ -1860,8 +1860,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_18_100000) do
     t.boolean "closed_to_departure"
     t.boolean "stop_sell"
     t.decimal "walk_in_price", precision: 10, scale: 2
-    t.decimal "corporate_price", precision: 10, scale: 2
     t.string "applied_rule_type"
+    t.decimal "corporate_price", precision: 10, scale: 2
     t.decimal "single_supplement", precision: 10, scale: 2
     t.integer "base_occupancy"
     t.decimal "extra_pax_charge", precision: 10, scale: 2

@@ -1,0 +1,149 @@
+<% booking = local_assigns.fetch(:booking) { @booking } %>
+<% checkout_error = local_assigns.fetch(:checkout_error, nil) %>
+<% currency = booking.currency.presence || current_hotel.default_currency.presence || "MYR" %>
+<% checkout_business_date = current_hotel.current_business_date %>
+<% group_checkout = booking.group_booking_id.present? %>
+<% target_presenter = HotelPortal::BookingLifecycleTargetPresenter.new(booking: booking, action: :checkout) %>
+<% checkout_bookings = group_checkout ? target_presenter.rows.select(&:eligible).map(&:booking) : [ booking ] %>
+<% checkout_bookings = [ booking ] if checkout_bookings.empty? %>
+<% checkout_sheets = checkout_bookings.index_with { |checkout_booking| checkout_sheet_presenter(checkout_booking) } %>
+<% form_state = checkout_form_state(bookings: checkout_bookings, sheets: checkout_sheets) %>
+<% selected_booking_ids = form_state.selected_booking_ids %>
+<% all_held_deposits = checkout_sheets.values.flat_map(&:held_deposits) %>
+<% ns = "booking-actions--checkout-settlement" %>
+
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "booking-checkout-sheet",
+        side: :bottom,
+        size: :full,
+        title: group_checkout ? "Group checkout" : "Checkout",
+        description: group_checkout ? booking.group_booking.name : booking.guest_name,
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <div class="flex h-full min-h-0 flex-col"
+           data-controller="group-lifecycle-targets <%= ns %>"
+           data-action="<%= ns %>:charge-changed-><%= ns %>#updateEarlyDepartureCharge group-lifecycle-targets:changed-><%= ns %>#syncBookingSections"
+           data-<%= ns %>-currency-value="<%= currency %>"
+           data-<%= ns %>-group-checkout-value="<%= group_checkout %>">
+        <%= form_with url: hotel_booking_action_checkout_path(current_hotel, booking), method: :post,
+              id: "booking-checkout-form", class: "flex min-h-0 flex-1 flex-col overflow-hidden" do %>
+          <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+          <%= hidden_field_tag :source, params[:source] if params[:source].present? %>
+
+          <div class="min-h-0 flex-1 overflow-hidden <%= group_checkout ? 'grid grid-cols-1 lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[22rem_minmax(0,1fr)]' : '' %>">
+            <% if group_checkout %>
+              <aside class="min-h-0 overflow-y-auto border-b border-border bg-muted/30 lg:border-b-0 lg:border-r">
+                <%= render "hotel_portal/bookings/actions/shared/group_target_selector",
+                      target_presenter: target_presenter,
+                      master_detail: true,
+                      selected_booking_ids: selected_booking_ids,
+                      embedded: true %>
+              </aside>
+            <% end %>
+
+            <main class="flex h-full min-h-0 flex-col">
+              <%# Pinned context — checkout date + live totals stay visible while the folio list scrolls %>
+              <div class="shrink-0 space-y-3 border-b border-border bg-card px-4 py-3 sm:px-6">
+                <% unless group_checkout %>
+                  <% room = booking.booking_rooms.first %>
+                  <div>
+                    <h3 class="text-sm font-semibold">Booking #<%= booking.formatted_reservation_number.presence || booking.confirmation_token %></h3>
+                    <p class="text-xs text-muted-foreground">
+                      <%= room&.room_type&.name.presence || room&.room_type_snapshot.to_h["name"].presence || "Room type unavailable" %>
+                      · <%= room&.room_number.presence || "Unassigned room" %>
+                      · <%= booking.status.humanize %>
+                    </p>
+                  </div>
+                <% end %>
+
+                <div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+                  <div class="min-w-[15rem] flex-1">
+                    <%= fields_for "booking", OpenStruct.new(checked_out_at: form_state.checked_out_at) do |booking_form| %>
+                      <%= render PanelsUI::FormField.new(
+                            form: booking_form,
+                            attribute: :checked_out_at,
+                            label: "Check-out date and time",
+                            hint: "Scheduled checkout: #{booking.check_out.strftime('%d %b %Y')}",
+                            required: booking.checkout_required?,
+                            size: :sm) do |field| %>
+                        <% field.with_date_time_picker(value: form_state.checked_out_at, minute_step: 5) %>
+                      <% end %>
+                    <% end %>
+                  </div>
+
+                  <dl class="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+                    <% if group_checkout %>
+                      <div class="flex items-baseline gap-1.5">
+                        <dt class="text-xs text-muted-foreground">Selected</dt>
+                        <dd class="text-sm font-semibold tabular-nums" data-<%= ns %>-target="selectedCount"><%= form_state.selected_count %> <%= "booking".pluralize(form_state.selected_count) %></dd>
+                      </div>
+                    <% end %>
+                    <div class="flex items-baseline gap-1.5">
+                      <dt class="text-xs text-muted-foreground">Collect now</dt>
+                      <dd class="text-sm font-semibold tabular-nums" data-<%= ns %>-target="collectNowAmount"><%= currency %> <%= format("%.2f", form_state.collect_now_total) %></dd>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                      <dt class="text-xs text-muted-foreground">Direct bill</dt>
+                      <dd class="text-sm font-semibold tabular-nums" data-<%= ns %>-target="directBillAmount"><%= currency %> <%= format("%.2f", form_state.direct_bill_total) %></dd>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                      <dt class="text-xs text-muted-foreground">Keep open</dt>
+                      <dd class="text-sm font-semibold tabular-nums" data-<%= ns %>-target="keepOpenCount"><%= pluralize(form_state.keep_open_count, "folio") %></dd>
+                    </div>
+                  </dl>
+                </div>
+
+                <% if checkout_error.present? %>
+                  <%= render PanelsUI::Alert.new(tone: :destructive, title: "Checkout could not be completed", role: :alert, aria: { live: "assertive" }) do |alert| %>
+                    <% alert.with_description { checkout_error } %>
+                  <% end %>
+                <% end %>
+              </div>
+
+              <%# Scroll region — only the folio work scrolls %>
+              <div class="min-h-0 flex-1 overflow-y-auto custom-scrollbar">
+                <div class="px-4 py-6 sm:px-6">
+                  <div class="hidden" data-<%= ns %>-target="emptySelection">
+                    <%= render PanelsUI::Alert.new(tone: :info, title: "Select at least one booking") do |alert| %>
+                      <% alert.with_description { "Choose an eligible booking from the group rail to review its checkout details and folios." } %>
+                    <% end %>
+                  </div>
+
+                  <div class="space-y-8" data-<%= ns %>-target="requiresSelection">
+                    <%= render "hotel_portal/bookings/actions/checkouts/folio_resolver",
+                          checkout_sheets: checkout_sheets,
+                          form_state: form_state,
+                          group_checkout: group_checkout,
+                          currency: currency,
+                          checkout_business_date: checkout_business_date,
+                          ns: ns %>
+
+                    <% if all_held_deposits.any? %>
+                      <%= render "hotel_portal/bookings/actions/checkouts/security_deposit",
+                            checkout_sheets: checkout_sheets,
+                            deposits: all_held_deposits,
+                            form_state: form_state,
+                            currency: currency %>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% sheet.with_footer do %>
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            type: :submit,
+            form: "booking-checkout-form",
+            data: { turbo_submits_with: "Checking out…", "#{ns}-target": "submitButton" }) do %>
+        <%= group_checkout ? "Complete group checkout" : "Complete checkout" %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

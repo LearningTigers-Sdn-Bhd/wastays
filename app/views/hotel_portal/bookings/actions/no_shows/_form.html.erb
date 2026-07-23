@@ -1,0 +1,43 @@
+<% booking = local_assigns.fetch(:booking) { @booking } %>
+<% group = booking.group_booking_id? %>
+<% target_presenter = HotelPortal::BookingLifecycleTargetPresenter.new(booking: booking, action: :mark_no_show) %>
+
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "booking-no-show-sheet",
+        side: :right,
+        size: group ? :xl : :md,
+        title: "Mark as no-show",
+        description: booking.guest_name,
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with url: hotel_booking_action_mark_no_show_path(current_hotel, booking), method: :post, class: "flex h-full min-h-0 flex-col", data: { controller: "group-lifecycle-targets" } do |f| %>
+        <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+        <div class="min-h-0 flex-1 <%= group ? 'grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none' : 'overflow-y-auto' %>">
+          <%= render "hotel_portal/bookings/actions/shared/group_target_selector", target_presenter: target_presenter %>
+          <% if group %><div class="min-h-0 overflow-y-auto custom-scrollbar"><% end %>
+          <div class="p-4">
+            <% if booking.errors.any? %>
+              <div class="mb-5 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert"><%= booking.errors.full_messages.to_sentence %></div>
+            <% end %>
+            <%= render PanelsUI::Alert.new(tone: :warning) do |alert| %>
+              <% alert.with_description do %>
+                This finalizes the no-show, posts the standard first-night no-show charges, excludes tourism tax, and releases the assigned room and remaining inventory. Any settled folio closes automatically.
+              <% end %>
+            <% end %>
+            <div class="mt-5">
+              <%= render PanelsUI::FormField.new(form: f, attribute: :no_show_reason, label: "No-show reason", required: true) do |field| %>
+                <% field.with_text_area(value: params[:no_show_reason], rows: 5, placeholder: group ? "Explain why the selected group bookings are being finalized as no-show." : "Explain why this booking is being finalized as no-show.") %>
+              <% end %>
+            </div>
+          </div>
+          <% if group %></div><% end %>
+        </div>
+        <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, data: { turbo_submits_with: "Marking…" }) do %>Confirm no-show<% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

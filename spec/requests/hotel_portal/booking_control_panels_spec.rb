@@ -465,7 +465,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(response.body).not_to include("Apply routing change?", "existing_and_future")
     end
 
-    it "opens room changes offcanvas and renders guest editing inline" do
+    it "opens room changes in the booking action Sheet and renders guest editing inline" do
       role.permissions << manage_bookings
       guest = create(:booking_guest, booking: booking, is_primary: true)
       create(:booking_room, booking: booking)
@@ -473,13 +473,18 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       get hotel_booking_control_panel_path(hotel, booking, tab: "room_and_rate")
       document = Nokogiri::HTML(response.body)
       change_room = document.at_xpath("//a[normalize-space()='Change Room']")
-      expect(change_room["data-turbo-frame"]).to eq("offcanvas_drawer")
-      expect(change_room["href"]).to eq(hotel_booking_transaction_edit_booking_timeline_path(hotel, booking))
+      expect(change_room["data-turbo-frame"]).to eq("booking_action_sheet")
+      change_room_uri = URI.parse(change_room["href"])
+      expect(change_room_uri.path).to eq(hotel_booking_action_edit_room_path(hotel, booking))
+      expect(Rack::Utils.parse_nested_query(change_room_uri.query)).to eq(
+        "return_to" => hotel_booking_control_panel_path(hotel, booking, tab: "room_and_rate")
+      )
 
       get hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", booking_guest_id: guest.id)
       document = Nokogiri::HTML(response.body)
       add_guest = document.at_xpath("//a[normalize-space()='+ Add Guest']")
-      expect(add_guest["data-turbo-frame"]).to eq("offcanvas_drawer")
+      expect(add_guest["data-turbo-frame"]).to eq("booking_action_sheet")
+      expect(add_guest["href"]).to include(hotel_booking_action_manage_guest_path(hotel, booking))
       form = document.at_css("form#guest-details-form[data-controller*='guest-details-editor']")
       footer = document.at_css('[data-testid="guest-details-footer"]')
       save_guest = footer.at_xpath(".//button[@type='submit' and normalize-space()='Save Guest']")
@@ -502,9 +507,9 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       print_menu = print_grc.ancestors('[data-controller="document-print"]').first
       expect(print_menu["data-document-print-url-value"]).to eq(hotel_booking_guest_registration_card_path(hotel, booking))
       expect(discard_alert["role"]).to eq("alertdialog")
-      expect(response.body).to include("Guest Details", "Guest details recorded for this stay.", "GRC Actions", "Print")
+      expect(response.body).to include("Guest details", "Guest details recorded for this stay.", "GRC Actions", "Print")
       expect(response.body).not_to include("Stay Record", "Guest Profile")
-      expect(response.body).to include("Enter full name", "guest@example.com", "+60 12-345 6789", "Select country", "Select gender", "Select document type", "Enter IC or passport number", "Select date")
+      expect(response.body).to include("Enter full name", "guest@example.com", "+60 12-345 6789", "Search for a country", "Select a gender", "Select a document type", "Enter IC or passport number", "Select date of birth")
       expect(footer.at_xpath(".//button[@name='save_scope' and @value='snapshot']")).to be_present
       expect(footer.at_xpath(".//button[@name='save_scope' and @value='snapshot_and_profile']")).to be_present
       expect(response.body).not_to include("C Form")
@@ -574,9 +579,8 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       expect(summary.text).not_to include("Checked out")
       checkout_action = summary.at_xpath('.//a[normalize-space()="Check-out"]')
       expect(checkout_action.at_css("svg")).to be_present
-      expect(checkout_action["href"]).to include(hotel_booking_transaction_check_out_path(hotel, checkout_child))
-      expect(checkout_action["data-turbo-frame"]).to eq("offcanvas_drawer")
-      expect(checkout_action["data-offcanvas-variant"]).to eq("fullscreen-bottom")
+      expect(checkout_action["href"]).to include(hotel_booking_action_checkout_path(hotel, checkout_child))
+      expect(checkout_action["data-turbo-frame"]).to eq("booking_action_sheet")
     end
 
     it "renders group-aware actions on the group overview summary" do
@@ -707,7 +711,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
       end
     end
 
-    it "renders an Edit Stay launch link on the group overview booking details tab" do
+    it "renders an Edit Dates launch link on the group overview booking details tab" do
       role.permissions << manage_bookings
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
@@ -716,12 +720,17 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      link = document.at_xpath("//a[normalize-space()='Edit Stay']")
+      link = document.at_xpath("//a[normalize-space()='Edit Dates']")
       expect(link).to be_present
-      expect(link["href"]).to eq(hotel_booking_transaction_amend_stay_path(hotel, booking))
+      link_uri = URI.parse(link["href"])
+      expect(link_uri.path).to eq(hotel_booking_action_edit_dates_path(hotel, booking))
+      return_to = Rack::Utils.parse_nested_query(link_uri.query).fetch("return_to")
+      return_uri = URI.parse(return_to)
+      expect(return_uri.path).to eq(hotel_booking_control_panel_path(hotel, booking))
+      expect(Rack::Utils.parse_nested_query(return_uri.query)).to eq("tab" => "booking_details", "scope" => "group")
     end
 
-    it "hides the Edit Stay launch link on the group overview without manage_bookings permission" do
+    it "hides the Edit Dates launch link on the group overview without manage_bookings permission" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
 
@@ -729,7 +738,7 @@ RSpec.describe "HotelPortal::BookingControlPanels", type: :request do
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      expect(document.at_xpath("//a[normalize-space()='Edit Stay']")).to be_nil
+      expect(document.at_xpath("//a[normalize-space()='Edit Dates']")).to be_nil
     end
 
     it "redirects legacy grouped folio scope to the first child's primary folio" do

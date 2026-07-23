@@ -6,9 +6,9 @@
         <%= render PanelsUI::DropdownMenu.new(id: "reservations-new-transaction-menu", placement: :bottom_end, class: "w-60") do |menu| %>
           <% menu.with_trigger(variant: :primary, size: :md) do %><%= app_icon "plus", class: "size-4", aria: { hidden: true } %><span>New</span><%= app_icon "chevron-down", class: "size-4", aria: { hidden: true } %><% end %>
           <% menu.with_group(label: "Insert transaction") do |group| %>
-            <% group.with_item(href: hotel_booking_transaction_quick_booking_path(current_hotel), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }) do %><%= app_icon "calendar-plus", class: "size-4", aria: { hidden: true } %><span>New Booking</span><% end %>
-            <% group.with_item(href: hotel_booking_transaction_walk_in_check_in_path(current_hotel), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }) do %><%= app_icon "user-check", class: "size-4", aria: { hidden: true } %><span>Walk-in Check-in</span><% end %>
-            <% group.with_item(href: hotel_booking_transaction_backdated_check_in_path(current_hotel), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" }) do %><%= app_icon "calendar-clock", class: "size-4", aria: { hidden: true } %><span>Backdated Check-in</span><% end %>
+            <% group.with_item(href: hotel_booking_action_quick_booking_path(current_hotel), data: { turbo_frame: "booking_action_sheet" }) do %><%= app_icon "calendar-plus", class: "size-4", aria: { hidden: true } %><span>New Booking</span><% end %>
+            <% group.with_item(href: hotel_booking_action_walk_in_check_in_path(current_hotel), data: { turbo_frame: "booking_action_sheet" }) do %><%= app_icon "user-check", class: "size-4", aria: { hidden: true } %><span>Walk-in Check-in</span><% end %>
+            <% group.with_item(href: hotel_booking_action_backdated_check_in_path(current_hotel), data: { turbo_frame: "booking_action_sheet" }) do %><%= app_icon "calendar-clock", class: "size-4", aria: { hidden: true } %><span>Backdated Check-in</span><% end %>
           <% end %>
         <% end %>
       <% end %>

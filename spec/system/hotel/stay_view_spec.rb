@@ -143,7 +143,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     segment.hover
     expect(page).to have_css("##{segment[:id]}-panel", text: "Ada Lovelace", visible: :visible)
     expect(page).to have_css("##{segment[:id]}-panel", text: "Single booking", visible: :visible)
-    expect(URI.parse(segment.find("a")[:href]).path).to eq(hotel_booking_transaction_show_booking_path(hotel, booking))
+    expect(URI.parse(segment.find("a")[:href]).path).to eq(hotel_booking_action_show_booking_path(hotel, booking))
 
     page.execute_script("document.querySelector('##{segment[:id]}-trigger').focus()")
     expect(page).to have_css("##{segment[:id]}-panel", text: "Confirmed", visible: :visible)
@@ -171,7 +171,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     within("#stay_view_room_#{room_type.id}_101-priority-panel") do
       find("input[name='room_status[priority]'][role='switch']", visible: :all).set(true)
       fill_in "Priority note", with: "Prepare before noon"
-      click_button "Apply"
+      click_in_overlay "Apply"
     end
 
     expect(page).to have_css("##{priority_trigger_id}:focus", wait: 10)
@@ -186,7 +186,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     find("##{dnd_trigger_id}").click
     within("#stay_view_room_#{room_type.id}_101-dnd-panel") do
       find("input[name='room_status[dnd]'][role='switch']", visible: :all).set(true)
-      click_button "Apply"
+      click_in_overlay "Apply"
     end
 
     expect(page).to have_css("##{dnd_trigger_id}:focus", wait: 10)
@@ -197,7 +197,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     find("##{priority_trigger_id}").click
     within("#stay_view_room_#{room_type.id}_101-priority-panel") do
       find("input[name='room_status[priority]'][role='switch']", visible: :all).set(false)
-      click_button "Apply"
+      click_in_overlay "Apply"
     end
 
     expect(page).to have_css("##{priority_trigger_id}:focus", wait: 10)
@@ -236,15 +236,15 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     menu_id = "stay_view_room_#{room_type.id}_102-#{Date.current.iso8601}-cell-actions-menu"
     expect(page).to have_css("##{menu_id}", text: "Walk-in check-in", visible: :visible)
-    within("##{menu_id}") { click_link "Add booking" }
+    within("##{menu_id}") { click_in_overlay "Add booking" }
 
-    within("#offcanvas_drawer") do
-      expect(find("#booking_check_in").value).to start_with(Date.current.iso8601)
-      expect(find("#booking_check_out").value).to start_with((Date.current + 1.day).iso8601)
+    within("#booking-creation-sheet") do
+      expect(find("#booking_check_in", visible: :all).value).to start_with(Date.current.iso8601)
+      expect(find("#booking_check_out", visible: :all).value).to start_with((Date.current + 1.day).iso8601)
     end
   end
 
-  it "opens a lifecycle drawer from Room View with Stay View return state" do
+  it "opens a booking action from Room View with Stay View return state" do
     return_to = hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
     visit return_to
 
@@ -252,14 +252,13 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
       expect(page).to have_no_css("[data-slot='stay-view-room-footer']")
       find("a[data-slot='stay-view-room-booking-item']").click
     end
-    within("#offcanvas_drawer") do
-      click_button "Actions"
+    within("#booking-summary-sheet") do
+      click_in_overlay "Actions"
+      click_in_overlay "Cancel booking"
     end
-    find("a[role='menuitem']", text: "Check-in", visible: :visible).click
 
-    within("#offcanvas_drawer") do
-      expect(page).to have_content("CONFIRM CHECK-IN")
-      expect(find("input[name='source']", visible: :all).value).to eq("stay_view")
+    within("#booking-cancellation-sheet") do
+      expect(page).to have_content("Cancel booking")
       expect(find("input[name='return_to']", visible: :all).value).to eq(return_to)
     end
   end
@@ -273,9 +272,9 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(Rack::Utils.parse_nested_query(URI.parse(book[:href]).query)).to include("room_number" => "102")
     book.send_keys(:enter)
 
-    within("#offcanvas_drawer") do
-      expect(find("#booking_check_in").value).to start_with(Date.current.iso8601)
-      expect(find("#booking_check_out").value).to start_with((Date.current + 1.day).iso8601)
+    within("#booking-creation-sheet") do
+      expect(find("#booking_check_in", visible: :all).value).to start_with(Date.current.iso8601)
+      expect(find("#booking_check_out", visible: :all).value).to start_with((Date.current + 1.day).iso8601)
     end
   end
 
@@ -297,16 +296,17 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
       expect(Rack::Utils.parse_nested_query(URI.parse(item[:href]).query)).to include("source" => "stay_view")
       item.click
     end
-    within("#offcanvas_drawer") do
+    within("#stay-view-room-block-sheet") do
       expect(page).to have_content("Edit room block")
       expect(find("#room_block_reason").value).to eq("Repair the balcony door")
-      click_button "Finish block"
+      click_in_overlay "Finish block"
     end
 
     expect(page).to have_css(
       "#stay_view_room_#{room_type.id}_102[data-room-state='vacant'] [data-slot='stay-view-room-activity']",
       text: "No activity today"
     )
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_102-title:focus")
     expect(block.reload.completed_at).to be_present
   end
 
@@ -325,14 +325,18 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(status_trigger[:"aria-label"]).to eq("Room status: Dirty — change")
     status_trigger.click
     within("#stay_view_room_#{room_type.id}_102-status-menu") do
-      click_link "Ready"
+      click_in_overlay "Ready"
     end
 
-    within("#offcanvas_drawer") do
+    within("#stay-view-room-status-sheet") do
       expect(page).to have_content("Change room status")
       expect(page).to have_content("Room 102")
       expect(find("#room_status_status", visible: :all).value).to eq("ready")
+      fill_in "Reason or note", with: "Room inspected and ready"
+      click_in_overlay "Update status"
     end
+    expect(page).to have_no_css("dialog#stay-view-room-status-sheet", wait: 3)
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_102-status-trigger:focus")
   end
 
   it "shows authorized projected financial signals in Timeline and Room views" do
@@ -399,38 +403,40 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_css(housekeeping_panel, text: "Fresh towels", visible: :visible)
     expect(page).to have_css("#{housekeeping_panel} [role='alert']", text: "Do not enter / do not clean", visible: :visible)
 
-    within(housekeeping_panel) { click_link "Assign" }
-    within("#offcanvas_drawer") do
+    within(housekeeping_panel) { click_in_overlay "Assign" }
+    within("#stay-view-housekeeping-assignment-sheet") do
       expect(page).to have_content("updates all active housekeeping requests")
       find("#assignment_assigned_to-trigger").click
       find("[role='option']", text: "Sam Lee").click
-      click_button "Save assignment"
+      click_in_overlay "Save assignment"
     end
-    expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 3)
+    expect(page).to have_no_css("dialog#stay-view-housekeeping-assignment-sheet", wait: 3)
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_101-housekeeping-trigger:focus")
     expect(housekeeping_request.reload.metadata).to include("assigned_to_name" => "Sam Lee")
 
     within("#stay_view_room_#{room_type.id}_101") do
       find("button[aria-label='1 active housekeeping request']").click
     end
-    within(housekeeping_panel) { click_link "Update status" }
-    within("#offcanvas_drawer") do
+    within(housekeeping_panel) { click_in_overlay "Update status" }
+    within("#stay-view-housekeeping-status-sheet") do
       find("#housekeeping_request_status-trigger").click
       find("[role='option']", text: "Completed").click
-      click_button "Update status"
+      click_in_overlay "Update status"
     end
 
     expect(page).to have_no_css("button[aria-label='1 active housekeeping request']")
+    expect(page).to have_css("#stay_view_room_#{room_type.id}_101-title:focus")
     expect(housekeeping_request.reload.status).to eq("completed")
     expect(hotel.room_statuses.find_by(room_type:, room_number: "101").status).to eq("ready")
   end
 
-  it "routes Timeline booking actions to the booking show off-canvas and drops the row menu" do
+  it "routes Timeline booking actions to the booking summary Sheet and drops the row menu" do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
 
     bar = find("#stay_view_booking_room_#{booking.booking_rooms.sole.id} a")
-    expect(bar[:"data-turbo-frame"]).to eq("offcanvas_drawer")
+    expect(bar[:"data-turbo-frame"]).to eq("booking_action_sheet")
     uri = URI.parse(bar[:href])
-    expect(uri.path).to eq(hotel_booking_transaction_show_booking_path(hotel, booking))
+    expect(uri.path).to eq(hotel_booking_action_show_booking_path(hotel, booking))
     expect(Rack::Utils.parse_nested_query(uri.query)).to include(
       "source" => "stay_view",
       "return_to" => hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
@@ -438,55 +444,99 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_no_button("Actions for room 101")
   end
 
-  it "moves a Timeline stay through the keyboard-accessible booking drawer and restores focus",
-    skip: "Pending the stacked PR that replaces legacy off-canvas flows with the new overlay components" do
+  it "opens group documents in the booking summary Sheet and restores launcher focus" do
+    group = create(:group_booking, hotel:, name: "Conference Group")
+    booking.update!(group_booking: group, group_position: 1)
+    sibling = create(:booking, hotel:, group_booking: group, group_position: 2, guest_name: "Grace Hopper")
+    create(:booking_room, booking: sibling, room_type:, room_number: "102")
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+
+    launcher = find("#stay_view_booking_room_#{booking.booking_rooms.sole.id} a")
+    launcher.click
+    expect(page).to have_css("dialog#booking-summary-sheet[open]", text: "Conference Group")
+
+    # click_in_overlay dispatches the DOM click directly; cuprite's coordinate
+    # hit-testing is unreliable for controls inside a showModal() top-layer dialog.
+    within("#booking-summary-sheet") do
+      click_in_overlay "Actions"
+      click_in_overlay "Print / Send"
+    end
+    expect(page).to have_css("dialog#booking-group-documents-sheet[open]", text: "Group documents")
+
+    within("#booking-group-documents-sheet") { click_in_overlay "Back to booking summary" }
+    expect(page).to have_css("dialog#booking-summary-sheet[open]", text: "Conference Group")
+    expect(page).to have_css("#booking-summary-actions-trigger:focus")
+    find("dialog#booking-summary-sheet").send_keys(:escape)
+
+    expect(page).to have_no_css("dialog#booking-summary-sheet", wait: 3)
+    expect(page.evaluate_script("document.activeElement.id")).to eq(launcher[:id])
+  end
+
+  it "moves a Timeline stay through the keyboard-accessible booking Sheets and restores focus" do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 30)
-    timeline = find("#stay-view-timeline")
-    page.execute_script("arguments[0].scrollLeft = 20", timeline)
+    # Wait out the initial centerToday animation frame so it cannot clobber the
+    # scroll position this test sets up.
+    timeline = find("#stay-view-timeline[data-viewport-settled='true']")
     trigger_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}-trigger"
     trigger = find("##{trigger_id}")
-    trigger.send_keys(:enter)
+    # Scroll after locating the trigger and focus it without Capybara's
+    # scroll-into-view, which would reset the container back to 0.
+    page.execute_script("arguments[0].scrollLeft = 20", timeline)
+    page.execute_script("arguments[0].focus({ preventScroll: true })", trigger)
+    page.driver.browser.keyboard.type(:enter)
 
-    within("#offcanvas_drawer") do
+    within("#booking-summary-sheet") do
       actions = find_button("Actions")
-      actions.send_keys(:down)
+      page.execute_script("arguments[0].focus()", actions)
+      page.driver.browser.keyboard.type(:enter)
+      change_room = find_link("Change room")
+      page.execute_script("arguments[0].focus()", change_room)
+      page.driver.browser.keyboard.type(:enter)
     end
-    find("a[role='menuitem']", text: "Move or reassign", visible: :visible).send_keys(:enter)
 
-    within("#offcanvas_drawer") do
-      expect(page).to have_content("Move or reassign stay")
+    within("#booking-room-sheet") do
+      expect(page).to have_content("Change room")
       page.execute_script(<<~JS)
-        document.querySelector('#booking_check_in').value = '#{Date.current.iso8601}'
-        const room = document.querySelector('#booking_room_assignment')
-        room.value = '#{room_type.id}|102'
+        const room = document.querySelector('#booking_room_number')
+        room.value = '102'
         room.dispatchEvent(new Event('change', { bubbles: true }))
       JS
-      find_button("Confirm move").trigger("click")
+      save = find_button("Save changes")
+      page.execute_script("arguments[0].focus()", save)
+      page.driver.browser.keyboard.type(:enter)
     end
 
-    expect(booking.reload.booking_rooms.first.room_number).to eq("102")
+    # Completion reloads the page: both stacked sheets close and the viewport
+    # controller restores focus and scroll from its sessionStorage snapshot.
+    expect(page).to have_no_css("dialog#booking-room-sheet[open]", wait: 5)
+    expect(page).to have_no_css("dialog#booking-summary-sheet[open]", wait: 5)
     expect(page).to have_css("##{trigger_id}:focus", wait: 10)
+    expect(booking.reload.booking_rooms.first.room_number).to eq("102")
     expect(page.evaluate_script("document.getElementById('stay-view-timeline').scrollLeft")).to be_within(2).of(20)
   end
 
-  it "opens explicit Change dates without pointer proposal state and restores focus on Escape",
-    skip: "Pending the stacked PR that replaces legacy off-canvas flows with the new overlay components" do
+  it "opens the explicit dates editor without proposal state and restores focus on Escape" do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
     trigger_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}-trigger"
     find("##{trigger_id}").click
 
-    within("#offcanvas_drawer") do
-      click_button "Actions"
+    within("#booking-summary-sheet") do
+      click_in_overlay "Actions"
+      link = find_link("Edit dates")
+      expect(Rack::Utils.parse_nested_query(URI.parse(link[:href]).query)).not_to have_key("proposal_kind")
     end
-    link = find("a[role='menuitem']", text: "Change dates", visible: :visible)
-    expect(Rack::Utils.parse_nested_query(URI.parse(link[:href]).query)).not_to have_key("proposal")
-    link.click
+    within("#booking-summary-sheet") { click_in_overlay "Edit dates" }
 
-    expect(page).to have_css("#offcanvas_drawer", text: "Change stay dates", visible: :visible)
-    find("#booking_check_in").send_keys(:escape)
-    expect(page).to have_no_css("#offcanvas_drawer", text: "Change stay dates", visible: :visible)
+    expect(page).to have_css("dialog#booking-dates-sheet[open]", text: "Edit dates", visible: :visible)
+    find("dialog#booking-dates-sheet").send_keys(:escape)
+    expect(page).to have_no_css("dialog#booking-dates-sheet[open]", visible: :visible)
+    find("dialog#booking-summary-sheet").send_keys(:escape)
     expect(page).to have_css("##{trigger_id}:focus", wait: 2)
     expect(booking.reload.check_out.to_date).to eq(Date.current + 2.days)
+
+    refresh
+    expect(page).to have_css("##{trigger_id}", wait: 10)
+    expect(page).to have_no_css("##{trigger_id}:focus")
   end
 
   xit "moves a stay without dragging and refreshes the Room View board" do
@@ -495,18 +545,19 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     within("#stay_view_room_#{room_type.id}_101") do
       find("a[data-slot='stay-view-room-booking-item']").click
     end
-    within("#offcanvas_drawer") { click_button "Actions" }
-    find("a[role='menuitem']", text: "Move or reassign", visible: :visible).click
+    within("#booking-summary-sheet") do
+      click_in_overlay "Actions"
+      click_in_overlay "Change room"
+    end
 
-    within("#offcanvas_drawer") do
-      expect(page).to have_content("Move or reassign stay")
+    within("#booking-room-sheet") do
+      expect(page).to have_content("Change room")
       page.execute_script(<<~JS)
-        document.querySelector('#booking_check_in').value = '#{Date.current.iso8601}'
-        const room = document.querySelector('#booking_room_assignment')
-        room.value = '#{room_type.id}|102'
+        const room = document.querySelector('#booking_room_number')
+        room.value = '102'
         room.dispatchEvent(new Event('change', { bubbles: true }))
       JS
-      click_button "Confirm move"
+      click_in_overlay "Save changes"
     end
 
     expect(page).to have_css("#stay_view_room_#{room_type.id}_102", text: "Ada Lovelace")
@@ -518,15 +569,15 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     drag_booking(room_number: "102", day_delta: 1)
 
-    within("#offcanvas_drawer") do
-      expect(page).to have_content("Move or reassign stay")
-      expect(find("#booking_check_in", visible: :all).value).to eq((Date.current + 1.day).iso8601)
-      expect(find("#booking_room_assignment", visible: :all).value).to eq("#{room_type.id}|102")
+    within("#booking-room-sheet") do
+      expect(page).to have_content("Review the proposed room and dates")
+      expect(find("#booking_check_in", visible: :all).value).to start_with((Date.current + 1.day).iso8601)
+      expect(find("#booking_room_number", visible: :all).value).to eq("102")
     end
     expect(booking.reload.check_in.to_date).to eq(Date.current)
     expect(booking.booking_rooms.first.reload.room_number).to eq("101")
 
-    within("#offcanvas_drawer") { click_button "Confirm move" }
+    within("#booking-room-sheet") { click_in_overlay "Save changes" }
 
     expect(page).to have_css("#stay_view_room_#{room_type.id}_102 #stay_view_booking_room_#{booking.booking_rooms.sole.id}")
     expect(booking.reload.check_in.to_date).to eq(Date.current + 1.day)
@@ -537,21 +588,21 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current - 1.day, days: 7)
 
     drag_booking(room_number: "101", day_delta: 1, edge: "start")
-    within("#offcanvas_drawer") do
-      expect(page).to have_content("Change stay dates")
-      expect(find("#booking_check_in", visible: :all).value).to eq((Date.current + 1.day).iso8601)
-      expect(find("#booking_check_out", visible: :all).value).to eq((Date.current + 2.days).iso8601)
-      click_button "Save dates"
+    within("#booking-dates-sheet") do
+      expect(page).to have_content("Review the proposed stay dates")
+      expect(find("#booking_check_in", visible: :all).value).to start_with((Date.current + 1.day).iso8601)
+      expect(find("#booking_check_out", visible: :all).value).to start_with((Date.current + 2.days).iso8601)
+      click_in_overlay "Save changes"
     end
-    expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 2)
+    expect(page).to have_no_css("dialog#booking-dates-sheet[open]", wait: 2)
     expect(booking.reload.check_in.to_date).to eq(Date.current + 1.day)
 
     drag_booking(room_number: "101", day_delta: 1, edge: "end")
-    within("#offcanvas_drawer") do
-      expect(find("#booking_check_out", visible: :all).value).to eq((Date.current + 3.days).iso8601)
-      click_button "Save dates"
+    within("#booking-dates-sheet") do
+      expect(find("#booking_check_out", visible: :all).value).to start_with((Date.current + 3.days).iso8601)
+      click_in_overlay "Save changes"
     end
-    expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 2)
+    expect(page).to have_no_css("dialog#booking-dates-sheet[open]", wait: 2)
     expect(booking.reload.check_out.to_date).to eq(Date.current + 3.days)
   end
 
@@ -561,15 +612,15 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     dispatch_pointer_swipe(segment_id:, room_number: "102", day_delta: 1)
     expect(page).to have_no_css("##{segment_id}[data-interacting='true']", visible: :all)
-    expect(page).to have_no_css("#offcanvas_drawer", text: "Move or reassign stay", visible: :visible)
+    expect(page).to have_no_css("dialog#booking-room-sheet[open]", visible: :visible)
 
     dispatch_pointer_down(segment_id:, pointer_type: "touch")
     wait_for_drag_activation(segment_id)
     dispatch_pointer_finish(room_number: "102", day_delta: 0, settle: true)
 
-    within("#offcanvas_drawer") do
-      expect(page).to have_content("Move or reassign stay")
-      click_button "Cancel"
+    within("#booking-room-sheet") do
+      expect(page).to have_content("Change room")
+      click_in_overlay "Cancel"
     end
     expect(booking.reload.booking_rooms.first.room_number).to eq("101")
   end
@@ -599,7 +650,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     page.execute_script('window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Escape" }))')
 
     expect(page).to have_no_css(".panel-timeline__segment-proposal")
-    expect(page).to have_no_css("#offcanvas_drawer", text: "Move or reassign stay", visible: :visible)
+    expect(page).to have_no_css("dialog#booking-room-sheet[open]", visible: :visible)
     expect(booking.reload.check_in.to_date).to eq(Date.current)
   end
 
@@ -608,7 +659,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     segment_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}"
 
     drag_booking(room_number: "101", day_delta: 0)
-    expect(page).to have_no_css("#offcanvas_drawer", text: "Move or reassign stay", visible: :visible)
+    expect(page).to have_no_css("dialog#booking-room-sheet[open]", visible: :visible)
 
     dispatch_pointer_down(segment_id:)
     page.execute_script(<<~JS)
@@ -626,16 +677,17 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     JS
 
     expect(page).to have_no_css(".panel-timeline__segment-proposal")
-    expect(page).to have_no_css("#offcanvas_drawer", text: "Move or reassign stay", visible: :visible)
+    expect(page).to have_no_css("dialog#booking-room-sheet[open]", visible: :visible)
     expect(booking.reload.booking_rooms.first.room_number).to eq("101")
   end
 
   it "preserves timeline scroll and restores focus to the moved segment after a selective refresh" do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 30)
+    expect(page).to have_css("#stay-view-timeline[data-viewport-settled='true']")
     page.execute_script("document.getElementById('stay-view-timeline').scrollLeft = 20")
 
     drag_booking(room_number: "102", day_delta: 0)
-    within("#offcanvas_drawer") { click_button "Confirm move" }
+    within("#booking-room-sheet") { click_in_overlay "Save changes" }
 
     trigger_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}-trigger"
     expect(page).to have_css("##{trigger_id}", wait: 10)

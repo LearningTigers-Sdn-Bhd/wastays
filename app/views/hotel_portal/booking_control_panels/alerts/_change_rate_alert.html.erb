@@ -28,6 +28,6 @@
 
   <div class="flex flex-col-reverse gap-2 border-t border-border px-5 py-4 sm:flex-row sm:justify-end">
     <button type="button" class="rounded-md border border-border-interactive bg-card px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" data-action="warning-dialog#close">Cancel</button>
-    <%= link_to "Continue to editor", hotel_booking_transaction_amend_stay_path(current_hotel, booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right", action: "warning-dialog#proceed" }, class: "rounded-md bg-primary px-4 py-2.5 text-center text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" %>
+    <%= link_to "Continue to editor", hotel_booking_action_edit_rate_path(current_hotel, booking, return_to: request.fullpath), data: { turbo_frame: "booking_action_sheet", action: "warning-dialog#proceed" }, class: "rounded-md bg-primary px-4 py-2.5 text-center text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" %>
   </div>
 </dialog>

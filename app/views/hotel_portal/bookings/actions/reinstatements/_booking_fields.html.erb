@@ -1,0 +1,72 @@
+<% booking = local_assigns.fetch(:booking) %>
+<% input_prefix = local_assigns.fetch(:input_prefix) %>
+<% dom_prefix = local_assigns.fetch(:dom_prefix) %>
+<% select_class = "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:border-ring focus:ring-ring" %>
+
+<div class="space-y-6"
+     data-reinstatement-fields="true"
+     data-booking-id="<%= booking.id %>"
+     data-controller="booking-actions--reinstate-editor"
+     data-booking-actions--reinstate-editor-availability-url-value="<%= availability_hotel_bookings_path(current_hotel) %>"
+     data-booking-actions--reinstate-editor-rate-options-url-value="<%= rate_options_hotel_bookings_path(current_hotel) %>"
+     data-booking-actions--reinstate-editor-booking-id-value="<%= booking.id %>"
+     data-booking-actions--reinstate-editor-check-in-value="<%= booking.check_in.to_date %>"
+     data-booking-actions--reinstate-editor-check-out-value="<%= booking.check_out.to_date %>">
+  <section class="rounded-2xl border border-border bg-muted p-5">
+    <h3 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Scheduled stay</h3>
+    <div class="mt-3 grid gap-4 sm:grid-cols-2">
+      <div>
+        <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Check-in</p>
+        <p class="mt-1 text-sm font-bold text-foreground"><%= booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %></p>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Check-out</p>
+        <p class="mt-1 text-sm font-bold text-foreground"><%= booking.check_out.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %></p>
+      </div>
+    </div>
+  </section>
+
+  <% booking.booking_rooms.each_with_index do |room, index| %>
+    <% room_options = reinstatement_room_options(room) %>
+    <section class="space-y-5">
+      <%= hidden_field_tag "#{input_prefix}[#{index}][id]", room.id %>
+      <div>
+        <%= label_tag "#{dom_prefix}_room_type_#{index}", "Room category", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground" %>
+        <select name="<%= input_prefix %>[<%= index %>][room_type_id]"
+                id="<%= dom_prefix %>_room_type_<%= index %>"
+                required
+                class="<%= select_class %>"
+                data-booking-actions--reinstate-editor-target="roomType"
+                data-action="change->booking-actions--reinstate-editor#categoryChanged">
+          <%= options_from_collection_for_select(current_hotel.room_types.order(:name), :id, :name, room.room_type_id) %>
+        </select>
+      </div>
+      <div>
+        <%= label_tag "#{dom_prefix}_rate_#{index}", "Rate", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground" %>
+        <select name="<%= input_prefix %>[<%= index %>][rate_plan_id]"
+                id="<%= dom_prefix %>_rate_<%= index %>"
+                class="<%= select_class %>"
+                data-booking-actions--reinstate-editor-target="ratePlan">
+          <option value="">Select a rate</option>
+          <%= options_from_collection_for_select(room.room_type.rate_plans.order(:name), :id, :name, room.rate_plan_id) %>
+        </select>
+      </div>
+      <div>
+        <%= label_tag "#{dom_prefix}_room_number_#{index}", "Room number", class: "mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground" %>
+        <select name="<%= input_prefix %>[<%= index %>][room_number]"
+                id="<%= dom_prefix %>_room_number_<%= index %>"
+                required
+                class="<%= select_class %>"
+                data-booking-actions--reinstate-editor-target="roomNumber">
+          <% if room_options.empty? %>
+            <option value="<%= room.room_number %>" selected><%= room.room_number %></option>
+          <% else %>
+            <% room_options.each do |option| %>
+              <option value="<%= option[:room_number] %>" <%= "disabled" unless option[:selectable] %> <%= "selected" if option[:room_number].to_s == room.room_number.to_s %>><%= option[:label] %></option>
+            <% end %>
+          <% end %>
+        </select>
+      </div>
+    </section>
+  <% end %>
+</div>

@@ -73,20 +73,6 @@ RSpec.describe "HotelPortal::BookingControlPanelActions", type: :request do
     )
   end
 
-  it "changes the primary guest only inside the selected booking" do
-    original = create(:booking_guest, booking: booking, is_primary: true)
-    replacement = create(:booking_guest, booking: booking, is_primary: false)
-    sibling = create(:booking)
-    sibling_primary = create(:booking_guest, booking: sibling, is_primary: true)
-
-    patch set_primary_guest_hotel_booking_control_panel_path(hotel, booking), params: { booking_guest_id: replacement.id }
-
-    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", booking_guest_id: replacement.id))
-    expect(replacement.reload).to be_primary
-    expect(original.reload).not_to be_primary
-    expect(sibling_primary.reload).to be_primary
-  end
-
   it "renders and applies billing routes for the selected group child booking" do
     allow(BookingRedesign).to receive(:enabled?).and_return(true)
     role.permissions << manage_folio_movements

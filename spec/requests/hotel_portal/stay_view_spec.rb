@@ -16,7 +16,13 @@ RSpec.describe "HotelPortal Stay View", type: :request do
   end
 
   def turbo_headers
-    { "Accept" => Mime[:turbo_stream].to_s, "Turbo-Frame" => "offcanvas_drawer" }
+    { "Accept" => Mime[:turbo_stream].to_s, "Turbo-Frame" => "booking_action_sheet" }
+  end
+
+  def expect_live_sheet_completion(frame: "booking_action_sheet")
+    stream = Nokogiri::HTML(response.body).at_css("turbo-stream[action='complete_sheet'][target='#{frame}']")
+    expect(stream).to be_present
+    expect(stream["url"]).to be_nil
   end
 
   def enable_housekeeping_feature
@@ -68,8 +74,8 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(document.at_css("#rate_plan_id-select-menu")).to be_nil
       global_actions = document.at_css("[data-slot='stay-view-global-actions']")
       expect(global_actions.ancestors("#stay_view_toolbar")).to be_present
-      expect(global_actions.at_css("a[href^='#{hotel_booking_transaction_walk_in_check_in_path(hotel)}']").text.squish).to eq("Walk-in")
-      expect(global_actions.at_css("a[href^='#{hotel_booking_transaction_new_booking_path(hotel)}']").text.squish).to eq("Add booking")
+      expect(global_actions.at_css("a[href^='#{hotel_booking_action_walk_in_check_in_path(hotel)}']").text.squish).to eq("Walk-in")
+      expect(global_actions.at_css("a[href^='#{hotel_booking_action_quick_booking_path(hotel)}']").text.squish).to eq("Add booking")
       operational_counts = document.css("[data-slot='stay-view-operational-count']")
       expect(operational_counts.map { |badge| badge["data-state"] }).to eq(
         %w[all vacant arrival occupied departure turnover blocked dirty]
@@ -151,7 +157,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       add_booking = today_menu.css("[role='menuitem']").find { |item| item.text.squish == "Add booking" }
       add_booking_uri = URI.parse(add_booking["href"])
-      expect(add_booking_uri.path).to eq(hotel_booking_transaction_new_booking_path(hotel))
+      expect(add_booking_uri.path).to eq(hotel_booking_action_quick_booking_path(hotel))
       expect(Rack::Utils.parse_nested_query(add_booking_uri.query)).to include(
         "check_in" => Date.current.iso8601,
         "check_out" => (Date.current + 1.day).iso8601,
@@ -159,7 +165,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
         "room_number" => "101",
         "source" => "stay_view"
       )
-      expect(add_booking["data-turbo-frame"]).to eq("offcanvas_drawer")
+      expect(add_booking["data-turbo-frame"]).to eq("booking_action_sheet")
 
       today_trigger = document.at_css("##{room_id}-#{Date.current.iso8601}-cell-actions-trigger")
       expect(today_trigger["data-alignment"]).to eq("center")
@@ -766,7 +772,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).not_to include("cell-actions-trigger")
     end
 
-    it "renders the lifecycle-derived action matrix in the booking drawer opened from Room View" do
+    it "surfaces the status-appropriate migrated lifecycle action in the booking summary Sheet" do
       booking = create(
         :booking,
         hotel:,
@@ -775,32 +781,22 @@ RSpec.describe "HotelPortal Stay View", type: :request do
         check_out: Date.current + 1.day
       )
       create(:booking_room, booking:, room_type:, room_number: "101")
-      lifecycle_labels = [
-        "Check-in", "Cancel", "Backdated Check-in", "Mark No-show", "Check-out",
-        "Edit Check-In", "Undo Check-in", "Review Late Checkout", "Complete Checkout"
-      ]
       expected = {
-        "confirmed" => [ "Check-in", "Cancel" ],
-        "review_no_show" => [ "Backdated Check-in", "Mark No-show", "Cancel" ],
-        "checked_in" => [ "Check-out", "Edit Check-In", "Undo Check-in" ],
-        "review_due_out" => [ "Review Late Checkout" ],
-        "checkout_required" => [ "Complete Checkout" ],
-        "completed" => []
+        "confirmed" => "Check-in",
+        "review_no_show" => "Mark No-show",
+        "checked_in" => "Check-out",
+        "review_due_out" => "Review Late Checkout",
+        "checkout_required" => "Complete Checkout"
       }
-
-      expected.each do |status, labels|
+      expected.each do |status, label|
         booking.update_column(:status, status)
         return_to = hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
-        get hotel_booking_transaction_show_booking_path(hotel, booking, source: "stay_view", return_to:)
+        get hotel_booking_action_show_booking_path(hotel, booking, source: "stay_view", return_to:)
 
         document = Nokogiri::HTML(response.body)
-        items = document.css("[role='menu'] a[role='menuitem']")
-        rendered = items.map { |item| item.text.squish } & lifecycle_labels
-        expect(rendered).to eq(labels), "unexpected rendered actions for #{status}"
-        items.select { |item| item.text.squish.in?(labels) }.each do |item|
-          query = Rack::Utils.parse_nested_query(URI.parse(item["href"]).query)
-          expect(query).to include("source" => "stay_view", "return_to" => return_to)
-        end
+        expect(document.at_css("turbo-frame#booking_action_sheet")).to be_present
+        control_labels = document.css("a, button").map { |control| control.text.squish }
+        expect(control_labels).to include(label), "expected #{label.inspect} for #{status}"
       end
     end
 
@@ -816,7 +812,8 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(item).to be_present
 
       get item["href"]
-      expect(response.body).not_to include(">Actions<", "Check-in", "Cancel", "Mark No-show", "Check-out")
+      control_labels = Nokogiri::HTML(response.body).css("a, button").map { |control| control.text.squish }
+      expect(control_labels).not_to include("Check-in", "Cancel", "Mark No-show", "Check-out")
     end
 
     it "rejects users without board access before loading the board" do
@@ -828,131 +825,29 @@ RSpec.describe "HotelPortal Stay View", type: :request do
     end
   end
 
-  describe "booking action sheets" do
-    let(:booking) do
-      create(:booking, hotel:, guest_name: "Ada Lovelace", check_in: Date.current, check_out: Date.current + 2.days).tap do |record|
-        create(:booking_room, booking: record, room_type:, room_number: "101")
-      end
-    end
-
-    it "renders move and date forms in the off-canvas frame" do
-      get edit_hotel_stay_view_booking_move_path(hotel, booking), params: { return_to: hotel_stay_view_path(hotel) }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include('turbo-frame id="offcanvas_drawer"', "Move or reassign stay", "Room 102")
-
-      get edit_hotel_stay_view_booking_dates_path(hotel, booking), params: { return_to: hotel_stay_view_path(hotel) }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Change stay dates", "assigned room stays the same")
-    end
-
-    it "moves a stay and selectively replaces unfiltered Timeline rows over Turbo Stream" do
-      patch hotel_stay_view_booking_move_path(hotel, booking), params: {
-        return_to: hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7),
-        booking: { check_in: Date.current + 3.days, room_assignment: "#{room_type.id}|102" }
-      }, headers: turbo_headers
-
-      expect(response).to have_http_status(:success)
-      expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
-      expect(response.body).to include(
-        'target="stay_view_toolbar"',
-        "target=\"stay_view_room_#{room_type.id}_101\"",
-        "target=\"stay_view_room_#{room_type.id}_102\"",
-        'target="offcanvas_drawer"',
-        "Stay moved."
-      )
-      expect(response.body).not_to include('target="stay_view_board"')
-      expect(booking.reload.check_in.to_date).to eq(Date.current + 3.days)
-      expect(booking.booking_rooms.first.reload.room_number).to eq("102")
-    end
-
-
-    it "prefills and validates pointer move and resize proposals without mutation" do
-      conflicting = create(:booking, hotel:, check_in: Date.current + 2.days, check_out: Date.current + 4.days)
-      create(:booking_room, booking: conflicting, room_type:, room_number: "102")
-      original_dates = [ booking.check_in, booking.check_out ]
-
-      get edit_hotel_stay_view_booking_move_path(hotel, booking), params: {
-        proposal: "pointer",
-        booking: { check_in: Date.current + 2.days, room_assignment: "#{room_type.id}|102" }
-      }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Review the proposed room and date", "Room 102 is not available")
-      expect(response.body).to include("value=\"#{Date.current + 2.days}\"")
-
-      get edit_hotel_stay_view_booking_dates_path(hotel, booking), params: {
-        proposal: "pointer",
-        booking: { check_in: Date.current, check_out: Date.current + 3.days }
-      }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Review the proposed dates", "value=\"#{Date.current + 3.days}\"")
-      expect([ booking.reload.check_in, booking.check_out ]).to eq(original_dates)
-    end
-
-    it "rejects a pointer proposal that names another hotel's room type" do
-      other_hotel = create(:hotel)
-      other_type = create(:room_type, hotel: other_hotel, room_numbers: [ "900" ])
-
-      get edit_hotel_stay_view_booking_move_path(hotel, booking), params: {
-        proposal: "pointer",
-        booking: { check_in: Date.current, room_assignment: "#{other_type.id}|900" }
-      }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
-
-      expect(response).to have_http_status(:not_found)
-      expect(booking.reload.booking_rooms.first.room_number).to eq("101")
-    end
-
-    it "falls back to replacing the complete board when Timeline filters are active" do
-      patch hotel_stay_view_booking_dates_path(hotel, booking), params: {
-        return_to: hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7, occupancy: :occupied),
-        view: :timeline,
-        start_date: Date.current,
-        days: 7,
-        occupancy: :occupied,
-        booking: { check_in: Date.current + 1.day, check_out: Date.current + 3.days }
-      }, headers: turbo_headers
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include('target="stay_view_board"', 'target="offcanvas_drawer"')
-      expect(response.body).not_to include('target="stay_view_toolbar"')
-    end
-
-    it "uses a 303 redirect for the HTML mutation fallback" do
-      patch hotel_stay_view_booking_dates_path(hotel, booking), params: {
-        return_to: hotel_stay_view_path(hotel, view: :rooms, date: Date.current),
-        booking: { check_in: Date.current + 1.day, check_out: Date.current + 4.days }
-      }
-
-      expect(response).to have_http_status(:see_other)
-      expect(response).to redirect_to(hotel_stay_view_path(hotel, view: :rooms, date: Date.current))
-    end
-
-    it "returns 422 and keeps the proposal form when dates are invalid" do
-      patch hotel_stay_view_booking_dates_path(hotel, booking), params: {
-        return_to: hotel_stay_view_path(hotel),
-        booking: { check_in: Date.current + 3.days, check_out: Date.current + 2.days }
-      }, headers: turbo_headers
-
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include('target="offcanvas_drawer"', "Checkout must be after check-in")
-      expect(booking.reload.check_in.to_date).to eq(Date.current)
-    end
-  end
-
   describe "room actions" do
-    it "renders room-status and room-block sheets in the off-canvas frame" do
-      get hotel_stay_view_room_status_path(hotel, room_type, "101"), params: { return_to: hotel_stay_view_path(hotel) }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
+    it "renders room-status and room-block actions as native Sheets" do
+      get hotel_stay_view_room_status_path(hotel, room_type, "101"), params: { return_to: hotel_stay_view_path(hotel) }, headers: { "Turbo-Frame" => "booking_action_sheet" }
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('turbo-frame id="offcanvas_drawer"', "Change room status", "Physical status")
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("turbo-frame#booking_action_sheet dialog#stay-view-room-status-sheet[data-controller='panels-ui--sheet']")).to be_present
+      expect(response.body).to include("Change room status", "Physical status")
 
       get new_hotel_stay_view_room_block_path(hotel), params: {
         room_type_id: room_type.id,
         room_number: "101",
         return_to: hotel_stay_view_path(hotel)
-      }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
+      }, headers: { "Turbo-Frame" => "booking_action_sheet" }
       expect(response).to have_http_status(:success)
+      expect(Nokogiri::HTML(response.body).at_css("turbo-frame#booking_action_sheet dialog#stay-view-room-block-sheet[data-controller='panels-ui--sheet']")).to be_present
       expect(response.body).to include("Block room", "Block type", "Room 101")
+    end
+
+    it "falls back to the primary Sheet frame for direct room-action requests" do
+      get hotel_stay_view_room_status_path(hotel, room_type, "101"), params: { return_to: hotel_stay_view_path(hotel) }
+
+      expect(response).to have_http_status(:success)
+      expect(Nokogiri::HTML(response.body).at_css("turbo-frame#booking_action_sheet dialog#stay-view-room-status-sheet")).to be_present
     end
 
     it "keeps an existing custom room-block type selected and saveable" do
@@ -961,7 +856,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       get edit_hotel_stay_view_room_block_path(hotel, block), params: {
         return_to: hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
-      }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
+      }, headers: { "Turbo-Frame" => "booking_action_sheet" }
 
       document = Nokogiri::HTML(response.body)
       option = document.at_css("select[name='room_block[block_type]'] option[value='storm_recovery']")
@@ -995,6 +890,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('target="stay_view_board"', "Room status updated.")
+      expect_live_sheet_completion
       expect(hotel.room_statuses.find_by(room_type:, room_number: "101")).to have_attributes(status: "cleaning", notes: "In progress")
     end
 
@@ -1066,7 +962,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("Operational flag could not be saved")
-      expect(response.body).not_to include('target="offcanvas_drawer"')
+      expect(response.body).not_to include('target="booking_action_sheet"')
     end
 
     it "redacts operational notes and flag indicators without readiness permission" do
@@ -1110,6 +1006,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('target="stay_view_board"', "Room blocked.")
+      expect_live_sheet_completion
     end
 
     it "keeps the room-block sheet open with 422 validation errors" do
@@ -1126,7 +1023,9 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       }, headers: turbo_headers
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include('target="offcanvas_drawer"', "could not be saved")
+      expect(response.body).to include('target="booking_action_sheet"', "could not be saved", "stay-view-room-block-sheet")
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("input[name='room_block[start_date]']")["value"]).to eq((Date.current + 2.days).iso8601)
       expect(RoomBlock).not_to exist(room_number: "101")
     end
 
@@ -1157,6 +1056,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       post finish_hotel_stay_view_room_block_path(hotel, first), params: { return_to: hotel_stay_view_path(hotel) }, headers: turbo_headers
       expect(response).to have_http_status(:success)
+      expect_live_sheet_completion
       expect(first.reload.completed_at).to be_present
 
       expect {
@@ -1192,16 +1092,18 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       get edit_hotel_stay_view_housekeeping_request_assignment_path(hotel, housekeeping_request),
         params: { return_to: hotel_stay_view_path(hotel) },
-        headers: { "Turbo-Frame" => "offcanvas_drawer" }
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:success)
+      expect(Nokogiri::HTML(response.body).at_css("dialog#stay-view-housekeeping-assignment-sheet[data-controller='panels-ui--sheet']")).to be_present
       expect(response.body).to include("Assign room tasks", "all active housekeeping requests", "Sam Lee")
 
       get edit_hotel_stay_view_housekeeping_request_status_path(hotel, housekeeping_request),
         params: { return_to: hotel_stay_view_path(hotel) },
-        headers: { "Turbo-Frame" => "offcanvas_drawer" }
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:success)
+      expect(Nokogiri::HTML(response.body).at_css("dialog#stay-view-housekeeping-status-sheet[data-controller='panels-ui--sheet']")).to be_present
       expect(response.body).to include("Update task status", "Fresh towels", "In progress", "Completed")
     end
 
@@ -1239,6 +1141,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("target=\"stay_view_room_#{room_type.id}_101\"", "Room tasks assigned.", "Sam Lee")
+      expect_live_sheet_completion
       expect(housekeeping_request.reload).to have_attributes(status: "assigned")
       expect(housekeeping_request.metadata).to include("assigned_to" => housekeeper.id, "assigned_to_name" => "Sam Lee")
     end
@@ -1253,6 +1156,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('target="stay_view_board"', "Housekeeping status updated.")
+      expect_live_sheet_completion
       expect(response.body).not_to include("Fresh towels")
       expect(housekeeping_request.reload).to have_attributes(status: "completed")
       expect(hotel.room_statuses.find_by(room_type:, room_number: "101")).to have_attributes(status: "ready")

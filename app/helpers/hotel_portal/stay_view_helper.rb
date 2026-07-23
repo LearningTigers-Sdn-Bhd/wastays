@@ -60,31 +60,36 @@ module HotelPortal::StayViewHelper
   end
 
   def stay_view_action_data
-    { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }
+    { turbo_frame: "booking_action_sheet" }
+  end
+
+  def stay_view_booking_action_data
+    { turbo_frame: "booking_action_sheet" }
   end
 
   def stay_view_booking_path(booking_id, return_to:, source: nil)
-    hotel_booking_transaction_show_booking_path(current_hotel, booking_id, { return_to:, source: }.compact)
+    hotel_booking_action_show_booking_path(current_hotel, booking_id, { return_to:, source: }.compact)
   end
 
   def stay_view_drawer_booking_actions(booking_id, capabilities:, return_to:)
     common = { return_to:, source: "stay_view" }
+    stay_view_stay_editing_actions(capabilities, booking_id, common)
+  end
+
+  # Intent-scoped Stay-editing entries (Dates / Room / Rate). Each opens its own
+  # Sheet; the launcher only targets the frame.
+  def stay_view_stay_editing_actions(capabilities, booking_id, common)
     actions = []
-    if capabilities.move_booking?
-      actions << {
-        label: "Move or reassign",
-        href: edit_hotel_stay_view_booking_move_path(current_hotel, booking_id, common),
-        icon: "move"
-      }
-    end
     if capabilities.change_dates?
-      actions << {
-        label: "Change dates",
-        href: edit_hotel_stay_view_booking_dates_path(current_hotel, booking_id, common),
-        icon: "calendar-range"
-      }
+      actions << { label: "Edit dates", href: hotel_booking_action_edit_dates_path(current_hotel, booking_id, common), icon: "calendar-range", data: stay_view_booking_action_data }
     end
-    actions.map { |action| action.merge(data: stay_view_action_data) }
+    if capabilities.reassign_room? || capabilities.move_booking?
+      actions << { label: "Change room", href: hotel_booking_action_edit_room_path(current_hotel, booking_id, common), icon: "bed-double", data: stay_view_booking_action_data }
+    end
+    if capabilities.manage_bookings?
+      actions << { label: "Change rate", href: hotel_booking_action_edit_rate_path(current_hotel, booking_id, common), icon: "tag", data: stay_view_booking_action_data }
+    end
+    actions
   end
 
   def stay_view_cell_actions(room, cell, state)
@@ -103,25 +108,29 @@ module HotelPortal::StayViewHelper
       if cell.date < state.date_window.operational_date
         actions << {
           label: "Backdated check-in",
-          href: hotel_booking_transaction_backdated_check_in_path(current_hotel, common),
-          icon: "history"
+          href: hotel_booking_action_backdated_check_in_path(current_hotel, common),
+          icon: "history",
+          data: stay_view_booking_action_data
         }
       elsif cell.date == state.date_window.operational_date
         actions << {
           label: "Walk-in check-in",
-          href: hotel_booking_transaction_walk_in_check_in_path(current_hotel, common),
-          icon: "log-in"
+          href: hotel_booking_action_walk_in_check_in_path(current_hotel, common),
+          icon: "log-in",
+          data: stay_view_booking_action_data
         }
         actions << {
           label: "Add booking",
-          href: hotel_booking_transaction_new_booking_path(current_hotel, common),
-          icon: "calendar-plus"
+          href: hotel_booking_action_quick_booking_path(current_hotel, common),
+          icon: "calendar-plus",
+          data: stay_view_booking_action_data
         }
       else
         actions << {
           label: "Add booking",
-          href: hotel_booking_transaction_new_booking_path(current_hotel, common),
-          icon: "calendar-plus"
+          href: hotel_booking_action_quick_booking_path(current_hotel, common),
+          icon: "calendar-plus",
+          data: stay_view_booking_action_data
         }
       end
     end
@@ -140,22 +149,24 @@ module HotelPortal::StayViewHelper
       }
     end
 
-    actions.map { |action| action.merge(data: stay_view_action_data) }
+    actions.map { |action| action.merge(data: action.fetch(:data, stay_view_action_data)) }
   end
 
   def stay_view_booking_actions(segment, state)
     return_to = state.return_path(current_hotel)
     common = { return_to:, source: "stay_view" }
     actions = []
-    actions << { label: "Open booking", href: stay_view_booking_path(segment.booking_id, return_to:), icon: "external-link" } if segment.capabilities.view_booking?
-    if segment.capabilities.move_booking?
-      actions << { label: "Move or reassign", href: edit_hotel_stay_view_booking_move_path(current_hotel, segment.booking_id, common), icon: "move" }
+    if segment.capabilities.view_booking?
+      actions << {
+        label: "Open booking",
+        href: stay_view_booking_path(segment.booking_id, return_to:, source: "stay_view"),
+        icon: "external-link",
+        data: stay_view_booking_action_data
+      }
     end
-    if segment.capabilities.change_dates?
-      actions << { label: "Change dates", href: edit_hotel_stay_view_booking_dates_path(current_hotel, segment.booking_id, common), icon: "calendar-range" }
-    end
+    actions.concat(stay_view_stay_editing_actions(segment.capabilities, segment.booking_id, common))
     actions.concat(stay_view_lifecycle_booking_actions(segment, common))
-    actions.map { |action| action.merge(data: stay_view_action_data) }
+    actions.map { |action| action.merge(data: action.fetch(:data, stay_view_action_data)) }
   end
 
   def stay_view_lifecycle_booking_actions(segment, common)
@@ -174,24 +185,24 @@ module HotelPortal::StayViewHelper
     label = segment.status == :checkout_required && key == :check_out ? "Complete Checkout" : presentation.fetch(:label)
     href = case key
     when :check_in, :edit_check_in
-      hotel_booking_transaction_check_in_reservation_path(current_hotel, segment.booking_id, common)
+      hotel_booking_action_check_in_path(current_hotel, segment.booking_id, common)
     when :cancel
-      hotel_booking_transaction_cancel_booking_path(current_hotel, segment.booking_id, common)
+      hotel_booking_action_cancel_booking_path(current_hotel, segment.booking_id, common)
     when :backdated_check_in
-      hotel_booking_transaction_booking_backdated_check_in_path(current_hotel, segment.booking_id, common)
+      hotel_booking_action_review_backdated_check_in_path(current_hotel, segment.booking_id, common)
     when :mark_no_show
-      hotel_booking_transaction_mark_no_show_path(current_hotel, segment.booking_id, common)
+      hotel_booking_action_mark_no_show_path(current_hotel, segment.booking_id, common)
     when :check_out
-      hotel_booking_transaction_check_out_path(current_hotel, segment.booking_id, common)
+      hotel_booking_action_checkout_path(current_hotel, segment.booking_id, common)
     when :undo_check_in
-      hotel_booking_transaction_undo_check_in_path(current_hotel, segment.booking_id, common)
+      hotel_booking_action_undo_check_in_path(current_hotel, segment.booking_id, common)
     when :late_checkout
-      hotel_booking_transaction_late_checkout_path(current_hotel, segment.booking_id, common)
+      hotel_booking_action_late_checkout_path(current_hotel, segment.booking_id, common)
     else
       raise ArgumentError, "Unsupported Stay View lifecycle action: #{key}"
     end
 
-    presentation.except(:key).merge(label:, href:)
+    presentation.except(:key).merge(label:, href:, data: stay_view_booking_action_data)
   end
 
   # Status quick-pick items for the room-status badge dropdown. Each opens the
@@ -250,32 +261,36 @@ module HotelPortal::StayViewHelper
         actions << {
           label: "Backdated",
           aria_label: "Backdated check-in for room #{room.room_number} on #{I18n.l(date, format: :long)}",
-          href: hotel_booking_transaction_backdated_check_in_path(current_hotel, common),
+          href: hotel_booking_action_backdated_check_in_path(current_hotel, common),
           icon: "history",
-          variant: :secondary
+          variant: :secondary,
+          data: stay_view_booking_action_data
         }
       elsif date == state.date_window.operational_date
         actions << {
           label: "Walk-in",
           aria_label: "Walk-in check-in for room #{room.room_number} on #{I18n.l(date, format: :long)}",
-          href: hotel_booking_transaction_walk_in_check_in_path(current_hotel, common),
+          href: hotel_booking_action_walk_in_check_in_path(current_hotel, common),
           icon: "log-in",
-          variant: :secondary
+          variant: :secondary,
+          data: stay_view_booking_action_data
         }
         actions << {
           label: "Book",
           aria_label: "Add booking for room #{room.room_number} on #{I18n.l(date, format: :long)}",
-          href: hotel_booking_transaction_new_booking_path(current_hotel, common),
+          href: hotel_booking_action_quick_booking_path(current_hotel, common),
           icon: "calendar-plus",
-          variant: :neutral
+          variant: :neutral,
+          data: stay_view_booking_action_data
         }
       else
         actions << {
           label: "Book",
           aria_label: "Add booking for room #{room.room_number} on #{I18n.l(date, format: :long)}",
-          href: hotel_booking_transaction_new_booking_path(current_hotel, common),
+          href: hotel_booking_action_quick_booking_path(current_hotel, common),
           icon: "calendar-plus",
-          variant: :secondary
+          variant: :secondary,
+          data: stay_view_booking_action_data
         }
       end
     end
@@ -297,7 +312,7 @@ module HotelPortal::StayViewHelper
       }
     end
 
-    actions.map { |action| action.merge(data: stay_view_action_data) }
+    actions.map { |action| action.merge(data: action.fetch(:data, stay_view_action_data)) }
   end
 
   def stay_view_occupancy_label(occupancy)

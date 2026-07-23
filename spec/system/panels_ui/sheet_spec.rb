@@ -79,7 +79,7 @@ RSpec.describe "PanelsUI::Sheet", type: :system do
     JS
 
     expect(page).to have_css("dialog#sd-sheet-required[open]")
-    click_button "Finish required step"
+    click_in_overlay "Finish required step"
     expect(page).to have_no_css("dialog#sd-sheet-required[open]")
   end
 
@@ -109,7 +109,7 @@ RSpec.describe "PanelsUI::Sheet", type: :system do
     original_overflow = page.evaluate_script("document.body.style.overflow")
 
     click_button "Open right sheet"
-    click_button "Open stacked sheet"
+    click_in_overlay "Open stacked sheet"
 
     expect(page).to have_css("dialog#sd-sheet-right[open]")
     expect(page).to have_css("dialog#sd-sheet-stacked[open][data-panels-open]")
@@ -123,14 +123,14 @@ RSpec.describe "PanelsUI::Sheet", type: :system do
     expect(page).to have_css("dialog#sd-sheet-right[open]")
     expect(page).to have_css("dialog#sd-sheet-stacked[open]")
 
-    click_button "Back to filters"
+    click_in_overlay "Back to filters"
 
     expect(page).to have_no_css("dialog#sd-sheet-stacked[open]")
     expect(page).to have_css("dialog#sd-sheet-right[open]")
     expect(page.evaluate_script("document.body.style.overflow")).to eq("hidden")
     expect(page.evaluate_script("document.activeElement.id")).to eq("sd-sheet-stack-trigger")
 
-    click_button "Cancel filters"
+    click_in_overlay "Cancel filters"
 
     expect(page).to have_no_css("dialog[open]")
     expect(page).to have_no_css("body[style*='overflow: hidden']")

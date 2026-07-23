@@ -15,7 +15,7 @@ module PanelsUI
     renders_one :footer
 
     SIDES = %i[right left top bottom].freeze
-    SIZES = %i[sm md lg full].freeze
+    SIZES = %i[sm md lg xl full].freeze
     VARIANTS = %i[edge floating].freeze
 
     BASE_CLASSES = "fixed m-0 hidden open:flex flex-col overflow-hidden " \
@@ -44,12 +44,14 @@ module PanelsUI
           sm:   "w-[20rem] max-w-[100dvw]",
           md:   "w-[28rem] max-w-[100dvw]",
           lg:   "w-[36rem] max-w-[100dvw]",
+          xl:   "w-[48rem] max-w-[100dvw]",
           full: "w-dvw max-w-none rounded-none"
         },
         horizontal: {
           sm:   "h-[20rem] max-h-[100dvh]",
           md:   "h-[28rem] max-h-[100dvh]",
           lg:   "h-[36rem] max-h-[100dvh]",
+          xl:   "h-[48rem] max-h-[100dvh]",
           full: "h-dvh max-h-none rounded-none"
         }
       },
@@ -58,12 +60,14 @@ module PanelsUI
           sm:   "w-[20rem] max-w-[calc(100dvw-2rem)]",
           md:   "w-[28rem] max-w-[calc(100dvw-2rem)]",
           lg:   "w-[36rem] max-w-[calc(100dvw-2rem)]",
+          xl:   "w-[48rem] max-w-[calc(100dvw-2rem)]",
           full: "w-[calc(100dvw-2rem)] max-w-none"
         },
         horizontal: {
           sm:   "h-[20rem] max-h-[calc(100dvh-2rem)]",
           md:   "h-[28rem] max-h-[calc(100dvh-2rem)]",
           lg:   "h-[36rem] max-h-[calc(100dvh-2rem)]",
+          xl:   "h-[48rem] max-h-[calc(100dvh-2rem)]",
           full: "h-[calc(100dvh-2rem)] max-h-none"
         }
       }

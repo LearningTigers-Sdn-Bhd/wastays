@@ -308,10 +308,6 @@ Rails.application.routes.draw do
     resources :room_groups, except: [ :show ]
     get "stay-view", to: "stay_view/board#index", as: :stay_view
     scope "stay-view", module: :stay_view, as: :stay_view do
-      resources :bookings, only: [] do
-        resource :move, only: [ :edit, :update ], controller: "booking_moves"
-        resource :dates, only: [ :edit, :update ], controller: "booking_dates"
-      end
       get "rooms/:room_type_id/:room_number/status", to: "room_operations#edit", as: :room_status
       patch "rooms/:room_type_id/:room_number/status", to: "room_operations#update"
       resources :room_blocks, only: [ :new, :edit, :create, :update, :destroy ] do
@@ -328,25 +324,16 @@ Rails.application.routes.draw do
         get :availability, to: "bookings/availabilities#show"
         get :rate_options, to: "bookings/rate_options#show"
         get :stay_price, to: "bookings/prices#show"
+        get :room_row, to: "bookings/room_rows#show"
       end
 
       member do
         patch :move, to: "bookings/moves#update"
-        post :check_in, to: "bookings/check_ins#create"
-        post :check_out, to: "bookings/checkouts#create"
-        post :reinstate, to: "bookings/reinstatements#create"
-        post :mark_no_show, to: "bookings/no_shows#create"
-        post :repair_no_show_folio, to: "bookings/no_show_folio_repairs#create"
-        post :cancel, to: "bookings/cancellations#create"
-        post :add_guest, to: "bookings/guests#create"
-        post :process_late_checkout, to: "bookings/checkouts#process_late_checkout"
-        delete "guests/:guest_id", to: "bookings/guests#destroy", as: :remove_guest
         post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings/housekeeping_requests#complete", as: :complete_housekeeping_request
         post "complaint_requests/:complaint_request_id/resolve", to: "bookings/complaint_requests#resolve", as: :resolve_complaint_request
       end
 
       resources :refund_requests, only: [ :new, :create ]
-      resources :booking_notes, only: [ :create, :update, :destroy ], module: :bookings
       resource :guest_registration_card, only: [ :show, :update, :destroy ], module: :bookings
       resources :guest_registration_note_templates, only: [ :index, :new, :create, :edit, :update, :destroy ], module: :bookings
       resource :reservation_voucher, only: [ :show ], module: :bookings
@@ -357,7 +344,6 @@ Rails.application.routes.draw do
     resources :booking_control_panels, only: :show, param: :booking_id, path: "booking-control-panels" do
       member do
         get :audit_trail
-        patch :set_primary_guest, controller: :booking_control_panel_actions
         patch :update_room_rate, controller: :booking_control_panel_actions
         get :new_folio_window, controller: :booking_control_panel_actions
         post :create_folio_window, controller: :booking_control_panel_actions
@@ -384,30 +370,31 @@ Rails.application.routes.draw do
         post :resolve_complaint_request, controller: :booking_control_panel_actions
       end
     end
-    scope "bookings/:booking_id/show/actions", as: :booking_show_action, module: "bookings/show/actions" do
-      match "manage-guest", to: "manage_guests#show", via: [ :get, :post, :patch ], as: :manage_guest
-      match "confirmation", to: "confirmation_actions#show", via: [ :get, :delete ], as: :confirmation
-      match "manage-internal-notes", to: "manage_internal_notes#show", via: [ :get, :post, :patch ], as: :manage_internal_notes
-    end
-    scope "booking-transactions", as: :booking_transaction, module: "bookings/transactions" do
-      match "quick-booking", to: "quick_bookings#show", via: [ :get, :post ], as: :quick_booking
+    scope "booking-actions", as: :booking_action, module: "bookings/actions" do
+      get "audit-trail/:booking_id", to: "audit_trails#show", as: :audit_trail
+      get "show-booking/:booking_id", to: "summaries#show", as: :show_booking
+      get "show-booking/:booking_id/print-send", to: "documents#show", as: :group_print_send
       match "new-booking", to: "new_bookings#show", via: [ :get, :post ], as: :new_booking
+      match "quick-booking", to: "quick_bookings#show", via: [ :get, :post ], as: :quick_booking
       match "walk-in-check-in", to: "walk_in_check_ins#show", via: [ :get, :post ], as: :walk_in_check_in
       match "backdated-check-in", to: "backdated_check_ins#show", via: [ :get, :post ], as: :backdated_check_in
-      match "backdated-check-in/:booking_id", to: "backdated_check_ins#show", via: [ :get, :post ], as: :booking_backdated_check_in
-      match "edit-booking/:booking_id", to: "edit_bookings#show", via: [ :get, :patch ], as: :edit_booking
-      match "edit-booking-timeline/:booking_id", to: "edit_booking_timelines#show", via: [ :get, :patch ], as: :edit_booking_timeline
-      get "show-booking/:booking_id", to: "show_bookings#show", as: :show_booking
-      get "show-booking/:booking_id/print-send", to: "show_bookings#print_send", as: :show_booking_print_send
-      match "amend-stay/:booking_id", to: "amend_stays#show", via: [ :get, :patch ], as: :amend_stay
-      get "check-in-reservation/:booking_id", to: "check_in_reservations#show", as: :check_in_reservation
+      match "edit-dates/:booking_id", to: "booking_dates#show", via: [ :get, :patch ], as: :edit_dates
+      match "edit-room/:booking_id", to: "room_assignments#show", via: [ :get, :patch ], as: :edit_room
+      match "edit-rate/:booking_id", to: "rate_changes#show", via: [ :get, :patch ], as: :edit_rate
+      match "check-in/:booking_id", to: "check_ins#show", via: [ :get, :post ], as: :check_in
+      match "cancel-booking/:booking_id", to: "cancellations#show", via: [ :get, :post ], as: :cancel_booking
+      match "mark-no-show/:booking_id", to: "no_shows#show", via: [ :get, :post ], as: :mark_no_show
       match "undo-check-in/:booking_id", to: "undo_check_ins#show", via: [ :get, :post ], as: :undo_check_in
-      get "check-out/:booking_id", to: "check_outs#show", as: :check_out
-      get "late-checkout/:booking_id", to: "late_checkouts#show", as: :late_checkout
-      get "reinstate-no-show/:booking_id", to: "reinstate_no_shows#show", as: :reinstate_no_show
-      get "mark-no-show/:booking_id", to: "mark_no_shows#show", as: :mark_no_show
-      get "repair-no-show-folio/:booking_id", to: "repair_no_show_folios#show", as: :repair_no_show_folio
-      get "cancel-booking/:booking_id", to: "cancel_bookings#show", as: :cancel_booking
+      match "review-backdated-check-in/:booking_id", to: "review_backdated_check_ins#show", via: [ :get, :post ], as: :review_backdated_check_in
+      match "repair-no-show-folio/:booking_id", to: "no_show_folio_repairs#show", via: [ :get, :post ], as: :repair_no_show_folio
+      match "reinstate-no-show/:booking_id", to: "reinstatements#show", via: [ :get, :post ], as: :reinstate_no_show
+      match "late-checkout/:booking_id", to: "late_checkouts#show", via: [ :get, :post ], as: :late_checkout
+      match "checkout/:booking_id", to: "checkouts#show", via: [ :get, :post ], as: :checkout
+      match "manage-guest/:booking_id", to: "guests#show", via: [ :get, :post, :patch ], as: :manage_guest
+      match "remove-guest/:booking_id/:booking_guest_id", to: "guests#remove", via: [ :get, :delete ], as: :remove_guest
+      patch "set-primary-guest/:booking_id/:booking_guest_id", to: "guests#set_primary", as: :set_primary_guest
+      match "internal-notes/:booking_id", to: "internal_notes#show", via: [ :get, :post, :patch ], as: :internal_notes
+      match "internal-notes/:booking_id/:note_id/delete", to: "internal_notes#delete", via: [ :get, :delete ], as: :delete_internal_note
     end
 
     resources :folios, only: [ :index, :show ], param: :booking_id do

@@ -1,0 +1,64 @@
+@layer components {
+  .panel-autocomplete {
+    position: relative;
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .panel-autocomplete__listbox {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(100% + 0.375rem);
+    z-index: var(--z-dropdown);
+    max-height: min(18rem, calc(100vh - 1rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.375rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+    color: var(--card-foreground);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .panel-autocomplete__option {
+    display: grid;
+    gap: 0.125rem;
+    padding: 0.4375rem 0.625rem;
+    border-radius: var(--radius-md);
+    cursor: default;
+  }
+
+  .panel-autocomplete__option:hover,
+  .panel-autocomplete__option[aria-selected="true"] {
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  .panel-autocomplete__label {
+    overflow: hidden;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .panel-autocomplete__description,
+  .panel-autocomplete__empty {
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  .panel-autocomplete__description {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .panel-autocomplete__empty {
+    padding: 0.4375rem 0.625rem;
+  }
+}

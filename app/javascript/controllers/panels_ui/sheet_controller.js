@@ -99,7 +99,10 @@ export default class extends Controller {
 
     this.cancelCloseWait()
     this.closing = false
-    if (this.element.open) this.element.close()
+    if (this.element.open) {
+      this.element.close()
+      window.dispatchEvent(new CustomEvent("panels-ui:sheet-closed"))
+    }
   }
 
   cancelOpenFrame() {

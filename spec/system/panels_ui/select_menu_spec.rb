@@ -94,6 +94,26 @@ RSpec.describe "PanelsUI::SelectMenu", type: :system do
     expect(find("##{ROOM_LISTBOX} [role='option'][data-value='dlx_twin']", visible: :all)["aria-selected"]).to eq("true")
   end
 
+  it "replaces dynamic choices in both the native select and styled listbox" do
+    page.execute_script(<<~JS)
+      const root = document.getElementById('#{NATIVE}-select-menu')
+      const controller = window.Stimulus.getControllerForElementAndIdentifier(root, 'panels-ui--select-menu')
+      controller.replaceOptions([
+        { label: 'Advance purchase', value: 'advance' },
+        { label: 'Corporate (unavailable)', value: 'corporate', disabled: true }
+      ], 'advance')
+    JS
+
+    expect(page.evaluate_script("[...document.getElementById('#{NATIVE}').options].map(option => [option.text, option.value, option.disabled])")).to eq([
+      [ "Advance purchase", "advance", false ],
+      [ "Corporate (unavailable)", "corporate", true ]
+    ])
+    expect(native_value).to eq("advance")
+    expect(find("##{TRIGGER} .panel-select-menu__value")).to have_text("Advance purchase")
+    expect(page).to have_css("##{LISTBOX} [role='option']", count: 2, visible: :all)
+    expect(find("##{LISTBOX} [data-value='corporate']", visible: :all)["aria-disabled"]).to eq("true")
+  end
+
   it "skips disabled options and closes on Escape and outside pointer input" do
     open_menu
     disabled = find("[role='option'][aria-disabled='true']", text: "All inclusive (sold out)")

@@ -1,0 +1,15 @@
+<%= tag.div(**root_attributes) do %>
+  <%= render input_component %>
+  <div id="<%= listbox_id %>"
+       class="panel-autocomplete__listbox"
+       role="listbox"
+       hidden
+       data-panels-ui--autocomplete-target="listbox"
+       data-action="pointerdown->panels-ui--autocomplete#onOptionPointerDown click->panels-ui--autocomplete#choose">
+  </div>
+  <p id="<%= status_id %>"
+     class="sr-only"
+     role="status"
+     aria-live="polite"
+     data-panels-ui--autocomplete-target="status"></p>
+<% end %>

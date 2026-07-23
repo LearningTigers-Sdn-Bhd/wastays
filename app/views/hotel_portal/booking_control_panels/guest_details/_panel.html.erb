@@ -5,9 +5,10 @@
     <% return_to = presenter.guest_details_return_to %>
     <% snapshots = presenter.guest_details_snapshots %>
     <% boat_times = presenter.guest_details_boat_times %>
+    <% country_choices = COUNTRY_OPTIONS.map { |country| [country, country] } %>
 
     <%= form_with model: presenter.selected_guest,
-        url: hotel_booking_show_action_manage_guest_path(current_hotel, booking, mode: mode, booking_guest_id: presenter.selected_booking_guest.id),
+        url: hotel_booking_action_manage_guest_path(current_hotel, booking, mode: mode, booking_guest_id: presenter.selected_booking_guest.id),
         method: :patch,
         id: "guest-details-form",
         class: "flex h-full min-h-0 flex-col bg-card",
@@ -17,106 +18,77 @@
 
       <header class="shrink-0 border-b border-border px-5 py-4">
         <p class="text-xs font-semibold text-muted-foreground">Booking No. <%= presenter.booking_number %></p>
-        <h2 id="guest-details-heading" class="mt-1 truncate text-lg font-bold text-foreground"><%= presenter.guest_display[:name] %></h2>
+          <h2 id="guest-details-heading" class="mt-1 truncate text-base font-semibold text-foreground"><%= presenter.guest_display[:name] %></h2>
         <p class="mt-1 text-sm text-muted-foreground"><%= presenter.guest_display[:role] %></p>
       </header>
 
       <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar">
         <div class="mx-auto max-w-5xl px-5 py-6 lg:px-8">
-          <div class="mb-5">
-            <h3 class="text-sm font-bold text-foreground">Guest Details</h3>
-            <p class="mt-1 text-xs text-muted-foreground">Guest details recorded for this stay.</p>
-          </div>
-
-          <fieldset <%= "disabled" unless presenter.can_manage_bookings?(current_user) %> class="space-y-6 disabled:opacity-70">
-            <div class="grid gap-5 md:grid-cols-2">
-              <div class="md:col-span-2">
-                <%= form.label :name, "Full Name", class: "booking-form__label" %>
-                <%= form.text_field :name, value: snapshots[:name], required: true, autocomplete: "name", placeholder: "Enter full name", class: "booking-form__control" %>
-              </div>
-              <div>
-                <%= form.label :email, "Email", class: "booking-form__label" %>
-                <%= form.email_field :email, value: snapshots[:email], autocomplete: "email", spellcheck: false, placeholder: "guest@example.com", class: "booking-form__control" %>
-              </div>
-              <div>
-                <%= form.label :phone, "Phone", class: "booking-form__label" %>
-                <%= form.telephone_field :phone, value: snapshots[:phone], autocomplete: "tel", placeholder: "+60 12-345 6789", class: "booking-form__control" %>
-              </div>
-              <div>
-                <%= form.label :country, "Country", class: "booking-form__label" %>
-                <%= form.select :country, options_for_select([["Select country", ""]] + COUNTRY_OPTIONS, snapshots[:country]), {}, class: "booking-form__control", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" } %>
-              </div>
-              <div>
-                <%= form.label :gender, "Gender", class: "booking-form__label" %>
-                <%= form.select :gender, options_for_select([["Select gender", ""], ["Male", "male"], ["Female", "female"], ["Other", "other"]], snapshots[:gender]), {}, class: "booking-form__control" %>
-              </div>
+            <div class="mb-5">
+              <h3 class="text-base font-semibold text-foreground">Guest details</h3>
+              <p class="mt-1 text-xs text-muted-foreground">Guest details recorded for this stay.</p>
             </div>
 
-            <section class="border-t border-border pt-6" aria-labelledby="guest-identity-heading">
-              <div class="mb-4">
-                <h3 id="guest-identity-heading" class="text-sm font-bold text-foreground">Identity Information</h3>
-                <p class="mt-1 text-xs text-muted-foreground">Use the identification presented by the guest.</p>
+            <fieldset <%= "disabled" unless presenter.can_manage_bookings?(current_user) %> class="space-y-6 disabled:opacity-70">
+              <div class="grid gap-4 md:grid-cols-2">
+                <div class="md:col-span-2">
+                  <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Full name", required: true) do |field| %>
+                    <% field.with_input(value: snapshots[:name], autocomplete: "name", placeholder: "Enter full name") %>
+                  <% end %>
+                </div>
+                <%= render PanelsUI::FormField.new(form:, attribute: :email, label: "Email") do |field| %>
+                  <% field.with_input(type: :email, value: snapshots[:email], autocomplete: "email", spellcheck: false, placeholder: "guest@example.com") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :phone, label: "Phone") do |field| %>
+                  <% field.with_input(type: :tel, value: snapshots[:phone], autocomplete: "tel", placeholder: "+60 12-345 6789") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Country", required: true) do |field| %>
+                  <% field.with_combobox(country_choices, selected: snapshots[:country], prompt: "Search for a country", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" }) %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :gender, label: "Gender") do |field| %>
+                  <% field.with_select_menu([["Male", "male"], ["Female", "female"], ["Other", "other"]], selected: snapshots[:gender], prompt: "Select a gender") %>
+                <% end %>
               </div>
-              <div class="grid gap-5 md:grid-cols-2">
-                <div>
-                  <%= form.label :document_type, "Document Type", class: "booking-form__label" %>
-                  <%= form.select :document_type, options_for_select([["Select document type", ""], ["IC", "ic"], ["Passport", "passport"]], snapshots[:document_type]), {}, class: "booking-form__control", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" } %>
-                </div>
-                <div>
-                  <%= form.label :government_id, "IC / Passport No.", class: "booking-form__label" %>
-                  <%= form.text_field :government_id, value: snapshots[:government_id], autocomplete: "off", spellcheck: false, placeholder: "Enter IC or passport number", class: "booking-form__control", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
-                </div>
-                <div>
-                  <%= form.label :date_of_birth, "Date of Birth", class: "booking-form__label" %>
-                  <%= form.date_field :date_of_birth, value: snapshots[:date_of_birth], autocomplete: "bday", placeholder: "Select date", class: "booking-form__control", data: { guest_dob_target: "dateOfBirth" } %>
-                </div>
-              </div>
-            </section>
 
-            <% if current_hotel.allow_boat_information? %>
-              <section class="border-t border-slate-200 pt-6" aria-labelledby="guest-bibo-heading">
+              <section class="border-t border-border pt-6" aria-labelledby="guest-identity-heading">
                 <div class="mb-4">
-                  <h3 id="guest-bibo-heading" class="text-sm font-bold text-slate-955">Boat transfer</h3>
-                  <p class="mt-1 text-xs text-slate-500">Guest Boat-In / Boat-Out timestamps.</p>
+                  <h3 id="guest-identity-heading" class="text-base font-semibold text-foreground">Identity information</h3>
+                  <p class="mt-1 text-xs text-muted-foreground">Use the identification presented by the guest.</p>
                 </div>
-                <div class="grid gap-5 md:grid-cols-2">
-                  <!-- Boat-In -->
-                  <div class="space-y-1.5" data-controller="boat-time-combiner">
-                    <%= label_tag "booking_guest_boat_in_at", "Boat-In", class: "booking-form__label" %>
-                    <%= hidden_field_tag "booking_guest[boat_in_at]", boat_times[:boat_in], data: { boat_time_combiner_target: "datetimeInput" } %>
-                    <div class="grid grid-cols-2 gap-2">
-                      <input type="date" 
-                             value="<%= presenter.guest_details_boat_in_date %>" 
-                             data-boat-time-combiner-target="dateInput" 
-                             data-action="change->boat-time-combiner#combine" 
-                             class="booking-form__control">
-                      <select data-boat-time-combiner-target="timeInput" 
-                              data-action="change->boat-time-combiner#combine" 
-                              class="booking-form__control">
-                        <option value="">Select time</option>
-                        <%= options_for_select(presenter.guest_details_boat_in_time_options, presenter.guest_details_boat_in_time) %>
-                      </select>
-                    </div>
-                  </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                  <%= render PanelsUI::FormField.new(form:, attribute: :document_type, label: "Document type") do |field| %>
+                    <% field.with_select_menu([["IC", "ic"], ["Passport", "passport"]], selected: snapshots[:document_type], prompt: "Select a document type", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" }) %>
+                  <% end %>
+                  <%= render PanelsUI::FormField.new(form:, attribute: :government_id, label: "IC / Passport no.") do |field| %>
+                    <% field.with_input(value: snapshots[:government_id], autocomplete: "off", spellcheck: false, placeholder: "Enter IC or passport number", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" }) %>
+                  <% end %>
+                  <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth, label: "Date of birth") do |field| %>
+                    <% field.with_date_picker(
+                         value: snapshots[:date_of_birth]&.to_date&.iso8601,
+                         max: Date.yesterday,
+                         caption_layout: :dropdown,
+                         year_range: (Date.current.year - 120)..Date.current.year,
+                         placeholder: "Select date of birth",
+                         data: { guest_dob_target: "dateOfBirth" }) %>
+                  <% end %>
+                </div>
+              </section>
 
-                  <!-- Boat-Out -->
-                  <div class="space-y-1.5" data-controller="boat-time-combiner">
-                    <%= label_tag "booking_guest_boat_out_at", "Boat-Out", class: "booking-form__label" %>
-                    <%= hidden_field_tag "booking_guest[boat_out_at]", boat_times[:boat_out], data: { boat_time_combiner_target: "datetimeInput" } %>
-                    <div class="grid grid-cols-2 gap-2">
-                      <input type="date" 
-                             value="<%= presenter.guest_details_boat_out_date %>" 
-                             data-boat-time-combiner-target="dateInput" 
-                             data-action="change->boat-time-combiner#combine" 
-                             class="booking-form__control">
-                      <select data-boat-time-combiner-target="timeInput" 
-                              data-action="change->boat-time-combiner#combine" 
-                              class="booking-form__control">
-                        <option value="">Select time</option>
-                        <%= options_for_select(presenter.guest_details_boat_out_time_options, presenter.guest_details_boat_out_time) %>
-                      </select>
-                    </div>
-                  </div>
+              <% if current_hotel.allow_boat_information? %>
+              <section class="border-t border-border pt-6" aria-labelledby="guest-bibo-heading">
+                <div class="mb-4">
+                  <h3 id="guest-bibo-heading" class="text-base font-semibold text-foreground">Boat transfer</h3>
+                  <p class="mt-1 text-xs text-muted-foreground">Guest boat-in and boat-out timestamps.</p>
+                </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                  <%= fields_for :booking_guest, presenter.selected_booking_guest do |booking_guest_form| %>
+                    <%= render PanelsUI::FormField.new(form: booking_guest_form, attribute: :boat_in_at, label: "Boat-in") do |field| %>
+                      <% field.with_date_time_picker(value: boat_times[:boat_in]) %>
+                    <% end %>
+                    <%= render PanelsUI::FormField.new(form: booking_guest_form, attribute: :boat_out_at, label: "Boat-out") do |field| %>
+                      <% field.with_date_time_picker(value: boat_times[:boat_out]) %>
+                    <% end %>
+                  <% end %>
                 </div>
               </section>
             <% end %>
