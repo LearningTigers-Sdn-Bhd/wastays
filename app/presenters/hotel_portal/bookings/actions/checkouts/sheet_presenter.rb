@@ -4,15 +4,13 @@ module HotelPortal
   module Bookings
     module Actions
       module Checkouts
-        # View-model for the Sheet-based checkout. Isolated copy of the legacy
-        # HotelPortal::Checkouts::SheetPresenter so the ported checkout does not
-        # depend on the legacy implementation.
+        # View-model for the Sheet-based checkout, scoped to the booking action
+        # so settlement presentation stays isolated from other folio concerns.
         #
-        # The one behavioural change from the legacy presenter: early-checkout
-        # preview lines are attributed to the folio they *route* to (via the
-        # `target_folio_id` the folios service tags), instead of dumping them all
-        # on the primary folio. Routing lives in Folios::PostEarlyCheckoutCharges;
-        # this presenter only reads the tag.
+        # Early-checkout preview lines are attributed to the folio they *route*
+        # to via the `target_folio_id` tagged by the folios service. Routing
+        # lives in Folios::PostEarlyCheckoutCharges; this presenter only reads
+        # the tag.
         class SheetPresenter
           include Rails.application.routes.url_helpers
 

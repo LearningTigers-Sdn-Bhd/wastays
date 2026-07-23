@@ -29,7 +29,6 @@ module HotelPortal
       @category = params[:category].presence
       @amount = params[:amount]
       @redirect_to_folio = params[:redirect_to_folio] == "true"
-      @redirect_to_checkout = params[:redirect_to_checkout] == "true"
       @folio_origin = params[:folio_origin].presence
       assign_sheet_config
       return redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations", folio_id: @active_folio.id), alert: "You do not have permission to post this folio transaction." unless allowed_to_view_posting_sheet?
@@ -149,9 +148,7 @@ module HotelPortal
 
     def redirect_after_post(options = {})
       active_folio_id = options.delete(:active_folio_id)
-      destination = if params[:redirect_to_checkout] == "true"
-        hotel_booking_transaction_check_out_path(current_hotel, @booking)
-      elsif params[:folio_origin] == "booking_control_panel"
+      destination = if params[:folio_origin] == "booking_control_panel"
         hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations", folio_id: active_folio_id)
       elsif params[:redirect_to_folio] == "true"
         hotel_booking_control_panel_path(current_hotel, @booking, tab: "folio_operations", folio_id: active_folio_id)

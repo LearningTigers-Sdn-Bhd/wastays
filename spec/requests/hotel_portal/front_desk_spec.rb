@@ -608,7 +608,25 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body).to include(confirmed.confirmation_token)
     end
 
-    it "keeps mobile lifecycle drawer paths, variants, and checkout fields" do
+    it "opens checkout actions in the booking action sheet" do
+      grant_booking_permission
+      active = booking(status: "checked_in", confirmation_token: "SHEET-ACTIVE", checked_in_at: Time.current, check_out: Date.current)
+
+      [
+        { tab: "in_house", view: "list", in_house_query: active.confirmation_token },
+        { tab: "in_house", view: "rooms", in_house_query: active.confirmation_token },
+        { tab: "departures", view: "rooms", departure_query: active.confirmation_token }
+      ].each do |query|
+        get hotel_front_desk_path(hotel), params: query
+
+        checkout_link = response.parsed_body.at_xpath("//a[normalize-space()='Check out']")
+        expect(checkout_link).to be_present, "expected checkout link for #{query.inspect}"
+        expect(checkout_link["href"]).to include(hotel_booking_action_checkout_path(hotel, active), "return_to=")
+        expect(checkout_link["data-turbo-frame"]).to eq("booking_action_sheet")
+      end
+    end
+
+    it "keeps mobile lifecycle sheet paths and checkout fields" do
       late = booking(status: "review_due_out", confirmation_token: "MOBILE-LATE", checked_in_at: Time.current)
       checkout = booking(status: "checkout_required", confirmation_token: "MOBILE-CHECKOUT", checked_in_at: Time.current)
       departed = booking(status: "completed", confirmation_token: "MOBILE-DEPARTED", checked_in_at: Time.current, checked_out_at: Time.current)
