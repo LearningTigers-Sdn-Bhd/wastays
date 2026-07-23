@@ -43,7 +43,7 @@ module Folios
             transaction_type: :payment,
             category: "booking_payment",
             user: posting_user(transaction_options),
-            description: "Booking payment via #{pt.gateway} (#{pt.external_reference})",
+            description: payment_description(pt),
             posting_date: posting_date,
             options: transaction_options
           ).call
@@ -56,6 +56,12 @@ module Folios
     end
 
     private
+
+    def payment_description(payment_transaction)
+      reference = payment_transaction.external_reference.presence
+
+      [ "Booking payment via #{payment_transaction.gateway}", ("(#{reference})" if reference) ].compact.join(" ")
+    end
 
     def override_options
       return @options unless @options[:override_night_audit]

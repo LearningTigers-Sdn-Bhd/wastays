@@ -17,7 +17,8 @@ module Folios
 
         original_date = payment_transaction.captured_at&.to_date || Time.current.to_date
         posting_date = booking.hotel.current_business_date
-        description = "Payment via #{payment_transaction.gateway} (#{payment_transaction.external_reference})"
+        reference = payment_transaction.external_reference.presence
+        description = [ "Payment via #{payment_transaction.gateway}", ("(#{reference})" if reference) ].compact.join(" ")
 
         if original_date != posting_date && NightAudit.closed_for_date?(booking.hotel_id, original_date)
           description += " (Original date: #{original_date.strftime('%d %b %Y')} - posted to current business date as original date was closed)"

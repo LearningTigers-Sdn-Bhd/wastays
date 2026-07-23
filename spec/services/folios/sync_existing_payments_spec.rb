@@ -23,6 +23,22 @@ RSpec.describe Folios::SyncExistingPayments do
     expect(transaction.metadata["applied_as"]).to eq("booking_payment")
   end
 
+  it "names the gateway reference in the description when one is present" do
+    create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: open_date.noon, gateway: "manual", external_reference: "REF-9001")
+
+    described_class.call(folio: folio, user: user)
+
+    expect(folio.folio_transactions.payment.sole.description).to eq("Booking payment via manual (REF-9001)")
+  end
+
+  it "omits the empty parenthetical when the gateway reference is blank" do
+    create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: open_date.noon, gateway: "manual", external_reference: nil)
+
+    described_class.call(folio: folio, user: user)
+
+    expect(folio.folio_transactions.payment.sole.description).to eq("Booking payment via manual")
+  end
+
   it "skips non-captured payment transactions" do
     create(:payment_transaction, booking: booking, status: "pending", amount_subunits: 10_000, captured_at: nil)
 
