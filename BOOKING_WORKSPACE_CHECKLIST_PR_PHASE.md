@@ -15,29 +15,30 @@ The only optional phase is the final canonical path migration. Everything else i
 
 ## Checklist Legend
 
-- `[x]` — present in the current branch or working tree
+- `[x]` — present in the current branch
 - `[ ]` — required and not yet complete
 - **Committed** — included in one of the current branch commits
-- **Working tree** — implemented but currently unstaged and uncommitted
 - **Validation pending** — code is present, but the required tests or rendered verification have not been completed
 
 Do not mark a behavior complete merely because a presenter method, CSS class, or partial exists. The behavior must be connected to the rendered workspace and covered proportionately by tests.
 
 ## Current Git Snapshot
 
-- [x] Branch contains four commits beyond `main`
+- [x] Branch contains ten commits beyond `main`
   - `905e02b33` — rename booking control panel to booking workspace
   - `bcd65e2cb` — flatten workspace shell and add booking header
   - `789300eca` — complete workspace foundation
   - `962ed409d` — complete Overview and Folio workspace
-- [x] No staged changes
-- [x] Thirteen tracked files and one untracked implementation partial in the working tree
-- [x] `BOOKING_WORKSPACE_PROPOSAL.md` is tracked
-- [x] Current unstaged diff passes `git diff --check`
-- [ ] Current unstaged implementation changes are committed
+  - `904730fd1` — complete guest workspace
+  - `f0e92c364` — complete mobile entity selection
+  - `0d04599ba` — delete unreachable workspace rail code (Phase 2.5)
+  - `d0385253a` — use semantic tokens for tourism tax menu items (Phase 2.5)
+  - `2f3abbda6` — rename `booking-control-tabs` to `booking-workspace-tabs` (Phase 2.5)
+  - `90df06548` — omit empty parenthetical from payment descriptions (Phase 2.5)
+- [x] Working tree is clean; all Phase 2 implementation is committed
 - [x] `BOOKING_WORKSPACE_PROPOSAL.md` is tracked
 - [x] This checklist is tracked
-- [x] Relevant tests have been run against the current working tree
+- [x] Relevant tests have been run against the current branch
 
 ## Phase 0 — Workspace Rename and Structural Baseline
 
@@ -138,135 +139,157 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 ## Phase 2 — Overview, Folios, and Guests
 
-**Status:** Overview and Folios committed; Guests implemented in the working tree
+**Status:** Committed
 
 ### Overview — Single Booking
 
-- [x] Replace the old identifier/stay/financial matrix with plain sections — **Working tree**
-- [x] Add separate Stay section — **Working tree**
-- [x] Add separate Financial section — **Working tree**
-- [x] Rename Identifiers to References — **Working tree**
-- [x] Relabel confirmation token as `Confirmation code` — **Working tree**
-- [x] Preserve Special Requests as a separate section — **Working tree**
-- [x] Use PanelsUI Button for Edit Dates — **Working tree**
-- [x] Integrate source/channel details into References — **Working tree**
-- [ ] Remove the independent Source Details destination and partial
-- [x] Confirm Internal Notes follows the same flattened section rhythm — **Working tree**
-- [x] Confirm values use appropriate tabular numerals — **Working tree**
-- [x] Verify empty values and unusually long external references — **Working tree**
+- [x] Replace the old identifier/stay/financial matrix with plain sections — **Committed**
+- [x] Add separate Stay section — **Committed**
+- [x] Add separate Financial section — **Committed**
+- [x] Rename Identifiers to References — **Committed**
+- [x] Relabel confirmation token as `Confirmation code` — **Committed**
+- [x] Preserve Special Requests as a separate section — **Committed**
+- [x] Use PanelsUI Button for Edit Dates — **Committed**
+- [x] Integrate source/channel details into References — **Committed**
+- [x] Confirm Internal Notes follows the same flattened section rhythm — **Committed**
+- [x] Confirm values use appropriate tabular numerals — **Committed**
+- [x] Verify empty values and unusually long external references — **Committed**
 
 ### Overview — Group Booking
 
-- [x] Add distinct arrival-date and departure-date helpers — **Working tree**
-- [x] Add mixed-date variation notice — **Working tree**
-- [x] Add presenter specs for sorted distinct dates — **Working tree**
-- [x] Add request coverage for mixed-date messaging — **Working tree**
-- [x] Rename group Identifiers to References — **Working tree**
-- [x] Show child bookings in a comparison table — **Working tree**
-- [x] Remove duplicate `Stay dates vary` messaging from the group panel — **Working tree**
-- [x] Show separate Arrival and Departure columns rather than one ambiguous Stay range — **Working tree**
-- [x] Do not repeat earliest/latest dates in the Overview if already sufficiently represented in the header and booking table — **Working tree**
-- [x] Avoid repeating the group name below the global group header — **Working tree**
-- [x] Use the established PanelsUI table pattern where its API supports this comparison — **Working tree**
-- [x] Verify matching-date groups do not show a variation notice — **Working tree**
-- [x] Verify partially missing dates do not raise an exception — **Working tree**
+- [x] Add distinct arrival-date and departure-date helpers — **Committed**
+- [x] Add mixed-date variation notice — **Committed**
+- [x] Add presenter specs for sorted distinct dates — **Committed**
+- [x] Add request coverage for mixed-date messaging — **Committed**
+- [x] Rename group Identifiers to References — **Committed**
+- [x] Show child bookings in a comparison table — **Committed**
+- [x] Remove duplicate `Stay dates vary` messaging from the group panel — **Committed**
+- [x] Show separate Arrival and Departure columns rather than one ambiguous Stay range — **Committed**
+- [x] Do not repeat earliest/latest dates in the Overview if already sufficiently represented in the header and booking table — **Committed**
+- [x] Avoid repeating the group name below the global group header — **Committed**
+- [x] Use the established PanelsUI table pattern where its API supports this comparison — **Committed**
+- [x] Verify matching-date groups do not show a variation notice — **Committed**
+- [x] Verify partially missing dates do not raise an exception — **Committed**
 
 ### Folio Entity Rail — Single Booking
 
-- [x] Show only concrete folios belonging to the current booking — **Working tree**
-- [x] Remove booking-context and Overview rows — **Working tree**
-- [x] Remove collapsible booking containers when there is only one booking — **Working tree**
-- [x] Show folio name, status/payer context, and balance with restrained hierarchy — **Working tree**
-- [x] Highlight the selected folio without a large decorative block — **Working tree**
-- [x] Keep `Add Folio` attached to the folio rail — **Working tree**
-- [x] Render a clear no-folios state with an Add Folio action — **Working tree**
+- [x] Show only concrete folios belonging to the current booking — **Committed**
+- [x] Remove booking-context and Overview rows — **Committed**
+- [x] Remove collapsible booking containers when there is only one booking — **Committed**
+- [x] Show folio name, status/payer context, and balance with restrained hierarchy — **Committed**
+- [x] Highlight the selected folio without a large decorative block — **Committed**
+- [x] Keep `Add Folio` attached to the folio rail — **Committed**
+- [x] Render a clear no-folios state with an Add Folio action — **Committed**
 
 ### Folio Entity Rail — Group Booking
 
-- [x] Group concrete folios by child booking/room — **Working tree**
-- [x] Use exactly one hierarchy level: child booking/room → folios — **Working tree**
-- [x] Remove `All Folios` — **Working tree**
-- [x] Remove group-overview selection from the folio rail — **Working tree**
-- [x] Avoid repeating all room, guest, status, and booking metadata on every child row — **Working tree**
-- [x] Preserve deterministic child ordering by `group_position` — **Working tree**
-- [x] Preserve deterministic folio ordering — **Working tree**
-- [x] Ensure Add Folio targets the intended concrete child booking — **Working tree**
+- [x] Group concrete folios by child booking/room — **Committed**
+- [x] Use exactly one hierarchy level: child booking/room → folios — **Committed**
+- [x] Remove `All Folios` — **Committed**
+- [x] Remove group-overview selection from the folio rail — **Committed**
+- [x] Avoid repeating all room, guest, status, and booking metadata on every child row — **Committed**
+- [x] Preserve deterministic child ordering by `group_position` — **Committed**
+- [x] Preserve deterministic folio ordering — **Committed**
+- [x] Ensure Add Folio targets the intended concrete child booking — **Committed**
 
 ### Selected Folio Content
 
-- [x] Normalize initial folio typography and semantic colors — **Working tree**
-- [x] Show exact child context: room, operational booking number, and child stay dates — **Working tree**
-- [x] Do not label a concrete child folio with only the workspace root booking — **Working tree**
-- [x] Preserve Edit, Close, Reopen, Payment, Charge, Adjustment, and More Actions behavior — **Working tree**
-- [x] Ensure every folio action targets the selected folio’s concrete booking — **Working tree**
-- [x] Preserve ledger and upcoming-charge behavior — **Working tree**
-- [x] Preserve group-deposit provenance — **Working tree**
+- [x] Normalize initial folio typography and semantic colors — **Committed**
+- [x] Show exact child context: room, operational booking number, and child stay dates — **Committed**
+- [x] Do not label a concrete child folio with only the workspace root booking — **Committed**
+- [x] Preserve Edit, Close, Reopen, Payment, Charge, Adjustment, and More Actions behavior — **Committed**
+- [x] Ensure every folio action targets the selected folio’s concrete booking — **Committed**
+- [x] Preserve ledger and upcoming-charge behavior — **Committed**
+- [x] Preserve group-deposit provenance — **Committed**
 - [ ] Confirm long ledger descriptions and large amounts remain readable
 
 ### Guest Entity Rail — Single Booking
 
-- [x] Show only concrete booking guests — **Working tree**
-- [x] Remove booking-context and Overview rows — **Working tree**
-- [x] Remove collapsible booking containers when there is only one booking — **Working tree**
-- [x] Show guest name and Primary/Additional role — **Working tree**
-- [x] Highlight the selected guest with restrained navigation styling — **Working tree**
-- [x] Keep Add Guest attached to the guest rail — **Working tree**
+- [x] Show only concrete booking guests — **Committed**
+- [x] Remove booking-context and Overview rows — **Committed**
+- [x] Remove collapsible booking containers when there is only one booking — **Committed**
+- [x] Show guest name and Primary/Additional role — **Committed**
+- [x] Highlight the selected guest with restrained navigation styling — **Committed**
+- [x] Keep Add Guest attached to the guest rail — **Committed**
 
 ### Guest Entity Rail — Group Booking
 
-- [x] Group concrete guests by child booking/room — **Working tree**
-- [x] Use exactly one hierarchy level: child booking/room → guests — **Working tree**
-- [x] Remove `All Guests` — **Working tree**
-- [x] Remove group-overview selection from the guest rail — **Working tree**
-- [x] Preserve deterministic child and guest ordering — **Working tree**
-- [x] Ensure Add Guest targets the intended concrete child booking — **Working tree**
+- [x] Group concrete guests by child booking/room — **Committed**
+- [x] Use exactly one hierarchy level: child booking/room → guests — **Committed**
+- [x] Remove `All Guests` — **Committed**
+- [x] Remove group-overview selection from the guest rail — **Committed**
+- [x] Preserve deterministic child and guest ordering — **Committed**
+- [x] Ensure Add Guest targets the intended concrete child booking — **Committed**
 
 ### Selected Guest Content
 
-- [x] Show exact child context: room, operational booking number, and child stay dates — **Working tree**
-- [x] Preserve primary/additional guest behavior — **Working tree**
-- [x] Preserve contact, identity, date-of-birth, and boat-transfer fields — **Working tree**
-- [x] Replace redesigned selection controls with PanelsUI SelectMenu or Combobox — **Working tree**
-- [x] Preserve GRC and print actions — **Working tree**
-- [x] Preserve Save Guest and alternate save scopes — **Working tree**
-- [x] Preserve validation rendering and focus behavior — **Working tree**
-- [x] Preserve unsaved-change protection while switching guests or destinations — **Working tree**
+- [x] Show exact child context: room, operational booking number, and child stay dates — **Committed**
+- [x] Preserve primary/additional guest behavior — **Committed**
+- [x] Preserve contact, identity, date-of-birth, and boat-transfer fields — **Committed**
+- [x] Replace redesigned selection controls with PanelsUI SelectMenu or Combobox — **Committed**
+- [x] Preserve GRC and print actions — **Committed**
+- [x] Preserve Save Guest and alternate save scopes — **Committed**
+- [x] Preserve validation rendering and focus behavior — **Committed**
+- [x] Preserve unsaved-change protection while switching guests or destinations — **Committed**
 
 ### Default Entity Selection Without Redirect
 
-- [x] Presenter selects a primary guest when no guest ID is supplied for a standalone booking — **Working tree**
-- [x] Presenter selects a folio when no folio ID is supplied for a standalone booking — **Working tree**
-- [x] Resolve the default group child in the presenter — **Working tree**
-- [x] Resolve the default group folio in the presenter — **Working tree**
-- [x] Resolve the default group guest in the presenter — **Working tree**
-- [x] Remove `redirect_group_entity_context!` from the controller — **Working tree**
-- [x] Render the default folio without redirecting — **Working tree**
-- [x] Render the default guest without redirecting — **Working tree**
-- [x] Preserve explicit `folio_id` selection in the URL — **Working tree**
-- [x] Preserve explicit `booking_guest_id` selection in the URL — **Working tree**
-- [x] Preserve Turbo history and browser back/forward behavior — **Working tree**
-- [x] Add request coverage proving missing entity IDs do not redirect — **Working tree**
-- [x] Add request coverage proving cross-hotel entity IDs are rejected or ignored safely — **Working tree**
+- [x] Presenter selects a primary guest when no guest ID is supplied for a standalone booking — **Committed**
+- [x] Presenter selects a folio when no folio ID is supplied for a standalone booking — **Committed**
+- [x] Resolve the default group child in the presenter — **Committed**
+- [x] Resolve the default group folio in the presenter — **Committed**
+- [x] Resolve the default group guest in the presenter — **Committed**
+- [x] Remove `redirect_group_entity_context!` from the controller — **Committed**
+- [x] Render the default folio without redirecting — **Committed**
+- [x] Render the default guest without redirecting — **Committed**
+- [x] Preserve explicit `folio_id` selection in the URL — **Committed**
+- [x] Preserve explicit `booking_guest_id` selection in the URL — **Committed**
+- [x] Preserve Turbo history and browser back/forward behavior — **Committed**
+- [x] Add request coverage proving missing entity IDs do not redirect — **Committed**
+- [x] Add request coverage proving cross-hotel entity IDs are rejected or ignored safely — **Committed**
 
 ### Mobile Entity Selection
 
-- [x] Replace generic `Change Context` wording with `Choose Folio` or `Choose Guest` — **Working tree**
-- [x] Use PanelsUI Sheet rather than a dropdown — **Working tree**
-- [x] Reuse the desktop entity grouping inside the sheet — **Working tree**
-- [x] Close the sheet after selection — **Working tree**
-- [x] Move focus to the selected entity heading after Turbo replacement — **Working tree**
-- [x] Preserve unsaved guest-form confirmation before changing guests — **Working tree**
-- [x] Verify long group entity lists remain operable — **Working tree**
+- [x] Replace generic `Change Context` wording with `Choose Folio` or `Choose Guest` — **Committed**
+- [x] Use PanelsUI Sheet rather than a dropdown — **Committed**
+- [x] Reuse the desktop entity grouping inside the sheet — **Committed**
+- [x] Close the sheet after selection — **Committed**
+- [x] Move focus to the selected entity heading after Turbo replacement — **Committed**
+- [x] Preserve unsaved guest-form confirmation before changing guests — **Committed**
+- [x] Verify long group entity lists remain operable — **Committed**
 
 ### Phase 2 Exit Gate
 
-- [x] Single and group Overview match the approved information hierarchy — **Working tree**
-- [x] Folio rail contains concrete folios only — **Working tree**
-- [x] Guest rail contains concrete guests only — **Working tree**
-- [x] No `All Folios` or `All Guests` state exists — **Working tree**
-- [x] Group entity pages render without controller redirects — **Working tree**
-- [x] Selected entity actions target the correct child booking — **Working tree**
+- [x] Single and group Overview match the approved information hierarchy — **Committed**
+- [x] Folio rail contains concrete folios only — **Committed**
+- [x] Guest rail contains concrete guests only — **Committed**
+- [x] No `All Folios` or `All Guests` state exists — **Committed**
+- [x] Group entity pages render without controller redirects — **Committed**
+- [x] Selected entity actions target the correct child booking — **Committed**
 - [ ] Desktop and mobile Folio/Guest flows have been visually verified
+
+## Phase 2.5 — Dead Code Cleanup
+
+**Status:** Committed
+
+Phase 1 removed the booking-context rail from the six standard destinations, but only at the call site. The rail partials and their presenter methods stayed in the tree, unreachable. Cleared before Phase 3 because Phase 3 refactors exactly those destinations.
+
+- [x] Delete the eleven unreachable rail partials — **Committed**
+- [x] Delete the presenter methods that fed them — **Committed**
+- [x] Delete presenter methods kept alive only by their own specs — **Committed**
+- [x] Delete the cascade orphans exposed by the above — **Committed**
+- [x] Make `show_left_rail?` derive from `left_rail_mode` so the two cannot disagree — **Committed**
+- [x] Cover the rail invariant across every destination — **Committed**
+- [x] Replace hardcoded `slate` colors in the folio actions menu — **Committed**
+- [x] Rename the stale `booking-control-tabs` identifier — **Committed**
+- [x] Omit the empty parenthetical from gateway payment descriptions — **Committed**
+
+### Phase 2.5 Exit Gate
+
+- [x] No workspace partial is unreachable from a live render path
+- [x] No presenter method is reachable only from a spec
+- [x] A standard destination cannot claim a rail it has no partial for
+- [ ] Standard destinations verified rendering without a rail in a running app
 
 ## Phase 3 — Remaining Workspace Destinations and PanelsUI
 
@@ -356,44 +379,44 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 ### Presenter Specs
 
-- [x] Distinct group arrival/departure dates — **Working tree**
-- [x] Mixed-date variation notice — **Working tree**
-- [x] Matching-date variation omission — **Working tree**
-- [x] Standalone primary guest fallback — **Working tree**
-- [x] Standalone folio fallback — **Working tree**
-- [x] Standard versus entity layout mode — **Working tree**
-- [x] Left rail visible only for Folios and Guests — **Working tree**
-- [x] Group header identity on concrete folio/guest views — **Working tree**
-- [x] Default group child selection — **Working tree**
-- [x] Default group folio selection — **Working tree**
-- [x] Default group guest selection — **Working tree**
-- [x] Entity grouping and order — **Working tree**
-- [x] Exact child context labels — **Working tree**
+- [x] Distinct group arrival/departure dates — **Committed**
+- [x] Mixed-date variation notice — **Committed**
+- [x] Matching-date variation omission — **Committed**
+- [x] Standalone primary guest fallback — **Committed**
+- [x] Standalone folio fallback — **Committed**
+- [x] Standard versus entity layout mode — **Committed**
+- [x] Left rail visible only for Folios and Guests — **Committed**
+- [x] Group header identity on concrete folio/guest views — **Committed**
+- [x] Default group child selection — **Committed**
+- [x] Default group folio selection — **Committed**
+- [x] Default group guest selection — **Committed**
+- [x] Entity grouping and order — **Committed**
+- [x] Exact child context labels — **Committed**
 - [ ] Source consolidation
 
 ### Request Specs
 
-- [x] References label and confirmation-code demotion — **Working tree**
-- [x] Mixed group stay-date notice — **Working tree**
-- [x] Default group folio renders without redirect — **Working tree**
-- [x] Default group guest renders without redirect — **Working tree**
-- [x] Explicit entity IDs render the correct entity — **Working tree**
-- [x] Cross-hotel entity isolation — **Working tree**
-- [x] Standard pages omit the left rail — **Working tree**
-- [x] Entity pages render the correct rail — **Working tree**
+- [x] References label and confirmation-code demotion — **Committed**
+- [x] Mixed group stay-date notice — **Committed**
+- [x] Default group folio renders without redirect — **Committed**
+- [x] Default group guest renders without redirect — **Committed**
+- [x] Explicit entity IDs render the correct entity — **Committed**
+- [x] Cross-hotel entity isolation — **Committed**
+- [x] Standard pages omit the left rail — **Committed**
+- [x] Entity pages render the correct rail — **Committed**
 - [ ] Source Details compatibility
 - [ ] Action return paths preserve selected context
 - [ ] Turbo-frame responses include the required workspace structure
 
 ### System Specs
 
-- [x] Switch folios in a single booking — **Working tree**
-- [x] Switch folios across group child bookings — **Working tree**
-- [x] Switch guests in a single booking — **Working tree**
-- [x] Switch guests across group child bookings — **Working tree**
-- [x] Preserve browser back and forward navigation — **Working tree**
-- [x] Preserve guest unsaved-change confirmation — **Working tree**
-- [x] Preserve validation errors after failed guest save — **Working tree**
+- [x] Switch folios in a single booking — **Committed**
+- [x] Switch folios across group child bookings — **Committed**
+- [x] Switch guests in a single booking — **Committed**
+- [x] Switch guests across group child bookings — **Committed**
+- [x] Preserve browser back and forward navigation — **Committed**
+- [x] Preserve guest unsaved-change confirmation — **Committed**
+- [x] Preserve validation errors after failed guest save — **Committed**
 - [ ] Verify folio actions target the selected child
 - [ ] Verify mobile entity-selection sheet
 - [ ] Verify keyboard operation and focus movement
@@ -420,11 +443,11 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 - [x] One logical `h1` and hierarchical headings
 - [ ] Every icon-only action has an accessible name
-- [x] Every field has a visible label — **Working tree**
+- [x] Every field has a visible label — **Committed**
 - [ ] Visible focus is preserved
 - [ ] Dialog and sheet focus is moved and restored
 - [ ] Turbo updates provide appropriate focus or live-region feedback
-- [x] Selection is not communicated by color alone — **Working tree**
+- [x] Selection is not communicated by color alone — **Committed**
 - [ ] Touch targets meet the project contract
 - [ ] Reflow and zoom remain usable
 
