@@ -1,8 +1,0 @@
-<nav class="space-y-1 p-2" aria-label="Billing scope">
-  <% presenter.billing_scope_rows.each do |row| %>
-    <%= link_to hotel_booking_workspace_path(current_hotel, booking, tab: presenter.active_tab, billing_scope: row.id), data: { turbo_frame: "booking_workspace", turbo_action: "advance" }, class: "flex gap-3 rounded-lg px-3 py-3 #{row.active ? "bg-blue-50 text-blue-950" : "text-foreground hover:bg-muted"}" do %>
-      <span class="w-1 shrink-0 rounded-full <%= row.active ? "bg-blue-600" : "bg-muted" %>"></span>
-      <span><span class="block text-sm font-bold"><%= row.label %></span><span class="block text-xs text-muted-foreground"><%= row.description %></span></span>
-    <% end %>
-  <% end %>
-</nav>

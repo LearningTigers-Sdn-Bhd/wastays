@@ -353,7 +353,6 @@ module HotelPortal
       case active_tab
       when "folio_operations" then group_context_enabled? ? "grouped_folio_tree" : "folio_tree"
       when "guest_details" then group_context_enabled? ? "grouped_guest_tree" : "guest_tree"
-      else group_context_enabled? ? "child_booking_tree" : "booking_context"
       end
     end
 
@@ -361,9 +360,6 @@ module HotelPortal
       case left_rail_mode
       when "folio_tree", "grouped_folio_tree" then "Folios"
       when "guest_tree", "grouped_guest_tree" then "Guests"
-      when "child_booking_tree" then grouped_booking_rail_title
-      when "booking_context" then standalone_booking_rail_title
-      else "Booking"
       end
     end
 
@@ -376,7 +372,7 @@ module HotelPortal
     end
 
     def show_left_rail?
-      layout_mode == "entity"
+      left_rail_mode.present?
     end
 
     def show_right_drawer?
@@ -587,40 +583,8 @@ module HotelPortal
       path_for(booking, **{ tab: "billing_preferences", scope: ("group" if group_overview?), billing_scope: billing_scope }.merge(options).compact)
     end
 
-    def child_booking_rows
-      child_bookings.map { |child| booking_navigation_row(child, active: child.id == booking.id && !group_overview?) }
-    end
-
-    def standalone_booking_rows
-      [ booking_navigation_row(booking, active: true) ]
-    end
-
-    def grouped_booking_rail_title
-      "Bookings / #{booking_rail_suffix}"
-    end
-
-    def standalone_booking_rail_title
-      "Booking / #{booking_rail_suffix}"
-    end
-
-    def booking_rail_suffix
-      {
-        "booking_details" => "Details",
-        "security_deposits" => "Deposits",
-        "billing_preferences" => "Billing",
-        "room_and_rate" => "Room Rate",
-        "source_details" => "Sources",
-        "housekeeping_requests" => "Requests",
-        "audit_trails" => "Audit Trails"
-      }.fetch(active_tab, active_tab_label)
-    end
-
     def group_overview_path
       path_for(booking, tab: active_tab, scope: "group")
-    end
-
-    def booking_context_description
-      booking_tree_description(booking)
     end
 
     def security_deposit_booking
@@ -923,18 +887,6 @@ module HotelPortal
       booking.currency.presence || hotel.default_currency.presence || "MYR"
     end
 
-    def room_tree_rows
-      booking.booking_rooms.map do |room|
-        room_tree_row(room)
-      end
-    end
-
-    def room_tree_groups
-      booking.booking_rooms.group_by { |room| room_type_label(room) }.map do |room_type, rooms|
-        TreeGroup.new(room_type, pluralize_count(rooms.size, "room"), rooms.map { |room| room_tree_row(room) }, nil)
-      end
-    end
-
     def folio_tree_rows
       folios.map do |folio|
         folio_tree_row(folio, active: folio_operations_folio_active?(folio)).with(
@@ -955,28 +907,6 @@ module HotelPortal
         end
 
         TreeGroup.new("#{child_booking_label(child)} · #{child_booking_number(child)}", nil, rows, child.id)
-      end
-    end
-
-    def group_folio_tree_rows
-      folios.select { |folio| folio.booking_room_id.blank? }.map { |folio| folio_tree_row(folio, active: folio_operations_folio_active?(folio)) }
-    end
-
-    def folio_room_type_groups
-      booking.booking_rooms.group_by { |room| room_type_label(room) }.map do |room_type, rooms|
-        {
-          label: room_type,
-          description: pluralize_count(rooms.size, "room"),
-          room_groups: rooms.map do |room|
-            {
-              id: room.id,
-              label: room_label(room),
-              description: room_type_label(room),
-              active: selected_room_id == room.id.to_s,
-              rows: folios.select { |folio| folio.booking_room_id == room.id }.map { |folio| folio_tree_row(folio, active: folio_operations_folio_active?(folio)) }
-            }
-          end
-        }
       end
     end
 
@@ -1015,34 +945,6 @@ module HotelPortal
       [ child_booking_label(child), "Booking #{child_booking_number(child)}", format_short_range(child.check_in, child.check_out) ].join(" · ")
     end
 
-    def request_tree_groups
-      request_rows = [
-        TreeRow.new("housekeeping", "Housekeeping", pluralize_count(booking.housekeeping_requests.size, "request"), "request", request_row_active?("housekeeping"), nil),
-        TreeRow.new("complaints", "Complaints", pluralize_count(booking.complaint_requests.size, "request"), "request", request_row_active?("complaints"), nil)
-      ]
-
-      [ TreeGroup.new("Requests", "Booking-level requests", request_rows, nil) ] + room_tree_groups
-    end
-
-    def audit_tree_groups
-      guest_rows = booking.booking_guests.map do |booking_guest|
-        TreeRow.new(booking_guest.id, booking_guest.guest&.name.presence || booking.guest_name, booking_guest.is_primary? ? "Primary guest" : "Additional guest", "guest", audit_row_active?("guest", booking_guest.id), nil)
-      end
-      audit_room_rows = booking.booking_rooms.map do |room|
-        TreeRow.new(room.id, room_label(room), room_type_label(room), "room", audit_row_active?("room", room.id), nil)
-      end
-      audit_folio_rows = folios.map do |folio|
-        folio_tree_row(folio, active: audit_row_active?("folio", folio.id))
-      end
-
-      [
-        TreeGroup.new("All Activity", "Full booking timeline", [ TreeRow.new("all", "All Activity", booking_reference, "audit", audit_row_active?("all", nil), nil) ], nil),
-        TreeGroup.new("Rooms", pluralize_count(audit_room_rows.size, "room"), audit_room_rows, nil),
-        TreeGroup.new("Folios", pluralize_count(audit_folio_rows.size, "folio"), audit_folio_rows, nil),
-        TreeGroup.new("Guests", pluralize_count(guest_rows.size, "guest"), guest_rows, nil)
-      ]
-    end
-
     def selected_folio
       return unless active_tab == "folio_operations"
 
@@ -1062,10 +964,6 @@ module HotelPortal
       return unless allocation
 
       "Group deposit allocation ##{allocation.group_deposit_id}"
-    end
-
-    def selected_room_id
-      @params[:room_id].to_s.presence
     end
 
     def folios
@@ -1220,17 +1118,6 @@ module HotelPortal
       SummaryAction.new(key, label, tone, offcanvas_variant, icon, booking)
     end
 
-    def room_tree_row(room)
-      TreeRow.new(
-        room.id,
-        room_label(room),
-        room_type_label(room),
-        "room",
-        room_row_active?(room),
-        nil
-      )
-    end
-
     def folio_tree_row(folio, active: false)
       TreeRow.new(
         folio.id,
@@ -1249,41 +1136,6 @@ module HotelPortal
 
     def child_booking_number(child)
       child.formatted_reservation_number.presence || "—"
-    end
-
-    def child_booking_number_label(child)
-      number = child_booking_number(child)
-      "Booking No. #{number}" if number != "—"
-    end
-
-    def child_booking_description(child)
-      booking_tree_description(child)
-    end
-
-    def child_booking_menu_description(child)
-      room = child.booking_rooms.first
-      room_type = room ? room_type_label(room) : "Room type unavailable"
-      primary_guest = child.booking_guests.find(&:primary?)
-      guest_name = primary_guest&.name_snapshot.presence || primary_guest&.guest&.name.presence || child.guest_name
-      "#{room_type} - #{guest_name}"
-    end
-
-    def booking_navigation_row(child, active:)
-      TreeRow.new(
-        child.id,
-        child_booking_label(child),
-        child_booking_menu_description(child),
-        "booking",
-        active,
-        path_for(child, tab: active_tab)
-      )
-    end
-
-    def booking_tree_description(child)
-      room = child.booking_rooms.first
-      room_type = room ? room_type_label(room) : "Room type unavailable"
-      room_number = room&.room_number.present? ? "Room #{room.room_number}" : "Unassigned room"
-      "#{room_type} · #{room_number}"
     end
 
     def request_room_label(child)
@@ -1317,35 +1169,8 @@ module HotelPortal
       selected_folio&.id
     end
 
-    def room_row_active?(room)
-      left_rail_mode == "room_tree" && selected_room_id == room.id.to_s
-    end
-
     def guest_row_active?(booking_guest)
       left_rail_mode == "guest_tree" && selected_booking_guest&.id == booking_guest.id
-    end
-
-    def request_row_active?(scope)
-      left_rail_mode == "request_tree" && @params[:request_scope].to_s == scope.to_s
-    end
-
-    def audit_row_active?(kind, id)
-      return false unless left_rail_mode == "audit_tree"
-      return @params[:audit_scope].blank? || @params[:audit_scope].to_s == "all" if kind == "all"
-
-      @params[:audit_scope].to_s == kind.to_s && audit_scope_param_for(kind).to_s == id.to_s
-    end
-
-    def audit_scope_param_for(kind)
-      case kind.to_s
-      when "room" then @params[:room_id]
-      when "folio" then @params[:folio_id]
-      when "guest" then @params[:booking_guest_id]
-      end
-    end
-
-    def room_label(room)
-      room.room_number.presence || "Unassigned room"
     end
 
     def room_type_label_for(room)

@@ -483,11 +483,11 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
   end
 
   describe "left rail modes" do
-    it "hides booking context for ordinary standalone tabs" do
+    it "renders no rail for ordinary standalone tabs" do
       %w[booking_details billing_preferences security_deposits source_details room_and_rate housekeeping_requests].each do |tab|
         tab_presenter = described_class.new(booking, params: { tab: tab })
 
-        expect(tab_presenter.left_rail_mode).to eq("booking_context")
+        expect(tab_presenter.left_rail_mode).to be_nil
         expect(tab_presenter.layout_mode).to eq("standard")
         expect(tab_presenter.show_left_rail?).to be(false)
       end
@@ -500,10 +500,10 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
       expect(folio_presenter).to have_attributes(left_rail_mode: "folio_tree", layout_mode: "entity", show_left_rail?: true)
       expect(guest_presenter).to have_attributes(left_rail_mode: "guest_tree", layout_mode: "entity", show_left_rail?: true)
-      expect(audit_presenter).to have_attributes(left_rail_mode: "booking_context", layout_mode: "standard", show_left_rail?: false)
+      expect(audit_presenter).to have_attributes(left_rail_mode: nil, layout_mode: "standard", show_left_rail?: false)
     end
 
-    it "uses child-booking context for ordinary grouped tabs" do
+    it "renders no rail for ordinary grouped tabs" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
 
@@ -512,72 +512,21 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       deposits_presenter = described_class.new(booking, params: { tab: "security_deposits" })
       requests_presenter = described_class.new(booking, params: { tab: "housekeeping_requests" })
 
-      expect(room_presenter).to have_attributes(left_rail_mode: "child_booking_tree", layout_mode: "standard")
-      expect(billing_presenter).to have_attributes(left_rail_mode: "child_booking_tree", billing_scope: "group")
-      expect(deposits_presenter).to have_attributes(left_rail_mode: "child_booking_tree", layout_mode: "standard")
-      expect(requests_presenter).to have_attributes(left_rail_mode: "child_booking_tree", layout_mode: "standard")
+      expect(room_presenter).to have_attributes(show_left_rail?: false, layout_mode: "standard")
+      expect(billing_presenter).to have_attributes(show_left_rail?: false, billing_scope: "group")
+      expect(deposits_presenter).to have_attributes(show_left_rail?: false, layout_mode: "standard")
+      expect(requests_presenter).to have_attributes(show_left_rail?: false, layout_mode: "standard")
     end
 
-    it "uses tab-specific titles for grouped booking rails" do
+    it "never reports a rail without a rail partial to render" do
       enable_audit_feature
-      group = create(:group_booking, hotel: hotel)
-      booking.update!(group_booking: group, group_position: 1)
-      expected_titles = {
-        "booking_details" => "Bookings / Details",
-        "security_deposits" => "Bookings / Deposits",
-        "billing_preferences" => "Bookings / Billing",
-        "room_and_rate" => "Bookings / Room Rate",
-        "source_details" => "Bookings / Sources",
-        "housekeeping_requests" => "Bookings / Requests",
-        "audit_trails" => "Bookings / Audit Trails"
-      }
 
-      expected_titles.each do |tab, title|
-        expect(described_class.new(booking, params: { tab: tab }).left_rail_title).to eq(title)
+      (described_class::TABS.map(&:key) + described_class::LEGACY_TABS.map(&:key)).each do |tab|
+        tab_presenter = described_class.new(booking, params: { tab: tab })
+
+        expect(tab_presenter.show_left_rail?).to eq(tab_presenter.left_rail_mode.present?)
+        expect(tab_presenter.left_rail_title.present?).to eq(tab_presenter.show_left_rail?)
       end
-    end
-
-    it "uses singular tab-specific titles for standalone booking rails" do
-      enable_audit_feature
-      expected_titles = {
-        "booking_details" => "Booking / Details",
-        "security_deposits" => "Booking / Deposits",
-        "billing_preferences" => "Booking / Billing",
-        "room_and_rate" => "Booking / Room Rate",
-        "source_details" => "Booking / Sources",
-        "housekeeping_requests" => "Booking / Requests",
-        "audit_trails" => "Booking / Audit Trails"
-      }
-
-      expected_titles.each do |tab, title|
-        expect(described_class.new(booking, params: { tab: tab }).left_rail_title).to eq(title)
-      end
-    end
-
-    it "uses the shared booking-row shape for standalone context" do
-      booking.update!(guest_name: "Standalone Guest")
-      room_type = create(:room_type, hotel: hotel, name: "Executive Suite")
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "208")
-
-      row = described_class.new(booking, params: { tab: "booking_details" }).standalone_booking_rows.sole
-
-      expect(row).to have_attributes(label: "Room 208", description: "Executive Suite - Standalone Guest", active: true)
-      expect(row.href).to include("tab=booking_details")
-    end
-
-    it "builds concise room and guest rows with safe fallbacks" do
-      group = create(:group_booking, hotel: hotel)
-      booking.update!(group_booking: group, group_position: 1, guest_name: "Booking Guest")
-      room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "105")
-      create(:booking_guest, booking: booking, guest: create(:guest, name: "Primary Guest"), is_primary: true)
-      fallback = create(:booking, hotel: hotel, group_booking: group, group_position: 2, guest_name: "Fallback Guest")
-
-      rows = described_class.new(booking, params: { tab: "booking_details" }).child_booking_rows
-
-      expect(rows.first).to have_attributes(label: "Room 105", description: "Garden Suite - Primary Guest")
-      expect(rows.second).to have_attributes(label: "Unassigned room", description: "Room type unavailable - Fallback Guest")
-      expect(rows.first.description).not_to include("Booking No.", "MYR")
     end
 
     it "uses entity-focused titles for grouped entity rails" do
@@ -627,36 +576,6 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
   end
 
   describe "context tree groups" do
-    it "groups each group booking child room by room type and room number" do
-      group_booking = create(:group_booking, hotel: hotel)
-      booking.update!(group_booking: group_booking, group_position: 1)
-      sibling = create(:booking, hotel: hotel, group_booking: group_booking, group_position: 2)
-      deluxe = create(:room_type, hotel: hotel, name: "Deluxe King")
-      family = create(:room_type, hotel: hotel, name: "Family Suite")
-      create(:booking_room, booking: booking, room_type: deluxe, room_number: "101")
-      create(:booking_room, booking: sibling, room_type: family, room_number: "201")
-
-      groups = presenter.room_tree_groups + described_class.new(sibling).room_tree_groups
-
-      expect(groups.map(&:label)).to contain_exactly("Deluxe King", "Family Suite")
-      expect(groups.flat_map(&:rows).map(&:label)).to contain_exactly("101", "201")
-    end
-
-    it "groups folio context as group folios and room-type room folios" do
-      room_type = create(:room_type, hotel: hotel, name: "Family Room")
-      room = create(:booking_room, booking: booking, room_type: room_type, room_number: "301")
-      group_folio = create(:booking_folio, booking: booking, hotel: hotel, name: "Group Folio", booking_room: nil)
-      room_folio = create(:booking_folio, booking: booking, hotel: hotel, name: "Room Guest Folio", booking_room: room)
-      corporate_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Corporate Folio", booking_room: nil)
-
-      tab_presenter = described_class.new(booking, params: { tab: "folio_operations", folio_id: room_folio.id })
-
-      expect(tab_presenter.group_folio_tree_rows.map(&:label)).to contain_exactly(group_folio.display_name, corporate_folio.display_name)
-      expect(tab_presenter.folio_room_type_groups.first[:label]).to eq("Family Room")
-      expect(tab_presenter.folio_room_type_groups.first[:room_groups].first[:label]).to eq("301")
-      expect(tab_presenter.folio_room_type_groups.first[:room_groups].first[:rows].map(&:label)).to eq([ "Room Guest Folio" ])
-    end
-
     it "builds grouped folio hierarchy as child bookings with folios" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1, confirmation_token: "B-10031", reservation_number: 31)
@@ -819,8 +738,8 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
     it "keeps audit filters out of the context rail" do
       enable_audit_feature
       expect(described_class.new(booking, params: { tab: "audit_trails" })).to have_attributes(
-        left_rail_mode: "booking_context",
-        left_rail_title: "Booking / Audit Trails"
+        show_left_rail?: false,
+        left_rail_mode: nil
       )
     end
 
