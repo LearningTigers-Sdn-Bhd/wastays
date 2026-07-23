@@ -38,7 +38,7 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
     expect(page).to have_css('[data-layout-mode="standard"]')
     expect(page).to have_content("Room & Rate")
 
-    within("#booking-control-tabs") { click_link "Guests" }
+    within("#booking-workspace-tabs") { click_link "Guests" }
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "guest_details"))
     expect(page).to have_css('[data-layout-mode="entity"]')
     expect(page).to have_content("Primary guest")
@@ -46,21 +46,21 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
     expect(page).to have_content("Guest details recorded for this stay.")
     expect(page).to have_button("Save Guest")
 
-    within("#booking-control-tabs") { click_link "Deposits" }
+    within("#booking-workspace-tabs") { click_link "Deposits" }
     expect(page).to have_css('[data-layout-mode="standard"]')
     expect(page).to have_content("Deposits")
     expect(page).to have_content("MYR 175.00")
 
-    within("#booking-control-tabs") { click_link "Billing" }
+    within("#booking-workspace-tabs") { click_link "Billing" }
     expect(page).to have_css('[data-layout-mode="standard"]')
     expect(page).to have_content("Billing parties")
 
-    within("#booking-control-tabs") { click_link "Folios" }
+    within("#booking-workspace-tabs") { click_link "Folios" }
     expect(page).to have_css('[data-layout-mode="entity"]')
     expect(page).to have_content("Ledger")
     expect(page).not_to have_content("Manage Folio Windows")
 
-    within("#booking-control-tabs") { click_link "Requests" }
+    within("#booking-workspace-tabs") { click_link "Requests" }
     expect(page).to have_css('[data-layout-mode="standard"]')
     expect(page).to have_content("Fresh towels")
     expect(page).to have_content("Noisy hallway")
@@ -69,12 +69,12 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
   it "re-renders the active tab with Turbo frame navigation", js: true do
     visit hotel_booking_workspace_path(hotel, booking, tab: "room_and_rate")
 
-    within("#booking-control-tabs") do
+    within("#booking-workspace-tabs") do
       expect(page).to have_css("a[aria-current='page']", text: "Room & Rate")
       click_link "Guests"
     end
 
-    within("#booking-control-tabs") do
+    within("#booking-workspace-tabs") do
       expect(page).to have_css("a[aria-current='page']", text: "Guests")
       expect(page).to have_no_css("a[aria-current='page']", text: "Room & Rate")
     end

@@ -454,7 +454,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
           expect(document.at_css('aside[aria-label="Booking context"]')).to be_present
         end
 
-        active_navigation = document.at_css('#booking-control-tabs a[aria-current="page"]')
+        active_navigation = document.at_css('#booking-workspace-tabs a[aria-current="page"]')
         if tab == "source_details"
           expect(active_navigation).to be_nil
         else
@@ -788,7 +788,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking, tab: "room_and_rate", scope: "booking")
 
       document = Nokogiri::HTML(response.body)
-      overview_link = document.css("#booking-control-tabs a").find { |link| link.text.squish == "Overview" }
+      overview_link = document.css("#booking-workspace-tabs a").find { |link| link.text.squish == "Overview" }
       expect(overview_link["href"]).to include("tab=booking_details", "scope=booking")
     end
 
