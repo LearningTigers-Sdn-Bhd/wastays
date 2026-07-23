@@ -268,6 +268,7 @@ RSpec.describe "Booking control panel Phase 6", :business_day, type: :system do
       click_in_overlay "Add note"
     end
 
+    expect(page).to have_content("Note added.")
     expect(page).to have_content("First operational note")
     within("article", text: "First operational note") { click_link "Edit" }
     within("#booking-internal-note-sheet") do
@@ -275,6 +276,7 @@ RSpec.describe "Booking control panel Phase 6", :business_day, type: :system do
       click_in_overlay "Save note"
     end
 
+    expect(page).to have_content("Note updated.")
     expect(page).to have_content("Updated operational note")
     within("article", text: "Updated operational note") { click_link "History" }
     expect(page).to have_css("dialog#booking-internal-note-history-sheet[open]", wait: 3)
@@ -285,6 +287,7 @@ RSpec.describe "Booking control panel Phase 6", :business_day, type: :system do
     within("article", text: "Updated operational note") { click_link "Delete" }
     expect(page).to have_css("dialog#booking-internal-note-deletion-sheet[open]", wait: 3)
     within("#booking-internal-note-deletion-sheet") { click_in_overlay "Delete note" }
+    expect(page).to have_content("Note deleted.")
     expect(page).to have_no_content("Updated operational note")
   end
 
