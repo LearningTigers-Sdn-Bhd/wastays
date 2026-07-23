@@ -194,17 +194,20 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       get search_hotel_guests_path(hotel), params: { q: "Nur" }
 
       expect(response).to have_http_status(:success)
-      result = JSON.parse(response.body).first
+      result = JSON.parse(response.body).fetch("results").first
       expect(result).to include(
-        "id" => guest.id,
+        "value" => guest.id,
+        "label" => "Nur Aina",
+        "description" => "aina@example.com · +60121112222"
+      )
+      expect(result.fetch("data")).to include(
         "name" => "Nur Aina",
         "email" => "aina@example.com",
         "phone" => "+60121112222",
         "country" => "Malaysia",
         "gender" => "female",
-        "document_type" => "passport",
-        "government_id" => "p123456",
-        "date_of_birth" => "1994-06-07"
+        "date_of_birth" => "1994-06-07",
+        "blacklisted" => false
       )
     end
   end
