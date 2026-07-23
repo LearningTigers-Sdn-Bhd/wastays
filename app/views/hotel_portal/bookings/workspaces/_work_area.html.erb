@@ -32,7 +32,7 @@
           </button>
         </div>
         <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-muted/60 custom-scrollbar">
-          <%= render "hotel_portal/bookings/workspaces/left_rails/#{presenter.left_rail_mode}", booking: booking, presenter: presenter %>
+          <%= render "hotel_portal/bookings/workspaces/left_rails/#{presenter.left_rail_mode}", booking: booking, entity_booking: entity_booking, presenter: presenter %>
         </div>
       </div>
     </dialog>
@@ -40,12 +40,13 @@
 
   <div class="grid min-h-0 flex-1 grid-cols-1 divide-border xl:divide-x <%= grid_class %>" data-layout-mode="<%= presenter.layout_mode %>">
     <% if presenter.show_left_rail? %>
-      <%= render "left_rail", booking: booking, presenter: presenter %>
+      <%= render "left_rail", booking: booking, entity_booking: entity_booking, presenter: presenter %>
     <% end %>
 
     <main class="min-h-0 min-w-0 <%= presenter.active_tab == 'guest_details' ? 'overflow-hidden' : 'overflow-y-auto overscroll-contain custom-scrollbar' %>" id="booking-workspace-content">
       <%= render presenter.active_tab_partial,
         booking: booking,
+        entity_booking: entity_booking,
         presenter: presenter,
         booking_presenter: booking_presenter,
         folio_show: folio_show,
@@ -55,13 +56,13 @@
 
     <% if presenter.show_right_drawer? %>
       <aside class="min-h-0 min-w-0 overflow-y-auto overscroll-contain border-t border-border bg-card custom-scrollbar xl:border-t-0">
-        <%= render "action_drawer", booking: booking, presenter: presenter, folio_show: folio_show %>
+        <%= render "action_drawer", booking: entity_booking, presenter: presenter, folio_show: folio_show %>
       </aside>
     <% end %>
   </div>
 
   <% if presenter.active_tab == "guest_details" && presenter.selected_booking_guest&.guest.present? %>
-    <%= render "hotel_portal/bookings/workspaces/guest_details/footer", booking: booking, presenter: presenter %>
+    <%= render "hotel_portal/bookings/workspaces/guest_details/footer", booking: entity_booking, presenter: presenter %>
     <%= render "hotel_portal/bookings/workspaces/alerts/confirm_discard_alert" %>
   <% end %>
 

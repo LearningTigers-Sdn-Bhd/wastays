@@ -1,6 +1,6 @@
 <% notes = booking.booking_notes.sort_by(&:created_at).reverse %>
 <% can_manage = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-<% return_to = hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details") %>
+<% return_to = hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details", scope: ("booking" if booking.group_booking_id?)) %>
 
 <section id="booking_internal_notes" class="border-t border-border px-5 py-5" aria-labelledby="internal-notes-heading">
   <div class="flex flex-wrap items-start justify-between gap-3">

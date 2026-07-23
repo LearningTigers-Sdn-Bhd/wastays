@@ -141,11 +141,15 @@ module HotelPortal
     end
 
     def group_stay_variation_notice
-      return unless stay_dates_vary?
+      return unless stay_dates_vary? || group_dates_incomplete?
 
       arrivals = group_arrival_dates.map { |date| format_short_date(date) }
       departures = group_departure_dates.map { |date| format_short_date(date) }
-      "Arrivals occur on #{arrivals.to_sentence}. Departures occur on #{departures.to_sentence}."
+      clauses = []
+      clauses << "Arrivals occur on #{arrivals.to_sentence}." if arrivals.any?
+      clauses << "Departures occur on #{departures.to_sentence}." if departures.any?
+      clauses << "Some stay dates are unavailable." if group_dates_incomplete?
+      clauses.join(" ")
     end
 
     def header_status_badge
@@ -298,7 +302,12 @@ module HotelPortal
 
     def tab_path(tab_key)
       entity_tab = tab_key.to_s.in?(%w[folio_operations guest_details])
-      path_for(booking, tab: tab_key, scope: ("group" if group_overview? && !entity_tab))
+      scope = if !entity_tab && @params[:scope].to_s == "booking"
+        "booking"
+      elsif !entity_tab && group_overview?
+        "group"
+      end
+      path_for(booking, tab: tab_key, scope: scope)
     end
 
     def close_drawer_path
@@ -347,8 +356,7 @@ module HotelPortal
 
     def left_rail_title
       case left_rail_mode
-      when "folio_tree" then "Booking / Folios"
-      when "grouped_folio_tree" then "Bookings / Folios"
+      when "folio_tree", "grouped_folio_tree" then "Folios"
       when "guest_tree" then "Booking / Guests"
       when "grouped_guest_tree" then "Bookings / Guests"
       when "child_booking_tree" then grouped_booking_rail_title
@@ -386,7 +394,11 @@ module HotelPortal
     end
 
     def group_overview?
-      group_context_enabled? && @params[:scope].to_s == "group"
+      return false unless group_context_enabled?
+      return false if active_tab.in?(ENTITY_TABS)
+
+      scope = @params[:scope].to_s
+      scope == "group" || (active_tab == "booking_details" && scope.blank?)
     end
 
     def group_booking
@@ -396,23 +408,37 @@ module HotelPortal
     def child_bookings
       return [ booking ] unless group_context_enabled?
 
-      @child_bookings ||= booking.group_booking.bookings
-        .includes(
-          :hotel, :deposits, :housekeeping_requests, :complaint_requests, :folio_operation_logs,
-          booking_folios: [ :folio_transactions, :folio_forecasted_charges ],
-          booking_rooms: [ :room_type, :rate_plan ],
-          booking_guests: :guest
-        )
-        .to_a
+      @child_bookings ||= begin
+        bookings = booking.group_booking.bookings
+        records = if bookings.loaded?
+          bookings.to_a
+        else
+          bookings
+            .where(hotel_id: hotel.id)
+            .includes(
+              :hotel, :deposits, :housekeeping_requests, :complaint_requests, :folio_operation_logs,
+              booking_folios: [ :folio_transactions, :folio_forecasted_charges ],
+              booking_rooms: [ :room_type, :rate_plan ],
+              booking_guests: :guest
+            )
+            .to_a
+        end
+        records.select { |child| child.hotel_id == hotel.id }
+      end
     end
 
     def selected_child_booking
-      child_bookings.find { |child| child.id.to_s == @params[:child_booking_id].to_s } || booking
+      explicit_child = child_bookings.find { |child| child.id.to_s == @params[:child_booking_id].to_s }
+      return explicit_child if explicit_child
+      return booking unless active_tab.in?(ENTITY_TABS)
+
+      explicit_entity_child_booking || child_bookings.first || booking
     end
 
     def selected_booking_guest
-      booking.booking_guests.find { |record| record.id.to_s == @params[:booking_guest_id].to_s } ||
-        booking.booking_guests.find(&:primary?) || booking.booking_guests.first
+      guests = ordered_booking_guests(selected_child_booking)
+      guests.find { |record| record.id.to_s == @params[:booking_guest_id].to_s } ||
+        guests.find(&:primary?) || guests.first
     end
 
     def selected_guest
@@ -426,7 +452,7 @@ module HotelPortal
     def guest_details_return_to
       return nil unless selected_booking_guest
 
-      path_for(booking, tab: "guest_details", booking_guest_id: selected_booking_guest.id)
+      path_for(selected_child_booking, tab: "guest_details", booking_guest_id: selected_booking_guest.id)
     end
 
     def guest_details_snapshots
@@ -693,7 +719,8 @@ module HotelPortal
           guest: child.booking_guests.find(&:primary?)&.guest&.name.presence || child.guest_name,
           room_type: room ? room_type_label(room) : "Room type unavailable",
           room: room&.room_number.presence || "Unassigned",
-          stay: "#{format_stay_date(child.check_in)} – #{format_stay_date(child.check_out)}",
+          arrival: format_stay_date(child.check_in),
+          departure: format_stay_date(child.check_out),
           rate_plan: room&.rate_plan&.name.presence || "Standard",
           value: money_for(child, room&.subtotal || 0),
           status: STATUS_LABELS.fetch(child.status, child.status.to_s.humanize)
@@ -820,8 +847,8 @@ module HotelPortal
       folio_window_billing_party_options.group_by(&:group)
     end
 
-    def can_manage_folio_windows?
-      folio_show&.can_manage_folio_windows? || false
+    def can_manage_folio_windows?(user)
+      user.has_permission?("manage_folio_windows", hotel: hotel)
     end
 
     def nights_count
@@ -906,16 +933,16 @@ module HotelPortal
 
     def grouped_folio_tree_groups
       @grouped_folio_tree_groups ||= child_bookings.map do |child|
-        rows = child.booking_folios.to_a.sort_by { |folio| [ folio.is_primary? ? 0 : 1, folio.folio_sequence.to_i, folio.id ] }.map do |folio|
+        rows = ordered_booking_folios(child).map do |folio|
           folio_tree_row(
             folio,
-            active: !group_overview? && child.id == booking.id && folio_operations_folio_active?(folio)
+            active: child.id == selected_child_booking.id && folio_operations_folio_active?(folio)
           ).with(
             href: Rails.application.routes.url_helpers.hotel_booking_workspace_path(hotel, child, tab: active_tab, folio_id: folio.id)
           )
         end
 
-        booking_entity_tree_group(child, rows)
+        TreeGroup.new("#{child_booking_label(child)} · #{child_booking_number(child)}", nil, rows, child.id)
       end
     end
 
@@ -958,13 +985,13 @@ module HotelPortal
 
     def grouped_guest_tree_groups
       @grouped_guest_tree_groups ||= child_bookings.map do |child|
-        rows = child.booking_guests.sort_by { |record| record.primary? ? 0 : 1 }.map do |booking_guest|
+        rows = ordered_booking_guests(child).map do |booking_guest|
           TreeRow.new(
             booking_guest.id,
             booking_guest.name_snapshot.presence || booking_guest.guest&.name.presence || child.guest_name,
             booking_guest.primary? ? "Primary guest" : "Additional guest",
             "guest",
-            child.id == booking.id && selected_booking_guest&.id == booking_guest.id && !group_overview?,
+            child.id == selected_child_booking.id && selected_booking_guest&.id == booking_guest.id,
             path_for(child, tab: active_tab, booking_guest_id: booking_guest.id)
           )
         end
@@ -1009,9 +1036,16 @@ module HotelPortal
 
     def selected_folio
       return unless active_tab == "folio_operations"
-      return folio_show&.folio if folio_show.present?
 
-      folios.find { |folio| folio.id.to_s == (@params[:folio_id].presence || @params[:active_folio_id]).to_s } || booking.booking_folio || folios.first
+      selected_folios = ordered_booking_folios(selected_child_booking)
+      explicit_id = @params[:folio_id].presence || @params[:active_folio_id].presence
+      selected_folios.find { |folio| folio.id.to_s == explicit_id.to_s } ||
+        selected_folios.find(&:is_primary?) || selected_folios.first
+    end
+
+    def selected_folio_context_line
+      child = selected_child_booking
+      [ child_booking_label(child), "Booking #{child_booking_number(child)}", format_short_range(child.check_in, child.check_out) ].join(" · ")
     end
 
     def group_deposit_provenance_for(transaction)
@@ -1044,6 +1078,48 @@ module HotelPortal
     end
 
     private
+
+    def explicit_entity_child_booking
+      case active_tab
+      when "folio_operations"
+        entity_id = @params[:folio_id].presence || @params[:active_folio_id].presence
+        child_bookings.find { |child| child.booking_folios.any? { |folio| folio.id.to_s == entity_id.to_s } } if entity_id
+      when "guest_details"
+        entity_id = @params[:booking_guest_id].presence
+        child_bookings.find { |child| child.booking_guests.any? { |guest| guest.id.to_s == entity_id.to_s } } if entity_id
+      end
+    end
+
+    def ordered_booking_folios(child)
+      child.booking_folios.to_a.sort_by do |folio|
+        [ folio.is_primary? ? 0 : 1, folio.folio_sequence.to_i, folio.id ]
+      end
+    end
+
+    def ordered_booking_guests(child)
+      child.booking_guests.to_a.sort_by { |guest| [ guest.primary? ? 0 : 1, guest.id ] }
+    end
+
+    def explicit_entity_child_booking
+      case active_tab
+      when "folio_operations"
+        entity_id = @params[:folio_id].presence || @params[:active_folio_id].presence
+        child_bookings.find { |child| child.booking_folios.any? { |folio| folio.id.to_s == entity_id.to_s } } if entity_id
+      when "guest_details"
+        entity_id = @params[:booking_guest_id].presence
+        child_bookings.find { |child| child.booking_guests.any? { |guest| guest.id.to_s == entity_id.to_s } } if entity_id
+      end
+    end
+
+    def ordered_booking_folios(child)
+      child.booking_folios.to_a.sort_by do |folio|
+        [ folio.is_primary? ? 0 : 1, folio.folio_sequence.to_i, folio.id ]
+      end
+    end
+
+    def ordered_booking_guests(child)
+      child.booking_guests.to_a.sort_by { |guest| [ guest.primary? ? 0 : 1, guest.id ] }
+    end
 
     def split_boat_time(key)
       guest_details_boat_times[key]&.split("T")
@@ -1150,7 +1226,7 @@ module HotelPortal
       TreeRow.new(
         folio.id,
         folio.display_name,
-        [ folio.folio_reference_display, folio.payer_display_label ].compact_blank.join(" · "),
+        [ folio.status.to_s.humanize, folio.payer_display_label, money_for(folio.booking, folio.projected_outstanding_balance) ].compact_blank.join(" · "),
         "folio",
         active,
         nil
@@ -1241,11 +1317,9 @@ module HotelPortal
     end
 
     def selected_folio_id
-      explicit_id = @params[:folio_id].presence || @params[:active_folio_id].presence
-      return explicit_id if explicit_id.present?
       return unless active_tab == "folio_operations"
 
-      folio_show&.folio&.id || booking.booking_folio&.id || folios.first&.id
+      selected_folio&.id
     end
 
     def room_row_active?(room)

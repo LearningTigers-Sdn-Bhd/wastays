@@ -3,7 +3,9 @@
     ["Booking No.", presenter.group_booking.formatted_reservation_number.presence || "—"],
     ["Confirmation code", presenter.group_booking.confirmation_token.presence || "—"],
     ["Receipt No.", presenter.group_booking.formatted_receipt_number.presence || "—"],
+    ["Source", presenter.group_booking.source.to_s.presence&.tr("_", " ")&.titleize || "—"],
     ["External Reference", presenter.group_booking.external_reference.presence || "—"],
+    ["Channel Manager", presenter.group_booking.channel_manager_reference.presence || "—"],
     ["Organizer", presenter.group_booking.organizer_guest&.name.presence || "—"]
   ] %>
 
@@ -23,7 +25,7 @@
         <% end %>
       </div>
 
-      <% if presenter.stay_dates_vary? %>
+      <% if presenter.stay_dates_vary? || presenter.group_dates_incomplete? %>
         <div class="mt-4">
           <%= render PanelsUI::Alert.new(tone: :info, title: "Arrival and departure schedule") do |alert| %>
             <% alert.with_description { presenter.group_stay_variation_notice } %>
@@ -38,7 +40,7 @@
         <% group_reference_rows.each do |label, value| %>
           <div>
             <dt class="text-xs text-muted-foreground"><%= label %></dt>
-            <dd class="mt-1 break-words text-sm text-foreground"><%= value %></dd>
+            <dd class="mt-1 break-words text-sm tabular-nums text-foreground"><%= value %></dd>
           </div>
         <% end %>
       </dl>
@@ -46,27 +48,28 @@
 
     <div class="px-5 py-5">
       <h3 class="text-base font-semibold text-foreground">Bookings</h3>
-      <div class="mt-4 overflow-x-auto">
-        <table class="w-full min-w-[880px] text-left text-sm">
-          <thead class="border-b border-border text-xs font-medium text-muted-foreground">
-            <tr><th class="px-3 py-2 font-medium">Booking No.</th><th class="px-3 py-2 font-medium">Guest</th><th class="px-3 py-2 font-medium">Room</th><th class="px-3 py-2 font-medium">Stay</th><th class="px-3 py-2 font-medium">Status</th><th class="px-3 py-2 text-right font-medium">Balance</th></tr>
-          </thead>
-          <tbody class="divide-y divide-border">
+      <div class="mt-4">
+        <%= render PanelsUI::Table.new(caption: "Group bookings", density: :compact, hoverable: true, bordered: false, class: "min-w-[960px]") do |table| %>
+          <% table.with_header do %>
+            <tr><th scope="col">Booking No.</th><th scope="col">Primary guest</th><th scope="col">Room</th><th scope="col">Arrival</th><th scope="col">Departure</th><th scope="col">Status</th><th scope="col" class="text-right">Balance</th></tr>
+          <% end %>
+          <% table.with_body do %>
             <% presenter.group_room_rows.each do |row| %>
               <tr>
-                <td class="px-3 py-2 text-foreground"><%= link_to row[:booking_number], hotel_booking_workspace_path(current_hotel, row[:booking], tab: "booking_details"), class: "font-medium underline-offset-4 hover:underline" %></td>
-                <td class="px-3 py-2 text-foreground"><%= row[:guest] %></td>
-                <td class="px-3 py-2 text-foreground"><%= row[:room] %> · <%= row[:room_type] %></td>
-                <td class="px-3 py-2 whitespace-nowrap tabular-nums text-foreground"><%= row[:stay] %></td>
-                <td class="px-3 py-2 text-foreground"><%= row[:status] %></td>
-                <td class="px-3 py-2 text-right tabular-nums text-foreground"><%= presenter.money_for(row[:booking], row[:booking].booking_folios.sum { |folio| folio.projected_outstanding_balance.to_d }) %></td>
+                <td><%= link_to row[:booking_number], hotel_booking_workspace_path(current_hotel, row[:booking], tab: "booking_details", scope: "booking"), class: "font-medium tabular-nums underline-offset-4 hover:underline" %></td>
+                <td><%= row[:guest] %></td>
+                <td><%= row[:room] %> · <%= row[:room_type] %></td>
+                <td class="whitespace-nowrap tabular-nums"><%= row[:arrival] %></td>
+                <td class="whitespace-nowrap tabular-nums"><%= row[:departure] %></td>
+                <td><%= row[:status] %></td>
+                <td class="text-right tabular-nums"><%= presenter.money_for(row[:booking], row[:booking].booking_folios.sum { |folio| folio.projected_outstanding_balance.to_d }) %></td>
               </tr>
             <% end %>
-          </tbody>
-          <tfoot class="border-t border-border text-sm">
-            <tr><th colspan="5" class="px-3 py-2 text-right font-medium text-foreground">Group Outstanding Balance</th><td class="px-3 py-2 text-right font-semibold tabular-nums text-foreground"><%= presenter.money(presenter.group_total_balance) %></td></tr>
-          </tfoot>
-        </table>
+          <% end %>
+          <% table.with_footer do %>
+            <tr><th colspan="6" scope="row" class="text-right font-medium text-foreground">Group Outstanding Balance</th><td class="text-right font-semibold tabular-nums text-foreground"><%= presenter.money(presenter.group_total_balance) %></td></tr>
+          <% end %>
+        <% end %>
       </div>
     </div>
   </section>

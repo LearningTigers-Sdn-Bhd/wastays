@@ -1,17 +1,17 @@
-<% if presenter.can_manage_folio_windows? && !presenter.group_overview? %>
+<% if presenter.can_manage_folio_windows?(current_user) %>
   <div class="border-b border-border px-4 py-3">
-    <%= link_to new_folio_window_hotel_booking_workspace_path(current_hotel, booking),
-        data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" },
-        class: "inline-flex w-full items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" do %>
-      + Add Folio
-    <% end %>
+    <%= render PanelsUI::Button.new(
+          href: new_folio_window_hotel_booking_workspace_path(current_hotel, entity_booking),
+          variant: :primary,
+          size: :sm,
+          class: "w-full",
+          data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }) do %>Add Folio<% end %>
   </div>
 <% end %>
 
-<%= render "hotel_portal/bookings/workspaces/left_rails/booking_entity_tree",
-    booking: booking,
-    presenter: presenter,
-    groups: presenter.booking_folio_tree_groups,
-    aria_label: "Booking folios",
-    empty_label: "No folios available.",
-    single_booking: true %>
+<nav aria-label="Booking folios">
+  <%= render "hotel_portal/bookings/workspaces/left_rails/folio_rows", rows: presenter.folio_tree_rows %>
+  <% if presenter.folio_tree_rows.empty? %>
+    <p class="px-4 py-4 text-sm text-muted-foreground">No folios available.</p>
+  <% end %>
+</nav>

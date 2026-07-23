@@ -105,6 +105,19 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(overview_presenter.group_summary_actions.map(&:label)).to include("Check-out")
     end
 
+    it "defaults grouped booking details to the group overview while preserving explicit child scope" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+
+      default_presenter = described_class.new(booking, params: { tab: "booking_details" })
+      child_presenter = described_class.new(booking, params: { tab: "booking_details", scope: "booking" })
+
+      expect(default_presenter).to be_group_overview
+      expect(child_presenter).not_to be_group_overview
+      expect(child_presenter.tab_path("room_and_rate")).to include("scope=booking")
+      expect(child_presenter.tab_path("folio_operations")).not_to include("scope=booking")
+    end
+
     it "returns compact status badge metadata for group child bookings" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
@@ -340,6 +353,64 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
       expect(matched_presenter.group_stay_variation_notice).to be_nil
     end
+
+    it "describes known dates without producing empty clauses when group dates are incomplete" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, check_in: booking.check_in + 2.days)
+      booking.check_out = nil
+      sibling.check_out = nil
+      incomplete_presenter = described_class.new(booking, params: { scope: "group" }, hotel: hotel)
+      allow(incomplete_presenter).to receive(:child_bookings).and_return([ booking, sibling ])
+
+      notice = incomplete_presenter.group_stay_variation_notice
+
+      expect(notice).to include("Arrivals occur on", "Some stay dates are unavailable.")
+      expect(notice).not_to include("Departures occur on .")
+    end
+
+    it "reports incomplete dates even when the known dates do not vary" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(
+        :booking,
+        hotel: hotel,
+        group_booking: group,
+        group_position: 2,
+        check_in: booking.check_in,
+        check_out: booking.check_out
+      )
+      sibling.check_out = nil
+      incomplete_presenter = described_class.new(booking, params: { scope: "group" }, hotel: hotel)
+      allow(incomplete_presenter).to receive(:child_bookings).and_return([ booking, sibling ])
+
+      expect(incomplete_presenter.stay_dates_vary?).to be(false)
+      expect(incomplete_presenter.group_stay_variation_notice).to include("Some stay dates are unavailable.")
+    end
+  end
+
+  describe "group overview rows" do
+    it "orders child bookings by group position and exposes arrival and departure separately" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 2)
+      first_child = create(
+        :booking,
+        hotel: hotel,
+        group_booking: group,
+        group_position: 1,
+        check_in: booking.check_in - 2.days,
+        check_out: booking.check_out - 1.day
+      )
+
+      rows = described_class.new(booking.reload, params: { scope: "group" }, hotel: hotel).group_room_rows
+
+      expect(rows.map { |row| row[:booking] }).to eq([ first_child, booking ])
+      expect(rows.first).to include(
+        arrival: first_child.check_in.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y"),
+        departure: first_child.check_out.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y")
+      )
+      expect(rows.first).not_to have_key(:stay)
+    end
   end
 
   describe "default entity selection" do
@@ -358,6 +429,56 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       tab_presenter = described_class.new(booking.reload, params: { tab: "folio_operations" }, hotel: hotel)
 
       expect(tab_presenter.selected_folio).to eq(folio)
+    end
+
+    it "selects the first group child and its primary folio and guest without entity IDs" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 2)
+      first_child = create(:booking, hotel: hotel, group_booking: group, group_position: 1)
+      create(:booking_folio, :secondary, booking: first_child, hotel: hotel, folio_sequence: 1)
+      primary_folio = create(:booking_folio, booking: first_child, hotel: hotel, is_primary: true, folio_sequence: 3)
+      create(:booking_guest, booking: first_child, guest: create(:guest), is_primary: false)
+      primary_guest = create(:booking_guest, booking: first_child, guest: create(:guest), is_primary: true)
+
+      folio_presenter = described_class.new(booking.reload, params: { tab: "folio_operations" }, hotel: hotel)
+      guest_presenter = described_class.new(booking.reload, params: { tab: "guest_details" }, hotel: hotel)
+
+      expect(folio_presenter).to have_attributes(selected_child_booking: first_child, selected_folio: primary_folio)
+      expect(guest_presenter).to have_attributes(selected_child_booking: first_child, selected_booking_guest: primary_guest)
+    end
+
+    it "resolves explicit group entities to their owning child and ignores foreign IDs" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      sibling_folio = create(:booking_folio, booking: sibling, hotel: hotel)
+      sibling_guest = create(:booking_guest, booking: sibling, guest: create(:guest), is_primary: true)
+      foreign_hotel = create(:hotel)
+      foreign_booking = create(:booking, hotel: foreign_hotel)
+      foreign_folio = create(:booking_folio, hotel: foreign_hotel, booking: foreign_booking)
+
+      folio_presenter = described_class.new(booking, params: { tab: "folio_operations", folio_id: sibling_folio.id }, hotel: hotel)
+      guest_presenter = described_class.new(booking, params: { tab: "guest_details", booking_guest_id: sibling_guest.id }, hotel: hotel)
+      foreign_presenter = described_class.new(booking, params: { tab: "folio_operations", folio_id: foreign_folio.id }, hotel: hotel)
+
+      expect(folio_presenter).to have_attributes(selected_child_booking: sibling, selected_folio: sibling_folio)
+      expect(guest_presenter).to have_attributes(selected_child_booking: sibling, selected_booking_guest: sibling_guest)
+      expect(foreign_presenter.selected_child_booking).to eq(booking)
+      expect(foreign_presenter.selected_folio).not_to eq(foreign_folio)
+    end
+
+    it "excludes inconsistent group children belonging to another hotel" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      foreign_hotel = create(:hotel)
+      foreign_child = create(:booking, hotel: foreign_hotel)
+      foreign_child.update_column(:group_booking_id, group.id)
+      group.bookings.reset
+
+      group_presenter = described_class.new(booking, params: { tab: "folio_operations" }, hotel: hotel)
+
+      expect(group_presenter.child_bookings).to eq([ booking ])
+      expect(group_presenter.child_bookings).not_to include(foreign_child)
     end
   end
 
@@ -459,11 +580,11 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(rows.first.description).not_to include("Booking No.", "MYR")
     end
 
-    it "uses booking-first titles for grouped entity rails" do
+    it "uses entity-focused titles for grouped entity rails" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
 
-      expect(described_class.new(booking, params: { tab: "folio_operations" }).left_rail_title).to eq("Bookings / Folios")
+      expect(described_class.new(booking, params: { tab: "folio_operations" }).left_rail_title).to eq("Folios")
       expect(described_class.new(booking, params: { tab: "guest_details" }).left_rail_title).to eq("Bookings / Guests")
     end
 
@@ -550,21 +671,18 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       tab_presenter = described_class.new(booking, params: { tab: "folio_operations" }, hotel: hotel)
 
       expect(tab_presenter.grouped_folio_tree_groups.map(&:label)).to include(
-        "Room 101",
-        "Room 102"
+        "Room 101 · #{booking.formatted_reservation_number}",
+        "Room 102 · #{sibling.formatted_reservation_number}"
       )
-      expect(tab_presenter.grouped_folio_tree_groups.map(&:description)).to include(
-        "#{current_room.room_type.name} - Guest One",
-        "#{sibling_room.room_type.name} - Guest Two"
-      )
+      expect(tab_presenter.grouped_folio_tree_groups.map(&:description)).to all(be_nil)
       expect(tab_presenter.grouped_folio_tree_groups.flat_map(&:rows).map(&:label)).to include("Guest Folio", "Corporate Folio")
       expect(tab_presenter.grouped_folio_tree_groups.flat_map(&:rows).map(&:description)).to include(
-        "#{booking.booking_folios.first.folio_reference_display} · #{booking.booking_folios.first.payer_display_label}",
-        "#{sibling.booking_folios.first.folio_reference_display} · #{sibling.booking_folios.first.payer_display_label}"
+        "Open · #{booking.booking_folios.first.payer_display_label} · MYR 0.00",
+        "Open · #{sibling.booking_folios.first.payer_display_label} · MYR 0.00"
       )
     end
 
-    it "leaves every child folio inactive while group scope is active" do
+    it "treats legacy group scope as an entity view and selects the explicit folio" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
       sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
@@ -577,8 +695,8 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
         hotel: hotel
       )
 
-      expect(group_presenter).to be_group_overview
-      expect(group_presenter.grouped_folio_tree_groups.flat_map(&:rows)).to all(satisfy { |row| !row.active })
+      expect(group_presenter).not_to be_group_overview
+      expect(group_presenter.grouped_folio_tree_groups.flat_map(&:rows).select(&:active).map(&:id)).to eq([ current_folio.id ])
     end
 
     it "builds grouped guest hierarchy as child bookings with guests" do
@@ -611,15 +729,16 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(guest_group).to have_attributes(label: "Room 208", description: "Executive Suite - Standalone Guest")
     end
 
-    it "opens only the current empty booking group when room labels are duplicated" do
+    it "keeps duplicate room labels distinguishable with ordered booking numbers" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
       create(:booking, hotel: hotel, group_booking: group, group_position: 2)
       tab_presenter = described_class.new(booking, params: { tab: "folio_operations" }, hotel: hotel)
       groups = tab_presenter.grouped_folio_tree_groups
 
-      expect(groups.map(&:label)).to eq([ "Unassigned room", "Unassigned room" ])
-      expect(groups.map { |tree_group| tab_presenter.booking_tree_group_open?(tree_group) }).to eq([ true, false ])
+      expect(groups.map(&:label)).to eq(
+        tab_presenter.child_bookings.map { |child| "Unassigned room · #{child.formatted_reservation_number}" }
+      )
     end
 
     it "summarizes security deposits" do

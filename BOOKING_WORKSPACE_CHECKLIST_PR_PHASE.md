@@ -25,16 +25,17 @@ Do not mark a behavior complete merely because a presenter method, CSS class, or
 
 ## Current Git Snapshot
 
-- [x] Branch contains two commits beyond `main`
+- [x] Branch contains three commits beyond `main`
   - `905e02b33` — rename booking control panel to booking workspace
   - `bcd65e2cb` — flatten workspace shell and add booking header
+  - `789300eca` — complete workspace foundation
 - [x] No staged changes
-- [x] Thirteen modified files in the working tree
-- [x] `BOOKING_WORKSPACE_PROPOSAL.md` exists as an untracked file
+- [x] Eighteen modified files and one untracked implementation partial in the working tree
+- [x] `BOOKING_WORKSPACE_PROPOSAL.md` is tracked
 - [x] Current unstaged diff passes `git diff --check`
 - [ ] Current unstaged implementation changes are committed
-- [ ] `BOOKING_WORKSPACE_PROPOSAL.md` is tracked
-- [ ] This checklist is tracked
+- [x] `BOOKING_WORKSPACE_PROPOSAL.md` is tracked
+- [x] This checklist is tracked
 - [x] Relevant tests have been run against the current working tree
 
 ## Phase 0 — Workspace Rename and Structural Baseline
@@ -147,11 +148,11 @@ This phase completes the workspace shell and layout architecture. It is not comp
 - [x] Relabel confirmation token as `Confirmation code` — **Working tree**
 - [x] Preserve Special Requests as a separate section — **Working tree**
 - [x] Use PanelsUI Button for Edit Dates — **Working tree**
-- [ ] Integrate source/channel details into References
+- [x] Integrate source/channel details into References — **Working tree**
 - [ ] Remove the independent Source Details destination and partial
-- [ ] Confirm Internal Notes follows the same flattened section rhythm
-- [ ] Confirm values use appropriate tabular numerals
-- [ ] Verify empty values and unusually long external references
+- [x] Confirm Internal Notes follows the same flattened section rhythm — **Working tree**
+- [x] Confirm values use appropriate tabular numerals — **Working tree**
+- [x] Verify empty values and unusually long external references — **Working tree**
 
 ### Overview — Group Booking
 
@@ -162,43 +163,43 @@ This phase completes the workspace shell and layout architecture. It is not comp
 - [x] Rename group Identifiers to References — **Working tree**
 - [x] Show child bookings in a comparison table — **Working tree**
 - [x] Remove duplicate `Stay dates vary` messaging from the group panel — **Working tree**
-- [ ] Show separate Arrival and Departure columns rather than one ambiguous Stay range
-- [ ] Do not repeat earliest/latest dates in the Overview if already sufficiently represented in the header and booking table
+- [x] Show separate Arrival and Departure columns rather than one ambiguous Stay range — **Working tree**
+- [x] Do not repeat earliest/latest dates in the Overview if already sufficiently represented in the header and booking table — **Working tree**
 - [x] Avoid repeating the group name below the global group header — **Working tree**
-- [ ] Use the established PanelsUI table pattern where its API supports this comparison
+- [x] Use the established PanelsUI table pattern where its API supports this comparison — **Working tree**
 - [x] Verify matching-date groups do not show a variation notice — **Working tree**
 - [x] Verify partially missing dates do not raise an exception — **Working tree**
 
 ### Folio Entity Rail — Single Booking
 
-- [ ] Show only concrete folios belonging to the current booking
-- [ ] Remove booking-context and Overview rows
-- [ ] Remove collapsible booking containers when there is only one booking
-- [ ] Show folio name, status/payer context, and balance with restrained hierarchy
-- [ ] Highlight the selected folio without a large decorative block
-- [ ] Keep `Add Folio` attached to the folio rail
-- [ ] Render a clear no-folios state with an Add Folio action
+- [x] Show only concrete folios belonging to the current booking — **Working tree**
+- [x] Remove booking-context and Overview rows — **Working tree**
+- [x] Remove collapsible booking containers when there is only one booking — **Working tree**
+- [x] Show folio name, status/payer context, and balance with restrained hierarchy — **Working tree**
+- [x] Highlight the selected folio without a large decorative block — **Working tree**
+- [x] Keep `Add Folio` attached to the folio rail — **Working tree**
+- [x] Render a clear no-folios state with an Add Folio action — **Working tree**
 
 ### Folio Entity Rail — Group Booking
 
-- [ ] Group concrete folios by child booking/room
-- [ ] Use exactly one hierarchy level: child booking/room → folios
-- [ ] Remove `All Folios`
-- [ ] Remove group-overview selection from the folio rail
-- [ ] Avoid repeating all room, guest, status, and booking metadata on every child row
-- [ ] Preserve deterministic child ordering by `group_position`
-- [ ] Preserve deterministic folio ordering
-- [ ] Ensure Add Folio targets the intended concrete child booking
+- [x] Group concrete folios by child booking/room — **Working tree**
+- [x] Use exactly one hierarchy level: child booking/room → folios — **Working tree**
+- [x] Remove `All Folios` — **Working tree**
+- [x] Remove group-overview selection from the folio rail — **Working tree**
+- [x] Avoid repeating all room, guest, status, and booking metadata on every child row — **Working tree**
+- [x] Preserve deterministic child ordering by `group_position` — **Working tree**
+- [x] Preserve deterministic folio ordering — **Working tree**
+- [x] Ensure Add Folio targets the intended concrete child booking — **Working tree**
 
 ### Selected Folio Content
 
 - [x] Normalize initial folio typography and semantic colors — **Working tree**
-- [ ] Show exact child context: room, operational booking number, and child stay dates
-- [ ] Do not label a concrete child folio with only the workspace root booking
-- [ ] Preserve Edit, Close, Reopen, Payment, Charge, Adjustment, and More Actions behavior
-- [ ] Ensure every folio action targets the selected folio’s concrete booking
-- [ ] Preserve ledger and upcoming-charge behavior
-- [ ] Preserve group-deposit provenance
+- [x] Show exact child context: room, operational booking number, and child stay dates — **Working tree**
+- [x] Do not label a concrete child folio with only the workspace root booking — **Working tree**
+- [x] Preserve Edit, Close, Reopen, Payment, Charge, Adjustment, and More Actions behavior — **Working tree**
+- [x] Ensure every folio action targets the selected folio’s concrete booking — **Working tree**
+- [x] Preserve ledger and upcoming-charge behavior — **Working tree**
+- [x] Preserve group-deposit provenance — **Working tree**
 - [ ] Confirm long ledger descriptions and large amounts remain readable
 
 ### Guest Entity Rail — Single Booking
@@ -234,17 +235,17 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 - [x] Presenter selects a primary guest when no guest ID is supplied for a standalone booking — **Working tree**
 - [x] Presenter selects a folio when no folio ID is supplied for a standalone booking — **Working tree**
-- [ ] Resolve the default group child in the presenter
-- [ ] Resolve the default group folio in the presenter
-- [ ] Resolve the default group guest in the presenter
-- [ ] Remove `redirect_group_entity_context!` from the controller
-- [ ] Render the default folio without redirecting
-- [ ] Render the default guest without redirecting
-- [ ] Preserve explicit `folio_id` selection in the URL
-- [ ] Preserve explicit `booking_guest_id` selection in the URL
+- [x] Resolve the default group child in the presenter — **Working tree**
+- [x] Resolve the default group folio in the presenter — **Working tree**
+- [x] Resolve the default group guest in the presenter — **Working tree**
+- [x] Remove `redirect_group_entity_context!` from the controller — **Working tree**
+- [x] Render the default folio without redirecting — **Working tree**
+- [x] Render the default guest without redirecting — **Working tree**
+- [x] Preserve explicit `folio_id` selection in the URL — **Working tree**
+- [x] Preserve explicit `booking_guest_id` selection in the URL — **Working tree**
 - [ ] Preserve Turbo history and browser back/forward behavior
-- [ ] Add request coverage proving missing entity IDs do not redirect
-- [ ] Add request coverage proving cross-hotel entity IDs are rejected or ignored safely
+- [x] Add request coverage proving missing entity IDs do not redirect — **Working tree**
+- [x] Add request coverage proving cross-hotel entity IDs are rejected or ignored safely — **Working tree**
 
 ### Mobile Entity Selection
 
@@ -258,12 +259,12 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 ### Phase 2 Exit Gate
 
-- [ ] Single and group Overview match the approved information hierarchy
-- [ ] Folio rail contains concrete folios only
+- [x] Single and group Overview match the approved information hierarchy — **Working tree**
+- [x] Folio rail contains concrete folios only — **Working tree**
 - [ ] Guest rail contains concrete guests only
-- [ ] No `All Folios` or `All Guests` state exists
-- [ ] Group entity pages render without controller redirects
-- [ ] Selected entity actions target the correct child booking
+- [x] No `All Folios` or `All Guests` state exists — **Working tree**
+- [x] Group entity pages render without controller redirects — **Working tree**
+- [x] Selected entity actions target the correct child booking — **Working tree**
 - [ ] Desktop and mobile Folio/Guest flows have been visually verified
 
 ## Phase 3 — Remaining Workspace Destinations and PanelsUI
@@ -362,10 +363,10 @@ This phase completes the workspace shell and layout architecture. It is not comp
 - [x] Standard versus entity layout mode — **Working tree**
 - [x] Left rail visible only for Folios and Guests — **Working tree**
 - [x] Group header identity on concrete folio/guest views — **Working tree**
-- [ ] Default group child selection
-- [ ] Default group folio selection
-- [ ] Default group guest selection
-- [ ] Entity grouping and order
+- [x] Default group child selection — **Working tree**
+- [x] Default group folio selection — **Working tree**
+- [x] Default group guest selection — **Working tree**
+- [x] Entity grouping and order — **Working tree**
 - [ ] Exact child context labels
 - [ ] Source consolidation
 
@@ -373,10 +374,10 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 - [x] References label and confirmation-code demotion — **Working tree**
 - [x] Mixed group stay-date notice — **Working tree**
-- [ ] Default group folio renders without redirect
-- [ ] Default group guest renders without redirect
-- [ ] Explicit entity IDs render the correct entity
-- [ ] Cross-hotel entity isolation
+- [x] Default group folio renders without redirect — **Working tree**
+- [x] Default group guest renders without redirect — **Working tree**
+- [x] Explicit entity IDs render the correct entity — **Working tree**
+- [x] Cross-hotel entity isolation — **Working tree**
 - [x] Standard pages omit the left rail — **Working tree**
 - [x] Entity pages render the correct rail — **Working tree**
 - [ ] Source Details compatibility
@@ -385,11 +386,11 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 ### System Specs
 
-- [ ] Switch folios in a single booking
-- [ ] Switch folios across group child bookings
+- [x] Switch folios in a single booking — **Working tree**
+- [x] Switch folios across group child bookings — **Working tree**
 - [ ] Switch guests in a single booking
 - [ ] Switch guests across group child bookings
-- [ ] Preserve browser back and forward navigation
+- [ ] Preserve browser back and forward navigation — **Folio flows verified; Guest flow pending**
 - [ ] Preserve guest unsaved-change confirmation
 - [ ] Preserve validation errors after failed guest save
 - [ ] Verify folio actions target the selected child
@@ -433,7 +434,7 @@ This phase completes the workspace shell and layout architecture. It is not comp
 - [x] `bin/test spec/requests/hotel_portal/bookings/workspaces_spec.rb`
 - [x] `bin/test spec/requests/hotel_portal/bookings/workspace_actions_spec.rb`
 - [x] `bin/test spec/system/hotel/booking_workspace_phase6_spec.rb --serial`
-- [ ] `bin/test spec/system/hotel/folio_operations_ledger_spec.rb --serial`
+- [x] `bin/test spec/system/hotel/folio_operations_ledger_spec.rb --serial`
 - [ ] `bin/test spec/system/hotel/group_billing_routes_spec.rb --serial`
 - [x] `bin/test bookings`
 - [x] `bin/test financials`

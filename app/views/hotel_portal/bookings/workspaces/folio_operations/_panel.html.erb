@@ -3,17 +3,29 @@
   <section aria-labelledby="folio-operations-heading">
     <header class="border-b border-border px-5 py-4">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div><p class="text-xs text-muted-foreground">Booking No. <%= presenter.booking_number %></p><h2 id="folio-operations-heading" class="mt-1 text-base font-semibold text-foreground"><%= active_folio.display_name %></h2><p class="mt-1 text-sm text-muted-foreground"><%= active_folio.status.humanize %> · <%= active_folio.payer_display_label %> · <span class="tabular-nums text-foreground"><%= presenter.money(active_folio.projected_outstanding_balance) %></span></p></div>
-        <%= render "hotel_portal/bookings/workspaces/folio_operations/window_actions", booking: booking, folio: active_folio, folio_show: folio_show %>
+        <div><p class="text-xs tabular-nums text-muted-foreground"><%= presenter.selected_folio_context_line %></p><h2 id="folio-operations-heading" class="mt-1 text-base font-semibold text-foreground"><%= active_folio.display_name %></h2><p class="mt-1 text-sm text-muted-foreground"><%= active_folio.status.humanize %> · <%= active_folio.payer_display_label %> · <span class="tabular-nums text-foreground"><%= presenter.money_for(entity_booking, active_folio.projected_outstanding_balance) %> outstanding</span></p></div>
+        <%= render "hotel_portal/bookings/workspaces/folio_operations/window_actions", booking: entity_booking, folio: active_folio, folio_show: folio_show %>
       </div>
-      <div class="mt-4"><%= render "hotel_portal/bookings/workspaces/folio_operations/folio_actions", booking: booking, hotel: current_hotel, folio_show: folio_show, redirect_to_folio: true, folio_origin: "booking_workspace" %></div>
+      <div class="mt-4"><%= render "hotel_portal/bookings/workspaces/folio_operations/folio_actions", booking: entity_booking, hotel: current_hotel, folio_show: folio_show, redirect_to_folio: true, folio_origin: "booking_workspace" %></div>
     </header>
 
     <% if active_folio.group_deposit_allocations.any? %><div class="border-b border-border bg-muted px-5 py-3 text-sm text-foreground"><span class="font-medium">Group Deposit Allocation:</span> <%= active_folio.group_deposit_allocations.map { |allocation| "##{allocation.group_deposit_id} · #{presenter.money(allocation.amount)}" }.to_sentence %></div><% end %>
 
-    <div class="px-5 pb-5"><%= render "hotel_portal/folios/show/page_ledger", folio_show: folio_show, booking: booking, hotel: current_hotel, folio_origin: "booking_workspace" %></div>
+    <div class="px-5 pb-5"><%= render "hotel_portal/folios/show/page_ledger", folio_show: folio_show, booking: entity_booking, hotel: current_hotel, folio_origin: "booking_workspace" %></div>
   </section>
-  <%= render "hotel_portal/bookings/workspaces/folio_operations/window_dialogs", booking: booking, folio: active_folio, folio_show: folio_show %>
+  <%= render "hotel_portal/bookings/workspaces/folio_operations/window_dialogs", booking: entity_booking, folio: active_folio, folio_show: folio_show %>
 <% else %>
-  <div class="px-5 py-12 text-center"><p class="font-semibold text-foreground">No folios are available.</p><p class="mt-1 text-sm text-muted-foreground">Create a folio before posting charges or payments.</p></div>
+  <div class="px-5 py-12 text-center">
+    <p class="font-semibold text-foreground">No folios are available.</p>
+    <p class="mt-1 text-sm text-muted-foreground">Create a folio before posting charges or payments.</p>
+    <% if presenter.can_manage_folio_windows?(current_user) %>
+      <div class="mt-4">
+        <%= render PanelsUI::Button.new(
+              href: new_folio_window_hotel_booking_workspace_path(current_hotel, entity_booking),
+              variant: :primary,
+              size: :sm,
+              data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }) do %>Add Folio<% end %>
+      </div>
+    <% end %>
+  </div>
 <% end %>
