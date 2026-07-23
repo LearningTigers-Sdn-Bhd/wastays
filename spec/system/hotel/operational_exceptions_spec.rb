@@ -36,20 +36,23 @@ RSpec.describe "Operational Exceptions", type: :system do
       expect(page).to have_content("Review Late Checkout")
       click_link "Review Late Checkout"
 
-      expect(page).to have_content("Current Rate Charge")
+      expect(page).to have_content("Current rate charge")
 
       # Select custom charge
-      find("label", text: "Additional Charge").click
+      find("label", text: "Additional charge").click
 
       # Wait for custom section to appear
-      expect(page).to have_selector("[data-late-checkout-target='customSection']", visible: true)
+      expect(page).to have_selector(
+        "[data-booking-actions--late-checkout-target='customSection']",
+        visible: true
+      )
 
       # Fill in the custom value
-      find("[data-late-checkout-target='customValue']").set("75.00")
+      fill_in "Amount / %", with: "75.00"
 
       expect(page).to have_content("MYR 174.99")
 
-      click_button "Process Late Checkout"
+      click_button "Process late checkout"
 
       expect(page).to have_current_path(
         hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")

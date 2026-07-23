@@ -183,7 +183,7 @@ RSpec.describe "Booking control panel Phase 6", :business_day, type: :system do
     booking.update_columns(status: "checkout_required", checked_in_at: 2.hours.ago)
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
 
-    relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: true)
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
     company_folio = create(
       :booking_folio,
       :secondary,
@@ -213,7 +213,10 @@ RSpec.describe "Booking control panel Phase 6", :business_day, type: :system do
       expect(page).to have_no_content("Settlement Details")
 
       company_row = find("article", text: "Company Folio")
-      click_in_overlay company_row.find(".panel-select-menu__trigger")
+      resolution_trigger = company_row.find(
+        "[data-booking-actions--checkout-settlement-target~='actionControl'] .panel-select-menu__trigger"
+      )
+      click_in_overlay resolution_trigger
       click_in_overlay find("[role='option']", text: "Pay Now", visible: true)
 
       within(company_row) do
@@ -265,6 +268,7 @@ RSpec.describe "Booking control panel Phase 6", :business_day, type: :system do
       click_in_overlay "Add note"
     end
 
+    expect(page).to have_content("Note added.")
     expect(page).to have_content("First operational note")
     within("article", text: "First operational note") { click_link "Edit" }
     within("#booking-internal-note-sheet") do
@@ -272,6 +276,7 @@ RSpec.describe "Booking control panel Phase 6", :business_day, type: :system do
       click_in_overlay "Save note"
     end
 
+    expect(page).to have_content("Note updated.")
     expect(page).to have_content("Updated operational note")
     within("article", text: "Updated operational note") { click_link "History" }
     expect(page).to have_css("dialog#booking-internal-note-history-sheet[open]", wait: 3)
@@ -282,6 +287,7 @@ RSpec.describe "Booking control panel Phase 6", :business_day, type: :system do
     within("article", text: "Updated operational note") { click_link "Delete" }
     expect(page).to have_css("dialog#booking-internal-note-deletion-sheet[open]", wait: 3)
     within("#booking-internal-note-deletion-sheet") { click_in_overlay "Delete note" }
+    expect(page).to have_content("Note deleted.")
     expect(page).to have_no_content("Updated operational note")
   end
 
