@@ -48,7 +48,10 @@
     <p class="pb-1 text-sm text-muted-foreground" aria-live="polite"><%= pluralize(visible_room_count, "room") %></p>
   <% end %>
 
-  <div class="max-h-[60dvh] space-y-6 overflow-y-auto overflow-x-hidden pr-1" data-testid="stay-view-room-cards">
+  <div class="max-h-[60dvh] space-y-6 overflow-y-auto overflow-x-hidden pr-1"
+       data-testid="stay-view-room-cards"
+       data-controller="stay-view--viewport"
+       data-stay-view--viewport-state-key-value="<%= state.query.to_query %>">
   <% if state.grouped_rooms? %>
     <% board.room_groups.each do |room_group| %>
       <% next if room_group.rooms.empty? %>

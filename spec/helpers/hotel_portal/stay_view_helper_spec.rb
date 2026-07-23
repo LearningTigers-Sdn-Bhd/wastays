@@ -86,7 +86,7 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
       expect(uri.path).to eq(expected_paths.fetch(action.fetch(:label)))
       expect(query).to include("source" => "stay_view", "return_to" => state.return_path(hotel))
       sheet_actions = [ "Cancel", "Check-in", "Edit Check-In", "Mark No-show", "Undo Check-in", "Backdated Check-in", "Review Late Checkout", "Check-out", "Complete Checkout" ]
-      expected_data = action.fetch(:label).in?(sheet_actions) ? helper.stay_view_booking_sheet_data : helper.stay_view_action_data
+      expected_data = action.fetch(:label).in?(sheet_actions) ? helper.stay_view_booking_action_data : helper.stay_view_action_data
       expect(action.fetch(:data)).to eq(expected_data)
     end
   end
@@ -114,7 +114,7 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
     expect(uri.path).to eq(hotel_booking_action_edit_room_path(hotel, 123))
     expect(query).to include("source" => "stay_view", "return_to" => return_to)
     expect(query).not_to have_key("proposal")
-    expect(change_room.fetch(:data)).to eq(helper.stay_view_stay_edit_data)
+    expect(change_room.fetch(:data)).to eq(helper.stay_view_booking_action_data)
   end
 
   it "exposes Edit dates when only date changes are permitted" do

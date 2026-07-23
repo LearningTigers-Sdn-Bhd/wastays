@@ -124,7 +124,7 @@ end %>
           href: hotel_booking_action_walk_in_check_in_path(current_hotel, return_to: state.return_path(current_hotel)),
           variant: :secondary,
           size: :sm,
-          data: stay_view_create_booking_data
+          data: stay_view_booking_action_data
         ) do %>
           <%= app_icon "footprints", class: "size-4", aria: { hidden: true } %>
           Walk-in
@@ -132,7 +132,7 @@ end %>
         <%= render PanelsUI::Button.new(
           href: hotel_booking_action_quick_booking_path(current_hotel, return_to: state.return_path(current_hotel)),
           size: :sm,
-          data: stay_view_create_booking_data
+          data: stay_view_booking_action_data
         ) do %>
           <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
           Add booking
