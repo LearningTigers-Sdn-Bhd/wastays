@@ -9,13 +9,13 @@
   id: room.dom_id,
   class: "h-full",
   aria: { label: "Room #{room.room_number}, #{room.room_type_name}" },
-  data: { room_state: presentation.state }
+  data: { room_state: presentation.state, stay_view_room: true }
 ) do |card| %>
   <% card.with_header(id: "#{room.dom_id}-header") do %>
     <div class="space-y-2">
       <div class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2" data-slot="stay-view-room-identity">
         <div class="min-w-0">
-          <%= tag.public_send(heading_level, room.room_number, id: "#{room.dom_id}-title", class: "truncate text-sm font-semibold text-foreground") %>
+          <%= tag.public_send(heading_level, room.room_number, id: "#{room.dom_id}-title", tabindex: -1, class: "truncate text-sm font-semibold text-foreground focus:outline-none") %>
           <p class="truncate text-xs text-muted-foreground"><%= room.room_type_name %></p>
         </div>
         <%= render HotelPortal::StayView::OperationalStatusBadge.new(

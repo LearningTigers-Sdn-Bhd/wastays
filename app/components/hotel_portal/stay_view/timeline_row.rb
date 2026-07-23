@@ -25,6 +25,7 @@ module HotelPortal
           id: @room.dom_id,
           data: {
             "stay-view--interaction-target": "row",
+            stay_view_room: true,
             room_type_id: @room.room_type_id,
             room_number: @room.room_number
           }

@@ -46,6 +46,8 @@ Turbo.StreamActions.complete_sheet = function() {
   const controller = dialog && window.Stimulus?.getControllerForElementAndIdentifier(dialog, "panels-ui--sheet")
   const url = this.getAttribute("url")
 
+  if (dialog && url) dialog.dataset.panelsNavigationPending = "true"
+
   if (controller) {
     controller.close()
   } else {
