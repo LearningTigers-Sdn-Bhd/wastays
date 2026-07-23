@@ -100,6 +100,12 @@ export default class extends Controller {
     this.cancelCloseWait()
     this.closing = false
     if (this.element.open) {
+      // Release the scroll lock synchronously here, before element.close().
+      // The native `close` event (wired to onClose) is dispatched via a queued
+      // task, so relying on it alone leaves a window where the dialog is already
+      // closed and focus restored but the body is still scroll-locked. onClose
+      // stays as an idempotent safety net for closes that bypass finishClose.
+      unlockScroll(this.element)
       this.element.close()
       window.dispatchEvent(new CustomEvent("panels-ui:sheet-closed"))
     }
