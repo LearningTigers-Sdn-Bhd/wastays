@@ -47,16 +47,9 @@
               <td class="px-6 py-4"><%= row.status_label %></td>
               <td class="px-6 py-4 text-slate-600"><%= row.created_on_label %></td>
               <td class="px-6 py-4 text-right">
-                <div class="inline-flex gap-2">
-                  <%= link_to "Edit", edit_hotel_corporate_account_path(current_hotel, relationship),
-                    class: "rounded-lg border border-slate-200 px-3 py-2 font-bold text-slate-700",
-                    data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } %>
-                  <% if row.active? %>
-                    <%= button_to "Suspend", suspend_hotel_corporate_account_path(current_hotel, relationship), method: :patch, class: "rounded-lg border border-red-200 px-3 py-2 font-bold text-red-700" %>
-                  <% else %>
-                    <%= button_to "Reactivate", reactivate_hotel_corporate_account_path(current_hotel, relationship), method: :patch, class: "rounded-lg border border-emerald-200 px-3 py-2 font-bold text-emerald-700" %>
-                  <% end %>
-                </div>
+                <%= link_to "Edit", edit_hotel_corporate_account_path(current_hotel, relationship),
+                  class: "inline-block rounded-lg border border-slate-200 px-3 py-2 font-bold text-slate-700",
+                  data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } %>
               </td>
             </tr>
           <% end %>

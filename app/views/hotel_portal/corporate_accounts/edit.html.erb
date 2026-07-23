@@ -54,7 +54,14 @@
               <p class="mt-1 text-xs font-medium text-slate-500">These terms govern invoicing and credit exposure for this account at this hotel.</p>
             </div>
             <div>
-              <%= f.label :relationship_type, "Relationship", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+              <div class="mb-1.5 flex items-center gap-1.5">
+                <%= f.label :relationship_type, "Relationship", class: "block text-sm font-semibold text-slate-900" %>
+                <%= render PanelsUI::Tooltip.new(
+                  text: "Standard: The guest settles their own folio at checkout.\n\nDirect bill: The outstanding balance is invoiced to this account instead, against its credit limit and payment terms.",
+                  class: "whitespace-pre-line text-left") do %>
+                  <%= cached_icon "info", class: "size-3.5 text-slate-400", aria: { hidden: true } %>
+                <% end %>
+              </div>
               <%= f.select :relationship_type,
                 [["Standard", "standard"], ["Direct bill", "direct_bill"]],
                 {},
@@ -86,9 +93,21 @@
       </div>
 
       <div class="shrink-0 border-t border-slate-200 bg-white px-6 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
-        <div class="flex items-center justify-end gap-3">
-          <button type="button" data-action="click->offcanvas#close" class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">Cancel</button>
-          <%= f.submit "Save changes", class: "rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+        <div class="flex items-center justify-between gap-3">
+          <% if @relationship.active? %>
+            <%= button_to "Suspend account", suspend_hotel_corporate_account_path(current_hotel, @relationship), method: :patch,
+              class: "rounded-xl border border-red-200 bg-white px-5 py-2.5 text-sm font-bold text-red-700 shadow-sm transition hover:bg-red-50",
+              data: { turbo_stream: true, turbo_confirm: "Suspend #{@relationship.corporate_account.name}? Direct bill invoicing will be paused until reactivated." } %>
+          <% else %>
+            <%= button_to "Reactivate account", reactivate_hotel_corporate_account_path(current_hotel, @relationship), method: :patch,
+              class: "rounded-xl border border-emerald-200 bg-white px-5 py-2.5 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-50",
+              data: { turbo_stream: true } %>
+          <% end %>
+
+          <div class="flex items-center gap-3">
+            <button type="button" data-action="click->offcanvas#close" class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">Cancel</button>
+            <%= f.submit "Save changes", class: "rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
+          </div>
         </div>
       </div>
     <% end %>

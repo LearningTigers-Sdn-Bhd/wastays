@@ -58,12 +58,18 @@ module HotelPortal
 
     def suspend
       @relationship.suspend!
-      redirect_to hotel_corporate_accounts_path(current_hotel), notice: "Corporate relationship suspended."
+      offcanvas_transaction_response(
+        destination: hotel_corporate_accounts_path(current_hotel),
+        notice: "#{@relationship.corporate_account.name} suspended."
+      )
     end
 
     def reactivate
       @relationship.reactivate!
-      redirect_to hotel_corporate_accounts_path(current_hotel), notice: "Corporate relationship reactivated."
+      offcanvas_transaction_response(
+        destination: hotel_corporate_accounts_path(current_hotel),
+        notice: "#{@relationship.corporate_account.name} reactivated."
+      )
     end
 
     private

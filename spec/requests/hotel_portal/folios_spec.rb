@@ -39,8 +39,6 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       get hotel_folios_path(hotel)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Folios")
-      expect(response.body).to include("Review open balances, refund due folios, checkout readiness, and guest folio activity.")
       expect(response.body).to include("Guest / Booking")
       expect(response.body).to include("Folio Reference")
       expect(response.body).to include("Stay / Room")

@@ -49,7 +49,14 @@
               <p class="mt-1 text-xs font-medium text-muted-foreground">These proposed terms become this hotel’s relationship when the invitation is accepted.</p>
             </div>
             <div>
-              <%= f.label :relationship_type, "Relationship", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
+              <div class="mb-1.5 flex items-center gap-1.5">
+                <%= f.label :relationship_type, "Relationship", class: "block text-sm font-semibold text-foreground" %>
+                <%= render PanelsUI::Tooltip.new(
+                  text: "Standard: The guest settles their own folio at checkout.\n\nDirect bill: The outstanding balance is invoiced to this account instead, against its credit limit and payment terms.",
+                  class: "whitespace-pre-line text-left") do %>
+                  <%= cached_icon "info", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
+                <% end %>
+              </div>
               <%= f.select :relationship_type,
                 [["Standard", "standard"], ["Direct bill", "direct_bill"]],
                 { selected: @corporate_invitation.relationship_type },

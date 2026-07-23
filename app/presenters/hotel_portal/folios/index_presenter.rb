@@ -60,10 +60,10 @@ module HotelPortal
 
     def summary_cards
       [
-        { label: "Open Folios", value: rows.count(&:open?), description: "Active guest folios", icon: "book-open", class: "bg-blue-50 text-blue-700" },
-        { label: "Balance Due", value: rows.count(&:balance_due?), description: "Guest owes hotel", icon: "credit-card", class: "bg-red-50 text-red-700" },
-        { label: "Refund Due", value: rows.count(&:refund_due?), description: "Hotel owes guest", icon: "rotate-ccw", class: "bg-amber-50 text-amber-700" },
-        { label: "Closed Today", value: rows.count(&:closed_today?), description: "Settled / completed", icon: "circle-check", class: "bg-emerald-50 text-emerald-700" }
+        { label: "Open Folios", value: rows.count(&:open?), icon: "book-open", class: "bg-blue-50 text-blue-700" },
+        { label: "Balance Due", value: rows.count(&:balance_due?), icon: "credit-card", class: "bg-red-50 text-red-700" },
+        { label: "Refund Due", value: rows.count(&:refund_due?), icon: "rotate-ccw", class: "bg-amber-50 text-amber-700" },
+        { label: "Closed Today", value: rows.count(&:closed_today?), icon: "circle-check", class: "bg-emerald-50 text-emerald-700" }
       ]
     end
 

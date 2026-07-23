@@ -8,7 +8,7 @@
       data: { action: "input->auto-submit#submit" } %>
   </div>
 
-  <div class="-mx-0.5 flex items-center gap-2 overflow-x-auto px-0.5 py-2 no-scrollbar">
+  <div class="-mx-0.5 flex items-center gap-2 overflow-x-auto px-0.5 no-scrollbar">
     <div class="shrink-0">
       <input type="radio" name="status" value="" id="corporate_account_status_all" class="peer sr-only" <%= "checked" if presenter.selected_status.blank? %> data-action="change->auto-submit#submitNow">
       <label for="corporate_account_status_all" class="inline-flex cursor-pointer rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white">All</label>

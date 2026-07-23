@@ -1,6 +1,4 @@
 <header class="space-y-4">
-  <%= render PanelsUI::PageHeader.new(title: "Folios", description: "Review open balances, refund due folios, checkout readiness, and guest folio activity.") %>
-
   <div class="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-card shadow-sm lg:grid-cols-4">
     <% folio_index.summary_cards.each do |card| %>
       <div class="border-b border-r border-border px-4 py-3 last:border-r-0 lg:border-b-0">

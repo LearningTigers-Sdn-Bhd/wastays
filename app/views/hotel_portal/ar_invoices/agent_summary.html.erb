@@ -1,19 +1,12 @@
 <div class="mx-auto max-w-[1600px] space-y-4 pb-10">
-  <header class="flex flex-col gap-4 px-4 md:px-0 lg:flex-row lg:items-end lg:justify-between">
-    <div>
-      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Agent Summary Statement</h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">
-        Outstanding balances for all travel agent and airline accounts as of <%= @presenter.as_of_date.strftime("%d %b %Y") %>.
-      </p>
-    </div>
-
+  <div class="flex justify-end px-4 md:px-0">
     <%= link_to hotel_ar_agent_summary_path(current_hotel, format: :pdf),
                 target: "_blank", rel: "noopener",
                 class: "inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20" do %>
       <%= cached_icon "printer", class: "size-4", aria: { hidden: true } %>
       Print Summary
     <% end %>
-  </header>
+  </div>
 
   <%= render "hotel_portal/ar_invoices/aging/metrics", presenter: @presenter %>
   <%= render "hotel_portal/ar_invoices/aging/table", presenter: @presenter %>
