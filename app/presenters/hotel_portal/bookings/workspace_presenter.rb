@@ -367,6 +367,10 @@ module HotelPortal
       end
     end
 
+    def entity_selector_label
+      active_tab == "folio_operations" ? "Choose Folio" : "Choose Guest"
+    end
+
     def layout_mode
       active_tab.in?(ENTITY_TABS) ? "entity" : "standard"
     end

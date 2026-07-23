@@ -138,6 +138,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(document.at_css('[data-layout-mode="standard"]')).to be_present
       expect(document.at_css('aside[aria-label="Booking context"]')).to be_nil
       expect(document.at_xpath('//button[normalize-space()="Change Context"]')).to be_nil
+      expect(document.at_css("#booking-entity-selector-sheet")).to be_nil
       expect(document.css("h1").size).to eq(1)
       expect(document.at_css("main h2").text).to eq("Overview")
     end
@@ -288,6 +289,10 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(folio_nav.at_css("details")).to be_nil
       selected_folio = folio_nav.at_css('a[aria-current="page"]')
       expect(selected_folio.text).to include(folio.display_name, "Open", "MYR 0.00", "Selected:")
+      folio_trigger = folio_document.at_css('button[command="show-modal"][commandfor="booking-entity-selector-sheet"]')
+      expect(folio_trigger.text.squish).to eq("Choose Folio")
+      expect(folio_document.at_css("#booking-entity-selector-sheet-title").text).to eq("Choose Folio")
+      expect(folio_document.at_xpath('//button[normalize-space()="Change Context"]')).to be_nil
 
       get hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
 
@@ -296,6 +301,9 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(guest_nav.at_css("details")).to be_nil
       selected_guest = guest_nav.at_css('a[aria-current="page"]')
       expect(selected_guest.text).to include(guest.name, "Primary guest", "Selected:")
+      guest_trigger = guest_document.at_css('button[command="show-modal"][commandfor="booking-entity-selector-sheet"]')
+      expect(guest_trigger.text.squish).to eq("Choose Guest")
+      expect(guest_document.at_css("#booking-entity-selector-sheet-title").text).to eq("Choose Guest")
     end
 
     it "renders one flat guest group per child booking with exact selected context" do
@@ -319,6 +327,10 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(nav.css("details")).to be_empty
       expect(nav.text).not_to include("All Guests", booking.status.humanize)
       expect(nav.at_css('a[aria-current="page"]').text).to include("Room 101 Guest", "Primary guest")
+      expect(document.css("[id$='-guest-group-#{booking.id}']").map { |node| node["id"] }).to contain_exactly(
+        "desktop-guest-group-#{booking.id}",
+        "mobile-guest-group-#{booking.id}"
+      )
       expect(document.at_css("#guest-details-heading").previous_element.text).to include(
         "Room 101",
         "Booking #{booking.formatted_reservation_number}"

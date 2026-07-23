@@ -5,15 +5,21 @@
           variant: :primary,
           size: :sm,
           class: "w-full",
-          data: { turbo_frame: "booking_action_sheet" }) do %>Add Guest<% end %>
+           data: {
+             turbo_frame: "booking_action_sheet",
+             action: ("panels-ui--sheet#close" if mobile_entity_selection)
+           }.compact) do %>Add Guest<% end %>
   </div>
 <% end %>
 
 <nav aria-label="Bookings and guests" class="divide-y divide-border">
   <% presenter.grouped_guest_tree_groups.each do |group| %>
-    <section aria-labelledby="guest-group-<%= group.booking_id %>">
-      <h3 id="guest-group-<%= group.booking_id %>" class="px-4 pt-4 text-xs font-medium text-muted-foreground"><%= group.label %></h3>
-      <%= render "hotel_portal/bookings/workspaces/left_rails/guest_rows", rows: group.rows %>
+    <% heading_id = "#{id_prefix}-guest-group-#{group.booking_id}" %>
+    <section aria-labelledby="<%= heading_id %>">
+      <h3 id="<%= heading_id %>" class="px-4 pt-4 text-xs font-medium text-muted-foreground"><%= group.label %></h3>
+      <%= render "hotel_portal/bookings/workspaces/left_rails/guest_rows",
+        rows: group.rows,
+        mobile_entity_selection: mobile_entity_selection %>
       <% if group.rows.empty? %>
         <p class="px-4 pb-4 text-sm text-muted-foreground">No guests available.</p>
       <% end %>

@@ -5,12 +5,18 @@
           variant: :primary,
           size: :sm,
           class: "w-full",
-          data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }) do %>Add Folio<% end %>
+           data: {
+             turbo_frame: "offcanvas_drawer",
+             offcanvas_variant: "right",
+             action: ("panels-ui--sheet#close" if mobile_entity_selection)
+           }.compact) do %>Add Folio<% end %>
   </div>
 <% end %>
 
 <nav aria-label="Booking folios">
-  <%= render "hotel_portal/bookings/workspaces/left_rails/folio_rows", rows: presenter.folio_tree_rows %>
+  <%= render "hotel_portal/bookings/workspaces/left_rails/folio_rows",
+    rows: presenter.folio_tree_rows,
+    mobile_entity_selection: mobile_entity_selection %>
   <% if presenter.folio_tree_rows.empty? %>
     <p class="px-4 py-4 text-sm text-muted-foreground">No folios available.</p>
   <% end %>

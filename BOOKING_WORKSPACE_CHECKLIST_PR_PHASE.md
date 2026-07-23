@@ -250,13 +250,13 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 ### Mobile Entity Selection
 
-- [ ] Replace generic `Change Context` wording with `Choose Folio` or `Choose Guest`
-- [ ] Use PanelsUI Sheet rather than a dropdown
-- [ ] Reuse the desktop entity grouping inside the sheet
-- [ ] Close the sheet after selection
-- [ ] Move focus to the selected entity heading after Turbo replacement
-- [ ] Preserve unsaved guest-form confirmation before changing guests
-- [ ] Verify long group entity lists remain operable
+- [x] Replace generic `Change Context` wording with `Choose Folio` or `Choose Guest` — **Working tree**
+- [x] Use PanelsUI Sheet rather than a dropdown — **Working tree**
+- [x] Reuse the desktop entity grouping inside the sheet — **Working tree**
+- [x] Close the sheet after selection — **Working tree**
+- [x] Move focus to the selected entity heading after Turbo replacement — **Working tree**
+- [x] Preserve unsaved guest-form confirmation before changing guests — **Working tree**
+- [x] Verify long group entity lists remain operable — **Working tree**
 
 ### Phase 2 Exit Gate
 

@@ -5,12 +5,17 @@
           variant: :primary,
           size: :sm,
           class: "w-full",
-          data: { turbo_frame: "booking_action_sheet" }) do %>Add Guest<% end %>
+           data: {
+             turbo_frame: "booking_action_sheet",
+             action: ("panels-ui--sheet#close" if mobile_entity_selection)
+           }.compact) do %>Add Guest<% end %>
   </div>
 <% end %>
 
 <nav aria-label="Booking guests">
-  <%= render "hotel_portal/bookings/workspaces/left_rails/guest_rows", rows: presenter.guest_tree_rows %>
+  <%= render "hotel_portal/bookings/workspaces/left_rails/guest_rows",
+    rows: presenter.guest_tree_rows,
+    mobile_entity_selection: mobile_entity_selection %>
   <% if presenter.guest_tree_rows.empty? %>
     <p class="px-4 py-4 text-sm text-muted-foreground">No guests available.</p>
   <% end %>

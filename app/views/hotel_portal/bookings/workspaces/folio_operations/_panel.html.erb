@@ -3,7 +3,7 @@
   <section aria-labelledby="folio-operations-heading">
     <header class="border-b border-border px-5 py-4">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div><p class="text-xs tabular-nums text-muted-foreground"><%= presenter.selected_folio_context_line %></p><h2 id="folio-operations-heading" class="mt-1 text-base font-semibold text-foreground"><%= active_folio.display_name %></h2><p class="mt-1 text-sm text-muted-foreground"><%= active_folio.status.humanize %> · <%= active_folio.payer_display_label %> · <span class="tabular-nums text-foreground"><%= presenter.money_for(entity_booking, active_folio.projected_outstanding_balance) %> outstanding</span></p></div>
+        <div><p class="text-xs tabular-nums text-muted-foreground"><%= presenter.selected_folio_context_line %></p><h2 id="folio-operations-heading" class="mt-1 text-base font-semibold text-foreground" tabindex="-1"><%= active_folio.display_name %></h2><p class="mt-1 text-sm text-muted-foreground"><%= active_folio.status.humanize %> · <%= active_folio.payer_display_label %> · <span class="tabular-nums text-foreground"><%= presenter.money_for(entity_booking, active_folio.projected_outstanding_balance) %> outstanding</span></p></div>
         <%= render "hotel_portal/bookings/workspaces/folio_operations/window_actions", booking: entity_booking, folio: active_folio, folio_show: folio_show %>
       </div>
       <div class="mt-4"><%= render "hotel_portal/bookings/workspaces/folio_operations/folio_actions", booking: entity_booking, hotel: current_hotel, folio_show: folio_show, redirect_to_folio: true, folio_origin: "booking_workspace" %></div>
