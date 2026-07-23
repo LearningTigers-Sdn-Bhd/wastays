@@ -35,6 +35,7 @@
       "in_house" => "In-house",
       "departures" => "Departures",
       "checkout" => "Checkout",
+      "police_report" => "Police report",
       "registration_cards" => "Registration cards",
       "bibo" => "Boat transfers",
       "meal_prep" => "Meal prep"
@@ -45,7 +46,7 @@
           variant: :line,
           aria_label: "Guest reports"
         ) do |tabs| %>
-      <% guest_report_tabs_data(@report, @bibo_report, @active_guest_report_tab, @grc_total_count, current_hotel, @date_preset).each do |tab| %>
+      <% guest_report_tabs_data(@report, @bibo_report, @police_report, @active_guest_report_tab, @grc_total_count, current_hotel, @date_preset).each do |tab| %>
         <% tabs.with_tab(
              name: tab[:value],
              label: guest_tab_labels.fetch(tab[:value]),
@@ -132,6 +133,8 @@
         report: @meal_prep_report
       } %>
     </div>
+  <% elsif @active_guest_report_tab == "police_report" %>
+    <%= render "hotel_portal/reports/police_report_section", report: @police_report, date_preset: @date_preset %>
   <% else %>
     <%= render "hotel_portal/reports/guest_registration_cards_section",
       form_url: guest_reports_hotel_reports_path(current_hotel),

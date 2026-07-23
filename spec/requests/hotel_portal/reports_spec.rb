@@ -296,6 +296,46 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).not_to include("Wrong Date")
     end
 
+    it "renders and exports the police report from guest reports" do
+      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date - 1.day, check_out: end_date + 1.day, guest_name: "Police Guest", confirmation_token: "POLICE-123")
+      guest = create(:guest, name: "Police Guest", country: "Malaysia", document_type: "ic", government_id: "900101135555")
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+
+      get guest_reports_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s, tab: "police_report" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Police report records", "Police Guest", "POLICE-123", "Nights stayed")
+      expect(Capybara.string(response.body)).to have_no_css("[data-slot='report-metric-strip']")
+      expect(Capybara.string(response.body)).to have_css("th", text: "Nights stayed")
+      expect(Capybara.string(response.body)).to have_css("th", text: "Guest")
+      expect(Capybara.string(response.body)).to have_css("th", text: "Guest details")
+      expect(Capybara.string(response.body)).to have_css("th", text: "Contact")
+      expect(Capybara.string(response.body)).to have_css("th", text: "Scheduled check-in")
+
+      get guest_reports_hotel_reports_path(hotel, format: :pdf), params: { start_date: start_date.to_s, end_date: end_date.to_s, tab: "police_report" }
+
+      expect(response.content_type).to eq("application/pdf")
+      expect(response.body).to start_with("%PDF")
+    end
+
+    it "separates police report rows by month for This Year" do
+      create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 5, 10), check_out: Date.new(2026, 5, 12), guest_name: "May police guest")
+      create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 6, 10), check_out: Date.new(2026, 6, 12), guest_name: "June police guest")
+
+      get guest_reports_hotel_reports_path(hotel), params: { date_preset: "this_year", start_date: "2026-01-01", end_date: "2026-12-31", tab: "police_report" }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css("[data-slot='report-month-group']", text: "May 2026")
+      expect(page).to have_css("[data-slot='report-month-group']", text: "June 2026")
+    end
+
+    it "uses the approved empty state for police report periods without stays" do
+      get guest_reports_hotel_reports_path(hotel), params: { start_date: start_date.to_s, end_date: end_date.to_s, tab: "police_report" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("No guest stays in this selected period.")
+    end
+
     it "redirects the legacy arrivals_departures URL to guest reports" do
       get arrivals_departures_hotel_reports_path(hotel), params: { tab: "registration_cards" }
 

@@ -37,6 +37,7 @@ RSpec.describe HotelPortal::Reports::Exports::PdfReportBuilder do
     expect(text).to include("CONTRACT REPORT", "Contract", "Hôtel 東京", "22 Jul 2026")
     expect(text).to include("Transactions", "Total Amount", "测试 Guest", "Dinner", "Total")
     expect(text).to match(/Page 1 of \d+/)
+    expect(PDF::Reader.new(StringIO.new(content)).pages.first.xobjects).not_to be_empty
   end
 
   it "renders an informative empty state" do

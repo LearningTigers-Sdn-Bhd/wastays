@@ -9,7 +9,7 @@ module HotelPortal
     include ReportDateFiltering
 
     PAYOUT_TABS = %w[upcoming paid].freeze
-    GUEST_REPORT_TABS = %w[arrivals in_house departures checkout registration_cards bibo meal_prep].freeze
+    GUEST_REPORT_TABS = %w[arrivals in_house departures checkout police_report registration_cards bibo meal_prep].freeze
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
     DAILY_REPORT_TABS = %w[overview revenue cashier].freeze
     TAX_COMPLIANCE_TABS = %w[tourism_tax sst non_national].freeze
@@ -388,6 +388,12 @@ module HotelPortal
         end_date: @report_end_date
       ).call
 
+      @police_report = HotelPortal::Reports::PoliceReport.new(
+        hotel: current_hotel,
+        start_date: @report_start_date,
+        end_date: @report_end_date
+      ).call
+
       if @active_guest_report_tab == "meal_prep"
         params[:meal_type] = "breakfast" unless %w[breakfast lunch dinner].include?(params[:meal_type])
         @meal_prep_report = HotelPortal::Reports::MealPrepReport.new(
@@ -412,7 +418,9 @@ module HotelPortal
 
       load_guest_registration_cards(start_date: @report_start_date, end_date: @report_end_date)
 
-      report_to_export = if @active_guest_report_tab == "bibo"
+      report_to_export = if @active_guest_report_tab == "police_report"
+        @police_report
+      elsif @active_guest_report_tab == "bibo"
         @bibo_report
       elsif @active_guest_report_tab == "meal_prep"
         @meal_prep_report
@@ -431,7 +439,11 @@ module HotelPortal
         format.csv do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
+          csv = if @active_guest_report_tab == "police_report"
+            HotelPortal::Reports::PoliceReportCsvExportService.new(report: @police_report).generate
+          else
+            HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: report_to_export, tab: @active_guest_report_tab).generate
+          end
           send_data csv,
             filename: "guest-reports-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.csv",
             type: "text/csv; charset=utf-8"
@@ -439,7 +451,11 @@ module HotelPortal
         format.xlsx do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          workbook = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(hotel: current_hotel, report: report_to_export, tab: @active_guest_report_tab).generate
+          workbook = if @active_guest_report_tab == "police_report"
+            HotelPortal::Reports::PoliceReportExcelExportService.new(hotel: current_hotel, report: @police_report).generate
+          else
+            HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(hotel: current_hotel, report: report_to_export, tab: @active_guest_report_tab).generate
+          end
           send_data workbook,
             filename: "guest-reports-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.xlsx",
             type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -448,7 +464,11 @@ module HotelPortal
         format.pdf do
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
-          pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: report_to_export, tab: @active_guest_report_tab).generate
+          pdf = if @active_guest_report_tab == "police_report"
+            HotelPortal::Reports::PoliceReportPdfExportService.new(hotel: current_hotel, report: @police_report).generate
+          else
+            HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: report_to_export, tab: @active_guest_report_tab).generate
+          end
           send_data pdf,
             filename: "guest-reports-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.pdf",
             type: "application/pdf",

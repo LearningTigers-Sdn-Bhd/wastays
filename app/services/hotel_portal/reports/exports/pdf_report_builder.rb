@@ -26,6 +26,8 @@ module HotelPortal
           if @subtitle.present?
             @pdf.text_box @subtitle, at: [ 16, top - 36 ], width: @pdf.bounds.width - 32, height: 16, size: 9
           end
+          logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
+          @pdf.image logo_path, at: [ @pdf.bounds.right - 145, top - 10 ], width: 125 if File.exist?(logo_path)
           @pdf.move_down 70
           @pdf.fill_color PdfTheme::COLORS[:ink]
           @pdf.text @hotel.name.to_s, size: 12, style: :bold

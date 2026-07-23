@@ -42,12 +42,13 @@ module HotelPortal::ReportsHelper
     end
   end
 
-  def guest_report_tabs_data(report, bibo_report, active_tab, grc_total_count, current_hotel, date_preset)
+  def guest_report_tabs_data(report, bibo_report, police_report, active_tab, grc_total_count, current_hotel, date_preset)
     tabs = [
       { label: "Arrivals", value: "arrivals", count: report.arrival_count },
       { label: "In-House", value: "in_house", count: report.in_house_count },
       { label: "Departures", value: "departures", count: report.departure_count },
       { label: "Checkout", value: "checkout", count: report.checkout_count },
+      { label: "Police report", value: "police_report", count: police_report.rows.size },
       { label: "Registration Cards", value: "registration_cards", count: grc_total_count }
     ]
 
@@ -76,7 +77,7 @@ module HotelPortal::ReportsHelper
   end
 
   def show_metrics_cards?(active_tab)
-    !%w[registration_cards bibo meal_prep].include?(active_tab)
+    !%w[registration_cards police_report bibo meal_prep].include?(active_tab)
   end
 
   def format_report_boat_time(boat_departure, hotel)
