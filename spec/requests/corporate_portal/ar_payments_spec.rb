@@ -11,7 +11,8 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
   end
 
   it "lists only payments belonging to the current corporate account" do
-    relationship = create(:hotel_corporate_account, corporate_account: user.account)
+    visible_hotel = create(:hotel, name: "D'Amore Corporate Hotel")
+    relationship = create(:hotel_corporate_account, hotel: visible_hotel, corporate_account: user.account)
     visible = create(:ar_payment, hotel_corporate_account: relationship, hotel: relationship.hotel, amount: 250, currency: "MYR", reference_number: "PAY-CORP-1")
 
     # Avoid factory sequence collisions with Faker names on the page
@@ -21,13 +22,15 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
 
     get corporate_ar_payments_path
 
+    body_text = response.parsed_body.text
+
     expect(response).to have_http_status(:success)
     expect(response.body).to include("Payment History")
     expect(response.body).to include("PAY-CORP-1")
-    expect(response.body).to include(visible.hotel.name)
+    expect(body_text).to include(visible.hotel.name)
     expect(response.body).to include("MYR 250.00")
     expect(response.body).not_to include("PAY-HIDDEN-1")
-    expect(response.body).not_to include(hidden_hotel.name)
+    expect(body_text).not_to include(hidden_hotel.name)
   end
 
   it "merges pending and rejected bank-transfer submissions into payment history, excluding approved ones" do

@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 8.0.4"
+gem "rails", "~> 8.1.3"
 gem "friendly_id", "~> 5.7"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
@@ -87,7 +87,6 @@ group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "hotwire-livereload"
   gem "web-console"
-  gem "rails-mcp-server"
   gem "letter_opener_web"
 end
 
