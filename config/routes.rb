@@ -329,11 +329,6 @@ Rails.application.routes.draw do
 
       member do
         patch :move, to: "bookings/moves#update"
-        post :check_out, to: "bookings/checkouts#create"
-        post :reinstate, to: "bookings/reinstatements#create"
-        post :mark_no_show, to: "bookings/no_shows#create"
-        post :repair_no_show_folio, to: "bookings/no_show_folio_repairs#create"
-        post :process_late_checkout, to: "bookings/checkouts#process_late_checkout"
         post "housekeeping_requests/:housekeeping_request_id/complete", to: "bookings/housekeeping_requests#complete", as: :complete_housekeeping_request
         post "complaint_requests/:complaint_request_id/resolve", to: "bookings/complaint_requests#resolve", as: :resolve_complaint_request
       end
@@ -374,15 +369,6 @@ Rails.application.routes.draw do
         post :complete_housekeeping_request, controller: :booking_control_panel_actions
         post :resolve_complaint_request, controller: :booking_control_panel_actions
       end
-    end
-    scope "booking-transactions", as: :booking_transaction, module: "bookings/transactions" do
-      match "backdated-check-in/:booking_id", to: "backdated_check_ins#show", via: [ :get, :post ], as: :booking_backdated_check_in
-      match "undo-check-in/:booking_id", to: "undo_check_ins#show", via: [ :get, :post ], as: :undo_check_in
-      get "check-out/:booking_id", to: "check_outs#show", as: :check_out
-      get "late-checkout/:booking_id", to: "late_checkouts#show", as: :late_checkout
-      get "reinstate-no-show/:booking_id", to: "reinstate_no_shows#show", as: :reinstate_no_show
-      get "mark-no-show/:booking_id", to: "mark_no_shows#show", as: :mark_no_show
-      get "repair-no-show-folio/:booking_id", to: "repair_no_show_folios#show", as: :repair_no_show_folio
     end
     scope "booking-actions", as: :booking_action, module: "bookings/actions" do
       get "audit-trail/:booking_id", to: "audit_trails#show", as: :audit_trail
