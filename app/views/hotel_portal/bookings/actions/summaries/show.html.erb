@@ -30,8 +30,8 @@
 
 <%= render "hotel_portal/bookings/actions/shared/sheet",
       id: "booking-summary-sheet",
-      title: presenter.summary_heading,
-      description: presenter.summary_subtitle,
+      title: presenter.header_title,
+      description: group_booking ? "Group Booking #{presenter.group_booking_number}" : "Booking No. #{presenter.booking_number}",
       side: :right,
       size: :lg,
       footer: sheet_footer do %>
@@ -53,8 +53,8 @@
         <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div><dt class="text-xs text-muted-foreground">Group reservation number</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_booking_number %></dd></div>
           <div><dt class="text-xs text-muted-foreground">Group status</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_status_counts.map { |status, count| "#{count} #{HotelPortal::Bookings::WorkspacePresenter::STATUS_LABELS.fetch(status, status.humanize)}" }.to_sentence %></dd></div>
-          <div><dt class="text-xs text-muted-foreground">Arrival</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.summary_items.to_h["Arrival"] %></dd></div>
-          <div><dt class="text-xs text-muted-foreground">Departure</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.summary_items.to_h["Departure"] %></dd></div>
+          <div><dt class="text-xs text-muted-foreground">Arrival</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_earliest_arrival %></dd></div>
+          <div><dt class="text-xs text-muted-foreground">Departure</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_latest_departure %></dd></div>
           <div><dt class="text-xs text-muted-foreground">Rooms</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= pluralize(presenter.child_bookings.size, "room") %></dd></div>
           <div><dt class="text-xs text-muted-foreground">Guests</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.child_bookings.sum { |child| child.adults.to_i } %> adults, <%= presenter.child_bookings.sum { |child| child.children.to_i } %> children</dd></div>
         </dl>

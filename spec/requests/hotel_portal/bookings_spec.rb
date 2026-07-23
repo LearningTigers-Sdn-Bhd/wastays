@@ -93,7 +93,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-testid="booking-workspace"')
-      expect(response.body).to include("Booking Details")
+      expect(response.body).to include("Overview")
       expect(response.body).to include(booking.confirmation_token)
     end
 
@@ -137,7 +137,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get booking_details_path(booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Identifiers")
+      expect(response.body).to include("References")
       expect(response.body).to include(booking.confirmation_token)
       expect(response.body).to include(booking.formatted_reservation_number)
       expect(response.body).to include(booking.formatted_guest_registration_number)
@@ -153,7 +153,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get booking_details_path(booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Identifiers")
+      expect(response.body).to include("References")
       expect(response.body).to include("External")
       expect(response.body).to include("Channel Manager")
       expect(response.body).not_to include("have not been added to the guest records")
@@ -164,7 +164,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get booking_details_path(booking)
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-testid="booking-workspace"')
-      expect(response.body).to include("Booking Details")
+      expect(response.body).to include("Overview")
     end
 
     it "renders folio actions for matching granular permissions" do

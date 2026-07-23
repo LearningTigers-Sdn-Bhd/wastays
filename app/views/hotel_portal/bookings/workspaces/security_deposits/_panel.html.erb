@@ -1,8 +1,7 @@
 <% if presenter.group_overview? %>
   <section aria-labelledby="security-deposits-heading">
     <header class="border-b border-border px-5 py-4">
-      <p class="text-xs font-semibold text-muted-foreground">Booking No. <%= presenter.group_booking_number %></p>
-      <h2 id="security-deposits-heading" class="mt-1 text-lg font-bold text-foreground">Security Deposits</h2>
+      <h2 id="security-deposits-heading" class="text-base font-semibold text-foreground">Deposits</h2>
       <p class="mt-1 text-sm text-muted-foreground">Booking-level refundable deposits across this group. Select a booking before collecting or releasing a deposit.</p>
     </header>
     <div class="overflow-x-auto">
@@ -21,7 +20,7 @@
   <% deposit_booking = presenter.security_deposit_booking %>
   <section aria-labelledby="security-deposits-heading">
     <header class="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
-      <div><p class="text-xs font-semibold text-muted-foreground">Booking No. <%= deposit_booking.formatted_reservation_number.presence || "—" %></p><h2 id="security-deposits-heading" class="mt-1 text-lg font-bold text-foreground">Security Deposits</h2><p class="mt-1 text-sm text-muted-foreground">Refundable security deposits for this booking.</p></div>
+      <div><% if presenter.group_context_enabled? %><p class="text-xs text-muted-foreground">Booking <%= deposit_booking.formatted_reservation_number.presence || "—" %></p><% end %><h2 id="security-deposits-heading" class="mt-1 text-base font-semibold text-foreground">Deposits</h2><p class="mt-1 text-sm text-muted-foreground">Refundable security deposits for this booking.</p></div>
       <div class="text-left sm:text-right"><p class="text-xs font-semibold text-muted-foreground">Held Total</p><p class="mt-1 text-lg font-bold tabular-nums text-foreground"><%= presenter.money_for(deposit_booking, presenter.held_security_deposit_total) %></p><p class="text-xs text-muted-foreground"><%= presenter.security_deposit_status_label %></p></div>
     </header>
 

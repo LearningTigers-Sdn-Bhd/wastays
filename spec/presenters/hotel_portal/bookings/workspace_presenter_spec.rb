@@ -35,12 +35,13 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(presenter.source_label).to eq("Booking Com")
     end
 
-    it "uses the group booking number in the summary when viewing a child booking" do
-      group = create(:group_booking, hotel: hotel)
+    it "uses group identity in the header when viewing a child booking" do
+      group = create(:group_booking, hotel: hotel, name: "Iskandar Family")
       booking.update!(group_booking: group, group_position: 1)
 
-      expect(presenter.summary_subtitle).to eq("Booking No. #{group.formatted_reservation_number}")
-      expect(presenter.summary_items).to include([ "Booking No.", group.formatted_reservation_number ])
+      expect(presenter.header_title).to eq("Iskandar Family")
+      expect(presenter.header_reference_line).to eq("Group Booking #{group.formatted_reservation_number}")
+      expect(presenter.header_outstanding_balance).to eq(presenter.money(presenter.group_total_balance))
     end
 
     it "exposes group summary actions from eligible child booking statuses" do
@@ -237,7 +238,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
   describe "booking header" do
     it "summarizes a standalone booking" do
-      expect(presenter.header_reference_line).to eq("Booking No. #{booking.formatted_reservation_number}")
+      expect(presenter.header_reference_line).to eq("Booking #{booking.formatted_reservation_number}")
       expect(presenter.stay_dates_vary?).to be(false)
       expect(presenter.header_stay_line).to include("night")
       expect(presenter.header_outstanding_balance).to eq(presenter.money(presenter.total_balance))
@@ -272,16 +273,102 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(group_presenter.stay_dates_vary?).to be(false)
       expect(group_presenter.group_stay_summary).not_to eq("Stay dates vary")
     end
+
+    it "shows partially in house for mixed child lifecycle statuses" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      booking.update_column(:status, "checked_in")
+      create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "confirmed")
+
+      expect(presenter.header_status_badge).to eq(label: "Partially in house", variant: :warning)
+    end
+
+    it "handles partially missing group dates" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      child = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      child.check_in = nil
+      child.check_out = nil
+      allow(presenter).to receive(:child_bookings).and_return([ booking, child ])
+
+      expect(presenter.group_stay_summary).to eq("Some stay dates unavailable")
+      expect { presenter.header_stay_line }.not_to raise_error
+    end
+
+    it "preserves group identity on concrete folio and guest destinations" do
+      group = create(:group_booking, hotel: hotel, name: "Conference Group")
+      booking.update!(group_booking: group, group_position: 1)
+
+      %w[folio_operations guest_details].each do |tab|
+        entity_presenter = described_class.new(booking, params: { tab: tab }, hotel: hotel)
+
+        expect(entity_presenter.header_title).to eq("Conference Group")
+        expect(entity_presenter.header_reference_line).to eq("Group Booking #{group.formatted_reservation_number}")
+      end
+    end
+  end
+
+  describe "group stay date helpers" do
+    let(:group_presenter) do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      create(:booking, hotel: hotel, group_booking: group, group_position: 2,
+                       check_in: booking.check_in + 2.days, check_out: booking.check_out + 3.days)
+      described_class.new(booking, params: { scope: "group" }, hotel: hotel)
+    end
+
+    it "returns distinct, sorted arrival and departure dates" do
+      expect(group_presenter.group_arrival_dates.size).to eq(2)
+      expect(group_presenter.group_departure_dates.size).to eq(2)
+      expect(group_presenter.group_arrival_dates).to eq(group_presenter.group_arrival_dates.sort)
+      expect(group_presenter.group_departure_dates).to eq(group_presenter.group_departure_dates.sort)
+    end
+
+    it "builds a variation notice naming arrivals and departures" do
+      notice = group_presenter.group_stay_variation_notice
+
+      expect(notice).to start_with("Arrivals occur on")
+      expect(notice).to include("Departures occur on")
+    end
+
+    it "omits the variation notice when child dates match" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      create(:booking, hotel: hotel, group_booking: group, group_position: 2,
+                       check_in: booking.check_in, check_out: booking.check_out)
+      matched_presenter = described_class.new(booking, params: { scope: "group" }, hotel: hotel)
+
+      expect(matched_presenter.group_stay_variation_notice).to be_nil
+    end
+  end
+
+  describe "default entity selection" do
+    it "selects the primary guest when no booking_guest_id is provided" do
+      create(:booking_guest, booking: booking, guest: create(:guest, name: "Primary"), is_primary: true)
+      create(:booking_guest, booking: booking, guest: create(:guest, name: "Additional"), is_primary: false)
+
+      tab_presenter = described_class.new(booking.reload, params: { tab: "guest_details" }, hotel: hotel)
+
+      expect(tab_presenter.selected_booking_guest&.primary?).to be(true)
+    end
+
+    it "selects a folio when no folio_id is provided" do
+      folio = create(:booking_folio, booking: booking, hotel: hotel, name: "Guest Folio")
+
+      tab_presenter = described_class.new(booking.reload, params: { tab: "folio_operations" }, hotel: hotel)
+
+      expect(tab_presenter.selected_folio).to eq(folio)
+    end
   end
 
   describe "left rail modes" do
-    it "keeps booking context visible for ordinary standalone tabs" do
+    it "hides booking context for ordinary standalone tabs" do
       %w[booking_details billing_preferences security_deposits source_details room_and_rate housekeeping_requests].each do |tab|
         tab_presenter = described_class.new(booking, params: { tab: tab })
 
         expect(tab_presenter.left_rail_mode).to eq("booking_context")
         expect(tab_presenter.layout_mode).to eq("standard")
-        expect(tab_presenter.show_left_rail?).to be(true)
+        expect(tab_presenter.show_left_rail?).to be(false)
       end
     end
 
@@ -292,7 +379,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
       expect(folio_presenter).to have_attributes(left_rail_mode: "folio_tree", layout_mode: "entity", show_left_rail?: true)
       expect(guest_presenter).to have_attributes(left_rail_mode: "guest_tree", layout_mode: "entity", show_left_rail?: true)
-      expect(audit_presenter).to have_attributes(left_rail_mode: "booking_context", layout_mode: "standard", show_left_rail?: true)
+      expect(audit_presenter).to have_attributes(left_rail_mode: "booking_context", layout_mode: "standard", show_left_rail?: false)
     end
 
     it "uses child-booking context for ordinary grouped tabs" do
@@ -383,16 +470,24 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
     it "registers the adjusted tab order and Requests label" do
       enable_audit_feature
       expect(presenter.tabs.map { |tab| [ tab.key, tab.label ] }).to eq([
-        [ "booking_details", "Booking Details" ],
-        [ "folio_operations", "Folio Operations" ],
-        [ "security_deposits", "Security Deposits" ],
-        [ "billing_preferences", "Billing Preferences" ],
-        [ "guest_details", "Guest Details" ],
+        [ "booking_details", "Overview" ],
+        [ "folio_operations", "Folios" ],
+        [ "security_deposits", "Deposits" ],
+        [ "billing_preferences", "Billing" ],
+        [ "guest_details", "Guests" ],
         [ "room_and_rate", "Room & Rate" ],
-        [ "source_details", "Source Details" ],
         [ "housekeeping_requests", "Requests" ],
-        [ "audit_trails", "Audit Trails" ]
+        [ "audit_trails", "Audit Trail" ]
       ])
+    end
+
+    it "supports Source Details as a legacy destination without navigating to it" do
+      legacy_presenter = described_class.new(booking, params: { tab: "source_details" })
+
+      expect(legacy_presenter.active_tab).to eq("source_details")
+      expect(legacy_presenter.active_tab_label).to eq("Source Details")
+      expect(legacy_presenter.navigation_active_tab).to be_nil
+      expect(legacy_presenter.tabs.map(&:key)).not_to include("source_details")
     end
 
     it "separates warning alerts from true editor drawers" do
@@ -400,11 +495,13 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       invalid_alert_presenter = described_class.new(booking, params: { tab: "room_and_rate", alert_action: "change_room" })
       removed_drawer_presenter = described_class.new(booking, params: { tab: "billing_preferences", drawer: "billing" })
       drawer_presenter = described_class.new(booking, params: { tab: "folio_operations", drawer: "deposit" })
+      standard_drawer_presenter = described_class.new(booking, params: { tab: "security_deposits", drawer: "deposit" })
 
       expect(alert_presenter).to have_attributes(alert_action: "change_rate", alert_open?: true, layout_mode: "standard", show_right_drawer?: false)
       expect(invalid_alert_presenter).to have_attributes(alert_action: nil, alert_open?: false)
       expect(removed_drawer_presenter).to have_attributes(layout_mode: "standard", show_right_drawer?: false)
       expect(drawer_presenter).to have_attributes(layout_mode: "entity", show_right_drawer?: true)
+      expect(standard_drawer_presenter).to have_attributes(layout_mode: "standard", show_left_rail?: false, show_right_drawer?: true)
     end
   end
 

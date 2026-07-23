@@ -7,15 +7,19 @@
     <% end %>
     <div class="min-w-0 space-y-1">
       <div class="flex flex-wrap items-center gap-2">
-        <h1 class="truncate text-base font-semibold tracking-tight text-foreground"><%= presenter.header_title %></h1>
-        <% if presenter.group_overview? %>
+        <h1 class="min-w-0 max-w-full truncate text-base font-semibold tracking-tight text-foreground"><%= presenter.header_title %></h1>
+        <% if presenter.group_context_enabled? %>
           <%= render PanelsUI::Badge.new(label: "Group", variant: :info, size: :sm) %>
         <% end %>
         <% if (status_badge = presenter.header_status_badge) %>
           <%= render PanelsUI::Badge.new(label: status_badge[:label], variant: status_badge[:variant], size: :sm) %>
         <% end %>
       </div>
-      <p class="text-xs text-muted-foreground"><%= presenter.header_reference_line %></p>
+      <% if presenter.group_overview_header_path %>
+        <p class="text-xs text-muted-foreground"><%= link_to presenter.header_reference_line, presenter.group_overview_header_path, class: "underline-offset-4 hover:text-foreground hover:underline" %></p>
+      <% else %>
+        <p class="text-xs text-muted-foreground"><%= presenter.header_reference_line %></p>
+      <% end %>
       <p class="text-xs text-muted-foreground"><%= presenter.header_stay_line %></p>
       <% if presenter.stay_dates_vary? %>
         <dl class="flex flex-wrap gap-x-6 gap-y-1 pt-0.5 text-xs text-muted-foreground">

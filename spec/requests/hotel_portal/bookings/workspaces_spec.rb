@@ -75,6 +75,25 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include('data-testid="booking-workspace-header"')
     end
 
+    it "labels the overview references section and demotes the confirmation code" do
+      create(:booking_guest, booking: booking, guest: create(:guest, name: "Aina Rahman"), is_primary: true)
+
+      get hotel_booking_workspace_path(hotel, booking)
+
+      overview = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="booking-overview-heading"]')
+      expect(overview.text).to include("References")
+      expect(overview.text).not_to include("Identifiers")
+      expect(overview.text).to include("Confirmation code")
+    end
+
+    it "uses the operational booking number in the breadcrumb" do
+      get hotel_booking_workspace_path(hotel, booking)
+
+      breadcrumb = Nokogiri::HTML(response.body).at_css("#hotel-breadcrumb")
+      expect(breadcrumb.text).to include(booking.formatted_reservation_number)
+      expect(breadcrumb.text).not_to include(booking.confirmation_token)
+    end
+
     it "renders explicit rate, source, and deposit form states" do
       create(:booking_room, booking: booking, nightly_rate_snapshot: {})
 
@@ -96,7 +115,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include("grid min-h-0 flex-1")
     end
 
-    it "renders one active standalone booking row without Overview" do
+    it "renders a full-width standalone Overview without context controls" do
       room_type = create(:room_type, hotel: hotel, name: "Executive Suite")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "208")
 
@@ -104,17 +123,14 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      nav = document.at_css('nav[aria-label="Booking context menu"]')
-      links = nav.css("a")
-      expect(document.at_css("aside h2").text).to include("Booking / Details")
-      expect(links.size).to eq(1)
-      expect(links.first.text.squish).to eq("Room 208 Executive Suite - Fallback Name")
-      expect(links.first["class"]).to include("bg-primary")
-      expect(links.first.at_css("svg")).to be_present
-      expect(nav.text).not_to include("Overview", booking.formatted_reservation_number, booking.status.humanize)
+      expect(document.at_css('[data-layout-mode="standard"]')).to be_present
+      expect(document.at_css('aside[aria-label="Booking context"]')).to be_nil
+      expect(document.at_xpath('//button[normalize-space()="Change Context"]')).to be_nil
+      expect(document.css("h1").size).to eq(1)
+      expect(document.at_css("main h2").text).to eq("Overview")
     end
 
-    it "keeps Change Billing Routes above the standalone billing row" do
+    it "keeps Change Billing Routes in the standalone Billing heading" do
       role.permissions << manage_folio_movements
       create(:booking_room, booking: booking, room_number: "208")
 
@@ -122,14 +138,21 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      aside = document.at_css('aside[aria-label="Booking context"]')
-      billing_action = aside.at_xpath(".//a[normalize-space()='Change Billing Routes']")
-      booking_row = aside.at_css('nav[aria-label="Booking context menu"] a')
-      expect(document.at_css("aside h2").text).to include("Booking / Billing")
+      billing_action = document.at_xpath("//main//a[normalize-space()='Change Billing Routes']")
+      expect(document.at_css("main h2").text).to eq("Billing")
       expect(billing_action).to be_present
-      expect(booking_row).to be_present
-      expect(billing_action.path).not_to eq(booking_row.path)
-      expect(aside.inner_html.index("Change Billing Routes")).to be < aside.inner_html.index("Booking context menu")
+      expect(document.at_css('aside[aria-label="Booking context"]')).to be_nil
+    end
+
+    it "shows Billing Routes to superadmins and hides them from unauthorized staff" do
+      get hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences")
+      expect(Nokogiri::HTML(response.body).at_xpath("//main//a[normalize-space()='Change Billing Routes']")).to be_nil
+
+      sign_in_as(create(:user, :superadmin))
+      get hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences")
+
+      expect(response).to have_http_status(:success)
+      expect(Nokogiri::HTML(response.body).at_xpath("//main//a[normalize-space()='Change Billing Routes']")).to be_present
     end
 
     it "shows recorded rates even when booking dates are invalid" do
@@ -155,8 +178,8 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Folio Operations")
-      expect(response.body).to include("Billing Preferences")
+      expect(response.body).to include("Folios")
+      expect(response.body).to include("Billing")
       expect(response.body).not_to include("PRIVATE FOLIO MARKER")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id)
@@ -355,11 +378,29 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       create(:booking_folio, booking: booking, hotel: hotel, booking_room: room, name: "Room Guest Folio")
 
       described_class = self.class
+      standard_tabs = %w[booking_details security_deposits billing_preferences room_and_rate source_details housekeeping_requests audit_trails]
       %w[booking_details folio_operations security_deposits billing_preferences guest_details room_and_rate source_details housekeeping_requests audit_trails].each do |tab|
         get hotel_booking_workspace_path(hotel, booking, tab: tab)
 
         expect(response).to have_http_status(:success), "expected #{tab} to render for #{described_class.description}"
-        expect(response.body).to include("data-layout-mode=")
+        document = Nokogiri::HTML(response.body)
+        expected_mode = standard_tabs.include?(tab) ? "standard" : "entity"
+        expect(document.at_css("[data-layout-mode='#{expected_mode}']")).to be_present
+        expect(document.css("h1").size).to eq(1)
+        if expected_mode == "standard"
+          expect(document.at_css('aside[aria-label="Booking context"]')).to be_nil
+          expect(document.at_xpath('//button[normalize-space()="Change Context"]')).to be_nil
+          expect(document.css("main h2").size).to eq(1)
+        else
+          expect(document.at_css('aside[aria-label="Booking context"]')).to be_present
+        end
+
+        active_navigation = document.at_css('#booking-control-tabs a[aria-current="page"]')
+        if tab == "source_details"
+          expect(active_navigation).to be_nil
+        else
+          expect(active_navigation).to be_present
+        end
       end
 
       get hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests")
@@ -371,7 +412,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).not_to include("Audit Trails")
+      expect(response.body).not_to include("Audit Trail")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "audit_trails")
 
@@ -386,7 +427,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Audit Trails")
+      expect(response.body).to include("Audit Trail")
     end
 
     it "renders the complete lifecycle action set with workspace return context" do
@@ -535,11 +576,11 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences", drawer: "billing")
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Billing Preferences")
+      expect(response.body).to include("Billing")
       expect(response.body).not_to include('data-testid="workspace-action-drawer"')
     end
 
-    it "shows sibling child bookings when the booking belongs to a group" do
+    it "renders grouped standard destinations full width with a group Overview link" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
       booking.update_column(:status, "checked_in")
@@ -551,12 +592,11 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      child_nav = document.at_css('nav[aria-label="Group booking context"]')
       expect(response.body).to include('data-layout-mode="standard"')
-      expect(response.body).to include("Bookings / Room Rate")
-      expect(response.body).to include(hotel_booking_workspace_path(hotel, sibling, tab: "room_and_rate"))
-      expect(child_nav.text.squish).to include("In house Room 103")
-      expect(child_nav.at_xpath('.//a[contains(normalize-space(), "Room")][1]')["data-turbo-frame"]).to eq("_top")
+      expect(document.at_css("main h2").text).to eq("Room & Rate")
+      expect(document.at_css('aside[aria-label="Booking context"]')).to be_nil
+      group_link = document.at_css('[data-testid="booking-workspace-header"] a[href*="scope=group"]')
+      expect(group_link["href"]).to include("tab=booking_details", "scope=group")
     end
 
     it "renders group-aware lifecycle controls as an actions dropdown in group context" do
@@ -576,7 +616,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(summary.at_xpath('.//button[normalize-space()="Actions"]')).to be_present
       expect(summary.css('a').map { |link| link.text.squish }).to include("Check-out")
       expect(summary.text).not_to include("Check-out...")
-      expect(summary.text).to include("Checked out")
+      expect(summary.text).to include("Partially in house")
       checkout_action = summary.at_xpath('.//a[normalize-space()="Check-out"]')
       expect(checkout_action.at_css("svg")).to be_present
       expect(checkout_action["href"]).to include(hotel_booking_action_checkout_path(hotel, checkout_child))
@@ -598,7 +638,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(summary.text).to include(group.name)
     end
 
-    it "renders security deposits and requests with persistent standalone context" do
+    it "renders deposits and requests as full-width standard destinations" do
       create(:deposit, booking: booking, hotel: hotel, amount: 150, status: "held")
       create(:housekeeping_request, booking: booking, request_details: "Fresh towels")
       create(:complaint_request, booking: booking, complaint_details: "Noisy hallway")
@@ -606,7 +646,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking, tab: "security_deposits")
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-layout-mode="standard"')
-      expect(response.body).to include("Security Deposits")
+      expect(response.body).to include("Deposits")
       expect(response.body).to include("MYR 150.00")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests")
@@ -616,7 +656,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include("Noisy hallway")
     end
 
-    it "uses child-booking rails for grouped security deposits and requests" do
+    it "omits child-booking rails from grouped deposits and requests" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
       booking.update_column(:status, "checked_in")
@@ -628,19 +668,20 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests")
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-layout-mode="standard"')
-      expect(response.body).to include("Bookings / Requests")
-      expect(Nokogiri::HTML(response.body).text).to include("#{sibling.booking_rooms.first.room_type.name} - #{sibling.guest_name}")
+      request_document = Nokogiri::HTML(response.body)
+      expect(request_document.at_css("main h2").text).to eq("Requests")
+      expect(request_document.at_css('aside[aria-label="Booking context"]')).to be_nil
 
       get hotel_booking_workspace_path(hotel, booking, tab: "security_deposits")
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-layout-mode="standard"')
-      expect(response.body).to include("Bookings / Deposits")
+      expect(response.body).to include("Deposits")
       deposit_document = Nokogiri::HTML(response.body)
-      expect(deposit_document.text).to include("#{sibling.booking_rooms.first.room_type.name} - #{sibling.guest_name}")
-      expect(deposit_document.at_css('nav[aria-label="Group booking context"]').text.squish).to include("In house Room 103", "Checked out Room 104")
+      expect(deposit_document.at_css('aside[aria-label="Booking context"]')).to be_nil
+      expect(deposit_document.at_css('[data-testid="booking-workspace-header"] a[href*="scope=group"]')).to be_present
     end
 
-    it "renders overview and booking rows as chevron navigation without a group identity block" do
+    it "links group Overview bookings and preserves group identity on child pages" do
       group = create(:group_booking, hotel: hotel, name: "Hidden Group Name")
       booking.update!(group_booking: group, group_position: 1, guest_name: "Hanami Ume")
       room_type = create(:room_type, hotel: hotel, name: "Garden Prestige Suite")
@@ -650,23 +691,17 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      nav = document.at_css('nav[aria-label="Group booking context"]')
-      links = nav.css("a")
-      expect(links.map { |link| link.text.squish }).to include("Overview", "Confirmed Room 105 Garden Prestige Suite - Hanami Ume")
-      expect(links).to all(satisfy { |link| link.at_css("svg").present? })
-      expect(links.first["href"]).to include("tab=booking_details", "scope=group")
-      expect(links.first["class"]).to include("bg-primary")
-      expect(nav.text).not_to include(group.formatted_reservation_number, "Hidden Group Name")
+      booking_link = document.at_css('section[aria-labelledby="group-overview-heading"] tbody a')
+      expect(booking_link.text).to eq(booking.formatted_reservation_number)
+      expect(booking_link["href"]).to include("tab=booking_details")
+      expect(document.at_css('aside[aria-label="Booking context"]')).to be_nil
 
       get hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
       child_document = Nokogiri::HTML(response.body)
-      child_nav = child_document.at_css('nav[aria-label="Group booking context"]')
       summary = child_document.at_css('[data-testid="booking-workspace-header"]')
-      expect(summary.text).to include("Booking No. #{group.formatted_reservation_number}")
-      expect(summary.text).not_to include("Booking No. #{booking.formatted_reservation_number}")
-      expect(child_nav.css("a").last["class"]).to include("bg-primary")
-      expect(child_nav.css("a").first["class"]).not_to include("bg-primary")
-      expect(child_nav.css("a").last["data-turbo-frame"]).to eq("_top")
+      expect(summary.text).to include("Hidden Group Name", "Group Booking #{group.formatted_reservation_number}")
+      expect(summary.text).not_to include("Booking #{booking.formatted_reservation_number}")
+      expect(child_document.at_css('aside[aria-label="Booking context"]')).to be_nil
     end
 
     it "renders functional group overviews across every tab" do
@@ -687,10 +722,10 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
         "booking_details" => "Conference Group",
         "security_deposits" => sibling.formatted_reservation_number,
         "billing_preferences" => "Register billing parties and settlement terms",
-        "room_and_rate" => "Group Room &amp; Rate",
+        "room_and_rate" => "Room &amp; Rate",
         "source_details" => "Group Source",
         "housekeeping_requests" => "Group overview towels",
-        "audit_trails" => "Group Audit Trail"
+        "audit_trails" => "Audit Trail"
       }
 
       expected_markers.each do |tab, marker|
@@ -709,6 +744,20 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
           expect(table.text).not_to include("Guest", "Status", "Estimated Room Value")
         end
       end
+    end
+
+    it "surfaces a stay-dates-vary notice instead of a combined group stay" do
+      group = create(:group_booking, hotel: hotel, name: "Varied Group")
+      booking.update!(group_booking: group, group_position: 1)
+      create(:booking, hotel: hotel, group_booking: group, group_position: 2,
+                       check_in: booking.check_in + 2.days, check_out: booking.check_out + 3.days)
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "booking_details", scope: "group")
+
+      overview = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="group-overview-heading"]')
+      expect(overview.text).to include("Arrival and departure schedule")
+      expect(overview.text).not_to include("Stay dates vary")
+      expect(overview.text).to include("Arrivals occur on")
     end
 
     it "renders an Edit Dates launch link on the group overview booking details tab" do
@@ -806,9 +855,26 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
+      header = document.at_css('[data-testid="booking-workspace-header"]')
+      expect(header.text).to include(group.name, "Group Booking #{group.formatted_reservation_number}")
+      expect(header.text).not_to include("Booking #{sibling.formatted_reservation_number}")
       expect(document.at_css("aside").text).not_to include("Group Statement", "Group Guest Overview")
       expect(document.at_css("aside h2").text).to include("Bookings / Folios")
       expect(document.at_css('nav[aria-label="Bookings and folios"] a.bg-primary').text).to include(sibling_folio.display_name)
+    end
+
+    it "preserves group identity for an explicitly selected group guest" do
+      group = create(:group_booking, hotel: hotel, name: "Guest Tour Group")
+      booking.update!(group_booking: group, group_position: 1)
+      guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Concrete Guest"), is_primary: true)
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: guest.id)
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      header = document.at_css('[data-testid="booking-workspace-header"]')
+      expect(header.text).to include("Guest Tour Group", "Group Booking #{group.formatted_reservation_number}")
+      expect(document.at_css("#booking-workspace-content #guest-details-heading").text).to include("Concrete Guest")
     end
 
     it "renders group deposits under group security deposits" do

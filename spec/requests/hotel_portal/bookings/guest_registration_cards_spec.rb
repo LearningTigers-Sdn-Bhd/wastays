@@ -338,7 +338,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('data-testid="booking-workspace"')
-      expect(response.body).to include("Guest Details")
+      expect(response.body).to include("Guests")
     end
   end
 end

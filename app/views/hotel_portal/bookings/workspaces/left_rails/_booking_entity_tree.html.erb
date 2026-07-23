@@ -3,7 +3,7 @@
   <% if local_assigns[:overview_path].present? %>
     <%= link_to overview_path,
         data: navigation_data,
-        class: "flex items-center justify-between gap-3 border-b border-border px-4 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 #{presenter.group_overview? ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted'}" do %>
+        class: "flex items-center justify-between gap-3 border-b border-border px-4 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring #{presenter.group_overview? ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted'}" do %>
       <span><%= overview_label %></span>
       <%= cached_icon "chevron-right", class: "size-4 shrink-0 opacity-70", aria: { hidden: true } %>
     <% end %>
@@ -12,11 +12,11 @@
   <div class="divide-y divide-border">
     <% groups.each_with_index do |group, index| %>
       <details class="group" data-booking-entity-tree-target="group" data-group-key="<%= index %>" data-action="toggle->booking-entity-tree#remember" <%= "open" if local_assigns.fetch(:single_booking, false) || presenter.booking_tree_group_open?(group) %>>
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 group-open:bg-muted [&::-webkit-details-marker]:hidden">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-open:bg-muted [&::-webkit-details-marker]:hidden">
           <span class="min-w-0">
             <span class="flex min-w-0 items-center gap-2">
               <% if presenter.group_context_enabled? && (badge = presenter.status_badge_for_tree_group(group)) %>
-                <span class="inline-flex shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide <%= status_badge_classes(badge[:tone]) %>"><%= badge[:label] %></span>
+                <%= render PanelsUI::Badge.new(label: badge[:label], variant: presenter.badge_variant_for(badge[:tone]), size: :sm, class: "shrink-0") %>
               <% end %>
               <span class="truncate"><%= group.label %></span>
             </span>
@@ -29,7 +29,7 @@
           <% group.rows.each do |row| %>
             <%= link_to row.href,
                 data: navigation_data,
-                class: "mx-2 block rounded-md px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 #{row.active ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted'}" do %>
+                class: "mx-2 block rounded-md px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring #{row.active ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted'}" do %>
               <span class="block truncate font-semibold"><%= row.label %></span>
               <span class="block truncate text-xs font-normal opacity-70"><%= row.description %></span>
             <% end %>

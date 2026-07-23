@@ -8,7 +8,7 @@
     <div class="flex min-w-0 items-center gap-2 overflow-x-auto overscroll-x-contain">
       <% if can_view_grc %>
         <div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="right">
-          <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-border-interactive bg-card px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-expanded="false" aria-haspopup="menu">
+          <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-border-interactive bg-card px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-expanded="false" aria-haspopup="menu">
             GRC Actions <%= cached_icon "chevron-down", class: "size-3", aria: { hidden: true } %>
           </button>
           <div data-dropdown-target="menu" class="hidden w-56 rounded-lg border border-border bg-card p-1.5 shadow-lg" role="menu" tabindex="-1">
@@ -22,7 +22,7 @@
         </div>
 
         <div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="right">
-          <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-border-interactive bg-card px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-expanded="false" aria-haspopup="menu">
+          <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-border-interactive bg-card px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-expanded="false" aria-haspopup="menu">
             Print <%= cached_icon "chevron-down", class: "size-3", aria: { hidden: true } %>
           </button>
           <div data-dropdown-target="menu"
@@ -60,9 +60,9 @@
 
     <% if can_manage %>
       <div class="inline-flex shrink-0">
-        <button type="submit" form="guest-details-form" name="save_scope" value="snapshot" class="rounded-l-md bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Save Guest</button>
+        <button type="submit" form="guest-details-form" name="save_scope" value="snapshot" class="rounded-l-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">Save Guest</button>
         <div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="end">
-          <button type="button" class="inline-flex h-full items-center rounded-r-md border-l border-border-interactive bg-primary px-3 text-primary-foreground hover:bg-primary-hover focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2" aria-label="More save options" aria-expanded="false" aria-haspopup="menu" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown">
+          <button type="button" class="inline-flex h-full items-center rounded-r-md border-l border-border-interactive bg-primary px-3 text-primary-foreground hover:bg-primary-hover focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" aria-label="More save options" aria-expanded="false" aria-haspopup="menu" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown">
             <%= cached_icon "chevron-up", class: "size-4", aria: { hidden: true } %>
           </button>
           <div data-dropdown-target="menu" data-testid="save-options-menu" class="hidden w-72 rounded-lg border border-border bg-card p-1.5 shadow-lg" role="menu" tabindex="-1">

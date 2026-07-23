@@ -34,7 +34,7 @@ RSpec.describe "Hotel booking show tab redirects", type: :request do
     expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "audit_trails"))
 
     follow_redirect!
-    expect(response.body).to include("Audit Trails")
+    expect(response.body).to include("Audit Trail")
   end
 
   it "falls back to booking details for an unknown tab parameter" do
@@ -43,6 +43,6 @@ RSpec.describe "Hotel booking show tab redirects", type: :request do
     expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
 
     follow_redirect!
-    expect(response.body).to include("Booking Details")
+    expect(response.body).to include("Overview")
   end
 end

@@ -43,7 +43,7 @@ module HotelPortal
       )
       @presenter = HotelPortal::Bookings::WorkspacePresenter.new(@booking, params: params, hotel: current_hotel, booking_presenter: @booking_presenter, folio_show: @folio_show)
       set_audit_logs(@booking, group_booking: (@booking.group_booking if @presenter.group_overview?)) if @presenter.active_tab == "audit_trails"
-      set_breadcrumbs(@booking)
+      set_breadcrumbs(@booking, @presenter)
 
       render partial: "hotel_portal/bookings/workspaces/work_area", locals: workspace_locals if turbo_frame_request?
     end
@@ -64,11 +64,11 @@ module HotelPortal
       require_feature!("full_audit_trail")
     end
 
-    def set_breadcrumbs(booking)
+    def set_breadcrumbs(booking, presenter)
       override_breadcrumbs(
         { label: "Operations" },
         { label: "Reservations", path: hotel_front_desk_path(current_hotel, tab: "bookings", view: "list") },
-        { label: booking.confirmation_token, path: hotel_booking_workspace_path(current_hotel, booking) },
+        { label: presenter.group_context_enabled? ? presenter.group_booking_number : presenter.booking_number, path: presenter.group_overview_header_path || hotel_booking_workspace_path(current_hotel, booking) },
         { label: "Booking Workspace" }
       )
     end

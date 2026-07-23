@@ -16,16 +16,16 @@ module HotelPortal
     DocumentRow = Data.define(:booking, :room_type, :room_number, :guest_name, :invoice_available)
 
     TABS = [
-      Tab.new("booking_details", "Booking Details"),
-      Tab.new("folio_operations", "Folio Operations"),
-      Tab.new("security_deposits", "Security Deposits"),
-      Tab.new("billing_preferences", "Billing Preferences"),
-      Tab.new("guest_details", "Guest Details"),
+      Tab.new("booking_details", "Overview"),
+      Tab.new("folio_operations", "Folios"),
+      Tab.new("security_deposits", "Deposits"),
+      Tab.new("billing_preferences", "Billing"),
+      Tab.new("guest_details", "Guests"),
       Tab.new("room_and_rate", "Room & Rate"),
-      Tab.new("source_details", "Source Details"),
       Tab.new("housekeeping_requests", "Requests"),
-      Tab.new("audit_trails", "Audit Trails")
+      Tab.new("audit_trails", "Audit Trail")
     ].freeze
+    LEGACY_TABS = [ Tab.new("source_details", "Source Details") ].freeze
     ALERT_ACTIONS = %w[change_rate].freeze
     ENTITY_TABS = %w[folio_operations guest_details].freeze
     BADGE_VARIANTS = {
@@ -92,42 +92,35 @@ module HotelPortal
       group_booking&.formatted_reservation_number.presence || "—"
     end
 
-    def summary_booking_number
-      group_context_enabled? ? group_booking_number : booking_number
-    end
-
-    def summary_heading
-      group_overview? ? group_booking.name : primary_guest_name
-    end
-
-    def summary_subtitle
-      "Booking No. #{summary_booking_number}"
-    end
-
     def header_title
-      summary_heading
+      group_context_enabled? ? group_booking.name : primary_guest_name.presence || "Guest unavailable"
     end
 
     def header_reference_line
-      group_overview? ? "Group Booking #{group_booking_number}" : "Booking No. #{summary_booking_number}"
+      group_context_enabled? ? "Group Booking #{group_booking_number}" : "Booking #{booking_number}"
     end
 
     def header_stay_line
-      if group_overview?
+      if group_context_enabled?
         [ pluralize_count(child_bookings.size, "booking"), pluralize_count(group_room_count, "room"), group_stay_summary ].join(" · ")
       else
-        [ room_summary, short_stay_range, pluralize_count(nights_count, "night") ].compact_blank.join(" · ")
+        [ room_summary, short_stay_range, (pluralize_count(nights_count, "night") if nights_count) ].compact_blank.join(" · ")
       end
     end
 
     def stay_dates_vary?
       return false unless group_context_enabled?
 
-      child_bookings.map { |child| child.check_in.to_date }.uniq.size > 1 ||
-        child_bookings.map { |child| child.check_out.to_date }.uniq.size > 1
+      group_arrival_dates.size > 1 || group_departure_dates.size > 1
+    end
+
+    def group_dates_incomplete?
+      group_context_enabled? && child_bookings.any? { |child| child.check_in.blank? || child.check_out.blank? }
     end
 
     def group_stay_summary
+      return "Some stay dates unavailable" if group_dates_incomplete?
+
       stay_dates_vary? ? "Stay dates vary" : format_short_range(group_arrival, group_departure)
     end
 
@@ -139,15 +132,37 @@ module HotelPortal
       format_summary_time(group_departure)
     end
 
+    def group_arrival_dates
+      distinct_child_dates(:check_in)
+    end
+
+    def group_departure_dates
+      distinct_child_dates(:check_out)
+    end
+
+    def group_stay_variation_notice
+      return unless stay_dates_vary?
+
+      arrivals = group_arrival_dates.map { |date| format_short_date(date) }
+      departures = group_departure_dates.map { |date| format_short_date(date) }
+      "Arrivals occur on #{arrivals.to_sentence}. Departures occur on #{departures.to_sentence}."
+    end
+
     def header_status_badge
-      badge = group_overview? ? group_status_badge : status_badge(booking.status)
+      badge = group_context_enabled? ? group_status_badge : status_badge(booking.status)
       return if badge.blank?
 
       { label: badge[:label], variant: BADGE_VARIANTS.fetch(badge[:tone], :neutral) }
     end
 
     def header_outstanding_balance
-      money(group_overview? ? group_total_balance : total_balance)
+      money(group_context_enabled? ? group_total_balance : total_balance)
+    end
+
+    def group_overview_header_path
+      return unless group_context_enabled?
+
+      path_for(booking, tab: "booking_details", scope: "group")
     end
 
     def status_label
@@ -163,6 +178,10 @@ module HotelPortal
       return if group.booking_id.blank?
 
       status_badge_for_booking_id(group.booking_id)
+    end
+
+    def badge_variant_for(tone)
+      BADGE_VARIANTS.fetch(tone.to_s, :neutral)
     end
 
     def status_badge(status)
@@ -262,11 +281,15 @@ module HotelPortal
 
     def active_tab
       key = normalized_tab(@params[:tab])
-      tabs.any? { |tab| tab.key == key } ? key : "booking_details"
+      supported_tabs.any? { |tab| tab.key == key } ? key : "booking_details"
     end
 
     def active_tab_label
-      tabs.find { |tab| tab.key == active_tab }&.label || "Booking Details"
+      supported_tabs.find { |tab| tab.key == active_tab }&.label || "Overview"
+    end
+
+    def navigation_active_tab
+      active_tab if tabs.any? { |tab| tab.key == active_tab }
     end
 
     def active_tab_partial
@@ -338,11 +361,8 @@ module HotelPortal
       active_tab.in?(ENTITY_TABS) ? "entity" : "standard"
     end
 
-    # The rail is retained on standard tabs until each panel is flattened to carry
-    # its own actions and group child-navigation (PR2/PR3). Entity tabs (folios,
-    # guests) are the eventual rail-only destinations.
     def show_left_rail?
-      true
+      layout_mode == "entity"
     end
 
     def show_right_drawer?
@@ -805,6 +825,8 @@ module HotelPortal
     end
 
     def nights_count
+      return if booking.check_in.blank? || booking.check_out.blank?
+
       (booking.check_out.to_date - booking.check_in.to_date).to_i
     end
 
@@ -856,28 +878,6 @@ module HotelPortal
 
     def currency
       booking.currency.presence || hotel.default_currency.presence || "MYR"
-    end
-
-    def summary_items
-      if group_overview?
-        return [
-          [ "Arrival", format_summary_time(group_arrival) ],
-          [ "Departure", format_summary_time(group_departure) ],
-          [ "Rooms", child_bookings.size ],
-          [ "Status", group_booking.projected_status.humanize ],
-          [ "Booking No.", group_booking_number ],
-          [ "Balance", money(group_total_balance) ]
-        ]
-      end
-
-      [
-        [ "Arrival", booking.check_in.in_time_zone(hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M") ],
-        [ "Departure", booking.check_out.in_time_zone(hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M") ],
-        [ "Nights", nights_count ],
-        [ "Room / Room Type", room_summary ],
-        [ "Booking No.", summary_booking_number ],
-        [ "Balance", money(total_balance) ]
-      ]
     end
 
     def room_tree_rows
@@ -1299,6 +1299,8 @@ module HotelPortal
     end
 
     def format_stay_date(value)
+      return "—" if value.blank?
+
       value.in_time_zone(booking.hotel.hotel_time_zone).strftime("%d %b %Y")
     end
 
@@ -1325,11 +1327,20 @@ module HotelPortal
     end
 
     def group_status_badge
-      status = group_booking&.projected_status
-      return if status.blank?
+      statuses = child_bookings.filter_map { |child| child.status.to_s.presence }
+      return if statuses.empty?
+      return status_badge(statuses.first) if statuses.uniq.one?
+      return { label: "Cancelled", tone: "rose" } if statuses.all? { |status| status == "cancelled" }
+      return { label: "Checked out", tone: "slate" } if statuses.all? { |status| status.in?(%w[completed cancelled]) }
 
-      tone = { "active" => "emerald", "completed" => "slate", "cancelled" => "rose" }.fetch(status, "slate")
-      { label: status.humanize, tone: tone }
+      in_house_statuses = %w[checked_in review_due_out checkout_required]
+      in_house_count = statuses.count { |status| status.in?(in_house_statuses) }
+      return { label: "Partially in house", tone: "amber" } if in_house_count.positive? && in_house_count < statuses.size
+      return { label: "Checkout due", tone: "orange" } if statuses.include?("checkout_required") && in_house_count == statuses.size
+      return { label: "Due out", tone: "amber" } if statuses.include?("review_due_out") && in_house_count == statuses.size
+      return { label: "In house", tone: "emerald" } if in_house_count == statuses.size
+
+      { label: "Mixed statuses", tone: "amber" }
     end
 
     def format_summary_time(value)
@@ -1338,8 +1349,21 @@ module HotelPortal
       value.in_time_zone(hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M")
     end
 
+    def distinct_child_dates(field)
+      tz = hotel.hotel_time_zone
+      child_bookings.filter_map { |child| child.public_send(field)&.in_time_zone(tz)&.to_date }.uniq.sort
+    end
+
+    def format_short_date(date)
+      date.strftime("%-d %b")
+    end
+
     def path_for(target_booking, **query)
       Rails.application.routes.url_helpers.hotel_booking_workspace_path(hotel, target_booking, query.compact)
+    end
+
+    def supported_tabs
+      @supported_tabs ||= TABS + LEGACY_TABS
     end
 
     def booking_billing_parties

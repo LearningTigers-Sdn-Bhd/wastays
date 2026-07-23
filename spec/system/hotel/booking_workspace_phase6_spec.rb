@@ -29,12 +29,12 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
     click_button "Sign In to Portal"
   end
 
-  it "uses contextual rails while navigating the core Phase 6 tabs" do
+  it "uses standard and entity layouts while navigating the workspace" do
     visit hotel_booking_workspace_path(hotel, booking, tab: "room_and_rate")
     expect(page).to have_css('[data-layout-mode="standard"]')
     expect(page).to have_content("Room & Rate")
 
-    click_link "Guest Details"
+    within("#booking-control-tabs") { click_link "Guests" }
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "guest_details"))
     expect(page).to have_css('[data-layout-mode="entity"]')
     expect(page).to have_content("Primary guest for this room")
@@ -42,36 +42,36 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
     expect(page).to have_content("Guest details recorded for this stay.")
     expect(page).to have_button("Save Guest")
 
-    click_link "Security Deposits"
+    within("#booking-control-tabs") { click_link "Deposits" }
     expect(page).to have_css('[data-layout-mode="standard"]')
-    expect(page).to have_content("Security Deposits")
+    expect(page).to have_content("Deposits")
     expect(page).to have_content("MYR 175.00")
 
-    click_link "Billing Preferences"
+    within("#booking-control-tabs") { click_link "Billing" }
     expect(page).to have_css('[data-layout-mode="standard"]')
     expect(page).to have_content("Billing parties")
 
-    click_link "Folio Operations"
+    within("#booking-control-tabs") { click_link "Folios" }
     expect(page).to have_css('[data-layout-mode="entity"]')
     expect(page).to have_content("Ledger")
     expect(page).not_to have_content("Manage Folio Windows")
 
-    click_link "Requests"
+    within("#booking-control-tabs") { click_link "Requests" }
     expect(page).to have_css('[data-layout-mode="standard"]')
     expect(page).to have_content("Fresh towels")
     expect(page).to have_content("Noisy hallway")
   end
 
-  xit "re-renders the active tab with Turbo frame navigation", js: true do
+  it "re-renders the active tab with Turbo frame navigation", js: true do
     visit hotel_booking_workspace_path(hotel, booking, tab: "room_and_rate")
 
     within("#booking-control-tabs") do
       expect(page).to have_css("a[aria-current='page']", text: "Room & Rate")
-      click_link "Guest Details"
+      click_link "Guests"
     end
 
     within("#booking-control-tabs") do
-      expect(page).to have_css("a[aria-current='page']", text: "Guest Details")
+      expect(page).to have_css("a[aria-current='page']", text: "Guests")
       expect(page).to have_no_css("a[aria-current='page']", text: "Room & Rate")
     end
 
@@ -296,13 +296,13 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
 
     fill_in "Full Name", with: "Unsaved Guest Name"
 
-    click_link "Booking Details"
+    click_link "Overview"
     expect(page).to have_css('[role="alertdialog"]', text: "Discard your changes?")
     click_button "Keep Editing"
     expect(page).to have_field("Full Name", with: "Unsaved Guest Name")
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "guest_details"))
 
-    click_link "Booking Details"
+    click_link "Overview"
     within('[role="alertdialog"]') { click_button "Discard Changes" }
 
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
