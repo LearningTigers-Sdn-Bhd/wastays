@@ -66,14 +66,15 @@
       </div>
     </section>
 
+    <% annual = @date_preset == "this_year" %>
     <section class="space-y-3" aria-labelledby="daily-performance-heading">
       <div>
-        <h2 id="daily-performance-heading" class="text-base font-semibold text-foreground">Daily performance snapshot</h2>
-        <p class="mt-1 text-sm text-muted-foreground">A detailed breakdown of revenue and volume across the selected range.</p>
+        <h2 id="daily-performance-heading" class="text-base font-semibold text-foreground"><%= annual ? "Monthly performance snapshot" : "Daily performance snapshot" %></h2>
+        <p class="mt-1 text-sm text-muted-foreground">A breakdown of revenue and volume across the selected range.</p>
       </div>
 
       <%= render PanelsUI::Table.new(
-            caption: "Daily performance snapshot",
+            caption: annual ? "Monthly performance snapshot" : "Daily performance snapshot",
             density: :compact,
             header_style: :sentence,
             hoverable: true,
@@ -81,7 +82,7 @@
           ) do |table| %>
         <% table.with_header do %>
           <tr>
-            <th scope="col">Date</th>
+            <th scope="col"><%= annual ? "Month" : "Date" %></th>
             <th scope="col" class="text-right">Bookings</th>
             <th scope="col" class="text-right">Gross</th>
             <th scope="col" class="text-right">Margin</th>
@@ -92,9 +93,12 @@
           <% if @paginated_daily_data.any? %>
             <% @paginated_daily_data.each do |date, gross| %>
               <%
-                daily_bookings = @base_bookings.select { |booking| booking.created_at.to_date == date }
-                daily_margin = daily_bookings.sum { |booking| booking.margin_amount || 0 }
-                daily_net = daily_bookings.sum { |booking| booking.net_amount || 0 }
+                period_bookings = @base_bookings.select do |booking|
+                  booking_date = booking.created_at.to_date
+                  annual ? booking_date.beginning_of_month == date : booking_date == date
+                end
+                period_margin = period_bookings.sum { |booking| booking.margin_amount || 0 }
+                period_net = period_bookings.sum { |booking| booking.net_amount || 0 }
                 date_key = date.strftime("%Y%m%d")
               %>
               <tr class="align-top">
@@ -105,14 +109,14 @@
                           aria-controls="daily-performance-modal-<%= date_key %>"
                           aria-haspopup="dialog"
                           onclick="document.getElementById('daily-performance-modal-<%= date_key %>').showModal()">
-                    <span class="block font-medium text-foreground"><%= date.strftime("%d %b %Y") %></span>
-                    <span class="block text-xs text-muted-foreground"><%= date.strftime("%A") %></span>
+                    <span class="block font-medium text-foreground"><%= date.strftime(annual ? "%B %Y" : "%d %b %Y") %></span>
+                    <% unless annual %><span class="block text-xs text-muted-foreground"><%= date.strftime("%A") %></span><% end %>
                   </button>
                 </th>
-                <td class="text-right tabular-nums"><%= daily_bookings.count %></td>
+                <td class="text-right tabular-nums"><%= period_bookings.count %></td>
                 <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_delimiter(number_with_precision(gross, precision: 2)) %></td>
-                <td class="whitespace-nowrap text-right tabular-nums">- <%= number_with_delimiter(number_with_precision(daily_margin, precision: 2)) %></td>
-                <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_delimiter(number_with_precision(daily_net, precision: 2)) %></td>
+                <td class="whitespace-nowrap text-right tabular-nums">- <%= number_with_delimiter(number_with_precision(period_margin, precision: 2)) %></td>
+                <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_delimiter(number_with_precision(period_net, precision: 2)) %></td>
               </tr>
             <% end %>
           <% else %>
@@ -126,9 +130,12 @@
 
     <% @paginated_daily_data.each do |date, gross| %>
       <%
-        daily_bookings = @base_bookings.select { |booking| booking.created_at.to_date == date }
-        daily_margin = daily_bookings.sum { |booking| booking.margin_amount || 0 }
-        daily_net = daily_bookings.sum { |booking| booking.net_amount || 0 }
+        period_bookings = @base_bookings.select do |booking|
+          booking_date = booking.created_at.to_date
+          annual ? booking_date.beginning_of_month == date : booking_date == date
+        end
+        period_margin = period_bookings.sum { |booking| booking.margin_amount || 0 }
+        period_net = period_bookings.sum { |booking| booking.net_amount || 0 }
         date_key = date.strftime("%Y%m%d")
       %>
       <dialog id="daily-performance-modal-<%= date_key %>"
@@ -138,12 +145,12 @@
         <div class="flex max-h-[85vh] flex-col overflow-hidden" onclick="event.stopPropagation()">
           <div class="flex items-center justify-between gap-3 border-b border-border p-4">
             <div>
-              <p class="text-xs font-medium text-muted-foreground">Daily ledger</p>
-              <h3 id="daily-performance-title-<%= date_key %>" class="mt-1 text-base font-semibold"><%= date.strftime("%A, %d %b %Y") %></h3>
+              <p class="text-xs font-medium text-muted-foreground"><%= annual ? "Monthly ledger" : "Daily ledger" %></p>
+              <h3 id="daily-performance-title-<%= date_key %>" class="mt-1 text-base font-semibold"><%= date.strftime(annual ? "%B %Y" : "%A, %d %b %Y") %></h3>
             </div>
             <button type="button"
                     class="flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive"
-                    aria-label="Close daily ledger"
+                    aria-label="Close <%= annual ? 'monthly' : 'daily' %> ledger"
                     onclick="this.closest('dialog').close()">
               <%= app_icon "x", class: "size-4", aria: { hidden: "true" } %>
             </button>
@@ -152,7 +159,7 @@
           <dl class="grid grid-cols-2 gap-px border-b border-border bg-border md:grid-cols-4">
             <div class="bg-card p-3">
               <dt class="text-xs font-medium text-muted-foreground">Volume</dt>
-              <dd class="mt-1 font-semibold tabular-nums"><%= daily_bookings.count %></dd>
+              <dd class="mt-1 font-semibold tabular-nums"><%= period_bookings.count %></dd>
             </div>
             <div class="bg-card p-3">
               <dt class="text-xs font-medium text-muted-foreground">Gross sale</dt>
@@ -160,18 +167,18 @@
             </div>
             <div class="bg-card p-3">
               <dt class="text-xs font-medium text-muted-foreground">Commission</dt>
-              <dd class="mt-1 font-semibold tabular-nums">- <%= number_with_precision(daily_margin, precision: 2) %></dd>
+              <dd class="mt-1 font-semibold tabular-nums">- <%= number_with_precision(period_margin, precision: 2) %></dd>
             </div>
             <div class="bg-card p-3">
               <dt class="text-xs font-medium text-muted-foreground">Settlement</dt>
-              <dd class="mt-1 font-semibold tabular-nums">MYR <%= number_with_precision(daily_net, precision: 2) %></dd>
+              <dd class="mt-1 font-semibold tabular-nums">MYR <%= number_with_precision(period_net, precision: 2) %></dd>
             </div>
           </dl>
 
           <div class="flex-1 overflow-y-auto bg-muted/30 p-4">
-            <% if daily_bookings.any? %>
+            <% if period_bookings.any? %>
               <div class="space-y-3">
-                <% daily_bookings.each do |booking| %>
+                <% period_bookings.each do |booking| %>
                   <article class="rounded-lg border border-border bg-card p-3 shadow-sm">
                     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div class="min-w-0 flex-1">

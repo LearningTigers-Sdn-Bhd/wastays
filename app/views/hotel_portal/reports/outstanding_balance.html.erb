@@ -1,5 +1,5 @@
 <div class="w-full space-y-4" data-slot="report-page" data-report="outstanding-balance">
-  <%= render PanelsUI::PageHeader.new(title: "Outstanding balance report") do |header| %>
+  <%= render PanelsUI::PageHeader.new(title: "Outstanding balance report", description: "Review guests and bookings with unpaid balances for the selected stay dates.") do |header| %>
     <% header.with_caption do %>
       <p class="text-sm font-medium text-muted-foreground">
         <%= current_hotel.name %> ·
@@ -31,58 +31,55 @@
   <section class="space-y-3" aria-labelledby="outstanding-bookings-heading">
     <h2 id="outstanding-bookings-heading" class="text-base font-semibold text-foreground">Outstanding bookings</h2>
 
-    <% grouped_rows = @date_preset == "this_year" ? @report.rows.group_by { |row| row[:check_in].to_date.beginning_of_month } : { nil => @report.rows } %>
-    <% grouped_rows = { nil => [] } if grouped_rows.empty? %>
-    <% grouped_rows.each do |month, rows| %>
-      <div class="space-y-2">
-        <% if month.present? %>
-          <h3 class="text-sm font-semibold text-foreground"><%= month.strftime("%B %Y") %></h3>
-        <% end %>
-
-        <%= render PanelsUI::Table.new(
-              caption: month.present? ? "Outstanding balances for #{month.strftime('%B %Y')}" : "Outstanding balances",
-              density: :compact,
-              header_style: :sentence,
-              hoverable: true,
-              wrapper_class: "rounded-lg border border-border bg-card"
-            ) do |table| %>
-          <% table.with_header do %>
-            <tr>
-              <th scope="col">Guest / reference</th>
-              <th scope="col">Stay</th>
-              <th scope="col">Rooms</th>
-              <th scope="col">Payment status</th>
-              <th scope="col" class="text-right">Outstanding amount</th>
-              <th scope="col">Notes</th>
-            </tr>
-          <% end %>
-          <% table.with_body do %>
-            <% if rows.any? %>
-              <% rows.each do |row| %>
-                <tr class="align-top">
-                  <th scope="row">
-                    <p class="font-semibold text-foreground"><%= row[:guest_name] %></p>
-                    <%= link_to row[:confirmation_token],
-                          hotel_booking_control_panel_path(current_hotel, row[:booking_id], tab: "booking_details"),
-                          class: "font-mono text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive",
-                          data: { turbo: false } %>
-                  </th>
-                  <td class="whitespace-nowrap"><%= row[:stay_dates] %></td>
-                  <td>
-                    <p><%= row[:room_details] %></p>
-                    <p class="text-xs text-muted-foreground">Room: <%= row[:room_numbers] %></p>
-                  </td>
-                  <td><%= row[:payment_status] %></td>
-                  <td class="whitespace-nowrap text-right font-semibold tabular-nums text-destructive">MYR <%= number_with_precision(row[:outstanding_amount], precision: 2) %></td>
-                  <td><%= row[:latest_note].presence || "-" %></td>
-                </tr>
-              <% end %>
-            <% else %>
-              <%= render "table_empty_state", colspan: 6, message: "No outstanding bookings for this selected period." %>
+    <%= render PanelsUI::Table.new(
+          caption: "Outstanding balances",
+          density: :compact,
+          header_style: :sentence,
+          hoverable: true,
+          wrapper_class: "rounded-lg border border-border bg-card"
+        ) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Guest / reference</th>
+          <th scope="col">Stay</th>
+          <th scope="col">Rooms</th>
+          <th scope="col">Payment status</th>
+          <th scope="col" class="text-right">Outstanding amount</th>
+          <th scope="col">Notes</th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% if @report.rows.any? %>
+          <% report_rows_grouped_by_month(@report.rows, date_preset: @date_preset) { |row| row[:check_in] }.each do |month, rows| %>
+            <% if month %>
+              <tr class="bg-muted/55" data-slot="report-month-group">
+                <th scope="rowgroup" colspan="6" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
+              </tr>
+            <% end %>
+            <% rows.each do |row| %>
+              <tr class="align-top">
+                <th scope="row">
+                  <p class="font-semibold text-foreground"><%= row[:guest_name] %></p>
+                  <%= link_to row[:confirmation_token],
+                        hotel_booking_control_panel_path(current_hotel, row[:booking_id], tab: "booking_details"),
+                        class: "font-mono text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive",
+                        data: { turbo: false } %>
+                </th>
+                <td class="whitespace-nowrap"><%= row[:stay_dates] %></td>
+                <td>
+                  <p><%= row[:room_details] %></p>
+                  <p class="text-xs text-muted-foreground">Room: <%= row[:room_numbers] %></p>
+                </td>
+                <td><%= row[:payment_status] %></td>
+                <td class="whitespace-nowrap text-right font-semibold tabular-nums text-destructive">MYR <%= number_with_precision(row[:outstanding_amount], precision: 2) %></td>
+                <td><%= row[:latest_note].presence || "-" %></td>
+              </tr>
             <% end %>
           <% end %>
+        <% else %>
+          <%= render "table_empty_state", colspan: 6, message: "No outstanding bookings for this selected period." %>
         <% end %>
-      </div>
+      <% end %>
     <% end %>
   </section>
 </div>

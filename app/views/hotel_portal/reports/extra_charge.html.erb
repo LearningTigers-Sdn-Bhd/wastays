@@ -1,5 +1,5 @@
 <div class="w-full space-y-4" data-slot="report-page" data-report="extra-charge">
-  <%= render PanelsUI::PageHeader.new(title: "Extra charge report") do |header| %>
+  <%= render PanelsUI::PageHeader.new(title: "Extra charge report", description: "Review food, beverage, and other posted charges for the selected period.") do |header| %>
     <% header.with_caption do %>
       <p class="text-sm font-medium text-muted-foreground">
         <%= current_hotel.name %> ·

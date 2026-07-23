@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 module HotelPortal::ReportsHelper
+  def report_rows_grouped_by_month(rows, date_preset:, &date_for)
+    return { nil => rows } unless date_preset == "this_year"
+
+    rows.group_by { |row| date_for.call(row).to_date.beginning_of_month }
+  end
+
   def daily_report_adjustment_presentation(amount)
     amount = amount.to_d
     if amount.positive?

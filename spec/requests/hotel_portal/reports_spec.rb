@@ -44,6 +44,63 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     sign_in_as(user)
   end
 
+  it "shows contextual information beside every report heading" do
+    {
+      guest_reports_hotel_reports_path(hotel) => "Guest reports",
+      tax_compliance_hotel_reports_path(hotel) => "Tax & compliance",
+      extra_charge_hotel_reports_path(hotel) => "Extra charge report",
+      daily_occupancy_hotel_reports_path(hotel) => "Daily occupancy report",
+      outstanding_balance_hotel_reports_path(hotel) => "Outstanding balance report",
+      deposit_liability_hotel_reports_path(hotel) => "Deposit liability report",
+      daily_report_hotel_reports_path(hotel) => "Daily report",
+      refund_report_hotel_reports_path(hotel) => "Monthly refund report"
+    }.each do |path, title|
+      get path
+
+      expect(response).to have_http_status(:success)
+      expect(Capybara.string(response.body)).to have_css("button[aria-label='About #{title}']")
+    end
+  end
+
+  it "presents this year as monthly periods across report pages" do
+    travel_to(Time.zone.local(2026, 7, 23, 10, 0, 0)) do
+      booking = create(
+        :booking,
+        hotel: hotel,
+        status: "checked_in",
+        payment_status: "captured",
+        check_in: Date.new(2026, 5, 6),
+        check_out: Date.new(2026, 5, 8),
+        guest_country: "Japan",
+        tourism_tax_amount: 20,
+        tourism_tax_collected: true,
+        created_at: Time.zone.local(2026, 5, 7, 10, 0, 0)
+      )
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100, posting_date: Date.new(2026, 5, 7))
+      create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 100, posting_date: Date.new(2026, 5, 7))
+
+      get hotel_reports_path(hotel), params: { date_preset: "this_year" }
+      page = Capybara.string(response.body)
+      expect(page).to have_css("h2", exact_text: "Monthly performance snapshot")
+      expect(page).to have_css("thead th", exact_text: "Month")
+      expect(page).to have_text("May 2026")
+
+      [
+        breakdown_hotel_reports_path(hotel),
+        guest_reports_hotel_reports_path(hotel, tab: "in_house"),
+        tax_compliance_hotel_reports_path(hotel, tab: "tourism_tax"),
+        daily_report_hotel_reports_path(hotel, tab: "cashier"),
+        daily_report_hotel_reports_path(hotel, tab: "revenue")
+      ].each do |path|
+        get path, params: { date_preset: "this_year" }
+
+        expect(response).to have_http_status(:success)
+        expect(Capybara.string(response.body)).to have_css("[data-slot='report-month-group']", text: "May 2026")
+      end
+    end
+  end
+
   describe "GET /index" do
     it "returns http success" do
       get "/hotel/#{hotel.id}/reports"
@@ -956,9 +1013,28 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 2)
       expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
       expect(page).to have_css("h1", exact_text: "Outstanding balance report")
+      expect(page).to have_css("select[name='date_preset'] option[value='this_year']", text: "This Year", visible: :all)
       expect(page).to have_link("WS-UNPAID", href: hotel_booking_control_panel_path(hotel, unpaid, tab: "booking_details"))
       expect(page).to have_text("Unpaid Guest")
       expect(page).to have_no_text("Paid Guest")
+    end
+
+    it "uses one table with month divider rows for this year" do
+      travel_to(Time.zone.local(2026, 7, 23, 10, 0, 0)) do
+        [ Date.new(2026, 4, 14), Date.new(2026, 5, 14) ].each do |check_in|
+          booking = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: check_in, check_out: check_in + 1.day)
+          folio = create(:booking_folio, booking: booking, hotel: hotel)
+          create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100, posting_date: check_in)
+        end
+
+        get outstanding_balance_hotel_reports_path(hotel), params: { date_preset: "this_year" }
+
+        page = Capybara.string(response.body)
+        table = page.find("[aria-labelledby='outstanding-bookings-heading'] table")
+        expect(page).to have_css("[aria-labelledby='outstanding-bookings-heading'] table", count: 1)
+        expect(table).to have_css("[data-slot='report-month-group']", text: "April 2026")
+        expect(table).to have_css("[data-slot='report-month-group']", text: "May 2026")
+      end
     end
 
     it "exports CSV" do
@@ -1035,6 +1111,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(picker["data-action"]).to include("change->date-preset#submitDate")
       expect(page).to have_no_button("Apply")
       expect(page).to have_field("Time period", visible: :all)
+      expect(page).to have_no_css("select[name='date_preset'] option[value='this_year']", visible: :all)
+      expect(page).to have_no_css("select[name='date_preset'] option[value='all_time']", visible: :all)
+      expect(page).to have_css("select[name='date_preset'] option[value='custom']", text: "Custom Date", visible: :all)
       expect(response.body).to include("As of date")
       expect(page).to have_no_field("As Of Date", visible: :all)
     end
@@ -1838,7 +1917,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).not_to include("Old Refund Guest")
     end
 
-    it "groups this year refunds by month" do
+    it "groups individual this year refunds under their month" do
       booking = create(:booking, hotel: hotel, guest_name: "Monthly Guest", confirmation_token: "WS-MON")
       folio = create(:booking_folio, booking: booking, hotel: hotel)
       create(
@@ -1852,10 +1931,13 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       get refund_report_hotel_reports_path(hotel), params: { date_preset: "this_year" }
 
+      page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Month")
-      expect(response.body).to include("May 2026")
-      expect(response.body).not_to include("07 May 2026")
+      expect(page).to have_css("thead th", exact_text: "Date")
+      expect(page).to have_css("[data-slot='report-month-group']", text: "May 2026")
+      expect(page).to have_text("07 May 2026")
+      expect(page).to have_text("Monthly Guest")
+      expect(page).to have_no_text("January 2026")
     end
   end
 

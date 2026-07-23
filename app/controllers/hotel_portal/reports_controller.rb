@@ -39,6 +39,13 @@ module HotelPortal
                                .includes(booking_rooms: :room_type)
       @base_bookings = @bookings
       @daily_data = Booking.daily_revenue_data(@bookings).to_a
+      if @date_preset == "this_year"
+        revenue_by_month = @daily_data.group_by { |date, _| date.beginning_of_month }
+        @daily_data = (1..12).map do |month|
+          month_start = Date.new(@start_date.year, month, 1)
+          [ month_start, revenue_by_month.fetch(month_start, []).sum { |_, gross| gross } ]
+        end
+      end
       @paginated_daily_data = Kaminari.paginate_array(@daily_data).page(params[:page]).per(25)
 
       respond_to do |format|
@@ -140,7 +147,10 @@ module HotelPortal
       respond_to do |format|
         format.html do
           @paginated_bookings = @bookings.page(params[:page]).per(25)
-          @grouped_bookings = @paginated_bookings.group_by { |b| b.created_at.to_date }.transform_values do |bookings|
+          @grouped_bookings = @paginated_bookings.group_by do |booking|
+            date = booking.created_at.to_date
+            @date_preset == "this_year" ? date.beginning_of_month : date
+          end.transform_values do |bookings|
             bookings.map { |b| HotelPortal::BookingFinancialPresenter.new(b) }
           end
         end

@@ -1,6 +1,6 @@
 <% export_disabled = @report.rows.empty? %>
 <div class="w-full space-y-4" data-slot="report-page" data-report="tax-compliance">
-  <%= render PanelsUI::PageHeader.new(title: "Tax & compliance") do |header| %>
+  <%= render PanelsUI::PageHeader.new(title: "Tax & compliance", description: "Review tourism tax, SST, and non-national guest records for the selected period.") do |header| %>
     <% header.with_caption do %>
       <p class="text-sm text-muted-foreground">
         <%= current_hotel.name %> ·

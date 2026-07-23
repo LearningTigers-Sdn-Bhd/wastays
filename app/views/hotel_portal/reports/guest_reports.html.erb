@@ -1,6 +1,6 @@
 <div class="w-full space-y-4 print:max-w-none print:pb-0 print:space-y-4" data-slot="report-page" data-report="guest-reports">
   <div class="print:px-0">
-    <%= render PanelsUI::PageHeader.new(title: "Guest reports", class: "print:block") do |header| %>
+    <%= render PanelsUI::PageHeader.new(title: "Guest reports", description: "Review arrivals, in-house guests, departures, registration cards, and operational guest lists.", class: "print:block") do |header| %>
       <% header.with_caption do %>
         <p class="text-sm font-medium text-muted-foreground print:text-xs">
           <%= current_hotel.name %> ·
@@ -75,6 +75,7 @@
       empty_message: "No arrivals scheduled for this selected period.",
       rows: @report.arrivals,
       type: :arrival,
+      date_preset: @date_preset,
       show_boat_departure: current_hotel.allow_boat_information?
     } %>
   <% elsif @active_guest_report_tab == "in_house" %>
@@ -83,6 +84,7 @@
       empty_message: "No in-house guests for this selected period.",
       rows: @report.in_house,
       type: :departure,
+      date_preset: @date_preset,
       show_boat_departure: current_hotel.allow_boat_information?
     } %>
   <% elsif @active_guest_report_tab == "departures" %>
@@ -91,6 +93,7 @@
       empty_message: "No departures scheduled for this selected period.",
       rows: @report.departures,
       type: :departure,
+      date_preset: @date_preset,
       show_boat_departure: current_hotel.allow_boat_information?
     } %>
   <% elsif @active_guest_report_tab == "checkout" %>
@@ -98,7 +101,8 @@
       title: "Checked-out guests",
       empty_message: "No checked-out guests for this selected period.",
       rows: @report.checkout,
-      type: :departure
+      type: :departure,
+      date_preset: @date_preset
     } %>
   <% elsif @active_guest_report_tab == "bibo" %>
     <%= render partial: "hotel_portal/reports/bibo_section", locals: {

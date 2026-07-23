@@ -1,5 +1,5 @@
 <div class="w-full space-y-4" data-slot="report-page" data-report="daily-occupancy">
-  <%= render PanelsUI::PageHeader.new(title: "Daily occupancy report") do |header| %>
+  <%= render PanelsUI::PageHeader.new(title: "Daily occupancy report", description: "Track rooms sold, occupancy, ADR, RevPAR, and room revenue for the selected period.") do |header| %>
     <% header.with_caption do %>
       <p class="text-sm font-medium text-muted-foreground">
         <%= current_hotel.name %> ·

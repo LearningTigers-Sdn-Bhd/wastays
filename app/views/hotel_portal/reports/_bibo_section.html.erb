@@ -23,7 +23,13 @@
         <% end %>
         <% table.with_body do %>
           <% if section[:rows].any? %>
-            <% section[:rows].each do |row| %>
+            <% report_rows_grouped_by_month(section[:rows], date_preset: @date_preset) { |row| row[:boat_at] }.each do |month, rows| %>
+              <% if month %>
+                <tr class="bg-muted/55" data-slot="report-month-group">
+                  <th scope="rowgroup" colspan="5" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
+                </tr>
+              <% end %>
+            <% rows.each do |row| %>
               <tr>
                 <th scope="row">
                   <div class="min-w-0">
@@ -38,6 +44,7 @@
                   <%= render PanelsUI::Badge.new(label: row[:boat_time], variant: :neutral, size: :lg, shape: :rounded) %>
                 </td>
               </tr>
+            <% end %>
             <% end %>
           <% else %>
             <%= render "table_empty_state", colspan: 5, message: section[:empty_message] %>

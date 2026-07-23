@@ -4,7 +4,7 @@
    else @revenue_report.rows.empty? && @cashier_report.totals[:movement_count].zero?
    end %>
 <div class="w-full space-y-4" data-slot="report-page" data-report="daily-report">
-  <%= render PanelsUI::PageHeader.new(title: "Daily report") do |header| %>
+  <%= render PanelsUI::PageHeader.new(title: "Daily report", description: "Review daily revenue, charge activity, and cashier sales for the selected period.") do |header| %>
     <% header.with_caption do %>
       <p class="text-sm text-muted-foreground">
         <%= current_hotel.name %> ·

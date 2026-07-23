@@ -84,9 +84,9 @@
               "pending" => :warning
             } %>
             <% @grouped_bookings.each do |date, bookings| %>
-              <tr class="bg-muted/55" data-slot="report-date-group">
+              <tr class="bg-muted/55" data-slot="<%= @date_preset == 'this_year' ? 'report-month-group' : 'report-date-group' %>">
                 <th scope="rowgroup" colspan="7" class="text-xs font-semibold text-muted-foreground">
-                  <%= date.strftime("%d %b %Y") %>
+                  <%= date.strftime(@date_preset == "this_year" ? "%B %Y" : "%d %b %Y") %>
                 </th>
               </tr>
               <% bookings.each do |presenter| %>

@@ -31,7 +31,13 @@
     <% end %>
     <% table.with_body do %>
         <% if @report.rows.any? %>
-          <% @report.rows.each do |row| %>
+          <% report_rows_grouped_by_month(@report.rows, date_preset: @date_preset) { |row| row[:check_in] }.each do |month, rows| %>
+            <% if month %>
+              <tr class="bg-muted/55" data-slot="report-month-group">
+                <th scope="rowgroup" colspan="10" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
+              </tr>
+            <% end %>
+          <% rows.each do |row| %>
             <tr class="align-top">
               <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= row[:guest_name] %></th>
               <td><%= row[:guest_country] %></td>
@@ -44,6 +50,7 @@
               <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:tax_collected], precision: 2) %></td>
               <td class="whitespace-nowrap"><%= row[:collection_status] %></td>
             </tr>
+          <% end %>
           <% end %>
         <% else %>
           <%= render "table_empty_state", colspan: 10, message: "No tourism tax bookings found for this selected period." %>

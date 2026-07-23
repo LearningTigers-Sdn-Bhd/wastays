@@ -25,7 +25,13 @@
     <% end %>
     <% table.with_body do %>
       <% if rows.any? %>
-        <% rows.each do |row| %>
+        <% report_rows_grouped_by_month(rows, date_preset: date_preset) { |row| type == :arrival ? row[:check_in] : row[:check_out] }.each do |month, period_rows| %>
+          <% if month %>
+            <tr class="bg-muted/55" data-slot="report-month-group">
+              <th scope="rowgroup" colspan="<%= local_assigns[:show_boat_departure] ? 6 : 5 %>" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
+            </tr>
+          <% end %>
+        <% period_rows.each do |row| %>
           <tr>
             <th scope="row">
               <div class="min-w-0">
@@ -62,6 +68,7 @@
               <p class="text-foreground"><%= row[:latest_note].presence || "-" %></p>
             </td>
           </tr>
+        <% end %>
         <% end %>
       <% else %>
         <%= render "table_empty_state", colspan: (local_assigns[:show_boat_departure] ? 6 : 5), message: empty_message %>
