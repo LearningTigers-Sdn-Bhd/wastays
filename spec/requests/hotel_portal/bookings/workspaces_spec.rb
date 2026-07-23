@@ -467,6 +467,39 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include("Room requests and complaints for this booking")
     end
 
+    it "renders every tab with its declared layout for a group child booking" do
+      hotel.update!(plan: create(:plan))
+      create(:plan_feature, plan: hotel.plan, feature: audit_feature, enabled: true)
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
+      room = create(:booking_room, booking: booking, room_type: room_type, room_number: "208")
+      create(:booking_guest, booking: booking, guest: create(:guest, name: "Aina Rahman"), is_primary: true)
+      create(:booking_folio, booking: booking, hotel: hotel, booking_room: room, name: "Room Guest Folio")
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      create(:booking_room, booking: sibling, room_type: room_type, room_number: "209")
+      create(:booking_guest, booking: sibling, guest: create(:guest, name: "Faiz Osman"), is_primary: true)
+      create(:booking_folio, booking: sibling, hotel: hotel, name: "Sibling Guest Folio")
+
+      standard_tabs = %w[booking_details security_deposits billing_preferences room_and_rate source_details housekeeping_requests audit_trails]
+      %w[booking_details folio_operations security_deposits billing_preferences guest_details room_and_rate source_details housekeeping_requests audit_trails].each do |tab|
+        get hotel_booking_workspace_path(hotel, booking, tab: tab)
+
+        expect(response).to have_http_status(:success), "expected #{tab} to render for a group child booking"
+        document = Nokogiri::HTML(response.body)
+        expected_mode = standard_tabs.include?(tab) ? "standard" : "entity"
+        expect(document.at_css("[data-layout-mode='#{expected_mode}']")).to be_present
+        expect(document.css("h1").size).to eq(1)
+
+        if expected_mode == "standard"
+          expect(document.at_css('aside[aria-label="Booking context"]')).to be_nil
+          expect(document.at_xpath('//button[normalize-space()="Change Context"]')).to be_nil
+        else
+          expect(document.at_css('aside[aria-label="Booking context"]')).to be_present
+        end
+      end
+    end
+
     it "hides and blocks the audit tab when the feature is disabled" do
       get hotel_booking_workspace_path(hotel, booking)
 
