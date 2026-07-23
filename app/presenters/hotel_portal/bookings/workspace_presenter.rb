@@ -27,6 +27,11 @@ module HotelPortal
       Tab.new("audit_trails", "Audit Trails")
     ].freeze
     ALERT_ACTIONS = %w[change_rate].freeze
+    ENTITY_TABS = %w[folio_operations guest_details].freeze
+    BADGE_VARIANTS = {
+      "slate" => :neutral, "blue" => :info, "amber" => :warning,
+      "emerald" => :success, "orange" => :warning, "rose" => :destructive
+    }.freeze
 
     STATUS_LABELS = {
       "pending" => "Pending",
@@ -99,8 +104,50 @@ module HotelPortal
       "Booking No. #{summary_booking_number}"
     end
 
-    def mobile_context_label
-      group_overview? ? group_booking.name : booking_number
+    def header_title
+      summary_heading
+    end
+
+    def header_reference_line
+      group_overview? ? "Group Booking #{group_booking_number}" : "Booking No. #{summary_booking_number}"
+    end
+
+    def header_stay_line
+      if group_overview?
+        [ pluralize_count(child_bookings.size, "booking"), pluralize_count(group_room_count, "room"), group_stay_summary ].join(" · ")
+      else
+        [ room_summary, short_stay_range, pluralize_count(nights_count, "night") ].compact_blank.join(" · ")
+      end
+    end
+
+    def stay_dates_vary?
+      return false unless group_context_enabled?
+
+      child_bookings.map { |child| child.check_in.to_date }.uniq.size > 1 ||
+        child_bookings.map { |child| child.check_out.to_date }.uniq.size > 1
+    end
+
+    def group_stay_summary
+      stay_dates_vary? ? "Stay dates vary" : format_short_range(group_arrival, group_departure)
+    end
+
+    def group_earliest_arrival
+      format_summary_time(group_arrival)
+    end
+
+    def group_latest_departure
+      format_summary_time(group_departure)
+    end
+
+    def header_status_badge
+      badge = group_overview? ? group_status_badge : status_badge(booking.status)
+      return if badge.blank?
+
+      { label: badge[:label], variant: BADGE_VARIANTS.fetch(badge[:tone], :neutral) }
+    end
+
+    def header_outstanding_balance
+      money(group_overview? ? group_total_balance : total_balance)
     end
 
     def status_label
@@ -288,17 +335,18 @@ module HotelPortal
     end
 
     def layout_mode
-      return "left_and_center" if active_tab == "guest_details"
-
-      drawer_open? ? "left_center_right" : "left_and_center"
+      active_tab.in?(ENTITY_TABS) ? "entity" : "standard"
     end
 
+    # The rail is retained on standard tabs until each panel is flattened to carry
+    # its own actions and group child-navigation (PR2/PR3). Entity tabs (folios,
+    # guests) are the eventual rail-only destinations.
     def show_left_rail?
-      layout_mode.in?(%w[left_and_center left_center_right])
+      true
     end
 
     def show_right_drawer?
-      layout_mode.in?(%w[center_and_right left_center_right])
+      drawer_open? && active_tab != "guest_details"
     end
 
     def drawer
@@ -1252,6 +1300,36 @@ module HotelPortal
 
     def format_stay_date(value)
       value.in_time_zone(booking.hotel.hotel_time_zone).strftime("%d %b %Y")
+    end
+
+    def short_stay_range
+      format_short_range(booking.check_in, booking.check_out)
+    end
+
+    def format_short_range(start_at, finish_at)
+      return "Dates unavailable" if start_at.blank? || finish_at.blank?
+
+      tz = hotel.hotel_time_zone
+      start_local = start_at.in_time_zone(tz)
+      finish_local = finish_at.in_time_zone(tz)
+
+      if start_local.year == finish_local.year && start_local.month == finish_local.month
+        "#{start_local.strftime('%-d')}–#{finish_local.strftime('%-d %b')}"
+      else
+        "#{start_local.strftime('%-d %b')} – #{finish_local.strftime('%-d %b')}"
+      end
+    end
+
+    def group_room_count
+      child_bookings.sum { |child| child.booking_rooms.sum { |room| room.quantity.to_i } }
+    end
+
+    def group_status_badge
+      status = group_booking&.projected_status
+      return if status.blank?
+
+      tone = { "active" => "emerald", "completed" => "slate", "cancelled" => "rose" }.fetch(status, "slate")
+      { label: status.humanize, tone: tone }
     end
 
     def format_summary_time(value)

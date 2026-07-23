@@ -1,44 +1,47 @@
 <%= turbo_frame_tag "booking_workspace", class: "flex min-h-0 flex-1 flex-col", data: { turbo_action: "advance", controller: "context-rail" } do %>
   <%= render "hotel_portal/bookings/workspaces/tabs", booking: booking, presenter: presenter, audit_logs: audit_logs %>
 
-  <% grid_class = case presenter.layout_mode
-     when "left_center_right" then "xl:grid-cols-[18rem_minmax(0,1fr)_22rem]"
-     else "xl:grid-cols-[18rem_minmax(0,1fr)]"
+  <% grid_class = if presenter.show_left_rail?
+       presenter.show_right_drawer? ? "xl:grid-cols-[18rem_minmax(0,1fr)_22rem]" : "xl:grid-cols-[18rem_minmax(0,1fr)]"
+     else
+       presenter.show_right_drawer? ? "xl:grid-cols-[minmax(0,1fr)_22rem]" : "xl:grid-cols-[minmax(0,1fr)]"
      end %>
-  <div class="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 xl:hidden">
-    <div class="min-w-0">
-      <p class="text-xs font-semibold text-muted-foreground"><%= presenter.left_rail_title %></p>
-      <p class="truncate text-sm font-bold text-foreground"><%= presenter.mobile_context_label %></p>
-    </div>
-    <button type="button"
-            class="rounded-md border border-border-interactive bg-card px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
-            aria-haspopup="dialog"
-            aria-expanded="false"
-            data-context-rail-target="trigger"
-            data-action="context-rail#open">
-      Change Context
-    </button>
-  </div>
 
-  <dialog class="m-0 h-dvh w-[min(22rem,90vw)] max-h-none max-w-none overflow-hidden bg-card p-0 shadow-2xl backdrop:bg-primary/40"
-          aria-label="Booking context"
-          data-context-rail-target="dialog"
-          data-action="click->context-rail#closeOnBackdrop">
-    <div class="flex h-full min-h-0 flex-col">
-      <div class="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
-        <h2 class="text-sm font-bold text-foreground"><%= presenter.left_rail_title %></h2>
-        <button type="button" class="rounded-md p-2 text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" aria-label="Close booking context" data-action="context-rail#close">
-          <%= cached_icon "x", class: "size-4", aria: { hidden: true } %>
-        </button>
-      </div>
-      <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-muted/60 custom-scrollbar">
-        <%= render "hotel_portal/bookings/workspaces/left_rails/#{presenter.left_rail_mode}", booking: booking, presenter: presenter %>
-      </div>
+  <% if presenter.show_left_rail? %>
+    <div class="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 xl:hidden">
+      <p class="truncate text-sm font-medium text-foreground"><%= presenter.left_rail_title %></p>
+      <button type="button"
+              class="rounded-md border border-border-interactive bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-haspopup="dialog"
+              aria-expanded="false"
+              data-context-rail-target="trigger"
+              data-action="context-rail#open">
+        Change Context
+      </button>
     </div>
-  </dialog>
+
+    <dialog class="m-0 h-dvh w-[min(22rem,90vw)] max-h-none max-w-none overflow-hidden bg-card p-0 shadow-2xl backdrop:bg-primary/40"
+            aria-label="Booking context"
+            data-context-rail-target="dialog"
+            data-action="click->context-rail#closeOnBackdrop">
+      <div class="flex h-full min-h-0 flex-col">
+        <div class="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
+          <h2 class="text-sm font-semibold text-foreground"><%= presenter.left_rail_title %></h2>
+          <button type="button" class="rounded-md p-2 text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Close booking context" data-action="context-rail#close">
+            <%= cached_icon "x", class: "size-4", aria: { hidden: true } %>
+          </button>
+        </div>
+        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-muted/60 custom-scrollbar">
+          <%= render "hotel_portal/bookings/workspaces/left_rails/#{presenter.left_rail_mode}", booking: booking, presenter: presenter %>
+        </div>
+      </div>
+    </dialog>
+  <% end %>
 
   <div class="grid min-h-0 flex-1 grid-cols-1 divide-border xl:divide-x <%= grid_class %>" data-layout-mode="<%= presenter.layout_mode %>">
-    <%= render "left_rail", booking: booking, presenter: presenter %>
+    <% if presenter.show_left_rail? %>
+      <%= render "left_rail", booking: booking, presenter: presenter %>
+    <% end %>
 
     <main class="min-h-0 min-w-0 <%= presenter.active_tab == 'guest_details' ? 'overflow-hidden' : 'overflow-y-auto overscroll-contain custom-scrollbar' %>" id="booking-workspace-content">
       <%= render presenter.active_tab_partial,

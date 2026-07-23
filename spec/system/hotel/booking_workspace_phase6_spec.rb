@@ -31,33 +31,33 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
 
   it "uses contextual rails while navigating the core Phase 6 tabs" do
     visit hotel_booking_workspace_path(hotel, booking, tab: "room_and_rate")
-    expect(page).to have_css('[data-layout-mode="left_and_center"]')
+    expect(page).to have_css('[data-layout-mode="standard"]')
     expect(page).to have_content("Room & Rate")
 
     click_link "Guest Details"
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "guest_details"))
-    expect(page).to have_css('[data-layout-mode="left_and_center"]')
+    expect(page).to have_css('[data-layout-mode="entity"]')
     expect(page).to have_content("Primary guest for this room")
     expect(page).to have_field("Email", with: "hanami@mail.com")
     expect(page).to have_content("Guest details recorded for this stay.")
     expect(page).to have_button("Save Guest")
 
     click_link "Security Deposits"
-    expect(page).to have_css('[data-layout-mode="left_and_center"]')
+    expect(page).to have_css('[data-layout-mode="standard"]')
     expect(page).to have_content("Security Deposits")
     expect(page).to have_content("MYR 175.00")
 
     click_link "Billing Preferences"
-    expect(page).to have_css('[data-layout-mode="left_and_center"]')
+    expect(page).to have_css('[data-layout-mode="standard"]')
     expect(page).to have_content("Billing parties")
 
     click_link "Folio Operations"
-    expect(page).to have_css('[data-layout-mode="left_and_center"]')
+    expect(page).to have_css('[data-layout-mode="entity"]')
     expect(page).to have_content("Ledger")
     expect(page).not_to have_content("Manage Folio Windows")
 
     click_link "Requests"
-    expect(page).to have_css('[data-layout-mode="left_and_center"]')
+    expect(page).to have_css('[data-layout-mode="standard"]')
     expect(page).to have_content("Fresh towels")
     expect(page).to have_content("Noisy hallway")
   end

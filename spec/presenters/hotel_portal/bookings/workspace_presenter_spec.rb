@@ -235,20 +235,64 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
     end
   end
 
+  describe "booking header" do
+    it "summarizes a standalone booking" do
+      expect(presenter.header_reference_line).to eq("Booking No. #{booking.formatted_reservation_number}")
+      expect(presenter.stay_dates_vary?).to be(false)
+      expect(presenter.header_stay_line).to include("night")
+      expect(presenter.header_outstanding_balance).to eq(presenter.money(presenter.total_balance))
+    end
+
+    it "maps booking status into a header badge" do
+      booking.update_column(:status, "checked_in")
+
+      expect(presenter.header_status_badge).to eq({ label: "In house", variant: :success })
+    end
+
+    it "flags mixed child stay dates for a group overview" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      create(:booking, hotel: hotel, group_booking: group, group_position: 2,
+                       check_in: booking.check_in, check_out: booking.check_out + 3.days)
+      group_presenter = described_class.new(booking, params: { scope: "group" })
+
+      expect(group_presenter.stay_dates_vary?).to be(true)
+      expect(group_presenter.group_stay_summary).to eq("Stay dates vary")
+      expect(group_presenter.header_stay_line).to include("Stay dates vary")
+      expect(group_presenter.header_reference_line).to eq("Group Booking #{group.formatted_reservation_number}")
+    end
+
+    it "shows a shared range when group child dates match" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      create(:booking, hotel: hotel, group_booking: group, group_position: 2,
+                       check_in: booking.check_in, check_out: booking.check_out)
+      group_presenter = described_class.new(booking, params: { scope: "group" })
+
+      expect(group_presenter.stay_dates_vary?).to be(false)
+      expect(group_presenter.group_stay_summary).not_to eq("Stay dates vary")
+    end
+  end
+
   describe "left rail modes" do
     it "keeps booking context visible for ordinary standalone tabs" do
       %w[booking_details billing_preferences security_deposits source_details room_and_rate housekeeping_requests].each do |tab|
         tab_presenter = described_class.new(booking, params: { tab: tab })
 
         expect(tab_presenter.left_rail_mode).to eq("booking_context")
-        expect(tab_presenter.layout_mode).to eq("left_and_center")
+        expect(tab_presenter.layout_mode).to eq("standard")
+        expect(tab_presenter.show_left_rail?).to be(true)
       end
     end
 
     it "uses entity context only for folio and guest tabs" do
-      expect(described_class.new(booking, params: { tab: "folio_operations" }).left_rail_mode).to eq("folio_tree")
-      expect(described_class.new(booking, params: { tab: "guest_details" }).left_rail_mode).to eq("guest_tree")
-      expect(described_class.new(booking, params: { tab: "audit_trails" }).left_rail_mode).to eq("booking_context")
+      folio_presenter = described_class.new(booking, params: { tab: "folio_operations" })
+      guest_presenter = described_class.new(booking, params: { tab: "guest_details" })
+      audit_presenter = described_class.new(booking, params: { tab: "audit_trails" })
+
+      expect(folio_presenter).to have_attributes(left_rail_mode: "folio_tree", layout_mode: "entity", show_left_rail?: true)
+      expect(guest_presenter).to have_attributes(left_rail_mode: "guest_tree", layout_mode: "entity", show_left_rail?: true)
+      expect(audit_presenter).to have_attributes(left_rail_mode: "booking_context", layout_mode: "standard", show_left_rail?: true)
     end
 
     it "uses child-booking context for ordinary grouped tabs" do
@@ -260,10 +304,10 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       deposits_presenter = described_class.new(booking, params: { tab: "security_deposits" })
       requests_presenter = described_class.new(booking, params: { tab: "housekeeping_requests" })
 
-      expect(room_presenter).to have_attributes(left_rail_mode: "child_booking_tree", layout_mode: "left_and_center")
+      expect(room_presenter).to have_attributes(left_rail_mode: "child_booking_tree", layout_mode: "standard")
       expect(billing_presenter).to have_attributes(left_rail_mode: "child_booking_tree", billing_scope: "group")
-      expect(deposits_presenter).to have_attributes(left_rail_mode: "child_booking_tree", layout_mode: "left_and_center")
-      expect(requests_presenter).to have_attributes(left_rail_mode: "child_booking_tree", layout_mode: "left_and_center")
+      expect(deposits_presenter).to have_attributes(left_rail_mode: "child_booking_tree", layout_mode: "standard")
+      expect(requests_presenter).to have_attributes(left_rail_mode: "child_booking_tree", layout_mode: "standard")
     end
 
     it "uses tab-specific titles for grouped booking rails" do
@@ -357,10 +401,10 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       removed_drawer_presenter = described_class.new(booking, params: { tab: "billing_preferences", drawer: "billing" })
       drawer_presenter = described_class.new(booking, params: { tab: "folio_operations", drawer: "deposit" })
 
-      expect(alert_presenter).to have_attributes(alert_action: "change_rate", alert_open?: true, layout_mode: "left_and_center", show_right_drawer?: false)
+      expect(alert_presenter).to have_attributes(alert_action: "change_rate", alert_open?: true, layout_mode: "standard", show_right_drawer?: false)
       expect(invalid_alert_presenter).to have_attributes(alert_action: nil, alert_open?: false)
-      expect(removed_drawer_presenter).to have_attributes(layout_mode: "left_and_center", show_right_drawer?: false)
-      expect(drawer_presenter).to have_attributes(layout_mode: "left_center_right", show_right_drawer?: true)
+      expect(removed_drawer_presenter).to have_attributes(layout_mode: "standard", show_right_drawer?: false)
+      expect(drawer_presenter).to have_attributes(layout_mode: "entity", show_right_drawer?: true)
     end
   end
 
