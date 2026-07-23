@@ -585,7 +585,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       booking.update!(group_booking: group, group_position: 1)
 
       expect(described_class.new(booking, params: { tab: "folio_operations" }).left_rail_title).to eq("Folios")
-      expect(described_class.new(booking, params: { tab: "guest_details" }).left_rail_title).to eq("Bookings / Guests")
+      expect(described_class.new(booking, params: { tab: "guest_details" }).left_rail_title).to eq("Guests")
     end
 
     it "registers the adjusted tab order and Requests label" do
@@ -708,25 +708,43 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
       tab_presenter = described_class.new(booking, params: { tab: "guest_details" }, hotel: hotel)
 
-      expect(tab_presenter.grouped_guest_tree_groups.map(&:label)).to contain_exactly("Unassigned room", "Unassigned room")
-      expect(tab_presenter.grouped_guest_tree_groups.map(&:description)).to contain_exactly(
-        "Room type unavailable - Primary One",
-        "Room type unavailable - Primary Two"
+      expect(tab_presenter.grouped_guest_tree_groups.map(&:label)).to contain_exactly(
+        "Unassigned room · #{booking.formatted_reservation_number}",
+        "Unassigned room · #{sibling.formatted_reservation_number}"
       )
+      expect(tab_presenter.grouped_guest_tree_groups.map(&:description)).to all(be_nil)
       expect(tab_presenter.grouped_guest_tree_groups.flat_map(&:rows).map(&:label)).to contain_exactly("Primary One", "Primary Two")
     end
 
-    it "uses room and guest identity for standalone folio and guest groups" do
-      room_type = create(:room_type, hotel: hotel, name: "Executive Suite")
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "208")
-      create(:booking_guest, booking: booking, guest: create(:guest, name: "Standalone Guest"), is_primary: true)
-      create(:booking_folio, booking: booking, hotel: hotel)
+    it "orders standalone guest rows and exposes exact selected child context" do
+      create(:booking_room, booking: booking, room_number: "208")
+      additional = create(:booking_guest, booking: booking, guest: create(:guest, name: "Additional Guest"), is_primary: false)
+      primary = create(:booking_guest, booking: booking, guest: create(:guest, name: "Primary Guest"), is_primary: true)
+      tab_presenter = described_class.new(booking, params: { tab: "guest_details", booking_guest_id: additional.id }, hotel: hotel)
 
-      folio_group = described_class.new(booking, params: { tab: "folio_operations" }).booking_folio_tree_groups.sole
-      guest_group = described_class.new(booking, params: { tab: "guest_details" }).guest_tree_groups.sole
+      expect(tab_presenter.guest_tree_rows.map(&:id)).to eq([ primary.id, additional.id ])
+      expect(tab_presenter.guest_tree_rows.select(&:active).map(&:id)).to eq([ additional.id ])
+      expect(tab_presenter.selected_guest_context_line).to include("Room 208", "Booking #{booking.formatted_reservation_number}")
+      expect(tab_presenter.guest_display[:role]).to eq("Additional guest")
+    end
 
-      expect(folio_group).to have_attributes(label: "Room 208", description: "Executive Suite - Standalone Guest")
-      expect(guest_group).to have_attributes(label: "Room 208", description: "Executive Suite - Standalone Guest")
+    it "uses a failed guest form for submitted values and errors" do
+      booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Original Guest"), is_primary: true)
+      guest_form = booking_guest.guest.dup
+      guest_form.assign_attributes(name: "", email: "submitted@example.com")
+      guest_form.valid?
+
+      tab_presenter = described_class.new(
+        booking,
+        params: { tab: "guest_details", booking_guest_id: booking_guest.id },
+        hotel: hotel,
+        guest_form: guest_form
+      )
+
+      expect(tab_presenter.selected_guest).to eq(guest_form)
+      expect(tab_presenter.guest_details_snapshots).to include(name: "", email: "submitted@example.com")
+      expect(tab_presenter.guest_display[:name]).to eq("Guest details")
+      expect(tab_presenter.selected_guest.errors[:name]).to be_present
     end
 
     it "keeps duplicate room labels distinguishable with ordered booking numbers" do

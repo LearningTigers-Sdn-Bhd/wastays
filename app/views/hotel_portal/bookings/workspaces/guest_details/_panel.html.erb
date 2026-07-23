@@ -1,14 +1,13 @@
 <%# locals: (booking:, entity_booking:, presenter:, booking_presenter: nil, folio_show: nil, audit_logs: nil, audit_history: nil) %>
 <section class="h-full min-h-0" aria-labelledby="guest-details-heading">
   <% if presenter.selected_booking_guest && presenter.selected_guest %>
-    <% mode = presenter.guest_details_mode %>
     <% return_to = presenter.guest_details_return_to %>
     <% snapshots = presenter.guest_details_snapshots %>
     <% boat_times = presenter.guest_details_boat_times %>
     <% country_choices = COUNTRY_OPTIONS.map { |country| [country, country] } %>
 
     <%= form_with model: presenter.selected_guest,
-        url: hotel_booking_action_manage_guest_path(current_hotel, entity_booking, mode: mode, booking_guest_id: presenter.selected_booking_guest.id),
+        url: hotel_booking_workspace_path(current_hotel, entity_booking, tab: "guest_details", booking_guest_id: presenter.selected_booking_guest.id),
         method: :patch,
         id: "guest-details-form",
         class: "flex h-full min-h-0 flex-col bg-card",
@@ -17,19 +16,28 @@
       <%= hidden_field_tag :presentation, "booking_workspace" %>
 
       <header class="shrink-0 border-b border-border px-5 py-4">
-        <p class="text-xs font-semibold text-muted-foreground">Booking No. <%= entity_booking.formatted_reservation_number %></p>
-          <h2 id="guest-details-heading" class="mt-1 truncate text-base font-semibold text-foreground"><%= presenter.guest_display[:name] %></h2>
+        <p class="text-xs tabular-nums text-muted-foreground"><%= presenter.selected_guest_context_line %></p>
+        <h2 id="guest-details-heading" class="mt-1 break-words text-base font-semibold text-foreground"><%= presenter.guest_display[:name] %></h2>
         <p class="mt-1 text-sm text-muted-foreground"><%= presenter.guest_display[:role] %></p>
       </header>
 
       <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar">
         <div class="mx-auto max-w-5xl px-5 py-6 lg:px-8">
-            <div class="mb-5">
-              <h3 class="text-base font-semibold text-foreground">Guest details</h3>
-              <p class="mt-1 text-xs text-muted-foreground">Guest details recorded for this stay.</p>
+          <% if presenter.guest_details_errors.any? %>
+            <div class="mb-5 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive" role="alert" tabindex="-1" data-guest-details-error-summary>
+              <p class="font-medium">Guest details could not be saved.</p>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <% presenter.guest_details_errors.each do |message| %><li><%= message %></li><% end %>
+              </ul>
             </div>
+          <% end %>
 
-            <fieldset <%= "disabled" unless presenter.can_manage_bookings?(current_user) %> class="space-y-6 disabled:opacity-70">
+          <div class="space-y-6">
+            <%= render PanelsUI::FieldSet.new(
+                  legend: "Guest details",
+                  description: "Guest details recorded for this stay.",
+                  disabled: !presenter.can_manage_bookings?(current_user)) do %>
+              <%= render PanelsUI::FieldGroup.new do %>
               <div class="grid gap-4 md:grid-cols-2">
                 <div class="md:col-span-2">
                   <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Full name", required: true) do |field| %>
@@ -49,12 +57,15 @@
                   <% field.with_select_menu([["Male", "male"], ["Female", "female"], ["Other", "other"]], selected: snapshots[:gender], prompt: "Select a gender") %>
                 <% end %>
               </div>
+              <% end %>
+            <% end %>
 
-              <section class="border-t border-border pt-6" aria-labelledby="guest-identity-heading">
-                <div class="mb-4">
-                  <h3 id="guest-identity-heading" class="text-base font-semibold text-foreground">Identity information</h3>
-                  <p class="mt-1 text-xs text-muted-foreground">Use the identification presented by the guest.</p>
-                </div>
+            <%= render PanelsUI::FieldSet.new(
+                  legend: "Identity information",
+                  description: "Use the identification presented by the guest.",
+                  class: "border-t border-border pt-6",
+                  disabled: !presenter.can_manage_bookings?(current_user)) do %>
+              <%= render PanelsUI::FieldGroup.new do %>
                 <div class="grid gap-4 md:grid-cols-2">
                   <%= render PanelsUI::FormField.new(form:, attribute: :document_type, label: "Document type") do |field| %>
                     <% field.with_select_menu([["IC", "ic"], ["Passport", "passport"]], selected: snapshots[:document_type], prompt: "Select a document type", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" }) %>
@@ -72,16 +83,18 @@
                          data: { guest_dob_target: "dateOfBirth" }) %>
                   <% end %>
                 </div>
-              </section>
+              <% end %>
+            <% end %>
 
-              <% if current_hotel.allow_boat_information? %>
-              <section class="border-t border-border pt-6" aria-labelledby="guest-bibo-heading">
-                <div class="mb-4">
-                  <h3 id="guest-bibo-heading" class="text-base font-semibold text-foreground">Boat transfer</h3>
-                  <p class="mt-1 text-xs text-muted-foreground">Guest boat-in and boat-out timestamps.</p>
-                </div>
+            <% if current_hotel.allow_boat_information? %>
+              <%= render PanelsUI::FieldSet.new(
+                    legend: "Boat transfer",
+                    description: "Guest boat-in and boat-out timestamps.",
+                    class: "border-t border-border pt-6",
+                    disabled: !presenter.can_manage_bookings?(current_user)) do %>
+                <%= render PanelsUI::FieldGroup.new do %>
                 <div class="grid gap-4 md:grid-cols-2">
-                  <%= fields_for :booking_guest, presenter.selected_booking_guest do |booking_guest_form| %>
+                  <%= fields_for :booking_guest, presenter.guest_details_booking_guest_form do |booking_guest_form| %>
                     <%= render PanelsUI::FormField.new(form: booking_guest_form, attribute: :boat_in_at, label: "Boat-in") do |field| %>
                       <% field.with_date_time_picker(value: boat_times[:boat_in]) %>
                     <% end %>
@@ -90,9 +103,10 @@
                     <% end %>
                   <% end %>
                 </div>
-              </section>
+                <% end %>
+              <% end %>
             <% end %>
-          </fieldset>
+          </div>
         </div>
       </div>
     <% end %>
@@ -101,6 +115,15 @@
       <div>
         <p class="font-semibold text-foreground">No guest is linked to this booking.</p>
         <p class="mt-1 text-sm text-muted-foreground">Add a primary guest before check-in.</p>
+        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && entity_booking.status.in?(%w[confirmed checked_in]) %>
+          <div class="mt-4">
+            <%= render PanelsUI::Button.new(
+                  href: hotel_booking_action_manage_guest_path(current_hotel, entity_booking, mode: "add", return_to: presenter.close_drawer_path),
+                  variant: :primary,
+                  size: :sm,
+                  data: { turbo_frame: "booking_action_sheet" }) do %>Add Guest<% end %>
+          </div>
+        <% end %>
       </div>
     </div>
   <% end %>

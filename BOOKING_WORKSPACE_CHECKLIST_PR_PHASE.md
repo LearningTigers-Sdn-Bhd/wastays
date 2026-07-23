@@ -25,12 +25,13 @@ Do not mark a behavior complete merely because a presenter method, CSS class, or
 
 ## Current Git Snapshot
 
-- [x] Branch contains three commits beyond `main`
+- [x] Branch contains four commits beyond `main`
   - `905e02b33` — rename booking control panel to booking workspace
   - `bcd65e2cb` — flatten workspace shell and add booking header
   - `789300eca` — complete workspace foundation
+  - `962ed409d` — complete Overview and Folio workspace
 - [x] No staged changes
-- [x] Eighteen modified files and one untracked implementation partial in the working tree
+- [x] Thirteen tracked files and one untracked implementation partial in the working tree
 - [x] `BOOKING_WORKSPACE_PROPOSAL.md` is tracked
 - [x] Current unstaged diff passes `git diff --check`
 - [ ] Current unstaged implementation changes are committed
@@ -137,7 +138,7 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 ## Phase 2 — Overview, Folios, and Guests
 
-**Status:** Partially implemented in the working tree
+**Status:** Overview and Folios committed; Guests implemented in the working tree
 
 ### Overview — Single Booking
 
@@ -204,32 +205,32 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 ### Guest Entity Rail — Single Booking
 
-- [ ] Show only concrete booking guests
-- [ ] Remove booking-context and Overview rows
-- [ ] Remove collapsible booking containers when there is only one booking
-- [ ] Show guest name and Primary/Additional role
-- [ ] Highlight the selected guest with restrained navigation styling
-- [ ] Keep Add Guest attached to the guest rail
+- [x] Show only concrete booking guests — **Working tree**
+- [x] Remove booking-context and Overview rows — **Working tree**
+- [x] Remove collapsible booking containers when there is only one booking — **Working tree**
+- [x] Show guest name and Primary/Additional role — **Working tree**
+- [x] Highlight the selected guest with restrained navigation styling — **Working tree**
+- [x] Keep Add Guest attached to the guest rail — **Working tree**
 
 ### Guest Entity Rail — Group Booking
 
-- [ ] Group concrete guests by child booking/room
-- [ ] Use exactly one hierarchy level: child booking/room → guests
-- [ ] Remove `All Guests`
-- [ ] Remove group-overview selection from the guest rail
-- [ ] Preserve deterministic child and guest ordering
-- [ ] Ensure Add Guest targets the intended concrete child booking
+- [x] Group concrete guests by child booking/room — **Working tree**
+- [x] Use exactly one hierarchy level: child booking/room → guests — **Working tree**
+- [x] Remove `All Guests` — **Working tree**
+- [x] Remove group-overview selection from the guest rail — **Working tree**
+- [x] Preserve deterministic child and guest ordering — **Working tree**
+- [x] Ensure Add Guest targets the intended concrete child booking — **Working tree**
 
 ### Selected Guest Content
 
-- [ ] Show exact child context: room, operational booking number, and child stay dates
-- [ ] Preserve primary/additional guest behavior
-- [ ] Preserve contact, identity, date-of-birth, and boat-transfer fields
-- [ ] Replace redesigned selection controls with PanelsUI SelectMenu or Combobox
-- [ ] Preserve GRC and print actions
-- [ ] Preserve Save Guest and alternate save scopes
-- [ ] Preserve validation rendering and focus behavior
-- [ ] Preserve unsaved-change protection while switching guests or destinations
+- [x] Show exact child context: room, operational booking number, and child stay dates — **Working tree**
+- [x] Preserve primary/additional guest behavior — **Working tree**
+- [x] Preserve contact, identity, date-of-birth, and boat-transfer fields — **Working tree**
+- [x] Replace redesigned selection controls with PanelsUI SelectMenu or Combobox — **Working tree**
+- [x] Preserve GRC and print actions — **Working tree**
+- [x] Preserve Save Guest and alternate save scopes — **Working tree**
+- [x] Preserve validation rendering and focus behavior — **Working tree**
+- [x] Preserve unsaved-change protection while switching guests or destinations — **Working tree**
 
 ### Default Entity Selection Without Redirect
 
@@ -243,7 +244,7 @@ This phase completes the workspace shell and layout architecture. It is not comp
 - [x] Render the default guest without redirecting — **Working tree**
 - [x] Preserve explicit `folio_id` selection in the URL — **Working tree**
 - [x] Preserve explicit `booking_guest_id` selection in the URL — **Working tree**
-- [ ] Preserve Turbo history and browser back/forward behavior
+- [x] Preserve Turbo history and browser back/forward behavior — **Working tree**
 - [x] Add request coverage proving missing entity IDs do not redirect — **Working tree**
 - [x] Add request coverage proving cross-hotel entity IDs are rejected or ignored safely — **Working tree**
 
@@ -261,7 +262,7 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 - [x] Single and group Overview match the approved information hierarchy — **Working tree**
 - [x] Folio rail contains concrete folios only — **Working tree**
-- [ ] Guest rail contains concrete guests only
+- [x] Guest rail contains concrete guests only — **Working tree**
 - [x] No `All Folios` or `All Guests` state exists — **Working tree**
 - [x] Group entity pages render without controller redirects — **Working tree**
 - [x] Selected entity actions target the correct child booking — **Working tree**
@@ -367,7 +368,7 @@ This phase completes the workspace shell and layout architecture. It is not comp
 - [x] Default group folio selection — **Working tree**
 - [x] Default group guest selection — **Working tree**
 - [x] Entity grouping and order — **Working tree**
-- [ ] Exact child context labels
+- [x] Exact child context labels — **Working tree**
 - [ ] Source consolidation
 
 ### Request Specs
@@ -388,11 +389,11 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 - [x] Switch folios in a single booking — **Working tree**
 - [x] Switch folios across group child bookings — **Working tree**
-- [ ] Switch guests in a single booking
-- [ ] Switch guests across group child bookings
-- [ ] Preserve browser back and forward navigation — **Folio flows verified; Guest flow pending**
-- [ ] Preserve guest unsaved-change confirmation
-- [ ] Preserve validation errors after failed guest save
+- [x] Switch guests in a single booking — **Working tree**
+- [x] Switch guests across group child bookings — **Working tree**
+- [x] Preserve browser back and forward navigation — **Working tree**
+- [x] Preserve guest unsaved-change confirmation — **Working tree**
+- [x] Preserve validation errors after failed guest save — **Working tree**
 - [ ] Verify folio actions target the selected child
 - [ ] Verify mobile entity-selection sheet
 - [ ] Verify keyboard operation and focus movement
@@ -419,11 +420,11 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 - [x] One logical `h1` and hierarchical headings
 - [ ] Every icon-only action has an accessible name
-- [ ] Every field has a visible label
+- [x] Every field has a visible label — **Working tree**
 - [ ] Visible focus is preserved
 - [ ] Dialog and sheet focus is moved and restored
 - [ ] Turbo updates provide appropriate focus or live-region feedback
-- [ ] Selection is not communicated by color alone
+- [x] Selection is not communicated by color alone — **Working tree**
 - [ ] Touch targets meet the project contract
 - [ ] Reflow and zoom remain usable
 

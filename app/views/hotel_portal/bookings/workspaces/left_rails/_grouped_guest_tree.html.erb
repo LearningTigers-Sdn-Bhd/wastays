@@ -1,16 +1,22 @@
 <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && entity_booking.status.in?(%w[confirmed checked_in]) %>
   <div class="border-b border-border px-4 py-3">
-    <%= link_to hotel_booking_action_manage_guest_path(current_hotel, entity_booking, mode: "add", return_to: presenter.close_drawer_path),
-        data: { turbo_frame: "booking_action_sheet" },
-        class: "inline-flex w-full items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" do %>
-      + Add Guest
-    <% end %>
+    <%= render PanelsUI::Button.new(
+          href: hotel_booking_action_manage_guest_path(current_hotel, entity_booking, mode: "add", return_to: presenter.close_drawer_path),
+          variant: :primary,
+          size: :sm,
+          class: "w-full",
+          data: { turbo_frame: "booking_action_sheet" }) do %>Add Guest<% end %>
   </div>
 <% end %>
 
-<%= render "hotel_portal/bookings/workspaces/left_rails/booking_entity_tree",
-    booking: booking,
-    presenter: presenter,
-    groups: presenter.grouped_guest_tree_groups,
-    aria_label: "Bookings and guests",
-    empty_label: "No guests available." %>
+<nav aria-label="Bookings and guests" class="divide-y divide-border">
+  <% presenter.grouped_guest_tree_groups.each do |group| %>
+    <section aria-labelledby="guest-group-<%= group.booking_id %>">
+      <h3 id="guest-group-<%= group.booking_id %>" class="px-4 pt-4 text-xs font-medium text-muted-foreground"><%= group.label %></h3>
+      <%= render "hotel_portal/bookings/workspaces/left_rails/guest_rows", rows: group.rows %>
+      <% if group.rows.empty? %>
+        <p class="px-4 pb-4 text-sm text-muted-foreground">No guests available.</p>
+      <% end %>
+    </section>
+  <% end %>
+</nav>

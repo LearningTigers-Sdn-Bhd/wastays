@@ -8,6 +8,12 @@ export default class extends Controller {
     this.boundDiscardConfirmed = this.discardConfirmed.bind(this)
     document.addEventListener("click", this.boundDocumentClick, true)
     document.addEventListener("guest-details:discard-confirmed", this.boundDiscardConfirmed)
+
+    const invalidField = this.element.querySelector(
+      '[data-invalid="true"] input:not([type="hidden"]), [data-invalid="true"] button, [data-invalid="true"] textarea'
+    )
+    const errorSummary = this.element.querySelector("[data-guest-details-error-summary]")
+    if (invalidField || errorSummary) requestAnimationFrame(() => (invalidField || errorSummary).focus())
   }
 
   disconnect() {

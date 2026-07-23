@@ -350,7 +350,7 @@ Rails.application.routes.draw do
         post :issue
       end
 
-      resource :workspace, only: :show, module: :bookings do
+      resource :workspace, only: [ :show, :update ], module: :bookings do
         get :audit_trail
         patch :update_room_rate, controller: :workspace_actions
         get :new_folio_window, controller: :workspace_actions

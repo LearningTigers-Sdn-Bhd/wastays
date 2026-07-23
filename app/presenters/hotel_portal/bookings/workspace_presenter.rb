@@ -28,6 +28,7 @@ module HotelPortal
     LEGACY_TABS = [ Tab.new("source_details", "Source Details") ].freeze
     ALERT_ACTIONS = %w[change_rate].freeze
     ENTITY_TABS = %w[folio_operations guest_details].freeze
+    GUEST_FORM_ATTRIBUTES = %i[name email phone country gender document_type government_id date_of_birth].freeze
     BADGE_VARIANTS = {
       "slate" => :neutral, "blue" => :info, "amber" => :warning,
       "emerald" => :success, "orange" => :warning, "rose" => :destructive
@@ -68,12 +69,14 @@ module HotelPortal
 
     attr_reader :hotel, :booking_presenter, :folio_show
 
-    def initialize(booking, params: {}, hotel: booking.hotel, booking_presenter: nil, folio_show: nil)
+    def initialize(booking, params: {}, hotel: booking.hotel, booking_presenter: nil, folio_show: nil, guest_form: nil, booking_guest_form: nil)
       @booking = booking
       @params = params
       @hotel = hotel
       @booking_presenter = booking_presenter || BookingPresenter.new(booking, hotel)
       @folio_show = folio_show
+      @guest_form = guest_form
+      @booking_guest_form = booking_guest_form
     end
 
     def booking_id
@@ -357,8 +360,7 @@ module HotelPortal
     def left_rail_title
       case left_rail_mode
       when "folio_tree", "grouped_folio_tree" then "Folios"
-      when "guest_tree" then "Booking / Guests"
-      when "grouped_guest_tree" then "Bookings / Guests"
+      when "guest_tree", "grouped_guest_tree" then "Guests"
       when "child_booking_tree" then grouped_booking_rail_title
       when "booking_context" then standalone_booking_rail_title
       else "Booking"
@@ -442,7 +444,7 @@ module HotelPortal
     end
 
     def selected_guest
-      selected_booking_guest&.guest
+      @guest_form || selected_booking_guest&.guest
     end
 
     def guest_details_mode
@@ -460,6 +462,8 @@ module HotelPortal
       g = selected_guest
       return {} unless bg && g
 
+      return GUEST_FORM_ATTRIBUTES.to_h { |attribute| [ attribute, g.public_send(attribute) ] } if @guest_form
+
       {
         name: bg.name_snapshot.presence || g.name,
         email: bg.email_snapshot.presence || g.email,
@@ -473,7 +477,7 @@ module HotelPortal
     end
 
     def guest_details_boat_times
-      bg = selected_booking_guest
+      bg = @booking_guest_form || selected_booking_guest
       return { boat_in: nil, boat_out: nil } unless bg
 
       tz = hotel.hotel_time_zone.presence || Time.zone.name
@@ -481,6 +485,14 @@ module HotelPortal
         boat_in: bg.boat_in_at&.in_time_zone(tz)&.strftime("%Y-%m-%dT%H:%M"),
         boat_out: bg.boat_out_at&.in_time_zone(tz)&.strftime("%Y-%m-%dT%H:%M")
       }
+    end
+
+    def guest_details_booking_guest_form
+      @booking_guest_form || selected_booking_guest
+    end
+
+    def guest_details_errors
+      [ selected_guest, guest_details_booking_guest_form ].compact.flat_map { |record| record.errors.full_messages }.uniq
     end
 
     def guest_details_boat_in_date
@@ -510,8 +522,8 @@ module HotelPortal
     def guest_display(booking_guest = selected_booking_guest)
       record = booking_guest
       {
-        name: safe_text(record&.name_snapshot.presence || record&.guest&.name.presence || booking.guest_name, fallback: "Guest details"),
-        role: record&.primary? ? "★ Primary guest for this room" : "Additional guest",
+        name: safe_text((@guest_form&.name if record == selected_booking_guest) || record&.name_snapshot.presence || record&.guest&.name.presence || booking.guest_name, fallback: "Guest details"),
+        role: record&.primary? ? "Primary guest" : "Additional guest",
         email: mask_email(safe_sensitive_snapshot(record, :email_snapshot)),
         phone: mask_phone(safe_sensitive_snapshot(record, :phone_snapshot)),
         country: safe_text(record&.country_snapshot.presence || record&.guest&.country, fallback: "—"),
@@ -927,10 +939,6 @@ module HotelPortal
       end
     end
 
-    def booking_folio_tree_groups
-      [ booking_entity_tree_group(booking, folio_tree_rows) ]
-    end
-
     def grouped_folio_tree_groups
       @grouped_folio_tree_groups ||= child_bookings.map do |child|
         rows = ordered_booking_folios(child).map do |folio|
@@ -968,8 +976,8 @@ module HotelPortal
       end
     end
 
-    def guest_tree_groups
-      guest_rows = booking.booking_guests.sort_by { |booking_guest| booking_guest.primary? ? 0 : 1 }.map do |booking_guest|
+    def guest_tree_rows
+      ordered_booking_guests(booking).map do |booking_guest|
         TreeRow.new(
           booking_guest.id,
           booking_guest.name_snapshot.presence || booking_guest.guest&.name.presence || booking.guest_name,
@@ -979,8 +987,6 @@ module HotelPortal
           path_for(booking, tab: active_tab, booking_guest_id: booking_guest.id)
         )
       end
-
-      [ booking_entity_tree_group(booking, guest_rows) ]
     end
 
     def grouped_guest_tree_groups
@@ -996,14 +1002,13 @@ module HotelPortal
           )
         end
 
-        booking_entity_tree_group(child, rows)
+        TreeGroup.new("#{child_booking_label(child)} · #{child_booking_number(child)}", nil, rows, child.id)
       end
     end
 
-    def booking_tree_group_open?(group)
-      return false if group_overview?
-
-      group.rows.any?(&:active) || group.equal?(current_booking_tree_group)
+    def selected_guest_context_line
+      child = selected_child_booking
+      [ child_booking_label(child), "Booking #{child_booking_number(child)}", format_short_range(child.check_in, child.check_out) ].join(" · ")
     end
 
     def request_tree_groups
@@ -1238,10 +1243,6 @@ module HotelPortal
       room&.room_number.present? ? "Room #{room.room_number}" : "Unassigned room"
     end
 
-    def booking_entity_tree_group(child, rows)
-      TreeGroup.new(child_booking_label(child), child_booking_menu_description(child), rows, child.id)
-    end
-
     def child_booking_number(child)
       child.formatted_reservation_number.presence || "—"
     end
@@ -1272,16 +1273,6 @@ module HotelPortal
         active,
         path_for(child, tab: active_tab)
       )
-    end
-
-    def current_booking_tree_group
-      index = child_bookings.index { |child| child.id == booking.id }
-      return unless index
-
-      case left_rail_mode
-      when "grouped_folio_tree" then grouped_folio_tree_groups[index]
-      when "grouped_guest_tree" then grouped_guest_tree_groups[index]
-      end
     end
 
     def booking_tree_description(child)

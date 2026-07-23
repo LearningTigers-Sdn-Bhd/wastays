@@ -274,7 +274,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(form["data-turbo-frame"]).not_to eq("offcanvas_drawer")
     end
 
-    it "renders a flat standalone folio rail while preserving the guest hierarchy" do
+    it "renders flat standalone folio and guest rails" do
       guest = create(:guest, name: "Rail Guest Name")
       booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true)
       room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
@@ -293,11 +293,36 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       guest_document = Nokogiri::HTML(response.body)
       guest_nav = guest_document.at_css('nav[aria-label="Booking guests"]')
-      guest_summary = guest_nav.at_css("details[open] summary")
-      expect(guest_summary.text.squish).to include("Room 208", "Garden Suite - Rail Guest Name")
-      expect(guest_summary.text).not_to include(booking.formatted_reservation_number)
-      expect(guest_nav.at_css("a.bg-primary").text).to include(guest.name)
-      expect(guest_nav.to_html).not_to include("border-l-2")
+      expect(guest_nav.at_css("details")).to be_nil
+      selected_guest = guest_nav.at_css('a[aria-current="page"]')
+      expect(selected_guest.text).to include(guest.name, "Primary guest", "Selected:")
+    end
+
+    it "renders one flat guest group per child booking with exact selected context" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      create(:booking_room, booking: booking, room_number: "101")
+      primary_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Room 101 Guest"), is_primary: true)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      create(:booking_room, booking: sibling, room_number: "102")
+      create(:booking_guest, booking: sibling, guest: create(:guest, name: "Room 102 Guest"), is_primary: true)
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: primary_guest.id)
+
+      document = Nokogiri::HTML(response.body)
+      nav = document.at_css('nav[aria-label="Bookings and guests"]')
+      expect(nav.css("section").size).to eq(2)
+      expect(nav.css("h3").map { |heading| heading.text.squish }).to eq([
+        "Room 101 · #{booking.formatted_reservation_number}",
+        "Room 102 · #{sibling.formatted_reservation_number}"
+      ])
+      expect(nav.css("details")).to be_empty
+      expect(nav.text).not_to include("All Guests", booking.status.humanize)
+      expect(nav.at_css('a[aria-current="page"]').text).to include("Room 101 Guest", "Primary guest")
+      expect(document.at_css("#guest-details-heading").previous_element.text).to include(
+        "Room 101",
+        "Booking #{booking.formatted_reservation_number}"
+      )
     end
 
     it "renders Add Folio in the folio left rail using the workspace flow" do
@@ -313,6 +338,18 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(add_folio["href"]).to eq(new_folio_window_hotel_booking_workspace_path(hotel, booking))
       expect(add_folio["href"]).not_to eq(new_window_hotel_folio_path(hotel, booking))
       expect(add_folio["data-turbo-frame"]).to eq("offcanvas_drawer")
+    end
+
+    it "renders an actionable guest empty state" do
+      role.permissions << manage_bookings
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "guest_details")
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("main").text).to include("No guest is linked to this booking")
+      add_guest = document.at_xpath("//main//a[normalize-space()='Add Guest']")
+      expect(add_guest["href"]).to include(hotel_booking_action_manage_guest_path(hotel, booking), "mode=add")
+      expect(add_guest["data-turbo-frame"]).to eq("booking_action_sheet")
     end
 
     it "keeps folio tree links free of obsolete subtab state" do
@@ -533,7 +570,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       get hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: guest.id)
       document = Nokogiri::HTML(response.body)
-      add_guest = document.at_xpath("//a[normalize-space()='+ Add Guest']")
+      add_guest = document.at_xpath("//a[normalize-space()='Add Guest']")
       expect(add_guest["data-turbo-frame"]).to eq("booking_action_sheet")
       expect(add_guest["href"]).to include(hotel_booking_action_manage_guest_path(hotel, booking))
       form = document.at_css("form#guest-details-form[data-controller*='guest-details-editor']")
@@ -545,6 +582,10 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       discard_alert = document.at_css('dialog[data-controller="confirm-discard"]')
 
       expect(form).to be_present
+      expect(form["action"]).to eq(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: guest.id))
+      expect(form["method"]).to eq("post")
+      expect(form.at_css('input[name="_method"][value="patch"]')).to be_present
+      expect(form.css("fieldset.panel-field-set").size).to be >= 2
       expect(footer.parent["id"]).to eq("booking_workspace")
       expect(footer.ancestors("#booking-workspace-content")).to be_empty
       expect(footer["class"]).to include("border-t", "bg-card")
@@ -908,11 +949,11 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       create(:booking_guest, booking: first_child, guest: create(:guest), is_primary: true)
 
       get hotel_booking_workspace_path(hotel, booking, tab: "guest_details")
-      expect(Nokogiri::HTML(response.body).at_xpath("//a[normalize-space()='+ Add Guest']")).to be_nil
+      expect(Nokogiri::HTML(response.body).at_xpath("//a[normalize-space()='Add Guest']")).to be_nil
 
       first_child.update_column(:status, "confirmed")
       get hotel_booking_workspace_path(hotel, booking, tab: "guest_details")
-      add_guest = Nokogiri::HTML(response.body).at_xpath("//a[normalize-space()='+ Add Guest']")
+      add_guest = Nokogiri::HTML(response.body).at_xpath("//a[normalize-space()='Add Guest']")
       expect(add_guest["href"]).to include(first_child.id.to_s)
     end
 
@@ -1059,6 +1100,116 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking)
 
       expect(response).to have_http_status(:redirect)
+    end
+  end
+
+  describe "PATCH /hotel/:hotel_id/bookings/:booking_id/workspace" do
+    before { role.permissions << manage_bookings }
+
+    it "updates the selected stay snapshot without changing the reusable guest" do
+      guest = create(:guest, name: "Reusable Guest")
+      booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "Stay Snapshot", email: "stay@example.com", country: "Malaysia", document_type: "passport" },
+        save_scope: "snapshot"
+      }
+
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id))
+      expect(booking_guest.reload).to have_attributes(name_snapshot: "Stay Snapshot", email_snapshot: "stay@example.com")
+      expect(guest.reload.name).to eq("Reusable Guest")
+    end
+
+    it "updates the reusable guest only through the explicit split-save scope" do
+      guest = create(:guest, name: "Reusable Guest")
+      booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "Shared Guest", email: "shared@example.com", country: "Malaysia", document_type: "passport" },
+        save_scope: "snapshot_and_profile"
+      }
+
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id))
+      expect(booking_guest.reload.name_snapshot).to eq("Shared Guest")
+      expect(guest.reload.name).to eq("Shared Guest")
+    end
+
+    it "renders submitted values and field errors without partially updating" do
+      guest = create(:guest, name: "Original Guest", email: "original@example.com")
+      booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true, name_snapshot: "Original Guest")
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "", email: "submitted@example.com", country: "Malaysia", document_type: "passport" },
+        save_scope: "snapshot_and_profile"
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("[data-guest-details-error-summary]").text).to include("Name can't be blank")
+      expect(document.at_css("input[name='guest[email]']")["value"]).to eq("submitted@example.com")
+      expect(document.at_css("input[name='guest[name]']")["aria-invalid"]).to eq("true")
+      expect(booking_guest.reload.name_snapshot).to eq("Original Guest")
+      expect(guest.reload).to have_attributes(name: "Original Guest", email: "original@example.com")
+    end
+
+    it "preserves boat-transfer values and field errors" do
+      hotel.update!(allow_boat_information: true)
+      booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "Boat Guest", country: "Malaysia", document_type: "passport" },
+        booking_guest: { boat_in_at: "2026-08-02T10:00", boat_out_at: "2026-08-01T10:00" }
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      document = Nokogiri::HTML(response.body)
+      invalid_boat_field = document.css('[data-invalid="true"]').find { |field| field.text.include?("Boat-out") }
+      expect(document.at_css("[data-guest-details-error-summary]").text).to include("Boat out at must be after boat in time")
+      expect(invalid_boat_field).to be_present
+      expect(document.at_css("input[name='booking_guest[boat_in_at]']")["value"]).to start_with("2026-08-02T10:00")
+      expect(document.at_css("input[name='booking_guest[boat_out_at]']")["value"]).to start_with("2026-08-01T10:00")
+      expect(booking_guest.reload).to have_attributes(boat_in_at: nil, boat_out_at: nil)
+    end
+
+    it "ignores forged boat-transfer fields when the hotel disables them" do
+      hotel.update!(allow_boat_information: false)
+      booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "No Boat Guest"), is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "No Boat Guest", country: "Malaysia", document_type: "passport" },
+        booking_guest: { boat_in_at: "2026-08-01T10:00", boat_out_at: "2026-08-02T10:00" }
+      }
+
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id))
+      expect(booking_guest.reload).to have_attributes(boat_in_at: nil, boat_out_at: nil)
+    end
+
+    it "rejects a booking guest outside the workspace booking or group" do
+      local_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Local Guest"), is_primary: true)
+      foreign_booking = create(:booking, hotel: other_hotel)
+      foreign_guest = create(:booking_guest, booking: foreign_booking, guest: create(:guest, name: "Foreign Guest"), is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: foreign_guest.id), params: {
+        guest: { name: "Forged Update", country: "Malaysia" }
+      }
+
+      expect(response).to have_http_status(:not_found)
+      expect(local_guest.reload.name_snapshot).not_to eq("Forged Update")
+      expect(foreign_guest.reload.name_snapshot).not_to eq("Forged Update")
+    end
+
+    it "rejects a sibling guest submitted through another child booking URL" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      sibling_guest = create(:booking_guest, booking: sibling, guest: create(:guest, name: "Sibling Guest"), is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: sibling_guest.id), params: {
+        guest: { name: "Forged Sibling Update", country: "Malaysia" }
+      }
+
+      expect(response).to have_http_status(:not_found)
+      expect(sibling_guest.reload.name_snapshot).not_to eq("Forged Sibling Update")
     end
   end
 
