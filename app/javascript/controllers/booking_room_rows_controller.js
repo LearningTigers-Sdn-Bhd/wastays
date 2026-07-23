@@ -107,7 +107,7 @@ export default class extends Controller {
         .filter((candidate) => candidate !== row)
         .map((candidate) => this.readValue(this.roleEl(candidate, "room-number")))
 
-      const roomChoices = [{ label: "Select room", value: "" }].concat(
+      const roomChoices = [{ label: this.roomPlaceholderLabel(), value: "" }].concat(
         (availability.room_options || availability.available_rooms || []).map((room) => {
           const number = String(typeof room === "string" ? room : room.room_number)
           return {
@@ -192,11 +192,35 @@ export default class extends Controller {
   }
 
   updateRoomRequirements() {
-    const roomRequired = this.hasBookingTypeTarget && this.readValue(this.bookingTypeTarget) !== "reservation"
+    const roomRequired = !this.deferredRoomSelectionAllowed()
     this.rowTargets.forEach((row) => {
-      const native = this.roleEl(row, "room-number")?.querySelector("select")
-      if (native) native.required = roomRequired
+      const wrapper = this.roleEl(row, "room-number")
+      let native = wrapper?.querySelector("select")
+      if (!native) return
+
+      const emptyOption = Array.from(native.options).find((option) => option.value === "")
+      const placeholder = this.roomPlaceholderLabel()
+      const deferredLabels = ["Select room", "Select room later"]
+      if (emptyOption && deferredLabels.includes(emptyOption.textContent) && emptyOption.textContent !== placeholder) {
+        const selectedValue = native.value
+        const choices = Array.from(native.options).map((option) => ({
+          label: option.value === "" ? placeholder : option.textContent,
+          value: option.value,
+          disabled: option.disabled
+        }))
+        this.setChoices(wrapper, choices, selectedValue)
+        native = wrapper.querySelector("select")
+      }
+      native.required = roomRequired
     })
+  }
+
+  deferredRoomSelectionAllowed() {
+    return !this.hasBookingTypeTarget || this.readValue(this.bookingTypeTarget) === "reservation"
+  }
+
+  roomPlaceholderLabel() {
+    return this.deferredRoomSelectionAllowed() ? "Select room later" : "Select room"
   }
 
   toggleCorporate(event) {
@@ -267,31 +291,6 @@ export default class extends Controller {
       return option
     }))
     native.value = selectedValue || ""
-  }
-
-  moreOptions(event) {
-    event.preventDefault()
-    const url = new URL(event.currentTarget.href, window.location.origin)
-    const data = new FormData(this.element.querySelector("form"))
-    data.forEach((value, key) => url.searchParams.append(key, value))
-
-    const openFullForm = () => {
-      const link = document.createElement("a")
-      link.href = url.toString()
-      link.dataset.turboFrame = "offcanvas_drawer"
-      link.dataset.offcanvasVariant = "fullscreen-bottom"
-      link.hidden = true
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-    }
-
-    const container = document.getElementById("offcanvas_drawer_container")
-    const offcanvas = container && window.Stimulus?.getControllerForElementAndIdentifier(container, "offcanvas")
-    if (!offcanvas) return openFullForm()
-
-    offcanvas.close()
-    setTimeout(openFullForm, 325)
   }
 
   updateNights() {

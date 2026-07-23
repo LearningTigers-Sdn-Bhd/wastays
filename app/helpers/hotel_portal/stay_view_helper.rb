@@ -137,14 +137,14 @@ module HotelPortal::StayViewHelper
         }
         actions << {
           label: "Add booking",
-          href: hotel_booking_action_new_booking_path(current_hotel, common),
+          href: hotel_booking_action_quick_booking_path(current_hotel, common),
           icon: "calendar-plus",
           data: stay_view_create_booking_data
         }
       else
         actions << {
           label: "Add booking",
-          href: hotel_booking_action_new_booking_path(current_hotel, common),
+          href: hotel_booking_action_quick_booking_path(current_hotel, common),
           icon: "calendar-plus",
           data: stay_view_create_booking_data
         }
@@ -295,7 +295,7 @@ module HotelPortal::StayViewHelper
         actions << {
           label: "Book",
           aria_label: "Add booking for room #{room.room_number} on #{I18n.l(date, format: :long)}",
-          href: hotel_booking_action_new_booking_path(current_hotel, common),
+          href: hotel_booking_action_quick_booking_path(current_hotel, common),
           icon: "calendar-plus",
           variant: :neutral,
           data: stay_view_create_booking_data
@@ -304,7 +304,7 @@ module HotelPortal::StayViewHelper
         actions << {
           label: "Book",
           aria_label: "Add booking for room #{room.room_number} on #{I18n.l(date, format: :long)}",
-          href: hotel_booking_action_new_booking_path(current_hotel, common),
+          href: hotel_booking_action_quick_booking_path(current_hotel, common),
           icon: "calendar-plus",
           variant: :secondary,
           data: stay_view_create_booking_data

@@ -3,6 +3,7 @@
     at runtime through SelectMenu#replaceOptions after the availability/rate AJAX
     resolves — no native <select>, no <template> cloning. %>
 <% values = local_assigns.fetch(:values, {}).symbolize_keys %>
+<% allow_deferred_room = local_assigns.fetch(:allow_deferred_room, true) %>
 <% room_type_choices = @room_types.map { |room_type| [ room_type.name, room_type.id ] }.presence || [ [ "No room types available", "" ] ] %>
 <% popover_index = index.to_s.parameterize(separator: "-").presence || "0" %>
 <div class="grid grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_1fr_36px] items-center gap-1.5 border-b border-border px-3 py-3 last:border-b-0"
@@ -32,7 +33,10 @@
     </div>
     <div class="min-w-0" data-role="room-number">
       <%= render PanelsUI::FormField.new(form: rf, attribute: :room_number, label: "Room", label_hidden: true, class: "min-w-0") do |field| %>
-        <% field.with_select_menu([["Select room later", ""]], selected: "", class: "min-w-0") %>
+        <% field.with_select_menu(
+             [[allow_deferred_room ? "Select room later" : "Select room", ""]],
+             selected: "",
+             class: "min-w-0") %>
       <% end %>
     </div>
     <%= render PanelsUI::FormField.new(form: rf, attribute: :adults, label: "Adults", label_hidden: true, required: true, class: "min-w-0") do |field| %>

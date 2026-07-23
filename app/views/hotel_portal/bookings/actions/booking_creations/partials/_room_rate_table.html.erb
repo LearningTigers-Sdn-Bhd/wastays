@@ -18,7 +18,10 @@
       </div>
       <div data-booking-room-rows-target="rows">
         <% (@initial_room_rows.presence || [ {} ]).each_with_index do |values, index| %>
-          <%= render "hotel_portal/bookings/actions/booking_creations/partials/room_row", index: index.to_s, values: values %>
+          <%= render "hotel_portal/bookings/actions/booking_creations/partials/room_row",
+                index: index.to_s,
+                values: values,
+                allow_deferred_room: allow_deferred_room %>
         <% end %>
       </div>
     </div>

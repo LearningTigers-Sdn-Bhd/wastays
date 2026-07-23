@@ -36,7 +36,7 @@ end %>
            data-booking-room-rows-price-url-value="<%= stay_price_hotel_bookings_path(current_hotel) %>"
            data-booking-room-rows-room-row-url-value="<%= room_row_hotel_bookings_path(current_hotel) %>">
         <%= form_with model: @booking, url: form_url, local: true, class: "flex min-h-0 flex-1 flex-col", id: "manual_booking_form",
-              data: (quick ? {} : { controller: "booking-guest-autofill", action: "panels-ui:autocomplete-select->booking-guest-autofill#selectGuest" }) do |f| %>
+              data: { controller: "booking-guest-autofill", action: "panels-ui:autocomplete-select->booking-guest-autofill#selectGuest" } do |f| %>
           <%# Backend param contract: the range picker feeds these hidden fields. %>
           <%= f.hidden_field :check_in, value: check_in_value, data: { booking_room_rows_target: "checkIn" } %>
           <%= f.hidden_field :check_out, value: check_out_value, data: { booking_room_rows_target: "checkOut" } %>
@@ -97,7 +97,9 @@ end %>
                   <% end %>
                 </section>
 
-                <%= render "hotel_portal/bookings/actions/booking_creations/partials/room_rate_table", f: f %>
+                <%= render "hotel_portal/bookings/actions/booking_creations/partials/room_rate_table",
+                      f: f,
+                      allow_deferred_room: quick || initial_type == "reservation" %>
 
                 <section class="space-y-4">
                   <div>
@@ -106,40 +108,28 @@ end %>
                   </div>
                   <div class="grid gap-x-3 gap-y-4 <%= quick ? "md:grid-cols-3" : "md:grid-cols-2" %>" data-role="guest-primary-fields">
                     <%= render PanelsUI::FormField.new(form: f, attribute: :guest_name, label: "Guest name") do |field| %>
-                      <% if quick %>
-                        <% field.with_input(required: true, placeholder: "Full name") %>
-                      <% else %>
-                        <% field.with_autocomplete(
-                             endpoint: search_hotel_guests_path(current_hotel),
-                             required: true,
-                             placeholder: "Full name",
-                             data: { booking_guest_autofill_target: "nameField" }) %>
-                      <% end %>
+                      <% field.with_autocomplete(
+                           endpoint: search_hotel_guests_path(current_hotel),
+                           required: true,
+                           placeholder: "Full name",
+                           data: { booking_guest_autofill_target: "nameField" }) %>
                     <% end %>
                     <div class="<%= quick ? "contents" : "grid gap-x-3 gap-y-4 md:grid-cols-2" %>" data-role="guest-contact-fields">
                       <%= render PanelsUI::FormField.new(form: f, attribute: :guest_email, label: "Email") do |field| %>
-                        <% if quick %>
-                          <% field.with_input(type: :email, required: true, placeholder: "guest@example.com") %>
-                        <% else %>
-                          <% field.with_autocomplete(
-                               endpoint: search_hotel_guests_path(current_hotel),
-                               type: :email,
-                               required: true,
-                               placeholder: "guest@example.com",
-                               data: { booking_guest_autofill_target: "emailField" }) %>
-                        <% end %>
+                        <% field.with_autocomplete(
+                             endpoint: search_hotel_guests_path(current_hotel),
+                             type: :email,
+                             required: true,
+                             placeholder: "guest@example.com",
+                             data: { booking_guest_autofill_target: "emailField" }) %>
                       <% end %>
                       <%= render PanelsUI::FormField.new(form: f, attribute: :guest_phone, label: "Phone") do |field| %>
-                        <% if quick %>
-                          <% field.with_input(type: :tel, required: true, placeholder: "+60 12-345 6789") %>
-                        <% else %>
-                          <% field.with_autocomplete(
-                               endpoint: search_hotel_guests_path(current_hotel),
-                               type: :tel,
-                               required: true,
-                               placeholder: "+60 12-345 6789",
-                               data: { booking_guest_autofill_target: "phoneField" }) %>
-                        <% end %>
+                        <% field.with_autocomplete(
+                             endpoint: search_hotel_guests_path(current_hotel),
+                             type: :tel,
+                             required: true,
+                             placeholder: "+60 12-345 6789",
+                             data: { booking_guest_autofill_target: "phoneField" }) %>
                       <% end %>
                     </div>
                   </div>
@@ -151,14 +141,14 @@ end %>
                            caption_layout: :dropdown,
                            year_range: (Date.current.year - 120)..Date.current.year,
                            placeholder: "Select date of birth",
-                           data: (quick ? {} : { booking_guest_autofill_target: "dateOfBirthField" })) %>
+                           data: { booking_guest_autofill_target: "dateOfBirthField" }) %>
                     <% end %>
                     <%= render PanelsUI::FormField.new(form: f, attribute: :guest_gender, label: "Gender") do |field| %>
                       <% field.with_select_menu(
                            Guest::GENDERS.map { |gender| [gender.titleize, gender] },
                            selected: @booking.guest_gender,
                            prompt: "Select gender",
-                           data: (quick ? {} : { booking_guest_autofill_target: "genderField" })) %>
+                           data: { booking_guest_autofill_target: "genderField" }) %>
                     <% end %>
                     <%= render PanelsUI::FormField.new(form: f, attribute: :guest_country, label: "Nationality") do |field| %>
                       <% field.with_combobox(
@@ -167,35 +157,33 @@ end %>
                            prompt: "Select nationality",
                            data: {
                              booking_room_rows_target: "guestCountry",
-                             booking_guest_autofill_target: ("countryField" unless quick),
+                             booking_guest_autofill_target: "countryField",
                              action: "change->booking-room-rows#guestCountryChanged"
-                           }.compact) %>
+                           }) %>
                     <% end %>
                   </div>
-                  <% unless quick %>
-                    <% selected_guest_id = params.dig(:booking, :existing_guest_id).presence || @booking.existing_guest_id %>
-                    <%= f.hidden_field :existing_guest_id, value: selected_guest_id, data: { booking_guest_autofill_target: "existingGuestId" } %>
-                    <div class="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-3 md:flex-row md:items-center md:justify-between"
-                         <%= "hidden" if selected_guest_id.blank? %>
-                         data-booking-guest-autofill-target="profileRow">
-                      <div class="min-w-0">
-                        <div class="flex items-center gap-2">
-                          <span class="truncate text-sm font-medium text-foreground" tabindex="-1" data-booking-guest-autofill-target="linkedName"><%= @booking.guest_name.presence || "Existing guest" %></span>
-                          <button type="button" class="text-xs font-medium text-primary hover:underline" data-action="booking-guest-autofill#clearGuest">Change guest</button>
-                        </div>
-                        <p class="truncate text-xs text-muted-foreground" data-booking-guest-autofill-target="linkedDescription"><%= [@booking.guest_email, @booking.guest_phone].compact_blank.join(" · ") %></p>
-                        <p class="text-xs text-destructive" hidden data-booking-guest-autofill-target="blacklistWarning">This guest is blacklisted at this hotel.</p>
+                  <% selected_guest_id = params.dig(:booking, :existing_guest_id).presence || @booking.existing_guest_id %>
+                  <%= f.hidden_field :existing_guest_id, value: selected_guest_id, data: { booking_guest_autofill_target: "existingGuestId" } %>
+                  <div class="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-3 <%= "md:flex-row md:items-center md:justify-between" unless quick %>"
+                       <%= "hidden" if selected_guest_id.blank? %>
+                       data-booking-guest-autofill-target="profileRow">
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="truncate text-sm font-medium text-foreground" tabindex="-1" data-booking-guest-autofill-target="linkedName"><%= @booking.guest_name.presence || "Existing guest" %></span>
+                        <button type="button" class="text-xs font-medium text-primary hover:underline" data-action="booking-guest-autofill#clearGuest">Change guest</button>
                       </div>
-                      <%= render PanelsUI::Switch.new(
-                            name: "booking[guest_update_intent]",
-                            value: "update_existing",
-                            unchecked_value: "keep_existing",
-                            checked: params.dig(:booking, :guest_update_intent) == "update_existing",
-                            label: "Update guest profile",
-                            description: "Save the guest information entered here to the guest database.",
-                            data: { booking_guest_autofill_target: "updateSwitch" }) %>
+                      <p class="truncate text-xs text-muted-foreground" data-booking-guest-autofill-target="linkedDescription"><%= [@booking.guest_email, @booking.guest_phone].compact_blank.join(" · ") %></p>
+                      <p class="text-xs text-destructive" hidden data-booking-guest-autofill-target="blacklistWarning">This guest is blacklisted at this hotel.</p>
                     </div>
-                  <% end %>
+                    <%= render PanelsUI::Switch.new(
+                          name: "booking[guest_update_intent]",
+                          value: "update_existing",
+                          unchecked_value: "keep_existing",
+                          checked: params.dig(:booking, :guest_update_intent) == "update_existing",
+                          label: "Update guest profile",
+                          description: "Save the guest information entered here to the guest database.",
+                          data: { booking_guest_autofill_target: "updateSwitch" }) %>
+                  </div>
                 </section>
 
                 <% if quick %>
@@ -261,7 +249,15 @@ end %>
 
     <% sheet.with_footer do %>
       <% if quick %>
-        <%= link_to "More options", hotel_booking_action_new_booking_path(current_hotel), class: "mr-auto rounded-md border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted", data: { turbo_frame: "booking_action_sheet" } %>
+        <%= link_to "More options",
+              hotel_booking_action_new_booking_path(current_hotel, params.permit(:return_to, :source)),
+              class: "mr-auto rounded-md border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted",
+              data: {
+                controller: "booking-form-transfer",
+                action: "booking-form-transfer#open",
+                booking_form_transfer_form_id_value: "manual_booking_form",
+                booking_form_transfer_frame_value: "booking_action_sheet"
+              } %>
       <% end %>
       <button type="button" class="px-4 py-2 text-sm font-semibold text-muted-foreground" data-action="panels-ui--sheet#close">Cancel</button>
       <button type="submit" form="manual_booking_form" class="rounded-md bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" data-turbo-submits-with="Creating…"><%= quick ? "Confirm booking" : "Create booking" %></button>

@@ -69,7 +69,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       global_actions = document.at_css("[data-slot='stay-view-global-actions']")
       expect(global_actions.ancestors("#stay_view_toolbar")).to be_present
       expect(global_actions.at_css("a[href^='#{hotel_booking_action_walk_in_check_in_path(hotel)}']").text.squish).to eq("Walk-in")
-      expect(global_actions.at_css("a[href^='#{hotel_booking_action_new_booking_path(hotel)}']").text.squish).to eq("Add booking")
+      expect(global_actions.at_css("a[href^='#{hotel_booking_action_quick_booking_path(hotel)}']").text.squish).to eq("Add booking")
       operational_counts = document.css("[data-slot='stay-view-operational-count']")
       expect(operational_counts.map { |badge| badge["data-state"] }).to eq(
         %w[all vacant arrival occupied departure turnover blocked dirty]
@@ -151,7 +151,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       add_booking = today_menu.css("[role='menuitem']").find { |item| item.text.squish == "Add booking" }
       add_booking_uri = URI.parse(add_booking["href"])
-      expect(add_booking_uri.path).to eq(hotel_booking_action_new_booking_path(hotel))
+      expect(add_booking_uri.path).to eq(hotel_booking_action_quick_booking_path(hotel))
       expect(Rack::Utils.parse_nested_query(add_booking_uri.query)).to include(
         "check_in" => Date.current.iso8601,
         "check_out" => (Date.current + 1.day).iso8601,

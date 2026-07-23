@@ -60,17 +60,71 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
       expect(dialog.at_css('input[name="booking[existing_guest_id]"]')).to be_present
       expect(dialog.at_css('input[name="booking[guest_update_intent]"][value="update_existing"]')).to be_present
       expect(dialog.at_css('[data-booking-guest-autofill-target="profileRow"]')["hidden"]).not_to be_nil
+      expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Select room later")
     end
 
     it "renders the Quick Booking sheet on the right" do
-      get hotel_booking_action_quick_booking_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
+      return_to = hotel_stay_view_path(hotel, view: "timeline")
+      get hotel_booking_action_quick_booking_path(hotel),
+          params: { return_to:, source: "stay_view" },
+          headers: { "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:success)
       dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet")
       expect(dialog["data-panels-ui-sheet-side"]).to eq("right")
       expect(dialog.text).to include("Quick Booking")
-      expect(dialog.css(".panel-autocomplete")).to be_empty
-      expect(dialog.at_css('input[name="booking[existing_guest_id]"]')).to be_nil
+      expect(dialog.css(".panel-autocomplete").size).to eq(3)
+      expect(dialog.at_css('input[name="booking[existing_guest_id]"]')).to be_present
+      expect(dialog.at_css('input[name="booking[guest_update_intent]"][value="update_existing"]')).to be_present
+      profile_row = dialog.at_css('[data-booking-guest-autofill-target="profileRow"]')
+      expect(profile_row["hidden"]).not_to be_nil
+      expect(profile_row["class"]).not_to include("md:flex-row")
+      expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Select room later")
+      more_options = dialog.at_css('a[data-controller="booking-form-transfer"]')
+      expect(more_options.text.squish).to eq("More options")
+      expect(more_options["data-action"]).to eq("booking-form-transfer#open")
+      expect(more_options["data-booking-form-transfer-form-id-value"]).to eq("manual_booking_form")
+      more_options_uri = URI.parse(more_options["href"])
+      expect(more_options_uri.path).to eq(hotel_booking_action_new_booking_path(hotel))
+      expect(Rack::Utils.parse_nested_query(more_options_uri.query)).to include(
+        "return_to" => return_to,
+        "source" => "stay_view"
+      )
+    end
+
+    it "hydrates the full form from transferred Quick Booking values" do
+      guest = create(:guest, created_by_hotel: hotel, name: "Existing Guest")
+      get hotel_booking_action_new_booking_path(hotel), params: {
+        booking: {
+          check_in: "2026-08-01T14:00",
+          check_out: "2026-08-03T11:00",
+          guest_name: "Transferred Guest",
+          guest_email: "transfer@example.com",
+          guest_phone: "+60123456789",
+          guest_country: "Malaysia",
+          guest_gender: "female",
+          guest_date_of_birth: "1992-03-04",
+          existing_guest_id: guest.id,
+          guest_update_intent: "update_existing",
+          source: "whatsapp",
+          rooms: {
+            "0" => {
+              room_type_id: room_type.id,
+              room_number: "101",
+              adults: "2",
+              children: "1"
+            }
+          }
+        }
+      }, headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet")
+      expect(dialog.at_css('input[name="booking[guest_name]"]')["value"]).to eq("Transferred Guest")
+      expect(dialog.at_css('input[name="booking[guest_email]"]')["value"]).to eq("transfer@example.com")
+      expect(dialog.at_css('input[name="booking[existing_guest_id]"]')["value"]).to eq(guest.id.to_s)
+      expect(dialog.at_css('input[name="booking[guest_update_intent]"][value="update_existing"]')["checked"]).not_to be_nil
+      expect(dialog.at_css('[data-booking-room-rows-target="row"]')["data-preserved-room-number"]).to eq("101")
+      expect(dialog.at_css('select[name="booking[rooms][0][room_type_id]"] option[selected]')["value"]).to eq(room_type.id.to_s)
     end
 
     it "renders a single server-rendered room row on demand" do
@@ -118,6 +172,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
       dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet")
       expect(dialog["data-panels-ui-sheet-side"]).to eq("bottom")
       expect(dialog.text).to include("Walk-in Check-in")
+      expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Select room")
     end
   end
 

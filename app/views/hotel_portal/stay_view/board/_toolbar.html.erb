@@ -130,7 +130,7 @@ end %>
           Walk-in
         <% end %>
         <%= render PanelsUI::Button.new(
-          href: hotel_booking_action_new_booking_path(current_hotel, return_to: state.return_path(current_hotel)),
+          href: hotel_booking_action_quick_booking_path(current_hotel, return_to: state.return_path(current_hotel)),
           size: :sm,
           data: stay_view_create_booking_data
         ) do %>
