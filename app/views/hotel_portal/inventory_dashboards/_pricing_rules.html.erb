@@ -21,10 +21,10 @@
         <label class="mb-2 block text-[10px] sm:text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">Target Room Categories</label>
         <div class="grid gap-2 rounded-2xl border border-border bg-muted p-3 sm:p-4 md:grid-cols-2 xl:grid-cols-3">
           <% @room_types.each do |rt| %>
-            <label class="flex items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2.5 text-xs sm:text-sm font-semibold text-foreground shadow-sm cursor-pointer hover:bg-muted transition-colors">
-              <%= f.check_box :room_type_ids, { multiple: true, checked: @pricing_form.selected_room_type_ids.include?(rt.id), class: "size-4 rounded border-border-interactive text-foreground focus:ring-0 focus:ring-offset-0" }, rt.id, nil %>
-              <span class="truncate"><%= rt.name %></span>
-            </label>
+            <%= render PanelsUI::Checkbox.new(
+                  form: f, attribute: :room_type_ids, id: "pricing_rule_room_type_ids_#{rt.id}",
+                  label: rt.name, value: rt.id, unchecked_value: nil, multiple: true,
+                  checked: @pricing_form.selected_room_type_ids.include?(rt.id), variant: :card, size: :sm) %>
           <% end %>
         </div>
       </div>
@@ -47,10 +47,10 @@
             ]
           %>
           <% tiers.each do |label, tier, is_checked| %>
-            <label class="flex items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2.5 text-xs sm:text-sm font-semibold text-foreground shadow-sm cursor-pointer hover:bg-muted transition-colors">
-              <input type="checkbox" data-tier="<%= tier %>" data-action="change->pricing-sections#toggle" <%= 'checked' if is_checked %> class="size-4 rounded border-border-interactive text-foreground focus:ring-0 focus:ring-offset-0">
-              <span class="truncate"><%= label %></span>
-            </label>
+            <%= render PanelsUI::Checkbox.new(
+                  name: "pricing_rule_ui_tier_#{tier}", id: "pricing_rule_ui_tier_#{tier}",
+                  label: label, checked: is_checked, variant: :card, size: :sm,
+                  data: { tier: tier, action: "change->pricing-sections#toggle" }) %>
           <% end %>
         </div>
       </div>
@@ -66,14 +66,14 @@
                           class: "rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-primary-foreground hover:bg-red-700" %>
             <% end %>
           </div>
-          <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-4 sm:grid-cols-2" data-controller="date-range-advance">
             <div>
               <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Start</label>
-              <%= f.date_field :gp_start_date, value: @pricing_form.pricing_data[:gp_start_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
+              <%= f.date_field :gp_start_date, value: @pricing_form.pricing_data[:gp_start_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", data: { date_range_advance_target: "start", action: "change->date-range-advance#advance" } %>
             </div>
             <div>
               <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">End</label>
-              <%= f.date_field :gp_end_date, value: @pricing_form.pricing_data[:gp_end_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
+              <%= f.date_field :gp_end_date, value: @pricing_form.pricing_data[:gp_end_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", data: { date_range_advance_target: "end" } %>
             </div>
           </div>
           <div class="mt-4">
@@ -92,14 +92,14 @@
                           class: "rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-primary-foreground hover:bg-red-700" %>
             <% end %>
           </div>
-          <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-4 sm:grid-cols-2" data-controller="date-range-advance">
             <div>
               <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Start</label>
-              <%= f.date_field :wk_start_date, value: @pricing_form.pricing_data[:wk_start_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
+              <%= f.date_field :wk_start_date, value: @pricing_form.pricing_data[:wk_start_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", data: { date_range_advance_target: "start", action: "change->date-range-advance#advance" } %>
             </div>
             <div>
               <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">End</label>
-              <%= f.date_field :wk_end_date, value: @pricing_form.pricing_data[:wk_end_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
+              <%= f.date_field :wk_end_date, value: @pricing_form.pricing_data[:wk_end_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", data: { date_range_advance_target: "end" } %>
             </div>
           </div>
           <div class="mt-4">
@@ -108,11 +108,10 @@
           </div>
           <div class="mt-4 grid grid-cols-4 gap-2">
             <% inventory_weekday_options.each do |label, value| %>
-              <% input_id = "weekend_day_#{value}" %>
-              <label for="<%= input_id %>" class="inline-flex items-center justify-center rounded-xl border border-border bg-card px-1 py-1.5 sm:px-2 sm:py-2 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.14em] text-muted-foreground">
-                <%= check_box_tag "pricing_rule[weekend_days][]", value, @pricing_form.weekend_days.include?(value), id: input_id, class: "me-1.5 size-3 rounded border-border-interactive text-foreground focus:ring-0 focus:ring-offset-0" %>
-                <%= label %>
-              </label>
+              <%= render PanelsUI::Checkbox.new(
+                    name: "pricing_rule[weekend_days][]", id: "weekend_day_#{value}",
+                    label: label, value: value, checked: @pricing_form.weekend_days.include?(value),
+                    variant: :card, size: :sm) %>
             <% end %>
           </div>
         </div>
@@ -127,14 +126,14 @@
                           class: "rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-primary-foreground hover:bg-red-700" %>
             <% end %>
           </div>
-          <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-4 sm:grid-cols-2" data-controller="date-range-advance">
             <div>
               <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Start</label>
-              <%= f.date_field :wi_start_date, value: @pricing_form.pricing_data[:wi_start_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
+              <%= f.date_field :wi_start_date, value: @pricing_form.pricing_data[:wi_start_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", data: { date_range_advance_target: "start", action: "change->date-range-advance#advance" } %>
             </div>
             <div>
               <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">End</label>
-              <%= f.date_field :wi_end_date, value: @pricing_form.pricing_data[:wi_end_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
+              <%= f.date_field :wi_end_date, value: @pricing_form.pricing_data[:wi_end_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", data: { date_range_advance_target: "end" } %>
             </div>
           </div>
           <div class="mt-4">
@@ -153,14 +152,14 @@
                           class: "rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-primary-foreground hover:bg-red-700" %>
             <% end %>
           </div>
-          <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-4 sm:grid-cols-2" data-controller="date-range-advance">
             <div>
               <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Start</label>
-              <%= f.date_field :cr_start_date, value: @pricing_form.pricing_data[:cr_start_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
+              <%= f.date_field :cr_start_date, value: @pricing_form.pricing_data[:cr_start_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", data: { date_range_advance_target: "start", action: "change->date-range-advance#advance" } %>
             </div>
             <div>
               <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">End</label>
-              <%= f.date_field :cr_end_date, value: @pricing_form.pricing_data[:cr_end_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
+              <%= f.date_field :cr_end_date, value: @pricing_form.pricing_data[:cr_end_date], class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", data: { date_range_advance_target: "end" } %>
             </div>
           </div>
           <div class="mt-4">
@@ -193,14 +192,14 @@
                     <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Holiday Name</label>
                     <input type="text" name="pricing_rule[school_holidays][][name]" value="<%= holiday&.name %>" class="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0">
                   </div>
-                  <div class="grid gap-3 grid-cols-2">
+                  <div class="grid gap-3 grid-cols-2" data-controller="date-range-advance">
                     <div>
                       <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Start</label>
-                      <input type="date" name="pricing_rule[school_holidays][][start_date]" value="<%= holiday&.start_date %>" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0">
+                      <input type="date" name="pricing_rule[school_holidays][][start_date]" value="<%= holiday&.start_date %>" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" data-date-range-advance-target="start" data-action="change->date-range-advance#advance">
                     </div>
                     <div>
                       <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">End</label>
-                      <input type="date" name="pricing_rule[school_holidays][][end_date]" value="<%= holiday&.end_date %>" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0">
+                      <input type="date" name="pricing_rule[school_holidays][][end_date]" value="<%= holiday&.end_date %>" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" data-date-range-advance-target="end">
                     </div>
                   </div>
                   <div>
@@ -222,14 +221,14 @@
                   <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Holiday Name</label>
                   <input type="text" name="pricing_rule[school_holidays][][name]" class="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0">
                 </div>
-                <div class="grid gap-3 grid-cols-2">
+                <div class="grid gap-3 grid-cols-2" data-controller="date-range-advance">
                   <div>
                     <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Start</label>
-                    <input type="date" name="pricing_rule[school_holidays][][start_date]" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0">
+                    <input type="date" name="pricing_rule[school_holidays][][start_date]" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" data-date-range-advance-target="start" data-action="change->date-range-advance#advance">
                   </div>
                   <div>
                     <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">End</label>
-                    <input type="date" name="pricing_rule[school_holidays][][end_date]" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0">
+                    <input type="date" name="pricing_rule[school_holidays][][end_date]" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" data-date-range-advance-target="end">
                   </div>
                 </div>
                 <div>
@@ -265,14 +264,14 @@
                     <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Holiday Name</label>
                     <input type="text" name="pricing_rule[public_holidays][][name]" value="<%= holiday&.name %>" class="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0">
                   </div>
-                  <div class="grid gap-3 grid-cols-2">
+                  <div class="grid gap-3 grid-cols-2" data-controller="date-range-advance">
                     <div>
                       <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Start</label>
-                      <input type="date" name="pricing_rule[public_holidays][][start_date]" value="<%= holiday&.start_date %>" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0">
+                      <input type="date" name="pricing_rule[public_holidays][][start_date]" value="<%= holiday&.start_date %>" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" data-date-range-advance-target="start" data-action="change->date-range-advance#advance">
                     </div>
                     <div>
                       <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">End</label>
-                      <input type="date" name="pricing_rule[public_holidays][][end_date]" value="<%= holiday&.end_date %>" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0">
+                      <input type="date" name="pricing_rule[public_holidays][][end_date]" value="<%= holiday&.end_date %>" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" data-date-range-advance-target="end">
                     </div>
                   </div>
                   <div>
@@ -300,14 +299,14 @@
                   <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Holiday Name</label>
                   <input type="text" name="pricing_rule[public_holidays][][name]" class="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0">
                 </div>
-                <div class="grid gap-3 grid-cols-2">
+                <div class="grid gap-3 grid-cols-2" data-controller="date-range-advance">
                   <div>
                     <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Start</label>
-                    <input type="date" name="pricing_rule[public_holidays][][start_date]" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0">
+                    <input type="date" name="pricing_rule[public_holidays][][start_date]" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" data-date-range-advance-target="start" data-action="change->date-range-advance#advance">
                   </div>
                   <div>
                     <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">End</label>
-                    <input type="date" name="pricing_rule[public_holidays][][end_date]" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0">
+                    <input type="date" name="pricing_rule[public_holidays][][end_date]" class="w-full rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" data-date-range-advance-target="end">
                   </div>
                 </div>
                 <div>

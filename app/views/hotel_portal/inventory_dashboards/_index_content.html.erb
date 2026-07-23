@@ -658,7 +658,7 @@
 
   <!-- Panel: Advanced Pricing -->
   <% tabs.with_panel(name: "advanced", id: "inventory-advanced-panel", data: { testid: "inventory-advanced-panel" }) do %>
-    <%= render PanelsUI::Tabs.new(id: "inventory-subtabs", active: active_subtab, variant: :pill, url: { param: "subtab" }, list_class: "mb-6", aria_label: "Advanced pricing sections") do |subtabs| %>
+    <%= render PanelsUI::Tabs.new(id: "inventory-subtabs", active: active_subtab, variant: :pill, url: { param: "subtab" }, aria_label: "Advanced pricing sections") do |subtabs| %>
       <% subtabs.with_tab(name: "pricing", label: "Pricing Rules", icon: "tags", panel_id: "inventory-pricing-panel") %>
       <% subtabs.with_tab(name: "overrides", label: "Availability Overrides", icon: "calendar-cog", panel_id: "inventory-overrides-panel") %>
       <% subtabs.with_panel(name: "pricing", id: "inventory-pricing-panel", data: { testid: "inventory-pricing-panel" }) do %>
