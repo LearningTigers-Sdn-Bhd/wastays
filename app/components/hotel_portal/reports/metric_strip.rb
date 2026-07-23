@@ -15,6 +15,7 @@ module HotelPortal
 
       def initialize(metrics:, aria_label: "Report summary", class: nil)
         raise ArgumentError, "MetricStrip requires one to six metrics" unless metrics.size.between?(1, 6)
+        raise ArgumentError, "MetricStrip requires a supporting description for every metric" if metrics.any? { |metric| metric[:detail].blank? }
 
         @metrics = metrics
         @aria_label = aria_label

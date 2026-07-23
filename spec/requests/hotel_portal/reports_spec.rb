@@ -80,12 +80,6 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100, posting_date: Date.new(2026, 5, 7))
       create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 100, posting_date: Date.new(2026, 5, 7))
 
-      get hotel_reports_path(hotel), params: { date_preset: "this_year" }
-      page = Capybara.string(response.body)
-      expect(page).to have_css("h2", exact_text: "Monthly performance snapshot")
-      expect(page).to have_css("thead th", exact_text: "Month")
-      expect(page).to have_text("May 2026")
-
       [
         breakdown_hotel_reports_path(hotel),
         guest_reports_hotel_reports_path(hotel, tab: "in_house"),
@@ -102,18 +96,43 @@ RSpec.describe "HotelPortal::Reports", type: :request do
   end
 
   describe "GET /index" do
+    it "presents an overview for every report group" do
+      get hotel_reports_path(hotel)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css("h1", exact_text: "Reports summary")
+      expect(page).to have_css("[data-slot='reports-summary-group']", count: 4)
+
+      [ "Financial", "Tax & compliance", "Guest operations", "Accounting" ].each do |label|
+        expect(page).to have_css("h2", exact_text: label)
+      end
+      expect(page).to have_no_link("View report")
+
+      expect(page).to have_text("Booking date")
+      expect(page).to have_text("Posting date")
+      expect(page).to have_text("Stay date")
+      expect(page).to have_text("Business date")
+    end
+
+    it "does not render duplicate report actions" do
+      get hotel_reports_path(hotel)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_no_link("View report")
+    end
+
     it "returns http success" do
       get "/hotel/#{hotel.id}/reports"
 
       page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
-      expect(page).to have_css("[data-slot='report-page'][data-report='financial-summary']")
-      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 3)
-      expect(page).to have_css(
-        "[data-slot='report-metric-strip'] ~ section[aria-label='Financial summary filters']"
-      )
-      expect(page).to have_css(".panel-form-field[data-size='md'] input[type='search']")
-      expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
+      expect(page).to have_css("[data-slot='report-page'][data-report='reports-summary']")
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 16)
+      expect(page).to have_css("[data-slot='reports-summary-group']", count: 4)
+      expect(page).to have_css(".panel-page-header__actions", text: "Time period")
+      expect(page).to have_no_css("section[aria-label='Reports summary filters']")
+      expect(page).to have_no_css(".panel-form-field[data-size='md'] input[type='search']")
+      expect(page).to have_no_css("table.panel-table")
     end
 
     it "uses sentence-case report copy" do
@@ -124,32 +143,29 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       }
 
       page = Capybara.string(response.body)
-      table = page.find("table.panel-table")
-      expect(page).to have_css("h1", exact_text: "Financial summary")
+      expect(page).to have_css("h1", exact_text: "Reports summary")
       expect(page).to have_css("turbo-frame#reports_content .panel-page-header__caption")
       caption = page.find(".panel-page-header__caption")
       expect(caption).to have_text(hotel.name)
       expect(caption).to have_text("01 May 2026 - 31 May 2026")
-      expect(page).to have_css("h2", exact_text: "Daily performance snapshot")
-      expect(table.find("caption", visible: :all).text).to eq("Daily performance snapshot")
-      expect(table.all("thead th").map(&:text)).to eq([ "Date", "Bookings", "Gross", "Margin", "Net" ])
+      expect(page).to have_css("h2", exact_text: "Financial")
+      expect(page).to have_css("h2", exact_text: "Tax & compliance")
+      expect(page).to have_css("h2", exact_text: "Guest operations")
+      expect(page).to have_css("h2", exact_text: "Accounting")
       expect(page).to have_field("Time period", visible: :all)
       expect(page).to have_no_field("Time Period", visible: :all)
       expect(response.body).to include("Date range")
       expect(response.body).not_to include("Date Range")
     end
 
-    it "opens a daily ledger from a native table control" do
+    it "keeps the financial summary free of a detailed ledger" do
       create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 300, margin_amount: 30, net_amount: 270, created_at: Time.zone.local(2026, 5, 6, 12, 0))
 
       get hotel_reports_path(hotel), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
 
       page = Capybara.string(response.body)
-      expect(page).to have_css(
-        "button[type='button'][data-slot='daily-ledger-trigger'][aria-controls='daily-performance-modal-20260506']",
-        text: "06 May 2026"
-      )
-      expect(page).to have_no_css("table.panel-table tbody tr[tabindex]")
+      expect(page).to have_no_link("View report")
+      expect(page).to have_no_css("[data-slot='daily-ledger-trigger']")
     end
 
     it "exports financial performance csv/xlsx/pdf" do
@@ -169,25 +185,24 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.content_type).to eq("application/pdf")
     end
 
-    it "links to xlsx instead of legacy xls" do
+    it "does not offer a financial-only export from the cross-report summary" do
       get hotel_reports_path(hotel), params: { start_date: "2026-05-06", end_date: "2026-05-08" }
 
-      page = Capybara.string(response.body)
-      expect(page).to have_link("Export Excel", href: hotel_reports_path(hotel, start_date: "2026-05-06", end_date: "2026-05-08", q: nil, date_preset: "custom", format: :xlsx))
-      expect(response.body).not_to match(/\.xls(?:\?|"|')/)
+      expect(response.body).not_to include("Export Excel")
+      expect(response.body).not_to include("Export CSV")
     end
 
-    it "parses date_range and preserves the query in resolved export links" do
+    it "parses date_range without rendering detailed report actions" do
       get hotel_reports_path(hotel), params: { date_range: "2026-05-06/2026-05-08", q: "A&B" }
 
       page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
       expect(page).to have_css('select[name="date_preset"] option[selected][value="custom"]')
       expect(page).to have_css('input[name="date_range"][value="2026-05-06/2026-05-08"]', visible: :all)
-      expect(page).to have_link("Export CSV", href: hotel_reports_path(hotel, start_date: "2026-05-06", end_date: "2026-05-08", q: "A&B", date_preset: "custom", format: :csv))
+      expect(page).to have_no_link("View report")
     end
 
-    it "prefers resolved export dates over a relative preset" do
+    it "prefers resolved dates over a relative preset" do
       get hotel_reports_path(hotel), params: {
         date_preset: "today",
         start_date: "2026-05-06",
@@ -196,17 +211,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
-      expect(page).to have_link(
-        "Export CSV",
-        href: hotel_reports_path(
-          hotel,
-          start_date: "2026-05-06",
-          end_date: "2026-05-08",
-          q: nil,
-          date_preset: "today",
-          format: :csv
-        )
-      )
+      expect(page).to have_css(".panel-page-header__caption", text: "06 May 2026 - 08 May 2026")
+      expect(page).to have_no_link("View report")
     end
   end
 
@@ -863,6 +869,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(page).to have_css("[data-slot='report-page'][data-report='daily-occupancy']")
       expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 7)
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card__detail", count: 7)
       expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
       expect(page).to have_css("h1", exact_text: "Daily occupancy report")
       expect(page).to have_text("Rooms sold")
@@ -1971,6 +1978,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(caption).to have_text(hotel.name)
       expect(caption).to have_text("01 May 2026 - 31 May 2026")
       expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 3)
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card__detail", count: 3)
       expect(picker["data-panels-ui--date-picker-months-value"]).to eq("2")
       expect(picker["data-action"]).to include("change->date-preset#submitDate")
       expect(page).to have_no_button("Filter")
@@ -1980,7 +1989,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_css("thead th", exact_text: "General ledger code (GL code)")
       expect(page).to have_text("4010")
       expect(page).to have_text("Room charge summary")
-      expect(page).to have_text("125.00", count: 4)
+      expect(page).to have_text("125.00", count: 6)
       expect(page).to have_link("Export CSV", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :csv))
       expect(page).to have_link("Export Excel", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :xlsx))
       expect(page).to have_link("Export PDF", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :pdf))

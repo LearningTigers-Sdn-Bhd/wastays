@@ -67,6 +67,24 @@ RSpec.describe "HotelPortal::NotificationLogs", type: :request do
       expect(page).to have_no_css("[onclick]")
     end
 
+    it "summarizes notification delivery status for the active filters" do
+      booking = create(:booking, hotel: hotel, status: "checked_in")
+      %w[sent failed pending skipped].each do |status|
+        create(:notification_delivery, hotel: hotel, booking: booking, status: status)
+      end
+
+      get hotel_notification_logs_path(hotel)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css("[data-slot='report-metric-strip'][aria-label='Notification delivery summary'] .panel-metric-card", count: 4)
+      expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card__detail", count: 4)
+      expect(page).to have_text("Total records")
+      expect(page).to have_text("Failed")
+      expect(page).to have_text("Pending")
+      expect(page).to have_text("Sent")
+      expect(page).to have_text("Current filters")
+    end
+
     it "generates unique resend field, label, and hint ids without changing the parameter name" do
       booking = create(:booking, hotel: hotel, status: "checked_in")
       deliveries = %w[sent failed].map do |status|

@@ -30,18 +30,18 @@
     <%= render HotelPortal::Reports::MetricStrip.new(
           aria_label: "Occupancy summary",
           metrics: [
-            { label: "Rooms sold", value: @report.totals[:rooms_sold].to_s },
-            { label: "Rooms available", value: @report.totals[:rooms_available].to_s },
-            { label: "Occupancy", value: number_to_percentage(@report.totals[:occupancy_rate] * 100, precision: 2) },
-            { label: "Average daily rate (ADR)", value: "MYR #{number_with_precision(@report.totals[:adr], precision: 2)}" }
+            { label: "Rooms sold", value: @report.totals[:rooms_sold].to_s, detail: "Selected period" },
+            { label: "Rooms available", value: @report.totals[:rooms_available].to_s, detail: "Selected period" },
+            { label: "Occupancy", value: number_to_percentage(@report.totals[:occupancy_rate] * 100, precision: 2), detail: "Rooms sold / available" },
+            { label: "Average daily rate (ADR)", value: "MYR #{number_with_precision(@report.totals[:adr], precision: 2)}", detail: "Room revenue / rooms sold" }
           ]
         ) %>
     <%= render HotelPortal::Reports::MetricStrip.new(
           aria_label: "Revenue summary",
           metrics: [
-            { label: "Revenue per available room (RevPAR)", value: "MYR #{number_with_precision(@report.totals[:revpar], precision: 2)}" },
-            { label: "Tax", value: "MYR #{number_with_precision(@report.totals[:tax_amount], precision: 2)}" },
-            { label: "Total revenue", value: "MYR #{number_with_precision(@report.totals[:total_revenue], precision: 2)}" }
+            { label: "Revenue per available room (RevPAR)", value: "MYR #{number_with_precision(@report.totals[:revpar], precision: 2)}", detail: "Room revenue / rooms available" },
+            { label: "Tax", value: "MYR #{number_with_precision(@report.totals[:tax_amount], precision: 2)}", detail: "Selected period" },
+            { label: "Total revenue", value: "MYR #{number_with_precision(@report.totals[:total_revenue], precision: 2)}", detail: "Room revenue plus tax" }
           ]
         ) %>
   </div>

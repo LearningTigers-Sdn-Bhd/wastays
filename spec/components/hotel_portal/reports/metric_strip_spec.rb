@@ -9,7 +9,7 @@ RSpec.describe HotelPortal::Reports::MetricStrip, type: :component do
       metrics: [
         { label: "Gross bookings", value: "MYR 42,860.00", detail: "18 reservations" },
         { label: "Net earnings", value: "MYR 36,412.00", detail: "85.0% retained", detail_variant: :success },
-        { label: "Average booking", value: "MYR 2,381.11" }
+        { label: "Average booking", value: "MYR 2,381.11", detail: "Selected period" }
       ]
     ))
 
@@ -26,8 +26,14 @@ RSpec.describe HotelPortal::Reports::MetricStrip, type: :component do
 
   it "rejects empty and oversized metric collections" do
     expect { described_class.new(metrics: []) }.to raise_error(ArgumentError, /one to six metrics/)
-    metrics = Array.new(7) { |index| { label: "Metric #{index}", value: index.to_s } }
+    metrics = Array.new(7) { |index| { label: "Metric #{index}", value: index.to_s, detail: "Selected period" } }
     expect { described_class.new(metrics:) }.to raise_error(ArgumentError, /one to six metrics/)
+  end
+
+  it "requires a supporting description for every metric" do
+    expect {
+      described_class.new(metrics: [ { label: "Gross bookings", value: "MYR 42,860.00" } ])
+    }.to raise_error(ArgumentError, /supporting description/)
   end
 
   it "stacks below tablet width and uses the exact responsive columns for every supported count" do
@@ -41,7 +47,7 @@ RSpec.describe HotelPortal::Reports::MetricStrip, type: :component do
     }
 
     expected_classes.each do |count, classes|
-      metrics = Array.new(count) { |index| { label: "Metric #{index + 1}", value: index.to_s } }
+      metrics = Array.new(count) { |index| { label: "Metric #{index + 1}", value: index.to_s, detail: "Selected period" } }
       render_inline(described_class.new(metrics:))
 
       expect(page.find("section[data-slot='report-metric-strip']")[:class]).to eq(classes)

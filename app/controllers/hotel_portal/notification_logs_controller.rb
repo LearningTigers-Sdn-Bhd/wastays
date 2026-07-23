@@ -6,6 +6,7 @@ class HotelPortal::NotificationLogsController < HotelPortal::BaseController
 
   def index
     @logs = filtered_logs
+    @notification_summary = notification_summary(@logs)
 
     respond_to do |format|
       format.html { @logs = @logs.page(params[:page]).per(20) }
@@ -89,6 +90,17 @@ class HotelPortal::NotificationLogsController < HotelPortal::BaseController
     logs = logs.where(channel: params[:channel]) if params[:channel].present?
     logs = logs.where(status: params[:status]) if params[:status].present?
     logs
+  end
+
+  def notification_summary(logs)
+    counts = logs.reorder(nil).group(:status).count
+
+    {
+      total: counts.values.sum,
+      failed: counts.fetch("failed", 0),
+      pending: counts.fetch("pending", 0),
+      sent: counts.fetch("sent", 0)
+    }
   end
 
   def export_filename(extension) = "notification-logs-#{Date.current}.#{extension}"

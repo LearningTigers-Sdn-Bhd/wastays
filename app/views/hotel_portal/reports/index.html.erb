@@ -1,229 +1,79 @@
-<div class="w-full space-y-4" data-slot="report-page" data-report="financial-summary">
+<div class="w-full space-y-4" data-slot="report-page" data-report="reports-summary">
   <%= turbo_frame_tag "reports_content", class: "block space-y-4" do %>
-    <%= render PanelsUI::PageHeader.new(title: "Financial summary", description: "Review your earnings and booking activity.") do |header| %>
-    <% header.with_caption do %>
-      <p class="text-sm font-medium text-muted-foreground">
-        <%= current_hotel.name %> ·
-        <% if @start_date == @end_date %>
-          <%= @start_date.strftime("%A, %d %b %Y") %>
-        <% else %>
-          <%= @start_date.strftime("%d %b %Y") %> - <%= @end_date.strftime("%d %b %Y") %>
-        <% end %>
-      </p>
-    <% end %>
-    <% header.with_actions do %>
-      <%= render PanelsUI::Button.new(
-            href: breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, date_preset: @date_preset),
-            data: { turbo: false }
-          ) do %>
-        <%= app_icon "chart-no-axes-column-increasing", class: "me-2 size-4", aria: { hidden: "true" } %>
-        View breakdown
+    <%= render PanelsUI::PageHeader.new(title: "Reports summary", description: "Review the key results across financial, compliance, guest, and accounting reports.") do |header| %>
+      <% header.with_caption do %>
+        <p class="text-sm font-medium text-muted-foreground">
+          <%= current_hotel.name %> ·
+          <% if @start_date == @end_date %>
+            <%= @start_date.strftime("%A, %d %b %Y") %>
+          <% else %>
+            <%= @start_date.strftime("%d %b %Y") %> - <%= @end_date.strftime("%d %b %Y") %>
+          <% end %>
+        </p>
       <% end %>
-    <% end %>
-    <% end %>
-
-    <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
-      { label: "Gross bookings", value: "MYR #{number_with_delimiter(number_with_precision(@total_gross, precision: 2))}", detail: "Before commission" },
-      { label: "Net earnings", value: "MYR #{number_with_delimiter(number_with_precision(@total_net, precision: 2))}", detail: "After commission", detail_variant: :success },
-      { label: "Reservations", value: @booking_count.to_s, detail: "Selected period" }
-    ]) %>
-
-    <section class="rounded-lg border border-border bg-card p-3" aria-label="Financial summary filters">
-      <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
+      <% header.with_actions do %>
         <%= render "preset_report_actions",
           form_url: hotel_reports_path(current_hotel),
           date_preset: @date_preset,
           start_date: @start_date,
           end_date: @end_date,
-          export_menu_id: "financial-summary-export",
+          export_menu_id: "reports-summary-export",
           export_items: [],
           show_export: false,
-          hidden_params: { q: params[:q] },
-          class_name: "flex w-full flex-col gap-2 sm:flex-row sm:items-end lg:w-auto" %>
-
-        <%= form_with url: hotel_reports_path(current_hotel), method: :get,
-              class: "w-full lg:min-w-64 lg:flex-1",
-              data: { controller: "auto-submit", turbo_frame: "reports_content" } do |form| %>
-          <%= hidden_field_tag :date_preset, @date_preset %>
-          <%= hidden_field_tag :start_date, @start_date %>
-          <%= hidden_field_tag :end_date, @end_date %>
-          <%= render PanelsUI::FormField.new(form: form, attribute: :q, label: "Search") do |field| %>
-            <% field.with_input(
-                 type: :search,
-                 value: params[:q],
-                 placeholder: "Guest, email, or reference token…",
-                 data: { action: "input->auto-submit#submit" }) %>
-          <% end %>
-        <% end %>
-
-        <% if feature_enabled_for_hotel?("excel_pdf_export") %>
-          <%= render "export_dropdown", menu_id: "financial-summary-export", items: [
-            ["Export PDF", hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :pdf)],
-            ["Export Excel", hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :xlsx)],
-            ["Export CSV", hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :csv)]
-          ] %>
-        <% end %>
-      </div>
-    </section>
-
-    <% annual = @date_preset == "this_year" %>
-    <section class="space-y-3" aria-labelledby="daily-performance-heading">
-      <div>
-        <h2 id="daily-performance-heading" class="text-base font-semibold text-foreground"><%= annual ? "Monthly performance snapshot" : "Daily performance snapshot" %></h2>
-        <p class="mt-1 text-sm text-muted-foreground">A breakdown of revenue and volume across the selected range.</p>
-      </div>
-
-      <%= render PanelsUI::Table.new(
-            caption: annual ? "Monthly performance snapshot" : "Daily performance snapshot",
-            density: :compact,
-            header_style: :sentence,
-            hoverable: true,
-            wrapper_class: "rounded-lg border border-border bg-card"
-          ) do |table| %>
-        <% table.with_header do %>
-          <tr>
-            <th scope="col"><%= annual ? "Month" : "Date" %></th>
-            <th scope="col" class="text-right">Bookings</th>
-            <th scope="col" class="text-right">Gross</th>
-            <th scope="col" class="text-right">Margin</th>
-            <th scope="col" class="text-right">Net</th>
-          </tr>
-        <% end %>
-        <% table.with_body do %>
-          <% if @paginated_daily_data.any? %>
-            <% @paginated_daily_data.each do |date, gross| %>
-              <%
-                period_bookings = @base_bookings.select do |booking|
-                  booking_date = booking.created_at.to_date
-                  annual ? booking_date.beginning_of_month == date : booking_date == date
-                end
-                period_margin = period_bookings.sum { |booking| booking.margin_amount || 0 }
-                period_net = period_bookings.sum { |booking| booking.net_amount || 0 }
-                date_key = date.strftime("%Y%m%d")
-              %>
-              <tr class="align-top">
-                <th scope="row">
-                  <button type="button"
-                          class="min-h-8 w-full rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive"
-                          data-slot="daily-ledger-trigger"
-                          aria-controls="daily-performance-modal-<%= date_key %>"
-                          aria-haspopup="dialog"
-                          onclick="document.getElementById('daily-performance-modal-<%= date_key %>').showModal()">
-                    <span class="block font-medium text-foreground"><%= date.strftime(annual ? "%B %Y" : "%d %b %Y") %></span>
-                    <% unless annual %><span class="block text-xs text-muted-foreground"><%= date.strftime("%A") %></span><% end %>
-                  </button>
-                </th>
-                <td class="text-right tabular-nums"><%= period_bookings.count %></td>
-                <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_delimiter(number_with_precision(gross, precision: 2)) %></td>
-                <td class="whitespace-nowrap text-right tabular-nums">- <%= number_with_delimiter(number_with_precision(period_margin, precision: 2)) %></td>
-                <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_delimiter(number_with_precision(period_net, precision: 2)) %></td>
-              </tr>
-            <% end %>
-          <% else %>
-            <%= render "table_empty_state", colspan: 5, message: "No financial data. Try selecting a different time period." %>
-          <% end %>
-        <% end %>
+          class_name: "flex flex-col gap-2 sm:flex-row sm:items-end" %>
       <% end %>
+    <% end %>
 
-      <%= render "table_pagination", collection: @paginated_daily_data %>
+    <section class="space-y-3" aria-labelledby="financial-summary-heading" data-slot="reports-summary-group">
+      <div>
+        <h2 id="financial-summary-heading" class="text-base font-semibold text-foreground">Financial</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Bookings, revenue, refunds, and balances.</p>
+      </div>
+      <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+        { label: "Gross bookings", value: "MYR #{number_with_delimiter(number_with_precision(@total_gross, precision: 2))}", detail: "Booking date" },
+        { label: "Net earnings", value: "MYR #{number_with_delimiter(number_with_precision(@total_net, precision: 2))}", detail: "Booking date", detail_variant: :success },
+        { label: "Refunds", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:financial][:refunds], precision: 2))}", detail: "Posting date", detail_variant: :destructive },
+        { label: "Extra charges", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:financial][:extra_charges], precision: 2))}", detail: "Posting date" },
+        { label: "Outstanding balance", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:financial][:outstanding], precision: 2))}", detail: "Stay date", detail_variant: :warning },
+        { label: "Deposit liability", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:financial][:deposit_liability], precision: 2))}", detail: "As of #{@end_date.strftime('%d %b %Y')}" }
+      ], aria_label: "Financial report summary") %>
     </section>
 
-    <% @paginated_daily_data.each do |date, gross| %>
-      <%
-        period_bookings = @base_bookings.select do |booking|
-          booking_date = booking.created_at.to_date
-          annual ? booking_date.beginning_of_month == date : booking_date == date
-        end
-        period_margin = period_bookings.sum { |booking| booking.margin_amount || 0 }
-        period_net = period_bookings.sum { |booking| booking.net_amount || 0 }
-        date_key = date.strftime("%Y%m%d")
-      %>
-      <dialog id="daily-performance-modal-<%= date_key %>"
-              class="fixed inset-0 m-auto w-[min(94vw,64rem)] rounded-lg border border-border bg-card p-0 text-foreground shadow-lg backdrop:bg-background/70"
-              aria-labelledby="daily-performance-title-<%= date_key %>"
-              onclick="if (event.target === this) { this.close(); }">
-        <div class="flex max-h-[85vh] flex-col overflow-hidden" onclick="event.stopPropagation()">
-          <div class="flex items-center justify-between gap-3 border-b border-border p-4">
-            <div>
-              <p class="text-xs font-medium text-muted-foreground"><%= annual ? "Monthly ledger" : "Daily ledger" %></p>
-              <h3 id="daily-performance-title-<%= date_key %>" class="mt-1 text-base font-semibold"><%= date.strftime(annual ? "%B %Y" : "%A, %d %b %Y") %></h3>
-            </div>
-            <button type="button"
-                    class="flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive"
-                    aria-label="Close <%= annual ? 'monthly' : 'daily' %> ledger"
-                    onclick="this.closest('dialog').close()">
-              <%= app_icon "x", class: "size-4", aria: { hidden: "true" } %>
-            </button>
-          </div>
+    <section class="space-y-3" aria-labelledby="tax-compliance-summary-heading" data-slot="reports-summary-group">
+      <div>
+        <h2 id="tax-compliance-summary-heading" class="text-base font-semibold text-foreground">Tax &amp; compliance</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Tax collections and non-national guest activity.</p>
+      </div>
+      <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+        { label: "Tourism tax collected", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:tax_compliance][:tourism_tax], precision: 2))}", detail: "Stay date" },
+        { label: "SST", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:tax_compliance][:sst], precision: 2))}", detail: "Posting date" },
+        { label: "Non-national guests", value: @reports_summary[:tax_compliance][:non_national_guests].to_s, detail: "Stay date" }
+      ], aria_label: "Tax and compliance report summary") %>
+    </section>
 
-          <dl class="grid grid-cols-2 gap-px border-b border-border bg-border md:grid-cols-4">
-            <div class="bg-card p-3">
-              <dt class="text-xs font-medium text-muted-foreground">Volume</dt>
-              <dd class="mt-1 font-semibold tabular-nums"><%= period_bookings.count %></dd>
-            </div>
-            <div class="bg-card p-3">
-              <dt class="text-xs font-medium text-muted-foreground">Gross sale</dt>
-              <dd class="mt-1 font-semibold tabular-nums">MYR <%= number_with_precision(gross, precision: 2) %></dd>
-            </div>
-            <div class="bg-card p-3">
-              <dt class="text-xs font-medium text-muted-foreground">Commission</dt>
-              <dd class="mt-1 font-semibold tabular-nums">- <%= number_with_precision(period_margin, precision: 2) %></dd>
-            </div>
-            <div class="bg-card p-3">
-              <dt class="text-xs font-medium text-muted-foreground">Settlement</dt>
-              <dd class="mt-1 font-semibold tabular-nums">MYR <%= number_with_precision(period_net, precision: 2) %></dd>
-            </div>
-          </dl>
+    <section class="space-y-3" aria-labelledby="guest-operations-summary-heading" data-slot="reports-summary-group">
+      <div>
+        <h2 id="guest-operations-summary-heading" class="text-base font-semibold text-foreground">Guest operations</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Key movement counts for the selected stay dates.</p>
+      </div>
+      <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+        { label: "Arrivals", value: @reports_summary[:guest_operations][:arrivals].to_s, detail: "Check-in date" },
+        { label: "In house", value: @reports_summary[:guest_operations][:in_house].to_s, detail: "Stay date" },
+        { label: "Departures", value: @reports_summary[:guest_operations][:departures].to_s, detail: "Check-out date" },
+        { label: "Checkouts", value: @reports_summary[:guest_operations][:checkouts].to_s, detail: "Check-out date" }
+      ], aria_label: "Guest operations report summary") %>
+    </section>
 
-          <div class="flex-1 overflow-y-auto bg-muted/30 p-4">
-            <% if period_bookings.any? %>
-              <div class="space-y-3">
-                <% period_bookings.each do |booking| %>
-                  <article class="rounded-lg border border-border bg-card p-3 shadow-sm">
-                    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div class="min-w-0 flex-1">
-                        <div class="flex flex-wrap items-center gap-2">
-                          <span class="rounded bg-muted px-2 py-0.5 font-mono text-sm font-semibold text-foreground">#<%= booking.confirmation_token %></span>
-                          <span class="text-sm font-semibold text-foreground"><%= booking.guest_name %></span>
-                        </div>
-                        <p class="mt-1 text-xs text-muted-foreground"><%= booking.guest_email %> · <%= booking.guest_phone %></p>
-                        <p class="mt-3 text-xs text-muted-foreground">
-                          <%= booking.check_in&.strftime("%d %b") %> — <%= booking.check_out&.strftime("%d %b %Y") %>
-                        </p>
-                      </div>
-
-                      <div class="border-t border-border pt-3 md:border-0 md:pt-0 md:text-right">
-                        <p class="text-xs font-medium text-muted-foreground">Net settlement</p>
-                        <p class="mt-1 font-semibold tabular-nums text-foreground">MYR <%= number_with_precision(booking.net_amount, precision: 2) %></p>
-                        <%= link_to hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"),
-                              class: "mt-2 inline-flex min-h-6 items-center gap-1 text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive",
-                              data: { turbo: false } do %>
-                          Details
-                          <%= app_icon "chevron-right", class: "size-3", aria: { hidden: "true" } %>
-                        <% end %>
-                      </div>
-                    </div>
-
-                    <% if booking.booking_rooms.any? %>
-                      <div class="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
-                        <% booking.booking_rooms.each do |room| %>
-                          <% room_name = room.room_type_snapshot.is_a?(Hash) ? room.room_type_snapshot["name"].presence : nil %>
-                          <% room_name = room_name.presence || room.room_type&.name || "Room" %>
-                          <span class="inline-flex items-center rounded-md border border-border bg-muted px-2 py-1 text-xs text-muted-foreground">
-                            <span class="me-1 font-semibold text-foreground">1x</span> <%= room_name %>
-                          </span>
-                        <% end %>
-                      </div>
-                    <% end %>
-                  </article>
-                <% end %>
-              </div>
-            <% else %>
-              <p class="py-6 text-center text-sm text-muted-foreground">No entries found.</p>
-            <% end %>
-          </div>
-        </div>
-      </dialog>
-    <% end %>
+    <section class="space-y-3" aria-labelledby="accounting-summary-heading" data-slot="reports-summary-group">
+      <div>
+        <h2 id="accounting-summary-heading" class="text-base font-semibold text-foreground">Accounting</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Journal activity recorded for the selected business dates.</p>
+      </div>
+      <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+        { label: "Journal batches", value: @reports_summary[:accounting][:batches].to_s, detail: "Business date" },
+        { label: "Total debit", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:accounting][:debit], precision: 2))}", detail: "Business date" },
+        { label: "Total credit", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:accounting][:credit], precision: 2))}", detail: "Business date" }
+      ], aria_label: "Accounting report summary") %>
+    </section>
   <% end %>
 </div>

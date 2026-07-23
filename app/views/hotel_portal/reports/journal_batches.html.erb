@@ -35,6 +35,12 @@
     <% end %>
   <% end %>
 
+  <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+    { label: "Journal batches", value: @journal_summary.batch_count.to_s, detail: "Selected period" },
+    { label: "Total debit", value: "MYR #{number_with_precision(@journal_summary.total_debit, precision: 2)}", detail: "Selected period" },
+    { label: "Total credit", value: "MYR #{number_with_precision(@journal_summary.total_credit, precision: 2)}", detail: "Selected period" }
+  ], aria_label: "Journal batch summary") %>
+
   <section class="space-y-4" aria-label="Journal batches">
     <% if @paginated_batches.any? %>
       <% @paginated_batches.each do |batch| %>

@@ -19,6 +19,16 @@
     <% end %>
   <% end %>
 
+  <%= render HotelPortal::Reports::MetricStrip.new(
+        aria_label: "Notification delivery summary",
+        metrics: [
+          { label: "Total records", value: @notification_summary[:total].to_s, detail: "Current filters" },
+          { label: "Failed", value: @notification_summary[:failed].to_s, detail: "Current filters · needs attention", detail_variant: :destructive },
+          { label: "Pending", value: @notification_summary[:pending].to_s, detail: "Current filters · awaiting delivery", detail_variant: :warning },
+          { label: "Sent", value: @notification_summary[:sent].to_s, detail: "Current filters · delivered", detail_variant: :success }
+        ]
+      ) %>
+
   <section class="rounded-lg border border-border bg-card p-3" aria-label="Notification log filters">
     <%= form_with url: hotel_notification_logs_path(current_hotel), method: :get,
           id: "notification-logs-filter-form",

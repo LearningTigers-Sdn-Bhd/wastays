@@ -47,6 +47,7 @@ module HotelPortal
         end
       end
       @paginated_daily_data = Kaminari.paginate_array(@daily_data).page(params[:page]).per(25)
+      prepare_reports_summary
 
       respond_to do |format|
         format.html
@@ -500,6 +501,7 @@ module HotelPortal
 
       respond_to do |format|
         format.html do
+          @journal_summary = HotelPortal::Reports::JournalBatchExportTable.new(batches: @batches)
           @paginated_batches = @batches.page(params[:page]).per(25)
         end
         format.csv do
@@ -629,6 +631,85 @@ module HotelPortal
     end
 
     private
+
+    def prepare_reports_summary
+      refund_report = HotelPortal::Reports::RefundReport.new(
+        hotel: current_hotel,
+        start_date: @start_date,
+        end_date: @end_date,
+        date_preset: @date_preset
+      ).call
+      extra_charge_total = %w[fb non_fb].sum do |tab|
+        HotelPortal::Reports::ExtraChargeReport.new(
+          hotel: current_hotel,
+          start_date: @start_date,
+          end_date: @end_date,
+          tab: tab,
+          date_preset: @date_preset
+        ).call.totals[:total_amount]
+      end
+      outstanding_report = HotelPortal::Reports::OutstandingBalanceReport.new(
+        hotel: current_hotel,
+        start_date: @start_date,
+        end_date: @end_date
+      ).call
+      deposit_liability_report = HotelPortal::Reports::DepositLiabilityReport.new(
+        hotel: current_hotel,
+        as_of_date: @end_date
+      ).call
+      tourism_tax_report = HotelPortal::Reports::TourismTaxReport.new(
+        hotel: current_hotel,
+        start_date: @start_date,
+        end_date: @end_date
+      ).call
+      sst_report = HotelPortal::Reports::SstReport.new(
+        hotel: current_hotel,
+        start_date: @start_date,
+        end_date: @end_date,
+        date_preset: @date_preset
+      ).call
+      non_national_report = HotelPortal::Reports::NonNationalReport.new(
+        hotel: current_hotel,
+        start_date: @start_date,
+        end_date: @end_date
+      ).call
+      guest_operations_report = HotelPortal::Reports::ArrivalsDeparturesReport.new(
+        hotel: current_hotel,
+        start_date: @start_date,
+        end_date: @end_date
+      ).call
+      journal_table = HotelPortal::Reports::JournalBatchExportTable.new(
+        batches: current_hotel.journal_batches
+                              .where(business_date: @start_date..@end_date)
+                              .includes(:entries)
+                              .order(business_date: :desc)
+      )
+
+      @reports_summary = {
+        financial: {
+          refunds: refund_report.totals[:total_amount],
+          extra_charges: extra_charge_total,
+          outstanding: outstanding_report.totals[:outstanding_amount],
+          deposit_liability: deposit_liability_report.totals[:remaining_liability]
+        },
+        tax_compliance: {
+          tourism_tax: tourism_tax_report.totals[:total_collected],
+          sst: sst_report.totals[:sst_amount],
+          non_national_guests: non_national_report.totals[:guest_count]
+        },
+        guest_operations: {
+          arrivals: guest_operations_report.arrival_count,
+          in_house: guest_operations_report.in_house_count,
+          departures: guest_operations_report.departure_count,
+          checkouts: guest_operations_report.checkout_count
+        },
+        accounting: {
+          batches: journal_table.batch_count,
+          debit: journal_table.total_debit,
+          credit: journal_table.total_credit
+        }
+      }
+    end
 
     def extra_charge_export_filename(extension)
       tab = @active_extra_charge_tab.tr("_", "-")
