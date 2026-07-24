@@ -79,7 +79,9 @@ export default class extends Controller {
     const adults = Number(this.adultsCountTarget.textContent.trim())
     const children = Number(this.childrenCountTarget.textContent.trim())
 
-    this.displayTarget.textContent = `${adults} Adults · ${children} Children`
+    const adultLabel = adults === 1 ? "Adult" : "Adults"
+    const childLabel = children === 1 ? "Child" : "Children"
+    this.displayTarget.textContent = `${adults} ${adultLabel} · ${children} ${childLabel}`
     if (this.hasCompactDisplayTarget) {
       this.compactDisplayTarget.textContent = String(adults + children)
     }

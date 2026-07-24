@@ -35,13 +35,13 @@
         
         <div class="flex flex-wrap gap-y-2 gap-x-4 mb-6">
           <div class="flex items-center gap-x-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            <svg class="w-3.5 h-3.5 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            <%= cached_icon "adult", library: "guest", class: "w-3.5 h-3.5 text-primary fill-current" %>
             Up to <%= room_type.max_adults %> Adults
           </div>
           <% if room_type.max_children.to_i > 0 %>
             <div class="flex items-center gap-x-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-              <svg class="w-3.5 h-3.5 text-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              <%= room_type.max_children %> Children
+              <%= cached_icon "child", library: "guest", class: "w-3 h-3 text-primary fill-current" %>
+              <%= room_type.max_children %> <%= room_type.max_children == 1 ? "Child" : "Children" %>
             </div>
           <% end %>
         </div>

@@ -13,10 +13,10 @@ export default class extends Controller {
     
     this.nameTarget.textContent = data.name
     this.descriptionTarget.textContent = data.description
-    this.adultsTarget.textContent = `${data.max_adults} Adults`
-    
+    this.adultsTarget.textContent = `${data.max_adults} ${data.max_adults === 1 ? "Adult" : "Adults"}`
+
     if (data.max_children > 0) {
-      this.childrenTarget.textContent = `${data.max_children} Children`
+      this.childrenTarget.textContent = `${data.max_children} ${data.max_children === 1 ? "Child" : "Children"}`
       if (this.hasChildrenContainerTarget) this.childrenContainerTarget.classList.remove("hidden")
     } else {
       if (this.hasChildrenContainerTarget) this.childrenContainerTarget.classList.add("hidden")

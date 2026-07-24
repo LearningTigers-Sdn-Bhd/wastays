@@ -43,14 +43,13 @@
 
   <%# Gallery Section (Primary Visuals) %>
   <div id="hotel-gallery-top" class="max-w-[85rem] mx-auto px-4 py-6 sm:px-6 lg:px-8">
-    <div class="flex flex-wrap items-center gap-3 mb-2">
-      <h1 class="text-3xl md:text-4xl font-extrabold text-foreground"><%= @hotel.name %></h1>
-      <% if @hotel.pax_pricing_only? %>
+    <% if @hotel.pax_pricing_only? %>
+      <div class="flex flex-wrap items-center gap-3 mb-2">
         <span class="inline-flex items-center gap-x-1.5 py-1 px-3 rounded-full text-[10px] font-black bg-indigo-50 border border-indigo-100 text-indigo-700 shadow-sm uppercase tracking-wider">
           Per Pax Pricing Only
         </span>
-      <% end %>
-    </div>
+      </div>
+    <% end %>
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[420px]">
       <div class="md:col-span-2 md:row-span-2 aspect-[2/1] md:aspect-auto rounded-2xl overflow-hidden shadow-lg group cursor-pointer" 
            data-action="click->gallery-toggle#show">
@@ -108,25 +107,22 @@
         <div class="card p-6 md:p-8">
           <div class="flex justify-between items-start mb-4">
             <div>
-              <div class="flex items-center gap-x-2 mb-2">
-                <div class="flex text-amber-400">
-                  <% @hotel.star_rating_int.times do %>
-                    <%= cached_icon "star", library: "phosphor", variant: "fill", class: "w-3.5 h-3.5 fill-current" %>
+              <% if @hotel.star_rating_int.positive? %>
+                <div class="flex items-center gap-x-2 mb-2">
+                  <%= render PanelsUI::Tooltip.new(text: "#{@hotel.star_rating_int}-Star Hotel", delay: 150) do %>
+                    <div class="flex text-amber-400 cursor-help" tabindex="0" aria-label="<%= @hotel.star_rating_int %>-Star Hotel">
+                      <% @hotel.star_rating_int.times do %>
+                        <%= cached_icon "star", library: "phosphor", variant: "fill", class: "w-3.5 h-3.5 fill-current" %>
+                      <% end %>
+                    </div>
                   <% end %>
                 </div>
-                <span class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Hotel Grade</span>
-              </div>
+              <% end %>
               <h1 class="text-3xl md:text-4xl font-extrabold text-foreground mb-2"><%= @hotel.name %></h1>
               <p class="text-muted-foreground flex items-start gap-x-2">
                 <svg class="w-5 h-5 mt-0.5 text-primary shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                 <span><%= @hotel.full_address %></span>
               </p>
-            </div>
-            <div class="hidden sm:block text-right">
-              <div class="bg-primary text-white p-3 rounded-xl shadow-lg shadow-primary/20">
-                <span class="block text-[10px] uppercase font-black tracking-tighter opacity-80">Guest Rating</span>
-                <span class="text-2xl font-black italic tracking-tighter">4.8</span>
-              </div>
             </div>
           </div>
 
@@ -135,7 +131,6 @@
 
         <%# About / Story Section %>
         <div class="space-y-4">
-          <h2 class="text-2xl font-extrabold text-foreground">About <%= @hotel.name %></h2>
           <div class="prose prose-neutral max-w-none text-muted-foreground leading-relaxed">
             <p>Welcome to <%= @hotel.name %>, where local hospitality meets modern comfort. Located in the heart of <%= @hotel.city %>, our property is designed for travelers who value simplicity, quality, and direct deals.</p>
             <p>Whether you're visiting for business or leisure, we provide a seamless stay experience with all the essential amenities you need. Book directly with us through WAStays to enjoy the best rates and personalized WhatsApp support throughout your journey.</p>
@@ -146,20 +141,6 @@
         <div class="space-y-6 pt-4" id="rooms-section">
           <div class="flex justify-between items-end">
             <h2 class="text-2xl font-extrabold text-foreground">Select your room</h2>
-            <div class="flex items-center gap-3">
-              <p class="text-sm text-secondary font-bold">Recommended for <%= @adults %> guests</p>
-              <%= form_with url: hotel_path(@hotel), method: :get, local: true, class: "hidden sm:block" do |f| %>
-                <% request.query_parameters.except("display_currency").each do |key, value| %>
-                  <%= hidden_field_tag key, value %>
-                <% end %>
-                <%= f.select :display_currency,
-                             options_for_select(@hotel.currency_dropdown_options, @display_currency),
-                             {},
-                             class: "rounded-lg border border-border bg-white px-3 py-2 text-xs font-bold text-foreground",
-                             onchange: "this.form.submit()",
-                             aria: { label: "Display currency" } %>
-              <% end %>
-            </div>
           </div>
 
           <div class="space-y-6">
@@ -173,7 +154,19 @@
 
             <% if @allocation_options.any? %>
               <div class="space-y-4">
-                <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Recommended Stay Bundles</p>
+                <p class="flex items-center gap-x-1.5 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                  Recommended Stay Bundles for
+                  <span class="inline-flex items-center gap-x-0.5 normal-case">
+                    <%= @adults %>
+                    <%= cached_icon "adult", library: "guest", class: "w-3 h-3 fill-current" %>
+                  </span>
+                  <% if @children.positive? %>
+                    <span class="inline-flex items-center gap-x-0.5 normal-case">
+                      <%= @children %>
+                      <%= cached_icon "child", library: "guest", class: "w-2.5 h-2.5 fill-current" %>
+                    </span>
+                  <% end %>
+                </p>
                 <% @allocation_options.each do |option| %>
                   <div class="card p-6 border-2 border-primary/10 hover:border-primary/30 transition-colors shadow-sm">
                     <div class="flex flex-col lg:flex-row justify-between gap-6">
@@ -217,15 +210,20 @@
                                   <%= room_type.description %>
                                 </p>
                                 <div class="flex items-center gap-x-2 mt-1.5">
-                                  <span class="inline-flex items-center gap-x-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-foreground">
-                                    Up to <%= room_type.max_adults.to_i %> adults
+                                  <span class="inline-flex items-center gap-x-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">
+                                    <%= allocated_room.adults %>
+                                    <%= cached_icon "adult", library: "guest", class: "w-3 h-3 fill-current" %>
                                   </span>
-                                  <% if room_type.max_children.to_i > 0 %>
-                                    <span class="inline-flex items-center gap-x-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-foreground">
-                                      <%= room_type.max_children.to_i %> children
+                                  <% if allocated_room.children.positive? %>
+                                    <span class="inline-flex items-center gap-x-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">
+                                      <%= allocated_room.children %>
+                                      <%= cached_icon "child", library: "guest", class: "w-2.5 h-2.5 fill-current" %>
                                     </span>
                                   <% end %>
                                 </div>
+                                <p class="text-[10px] text-muted-foreground mt-1">
+                                  Fits up to <%= room_type.max_adults.to_i %> adult<%= "s" if room_type.max_adults.to_i != 1 %><% if room_type.max_children.to_i > 0 %> + <%= room_type.max_children.to_i %> child<%= "ren" if room_type.max_children.to_i != 1 %><% end %>
+                                </p>
                               </div>
                             </div>
                           <% end %>
