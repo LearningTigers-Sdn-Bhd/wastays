@@ -1,95 +1,408 @@
-# Folios / Bookings Service Reorg & Rename Proposal
+# Folios / Bookings Service Reorg & Refactor Proposal
 
-> Status: **Proposed** — to be executed in a dedicated branch, not the current one.
-> Scope: `app/services/folios/` (40 files), `app/services/folio_routing/`, and the
-> creation-time adapters in `app/services/bookings/`.
-> Goal: reduce the number of top-level things a reader must track and remove
-> confusingly-overlapping names. **No behaviour changes.**
+> Status: **Proposed** (revision 2) — to be executed in a dedicated branch.
+> Scope: `app/services/folios/` (**42** files, 5,559 LOC), `app/services/folio_routing/`
+> (10 files), and the creation-time adapters in `app/services/bookings/`.
+> Lens: DIP, ISP, OCP, SRP, DRY, KISS, Law of Demeter.
 
-## Why
+## What changed in revision 2
 
-`folios/` is a flat folder of 40 files and `bookings/` has ~35. The problem is not
-only the count — several verbs mean nearly the same thing, so the name does not
-tell you *which* service to reach for.
+Revision 1 proposed folders and renames only, and was explicitly designed to
+change zero lines of code. Reading the code turned up duplication and
+encapsulation problems that foldering does not touch, and one factual error in
+v1's own recommendations. Changes:
 
-Same job, competing names:
+| v1 said | v2 says | Why |
+|---|---|---|
+| Reorg via Zeitwerk `collapse` first | **Don't use `collapse`** | It trades away `path = constant`, which v1 itself cites as a strength, and fixes nothing |
+| Keep `generate` and `sync` as two defined verbs | **Delete `GenerateForecastedCharges`** | It is a 15-line pure alias for `SyncForecastedCharges`. The distinction does not exist in the code |
+| `Result` type + `BuildGuestFolio` are "out of scope follow-ups" | **Core work items (M2, M4)** | They cover a live bug surface, not tidiness |
+| Sequence: folders → renames → dedup | **Seams → renames → folders** | Deduplication merges several of the "competing names" on its own |
+| 40 files | 42 files | Recount |
 
-| What you want | Competing service names |
+v1's blast-radius measurements and its naming analysis were sound and are kept.
+
+## Two complaints, two different fixes
+
+The folder/rename work and the deduplication work are not rivals. They solve
+different problems, and conflating them is what made v1's sequencing wrong:
+
+| Complaint | Fixed by |
 |---|---|
-| Make a folio | `create_folio` · `initialize_for_booking` · `recover_missing_folio` · `backfill_missing_for_operational_bookings` |
-| Close a folio | `close_folio` · `close_for_checkout` · `close_no_show_folios` |
-| Reopen a folio | `reopen_folio` · `reopen_for_correction` · `reopen_no_show_folios_for_reinstatement` |
-| Post / compute charges | `post_category_charge` · `post_nightly_charges` · `post_early_checkout_charges` · `post_staff_transaction` · `generate_forecasted_charges` · `sync_forecasted_charges` · `refresh_open_forecasts_from_room_revenue_rules` · `nightly_charge_calculation` · `nightly_charge_reconciliation` · `process_catch_up_charges` · `forecasted_charge_lines` |
-| Move money in | `record_payment_from_gateway` · `record_tourism_tax_payment` · `sync_existing_payments` · `payment_source` · `record_refund` · `refund_source` |
-| Route a charge to a party | `resolve_target_folio` · `route_preview` + `folio_routing/*` + `bookings/apply_bill_to` |
+| "Change one rule, edit four files" | seams (M1–M6) |
+| "Silent wrong answers in money code" | seams (M2) |
+| "Three names for one job" | seams — they merge — *then* renaming |
+| "I can't tell which service to reach for" | renaming + verb glossary |
+| "42 files is a lot to scan" | **folders** |
 
-`generate` vs `sync` vs `refresh` vs `calculate` vs `reconcile` vs `process` are
-undefined verbs — there is no glossary that distinguishes them.
+Seams-first takes the file count from 42 to ~43 — it removes ~800 lines of
+duplication but barely dents the count. **Foldering therefore stays on the
+table**; it simply lands better once the merges are done.
 
-## Target structure
+---
 
-Group into sub-namespaces so a reader scans ~6 concepts, not 40 files:
+## Principle audit (measured)
+
+### DRY — literal, byte-identical duplication
+
+Helper bodies hashed after normalizing the hotel accessor (`@hotel` vs
+`@booking.hotel`). Identical, not merely similar:
+
+| Method | Identical copies |
+|---|---|
+| `transaction_code_for_tax_line` | `post_nightly_charges.rb:173`, `process_catch_up_charges.rb:222`, `forecasted_charge_lines.rb:69` (+ near-variant `post_early_checkout_charges.rb:136`) |
+| `source_transaction_code_for_tax_line` | `post_nightly_charges.rb:183`, `process_catch_up_charges.rb:232` (+ variant `post_early_checkout_charges.rb:147`) |
+| `room_transaction_code` | 4 files |
+
+| Duplication | Count |
+|---|---|
+| `transaction_codes.find_by(system_key: …)` | **28** (`app/` + `lib/`) |
+| `permitted?` — `superadmin? \|\| has_permission?` | **16 files** (10 in `folios/`); 4 byte-identical |
+| Files building `OpenStruct.new(success?: …)` in folios + routing | **25** |
+| Distinct result shapes | **30+** |
+| `FolioOperationLog.create!` hand-rolled | **13 files** (incl. one controller) |
+| Guest-folio builders duplicating `create_booking_folio!` | **3** |
+
+### Law of Demeter — two are encapsulation breaches, not style nits
+
+`folio_routing/apply_batch.rb:84-95` instantiates *itself* and reaches through
+its own privates — four `send(:…)` plus **three `instance_variable_get(:@error)`**:
+
+```ruby
+service = new(booking:, actor: nil, routes:, …)
+changes = service.send(:validated_changes)
+return OpenStruct.new(success?: false, error: service.instance_variable_get(:@error)) if …
+```
+
+`BookingFolio` **deliberately** marks the reopen methods private
+(`booking_folio.rb:268`), then all four callers bypass it with `send` —
+`reopen_folio.rb:28,42`, `reopen_for_correction.rb:39,45`,
+`reopen_no_show_folios_for_reinstatement.rb:20,37`,
+`bookings/repair_no_show_tourism_tax.rb:98,112`. The privacy is fictional. It
+guards a real invariant (`closed_folio_reopen_must_be_authorized`,
+`booking_folio.rb:215`), so it needs a sanctioned public door, not removal.
+
+Train wrecks: `@booking.hotel.transaction_codes.find_by(...)` (7 files),
+`@booking.booking_folio.folio_transactions.payment` (`record_tourism_tax_payment.rb:57`).
+
+### SRP
+
+| File | LOC | Responsibilities in one `call` |
+|---|---|---|
+| `close_folio.rb` | 173 | permission · standard validation · direct-bill validation · credit exposure · state change · AR invoice · operation log · audit event |
+| `create_folio.rb` | 150 | permission · numbering · defaults · log · **`set_primary!`** (a second operation) |
+| `refresh_open_forecasts_from_room_revenue_rules.rb` | 136 | scan · **rebuild booking financial snapshots** · sync · count · audit |
+
+### OCP
+
+A new tax type means editing the same `case tax_line["type"]` in **4 files**. A
+new bill-to party kind means editing `ResolveTargetFolio#resolve`
+(`resolve_target_folio.rb:48`) — already shaped like Chain-of-Responsibility and
+would take strategies cleanly.
+
+### ISP
+
+- `ResolveTargetFolio.call` — **9 keyword params**; most callers pass 3.
+- `PostEarlyCheckoutCharges` — **4 class entry points** (`call`, `preview`,
+  `pending_preview`, `projected_checkout_balance`); commands and queries mixed.
+
+### DIP — deliberately limited
+
+Every dependency is a concrete `Foo::Bar.call`. Full constructor injection would
+be a **KISS violation**: the specs are DB-backed and green, and DI ceremony buys
+little in a Rails service layer. Depend on *named seams* (M1, M2) instead. Skip
+the container.
+
+### KISS — what to leave alone
+
+`ChargePostingKeys` (23 LOC, `module_function`) and `NextFolioNumber` (15 LOC)
+are exemplary: one job, no ceremony. `NightlyChargeCalculation` as a mixin is a
+sound Rails idiom. **Do not touch these** — v1's instinct to relocate
+`ChargePostingKeys` into a `reads/` folder is churn without benefit.
+
+---
+
+## The moves
+
+Each is independently shippable. Ranked by value ÷ risk.
+
+**Enabler:** all 42 folio services have a matching spec in `spec/services/folios/`
+(1:1, verified). Mechanical extraction is cheap to validate.
+
+### M1 — Transaction-code resolver ★ start here
+
+Kills 28 scattered lookups, 3 byte-identical helper triples, the
+`@booking.hotel.transaction_codes` train wreck, and the 4-file OCP `case`.
+
+No resolver exists today — `app/services/transaction_codes/` holds only
+`apply_hotel_tax_rule_change.rb` and `hotel_tax_rule_change.rb`.
+
+Prefer `TransactionCodes::Resolver.for(hotel)` with `#room_revenue`,
+`#for_tax_line(tax_line)`, `#source_for_tax_line(tax_line)` over a bare
+`Hotel#transaction_code(key)`. The `case` is where the duplication actually
+lives; a plain key lookup would leave it copied in 4 places.
+
+**Blast radius:** 15 app call sites in folios/bookings · 4 models · 1 controller ·
+2 in `lib/tasks/`. **Risk: low** — pure extraction.
+
+### M2 — `Result` value object (replace `OpenStruct`)
+
+Kills 30+ ad-hoc shapes and a silent-nil bug class in money-handling code
+(`OpenStruct` answers any message, so `result.sucess?` returns `nil` — falsy,
+silent).
+
+Ruby 3.4 provides `Data.define`. Key de-risking insight:
+
+> **Readers do not change.** A `Data` with matching member names is a drop-in for
+> the ~98 sites reading `.success?` / `.error` / `.folio`. Only the **25
+> constructing files** change.
+
+The real risk is the mirror image: `Data` raises where `OpenStruct` returned
+`nil`, surfacing consumers that read members the producer never sets. Those are
+latent bugs today. **Mitigation:** land per-family — lifecycle results first
+(the most uniform shape, 8 files), then transactions, then routing, with a full
+`bin/test` between slices. **Risk: medium**, mechanical.
+
+### M3 — Public reopen-authorization API
+
+Replace the private pair with one public block method on `BookingFolio`:
+
+```ruby
+folio.reopening_for_correction { folio.update!(status: "open", …) }
+```
+
+All four call sites already hand-roll this authorize/ensure-clear sandwich, two
+of them with a bare `ensure` inside a block (`reopen_folio.rb:41`,
+`reopen_for_correction.rb:44`) — subtle and easy to get wrong.
+
+**Blast radius:** 1 model + 4 services. **Risk: low.**
+
+### M4 — `BuildGuestFolio` primitive
+
+Kills 3 duplicated builders and — the real prize — **3 rival idempotency
+strategies for the same race**:
+
+| Service | Race strategy |
+|---|---|
+| `initialize_for_booking.rb:25` | rescues `RecordNotUnique` **and** `RecordInvalid`, re-reads, re-raises if absent; conditional on `lock:` |
+| `recover_missing_folio.rb:45` | rescues `RecordNotUnique` only |
+| `create_folio.rb:35` | rescues `RecordInvalid` → generic failure; no re-read |
+
+Highest-value **correctness** item in the list.
+
+#### Scope is smaller than it looks — `lock:` is maintenance-only
+
+`initialize_for_booking`'s `lock:` selects between two failure strategies:
+`lock: true` wraps in `booking.with_lock` and runs the rescue/reload/return-the-
+winner recovery; `lock: false` does none of it, because the caller's transaction
+would be poisoned by a duplicate insert (comment at line 17).
+
+Across all 8 app call sites, **7 pass `lock: false`**:
+
+| `lock:` | Call sites |
+|---|---|
+| `false` | `transition_status.rb:86,161` · `create_manual_booking.rb:158` · `finalize_no_show.rb:37` · `reinstate_reservation.rb:51` · `confirm_booking.rb:167` · `confirm_group_booking.rb:128` |
+| default (`true`) | `backfill_missing_for_operational_bookings.rb:28` — **only one** |
+
+The single `lock: true` production caller is the maintenance backfill this
+proposal already relocates. Specs use the default because they call the service
+standalone, so the branch stays well covered.
+
+**All 7 `lock: false` callers verified as running inside a transaction** — the
+line-17 contract holds, none is bare:
+
+- 4 hold an explicit `@booking.with_lock` (`transition_status` ×2,
+  `finalize_no_show`, `reinstate_reservation`).
+- 2 create the booking *inside* the transaction (`create_manual_booking`,
+  `confirm_group_booking`), so no concurrent creator for that booking can exist.
+- 1 serializes on `@quote.with_lock` (`confirm_booking:13`) rather than the
+  booking — correct granularity, since the race being prevented is two confirms
+  of one quote. Its `existing_booking` branch (line 18) is the idempotent
+  re-entry path.
+
+#### Consequence
+
+`BuildGuestFolio` needs **one** behaviour: the plain insert, no rescue, caller
+supplies the transaction — the `lock: false` semantics 7 of 8 callers already
+use. Locking + recovery becomes a thin opt-in wrapper for the one maintenance
+caller. `recover_missing_folio` keeps its own `RecordNotUnique` wrapper for the
+night-audit blocker path.
+
+That reduces the work from "reconcile three rival concurrency strategies" to
+"extract one insert, keep one small wrapper" — and the hot paths never touch the
+branch that would be riskiest to change.
+
+**Do after M2**, so all three return one comparable shape. **Risk: low.**
+
+### M5 — `SystemActor` + `Authorizable` concern
+
+**Decided:** null-object `SystemActor`; drop the `respond_to?` guards.
+
+Kills 16 copies of the permission idiom **and** three competing system-actor
+bypasses. `close_folio`, `rename_folio`, `reopen_folio`, `update_folio` have
+byte-identical `permitted?` bodies; `create_folio` differs only by its
+`skip_authorization` early return.
+
+#### Why not keep the `respond_to?` guards
+
+```ruby
+@user&.respond_to?(:superadmin?) && @user.superadmin? ||
+  @user&.respond_to?(:has_permission?) && @user.has_permission?(PERMISSION, hotel: @hotel)
+```
+
+- `has_permission?` is defined on **`User` only** (`user.rb:44`). `superadmin?` is
+  on `User` (`user.rb:32`) **and `ApiKey`** (`api_key.rb:19`).
+- `booking_folios.created_by_id` / `closed_by_id` are **FKs to `users`**
+  (`schema.rb:2063-2064`) — a non-`User` actor cannot be persisted on a folio.
+- The guard therefore defends against a type the DB rejects, while making that
+  type **silently pass**: `ApiKey#superadmin?` is `bearer.nil?`, so an unbound key
+  would get full folio permission and skip the `has_permission?` branch entirely.
+  No live path does this today; the guard enables it rather than preventing it.
+
+Duck-typing a permission check means anything that quacks becomes an admin.
+
+#### Why `nil` is not workable as "system"
+
+`permitted?` returns **false** for `nil`, so every system path invented its own
+hole — three so far:
+
+| Mechanism | Where |
+|---|---|
+| `skip_authorization: true` | `create_folio.rb:136` |
+| `system_folio_initialization` + `posting_source` **string equality** | `initialize_for_booking.rb:104` |
+| no check at all | various |
+
+The string-matching one has **already failed** — see *Related, tracked separately*.
+
+#### Allowlist, not blanket
+
+A blanket-permission `SystemActor` is `skip_authorization` with a nicer name: it
+centralizes the three bypasses (good) but grants exactly what they granted, so it
+fixes nothing. **The allowlist is where the value is.**
+
+It is also small and derivable, so it stays behaviour-preserving. The complete
+set of folio-touching system callers:
+
+| Caller | Reaches |
+|---|---|
+| `booking_engine/confirm_booking.rb:169` | `InitializeForBooking` |
+| `booking_engine/confirm_group_booking.rb:130` | `InitializeForBooking` |
+| `channel_managers/ingest_booking_service.rb:172` | `InitializeForBooking` |
+| `channel_managers/ingest_group_booking_service.rb:264` | `InitializeForBooking` |
+| `booking_billing_parties/manage_company.rb:84` | `CreateFolio` |
+| `folios/record_payment_from_gateway.rb:32` | `InsertTransaction` |
+| `folios/post_early_checkout_charges.rb:24,35` | preview only — read-only |
+
+That resolves to **`manage_folio_windows`** plus whatever `InsertTransaction`
+gates. Note `ResolveTargetFolio::PERMISSION` is *not* needed — it gates manual
+override only, not normal routing.
+
+Two permissions are then **excluded by construction**, and both should be:
+
+- `override_corporate_credit_limit` (`close_folio.rb:8`) — exists specifically to
+  force a deliberate human decision **with a reason**.
+- `post_folio_corrections` (`reopen_for_correction.rb:7`) — requires a reason
+  **and** a note.
+
+Granting either to a null object would be exactly backwards. A blanket
+`SystemActor` would grant both.
+
+#### Shape
+
+`permitted?` collapses to `actor.can?(PERMISSION, hotel:)`. `User` and
+`SystemActor` each answer honestly; anything else raises `NoMethodError` at the
+boundary instead of silently passing.
+
+**Serialization caveat:** `financial_audit_events` has a polymorphic `actor_type`
+(`schema.rb:740`), so `SystemActor` can be recorded there as-is — but folio
+`created_by` / `closed_by` are FK-to-users, so it must serialize as `nil` there.
+Be deliberate about this rather than discovering it at runtime.
+
+**Risk: low.** Behaviour-preserving given the derived allowlist.
+
+### M6 — Fix `ApplyBatch.preview`
+
+Extract shared validation into a `RoutingChangeSet` value object that both
+`.call` and `.preview` build. `preview` then reads it normally, and `@error`
+becomes a return value rather than smuggled state.
+
+**Blast radius:** 1 service + 2 consumers
+(`hotel_portal/bookings/workspace_actions_controller.rb:200,227`,
+`folio_routing/apply_group_batch.rb:52,91`). **Risk: low–medium** —
+`apply_batch.rb` is 12.7 KB and thinly specced.
+
+### M7 — Delete `GenerateForecastedCharges`
+
+A 15-line class whose entire body is `Folios::SyncForecastedCharges.call(...)`.
+Two app callers (`initialize_for_booking.rb:51`, `recover_missing_folio.rb:39`),
+plus its own spec file.
+
+This is also the evidence that v1's proposed glossary was wrong: `generate` and
+`sync` are not two verbs with different meanings here, they are one call.
+**Risk: trivial.**
+
+---
+
+## Naming & foldering — revised
+
+The rename analysis from v1 holds. What changes is *when*.
+
+### Renames worth doing regardless of sequencing
+
+| Current | Problem | Proposed | Refs |
+|---|---|---|---|
+| `apply_bill_to` (in `bookings/`) | verb + preposition fragment; wrong namespace | `FolioRouting::SponsorRoomChargesToCompany` | ~6 |
+| `backfill_missing_for_operational_bookings` | a maintenance script, not a domain op | `maintenance/` or a rake task | 1 |
+| `route_preview` · `forecasted_charge_lines` · `payment_source` · `refund_source` | nouns among verbs — query/value objects | `reads/` or `app/queries/` | 1–5 each |
+
+### The verb glossary — do this now, it is free
+
+`generate` · `sync` · `refresh` · `calculate` · `reconcile` · `process` have no
+written distinction. One paragraph of documentation makes every future naming
+decision obvious. **Correction from v1:** do not enshrine `generate` vs `sync` —
+M7 shows they are the same operation.
+
+### Renames to defer until after the seams work
+
+The three creation services (`create_folio`, `initialize_for_booking`,
+`recover_missing_folio`) compete because they duplicate one insert. Renaming
+them to `CreatePrimaryFolio` / `CreateAdditionalFolio` / `RecoverMissingFolio`
+produces three crisp, distinct-sounding names for what is **one** job done three
+ways — **the good naming would hide the duplication**, making it look
+deliberate. Merge first (M4), then name what remains.
+
+Same logic applies to `initialize_for_booking` → `CreatePrimaryFolio`, v1's most
+expensive rename at **20 files**. Its cost may shrink substantially after M4;
+re-measure before committing to it.
+
+### Foldering — optional, and not via `collapse`
+
+Target layout, if pursued, after the seams work:
 
 ```
 folios/
-  lifecycle/    create_primary · create_additional · close · reopen · rename
-  charges/      post_nightly · post_category · post_early_checkout   (commands)
-  forecasts/    generate · sync · refresh                            (define the 3 verbs once)
+  lifecycle/    build_guest_folio · create · close · reopen · rename
+  charges/      post_nightly · post_category · post_early_checkout
+  forecasts/    sync · refresh
   payments/     record_payment · record_refund · record_tourism_tax
-  routing/      (merge folio_routing/ + resolve_target_folio + apply_bill_to here)
+  routing/      (merge folio_routing/ + resolve_target_folio + apply_bill_to)
   reads/        payment_source · refund_source · route_preview · forecasted_charge_lines
   maintenance/  recover_missing · backfill_missing
 ```
 
-Two rules that keep it honest:
+**Do not use Zeitwerk `collapse`.** It buys folders at the cost of
+`path = constant` — a navigation property v1 itself identifies as currently true
+and useful. If the folders are worth having, they are worth the true nesting;
+if they are not worth 321 reference-line edits, they are not worth breaking
+navigation for either.
 
-1. **One verb = one meaning**, written down. Keep `generate` (create from scratch)
-   and `sync` (reconcile to current rules); rename/delete `refresh` / `reconcile` /
-   `process` where they duplicate those.
-2. **Value / query objects never sit among command services** — they live in
-   `reads/` (or `app/queries/`).
+## Blast radius (from v1, verified)
 
-## Naming offenders → clearer intent
-
-| Current | Problem | Proposed |
-|---|---|---|
-| `initialize_for_booking` vs `create_folio` | "initialize" vs "create" is a false distinction | `CreatePrimaryFolio` (normal) vs `CreateAdditionalFolio` (manual window) |
-| `apply_bill_to` (in `bookings/`) | verb + preposition fragment; wrong namespace | `FolioRouting::SponsorRoomChargesToCompany` |
-| `payment_source` / `refund_source` / `route_preview` / `forecasted_charge_lines` / `charge_posting_keys` | nouns among verbs — these are query/value objects | move to `reads/` or `app/queries/` |
-| `process_catch_up_charges` / `nightly_charge_reconciliation` | "process"/"reconcile" undefined; overlap with `sync_forecasted_charges` | needs a one-line glossary each |
-| `backfill_missing_for_operational_bookings` | a maintenance script, not a domain op | move to `maintenance/` or a rake task |
-
-## Blast radius (measured)
-
-- **101 files** reference a `Folios::*` service (app + spec + config) — **321 total
-  reference lines**.
-- **16 more files** reference `FolioRouting::*`.
-- No Zeitwerk `collapse` is configured today, so **path = constant**.
-
-Two independent levers with very different cost:
-
-### Lever 1 — Reorg into subfolders
-
-| Approach | `Folios::CloseFolio` becomes | Call-site edits | Cost |
-|---|---|---|---|
-| **Zeitwerk `collapse`** (`Rails.autoloaders.main.collapse("app/services/folios/*")`) | stays `Folios::CloseFolio` | **0** | 1 config line + `git mv`s — near-zero risk |
-| True nesting (`Folios::Lifecycle::CloseFolio`) | constant changes | up to **321 / 101 files** | high |
-
-**Recommendation: use `collapse`** — you get the tidy folders without touching a
-single call site.
-
-### Lever 2 — Renames (always change the constant → cost = its ref count)
-
-| Rename | Ref files | Cost |
-|---|---|---|
-| `apply_bill_to` → `SponsorRoomChargesToCompany` (+ move to routing) | ~6 | low |
-| `create_folio` → `CreateAdditionalFolio` | 4 | low |
-| `initialize_for_booking` → `CreatePrimaryFolio` | **20** | **high** — isolate in its own PR |
-| `backfill_missing_for_operational_bookings` → `maintenance/…` | 1 | trivial |
-| `route_preview` / `forecasted_charge_lines` / `payment_source` / `refund_source` → `reads/` | 1–5 each | low |
-| `refresh_open_forecasts_from_room_revenue_rules` (verb cleanup) | 6 | low–med |
-
-Heaviest files to re-touch if constants ever change:
+- **101 files** reference a `Folios::*` service (app + spec + config) — **321
+  reference lines**. **16 more** reference `FolioRouting::*`.
+- No Zeitwerk `collapse` configured today, so **path = constant**.
+- Concentration is healthy — the top ~6 files hold most references, and ~⅓ of
+  all touches are specs (green-checkable immediately):
 
 | Refs | File |
 |---|---|
@@ -100,23 +413,84 @@ Heaviest files to re-touch if constants ever change:
 | 5 | `app/presenters/hotel_portal/folios/show_presenter.rb` |
 | 5 | `spec/integration/lifecycles/standard_booking_lifecycle_spec.rb` |
 
-Concentration is healthy — the top ~6 files hold most references, and ~⅓ of all
-touches are specs (green-checkable immediately).
+## Sequencing
 
-## Recommended sequencing (lowest risk first)
+| PR | Work | Files | Risk |
+|---|---|---|---|
+| 1 | M7 delete alias · verb glossary | 3 | trivial |
+| 2 | M1 transaction-code resolver | ~20 | low |
+| 3 | M3 reopen API | 5 | low |
+| 4 | M5 `SystemActor` + `Authorizable` concern | 16 (+1 new) | low |
+| 5 | M2 `Result`, family by family | 25 (3 slices) | med |
+| 6 | M4 `BuildGuestFolio` | 3 | low |
+| 7 | M6 `ApplyBatch` | 3 | low–med |
+| 8 | Cheap renames (`apply_bill_to`, `reads/`, maintenance) | ≤6 each | low |
+| 9 | `initialize_for_booking` rename — **re-measure after PR 6** | ≤20 | med |
+| 10 | Foldering, if still wanted — true nesting, not `collapse` | 101 | high |
 
-1. **PR 1 — reorg via `collapse`**: `git mv` into subfolders + one config line.
-   Zero call-site edits. Pure structure.
-2. **PR 2 — cheap renames** (`apply_bill_to`, `create_folio`, the `reads/` value
-   objects, the maintenance move): each ≤6 files, mechanical.
-3. **PR 3 — `initialize_for_booking` → `CreatePrimaryFolio`** alone (20 files),
-   isolated for easy review.
-4. **PR 4 — glossary + `refresh` / `process` / `reconcile` verb cleanup**, once the
-   folders make the overlaps obvious.
+PRs 1–4 are mechanical and independently revertable. PR 5 needs a full
+`bin/test` between slices. PRs 8–10 are optional and can stop at any point.
 
-## Related follow-ups (out of scope here, tracked separately)
+## Not recommended
 
-- Three near-identical guest-folio builders (`initialize_for_booking`,
-  `recover_missing_folio`, `create_folio`) should collapse onto one
-  `BuildGuestFolio` primitive (DRY + one place for idempotency).
-- Shared `Result` value type to replace ad-hoc `OpenStruct.new(success?: …)` shapes.
+- **Zeitwerk `collapse`** — see above.
+- **Relocating `ChargePostingKeys` / `NextFolioNumber`** — exemplary as-is.
+- **Constructor-injecting collaborators** — DIP ceremony with no payoff given
+  DB-backed specs.
+- **Splitting `close_folio.rb` in this round** — real SRP violation, but the
+  direct-bill path is intricate and it blocks nothing. Revisit after M2 gives it
+  a typed result.
+
+## Decisions (all resolved — no blockers remain)
+
+1. ~~**M5** — keep `respond_to?`-guarded permission checks, or move to a null
+   actor?~~ **Resolved: `SystemActor` null object with a derived allowlist.**
+   See M5. PR 4 unblocked.
+2. ~~**M2** — `Folios::Result`, or app-wide?~~ **Resolved: a shared *recipe*,
+   not a shared class.** `Concierge::Result` uses named domain members;
+   `AiConcierge::…::Result` uses a generic `payload`. Named members win — they
+   are what keeps ~98 reader call sites unchanged, making M2 a 25-file job. A
+   generic `payload` would turn `result.folio` into `result.payload[:folio]`
+   everywhere and make it a 98-file job for no gain. Shape:
+
+   ```ruby
+   module ApplicationResult
+     def self.define(*members)
+       Data.define(:"success?", :error, *members) do
+         def self.success(**attrs) = new(success?: true, error: nil, **attrs)
+         def self.failure(error, **attrs) = new(success?: false, error:, **attrs)
+       end
+     end
+   end
+
+   module Folios
+     Result            = ApplicationResult.define(:folio)
+     TransactionResult = ApplicationResult.define(:transaction, :transactions)
+   end
+   ```
+
+   Verified on Ruby 3.4.7: `Data.define(:"success?")` is legal, and `Data` raises
+   `NoMethodError` where `OpenStruct` returned `nil`. Use `Data`, not `Struct` —
+   results should be frozen. **Implementation wrinkle:** `Data` requires every
+   member at construction, so `.failure` must nil-fill unspecified members.
+   Leave `Concierge` and `AiConcierge` as they are; converge later if it pays.
+   (No `ApplicationService` base class exists today — verified.)
+3. ~~**M4** — is `initialize_for_booking`'s `lock:` parameter vestigial?~~
+   **Resolved: maintenance-only, and all 7 `lock: false` callers verified safe.**
+   See M4. Risk downgraded medium → low.
+
+## Related, tracked separately
+
+- **Group booking confirmation is blocked during a night audit.**
+  `initialize_for_booking.rb:107` skips the night-audit guard only when
+  `posting_source == "booking_confirmation"`. `confirm_booking.rb:172` matches;
+  `confirm_group_booking.rb:131` passes `"group_booking_confirmation"` and does
+  not. Both are system confirmations with `user: nil` and
+  `system_folio_initialization: true`, so while an audit runs, single booking
+  confirmation succeeds and group booking confirmation raises
+  `OperationalChangeBlocked`. M5 removes this class of bug by construction, but
+  the defect should be fixed on its own timeline rather than waiting for the
+  refactor.
+- `lib/tasks/generate_hotel_dataset.rake:399` looks up
+  `system_key: "room_charges"`, but every app-side lookup uses `"room_revenue"`.
+  Likely a latent bug in the dataset task — found while enumerating M1 call sites.
