@@ -312,14 +312,16 @@ from room number and room type, not reservation numbers.
 - [x] Remove the guest content header (context line, name, and role)
 - [x] Give the guest panel a static accessible name and its own focus target
 - [x] Label the mobile entity bar with the selected entity instead of `Guests`
-- [x] Constrain the guest form width and pair Date of birth with Document type
+- [x] Lay guest content in two columns and pair fields within each section
+- [x] Replace the two boat-transfer pickers with one `DateTimePicker` range
 - [x] Give all three guest FieldSets one rule and spacing rhythm
 - [x] Reduce rail selection to dot plus fill, without the ring
-- [ ] Migrate the guest footer to PanelsUI (`DropdownMenu`, `Button`, `ButtonGroup`)
-- [ ] Replace the footer's hardcoded `text-amber-600` with a semantic token
-- [ ] Constrain the guest footer to the content column rather than the full width
+- [x] Migrate the guest footer to PanelsUI (`DropdownMenu`, `Button`, `ButtonGroup`)
+- [x] Replace the footer's hardcoded `text-amber-600` with a semantic token
+- [x] Constrain the guest footer to the content column rather than the full width
 - [ ] Guard `Make primary` against discarding unsaved guest edits
 - [ ] Migrate the discard alert to `PanelsUI::AlertDialog` with semantic tokens
+- [ ] Sweep the remaining orphaned presenter methods once Phase 3 lands
 
 
 ### Deposits
