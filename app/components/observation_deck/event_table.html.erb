@@ -1,0 +1,60 @@
+<section class="observation-deck__stream" aria-labelledby="event-stream-heading" aria-busy="false" data-observation-deck-target="stream">
+  <header class="observation-deck__section-header">
+    <div>
+      <h2 id="event-stream-heading">Event stream</h2>
+      <p><%= @entries.total_count %> events</p>
+    </div>
+    <span class="observation-deck__loading" hidden data-observation-deck-target="loading" role="status">Updating event stream…</span>
+  </header>
+
+  <% if @entries.any? %>
+    <div class="observation-deck__table-scroll">
+      <table class="observation-deck__table">
+        <caption class="sr-only">Events matching current Observation Deck filters</caption>
+        <thead>
+          <tr>
+            <th scope="col">Time</th>
+            <th scope="col">Type</th>
+            <th scope="col">Operation</th>
+            <th scope="col">Status</th>
+            <th scope="col">Duration</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% current_day = nil %>
+          <% @presenters.each do |entry| %>
+            <% if entry.day != current_day %>
+              <tr class="observation-deck__date-separator"><th colspan="5" scope="colgroup"><%= entry.day_label %></th></tr>
+              <% current_day = entry.day %>
+            <% end %>
+            <% selected = entry.id == @selected_id %>
+            <tr class="<%= "is-selected" if selected %> <%= "is-error" if entry.error? %>" <%= "aria-current=\"true\"" if selected %> data-action="click->observation-deck#openRow">
+              <td title="<%= entry.full_timestamp %>"><time datetime="<%= entry.created_at.iso8601 %>"><%= entry.timestamp_label %><span><%= entry.date_label %></span></time></td>
+              <td><span class="observation-deck__type"><%= helpers.app_icon entry.type_icon, class: "size-3.5", aria: { hidden: true } %><%= entry.type_label %></span></td>
+              <td class="observation-deck__operation">
+                <%= link_to admin_observation_deck_path(entry.id),
+                            title: entry.title,
+                            aria: { label: "Inspect #{entry.title}" },
+                            data: { action: "click->observation-deck#openInspector", turbo_frame: "entry_detail_frame", entry_id: entry.id } do %>
+                  <span><%= entry.title %></span>
+                  <small><%= entry.path %></small>
+                <% end %>
+              </td>
+              <td class="<%= "is-danger" if entry.error? %>"><%= entry.status_label %></td>
+              <td class="<%= "is-warning" if entry.slow? %>"><%= entry.duration_label %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <% if @entries.total_pages > 1 %>
+      <nav class="observation-deck__pagination" aria-label="Event stream pagination"><%= helpers.paginate(@entries) %></nav>
+    <% end %>
+  <% else %>
+    <div class="observation-deck__empty-state">
+      <%= helpers.app_icon "inbox", class: "size-5", aria: { hidden: true } %>
+      <h3><%= @filter_active ? "No events match these filters" : "No events captured" %></h3>
+      <p><%= @filter_active ? "Remove a filter or broaden the time range." : "Captured requests, SQL, jobs, mail, and API calls appear here." %></p>
+    </div>
+  <% end %>
+</section>

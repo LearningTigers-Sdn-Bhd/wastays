@@ -1,0 +1,40 @@
+<article class="observation-deck__inspector-content" aria-labelledby="inspector-event-title">
+  <header class="observation-deck__inspector-header">
+    <div class="min-w-0">
+      <p class="observation-deck__eyebrow"><%= @presenter.type_label %> event</p>
+      <h2 id="inspector-event-title" title="<%= @presenter.title %>"><%= @presenter.title %></h2>
+      <p><time datetime="<%= @presenter.created_at.iso8601 %>"><%= @presenter.full_timestamp %></time> · <span class="<%= "is-danger" if @presenter.error? %>"><%= @presenter.status_label %></span> · <span class="<%= "is-warning" if @presenter.slow? %>"><%= @presenter.duration_label %></span></p>
+    </div>
+    <button type="button" class="observation-deck__icon-button observation-deck__sheet-close" aria-label="Close event inspector" data-action="observation-deck#closeInspector">
+      <%= helpers.app_icon "x", class: "size-4", aria: { hidden: true } %>
+    </button>
+  </header>
+
+  <div class="observation-deck__copy-ids" data-controller="clipboard">
+    <button type="button" data-action="clipboard#copy" data-clipboard-text-value="<%= @presenter.id %>">Entry ID <code><%= @presenter.id %></code></button>
+    <% if @presenter.trace? %>
+      <button type="button" data-action="clipboard#copy" data-clipboard-text-value="<%= @presenter.request_id %>">Request ID <code><%= @presenter.request_id %></code></button>
+    <% end %>
+    <span class="sr-only" aria-live="polite" data-clipboard-target="status"></span>
+  </div>
+
+  <%= render PanelsUI::Tabs.new(id: "entry-#{@presenter.id}-tabs", active: "summary", variant: :line, aria_label: "Event inspector sections", list_class: "observation-deck__tabs", panels_class: "observation-deck__tab-panels") do |tabs| %>
+    <% tabs.with_tab(name: "summary", label: "Summary", panel_id: "entry-summary-panel") %>
+    <% tabs.with_tab(name: "trace", label: "Trace", panel_id: "entry-trace-panel") %>
+    <% tabs.with_tab(name: "payload", label: "Payload", panel_id: "entry-payload-panel") %>
+    <% tabs.with_tab(name: "analysis", label: "AI analysis", panel_id: "entry-analysis-panel") %>
+
+    <% tabs.with_panel(name: "summary", id: "entry-summary-panel") do %>
+      <%= render "admin/observation_deck/inspector/summary", presenter: @presenter %>
+    <% end %>
+    <% tabs.with_panel(name: "trace", id: "entry-trace-panel") do %>
+      <%= render "admin/observation_deck/inspector/trace", presenter: @presenter, trace_presenters: @trace_presenters %>
+    <% end %>
+    <% tabs.with_panel(name: "payload", id: "entry-payload-panel") do %>
+      <%= render "admin/observation_deck/inspector/payload", presenter: @presenter %>
+    <% end %>
+    <% tabs.with_panel(name: "analysis", id: "entry-analysis-panel") do %>
+      <%= render "admin/observation_deck/inspector/analysis", presenter: @presenter, configured_provider: @configured_provider %>
+    <% end %>
+  <% end %>
+</article>

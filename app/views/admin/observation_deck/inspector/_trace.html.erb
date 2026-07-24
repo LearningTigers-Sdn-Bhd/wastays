@@ -1,0 +1,31 @@
+<section class="observation-deck__trace-panel" aria-label="Request trace">
+  <% if presenter.trace? && trace_presenters.any? %>
+    <ol>
+      <% trace_presenters.each do |trace_entry| %>
+        <li class="<%= "is-current" if trace_entry.id == presenter.id %>">
+          <% if trace_entry.id == presenter.id %>
+            <div class="observation-deck__trace-current">
+              <span class="observation-deck__type"><%= app_icon trace_entry.type_icon, class: "size-3.5", aria: { hidden: true } %><%= trace_entry.type_label %> · Current event</span>
+              <strong title="<%= trace_entry.title %>"><%= trace_entry.path.presence || trace_entry.title %></strong>
+              <time datetime="<%= trace_entry.created_at.iso8601 %>"><%= trace_entry.timestamp_label %></time>
+              <span><%= trace_entry.status_label %> · <%= trace_entry.duration_label %></span>
+            </div>
+          <% else %>
+            <%= link_to admin_observation_deck_path(trace_entry.id), data: { turbo_frame: "entry_detail_frame" } do %>
+              <span class="observation-deck__type"><%= app_icon trace_entry.type_icon, class: "size-3.5", aria: { hidden: true } %><%= trace_entry.type_label %></span>
+              <strong title="<%= trace_entry.title %>"><%= trace_entry.path.presence || trace_entry.title %></strong>
+              <time datetime="<%= trace_entry.created_at.iso8601 %>"><%= trace_entry.timestamp_label %></time>
+              <span><%= trace_entry.status_label %> · <%= trace_entry.duration_label %></span>
+            <% end %>
+          <% end %>
+        </li>
+      <% end %>
+    </ol>
+  <% else %>
+    <div class="observation-deck__empty-state">
+      <%= app_icon "git-branch", class: "size-5", aria: { hidden: true } %>
+      <h3>No request trace</h3>
+      <p>This event has no correlated request ID.</p>
+    </div>
+  <% end %>
+</section>

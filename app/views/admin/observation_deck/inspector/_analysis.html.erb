@@ -1,0 +1,38 @@
+<section class="observation-deck__analysis-panel" id="ai_analysis_area" data-controller="ai-analysis" aria-label="AI analysis">
+  <% analysis = local_assigns.fetch(:analysis, presenter.current_analysis) %>
+  <% if analysis.present? %>
+    <div class="observation-deck__generated-analysis">
+      <header>
+        <div><%= app_icon "sparkles", class: "size-4", aria: { hidden: true } %><h3>Generated analysis</h3></div>
+        <span><%= analysis[:model].presence || configured_provider.presence || "AI" %></span>
+      </header>
+      <% if analysis[:error].present? %>
+        <div class="observation-deck__inline-error" role="alert"><%= analysis[:error] %></div>
+        <%= button_to "Retry analysis", analyze_admin_observation_deck_path(presenter.id, force: true), method: :post, data: { action: "click->ai-analysis#start", ai_analysis_target: "button" }, class: "observation-deck__secondary-button" %>
+      <% else %>
+        <div class="observation-deck__analysis-content" data-ai-analysis-target="content"><%= sanitize(analysis[:html]) %></div>
+        <%= button_to "Regenerate analysis", analyze_admin_observation_deck_path(presenter.id, force: true), method: :post, data: { action: "click->ai-analysis#start", ai_analysis_target: "button" }, class: "observation-deck__secondary-button" %>
+      <% end %>
+    </div>
+  <% elsif configured_provider.blank? %>
+    <div class="observation-deck__empty-state">
+      <%= app_icon "bot-off", class: "size-5", aria: { hidden: true } %>
+      <h3>No AI provider configured</h3>
+      <p>Configure a provider in Settings, then manage keys in Integrations.</p>
+    </div>
+  <% elsif presenter.analyzable? %>
+    <div class="observation-deck__analysis-empty">
+      <h3>Generated analysis</h3>
+      <p>AI output is separate from captured evidence. Analysis uses <%= configured_provider %>.</p>
+      <%= button_to "Analyze event", analyze_admin_observation_deck_path(presenter.id), method: :post, data: { action: "click->ai-analysis#start", ai_analysis_target: "button" }, class: "observation-deck__primary-button" %>
+    </div>
+  <% else %>
+    <div class="observation-deck__empty-state">
+      <%= app_icon "circle-check", class: "size-5", aria: { hidden: true } %>
+      <h3>Analysis not needed</h3>
+      <p>AI analysis is available for errors and events slower than <%= ObservationDeck::EntryPresenter::SLOW_DURATION_MS %> ms.</p>
+    </div>
+  <% end %>
+
+  <p class="observation-deck__analysis-loading" hidden data-ai-analysis-target="loading" role="status">Analyzing event…</p>
+</section>

@@ -1,0 +1,26 @@
+<section class="observation-deck__summary-panel" aria-label="Event summary">
+  <% if presenter.exception_message.present? %>
+    <div class="observation-deck__exception" role="alert">
+      <%= app_icon "circle-alert", class: "size-4", aria: { hidden: true } %>
+      <div><h3>Failure</h3><pre><%= presenter.exception_message %></pre></div>
+    </div>
+  <% end %>
+
+  <dl class="observation-deck__metadata-list">
+    <% presenter.context_rows.each do |label, value| %>
+      <div><dt><%= label %></dt><dd><%= value %></dd></div>
+    <% end %>
+    <% presenter.metadata_rows.each do |label, value| %>
+      <div><dt><%= label %></dt><dd title="<%= value %>"><%= value %></dd></div>
+    <% end %>
+  </dl>
+
+  <% if presenter.visible_tags.any? %>
+    <section aria-labelledby="event-tags-heading">
+      <h3 id="event-tags-heading">Tags</h3>
+      <div class="observation-deck__tag-list">
+        <% presenter.visible_tags.each do |tag| %><span><%= tag %></span><% end %>
+      </div>
+    </section>
+  <% end %>
+</section>

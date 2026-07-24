@@ -1,0 +1,6 @@
+<%= turbo_frame_tag "entry_detail_frame" do %>
+  <div class="observation-deck__inspector-error" role="alert">
+    <%= app_icon "circle-alert", class: "size-5", aria: { hidden: true } %>
+    <div><h2>This event is no longer available</h2><p>It may have been removed by retention or maintenance. Keep current event filters and choose another event.</p></div>
+  </div>
+<% end %>
