@@ -1,0 +1,53 @@
+<% rows = presenter.booking_reference_rows %>
+<div>
+  <h3 class="text-base font-semibold text-foreground">References</h3>
+
+  <dl class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+    <% presenter.reservation_reference_pairs.each do |label, value| %>
+      <div class="flex items-baseline gap-1.5">
+        <dt><%= label %></dt>
+        <dd class="break-all font-medium text-foreground"><%= value %></dd>
+      </div>
+    <% end %>
+  </dl>
+
+  <div class="mt-3">
+    <%= render PanelsUI::Table.new(
+          caption: "References",
+          density: :compact,
+          hoverable: true,
+          bordered: true,
+          wrapper_class: "rounded-md border border-border",
+          class: "min-w-[1000px]") do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Booking No.</th>
+          <th scope="col">Confirmation code</th>
+          <th scope="col">Receipt No.</th>
+          <th scope="col">Source</th>
+          <th scope="col">Invoice No.</th>
+          <th scope="col">Folio Account</th>
+          <th scope="col">Guest Registration</th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% rows.each do |row| %>
+          <tr>
+            <td class="whitespace-nowrap font-medium tabular-nums">
+              <%= row[:booking_number] %>
+              <% if row[:group] %>
+                <%= render PanelsUI::Badge.new(label: "Group", variant: :info, size: :sm) %>
+              <% end %>
+            </td>
+            <td class="tabular-nums"><%= row[:confirmation_code] %></td>
+            <td class="tabular-nums"><%= row[:receipt_number] %></td>
+            <td><%= row[:source] %></td>
+            <td class="tabular-nums"><%= row[:invoice_number] %></td>
+            <td class="tabular-nums"><%= row[:folio_account] %></td>
+            <td class="tabular-nums"><%= row[:guest_registration] %></td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+</div>

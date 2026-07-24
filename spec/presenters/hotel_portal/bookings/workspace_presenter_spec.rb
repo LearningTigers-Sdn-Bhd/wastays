@@ -39,8 +39,8 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       group = create(:group_booking, hotel: hotel, name: "Iskandar Family")
       booking.update!(group_booking: group, group_position: 1)
 
-      expect(presenter.header_title).to eq("Iskandar Family")
-      expect(presenter.header_reference_line).to eq("Group Booking #{group.formatted_reservation_number}")
+      expect(presenter.header_title).to eq(group.formatted_reservation_number)
+      expect(presenter.header_party_line).to eq("Iskandar Family")
       expect(presenter.header_outstanding_balance).to eq(presenter.money(presenter.group_total_balance))
     end
 
@@ -251,7 +251,8 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
   describe "booking header" do
     it "summarizes a standalone booking" do
-      expect(presenter.header_reference_line).to eq("Booking #{booking.formatted_reservation_number}")
+      expect(presenter.header_title).to eq(booking.formatted_reservation_number)
+      expect(presenter.header_party_line).to eq(presenter.primary_guest_name)
       expect(presenter.stay_dates_vary?).to be(false)
       expect(presenter.header_stay_line).to include("night")
       expect(presenter.header_outstanding_balance).to eq(presenter.money(presenter.total_balance))
@@ -273,7 +274,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(group_presenter.stay_dates_vary?).to be(true)
       expect(group_presenter.group_stay_summary).to eq("Stay dates vary")
       expect(group_presenter.header_stay_line).to include("Stay dates vary")
-      expect(group_presenter.header_reference_line).to eq("Group Booking #{group.formatted_reservation_number}")
+      expect(group_presenter.header_title).to eq(group.formatted_reservation_number)
     end
 
     it "shows a shared range when group child dates match" do
@@ -296,6 +297,48 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(presenter.header_status_badge).to eq(label: "Partially in house", variant: :warning)
     end
 
+    it "keeps both the group name and organizer when they differ" do
+      organizer = create(:guest, name: "Jane Tan")
+      group = create(:group_booking, hotel: hotel, name: "Iskandar Family", organizer_guest: organizer)
+      booking.update!(group_booking: group, group_position: 1)
+
+      expect(presenter.header_party_line).to eq("Iskandar Family · Organizer — Jane Tan")
+    end
+
+    it "drops the group name when it only repeats the organizer" do
+      organizer = create(:guest, name: "Katsuragi Lilja")
+      group = create(:group_booking, hotel: hotel, name: "Katsuragi Lilja group", organizer_guest: organizer)
+      booking.update!(group_booking: group, group_position: 1)
+
+      expect(presenter.header_party_line).to eq("Organizer — Katsuragi Lilja")
+    end
+
+    it "falls back to the group name when no organizer is assigned" do
+      group = create(:group_booking, hotel: hotel, name: "Iskandar Family", organizer_guest: nil)
+      booking.update!(group_booking: group, group_position: 1)
+
+      expect(presenter.header_party_line).to eq("Iskandar Family")
+    end
+
+    it "breaks the group status badge down per room in group_position order" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      booking.update_column(:status, "checked_in")
+      create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "confirmed")
+
+      rows = presenter.header_status_rows
+
+      expect(rows.size).to eq(2)
+      expect(rows.first[:badge]).to eq(label: "In house", variant: :success)
+      expect(rows.last[:badge]).to eq(label: "Confirmed", variant: :info)
+      expect(rows.map { |row| row[:room] }).to all(be_present)
+      expect(rows.map { |row| row[:room_type] }).to all(be_present)
+    end
+
+    it "returns no status breakdown for a standalone booking" do
+      expect(presenter.header_status_rows).to eq([])
+    end
+
     it "handles partially missing group dates" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
@@ -315,8 +358,8 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       %w[folio_operations guest_details].each do |tab|
         entity_presenter = described_class.new(booking, params: { tab: tab }, hotel: hotel)
 
-        expect(entity_presenter.header_title).to eq("Conference Group")
-        expect(entity_presenter.header_reference_line).to eq("Group Booking #{group.formatted_reservation_number}")
+        expect(entity_presenter.header_title).to eq(group.formatted_reservation_number)
+        expect(entity_presenter.header_party_line).to eq("Conference Group")
       end
     end
   end
@@ -402,7 +445,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
         check_out: booking.check_out - 1.day
       )
 
-      rows = described_class.new(booking.reload, params: { scope: "group" }, hotel: hotel).group_room_rows
+      rows = described_class.new(booking.reload, params: { scope: "group" }, hotel: hotel).stay_rows
 
       expect(rows.map { |row| row[:booking] }).to eq([ first_child, booking ])
       expect(rows.first).to include(
@@ -410,6 +453,162 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
         departure: first_child.check_out.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y")
       )
       expect(rows.first).not_to have_key(:stay)
+      expect(rows.first).not_to have_key(:rate_plan)
+    end
+
+    it "yields exactly one stay row for a standalone booking" do
+      rows = described_class.new(booking.reload, hotel: hotel).stay_rows
+
+      expect(rows.size).to eq(1)
+      expect(rows.first[:booking]).to eq(booking)
+      expect(rows.first[:nights]).to eq((booking.check_out.to_date - booking.check_in.to_date).to_i)
+      expect(rows.first[:status]).to include(:label, :variant)
+    end
+
+    it "labels pax with children only when there are children" do
+      booking.update!(adults: 2, children: 0)
+      expect(described_class.new(booking.reload, hotel: hotel).stay_rows.first[:pax]).to eq("2A")
+
+      booking.update!(adults: 2, children: 1)
+      expect(described_class.new(booking.reload, hotel: hotel).stay_rows.first[:pax]).to eq("2A · 1C")
+    end
+  end
+
+  describe "reference rows" do
+    def format_source_for(value)
+      value.to_s.presence&.tr("_", " ")&.titleize || "—"
+    end
+
+    it "reads reservation-level references from the booking when standalone" do
+      booking.update!(external_reference: "OTA-99", channel_manager_reference: "CM-77")
+
+      pairs = described_class.new(booking.reload, hotel: hotel).reservation_reference_pairs
+
+      expect(pairs).to eq([ [ "External Reference", "OTA-99" ], [ "Channel Manager", "CM-77" ] ])
+    end
+
+    # SplitLegacyMultiRoom promotes these to the group and nulls them on the child, so group
+    # context must read the group even though the child booking is the workspace root.
+    it "reads reservation-level references from the group and adds the organizer" do
+      organizer = create(:guest, name: "Jane Tan")
+      group = create(:group_booking, hotel: hotel, organizer_guest: organizer,
+                                     external_reference: "GRP-1", channel_manager_reference: "CM-1")
+      booking.update!(group_booking: group, group_position: 1,
+                      external_reference: nil, channel_manager_reference: nil)
+
+      pairs = described_class.new(booking.reload, params: { scope: "group" }, hotel: hotel).reservation_reference_pairs
+
+      expect(pairs).to eq([
+        [ "External Reference", "GRP-1" ],
+        [ "Channel Manager", "CM-1" ],
+        [ "Organizer", "Jane Tan" ]
+      ])
+    end
+
+    it "renders an em dash for every missing reservation-level reference" do
+      pairs = described_class.new(booking.reload, hotel: hotel).reservation_reference_pairs
+
+      expect(pairs.map(&:last)).to all(eq("—"))
+    end
+
+    it "yields one room-level reference row per booking with a shared source format" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1, source: "booking_com")
+      create(:booking, hotel: hotel, group_booking: group, group_position: 2, source: "walk_in")
+
+      rows = described_class.new(booking.reload, params: { scope: "group" }, hotel: hotel).booking_reference_rows
+
+      expect(rows.size).to eq(3)
+      expect(rows.first).to include(
+        group: true,
+        booking_number: group.formatted_reservation_number,
+        confirmation_code: group.confirmation_token,
+        receipt_number: group.formatted_receipt_number,
+        invoice_number: "—",
+        folio_account: "—",
+        guest_registration: "—"
+      )
+      expect(rows.drop(1).map { |row| row[:source] }).to eq([ "Booking Com", "Walk In" ])
+      expect(rows.drop(1).map { |row| row[:confirmation_code] }).to include(booking.confirmation_token)
+      expect(rows.drop(1)).to all(satisfy { |row| !row.key?(:group) })
+    end
+
+    it "shows the invoice number once checkout has closed the primary folio" do
+      folio = create(:booking_folio, booking: booking, hotel: hotel, is_primary: true)
+
+      expect(described_class.new(booking.reload, hotel: hotel).booking_reference_rows.first[:invoice_number]).to eq("—")
+
+      folio.update!(invoice_number: 512)
+
+      expect(described_class.new(booking.reload, hotel: hotel).booking_reference_rows.first[:invoice_number])
+        .to eq(booking.reload.formatted_invoice_number)
+    end
+
+    it "yields exactly one room-level reference row for a standalone booking" do
+      rows = described_class.new(booking.reload, hotel: hotel).booking_reference_rows
+
+      expect(rows.size).to eq(1)
+      expect(rows.first[:booking]).to eq(booking)
+      expect(rows.first).not_to have_key(:group)
+    end
+  end
+
+  describe "billing party rows" do
+    it "resolves an auto-created primary guest folio to the guest even without a billing party" do
+      guest = create(:guest, name: "Katsuragi Lilja")
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+      create(:booking_folio, booking: booking, hotel: hotel, is_primary: true,
+                             payer_type: "guest", booking_billing_party: nil)
+
+      rows = described_class.new(booking.reload, hotel: hotel).financial_party_rows
+
+      expect(rows.size).to eq(1)
+      expect(rows.first).to include(name: "Katsuragi Lilja", kind: "Guest", folio_count: 1)
+    end
+
+    # Current validation forbids a company folio without a corporate account, but legacy rows
+    # like this exist, so the column is cleared directly to reproduce them.
+    it "surfaces a legacy company folio with neither party nor corporate account as Unassigned" do
+      folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, booking_billing_party: nil)
+      folio.update_column(:hotel_corporate_account_id, nil)
+
+      rows = described_class.new(booking.reload, hotel: hotel).financial_party_rows
+
+      expect(rows.map { |row| row[:name] }).to include("Unassigned")
+    end
+
+    it "merges one company across group children into a single row" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      account = create(:hotel_corporate_account, hotel: hotel)
+
+      [ booking, sibling ].each do |child|
+        create(:booking_folio, :secondary, booking: child, hotel: hotel,
+                               booking_billing_party: nil, hotel_corporate_account: account)
+      end
+
+      rows = described_class.new(booking.reload, params: { scope: "group" }, hotel: hotel).financial_party_rows
+      company_rows = rows.select { |row| row[:kind] == "Company" }
+
+      expect(company_rows.size).to eq(1)
+      expect(company_rows.first[:folio_count]).to eq(2)
+    end
+
+    it "orders guests before companies before unassigned" do
+      create(:booking_folio, booking: booking, hotel: hotel, is_primary: true, payer_type: "guest")
+      create(:booking_folio, :secondary, booking: booking, hotel: hotel,
+                             hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel))
+      create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Legacy Folio")
+        .update_column(:hotel_corporate_account_id, nil)
+
+      rows = described_class.new(booking.reload, hotel: hotel).financial_party_rows
+
+      expect(rows.map { |row| row[:kind] }).to eq([ "Guest", "Company", "—" ])
+    end
+
+    it "returns no rows when the booking has no folios" do
+      expect(described_class.new(booking.reload, hotel: hotel).billing_party_rows).to be_empty
     end
   end
 

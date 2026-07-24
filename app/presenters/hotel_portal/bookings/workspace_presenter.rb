@@ -96,11 +96,43 @@ module HotelPortal
     end
 
     def header_title
+      group_context_enabled? ? group_booking_number : booking_number
+    end
+
+    # The action sheet leads with the human name and demotes the number, the inverse of
+    # the workspace header. Kept separate so the two can diverge deliberately.
+    def summary_title
       group_context_enabled? ? group_booking.name : primary_guest_name.presence || "Guest unavailable"
     end
 
-    def header_reference_line
-      group_context_enabled? ? "Group Booking #{group_booking_number}" : "Booking #{booking_number}"
+    # Group names default to the organizer's own name, so the group name is dropped when it
+    # only repeats the organizer. A group named independently keeps both.
+    def header_party_line
+      return primary_guest_name.presence || "Guest unavailable" unless group_context_enabled?
+
+      name = group_booking.name.presence
+      organizer = group_booking.organizer_guest&.name.presence
+      return name || "Group booking" if organizer.blank?
+
+      organizer_line = "Organizer — #{organizer}"
+      return organizer_line if name.blank? || name.downcase.include?(organizer.downcase)
+
+      "#{name} · #{organizer_line}"
+    end
+
+    # Per-room status breakdown behind the aggregated group badge. Ordered by
+    # group_position through child_bookings.
+    def header_status_rows
+      return [] unless group_context_enabled?
+
+      child_bookings.map do |child|
+        room = child.booking_rooms.first
+        {
+          room: room&.room_number.presence ? "Room #{room.room_number}" : "Unassigned",
+          room_type: room_type_label_for(room),
+          badge: presentable_badge(status_badge(child.status))
+        }
+      end
     end
 
     def header_stay_line
@@ -156,7 +188,10 @@ module HotelPortal
     end
 
     def header_status_badge
-      badge = group_context_enabled? ? group_status_badge : status_badge(booking.status)
+      presentable_badge(group_context_enabled? ? group_status_badge : status_badge(booking.status))
+    end
+
+    def presentable_badge(badge)
       return if badge.blank?
 
       { label: badge[:label], variant: BADGE_VARIANTS.fetch(badge[:tone], :neutral) }
@@ -690,7 +725,10 @@ module HotelPortal
       end
     end
 
-    def group_room_rows
+    # One row per booking for the Overview stay table: a single booking yields one row, a
+    # group yields one per child in group_position order. Rate plan is deliberately absent —
+    # Room & Rate owns it per night.
+    def stay_rows
       child_bookings.map do |child|
         room = child.booking_rooms.first
         {
@@ -701,11 +739,123 @@ module HotelPortal
           room: room&.room_number.presence || "Unassigned",
           arrival: format_stay_date(child.check_in),
           departure: format_stay_date(child.check_out),
-          rate_plan: room&.rate_plan&.name.presence || "Standard",
-          value: money_for(child, room&.subtotal || 0),
-          status: STATUS_LABELS.fetch(child.status, child.status.to_s.humanize)
+          nights: nights_between(child.check_in, child.check_out),
+          pax: pax_label(child),
+          status: presentable_badge(status_badge(child.status)),
+          balance: money_for(child, child.booking_folios.sum { |folio| folio.projected_outstanding_balance.to_d })
         }
       end
+    end
+
+    def stay_rows_total_balance
+      money(group_context_enabled? ? group_total_balance : total_balance)
+    end
+
+    # One row per billing identity, not per folio and not per booking. Folios are resolved to
+    # an identity (see billing_identity_for) and merged across the group, so a group billed
+    # entirely to one company reads as a single row carrying the whole amount.
+    def financial_party_rows
+      buckets = {}
+
+      child_bookings.each do |child|
+        child.booking_folios.each do |folio|
+          identity = billing_identity_for(folio, child)
+          bucket = buckets[identity[:key]] ||= {
+            name: identity[:name], kind: identity[:kind], sort: identity[:sort],
+            folio_count: 0, charged: 0.to_d, paid: 0.to_d, outstanding: 0.to_d
+          }
+          bucket[:folio_count] += 1
+          bucket[:charged] += folio.total_charges.to_d
+          bucket[:paid] += folio.total_payments.to_d
+          bucket[:outstanding] += folio.projected_outstanding_balance.to_d
+        end
+      end
+
+      buckets.values.sort_by { |row| [ row[:sort], row[:name].to_s ] }.map do |row|
+        row.merge(
+          charged: money(row[:charged]),
+          paid: money(row[:paid]),
+          outstanding: money(row[:outstanding])
+        )
+      end
+    end
+
+    # Identifiers for the reservation as a whole. SplitLegacyMultiRoom promotes external and
+    # channel references to the group and nulls them on children, so in group context these
+    # read from the group; a standalone booking carries its own.
+    def reservation_reference_pairs
+      pairs =
+        if group_context_enabled?
+          [
+            [ "External Reference", group_booking.external_reference ],
+            [ "Channel Manager", group_booking.channel_manager_reference ],
+            [ "Organizer", group_booking.organizer_guest&.name ]
+          ]
+        else
+          [
+            [ "External Reference", booking.external_reference ],
+            [ "Channel Manager", booking.channel_manager_reference ]
+          ]
+        end
+
+      pairs.map { |label, value| [ label, value.presence || "—" ] }
+    end
+
+    # Identifiers for one room-booking: one row for a standalone booking, one per child for a
+    # group, led by the group's own row so the four shared columns line up for comparison.
+    # Folio account and guest registration have no group equivalent and read as em dashes.
+    def booking_reference_rows
+      rows = child_bookings.map do |child|
+        {
+          booking: child,
+          booking_number: child_booking_number(child),
+          confirmation_code: child.confirmation_token.presence || "—",
+          receipt_number: child.formatted_receipt_number.presence || "—",
+          source: format_source(child.source),
+          invoice_number: child.formatted_invoice_number.presence || "—",
+          folio_account: child.folio_account_reference_display.presence || "—",
+          guest_registration: child.formatted_guest_registration_number.presence || "—"
+        }
+      end
+
+      return rows unless group_context_enabled?
+
+      rows.unshift(
+        group: true,
+        booking_number: group_booking_number,
+        confirmation_code: group_booking.confirmation_token.presence || "—",
+        receipt_number: group_booking.formatted_receipt_number.presence || "—",
+        source: format_source(group_booking.source),
+        invoice_number: "—",
+        folio_account: "—",
+        guest_registration: "—"
+      )
+    end
+
+    def format_source(value)
+      value.to_s.presence&.tr("_", " ")&.titleize || "—"
+    end
+
+    def financial_party_totals
+      folios = child_bookings.flat_map(&:booking_folios)
+
+      {
+        charged: money(folios.sum { |folio| folio.total_charges.to_d }),
+        paid: money(folios.sum { |folio| folio.total_payments.to_d }),
+        outstanding: money(folios.sum { |folio| folio.projected_outstanding_balance.to_d })
+      }
+    end
+
+    def nights_between(check_in, check_out)
+      return "—" if check_in.blank? || check_out.blank?
+
+      (check_out.to_date - check_in.to_date).to_i
+    end
+
+    def pax_label(child)
+      adults = child.adults.to_i
+      children = child.children.to_i
+      children.positive? ? "#{adults}A · #{children}C" : "#{adults}A"
     end
 
     def group_source_rows
@@ -985,6 +1135,40 @@ module HotelPortal
     end
 
     private
+
+    # Only 40 of 76 folios carry a booking_billing_party. The rest are resolvable from the
+    # folio itself: an auto-created primary guest folio belongs to the guest, and a company
+    # folio with a corporate account belongs to that account. Anything left is a real billing
+    # defect and is surfaced as Unassigned rather than hidden.
+    def billing_identity_for(folio, child)
+      party = folio.booking_billing_party
+
+      if party.present?
+        identity_id = party.booking_guest&.guest_id || party.hotel_corporate_account_id
+        return {
+          key: [ party.party_kind, identity_id || "party-#{party.id}" ],
+          name: party.display_name, kind: party.party_kind.to_s.humanize, sort: party.company? ? 1 : 0
+        }
+      end
+
+      if folio.hotel_corporate_account_id.present?
+        return {
+          key: [ "company", folio.hotel_corporate_account_id ],
+          name: folio.hotel_corporate_account&.corporate_account&.name.presence || "Corporate account",
+          kind: "Company", sort: 1
+        }
+      end
+
+      if folio.payer_type.to_s == "guest"
+        guest = child.booking_guests.find(&:primary?)
+        return {
+          key: [ "guest", guest&.guest_id || "booking-#{child.id}" ],
+          name: document_guest_name(child), kind: "Guest", sort: 0
+        }
+      end
+
+      { key: [ "unassigned", folio.id ], name: "Unassigned", kind: "—", sort: 2 }
+    end
 
     def explicit_entity_child_booking
       case active_tab

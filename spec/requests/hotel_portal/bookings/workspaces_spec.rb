@@ -90,7 +90,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(overview.text).not_to include("Identifiers")
       expect(overview.text).to include("Confirmation code")
       expect(overview.text).to include("Source", "Booking Com", booking.external_reference, "CHANNEL-REFERENCE-42")
-      expect(overview.at_xpath(".//dt[normalize-space()='External Reference']/following-sibling::dd")["class"]).to include("break-words", "tabular-nums")
+      expect(overview.at_xpath(".//dt[normalize-space()='External Reference']/following-sibling::dd")["class"]).to include("break-all")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "source_details")
 
@@ -691,8 +691,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include('data-layout-mode="standard"')
       expect(document.at_css("main h2").text).to eq("Room & Rate")
       expect(document.at_css('aside[aria-label="Booking context"]')).to be_nil
-      group_link = document.at_css('[data-testid="booking-workspace-header"] a[href*="scope=group"]')
-      expect(group_link["href"]).to include("tab=booking_details", "scope=group")
+      expect(document.at_css('[data-testid="booking-workspace-header"]').text).to include(group.formatted_reservation_number)
     end
 
     it "renders group-aware lifecycle controls as an actions dropdown in group context" do
@@ -774,7 +773,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include("Deposits")
       deposit_document = Nokogiri::HTML(response.body)
       expect(deposit_document.at_css('aside[aria-label="Booking context"]')).to be_nil
-      expect(deposit_document.at_css('[data-testid="booking-workspace-header"] a[href*="scope=group"]')).to be_present
+      expect(deposit_document.at_css('[data-testid="booking-workspace-header"]').text).to include(group.formatted_reservation_number)
     end
 
     it "links group Overview bookings and preserves group identity on child pages" do
@@ -795,8 +794,8 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking, tab: "booking_details", scope: "booking")
       child_document = Nokogiri::HTML(response.body)
       summary = child_document.at_css('[data-testid="booking-workspace-header"]')
-      expect(summary.text).to include("Hidden Group Name", "Group Booking #{group.formatted_reservation_number}")
-      expect(summary.text).not_to include("Booking #{booking.formatted_reservation_number}")
+      expect(summary.text).to include("Hidden Group Name", group.formatted_reservation_number)
+      expect(summary.text).not_to include(booking.formatted_reservation_number)
       expect(child_document.at_css('section[aria-labelledby="booking-overview-heading"]')).to be_present
       expect(child_document.at_css('section[aria-labelledby="group-overview-heading"]')).to be_nil
       expect(child_document.at_css('aside[aria-label="Booking context"]')).to be_nil
@@ -906,9 +905,9 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       table = overview.at_css("table.panel-table")
       expect(overview.text).to include("Travel Agent", "GROUP-EXTERNAL-42", "GROUP-CHANNEL-42")
       expect(table).to be_present
-      expect(table.at_css("caption").text).to eq("Group bookings")
+      expect(table.at_css("caption").text).to eq("Stay")
       expect(table.css("thead th").map { |header| header.text.strip }).to eq(
-        [ "Booking No.", "Primary guest", "Room", "Arrival", "Departure", "Status", "Balance" ]
+        [ "Booking No.", "Primary guest", "Room", "Arrival", "Departure", "Nights", "Pax", "Status", "Balance" ]
       )
       expect(table.css("tbody tr").map { |row| row.at_css("td").text.strip }).to eq(
         [ first_child.formatted_reservation_number, booking.formatted_reservation_number ]
@@ -917,7 +916,40 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
         first_child.check_in.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y"),
         first_child.check_out.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y")
       )
-      expect(table.css("thead th").map { |header| header.text.strip }).not_to include("Stay")
+      expect(table.css("thead th").map { |header| header.text.strip }).not_to include("Rate Plan")
+    end
+
+    it "renders the same stay table with a single row for a standalone booking" do
+      get hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
+
+      overview = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="booking-overview-heading"]')
+      table = overview.at_css("table.panel-table")
+      expect(table).to be_present
+      expect(table.css("thead th").map { |header| header.text.strip }).to eq(
+        [ "Booking No.", "Primary guest", "Room", "Arrival", "Departure", "Nights", "Pax", "Status", "Balance" ]
+      )
+      expect(table.css("tbody tr").size).to eq(1)
+      expect(table.at_css("tfoot")).to be_nil
+      expect(table.at_css("tbody a")).to be_nil
+    end
+
+    it "leads the group references table with the group's own row" do
+      group = create(:group_booking, hotel: hotel, source: "travel_agent")
+      booking.update!(group_booking: group, group_position: 1)
+      create(:booking, hotel: hotel, group_booking: group, group_position: 2, reservation_number: 77)
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "booking_details", scope: "group")
+
+      overview = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="group-overview-heading"]')
+      table = overview.css("table.panel-table").last
+      expect(table.css("thead th").map { |header| header.text.strip }).to eq(
+        [ "Booking No.", "Confirmation code", "Receipt No.", "Source", "Invoice No.", "Folio Account", "Guest Registration" ]
+      )
+
+      body_rows = table.css("tbody tr")
+      expect(body_rows.size).to eq(3)
+      expect(body_rows.first.text).to include(group.formatted_reservation_number, group.confirmation_token, "Group")
+      expect(body_rows.drop(1).map(&:text)).to all(satisfy { |text| !text.include?("Group") })
     end
 
     it "renders an Edit Dates launch link on the group overview booking details tab" do
@@ -1086,7 +1118,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
       header = document.at_css('[data-testid="booking-workspace-header"]')
-      expect(header.text).to include(group.name, "Group Booking #{group.formatted_reservation_number}")
+      expect(header.text).to include(group.name, group.formatted_reservation_number)
       expect(header.text).not_to include("Booking #{sibling.formatted_reservation_number}")
       expect(document.at_css("aside").text).not_to include("Group Statement", "Group Guest Overview")
       expect(document.at_css("aside h2").text).to include("Folios")
@@ -1103,7 +1135,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
       header = document.at_css('[data-testid="booking-workspace-header"]')
-      expect(header.text).to include("Guest Tour Group", "Group Booking #{group.formatted_reservation_number}")
+      expect(header.text).to include("Guest Tour Group", group.formatted_reservation_number)
       expect(document.at_css("#booking-workspace-content #guest-details-heading").text).to include("Concrete Guest")
     end
 

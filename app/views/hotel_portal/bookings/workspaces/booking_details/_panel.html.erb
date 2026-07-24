@@ -1,29 +1,8 @@
 <% if presenter.group_overview? %>
-  <% group_reference_rows = [
-    ["Booking No.", presenter.group_booking.formatted_reservation_number.presence || "—"],
-    ["Confirmation code", presenter.group_booking.confirmation_token.presence || "—"],
-    ["Receipt No.", presenter.group_booking.formatted_receipt_number.presence || "—"],
-    ["Source", presenter.group_booking.source.to_s.presence&.tr("_", " ")&.titleize || "—"],
-    ["External Reference", presenter.group_booking.external_reference.presence || "—"],
-    ["Channel Manager", presenter.group_booking.channel_manager_reference.presence || "—"],
-    ["Organizer", presenter.group_booking.organizer_guest&.name.presence || "—"]
-  ] %>
-
-  <section aria-labelledby="group-overview-heading" class="divide-y divide-border">
-    <div class="px-5 py-5">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 id="group-overview-heading" class="text-base font-semibold text-foreground">Overview</h2>
-          <p class="mt-1 text-sm text-muted-foreground">Group references and child bookings.</p>
-        </div>
-        <% if presenter.can_manage_bookings?(current_user) %>
-          <%= render PanelsUI::Button.new(
-                href: hotel_booking_action_edit_dates_path(current_hotel, booking, return_to: request.fullpath),
-                variant: :secondary,
-                size: :sm,
-                data: { turbo_frame: "booking_action_sheet" }) do %>Edit Dates<% end %>
-        <% end %>
-      </div>
+  <section aria-labelledby="group-overview-heading" class="space-y-8 px-5 py-6">
+    <div>
+      <h2 id="group-overview-heading" class="text-base font-semibold text-foreground">Overview</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Stay, financial, and reference detail for every booking in this group.</p>
 
       <% if presenter.stay_dates_vary? || presenter.group_dates_incomplete? %>
         <div class="mt-4">
@@ -34,46 +13,11 @@
       <% end %>
     </div>
 
-    <div class="px-5 py-5">
-      <h3 class="text-base font-semibold text-foreground">References</h3>
-      <dl class="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-        <% group_reference_rows.each do |label, value| %>
-          <div>
-            <dt class="text-xs text-muted-foreground"><%= label %></dt>
-            <dd class="mt-1 break-words text-sm tabular-nums text-foreground"><%= value %></dd>
-          </div>
-        <% end %>
-      </dl>
-    </div>
-
-    <div class="px-5 py-5">
-      <h3 class="text-base font-semibold text-foreground">Bookings</h3>
-      <div class="mt-4">
-        <%= render PanelsUI::Table.new(caption: "Group bookings", density: :compact, hoverable: true, bordered: false, class: "min-w-[960px]") do |table| %>
-          <% table.with_header do %>
-            <tr><th scope="col">Booking No.</th><th scope="col">Primary guest</th><th scope="col">Room</th><th scope="col">Arrival</th><th scope="col">Departure</th><th scope="col">Status</th><th scope="col" class="text-right">Balance</th></tr>
-          <% end %>
-          <% table.with_body do %>
-            <% presenter.group_room_rows.each do |row| %>
-              <tr>
-                <td><%= link_to row[:booking_number], hotel_booking_workspace_path(current_hotel, row[:booking], tab: "booking_details", scope: "booking"), class: "font-medium tabular-nums underline-offset-4 hover:underline" %></td>
-                <td><%= row[:guest] %></td>
-                <td><%= row[:room] %> · <%= row[:room_type] %></td>
-                <td class="whitespace-nowrap tabular-nums"><%= row[:arrival] %></td>
-                <td class="whitespace-nowrap tabular-nums"><%= row[:departure] %></td>
-                <td><%= row[:status] %></td>
-                <td class="text-right tabular-nums"><%= presenter.money_for(row[:booking], row[:booking].booking_folios.sum { |folio| folio.projected_outstanding_balance.to_d }) %></td>
-              </tr>
-            <% end %>
-          <% end %>
-          <% table.with_footer do %>
-            <tr><th colspan="6" scope="row" class="text-right font-medium text-foreground">Group Outstanding Balance</th><td class="text-right font-semibold tabular-nums text-foreground"><%= presenter.money(presenter.group_total_balance) %></td></tr>
-          <% end %>
-        <% end %>
-      </div>
-    </div>
+    <%= render "hotel_portal/bookings/workspaces/booking_details/stay_table", booking: booking, presenter: presenter %>
+    <%= render "hotel_portal/bookings/workspaces/booking_details/financial_table", presenter: presenter %>
+    <%= render "hotel_portal/bookings/workspaces/booking_details/references_table", presenter: presenter %>
   </section>
 <% else %>
-  <%= render "hotel_portal/bookings/workspaces/booking_details/stay_details", booking: booking, presenter: booking_presenter %>
+  <%= render "hotel_portal/bookings/workspaces/booking_details/stay_details", booking: booking, presenter: booking_presenter, workspace_presenter: presenter %>
   <%= render "hotel_portal/bookings/workspaces/booking_details/internal_notes", booking: booking %>
 <% end %>
