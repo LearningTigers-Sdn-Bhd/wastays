@@ -1,0 +1,24 @@
+<div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="right">
+  <button
+    type="button"
+    class="inline-flex size-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
+    data-dropdown-target="button"
+    data-action="click->dropdown#toggle keydown->dropdown#handleKeydown"
+    aria-expanded="false"
+    aria-haspopup="true"
+    aria-label="More actions for <%= row.booking.guest_name %>">
+    <%= cached_icon "ellipsis", stroke_width: 2.5, class: "size-4" %>
+  </button>
+
+  <div data-dropdown-target="menu" class="hidden absolute right-0 top-full z-[100] mt-2 w-56 overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xl shadow-foreground/10" role="menu" aria-orientation="vertical" tabindex="-1">
+    <%= link_to hotel_booking_control_panel_path(current_hotel, row.booking, tab: "folio_operations", folio_id: row.folio.id), role: "menuitem", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-foreground transition hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:outline-none", data: { turbo_frame: "_top" } do %>
+      <%= cached_icon "book-open", class: "size-4 text-muted-foreground" %>
+      View Folio
+    <% end %>
+
+    <%= link_to hotel_booking_control_panel_path(current_hotel, row.booking, tab: "booking_details"), role: "menuitem", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-foreground transition hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:outline-none", data: { turbo_frame: "_top" } do %>
+      <%= cached_icon "calendar-days", class: "size-4 text-muted-foreground" %>
+      View Booking
+    <% end %>
+  </div>
+</div>

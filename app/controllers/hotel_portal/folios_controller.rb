@@ -16,6 +16,16 @@ module HotelPortal
       render "hotel_portal/folios/index/index"
     end
 
+    def needs_attention
+      append_breadcrumb "Needs Attention"
+      @folio_index = HotelPortal::Folios::IndexPresenter.new(
+        hotel: current_hotel,
+        params: params,
+        attention_only: true
+      )
+      render "hotel_portal/folios/index/needs_attention"
+    end
+
     def show
       booking = current_hotel.bookings.find(params[:booking_id])
       query = { tab: "folio_operations" }

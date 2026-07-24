@@ -407,6 +407,9 @@ Rails.application.routes.draw do
     end
 
     resources :folios, only: [ :index, :show ], param: :booking_id do
+      collection do
+        get "needs-attention", to: "folios#needs_attention", as: :needs_attention
+      end
       get :invoice, on: :member
       get :ledger, on: :member
       get "windows/new", action: :new_window, on: :member, as: :new_window

@@ -1,6 +1,0 @@
-<div class="flex justify-end">
-  <%= render PanelsUI::Button.new(as: :a, href: hotel_ar_invoices_path(current_hotel, balance: "outstanding"), variant: :secondary, size: :md, class: "w-auto") do %>
-    <%= cached_icon "list-filter", class: "size-4", aria: { hidden: true } %>
-    View Outstanding Invoices
-  <% end %>
-</div>
