@@ -61,11 +61,6 @@
     <% end %>
   </div>
 
-  <% if presenter.active_tab == "guest_details" && presenter.selected_booking_guest&.guest.present? %>
-    <%= render "hotel_portal/bookings/workspaces/guest_details/footer", booking: entity_booking, presenter: presenter %>
-    <%= render "hotel_portal/bookings/workspaces/alerts/confirm_discard_alert" %>
-  <% end %>
-
   <% if presenter.alert_open? %>
     <%= render presenter.alert_partial, booking: booking, presenter: presenter %>
   <% end %>

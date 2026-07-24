@@ -1,7 +1,7 @@
 <%# locals: (booking:, entity_booking:, presenter:, booking_presenter: nil, folio_show: nil, audit_logs: nil, audit_history: nil) %>
 <%# Guest identity lives in the entity rail; repeating it here duplicated the
     global header, the rail row, and the Full name field. %>
-<section id="guest-details-panel" class="h-full min-h-0" aria-label="Guest details" tabindex="-1">
+<section id="guest-details-panel" class="flex h-full min-h-0 flex-col" aria-label="Guest details" tabindex="-1">
   <% if presenter.selected_booking_guest && presenter.selected_guest %>
     <% return_to = presenter.guest_details_return_to %>
     <% snapshots = presenter.guest_details_snapshots %>
@@ -12,7 +12,7 @@
         url: hotel_booking_workspace_path(current_hotel, entity_booking, tab: "guest_details", booking_guest_id: presenter.selected_booking_guest.id),
         method: :patch,
         id: "guest-details-form",
-        class: "flex h-full min-h-0 flex-col bg-card",
+        class: "flex min-h-0 flex-1 flex-col bg-card",
         data: { turbo: false, controller: "guest-details-editor guest-dob", action: "input->guest-details-editor#markDirty change->guest-details-editor#markDirty submit->guest-details-editor#submit" } do |form| %>
       <%= hidden_field_tag :return_to, return_to %>
       <%= hidden_field_tag :presentation, "booking_workspace" %>
@@ -106,8 +106,16 @@
         </div>
       </div>
     <% end %>
+
+    <%# Outside the form above: this footer carries its own form for Make primary,
+        and a nested <form> would be invalid. The submit buttons reach the guest
+        form by id instead. %>
+    <% if presenter.selected_booking_guest&.guest.present? %>
+      <%= render "hotel_portal/bookings/workspaces/guest_details/footer", booking: entity_booking, presenter: presenter %>
+      <%= render "hotel_portal/bookings/workspaces/alerts/confirm_discard_alert" %>
+    <% end %>
   <% else %>
-    <div class="flex h-full items-center justify-center px-5 py-12 text-center">
+    <div class="flex flex-1 items-center justify-center px-5 py-12 text-center">
       <div>
         <p class="font-semibold text-foreground">No guest is linked to this booking.</p>
         <p class="mt-1 text-sm text-muted-foreground">Add a primary guest before check-in.</p>

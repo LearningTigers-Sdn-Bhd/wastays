@@ -627,10 +627,14 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(form["method"]).to eq("post")
       expect(form.at_css('input[name="_method"][value="patch"]')).to be_present
       expect(form.css("fieldset.panel-field-set").size).to be >= 2
-      expect(footer.parent["id"]).to eq("booking_workspace")
-      expect(footer.ancestors("#booking-workspace-content")).to be_empty
-      expect(footer["class"]).to include("border-t", "bg-card")
-      expect(footer["class"]).not_to include("shadow")
+      # Belongs to the content column, not the workspace: it must not span the
+      # entity rail. It sits beside the guest form rather than inside it, because
+      # it carries its own form for Make primary.
+      expect(footer.parent["id"]).to eq("guest-details-panel")
+      expect(footer.ancestors("#booking-workspace-content")).not_to be_empty
+      expect(footer.ancestors("form#guest-details-form")).to be_empty
+      expect(footer["class"]).to include("bg-card")
+      expect(footer["class"]).not_to include("shadow", "border-t")
       expect(document.at_xpath("//a[normalize-space()='Edit Guest']")).to be_nil
       expect(save_guest["form"]).to eq("guest-details-form")
       expect(view_grc["href"]).to eq(hotel_booking_guest_registration_card_path(hotel, booking))

@@ -2,43 +2,43 @@
 <% can_manage = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
 <% can_view_grc = can_manage || current_user.has_permission?("view_reports", hotel: current_hotel) %>
 <% return_to = hotel_booking_workspace_path(current_hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id) %>
+<% grc_path = hotel_booking_guest_registration_card_path(current_hotel, booking) %>
 
-<footer class="shrink-0 border-t border-border bg-card px-4 py-3" data-testid="guest-details-footer">
-  <div class="flex items-center justify-between gap-3">
+<footer class="shrink-0 bg-card px-5 pb-4 pt-2 lg:px-8" data-testid="guest-details-footer">
+  <div class="flex max-w-6xl items-center justify-between gap-3">
     <div class="flex min-w-0 items-center gap-2 overflow-x-auto overscroll-x-contain">
       <% if can_view_grc %>
-        <div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="right">
-          <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-border-interactive bg-card px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-expanded="false" aria-haspopup="menu">
-            GRC Actions <%= cached_icon "chevron-down", class: "size-3", aria: { hidden: true } %>
-          </button>
-          <div data-dropdown-target="menu" class="hidden w-56 rounded-lg border border-border bg-card p-1.5 shadow-lg" role="menu" tabindex="-1">
-            <%= link_to hotel_booking_guest_registration_card_path(current_hotel, booking), target: "_blank", rel: "noopener", role: "menuitem", class: "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:bg-muted" do %>
-              <%= cached_icon "clipboard-list", class: "size-4 text-amber-600", aria: { hidden: true } %> View GRC
-            <% end %>
-            <button type="button" role="menuitem" disabled title="Signature capture will be added in a later phase" class="flex w-full cursor-not-allowed items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-muted-foreground">
-              <%= cached_icon "pen-line", class: "size-4", aria: { hidden: true } %> Add Signature
-            </button>
-          </div>
-        </div>
+        <%= render PanelsUI::DropdownMenu.new(id: "guest-grc-actions", placement: :top_start) do |menu| %>
+          <% menu.with_trigger(variant: :secondary, size: :sm) do %>
+            GRC Actions
+            <%= cached_icon "chevron-down", class: "size-3", aria: { hidden: true } %>
+          <% end %>
+          <% menu.with_item(href: grc_path, target: "_blank", rel: "noopener") do %>
+            <%= cached_icon "clipboard-list", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+            View GRC
+          <% end %>
+          <% menu.with_item(disabled: true, title: "Signature capture will be added in a later phase") do %>
+            <%= cached_icon "pen-line", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+            Add Signature
+          <% end %>
+        <% end %>
 
-        <div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="right">
-          <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-border-interactive bg-card px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-expanded="false" aria-haspopup="menu">
-            Print <%= cached_icon "chevron-down", class: "size-3", aria: { hidden: true } %>
-          </button>
-          <div data-dropdown-target="menu"
-               data-controller="document-print"
-               data-document-print-url-value="<%= hotel_booking_guest_registration_card_path(current_hotel, booking) %>"
-               class="hidden w-64 rounded-lg border border-border bg-card p-1.5 shadow-lg"
-               role="menu"
-               tabindex="-1">
-            <button type="button"
-                    role="menuitem"
-                    class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:bg-muted disabled:cursor-wait disabled:text-muted-foreground"
-                    data-document-print-target="button"
-                    data-action="document-print#print dropdown#close">
-              <%= cached_icon "printer", class: "size-4 text-muted-foreground", aria: { hidden: true } %> Guest Registration Card
-            </button>
-          </div>
+        <%# The menu uses popover="manual" and stays in this subtree, so the print
+            target and status stay within the controller's scope. %>
+        <div class="inline-flex min-w-0 items-center gap-2"
+             data-controller="document-print"
+             data-document-print-url-value="<%= grc_path %>">
+          <%= render PanelsUI::DropdownMenu.new(id: "guest-print-actions", placement: :top_start) do |menu| %>
+            <% menu.with_trigger(variant: :secondary, size: :sm) do %>
+              Print
+              <%= cached_icon "chevron-down", class: "size-3", aria: { hidden: true } %>
+            <% end %>
+            <% menu.with_item(data: { document_print_target: "button", action: "document-print#print" }) do %>
+              <%= cached_icon "printer", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+              Guest Registration Card
+            <% end %>
+          <% end %>
+          <p class="hidden min-w-0 truncate whitespace-nowrap text-xs font-semibold text-muted-foreground" role="status" aria-live="polite" data-document-print-status></p>
         </div>
       <% end %>
 
@@ -54,25 +54,28 @@
           <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, size: :sm) do %>Make primary<% end %>
         <% end %>
       <% end %>
-
-      <p class="hidden min-w-0 truncate whitespace-nowrap text-xs font-semibold text-muted-foreground" role="status" aria-live="polite" data-document-print-status></p>
     </div>
 
     <% if can_manage %>
-      <div class="inline-flex shrink-0">
-        <button type="submit" form="guest-details-form" name="save_scope" value="snapshot" class="rounded-l-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">Save Guest</button>
-        <div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="end">
-          <button type="button" class="inline-flex h-full items-center rounded-r-md border-l border-border-interactive bg-primary px-3 text-primary-foreground hover:bg-primary-hover focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" aria-label="More save options" aria-expanded="false" aria-haspopup="menu" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown">
+      <%= render PanelsUI::ButtonGroup.new(class: "shrink-0", aria: { label: "Save guest" }) do %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              form: "guest-details-form",
+              name: "save_scope",
+              value: "snapshot") do %>Save Guest<% end %>
+        <%= render PanelsUI::DropdownMenu.new(id: "guest-save-options", placement: :top_end) do |menu| %>
+          <% menu.with_trigger(size: :icon, aria_label: "More save options") do %>
             <%= cached_icon "chevron-up", class: "size-4", aria: { hidden: true } %>
-          </button>
-          <div data-dropdown-target="menu" data-testid="save-options-menu" class="hidden w-72 rounded-lg border border-border bg-card p-1.5 shadow-lg" role="menu" tabindex="-1">
-            <button type="submit" form="guest-details-form" name="save_scope" value="snapshot_and_profile" role="menuitem" class="w-full rounded-md px-3 py-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:bg-muted">
+          <% end %>
+          <% menu.with_item(type: :submit, form_id: "guest-details-form", name: "save_scope", value: "snapshot_and_profile") do %>
+            <span class="block">
               <span class="block text-sm font-semibold text-foreground">Save &amp; Update Guest Record</span>
               <span class="mt-0.5 block text-xs leading-5 text-muted-foreground">Also update this guest’s reusable profile.</span>
-            </button>
-          </div>
-        </div>
-      </div>
+            </span>
+          <% end %>
+        <% end %>
+      <% end %>
     <% else %>
       <span class="text-xs font-semibold text-muted-foreground">View only</span>
     <% end %>

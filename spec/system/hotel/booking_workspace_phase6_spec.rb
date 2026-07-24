@@ -436,11 +436,12 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
     expect(page.driver.browser.window_handles.size).to eq(1)
   end
 
-  it "saves the selected guest from the full-width external footer", js: true do
+  it "saves the selected guest from the footer inside the content column", js: true do
     visit hotel_booking_workspace_path(hotel, booking, tab: "guest_details")
     profile_name = booking.primary_guest.name
 
-    expect(page).to have_css("turbo-frame#booking_workspace > footer[data-testid='guest-details-footer']")
+    expect(page).to have_css("#guest-details-panel > footer[data-testid='guest-details-footer']")
+    expect(page).to have_no_css("turbo-frame#booking_workspace > footer[data-testid='guest-details-footer']")
     fill_in "Full name", with: "Saved From Footer"
     click_button "Save Guest"
 
@@ -514,7 +515,7 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
     expect(page.evaluate_script(<<~JS)).to be(true)
       (() => {
         const trigger = document.querySelector("button[aria-label='More save options']").getBoundingClientRect()
-        const menu = document.querySelector("[data-testid='save-options-menu']").getBoundingClientRect()
+        const menu = document.querySelector("#guest-save-options-menu").getBoundingClientRect()
         return menu.left < trigger.left && menu.right <= trigger.right + 1
       })()
     JS
