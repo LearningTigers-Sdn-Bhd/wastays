@@ -63,7 +63,7 @@ module Deposits
 
     def security_deposit_transaction_code
       Financials::EnsureDefaultTransactionCodes.call(@booking.hotel)
-      @booking.hotel.transaction_codes.find_by!(system_key: "security_deposit")
+      TransactionCodes::Resolver.for(@booking.hotel).for_key!("security_deposit")
     end
   end
 end

@@ -73,10 +73,15 @@ module Folios
     end
 
     def source_transaction_code(line)
-      source_id = line.dig(:tax_line, "source_transaction_code_id").presence || line.dig(:tax_line, :source_transaction_code_id).presence
-      return @booking.hotel.transaction_codes.find_by(id: source_id) if source_id.present?
+      tax_line = line[:tax_line].to_h
+      source_id = tax_line["source_transaction_code_id"].presence || tax_line[:source_transaction_code_id].presence
+      return transaction_codes.for_id(source_id) if source_id.present?
 
-      @booking.hotel.transaction_codes.find_by(system_key: "room_revenue")
+      transaction_codes.room_revenue
+    end
+
+    def transaction_codes
+      @transaction_codes ||= TransactionCodes::Resolver.for(@booking.hotel)
     end
 
     def fallback_code(line)

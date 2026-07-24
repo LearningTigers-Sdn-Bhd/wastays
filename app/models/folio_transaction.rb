@@ -126,22 +126,15 @@ class FolioTransaction < ApplicationRecord
       return tax.ensure_transaction_code if tax.present?
     end
 
-    tax_type = tax_line["type"].presence || tax_line[:type].presence
-    system_key =
-      case tax_type.to_s
-      when "sst" then "sst_tax"
-      when "tourism_tax" then "tourism_tax"
-      end
-    return if system_key.blank?
-
-    hotel.transaction_codes.find_by(system_key: system_key)
+    transaction_code_resolver.for_tax_type(tax_line["type"].presence || tax_line[:type].presence)
   end
 
   def category_transaction_code
-    system_key = Financials::EnsureDefaultTransactionCodes.system_key_for_category(category)
-    return if system_key.blank?
+    transaction_code_resolver.for_key(Financials::EnsureDefaultTransactionCodes.system_key_for_category(category))
+  end
 
-    hotel.transaction_codes.find_by(system_key: system_key)
+  def transaction_code_resolver
+    TransactionCodes::Resolver.for(hotel)
   end
 
   def category_allowed_for_transaction_type

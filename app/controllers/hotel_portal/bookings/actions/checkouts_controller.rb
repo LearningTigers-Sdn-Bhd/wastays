@@ -183,7 +183,7 @@ module HotelPortal
         def checkout_penalty_folio_id(booking)
           route = ::Folios::ResolveTargetFolio.call(
             booking: booking,
-            transaction_code: current_hotel.transaction_codes.find_by(system_key: "room_revenue")
+            transaction_code: ::TransactionCodes::Resolver.for(current_hotel).room_revenue
           )
           route.success? ? route.folio&.id : booking.booking_folio&.id
         end

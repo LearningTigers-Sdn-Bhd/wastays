@@ -36,7 +36,7 @@ class Deposit < ApplicationRecord
     return if transaction_code.present? || hotel.blank?
 
     Financials::EnsureDefaultTransactionCodes.call(hotel)
-    self.transaction_code = hotel.transaction_codes.find_by(system_key: "security_deposit")
+    self.transaction_code = TransactionCodes::Resolver.for(hotel).for_key("security_deposit")
   end
 
   def hotel_matches_booking

@@ -63,7 +63,7 @@ module Folios
           amount: amount,
           category: "accommodation",
           description: "Room Charge - #{@business_date}",
-          transaction_code: room_transaction_code,
+          transaction_code: transaction_codes.room_revenue,
           fallback_transaction_code: nil,
           metadata: nightly_metadata(booking, "accommodation", booking_room.id).merge(
             rate_source: nightly_rate_snapshot_for(booking_room, @business_date).present? ? "nightly_rate_snapshot" : "legacy_subtotal_average",
@@ -86,8 +86,8 @@ module Folios
           amount: amount,
           category: "tax",
           description: "Tax: #{tax_line_name(tax_line)} - #{@business_date}",
-          transaction_code: transaction_code_for_tax_line(tax_line),
-          fallback_transaction_code: source_transaction_code_for_tax_line(tax_line),
+          transaction_code: transaction_codes.for_tax_line(tax_line),
+          fallback_transaction_code: transaction_codes.source_for_tax_line(tax_line),
           metadata: nightly_metadata(booking, "tax", tax_identity).merge(tax_line: tax_line)
         )
       end
@@ -166,25 +166,8 @@ module Folios
       forecasts.where.not(id: target_forecast&.id).find_each(&:supersede!)
     end
 
-    def room_transaction_code
-      @room_transaction_code ||= @hotel.transaction_codes.find_by(system_key: "room_revenue")
-    end
-
-    def transaction_code_for_tax_line(tax_line)
-      id = tax_line["transaction_code_id"].presence || tax_line[:transaction_code_id].presence
-      return @hotel.transaction_codes.find_by(id: id) if id.present?
-
-      case tax_line["type"].presence || tax_line[:type].presence
-      when "sst" then @hotel.transaction_codes.find_by(system_key: "sst_tax")
-      when "tourism_tax" then @hotel.transaction_codes.find_by(system_key: "tourism_tax")
-      end
-    end
-
-    def source_transaction_code_for_tax_line(tax_line)
-      id = tax_line["source_transaction_code_id"].presence || tax_line[:source_transaction_code_id].presence
-      return @hotel.transaction_codes.find_by(id: id) if id.present?
-
-      nil
+    def transaction_codes
+      @transaction_codes ||= TransactionCodes::Resolver.for(@hotel)
     end
 
     def nightly_metadata(booking, charge_kind, identity)

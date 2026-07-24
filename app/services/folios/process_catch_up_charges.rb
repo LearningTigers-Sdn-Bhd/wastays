@@ -98,7 +98,7 @@ module Folios
 
         description = @is_reinstate ? "Reinstate Charge - #{date.strftime('%d %b %Y')}" : "Backdated Check-in (Room Charge) - #{date.strftime('%d %b %Y')}"
 
-        route = resolve_route(room_transaction_code)
+        route = resolve_route(transaction_codes.room_revenue)
         raise "Failed to resolve accommodation catch-up charge route: #{route.error}" unless route.success?
 
         result = Folios::InsertTransaction.new(
@@ -114,7 +114,7 @@ module Folios
             override_night_audit: true,
             correction_reason: "late_checkin_catch_up",
             correction_note: description,
-            transaction_code: room_transaction_code,
+            transaction_code: transaction_codes.room_revenue,
             metadata: {
               posting_source: "catch_up",
               route_source: route.route_source,
@@ -154,8 +154,8 @@ module Folios
           "Backdated Check-in Tax: #{tax_line_name(tax_line)} - #{date.strftime('%d %b %Y')}"
         end
 
-        transaction_code = transaction_code_for_tax_line(tax_line)
-        route = resolve_route(transaction_code, fallback_transaction_code: source_transaction_code_for_tax_line(tax_line))
+        transaction_code = transaction_codes.for_tax_line(tax_line)
+        route = resolve_route(transaction_code, fallback_transaction_code: transaction_codes.source_for_tax_line(tax_line))
         raise "Failed to resolve tax catch-up charge route: #{route.error}" unless route.success?
 
         result = Folios::InsertTransaction.new(
@@ -215,25 +215,8 @@ module Folios
       )
     end
 
-    def room_transaction_code
-      @room_transaction_code ||= @hotel.transaction_codes.find_by(system_key: "room_revenue")
-    end
-
-    def transaction_code_for_tax_line(tax_line)
-      id = tax_line["transaction_code_id"].presence || tax_line[:transaction_code_id].presence
-      return @hotel.transaction_codes.find_by(id: id) if id.present?
-
-      case tax_line["type"].presence || tax_line[:type].presence
-      when "sst" then @hotel.transaction_codes.find_by(system_key: "sst_tax")
-      when "tourism_tax" then @hotel.transaction_codes.find_by(system_key: "tourism_tax")
-      end
-    end
-
-    def source_transaction_code_for_tax_line(tax_line)
-      id = tax_line["source_transaction_code_id"].presence || tax_line[:source_transaction_code_id].presence
-      return @hotel.transaction_codes.find_by(id: id) if id.present?
-
-      nil
+    def transaction_codes
+      @transaction_codes ||= TransactionCodes::Resolver.for(@hotel)
     end
 
     def reason_metadata

@@ -121,35 +121,16 @@ module Folios
       Folios::ResolveTargetFolio.call(
         booking: @booking,
         transaction_code: transaction_code_for(line),
-        fallback_transaction_code: line[:category] == "tax" ? source_transaction_code_for_tax_line(line[:tax_line]) : nil
+        fallback_transaction_code: line[:category] == "tax" ? transaction_codes.source_for_tax_line(line[:tax_line]) : nil
       )
     end
 
     def transaction_code_for(line)
-      line[:category] == "tax" ? transaction_code_for_tax_line(line[:tax_line]) : room_transaction_code
+      line[:category] == "tax" ? transaction_codes.for_tax_line(line[:tax_line]) : transaction_codes.room_revenue
     end
 
-    def room_transaction_code
-      @room_transaction_code ||= @booking.hotel.transaction_codes.find_by(system_key: "room_revenue")
-    end
-
-    def transaction_code_for_tax_line(tax_line)
-      tax_line = tax_line.to_h
-      id = tax_line["transaction_code_id"].presence || tax_line[:transaction_code_id].presence
-      return @booking.hotel.transaction_codes.find_by(id: id) if id.present?
-
-      case tax_line["type"].presence || tax_line[:type].presence
-      when "sst" then @booking.hotel.transaction_codes.find_by(system_key: "sst_tax")
-      when "tourism_tax" then @booking.hotel.transaction_codes.find_by(system_key: "tourism_tax")
-      end
-    end
-
-    def source_transaction_code_for_tax_line(tax_line)
-      tax_line = tax_line.to_h
-      id = tax_line["source_transaction_code_id"].presence || tax_line[:source_transaction_code_id].presence
-      return @booking.hotel.transaction_codes.find_by(id: id) if id.present?
-
-      nil
+    def transaction_codes
+      @transaction_codes ||= TransactionCodes::Resolver.for(@booking.hotel)
     end
 
     # Display preview: each line is tagged with the folio it will route to, so

@@ -33,8 +33,8 @@ module Folios
           identity: room.id.to_s,
           amount: amount,
           description: "Room Charge - #{date}",
-          transaction_code: room_transaction_code,
-          transaction_code_id: room_transaction_code&.id
+          transaction_code: transaction_codes.room_revenue,
+          transaction_code_id: transaction_codes.room_revenue&.id
         }
       end
     end
@@ -44,7 +44,7 @@ module Folios
         amount = tax_line_amount(tax_line)
         next if amount.zero?
 
-        transaction_code = transaction_code_for_tax_line(tax_line)
+        transaction_code = transaction_codes.for_tax_line(tax_line)
 
         {
           stay_date: date,
@@ -55,32 +55,15 @@ module Folios
           description: "Tax: #{tax_line_name(tax_line)} - #{date}",
           transaction_code: transaction_code,
           transaction_code_id: transaction_code&.id,
-          fallback_transaction_code: source_transaction_code(tax_line),
-          fallback_transaction_code_id: source_transaction_code(tax_line)&.id,
+          fallback_transaction_code: transaction_codes.source_for_tax_line(tax_line),
+          fallback_transaction_code_id: transaction_codes.source_for_tax_line(tax_line)&.id,
           tax_line: tax_line
         }
       end
     end
 
-    def room_transaction_code
-      @room_transaction_code ||= @booking.hotel.transaction_codes.find_by(system_key: "room_revenue")
-    end
-
-    def transaction_code_for_tax_line(tax_line)
-      id = tax_line["transaction_code_id"].presence || tax_line[:transaction_code_id].presence
-      return @booking.hotel.transaction_codes.find_by(id: id) if id.present?
-
-      case tax_line["type"].presence || tax_line[:type].presence
-      when "sst" then @booking.hotel.transaction_codes.find_by(system_key: "sst_tax")
-      when "tourism_tax" then @booking.hotel.transaction_codes.find_by(system_key: "tourism_tax")
-      end
-    end
-
-    def source_transaction_code(tax_line)
-      id = tax_line["source_transaction_code_id"].presence || tax_line[:source_transaction_code_id].presence
-      return @booking.hotel.transaction_codes.find_by(id: id) if id.present?
-
-      nil
+    def transaction_codes
+      @transaction_codes ||= TransactionCodes::Resolver.for(@booking.hotel)
     end
 
     def stay_dates

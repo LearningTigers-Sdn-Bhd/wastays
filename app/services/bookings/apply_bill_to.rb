@@ -67,13 +67,15 @@ module Bookings
     end
 
     def room_revenue_code
-      @booking.hotel.transaction_codes.find_by(system_key: "room_revenue")
+      transaction_codes.room_revenue
     end
 
     def tourism_tax_code
-      return @tourism_tax_code if defined?(@tourism_tax_code)
+      transaction_codes.for_key("tourism_tax")
+    end
 
-      @tourism_tax_code = @booking.hotel.transaction_codes.find_by(system_key: "tourism_tax")
+    def transaction_codes
+      @transaction_codes ||= TransactionCodes::Resolver.for(@booking.hotel)
     end
 
     def failure(error) = OpenStruct.new(success?: false, party: nil, target_folio: nil, error: error)

@@ -101,7 +101,7 @@ module Folios
     end
 
     def transaction_code_for(hotel)
-      hotel.transaction_codes.find_by(system_key: system_key)
+      TransactionCodes::Resolver.for(hotel).for_key(system_key)
     end
 
     private

@@ -52,7 +52,7 @@ class TransactionCodeTax < ApplicationRecord
     return hotel_tax.ensure_transaction_code if hotel_tax.present?
 
     Financials::EnsureDefaultTransactionCodes.call(transaction_code.hotel)
-    transaction_code.hotel.transaction_codes.find_by(system_key: primary_tax_key)
+    TransactionCodes::Resolver.for(transaction_code.hotel).for_key(primary_tax_key)
   end
 
   def tax_line_type

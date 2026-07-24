@@ -123,7 +123,7 @@ module Bookings
       # primary folio when unrouted.
       route = Folios::ResolveTargetFolio.call(
         booking: @booking,
-        transaction_code: @booking.hotel.transaction_codes.find_by(system_key: "room_revenue")
+        transaction_code: TransactionCodes::Resolver.for(@booking.hotel).room_revenue
       )
       return failure(route.error) unless route.success?
 
