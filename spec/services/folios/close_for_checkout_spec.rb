@@ -146,7 +146,7 @@ RSpec.describe Folios::CloseForCheckout do
 
     before do
       create(:booking_room, booking: booking, subtotal: 200.0)
-      Folios::GenerateForecastedCharges.call(booking_folio: folio)
+      Folios::SyncForecastedCharges.call(booking_folio: folio)
     end
 
     it "fails when nightly charges are missing for past nights" do
@@ -229,7 +229,7 @@ RSpec.describe Folios::CloseForCheckout do
       booking.update!(tax_lines: [ { "name" => "SST", "amount" => "20.00", "type" => "sst" } ])
       # Regenerate forecasts with tax lines
       folio.folio_forecasted_charges.supersede_all!
-      Folios::GenerateForecastedCharges.call(booking_folio: folio)
+      Folios::SyncForecastedCharges.call(booking_folio: folio)
 
       # Actualize only accommodation forecasts
       folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation").each do |forecast|
@@ -250,7 +250,7 @@ RSpec.describe Folios::CloseForCheckout do
     it "fails when tax is posted but expected accommodation is missing" do
       booking.update!(tax_lines: [ { "name" => "SST", "amount" => "20.00", "type" => "sst" } ])
       folio.folio_forecasted_charges.supersede_all!
-      Folios::GenerateForecastedCharges.call(booking_folio: folio)
+      Folios::SyncForecastedCharges.call(booking_folio: folio)
 
       # Actualize only tax forecasts
       folio.folio_forecasted_charges.forecast.where(charge_kind: "tax").each do |forecast|

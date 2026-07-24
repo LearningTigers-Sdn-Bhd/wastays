@@ -91,7 +91,7 @@ RSpec.describe Folios::PostNightlyCharges do
     ).call
     booking.update!(tax_lines: snapshot.tax_lines, tax_posting_snapshot: snapshot.tax_posting_snapshot)
     folio = create(:booking_folio, hotel: hotel, booking: booking)
-    Folios::GenerateForecastedCharges.call(booking_folio: folio)
+    Folios::SyncForecastedCharges.call(booking_folio: folio)
 
     described_class.call(night_audit: night_audit, user: user)
 
@@ -313,7 +313,7 @@ RSpec.describe Folios::PostNightlyCharges do
       tax_lines: [ { "name" => "SST", "amount" => "20.00", "type" => "sst" } ])
     create(:booking_room, booking: booking, subtotal: 200.0)
     folio = create(:booking_folio, hotel: hotel, booking: booking)
-    Folios::GenerateForecastedCharges.call(booking_folio: folio)
+    Folios::SyncForecastedCharges.call(booking_folio: folio)
 
     expect {
       described_class.call(night_audit: night_audit, user: user)
@@ -334,7 +334,7 @@ RSpec.describe Folios::PostNightlyCharges do
       check_out: business_date + 1.day)
     booking_room = create(:booking_room, booking: booking, subtotal: 100.0)
     folio = create(:booking_folio, hotel: hotel, booking: booking)
-    Folios::GenerateForecastedCharges.call(booking_folio: folio)
+    Folios::SyncForecastedCharges.call(booking_folio: folio)
     existing_transaction = create(:folio_transaction,
       booking_folio: folio,
       transaction_type: :charge,

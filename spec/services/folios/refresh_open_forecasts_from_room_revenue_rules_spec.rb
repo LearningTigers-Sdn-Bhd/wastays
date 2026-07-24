@@ -25,7 +25,7 @@ RSpec.describe Folios::RefreshOpenForecastsFromRoomRevenueRules do
     room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
     room_code.update!(is_taxable: true)
     room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
-    Folios::GenerateForecastedCharges.call(booking_folio: folio)
+    Folios::SyncForecastedCharges.call(booking_folio: folio)
   end
 
   it "refreshes unposted forecasts from current ROOM tax rules" do

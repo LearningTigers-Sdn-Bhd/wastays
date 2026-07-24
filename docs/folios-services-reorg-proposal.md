@@ -357,10 +357,13 @@ The rename analysis from v1 holds. What changes is *when*.
 
 ### The verb glossary — do this now, it is free
 
-`generate` · `sync` · `refresh` · `calculate` · `reconcile` · `process` have no
-written distinction. One paragraph of documentation makes every future naming
+**Done (PR 1): `docs/folios-service-verbs.md`.**
+
+`generate` · `sync` · `refresh` · `calculate` · `reconcile` · `process` had no
+written distinction. One page of documentation makes every future naming
 decision obvious. **Correction from v1:** do not enshrine `generate` vs `sync` —
-M7 shows they are the same operation.
+M7 shows they are the same operation, and the glossary records `generate` as
+retired.
 
 ### Renames to defer until after the seams work
 

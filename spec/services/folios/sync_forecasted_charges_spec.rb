@@ -11,7 +11,7 @@ RSpec.describe Folios::SyncForecastedCharges do
 
   describe ".call" do
     it "does not recreate pending forecasts for nights already posted by night audit" do
-      Folios::GenerateForecastedCharges.call(booking_folio: folio)
+      Folios::SyncForecastedCharges.call(booking_folio: folio)
       forecast = folio.folio_forecasted_charges.forecast.find_by!(stay_date: business_date, charge_kind: "accommodation")
       transaction = create(
         :folio_transaction,
@@ -35,7 +35,7 @@ RSpec.describe Folios::SyncForecastedCharges do
     end
 
     it "supersedes pending forecasts for dates already posted by catch-up charges" do
-      Folios::GenerateForecastedCharges.call(booking_folio: folio)
+      Folios::SyncForecastedCharges.call(booking_folio: folio)
       create(
         :folio_transaction,
         booking_folio: folio,
@@ -70,8 +70,8 @@ RSpec.describe Folios::SyncForecastedCharges do
       )
       second_room = create(:booking_room, booking: second_booking, subtotal: 200.0)
       second_folio = create(:booking_folio, hotel: hotel, booking: second_booking)
-      Folios::GenerateForecastedCharges.call(booking_folio: folio)
-      Folios::GenerateForecastedCharges.call(booking_folio: second_folio)
+      Folios::SyncForecastedCharges.call(booking_folio: folio)
+      Folios::SyncForecastedCharges.call(booking_folio: second_folio)
       create(
         :folio_transaction,
         booking_folio: folio,
@@ -94,7 +94,7 @@ RSpec.describe Folios::SyncForecastedCharges do
     end
 
     it "does not recreate rows for already actualized forecasts without modern transaction metadata" do
-      Folios::GenerateForecastedCharges.call(booking_folio: folio)
+      Folios::SyncForecastedCharges.call(booking_folio: folio)
       folio.folio_forecasted_charges.forecast.each do |forecast|
         transaction = create(
           :folio_transaction,
@@ -114,7 +114,7 @@ RSpec.describe Folios::SyncForecastedCharges do
     end
 
     it "replaces active forecasts when the expected amount changes" do
-      Folios::GenerateForecastedCharges.call(booking_folio: folio)
+      Folios::SyncForecastedCharges.call(booking_folio: folio)
       booking_room.update!(subtotal: 300.0)
 
       described_class.call(booking_folio: folio)
@@ -125,7 +125,7 @@ RSpec.describe Folios::SyncForecastedCharges do
     end
 
     it "supersedes active forecasts when normal stay forecasts no longer apply" do
-      Folios::GenerateForecastedCharges.call(booking_folio: folio)
+      Folios::SyncForecastedCharges.call(booking_folio: folio)
       booking.update_column(:status, "no_show")
 
       described_class.call(booking_folio: folio)
@@ -221,6 +221,186 @@ RSpec.describe Folios::SyncForecastedCharges do
       expect(forecast.reload.status).to eq("actualized")
       expect(forecast.booking_folio).to eq(folio)
       expect(transaction.reload.booking_folio).to eq(folio)
+    end
+  end
+
+  # Merged from the deleted Folios::GenerateForecastedCharges spec. That service was a
+  # pure alias for this one, but its spec was the only cover for the first-run creation
+  # path — amounts, tax derivation, checkout day and rounding.
+  describe "creating forecasts on a folio with none" do
+    it "creates forecast charges for each night of the stay" do
+      described_class.call(booking_folio: folio)
+
+      forecasts = folio.folio_forecasted_charges.forecast.order(:stay_date, :charge_kind)
+      expect(forecasts.count).to eq(2) # 1 accommodation charge per night
+
+      expect(forecasts[0].attributes).to include(
+        "stay_date" => business_date,
+        "charge_kind" => "accommodation",
+        "identity" => booking_room.id.to_s,
+        "amount" => 100.0,
+        "description" => "Room Charge - #{business_date}"
+      )
+
+      expect(forecasts[1].attributes).to include(
+        "stay_date" => business_date + 1.day,
+        "charge_kind" => "accommodation",
+        "identity" => booking_room.id.to_s,
+        "amount" => 100.0,
+        "description" => "Room Charge - #{business_date + 1.day}"
+      )
+    end
+
+    it "creates tax forecast charges when tax_lines are present" do
+      booking.update!(tax_lines: [ { "name" => "SST", "amount" => "20.00", "type" => "sst" } ])
+
+      described_class.call(booking_folio: folio)
+
+      tax_forecasts = folio.folio_forecasted_charges.forecast.where(charge_kind: "tax")
+      expect(tax_forecasts.count).to eq(2) # 1 tax line per night
+    end
+
+    it "creates tax forecasts from tax_snapshot when available" do
+      booking.update!(
+        tax_lines: [],
+        tax_posting_snapshot: {
+          business_date.iso8601 => [ { "name" => "SST", "amount" => "10.00", "type" => "sst", "source" => "hotel_sst" } ],
+          (business_date + 1.day).iso8601 => [ { "name" => "SST", "amount" => "10.00", "type" => "sst", "source" => "hotel_sst" } ]
+        }
+      )
+
+      described_class.call(booking_folio: folio)
+
+      tax_forecasts = folio.folio_forecasted_charges.forecast.where(charge_kind: "tax").order(:stay_date)
+      expect(tax_forecasts.count).to eq(2)
+      expect(tax_forecasts.map(&:amount)).to all(eq(10.0))
+    end
+
+    it "creates new forecasts from ROOM transaction code tax rule snapshots" do
+      hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      room_code.update!(is_taxable: true)
+      room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+      room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+      snapshot = Bookings::BuildFinancialSnapshot.new(
+        hotel: hotel,
+        check_in: booking.check_in,
+        check_out: booking.check_out,
+        guest_country: "Singapore",
+        room_items: [
+          {
+            quantity: 1,
+            nightly_rate_snapshot: booking_room.nightly_rate_snapshot.presence || {
+              business_date.iso8601 => { "price" => "100.00" },
+              (business_date + 1.day).iso8601 => { "price" => "100.00" }
+            }
+          }
+        ]
+      ).call
+      booking.update!(guest_country: "Singapore", tax_lines: snapshot.tax_lines, tax_posting_snapshot: snapshot.tax_posting_snapshot)
+
+      described_class.call(booking_folio: folio)
+
+      tax_forecasts = folio.folio_forecasted_charges.forecast.where(charge_kind: "tax").order(:stay_date, :identity)
+      expect(tax_forecasts.count).to eq(4)
+      expect(tax_forecasts.map(&:description)).to include("Tax: SST 8% - #{business_date}", "Tax: Tourism Tax - #{business_date}")
+      expect(tax_forecasts.map(&:amount)).to include(8.0, 10.0)
+    end
+
+    it "does not recalculate existing unposted forecasts when rules change under new-bookings-only policy" do
+      booking.update!(
+        tax_posting_snapshot: {
+          business_date.iso8601 => [ { "name" => "Original Tax", "amount" => "5.00", "type" => "original", "source" => "legacy" } ]
+        }
+      )
+      described_class.call(booking_folio: folio)
+      original_tax_forecast = folio.folio_forecasted_charges.forecast.find_by!(charge_kind: "tax")
+      original_snapshot = booking.reload.tax_posting_snapshot
+
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      room_code.update!(is_taxable: true)
+      room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+
+      expect(booking.reload.tax_posting_snapshot).to eq(original_snapshot)
+      expect(folio.folio_forecasted_charges.forecast.count).to eq(3)
+      expect(original_tax_forecast.reload.description).to eq("Tax: Original Tax - #{business_date}")
+      expect(original_tax_forecast.amount).to eq(5.0)
+    end
+
+    it "does not create forecasts for the checkout day" do
+      booking.update!(check_out: business_date + 1.day)
+
+      described_class.call(booking_folio: folio)
+
+      expect(folio.folio_forecasted_charges.count).to eq(1)
+      expect(folio.folio_forecasted_charges.forecast.first.stay_date).to eq(business_date)
+    end
+
+    it "is idempotent" do
+      described_class.call(booking_folio: folio)
+
+      expect {
+        described_class.call(booking_folio: folio)
+      }.not_to change { folio.folio_forecasted_charges.count }
+    end
+
+    it "uses nightly_rate_snapshot when available" do
+      booking_room.update!(
+        nightly_rate_snapshot: {
+          business_date.iso8601 => { "price" => "150.00", "source" => "room_rate" },
+          (business_date + 1.day).iso8601 => { "price" => "200.00", "source" => "room_rate" }
+        }
+      )
+
+      described_class.call(booking_folio: folio)
+
+      forecasts = folio.folio_forecasted_charges.forecast.order(:stay_date)
+      expect(forecasts[0].amount).to eq(150.0)
+      expect(forecasts[1].amount).to eq(200.0)
+    end
+
+    it "allocates rounding remainder to the final night" do
+      booking_room.update!(subtotal: 100.0)
+      booking.update!(check_in: business_date, check_out: business_date + 3.days)
+      booking.booking_rooms.reload
+
+      described_class.call(booking_folio: folio)
+
+      forecasts = folio.folio_forecasted_charges.forecast.order(:stay_date)
+      expect(forecasts.count).to eq(3)
+      expect(forecasts[0].amount).to eq(33.33)
+      expect(forecasts[1].amount).to eq(33.33)
+      expect(forecasts[2].amount).to eq(33.34)
+    end
+
+    context "with a group booking" do
+      let(:group_booking) { create(:group_booking, hotel: hotel) }
+      let(:second_booking) do
+        create(
+          :booking,
+          hotel: hotel,
+          group_booking: group_booking,
+          group_position: 2,
+          check_in: booking.check_in,
+          check_out: booking.check_out
+        )
+      end
+      let!(:second_booking_room) { create(:booking_room, booking: second_booking, subtotal: 100.0) }
+      let(:second_folio) { create(:booking_folio, hotel: hotel, booking: second_booking) }
+
+      before do
+        booking.update!(group_booking: group_booking, group_position: 1)
+      end
+
+      it "creates separate forecasts for each one-room child" do
+        described_class.call(booking_folio: folio)
+        described_class.call(booking_folio: second_folio)
+
+        expect(group_booking.bookings.reload).to all(satisfy { |child| child.booking_rooms.one? })
+        accommodation_forecasts = FolioForecastedCharge.forecast
+          .where(booking_folio: [ folio, second_folio ], charge_kind: "accommodation")
+        expect(accommodation_forecasts.count).to eq(4) # 2 rooms x 2 nights
+      end
     end
   end
 end

@@ -48,7 +48,7 @@ module Folios
           folio = create_folio!
 
           Folios::SyncExistingPayments.call(folio: folio, user: @user, options: @options)
-          Folios::GenerateForecastedCharges.call(booking_folio: folio)
+          Folios::SyncForecastedCharges.call(booking_folio: folio)
         end
 
         folio

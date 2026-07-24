@@ -290,7 +290,7 @@ RSpec.describe Folios::ReverseTransaction, type: :service do
     booking = create(:booking, status: "checked_in", check_in: Date.current, check_out: Date.current + 1.day)
     booking_room = create(:booking_room, booking: booking, subtotal: 120)
     folio = create(:booking_folio, booking: booking, hotel: booking.hotel)
-    Folios::GenerateForecastedCharges.call(booking_folio: folio)
+    Folios::SyncForecastedCharges.call(booking_folio: folio)
     forecast = folio.folio_forecasted_charges.forecast.sole
     transaction = create(
       :folio_transaction,
@@ -335,7 +335,7 @@ RSpec.describe Folios::ReverseTransaction, type: :service do
     booking = create(:booking, status: "checked_in", check_in: Date.current, check_out: Date.current + 1.day)
     booking_room = create(:booking_room, booking: booking, subtotal: 120)
     folio = create(:booking_folio, booking: booking, hotel: booking.hotel)
-    Folios::GenerateForecastedCharges.call(booking_folio: folio)
+    Folios::SyncForecastedCharges.call(booking_folio: folio)
     forecast = folio.folio_forecasted_charges.forecast.sole
     transaction = create(
       :folio_transaction,

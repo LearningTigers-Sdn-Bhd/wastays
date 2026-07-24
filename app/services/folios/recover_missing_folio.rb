@@ -36,7 +36,7 @@ module Folios
             created = true
           end
 
-          Folios::GenerateForecastedCharges.call(booking_folio: folio)
+          Folios::SyncForecastedCharges.call(booking_folio: folio)
         end
       end
 
