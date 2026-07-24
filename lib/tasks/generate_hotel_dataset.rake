@@ -396,7 +396,7 @@ namespace :hotel_generator do
             nightly_room = (snapshot.room_total / nights).round(2)
             nightly_tax = (snapshot.tax_total / nights).round(2)
 
-            room_code = hotel.transaction_codes.find_by(system_key: "room_charges")
+            room_code = hotel.transaction_codes.find_by(system_key: "room_revenue")
             FolioTransaction.create!(
               booking_folio: folio,
               amount: nightly_room,
