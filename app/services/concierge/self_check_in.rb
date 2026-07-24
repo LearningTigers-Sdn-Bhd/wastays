@@ -11,6 +11,7 @@ module Concierge
     def call
       return build_failure(:wrong_date) unless on_check_in_date?
       return build_failure(:too_early)  if too_early?
+      return build_failure(:closed_check_in_date) if @hotel.date_closed?(@booking.check_in)
 
       if location_check_enabled?
         return build_failure(:missing_location) if location_missing?
@@ -22,6 +23,7 @@ module Concierge
 
       room_number = nil
       error_message = nil
+      closed_check_in_date = false
       no_room = false
 
       # Lock the room_type row so concurrent self check-ins serialize and
@@ -33,20 +35,27 @@ module Concierge
           next
         end
 
-        assign = Bookings::AssignRoom.new(booking: @booking, room_number: room_number, user: nil).call
-        unless assign.success?
-          error_message = assign.error
-          raise ActiveRecord::Rollback
-        end
-
-        transition = Bookings::TransitionStatus.new(booking: @booking, status: "checked_in").call
-        unless transition.success?
-          error_message = transition.error
+        process = Bookings::ProcessCheckIn.new(
+          bookings: [ @booking ],
+          details: {
+            checked_in_at: hotel_now,
+            room_assignments: { @booking.booking_rooms.first.id.to_s => room_number }
+          },
+          user: nil,
+          source: "concierge_page"
+        ).call
+        unless process.success?
+          if @hotel.date_closed?(@booking.check_in)
+            closed_check_in_date = true
+          else
+            error_message = process.error.presence || "Check-in lifecycle failed."
+          end
           raise ActiveRecord::Rollback
         end
       end
 
       return build_failure(:no_room_available) if no_room
+      return build_failure(:closed_check_in_date) if closed_check_in_date
       return build_failure(:error, message: error_message) if error_message.present?
 
       Result.success(booking: @booking, room_number: room_number)

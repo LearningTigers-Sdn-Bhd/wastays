@@ -13,6 +13,7 @@ RSpec.describe Concierge::SelfCheckIn do
   end
 
   def with_available_room(room_number: "101", date: Date.today)
+    room_type.update!(room_number_mode: "custom", room_numbers: (room_type.room_numbers + [ room_number ]).uniq)
     create(:room_inventory, room_type: room_type, date: date,
            quantity: 1, status: "open", available_room_numbers: [ room_number ])
     room_number
@@ -22,8 +23,97 @@ RSpec.describe Concierge::SelfCheckIn do
     described_class.new(booking: booking, latitude: latitude, longitude: longitude).call
   end
 
+  before { BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current) }
+
   context "when everything is ready" do
     before { with_available_room }
+
+    it "delegates check-in lifecycle processing with the selected room" do
+      processor = instance_double(Bookings::ProcessCheckIn, call: OpenStruct.new(success?: true))
+      allow(Bookings::ProcessCheckIn).to receive(:new).and_return(processor)
+
+      result = call
+
+      expect(Bookings::ProcessCheckIn).to have_received(:new).with(
+        bookings: [ booking ],
+        details: {
+          checked_in_at: Time.current.in_time_zone(hotel.hotel_time_zone),
+          room_assignments: { booking.booking_rooms.first.id.to_s => "101" }
+        },
+        user: nil,
+        source: "concierge_page"
+      )
+      expect(result.success?).to be true
+      expect(result.room_number).to eq("101")
+    end
+
+    it "returns the lifecycle processor failure unchanged" do
+      processor = instance_double(
+        Bookings::ProcessCheckIn,
+        call: OpenStruct.new(success?: false, error: "Check-in lifecycle failed")
+      )
+      allow(Bookings::ProcessCheckIn).to receive(:new).and_return(processor)
+
+      result = call
+
+      expect(result.success?).to be false
+      expect(result.error_code).to eq(:error)
+      expect(result.message).to eq("Check-in lifecycle failed")
+    end
+
+    it "classifies a closed check-in date without exposing the accounting error" do
+      hotel.current_business_date_record.update!(status: "closed")
+
+      result = call
+
+      expect(result.success?).to be false
+      expect(result.error_code).to eq(:closed_check_in_date)
+      expect(result.message).to be_nil
+    end
+
+    it "classifies a business date closed during lifecycle processing" do
+      lifecycle_called = false
+      processor = instance_double(Bookings::ProcessCheckIn)
+      allow(processor).to receive(:call) do
+        lifecycle_called = true
+        OpenStruct.new(success?: false, error: "Reason required for backdated check-in on closed date 2026-07-23.")
+      end
+      allow(Bookings::ProcessCheckIn).to receive(:new).and_return(processor)
+      allow(hotel).to receive(:date_closed?) { lifecycle_called }
+
+      result = call
+
+      expect(result.success?).to be false
+      expect(result.error_code).to eq(:closed_check_in_date)
+      expect(result.message).to be_nil
+    end
+
+    it "returns a fallback message when lifecycle processing fails without an error" do
+      processor = instance_double(
+        Bookings::ProcessCheckIn,
+        call: OpenStruct.new(success?: false, error: nil)
+      )
+      allow(Bookings::ProcessCheckIn).to receive(:new).and_return(processor)
+
+      result = call
+
+      expect(result.success?).to be false
+      expect(result.error_code).to eq(:error)
+      expect(result.message).to eq("Check-in lifecycle failed.")
+    end
+
+    it "rolls back canonical lifecycle writes when folio initialization fails" do
+      allow(Folios::InitializeForBooking).to receive(:call).and_raise("Folio initialization failed")
+
+      result = call
+
+      expect(result.success?).to be false
+      expect(result.message).to eq("Folio initialization failed")
+      expect(booking.reload.status).to eq("confirmed")
+      expect(booking.booking_rooms.first.reload.room_number).to be_nil
+      expect(booking.booking_folio).to be_nil
+      expect(BookingAuditLog.where(auditable: booking, action_type: "check_in")).not_to exist
+    end
 
     it "checks in the booking" do
       result = call
@@ -35,6 +125,15 @@ RSpec.describe Concierge::SelfCheckIn do
       result = call
       expect(result.room_number).to eq("101")
       expect(booking.booking_rooms.first.reload.room_number).to eq("101")
+    end
+
+    it "records concierge lifecycle audit metadata" do
+      call
+
+      audit = BookingAuditLog.find_by!(auditable: booking, action_type: "check_in")
+      expect(audit.source).to eq("concierge_page")
+      expect(audit.user_id).to be_nil
+      expect(audit.metadata["room_number"]).to eq("101")
     end
   end
 
@@ -123,10 +222,10 @@ RSpec.describe Concierge::SelfCheckIn do
 
     before { with_available_room(date: Date.yesterday) }
 
-    it "rejects check-in when the arrival accounting date has no control row" do
+    it "classifies a missing arrival accounting date as closed" do
       result = call
       expect(result.success?).to be false
-      expect(result.error_code).to eq(:error)
+      expect(result.error_code).to eq(:closed_check_in_date)
     end
   end
 
@@ -161,6 +260,7 @@ RSpec.describe Concierge::SelfCheckIn do
 
   context "when several rooms are available" do
     before do
+      room_type.update!(room_number_mode: "custom", room_numbers: %w[105 101 110])
       create(:room_inventory, room_type: room_type, date: Date.today,
              quantity: 3, status: "open", available_room_numbers: %w[105 101 110])
     end

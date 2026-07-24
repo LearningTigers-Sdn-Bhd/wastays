@@ -45,6 +45,8 @@ module Public
           "Check-in opens at #{hotel.property_policy.check_in_time}. Please come back later or see the front desk."
         when :no_room_available
           "No rooms are ready right now. Please proceed to the front desk and our staff will check you in shortly."
+        when :closed_check_in_date
+          "We're unable to complete self check-in for this stay. Please visit the front desk for assistance."
         when :registration_error
           "Please check the details below and try again."
         when :too_far_away

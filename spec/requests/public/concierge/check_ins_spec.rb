@@ -9,7 +9,9 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
   before do
     create(:plan_feature, plan: plan, feature: ai_concierge_page_feature, enabled: true)
   end
-  let(:room_type) { create(:room_type, hotel: hotel) }
+  let(:room_type) do
+    create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "101" ])
+  end
   let(:booking) do
     b = create(:booking, hotel: hotel, guest_name: "Ahmad Zulkifli", status: "confirmed",
                check_in: Date.today, check_out: Date.today + 1)
@@ -18,7 +20,10 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
     b
   end
 
-  before { Rails.cache.clear }
+  before do
+    Rails.cache.clear
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
+  end
 
   describe "GET /concierge/:hotel_slug/check-in" do
     it "renders the chooser page" do
@@ -87,14 +92,40 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
         post concierge_submit_check_in_path(hotel.slug)
         expect(response).to redirect_to(concierge_check_in_success_path(hotel.slug))
         expect(booking.reload.status).to eq("checked_in")
+        expect(booking.booking_rooms.first.reload.room_number).to eq("101")
+        expect(booking.booking_folio).to be_present
+        expect(BookingAuditLog.find_by!(auditable: booking, action_type: "check_in").source).to eq("concierge_page")
       end
     end
 
     context "no room available" do
+      before do
+        create(:room_inventory, room_type: room_type, date: Date.today,
+               quantity: 0, status: "closed", available_room_numbers: [])
+      end
+
       it "re-renders check_in_now with 422" do
         post concierge_submit_check_in_path(hotel.slug)
         expect(response).to have_http_status(:unprocessable_content)
         expect(response.body).to include("front desk")
+      end
+    end
+
+    context "closed check-in business date" do
+      before do
+        hotel.current_business_date_record.update!(status: "closed")
+        create(:room_inventory, room_type: room_type, date: Date.today,
+               quantity: 1, status: "open", available_room_numbers: [ "101" ])
+      end
+
+      it "shows guest-facing front desk guidance" do
+        post concierge_submit_check_in_path(hotel.slug)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include(
+          "We&#39;re unable to complete self check-in for this stay. Please visit the front desk for assistance."
+        )
+        expect(response.body).not_to include("Reason required for backdated check-in on closed date")
       end
     end
 
