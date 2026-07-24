@@ -175,10 +175,10 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Post Payment")
-      expect(response.body).to include("Post Charge")
+      expect(response.body).to include("Add Payment")
+      expect(response.body).to include("Add Charge")
       expect(response.body).not_to include("Issue Refund")
-      expect(response.body).not_to include("Post Adjustment")
+      expect(response.body).not_to include("Add Adjustment")
     end
 
     it "filters folio adjustment categories by granular permission" do
@@ -188,7 +188,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Post Adjustment")
+      expect(response.body).to include("Add Adjustment")
 
       get new_hotel_folio_transaction_path(hotel, booking, transaction_type: "adjustment", active_folio_id: booking.booking_folio.id),
         headers: { "Turbo-Frame" => "offcanvas_drawer" }
@@ -209,20 +209,17 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include('id="folio-operations-panel"')
       expect(response.body).to include("Guest Folio")
       expect(response.body).to include('data-testid="booking-workspace"')
-      expect(response.body).to include("SGD 150.00")
-      expect(response.body).to include("Upcoming Charges")
+      expect(response.body).to include("SGD 150.00") # Outstanding = 125 charge - 50 payment + 75 upcoming
       expect(response.body).to include("Room charge")
-      expect(response.body).to include('data-section="posted"')
-      expect(response.body).to include('aria-expanded="false"')
-      expect(response.body).to include('data-section="forecasted"')
-      expect(response.body).to include('data-folio-ledger-section-param="forecasted"')
       expect(response.body).to include("Future room charge")
       html = Nokogiri::HTML(response.body)
-      expect(html.css("tr[data-section='posted']").all? { |row| !row["class"].to_s.split.include?("hidden") }).to be(true)
-      expect(html.css("tr[data-section='forecasted']").all? { |row| row["class"].to_s.split.include?("hidden") }).to be(true)
+      ledger = html.at_css("section[data-testid='folio-ledger']")
+      expect(ledger).to be_present
+      expect(ledger.at_css('[data-folio-ledger-section-param="forecasted"]')).to be_nil
+      expect(ledger.at_css("tr.bg-warning\\/10")).to be_present # upcoming charge renders inline, warning-tinted
     end
   end
 

@@ -57,8 +57,8 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include("border-emerald-200 bg-emerald-50 text-emerald-700")
       expect(response.body).to include("text-red-700")
       expect(response.body).not_to include("Issue Refund")
-      expect(response.body).not_to include("Post Payment")
-      expect(response.body).not_to include("Post Charge")
+      expect(response.body).not_to include("Add Payment")
+      expect(response.body).not_to include("Add Charge")
       expect(response.body).not_to include("Adjustment")
       expect(response.body).not_to include("Booking &rsaquo;")
       expect(response.body).not_to include("type=\"submit\" class=\"inline-flex items-center justify-center rounded-lg bg-primary")
@@ -231,7 +231,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include("Reservations")
       expect(Nokogiri::HTML(response.body).at_css("a[aria-label='Back to Reservations']")&.[]("href")).to eq(hotel_front_desk_path(hotel, tab: "bookings", view: "list"))
       expect(response.body).to include(%(href="#{booking_details_path(booking)}"))
-      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include('id="folio-operations-panel"')
       expect(response.body).not_to include("Back to Booking")
       expect(response.body).not_to include("Back to All Folios")
     end
@@ -245,7 +245,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include('data-testid="booking-workspace"')
       expect(response.body).to include("Folios")
       expect(response.body).to include(%(href="#{folio_operations_path(booking)}"))
-      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include('id="folio-operations-panel"')
       expect(response.body).not_to include("Back to All Folios")
       expect(response.body).not_to include("Back to Booking")
     end
@@ -266,7 +266,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       body = response.body
 
       expect(response).to have_http_status(:success)
-      expect(body).to include('id="folio-operations-heading"')
+      expect(body).to include('id="folio-operations-panel"')
       expect(body).to include('data-testid="booking-workspace"')
       expect(body).to include("Guest Folio")
       expect(body).to include(%(href="#{booking_details_path(booking)}"))
@@ -283,7 +283,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       body = response.body
 
       expect(response).to have_http_status(:success)
-      expect(body).to include('id="folio-operations-heading"')
+      expect(body).to include('id="folio-operations-panel"')
       expect(body).to include("MYR 130.00")
       expect(body).to include(%(href="#{booking_details_path(booking)}"))
       expect(body).not_to include("Close Folio: Not ready")
@@ -301,11 +301,11 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       get folio_operations_path(booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Post Payment")
-      expect(response.body).to include("Post Charge")
-      expect(response.body).to include("Post Adjustment")
+      expect(response.body).to include("Add Payment")
+      expect(response.body).to include("Add Charge")
+      expect(response.body).to include("Add Adjustment")
       expect(response.body).to include("Ledger Actions")
-      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include('id="folio-operations-panel"')
       expect(response.body).to include("Folios")
       expect(response.body).to include("More Actions")
       expect(response.body).to include("Issue Refund")
@@ -324,11 +324,11 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("No posting actions available")
-      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include('id="folio-operations-panel"')
       expect(response.body).to include("Folios")
-      expect(response.body).not_to include("Post Payment")
-      expect(response.body).not_to include("Post Charge")
-      expect(response.body).not_to include("Post Adjustment")
+      expect(response.body).not_to include("Add Payment")
+      expect(response.body).not_to include("Add Charge")
+      expect(response.body).not_to include("Add Adjustment")
       expect(response.body).not_to include("More Actions")
       expect(response.body).not_to include("Issue Refund")
     end
@@ -351,14 +351,14 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Financial posting is temporarily unavailable.")
-      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include('id="folio-operations-panel"')
       expect(response.body).to include("Folios")
       expect(response.body).to include("Night audit is currently running for this business date.")
       expect(response.body).to include("View Night Audit")
       expect(response.body).to include(hotel_night_audit_path(hotel, night_audit))
-      expect(response.body).not_to include("Post Payment")
-      expect(response.body).not_to include("Post Charge")
-      expect(response.body).not_to include("Post Adjustment")
+      expect(response.body).not_to include("Add Payment")
+      expect(response.body).not_to include("Add Charge")
+      expect(response.body).not_to include("Add Adjustment")
       expect(response.body).not_to include("More Actions")
       expect(response.body).not_to include("Issue Refund")
       expect(response.body).not_to include(reverse_hotel_folio_transaction_path(hotel, booking, transaction))
@@ -382,14 +382,14 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Normal folio posting is blocked.")
-      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include('id="folio-operations-panel"')
       expect(response.body).to include("Folios")
       expect(response.body).to include("Night audit is blocked. Resolve blockers from the Night Audit page, then retry audit.")
       expect(response.body).to include("View Night Audit Blockers")
       expect(response.body).to include(resolve_hotel_night_audit_path(hotel, night_audit))
-      expect(response.body).not_to include("Post Payment")
-      expect(response.body).not_to include("Post Charge")
-      expect(response.body).not_to include("Post Adjustment")
+      expect(response.body).not_to include("Add Payment")
+      expect(response.body).not_to include("Add Charge")
+      expect(response.body).not_to include("Add Adjustment")
       expect(response.body).not_to include("More Actions")
       expect(response.body).not_to include("Issue Refund")
       expect(response.body).not_to include(reverse_hotel_folio_transaction_path(hotel, booking, transaction))
@@ -411,11 +411,11 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Normal posting actions are unavailable for a closed folio.")
-      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include('id="folio-operations-panel"')
       expect(response.body).to include("Folios")
-      expect(response.body).not_to include("Post Payment")
-      expect(response.body).not_to include("Post Charge")
-      expect(response.body).not_to include("Post Adjustment")
+      expect(response.body).not_to include("Add Payment")
+      expect(response.body).not_to include("Add Charge")
+      expect(response.body).not_to include("Add Adjustment")
       expect(response.body).not_to include("Issue Refund")
       expect(response.body).to include(reverse_hotel_folio_transaction_path(hotel, booking, transaction))
     end
@@ -436,23 +436,21 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(completed_html.at_css('[data-testid="booking-workspace"]')).to be_present
     end
 
-    it "renders one horizontal ledger table with posted balance as a section summary only" do
+    it "renders one horizontal ledger table with an Outstanding total and no collapse control" do
       booking = create_booking_with_folio(guest_name: "Ledger Guest", confirmation_token: "BK-LEDGER", folio_number: 603, charges: 100, payments: 40)
-      create(:folio_forecasted_charge, booking_folio: booking.booking_folio, amount: 30, stay_date: Date.current, charge_kind: "accommodation")
 
       get folio_operations_path(booking)
 
       html = Nokogiri::HTML(response.body)
-      ledger = html.at_css("section[data-controller='folio-ledger']")
+      ledger = html.at_css("section[data-testid='folio-ledger']")
       headers = ledger.css("thead th").map { |header| header.text.squish }
 
       expect(response).to have_http_status(:success)
-      expect(ledger.at_css(".overflow-x-auto")).to be_present
-      expect(headers).to eq([ "Date", "Code", "Description / Reference", "Debit", "Credit", "Action" ])
-      expect(ledger.text.squish).to include("Posted balance MYR 60.00")
-      expect(ledger.text.squish).not_to include("Projected balance")
-      expect(response.body).not_to include("posted-mobile")
-      expect(response.body).not_to include("forecasted-mobile")
+      expect(ledger.at_css("table.panel-table")).to be_present
+      expect(headers).to eq([ "Date", "Code", "Description", "Debit (MYR)", "Credit (MYR)", "Actions" ])
+      expect(ledger.text.squish).to include("Outstanding MYR 60.00")
+      expect(ledger.text.squish).not_to include("Posted balance")
+      expect(ledger.at_css('[data-folio-ledger-section-param="forecasted"]')).to be_nil
     end
 
     it "renders folio windows and switches the active ledger" do
@@ -468,10 +466,10 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       html = Nokogiri::HTML(response.body)
       folio_windows_frame = html.at_css("turbo-frame#folio_windows_frame")
       active_panel = html.at_css("[data-testid='active-folio-window-panel']")
-      ledger = html.at_css("section[data-controller='folio-ledger']").text.squish
+      ledger = html.at_css("section[data-testid='folio-ledger']").text.squish
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include('id="folio-operations-panel"')
       expect(response.body).to include('data-testid="booking-workspace"')
       expect(response.body).to include("Company Folio")
       expect(ledger).to include("Company Charge")
@@ -815,7 +813,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       get folio_operations_path(booking, folio_id: folio.id)
 
-      expect(response.body).to include('id="folio-operations-heading"')
+      expect(response.body).to include('id="folio-operations-panel"')
       expect(response.body).to include("Company Folio")
 
       expect {

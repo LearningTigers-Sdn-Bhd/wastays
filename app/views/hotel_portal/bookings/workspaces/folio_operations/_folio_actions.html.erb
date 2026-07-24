@@ -8,95 +8,81 @@
   <div class="flex flex-wrap items-center gap-2">
     <% if folio_show.actions_blocked? %>
       <div class="max-w-2xl">
-        <p class="text-sm font-black text-foreground"><%= folio_show.actions_blocked_title %></p>
-        <p class="mt-1 text-sm font-medium text-muted-foreground"><%= folio_show.actions_blocked_reason %></p>
+        <p class="text-sm font-semibold text-foreground"><%= folio_show.actions_blocked_title %></p>
+        <p class="mt-1 text-sm text-muted-foreground"><%= folio_show.actions_blocked_reason %></p>
         <% if folio_show.actions_blocked_url.present? %>
-          <%= link_to folio_show.actions_blocked_link_label, folio_show.actions_blocked_url, class: "mt-3 inline-flex items-center justify-center rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" %>
+          <div class="mt-3">
+            <%= render PanelsUI::Button.new(href: folio_show.actions_blocked_url, variant: :secondary, size: :sm) do %><%= folio_show.actions_blocked_link_label %><% end %>
+          </div>
         <% end %>
       </div>
     <% elsif folio_show.action_section_state == :closed %>
-      <span class="text-sm font-medium text-muted-foreground"><%= folio_show.closed_folio_action_message %></span>
+      <span class="text-sm text-muted-foreground"><%= folio_show.closed_folio_action_message %></span>
     <% elsif folio_show.normal_folio_actions_available? || (booking.tourism_tax? && current_user.has_permission?("manage_bookings", hotel: hotel)) %>
-    <% if folio_show.can_post_payment? %>
-      <%= link_to new_hotel_folio_transaction_path(hotel, booking,
-          transaction_type: "payment",
-          active_folio_id: folio_show.active_folio_id,
-          redirect_to_folio: redirect_to_folio,
-          folio_origin: folio_origin),
-          data: offcanvas_data,
-          class: "inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary-hover" do %>
-        <%= cached_icon "credit-card", class: "size-3" %>
-        Post Payment
+      <% if folio_show.can_post_payment? %>
+        <%= render PanelsUI::Button.new(
+              href: new_hotel_folio_transaction_path(hotel, booking, transaction_type: "payment", active_folio_id: folio_show.active_folio_id, redirect_to_folio: redirect_to_folio, folio_origin: folio_origin),
+              variant: :primary,
+              size: :sm,
+              data: offcanvas_data) do %>
+          <%= cached_icon "credit-card", class: "size-3.5", aria: { hidden: true } %>
+          Add Payment
+        <% end %>
       <% end %>
-    <% end %>
-    <% if folio_show.can_post_charge? %>
-      <%= link_to new_hotel_folio_transaction_path(hotel, booking,
-          transaction_type: "charge",
-          active_folio_id: folio_show.active_folio_id,
-          redirect_to_folio: redirect_to_folio,
-          folio_origin: folio_origin),
-          data: offcanvas_data,
-          class: "inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" do %>
-        <%= cached_icon "plus", class: "size-3" %>
-        Post Charge
+      <% if folio_show.can_post_charge? %>
+        <%= render PanelsUI::Button.new(
+              href: new_hotel_folio_transaction_path(hotel, booking, transaction_type: "charge", active_folio_id: folio_show.active_folio_id, redirect_to_folio: redirect_to_folio, folio_origin: folio_origin),
+              variant: :secondary,
+              size: :sm,
+              data: offcanvas_data) do %>
+          <%= cached_icon "plus", class: "size-3.5", aria: { hidden: true } %>
+          Add Charge
+        <% end %>
       <% end %>
-    <% end %>
-    <% if folio_show.can_post_adjustment? %>
-      <%= link_to new_hotel_folio_transaction_path(hotel, booking,
-          transaction_type: "adjustment",
-          active_folio_id: folio_show.active_folio_id,
-          redirect_to_folio: redirect_to_folio,
-          folio_origin: folio_origin),
-          data: offcanvas_data,
-          class: "inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-card px-3 py-2 text-xs font-black text-amber-800 shadow-sm transition hover:bg-amber-50" do %>
-        <%= cached_icon "receipt-text", class: "size-3" %>
-        Post Adjustment
+      <% if folio_show.can_post_adjustment? %>
+        <%= render PanelsUI::Button.new(
+              href: new_hotel_folio_transaction_path(hotel, booking, transaction_type: "adjustment", active_folio_id: folio_show.active_folio_id, redirect_to_folio: redirect_to_folio, folio_origin: folio_origin),
+              variant: :warning,
+              size: :sm,
+              data: offcanvas_data) do %>
+          <%= cached_icon "receipt-text", class: "size-3.5", aria: { hidden: true } %>
+          Add Adjustment
+        <% end %>
       <% end %>
-    <% end %>
 
-    <div class="relative inline-block text-left" data-controller="dropdown" data-dropdown-align="right">
-      <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" data-dropdown-target="button" data-action="click->dropdown#toggle keydown->dropdown#handleKeydown" aria-expanded="false" aria-haspopup="true">
-        More Actions
-        <%= cached_icon "chevron-down", class: "size-3" %>
-      </button>
-      <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-2xl border border-border bg-card p-1.5 shadow-xl shadow-foreground/10 focus:outline-none" role="menu" aria-orientation="vertical" tabindex="-1">
+      <%= render PanelsUI::DropdownMenu.new(id: "folio-more-actions", placement: :bottom_end) do |menu| %>
+        <% menu.with_trigger(variant: :secondary, size: :sm) do %>
+          More Actions
+          <%= cached_icon "chevron-down", class: "size-3", aria: { hidden: true } %>
+        <% end %>
         <% if folio_show.can_execute_refund? %>
-          <%= link_to new_hotel_folio_transaction_path(hotel, booking,
-              transaction_type: "payment",
-              category: "refund",
-              active_folio_id: folio_show.active_folio_id,
-              redirect_to_folio: redirect_to_folio,
-              folio_origin: folio_origin),
-              role: "menuitem",
-              data: offcanvas_data,
-              class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none" do %>
-            <%= cached_icon "rotate-ccw", class: "size-4 text-amber-600" %>
+          <% menu.with_item(href: new_hotel_folio_transaction_path(hotel, booking, transaction_type: "payment", category: "refund", active_folio_id: folio_show.active_folio_id, redirect_to_folio: redirect_to_folio, folio_origin: folio_origin), data: offcanvas_data) do %>
+            <%= cached_icon "rotate-ccw", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
             Issue Refund
           <% end %>
         <% end %>
         <% if booking.tourism_tax? && current_user.has_permission?("manage_bookings", hotel: hotel) %>
           <% if booking.tourism_tax_voucher_number? %>
-            <%= link_to hotel_booking_tourism_tax_voucher_path(hotel, booking), target: "_blank", data: { turbo: false }, role: "menuitem", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none" do %>
-              <%= cached_icon "receipt", class: "size-4 text-emerald-600" %>
+            <% menu.with_item(href: hotel_booking_tourism_tax_voucher_path(hotel, booking), target: "_blank", rel: "noopener", data: { turbo: false }) do %>
+              <%= cached_icon "receipt", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
               Tourism Tax Voucher
             <% end %>
           <% else %>
-            <%= button_to issue_hotel_booking_tourism_tax_voucher_path(hotel, booking), form: { target: "_blank", data: { turbo: false } }, role: "menuitem", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none" do %>
-              <%= cached_icon "receipt", class: "size-4 text-emerald-600" %>
+            <% menu.with_item(href: issue_hotel_booking_tourism_tax_voucher_path(hotel, booking), method: :post, form: { target: "_blank", data: { turbo: false } }) do %>
+              <%= cached_icon "receipt", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
               Issue Tourism Tax Voucher
             <% end %>
           <% end %>
         <% end %>
         <% [ [ "Transfer Charge", "arrow-right" ], [ "Print Folio", "file-text" ], [ "Void / Reverse", "rotate-ccw" ] ].each do |label, icon| %>
-          <button type="button" role="menuitem" disabled class="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-muted-foreground">
-            <%= cached_icon icon, class: "size-4 text-primary-foreground" %>
-            <span><%= label %></span>
-          </button>
+          <% menu.with_item(disabled: true) do %>
+            <%= cached_icon icon, class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+            <%= label %>
+          <% end %>
         <% end %>
-      </div>
-    </div>
+      <% end %>
     <% else %>
-      <span class="text-sm font-medium text-muted-foreground">No posting actions available</span>
+      <span class="text-sm text-muted-foreground">No posting actions available</span>
     <% end %>
   </div>
 </section>

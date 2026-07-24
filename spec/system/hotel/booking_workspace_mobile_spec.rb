@@ -16,20 +16,20 @@ RSpec.describe "Booking workspace mobile entity selection", :business_day, type:
     page.current_window.resize_to(1400, 1400)
     expect(page).to have_css("dialog#booking-entity-selector-sheet[open]", visible: true)
     page.current_window.resize_to(390, 844)
-    within("#booking-entity-selector-sheet") { click_link "Mobile Company Folio" }
+    find("#booking-entity-selector-sheet a[href*='folio_id=#{secondary.id}']").click
 
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: secondary.id))
     expect(page).to have_no_css("dialog#booking-entity-selector-sheet[open]")
-    expect(page).to have_css("#folio-operations-heading:focus")
+    expect(page).to have_css("#folio-operations-panel:focus")
 
     click_button "Choose Folio"
-    within("#booking-entity-selector-sheet") { click_link primary.display_name }
+    find("#booking-entity-selector-sheet a[href*='folio_id=#{primary.id}']").click
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: primary.id))
 
     click_button "Choose Folio"
-    within("#booking-entity-selector-sheet") { click_link "Mobile Company Folio" }
+    find("#booking-entity-selector-sheet a[href*='folio_id=#{secondary.id}']").click
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: secondary.id))
-    expect(page).to have_css("#folio-operations-heading:focus")
+    expect(page).to have_css("#folio-operations-panel:focus")
   end
 
   it "protects dirty guest details while selecting from the mobile Sheet", :mobile, js: true do

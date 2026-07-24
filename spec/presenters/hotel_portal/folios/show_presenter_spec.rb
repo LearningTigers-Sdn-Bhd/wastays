@@ -179,7 +179,7 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
 
     expect(row.code).to eq("PAY")
     expect(row.description).to eq("Booking payment")
-    expect(row.date_label).to eq("18 Jun")
+    expect(row.date_label).to eq(booking.check_in.to_date.strftime("%d/%m/%Y"))
     expect(row.debit).to eq("—")
     expect(row.credit).to eq("100.00")
     expect(row.balance).to eq("-100.00")
@@ -204,7 +204,7 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
     row = folio_show.forecasted_rows.first
 
     expect(folio_show.forecasted_rows.size).to eq(1)
-    expect(row.date_label).to eq("10 Jun")
+    expect(row.date_label).to eq(Date.new(2026, 6, 10).strftime("%d/%m/%Y"))
     expect(row.code).to eq("EARLY_DEP")
     expect(row.description).to eq("Early checkout charge - Night 1")
     expect(row.debit).to eq("50.00")
@@ -478,7 +478,7 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
 
     expect(row.code).to eq("SVC")
     expect(row.description).to eq("Tax: Service Charge - 2026-06-18")
-    expect(row.date_label).to eq("18 Jun")
+    expect(row.date_label).to eq(Date.new(2026, 6, 18).strftime("%d/%m/%Y"))
     expect(row.detail_label).to eq("Tax linked to ROOM")
     expect(row.source_label).to eq("Upcoming")
     expect(row.balance).to eq("Pending")

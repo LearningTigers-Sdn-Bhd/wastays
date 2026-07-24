@@ -796,11 +796,17 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
         booking.booking_rooms.first.room_type.name,
         sibling.booking_rooms.first.room_type.name
       )
-      expect(tab_presenter.folio_tree_groups.flat_map(&:rows).map(&:label)).to include("Guest Folio", "Corporate Folio")
-      expect(tab_presenter.folio_tree_groups.flat_map(&:rows).map(&:description)).to include(
-        "Open · #{booking.booking_folios.first.payer_display_label} · MYR 0.00",
-        "Open · #{sibling.booking_folios.first.payer_display_label} · MYR 0.00"
+      folio_rows = tab_presenter.folio_tree_groups.flat_map(&:rows)
+      expect(folio_rows.map(&:number)).to include(
+        booking.booking_folios.first.folio_number.to_s,
+        sibling.booking_folios.first.folio_number.to_s
       )
+      expect(folio_rows.map(&:payer_line)).to include(
+        "Guest : #{booking.guest_name}",
+        "Guest : #{sibling.guest_name}"
+      )
+      expect(folio_rows.map { |row| row.status_badge[:label] }).to all(eq("Open"))
+      expect(folio_rows.map(&:outstanding)).to all(eq("MYR 0.00"))
     end
 
     it "treats legacy group scope as an entity view and selects the explicit folio" do

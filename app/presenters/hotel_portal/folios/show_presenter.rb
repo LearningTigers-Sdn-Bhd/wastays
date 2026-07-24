@@ -12,6 +12,9 @@ module HotelPortal
       :reference_label,
       :detail_label,
       :source_label,
+      :weekday_label,
+      :info_rows,
+      :info_icon,
       :debit,
       :credit,
       :balance,
@@ -850,12 +853,15 @@ module HotelPortal
       action_label = suppress_normal_ledger_actions? ? "—" : policy.action_label
       action_kind = suppress_normal_ledger_actions? ? :none : policy.action_kind
       LedgerRow.new(
-        date_label: transaction.posting_date.strftime("%d %b"),
+        date_label: transaction.posting_date.strftime("%d/%m/%Y"),
         code: posted_code(transaction),
         description: transaction.description,
         reference_label: reference_label(transaction),
         detail_label: detail_label(transaction),
         source_label: source_label(transaction),
+        weekday_label: transaction.posting_date.strftime("%a"),
+        info_rows: ledger_info_rows(transaction),
+        info_icon: ledger_info_icon(transaction),
         debit: effect.positive? ? amount_label(effect) : "—",
         credit: effect.negative? ? amount_label(effect) : "—",
         balance: signed_amount_label(balance),
@@ -878,12 +884,18 @@ module HotelPortal
     def forecasted_row(line, balance)
       amount = line[:amount].to_d
       LedgerRow.new(
-        date_label: line[:date].strftime("%d %b"),
+        date_label: line[:date].strftime("%d/%m/%Y"),
         code: forecasted_code(line),
         description: line[:description],
         reference_label: "—",
         detail_label: forecasted_detail(line),
         source_label: "Upcoming",
+        weekday_label: line[:date].strftime("%a"),
+        info_rows: [
+          [ "Category", forecasted_detail(line) ],
+          [ "Status", "Upcoming — posts automatically at night audit" ]
+        ],
+        info_icon: :info,
         debit: amount.positive? ? amount_label(amount) : "—",
         credit: amount.negative? ? amount_label(amount) : "—",
         balance: "Pending",
@@ -955,6 +967,53 @@ module HotelPortal
       return if source_id.blank?
 
       transaction_codes_by_id[source_id.to_i]
+    end
+
+    # Labelled rows for the row's info popover, in reading order. Deliberately omits
+    # the raw machine reference key for charges (e.g. "catch_up:372:…") and the noisy
+    # "Manual" state; payments and tax lines keep their meaningful reference. Values
+    # are de-duplicated so a night-audit posting does not print "Night Audit" twice.
+    def ledger_info_rows(transaction)
+      rows = [
+        [ "Type", transaction.transaction_type.humanize ],
+        [ "Category", transaction.category.humanize ]
+      ]
+
+      posted_by = source_label(transaction)
+      rows << [ "Posted by", posted_by ] if posted_by.present?
+
+      status = notable_state_label(transaction)
+      rows << [ "Status", status ] if status.present?
+
+      reference = ledger_reference_detail(transaction)
+      rows << [ "Reference", reference ] if reference.present?
+
+      rows.reject { |_label, value| value.blank? || value == "—" }
+    end
+
+    # Only states worth surfacing — a manual staff posting is already implied by the
+    # "Posted by" actor, so "Manual"/"System" are dropped as noise.
+    def notable_state_label(transaction)
+      state = state_label(transaction)
+      return if state.blank? || state.in?(%w[Manual System])
+      return if source_label(transaction).to_s.include?(state) # e.g. don't repeat "Night Audit"
+
+      state
+    end
+
+    # The human-meaningful reference for the popover: gateway/receipt for payments,
+    # the parent link for generated tax lines. Machine catch-up keys are excluded.
+    def ledger_reference_detail(transaction)
+      return tax_reference_label(transaction, transaction.metadata.to_h) if tax_transaction?(transaction)
+      return reference_label(transaction) if transaction.payment?
+
+      nil
+    end
+
+    # Tax lines are linked to a parent charge, so a chain icon reads truer than a
+    # generic info glyph.
+    def ledger_info_icon(transaction)
+      tax_transaction?(transaction) ? :link : :info
     end
 
     def reference_label(transaction)

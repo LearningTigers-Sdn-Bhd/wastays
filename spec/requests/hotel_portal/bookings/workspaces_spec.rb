@@ -203,9 +203,8 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       document = Nokogiri::HTML(response.body)
       expect(document.at_css('nav[aria-label="Folio operation sections"]')).to be_nil
       expect(response.body).not_to include("Activity Log")
-      expect(document.at_css('[data-folio-ledger-section-param="forecasted"]')["aria-expanded"]).to eq("false")
-      expect(document.css("tr[data-section='posted']").all? { |row| !row["class"].to_s.split.include?("hidden") }).to be(true)
-      expect(document.css("tr[data-section='forecasted']").all? { |row| row["class"].to_s.split.include?("hidden") }).to be(true)
+      expect(document.at_css('[data-folio-ledger-section-param="forecasted"]')).to be_nil
+      expect(document.at_css("section[data-testid='folio-ledger']")).to be_present
 
       get hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id, folio_tab: "activity")
 
@@ -288,7 +287,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       folio_nav = folio_document.at_css('nav[aria-label="Booking folios"]')
       expect(folio_nav.at_css("details")).to be_nil
       selected_folio = folio_nav.at_css('a[aria-current="page"]')
-      expect(selected_folio.text).to include(folio.display_name, "Open", "MYR 0.00", "Selected:")
+      expect(selected_folio.text).to include(folio.folio_number.to_s, "Open", "MYR 0.00", "Selected:")
       folio_trigger = folio_document.at_css('button[command="show-modal"][commandfor="booking-entity-selector-sheet"]')
       expect(folio_trigger.text.squish).to eq("Choose Folio")
       expect(folio_document.at_css("#booking-entity-selector-sheet-title").text).to eq("Choose Folio")
@@ -392,7 +391,8 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(groups.last.at_css("h3").text.squish).to eq("Room 102")
       expect(nav.text).not_to include(booking.formatted_reservation_number, sibling.formatted_reservation_number)
       expect(nav.css("details")).to be_empty
-      expect(nav.text).not_to include("In house", "Checkout due", booking.guest_name, sibling.guest_name)
+      expect(nav.text).not_to include("In house", "Checkout due")
+      expect(nav.text).to include("Guest : #{booking.guest_name}", "Guest : #{sibling.guest_name}")
       current_folio_link = groups.first.at_css('a[href*="folio_id="]')
       expect(current_folio_link["data-turbo-frame"]).to eq("_top")
     end
@@ -998,7 +998,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
         first_child.id.to_s,
         "folio_id=#{primary_folio.id}"
       )
-      expect(document.at_css("#folio-operations-heading").text).to eq(primary_folio.display_name)
+      expect(document.at_css('nav[aria-label="Booking folios"] a[aria-current="page"]').text).to include(primary_folio.folio_number.to_s)
     end
 
     it "renders the first child's primary guest without redirecting" do
@@ -1050,7 +1050,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       get hotel_booking_workspace_path(hotel, booking, tab: "folio_operations")
       expect(response).to have_http_status(:success)
-      expect(Nokogiri::HTML(response.body).at_css("#folio-operations-heading").text).to eq(fallback_folio.display_name)
+      expect(Nokogiri::HTML(response.body).at_css('nav[aria-label="Booking folios"] a[aria-current="page"]').text).to include(fallback_folio.folio_number.to_s)
 
       get hotel_booking_workspace_path(hotel, booking, tab: "guest_details")
       expect(response).to have_http_status(:success)
@@ -1082,12 +1082,12 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking, tab: "folio_operations")
 
       document = Nokogiri::HTML(response.body)
-      context = document.at_css("#folio-operations-heading").previous_element.text
+      group_heading = document.at_css("#desktop-folio-group-#{first_child.id}").text
       edit_link = document.at_xpath("//a[normalize-space()='Edit']")
       expected_close_path = close_folio_window_hotel_booking_workspace_path(hotel, first_child, folio)
       close_form = document.css("form").find { |form| form["action"] == expected_close_path }
       add_link = document.at_xpath("//*[@data-testid='workspace-entity-rail']//a[starts-with(normalize-space(), '+ Add folio')]")
-      expect(context).to include("Room 105", "Booking #{first_child.formatted_reservation_number}")
+      expect(group_heading).to include("Room 105")
       expect(edit_link["href"]).to eq(edit_folio_window_hotel_booking_workspace_path(hotel, first_child, folio))
       expect(close_form["action"]).to eq(expected_close_path)
       expect(add_link["href"]).to eq(new_folio_window_hotel_booking_workspace_path(hotel, first_child))
@@ -1104,7 +1104,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       get hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: foreign_folio.id)
       expect(response).to have_http_status(:success)
-      expect(response.body).to include(local_folio.display_name)
+      expect(response.body).to include(local_folio.folio_number.to_s)
       expect(response.body).not_to include("Foreign Folio Secret")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: foreign_guest.id)
@@ -1130,7 +1130,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       rail = document.at_css('[data-testid="workspace-entity-rail"]')
       expect(rail.text).not_to include("Group Statement", "Group Guest Overview")
       expect(rail.css("h3").map { |heading| heading.text.squish }).to include(sibling.formatted_reservation_number)
-      expect(document.at_css('nav[aria-label="Booking folios"] a[aria-current="page"]').text).to include(sibling_folio.display_name)
+      expect(document.at_css('nav[aria-label="Booking folios"] a[aria-current="page"]').text).to include(sibling_folio.folio_number.to_s)
     end
 
     it "preserves group identity for an explicitly selected group guest" do

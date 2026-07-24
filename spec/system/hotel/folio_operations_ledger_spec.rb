@@ -17,25 +17,14 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
     sign_in_through_ui(user)
   end
 
-  it "expands and collapses upcoming charges while posted entries remain visible" do
+  it "shows posted and upcoming charges inline with an Outstanding total" do
     visit hotel_booking_workspace_path(hotel, booking, tab: "folio_operations")
 
-    trigger = find('[data-folio-ledger-section-param="forecasted"]')
-    expect(trigger["aria-expanded"]).to eq("false")
-    expect(page).to have_css("tr[data-section='forecasted'].hidden", visible: :all)
-
-    trigger.click
-
-    expect(trigger["aria-expanded"]).to eq("true")
-    expect(trigger).to have_text("▾")
-    expect(page).to have_css("tr[data-section='forecasted']", visible: :visible)
-
-    trigger.click
-
-    expect(trigger["aria-expanded"]).to eq("false")
-    expect(trigger).to have_text("▸")
-    expect(page).to have_css("tr[data-section='forecasted'].hidden", visible: :all)
-    expect(page).to have_css("tr[data-section='posted']", visible: :visible)
+    ledger = find("section[data-testid='folio-ledger']")
+    expect(ledger).to have_no_css('[data-folio-ledger-section-param="forecasted"]')
+    expect(ledger).to have_text("Posted room charge")
+    expect(ledger).to have_text("30.00") # upcoming charge renders inline, not behind a toggle
+    expect(ledger).to have_text("MYR 80.00") # Outstanding total = posted 50 + upcoming 30
   end
 
   it "switches standalone folios and restores the prior selection with browser history" do
@@ -43,16 +32,36 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
     second_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Incidentals Folio")
     visit hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: first_folio.id)
 
-    within('nav[aria-label="Booking folios"]') { click_link "Incidentals Folio" }
+    find("nav[aria-label='Booking folios'] a[href*='folio_id=#{second_folio.id}']").click
 
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: second_folio.id))
-    expect(page).to have_css("#folio-operations-heading", text: "Incidentals Folio")
-    expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: "Incidentals Folio")
+    expect(page).to have_css("#folio-operations-panel")
+    expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: second_folio.folio_number.to_s)
 
     page.go_back
 
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: first_folio.id))
-    expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: first_folio.display_name)
+    expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: first_folio.folio_number.to_s)
+  end
+
+  it "closes an eligible folio through the migrated PanelsUI dialog" do
+    role.permissions << Permission.find_or_create_by!(slug: "manage_folio_windows") { |permission| permission.name = "Manage folio windows" }
+    closable = create(:booking, hotel: hotel)
+    folio = create(:booking_folio, booking: closable, hotel: hotel, is_primary: true, name: "Closable Folio")
+
+    visit hotel_booking_workspace_path(hotel, closable, tab: "folio_operations")
+
+    expect(page).to have_no_css("dialog#close-workspace-folio-#{folio.id}[open]")
+    click_button "Close"
+    expect(page).to have_css("dialog#close-workspace-folio-#{folio.id}[open]")
+
+    within("dialog#close-workspace-folio-#{folio.id}") do
+      fill_in "Reason", with: "End of stay"
+      click_button "Close Folio"
+    end
+
+    expect(page).to have_css("#folio-operations-panel")
+    expect(folio.reload).to be_closed
   end
 
   it "switches to a folio on another group child booking" do
@@ -67,19 +76,18 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
     sibling_path = hotel_booking_workspace_path(hotel, sibling, tab: "folio_operations", folio_id: sibling_folio.id)
     visit first_path
 
-    within('nav[aria-label="Booking folios"]') { click_link "Room 102 Folio" }
+    find("nav[aria-label='Booking folios'] a[href*='folio_id=#{sibling_folio.id}']").click
 
     expect(page).to have_current_path(sibling_path)
-    expect(page).to have_css("#folio-operations-heading", text: "Room 102 Folio")
-    expect(page).to have_content("Room 102 · Booking #{sibling.formatted_reservation_number}")
-    expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: "Room 102 Folio")
+    expect(page).to have_css("#folio-operations-panel")
+    expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: sibling_folio.folio_number.to_s)
 
     page.go_back
     expect(page).to have_current_path(first_path)
-    expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: first_folio.display_name)
+    expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: first_folio.folio_number.to_s)
 
     page.go_forward
     expect(page).to have_current_path(sibling_path)
-    expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: "Room 102 Folio")
+    expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: sibling_folio.folio_number.to_s)
   end
 end

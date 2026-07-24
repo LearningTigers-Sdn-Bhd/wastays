@@ -323,6 +323,44 @@ from room number and room type, not reservation numbers.
 - [x] Migrate the discard alert to `PanelsUI::AlertDialog` with semantic tokens
 - [ ] Sweep the remaining orphaned presenter methods once Phase 3 lands
 
+### Folios — Content Header and Toolbar
+
+The Folios content header repeated the same identity the rail already carries
+(folio name, status/payer, child context), the way the Guests header did. It was
+replaced with an operational toolbar, and the raw action buttons were migrated to
+PanelsUI in the same pass.
+
+- [x] Remove the folio content header (context line, name, status/payer/outstanding block)
+- [x] Give the folio panel a static accessible name (`aria-label`) and its own focus target
+- [x] Point the rail's mobile focus param at the folio panel, not the removed heading
+- [x] Replace the header with a toolbar: status badge + outstanding balance on row one
+- [x] Split row two between posting actions (left) and folio lifecycle actions (right)
+- [x] Add a `selected_folio_status_badge` helper; drop the orphaned `selected_folio_context_line`
+- [x] Migrate posting actions to `PanelsUI::Button` and `More Actions` to `PanelsUI::DropdownMenu`
+- [x] Migrate Edit / Close / Reopen to `PanelsUI::Button`
+- [x] Replace hardcoded `amber`/`emerald`/`red` colors and `font-black` with semantic tokens
+- [x] Migrate the close/reopen confirmation `<dialog>`s to `PanelsUI::Dialog` (form in `with_body`, `command` invoker trigger)
+
+### Folios — Ledger Table
+
+The ledger was crowded: a second stacked metadata line per row (including a raw
+`catch_up:…` machine key), an actions column that mixed real buttons with status
+text, two hand-rolled `<dialog>`s per row, and a collapsible Upcoming section.
+Reworked into a scannable table.
+
+- [x] Format dates as `dd/mm/yyyy - Day` (e.g. `22/07/2026 - Wed`)
+- [x] Render the transaction code as a fixed-width monospace chip
+- [x] Reduce the description to a single line (drop the stacked reference/detail/source)
+- [x] Move provenance to an `ⓘ`/chain `PanelsUI::Tooltip` after the description; omit the raw machine reference for charges
+- [x] Put currency in the Debit/Credit headers (`Debit (MYR)`), bare numbers in cells
+- [x] Collapse row actions (Move / Split / Reverse) into one `⋮` `PanelsUI::DropdownMenu`; no menu on informational-only rows
+- [x] Render posted and upcoming charges inline in one table; tint upcoming rows with `bg-warning/10`
+- [x] Remove the collapse toggle and delete the orphaned `folio-ledger` Stimulus controller
+- [x] Show a single `Outstanding` total (`current_balance`) in the table foot; drop the `Posted balance` line
+- [x] Remove Outstanding from the toolbar (now in the ledger) and fold the status badge into the single-row toolbar
+- [x] Migrate the per-row Split and Reverse `<dialog>`s to `PanelsUI::Dialog` + `PanelsUI::FormField`
+- [x] Delete the orphaned (unrendered) `_ledger_mobile_row` partial
+- [ ] Tax-row nesting under the parent charge (deferred follow-up)
 
 ### Deposits
 

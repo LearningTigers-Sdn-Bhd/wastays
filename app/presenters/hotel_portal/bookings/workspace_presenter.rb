@@ -6,6 +6,7 @@ module HotelPortal
       RoomRow = Data.define(:room_number, :room_type)
       Tab = Data.define(:key, :label)
       TreeRow = Data.define(:id, :label, :description, :kind, :active, :href)
+    FolioRailRow = Data.define(:id, :number, :payer_line, :status_badge, :outstanding, :active, :href)
     TreeGroup = Data.define(:label, :description, :rows, :booking_id, :add_href)
     RoomRateRow = Data.define(:booking_reference, :date, :room_type, :room, :rate_plan, :nightly_rate, :rate_missing)
     RequestCard = Data.define(:id, :type, :title, :details, :room_label, :time_label, :status, :column, :record, :completed)
@@ -459,7 +460,7 @@ module HotelPortal
             .where(hotel_id: hotel.id)
             .includes(
               :hotel, :deposits, :housekeeping_requests, :complaint_requests, :folio_operation_logs,
-              booking_folios: [ :folio_transactions, :folio_forecasted_charges ],
+              booking_folios: [ :folio_transactions, :folio_forecasted_charges, { booking_billing_party: :booking_guest, hotel_corporate_account: :corporate_account } ],
               booking_rooms: [ :room_type, :rate_plan ],
               booking_guests: :guest
             )
@@ -1039,11 +1040,6 @@ module HotelPortal
         selected_folios.find(&:is_primary?) || selected_folios.first
     end
 
-    def selected_folio_context_line
-      child = selected_child_booking
-      [ child_booking_label(child), "Booking #{child_booking_number(child)}", format_short_range(child.check_in, child.check_out) ].join(" · ")
-    end
-
     def group_deposit_provenance_for(transaction)
       allocation = selected_folio&.group_deposit_allocations&.find { |candidate| candidate.folio_transaction_id == transaction.id }
       return unless allocation
@@ -1184,14 +1180,46 @@ module HotelPortal
     end
 
     def folio_tree_row(folio, active: false)
-      TreeRow.new(
-        folio.id,
-        folio.display_name,
-        [ folio.status.to_s.humanize, folio.payer_display_label, money_for(folio.booking, folio.projected_outstanding_balance) ].compact_blank.join(" · "),
-        "folio",
-        active,
-        nil
+      FolioRailRow.new(
+        id: folio.id,
+        number: folio.folio_number.to_s,
+        payer_line: folio_payer_line(folio),
+        status_badge: folio_status_badge(folio),
+        outstanding: money_for(folio.booking, folio.projected_outstanding_balance),
+        active: active,
+        href: nil
       )
+    end
+
+    def folio_status_badge(folio)
+      tone = case folio.status
+      when "open" then :success
+      when "voided" then :destructive
+      else :neutral
+      end
+      { label: folio.status.humanize, variant: tone }
+    end
+
+    # The payer's identity for the folio rail: "{payer type} : {name}". Falls back
+    # to just the type for house folios, which have no billing party.
+    def folio_payer_line(folio)
+      type = folio_payer_type_label(folio)
+      name = folio_payer_name(folio)
+      name.present? ? "#{type} : #{name}" : type
+    end
+
+    def folio_payer_type_label(folio)
+      case folio.payer_type
+      when "company" then "Company & Government"
+      when "hotel" then "On Hotel House"
+      else "Guest"
+      end
+    end
+
+    def folio_payer_name(folio)
+      folio.booking_billing_party&.display_name.presence ||
+        folio.hotel_corporate_account&.corporate_account&.name.presence ||
+        (folio.payer_type == "hotel" ? nil : folio.booking&.guest_name)
     end
 
     def child_booking_label(child)

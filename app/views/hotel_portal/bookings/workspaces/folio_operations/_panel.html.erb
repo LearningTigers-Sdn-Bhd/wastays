@@ -1,17 +1,19 @@
 <% active_folio = presenter.selected_folio %>
 <% if active_folio %>
-  <section aria-labelledby="folio-operations-heading">
-    <header class="border-b border-border px-5 py-4">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div><p class="text-xs tabular-nums text-muted-foreground"><%= presenter.selected_folio_context_line %></p><h2 id="folio-operations-heading" class="mt-1 text-base font-semibold text-foreground" tabindex="-1"><%= active_folio.display_name %></h2><p class="mt-1 text-sm text-muted-foreground"><%= active_folio.status.humanize %> · <%= active_folio.payer_display_label %> · <span class="tabular-nums text-foreground"><%= presenter.money_for(entity_booking, active_folio.projected_outstanding_balance) %> outstanding</span></p></div>
+  <%# Folio identity (name, payer, status) lives in the entity rail, and the
+      Outstanding balance lives in the ledger footer — so this panel opens with a
+      single operational toolbar: posting actions left, lifecycle right. %>
+  <section id="folio-operations-panel" aria-label="Folio details" tabindex="-1">
+    <div class="border-b border-border px-5 py-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <%= render "hotel_portal/bookings/workspaces/folio_operations/folio_actions", booking: entity_booking, hotel: current_hotel, folio_show: folio_show, redirect_to_folio: true, folio_origin: "booking_workspace" %>
         <%= render "hotel_portal/bookings/workspaces/folio_operations/window_actions", booking: entity_booking, folio: active_folio, folio_show: folio_show %>
       </div>
-      <div class="mt-4"><%= render "hotel_portal/bookings/workspaces/folio_operations/folio_actions", booking: entity_booking, hotel: current_hotel, folio_show: folio_show, redirect_to_folio: true, folio_origin: "booking_workspace" %></div>
-    </header>
+    </div>
 
     <% if active_folio.group_deposit_allocations.any? %><div class="border-b border-border bg-muted px-5 py-3 text-sm text-foreground"><span class="font-medium">Group Deposit Allocation:</span> <%= active_folio.group_deposit_allocations.map { |allocation| "##{allocation.group_deposit_id} · #{presenter.money(allocation.amount)}" }.to_sentence %></div><% end %>
 
-    <div class="px-5 pb-5"><%= render "hotel_portal/folios/show/page_ledger", folio_show: folio_show, booking: entity_booking, hotel: current_hotel, folio_origin: "booking_workspace" %></div>
+    <div class="px-5 pb-5 pt-5"><%= render "hotel_portal/folios/show/page_ledger", folio_show: folio_show, booking: entity_booking, hotel: current_hotel, folio_origin: "booking_workspace" %></div>
   </section>
   <%= render "hotel_portal/bookings/workspaces/folio_operations/window_dialogs", booking: entity_booking, folio: active_folio, folio_show: folio_show %>
 <% else %>
