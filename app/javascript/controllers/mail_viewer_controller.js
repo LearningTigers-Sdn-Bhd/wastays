@@ -5,25 +5,15 @@ export default class extends Controller {
 
   switch(event) {
     const viewName = event.currentTarget.dataset.view
-    
-    // Update buttons
-    this.buttonTargets.forEach(btn => {
-      if (btn.dataset.view === viewName) {
-        btn.classList.add("bg-white", "shadow-sm", "text-indigo-600")
-        btn.classList.remove("text-slate-500")
-      } else {
-        btn.classList.remove("bg-white", "shadow-sm", "text-indigo-600")
-        btn.classList.add("text-slate-500")
-      }
+
+    this.buttonTargets.forEach((button) => {
+      const selected = button.dataset.view === viewName
+      button.setAttribute("aria-pressed", selected.toString())
+      button.classList.toggle("is-active", selected)
     })
 
-    // Update views
-    this.viewTargets.forEach(view => {
-      if (view.dataset.view === viewName) {
-        view.classList.remove("hidden")
-      } else {
-        view.classList.add("hidden")
-      }
+    this.viewTargets.forEach((view) => {
+      view.hidden = view.dataset.view !== viewName
     })
   }
 }

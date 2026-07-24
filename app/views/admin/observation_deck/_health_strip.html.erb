@@ -1,0 +1,9 @@
+<%= render ObservationDeck::HealthStrip.new(
+      scope_label: @health_scope_label,
+      total_requests: @total_requests,
+      error_count: @health_error_count,
+      error_rate: @health_error_rate,
+      average_latency: @average_latency,
+      unacknowledged_errors: @error_count,
+      error_path: admin_observation_deck_index_path(@filter_params.merge(status_group: "errors"))
+    ) %>

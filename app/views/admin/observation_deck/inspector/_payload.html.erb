@@ -1,0 +1,32 @@
+<section class="observation-deck__payload-panel" data-controller="mail-viewer">
+  <% case presenter.payload_kind %>
+  <% when :sql %>
+    <div class="observation-deck__code-toolbar" data-controller="clipboard">
+      <h3>SQL query</h3>
+      <button type="button" class="observation-deck__secondary-button" data-action="clipboard#copy" data-clipboard-text-value="<%= presenter.payload_text %>">Copy SQL</button>
+      <span class="sr-only" aria-live="polite" data-clipboard-target="status"></span>
+    </div>
+    <pre class="observation-deck__code-viewer"><code><%= presenter.payload_text.presence || "No SQL payload recorded." %></code></pre>
+  <% when :mail %>
+    <dl class="observation-deck__metadata-list">
+      <% presenter.mail_headers.each do |label, value| %><div><dt><%= label %></dt><dd><%= value.presence || "—" %></dd></div><% end %>
+    </dl>
+    <div class="observation-deck__mail-tabs" role="group" aria-label="Mail payload views">
+      <% [[ "html", "HTML" ], [ "text", "Text" ], [ "raw", "Raw" ]].each do |name, label| %>
+        <button type="button" aria-pressed="<%= name == "html" %>" data-mail-viewer-target="button" data-view="<%= name %>" data-action="click->mail-viewer#switch"><%= label %></button>
+      <% end %>
+    </div>
+    <div data-mail-viewer-target="view" data-view="html">
+      <iframe class="observation-deck__mail-preview" title="Sandboxed email preview" srcdoc="<%= presenter.mail_html %>" sandbox referrerpolicy="no-referrer"></iframe>
+    </div>
+    <pre class="observation-deck__code-viewer" hidden data-mail-viewer-target="view" data-view="text"><code><%= presenter.mail_text %></code></pre>
+    <pre class="observation-deck__code-viewer" hidden data-mail-viewer-target="view" data-view="raw"><code><%= presenter.json_payload %></code></pre>
+  <% else %>
+    <div class="observation-deck__code-toolbar" data-controller="clipboard">
+      <h3>Captured JSON</h3>
+      <button type="button" class="observation-deck__secondary-button" data-action="clipboard#copy" data-clipboard-text-value="<%= presenter.json_payload %>">Copy JSON</button>
+      <span class="sr-only" aria-live="polite" data-clipboard-target="status"></span>
+    </div>
+    <pre class="observation-deck__code-viewer"><code><%= presenter.json_payload %></code></pre>
+  <% end %>
+</section>
