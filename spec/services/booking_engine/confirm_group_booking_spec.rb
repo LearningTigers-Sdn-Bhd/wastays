@@ -46,6 +46,21 @@ RSpec.describe BookingEngine::ConfirmGroupBooking do
     expect(result.bookings.map { |booking| booking.booking_rooms.sole.room_type }).to all(eq(room_type))
   end
 
+  # Folio creation itself is no longer what blocks this path — Folios::InitializeForBooking
+  # allows any system initialization during an audit. What blocks it is the group deposit,
+  # a real posting into an audited business date, which FinancialControls::PostingGuard
+  # rejects by design. Single confirmation reaches the audit with no posting to make, so it
+  # succeeds; group confirmation always posts a deposit, so it cannot.
+  it "is blocked by the deposit posting guard, not the folio guard, during a night audit" do
+    hotel.current_business_date_record.update!(status: "audit_running")
+
+    result = described_class.call(quote: quote, payment_details: payment_details)
+
+    expect(result).not_to be_success
+    expect(result.message).to include("Only night audit postings are allowed")
+    expect(GroupBooking.count).to eq(0)
+  end
+
   it "returns the existing group and child bookings when called again" do
     first_result = described_class.call(quote: quote, payment_details: payment_details)
     counts = [ GroupBooking.count, Booking.count, BookingRoom.count ]

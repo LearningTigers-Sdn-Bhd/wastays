@@ -92,7 +92,7 @@ module Folios
     end
 
     def guard_folio_creation!
-      return if system_confirmation_initialization?
+      return if system_initialization?
 
       NightAudits::OperationalChangeGuard.call!(
         hotel: @booking.hotel,
@@ -101,10 +101,13 @@ module Folios
       )
     end
 
-    def system_confirmation_initialization?
-      @user.nil? &&
-        @options[:system_folio_initialization] == true &&
-        @options[:posting_source] == "booking_confirmation"
+    # Confirmation is guest-facing and must not fail because staff started a
+    # night audit. Creating the folio is safe to allow: it is empty at this
+    # point, and SyncExistingPayments still runs the posting guards, so nothing
+    # lands in the audited ledger. Keyed on the caller's system flag alone —
+    # posting_source only labels the payment metadata and varies per caller.
+    def system_initialization?
+      @user.nil? && @options[:system_folio_initialization] == true
     end
   end
 end

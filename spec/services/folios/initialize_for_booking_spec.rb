@@ -96,6 +96,19 @@ RSpec.describe Folios::InitializeForBooking do
     expect(folio.folio_transactions).to be_empty
   end
 
+  it "allows system initialization regardless of the caller's posting source" do
+    booking.hotel.current_business_date_record.update!(status: "audit_running")
+
+    folio = described_class.call(
+      booking: booking,
+      user: nil,
+      options: { system_folio_initialization: true, posting_source: "group_booking_confirmation" }
+    )
+
+    expect(folio).to be_persisted
+    expect(folio.folio_transactions).to be_empty
+  end
+
   it "routes the primary folio to the agent's ledger when booked via an active agent account" do
     hotel_corporate_account = create(:hotel_corporate_account, hotel: booking.hotel, account_type: "travel_agent")
     booking.update!(hotel_corporate_account: hotel_corporate_account)
