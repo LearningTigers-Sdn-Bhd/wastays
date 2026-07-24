@@ -5,7 +5,7 @@
   <% if presenter.selected_booking_guest && presenter.selected_guest %>
     <% return_to = presenter.guest_details_return_to %>
     <% snapshots = presenter.guest_details_snapshots %>
-    <% boat_times = presenter.guest_details_boat_times %>
+    <% boat_range = presenter.guest_details_boat_range %>
     <% country_choices = COUNTRY_OPTIONS.map { |country| [country, country] } %>
 
     <%= form_with model: presenter.selected_guest,
@@ -18,7 +18,7 @@
       <%= hidden_field_tag :presentation, "booking_workspace" %>
 
       <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar">
-        <div class="max-w-2xl px-5 py-6 lg:px-8">
+        <div class="max-w-6xl px-5 py-6 lg:px-8">
           <% if presenter.guest_details_errors.any? %>
             <div class="mb-5 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive" role="alert" tabindex="-1" data-guest-details-error-summary>
               <p class="font-medium">Guest details could not be saved.</p>
@@ -28,14 +28,17 @@
             </div>
           <% end %>
 
-          <div class="space-y-8">
+          <%# Two columns at lg: who the guest is on the left, what documents and
+              transfers they arrived with on the right. Each section pairs its own
+              fields, so the columns stack below lg without the pairing changing. %>
+          <div class="grid gap-x-8 gap-y-10 lg:grid-cols-2 lg:items-start">
             <%= render PanelsUI::FieldSet.new(
                   legend: "Guest details",
                   description: "Guest details recorded for this stay.",
                   disabled: !presenter.can_manage_bookings?(current_user)) do %>
               <%= render PanelsUI::FieldGroup.new do %>
-              <div class="grid gap-4 md:grid-cols-2">
-                <div class="md:col-span-2">
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div class="sm:col-span-2">
                   <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Full name", required: true) do |field| %>
                     <% field.with_input(value: snapshots[:name], autocomplete: "name", placeholder: "Enter full name") %>
                   <% end %>
@@ -46,22 +49,23 @@
                 <%= render PanelsUI::FormField.new(form:, attribute: :phone, label: "Phone") do |field| %>
                   <% field.with_input(type: :tel, value: snapshots[:phone], autocomplete: "tel", placeholder: "+60 12-345 6789") %>
                 <% end %>
-                <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Country", required: true) do |field| %>
-                  <% field.with_combobox(country_choices, selected: snapshots[:country], prompt: "Search for a country", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" }) %>
-                <% end %>
                 <%= render PanelsUI::FormField.new(form:, attribute: :gender, label: "Gender") do |field| %>
                   <% field.with_select_menu([["Male", "male"], ["Female", "female"], ["Other", "other"]], selected: snapshots[:gender], prompt: "Select a gender") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Country", required: true) do |field| %>
+                  <% field.with_combobox(country_choices, selected: snapshots[:country], prompt: "Search for a country", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" }) %>
                 <% end %>
               </div>
               <% end %>
             <% end %>
 
-            <%= render PanelsUI::FieldSet.new(
+            <div class="space-y-10">
+              <%= render PanelsUI::FieldSet.new(
                   legend: "Identity information",
                   description: "Use the identification presented by the guest.",
                   disabled: !presenter.can_manage_bookings?(current_user)) do %>
               <%= render PanelsUI::FieldGroup.new do %>
-                <div class="grid gap-4 md:grid-cols-2">
+                <div class="grid gap-4 sm:grid-cols-2">
                   <%= render PanelsUI::FormField.new(form:, attribute: :document_type, label: "Document type") do |field| %>
                     <% field.with_select_menu([["IC", "ic"], ["Passport", "passport"]], selected: snapshots[:document_type], prompt: "Select a document type", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" }) %>
                   <% end %>
@@ -74,7 +78,7 @@
                          placeholder: "Select date of birth",
                          data: { guest_dob_target: "dateOfBirth" }) %>
                   <% end %>
-                  <div class="md:col-span-2">
+                  <div class="sm:col-span-2">
                     <%= render PanelsUI::FormField.new(form:, attribute: :government_id, label: "IC / Passport no.") do |field| %>
                       <% field.with_input(value: snapshots[:government_id], autocomplete: "off", spellcheck: false, placeholder: "Enter IC or passport number", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" }) %>
                     <% end %>
@@ -83,25 +87,21 @@
               <% end %>
             <% end %>
 
-            <% if current_hotel.allow_boat_information? %>
-              <%= render PanelsUI::FieldSet.new(
-                    legend: "Boat transfer",
-                    description: "Guest boat-in and boat-out timestamps.",
-                    disabled: !presenter.can_manage_bookings?(current_user)) do %>
-                <%= render PanelsUI::FieldGroup.new do %>
-                <div class="grid gap-4 md:grid-cols-2">
-                  <%= fields_for :booking_guest, presenter.guest_details_booking_guest_form do |booking_guest_form| %>
-                    <%= render PanelsUI::FormField.new(form: booking_guest_form, attribute: :boat_in_at, label: "Boat-in") do |field| %>
-                      <% field.with_date_time_picker(value: boat_times[:boat_in]) %>
-                    <% end %>
-                    <%= render PanelsUI::FormField.new(form: booking_guest_form, attribute: :boat_out_at, label: "Boat-out") do |field| %>
-                      <% field.with_date_time_picker(value: boat_times[:boat_out]) %>
+              <% if current_hotel.allow_boat_information? %>
+                <%= render PanelsUI::FieldSet.new(
+                      legend: "Boat transfer",
+                      description: "Guest boat-in and boat-out timestamps.",
+                      disabled: !presenter.can_manage_bookings?(current_user)) do %>
+                  <%= render PanelsUI::FieldGroup.new do %>
+                    <%= fields_for :booking_guest, presenter.guest_details_booking_guest_form do |booking_guest_form| %>
+                      <%= render PanelsUI::FormField.new(form: booking_guest_form, attribute: :boat_transfer_range, label: "Boat-in and boat-out", error: presenter.guest_details_boat_range_error) do |field| %>
+                        <% field.with_date_time_picker(range: true, months: 2, value: boat_range) %>
+                      <% end %>
                     <% end %>
                   <% end %>
-                </div>
                 <% end %>
               <% end %>
-            <% end %>
+            </div>
           </div>
         </div>
       </div>

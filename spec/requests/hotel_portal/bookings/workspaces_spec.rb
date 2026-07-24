@@ -1240,17 +1240,44 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
         guest: { name: "Boat Guest", country: "Malaysia", document_type: "passport" },
-        booking_guest: { boat_in_at: "2026-08-02T10:00", boat_out_at: "2026-08-01T10:00" }
+        booking_guest: { boat_transfer_range: "2026-08-02T10:00/2026-08-01T10:00" }
       }
 
       expect(response).to have_http_status(:unprocessable_content)
       document = Nokogiri::HTML(response.body)
-      invalid_boat_field = document.css('[data-invalid="true"]').find { |field| field.text.include?("Boat-out") }
+      invalid_boat_field = document.css('[data-invalid="true"]').find { |field| field.text.include?("Boat-in and boat-out") }
       expect(document.at_css("[data-guest-details-error-summary]").text).to include("Boat out at must be after boat in time")
       expect(invalid_boat_field).to be_present
-      expect(document.at_css("input[name='booking_guest[boat_in_at]']")["value"]).to start_with("2026-08-02T10:00")
-      expect(document.at_css("input[name='booking_guest[boat_out_at]']")["value"]).to start_with("2026-08-01T10:00")
+      expect(invalid_boat_field.text).to include("must be after boat in time")
+      expect(document.at_css("input[name='booking_guest[boat_transfer_range]']")["value"])
+        .to eq("2026-08-02T10:00/2026-08-01T10:00")
       expect(booking_guest.reload).to have_attributes(boat_in_at: nil, boat_out_at: nil)
+    end
+
+    it "saves both boat times from one range field" do
+      hotel.update!(allow_boat_information: true)
+      booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "Boat Guest", country: "Malaysia", document_type: "passport" },
+        booking_guest: { boat_transfer_range: "2026-08-01T09:30/2026-08-04T16:45" }
+      }
+
+      expect(booking_guest.reload.boat_in_at.in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")).to eq("2026-08-01T09:30")
+      expect(booking_guest.boat_out_at.in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")).to eq("2026-08-04T16:45")
+    end
+
+    it "leaves stored boat times alone when the range field is not submitted" do
+      hotel.update!(allow_boat_information: true)
+      booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true)
+      booking_guest.update!(boat_in_at: "2026-08-01T09:30", boat_out_at: "2026-08-04T16:45")
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "Boat Guest", country: "Malaysia", document_type: "passport" }
+      }
+
+      expect(booking_guest.reload.boat_in_at).to be_present
+      expect(booking_guest.boat_out_at).to be_present
     end
 
     it "ignores forged boat-transfer fields when the hotel disables them" do
@@ -1259,7 +1286,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
         guest: { name: "No Boat Guest", country: "Malaysia", document_type: "passport" },
-        booking_guest: { boat_in_at: "2026-08-01T10:00", boat_out_at: "2026-08-02T10:00" }
+        booking_guest: { boat_transfer_range: "2026-08-01T10:00/2026-08-02T10:00" }
       }
 
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id))

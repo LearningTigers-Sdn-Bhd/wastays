@@ -136,10 +136,14 @@ module HotelPortal
       params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth)
     end
 
+    # The form posts one "start/end" range; the record keeps two columns. Absent
+    # entirely means "not submitted" and must not clear the stored times.
     def booking_guest_bibo_params
       return {} unless current_hotel.allow_boat_information?
+      return {} unless params[:booking_guest].respond_to?(:key?) && params[:booking_guest].key?(:boat_transfer_range)
 
-      params.fetch(:booking_guest, ActionController::Parameters.new).permit(:boat_in_at, :boat_out_at)
+      boat_in, boat_out = params[:booking_guest][:boat_transfer_range].to_s.split("/", 2)
+      { boat_in_at: boat_in.presence, boat_out_at: boat_out.presence }
     end
 
     def folio_show_tab
