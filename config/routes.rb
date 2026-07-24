@@ -15,6 +15,12 @@ Rails.application.routes.draw do
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # Fast, UI-less sign-in for system/request specs only. Sets the session the
+  # same way SessionsController#create does, without the login round-trip.
+  if Rails.env.test?
+    get "test/sign_in/:user_id", to: "test_sessions#create", as: :test_sign_in
+  end
+
   # PanelsUI component library showcase (not exposed in production).
   unless Rails.env.production?
     get "system-design", to: "system_designs#index", as: :system_design

@@ -486,7 +486,7 @@ from room number and room type, not reservation numbers.
 - [x] `bin/test spec/presenters/hotel_portal/bookings/workspace_presenter_spec.rb`
 - [x] `bin/test spec/requests/hotel_portal/bookings/workspaces_spec.rb`
 - [x] `bin/test spec/requests/hotel_portal/bookings/workspace_actions_spec.rb`
-- [x] `bin/test spec/system/hotel/booking_workspace_phase6_spec.rb --serial`
+- [x] `bin/test spec/system/hotel/booking_workspace_navigation_spec.rb spec/system/hotel/booking_workspace_actions_spec.rb spec/system/hotel/booking_workspace_guest_editing_spec.rb spec/system/hotel/booking_workspace_mobile_spec.rb --serial` (split from the former `booking_workspace_phase6_spec.rb`)
 - [x] `bin/test spec/system/hotel/folio_operations_ledger_spec.rb --serial`
 - [ ] `bin/test spec/system/hotel/group_billing_routes_spec.rb --serial`
 - [x] `bin/test bookings`
