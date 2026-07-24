@@ -320,7 +320,7 @@ from room number and room type, not reservation numbers.
 - [x] Replace the footer's hardcoded `text-amber-600` with a semantic token
 - [x] Constrain the guest footer to the content column rather than the full width
 - [ ] Guard `Make primary` against discarding unsaved guest edits
-- [ ] Migrate the discard alert to `PanelsUI::AlertDialog` with semantic tokens
+- [x] Migrate the discard alert to `PanelsUI::AlertDialog` with semantic tokens
 - [ ] Sweep the remaining orphaned presenter methods once Phase 3 lands
 
 

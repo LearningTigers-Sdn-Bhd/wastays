@@ -31,10 +31,6 @@ export default class extends Controller {
     trigger?.click()
   }
 
-  closeOnBackdrop(event) {
-    if (event.target === this.element) this.keepEditing()
-  }
-
   handleClose() {
     if (!this.discarding) this.trigger?.focus()
     this.trigger = null

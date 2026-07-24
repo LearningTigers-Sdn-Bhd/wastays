@@ -620,7 +620,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       view_grc = footer.at_xpath(".//a[normalize-space()='View GRC']")
       print_grc = footer.at_xpath(".//button[normalize-space()='Guest Registration Card']")
       print_status = footer.at_css("[data-document-print-status]")
-      discard_alert = document.at_css('dialog[data-controller="confirm-discard"]')
+      discard_alert = document.at_css('dialog[data-controller~="confirm-discard"]')
 
       expect(form).to be_present
       expect(form["action"]).to eq(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: guest.id))
