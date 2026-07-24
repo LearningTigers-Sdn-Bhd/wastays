@@ -184,7 +184,7 @@ This phase completes the workspace shell and layout architecture. It is not comp
 ### Folio Entity Rail — Group Booking
 
 - [x] Group concrete folios by child booking/room — **Committed**
-- [x] Use exactly one hierarchy level: child booking/room → folios — **Committed**
+- [x] Use exactly one hierarchy level: child booking/room → folios — **Committed** (heading is now room number + room type; see Phase 3)
 - [x] Remove `All Folios` — **Committed**
 - [x] Remove group-overview selection from the folio rail — **Committed**
 - [x] Avoid repeating all room, guest, status, and booking metadata on every child row — **Committed**
@@ -215,7 +215,7 @@ This phase completes the workspace shell and layout architecture. It is not comp
 ### Guest Entity Rail — Group Booking
 
 - [x] Group concrete guests by child booking/room — **Committed**
-- [x] Use exactly one hierarchy level: child booking/room → guests — **Committed**
+- [x] Use exactly one hierarchy level: child booking/room → guests — **Committed** (heading is now room number + room type; see Phase 3)
 - [x] Remove `All Guests` — **Committed**
 - [x] Remove group-overview selection from the guest rail — **Committed**
 - [x] Preserve deterministic child and guest ordering — **Committed**
@@ -223,7 +223,7 @@ This phase completes the workspace shell and layout architecture. It is not comp
 
 ### Selected Guest Content
 
-- [x] Show exact child context: room, operational booking number, and child stay dates — **Committed**
+- [x] ~~Show exact child context: room, operational booking number, and child stay dates~~ — **Superseded in Phase 3.** The guest content header was removed; the rail now carries child context as room number plus room type. See *Guests — Rail and Content Header*.
 - [x] Preserve primary/additional guest behavior — **Committed**
 - [x] Preserve contact, identity, date-of-birth, and boat-transfer fields — **Committed**
 - [x] Replace redesigned selection controls with PanelsUI SelectMenu or Combobox — **Committed**
@@ -293,7 +293,34 @@ Phase 1 removed the booking-context rail from the six standard destinations, but
 
 ## Phase 3 — Remaining Workspace Destinations and PanelsUI
 
-**Status:** Not substantially started
+**Status:** Started — entity rails and the Guests content header are done
+
+### Guests — Rail and Content Header
+
+Design review of the rendered Guests destination found the same identity printed
+three times: global header, rail row, and content header — with the content
+header's first field (`Full name`) restating it a fourth time. Front desk works
+from room number and room type, not reservation numbers.
+
+- [x] Unify the standalone and grouped rails into one partial per entity
+- [x] Lead rail group headings with the room number, qualified by room type
+- [x] Fall back to the reservation number when a child has no room assigned
+- [x] Omit the room-type line when no room type is resolvable
+- [x] Remove the rail's `Guests`/`Folios` header, which restated the active tab
+- [x] Attach `+ Add guest` / `+ Add folio` to each group so it targets that child
+- [x] Gate each group's add action on that child booking's own status
+- [x] Remove the guest content header (context line, name, and role)
+- [x] Give the guest panel a static accessible name and its own focus target
+- [x] Label the mobile entity bar with the selected entity instead of `Guests`
+- [x] Constrain the guest form width and pair Date of birth with Document type
+- [x] Give all three guest FieldSets one rule and spacing rhythm
+- [x] Reduce rail selection to dot plus fill, without the ring
+- [ ] Migrate the guest footer to PanelsUI (`DropdownMenu`, `Button`, `ButtonGroup`)
+- [ ] Replace the footer's hardcoded `text-amber-600` with a semantic token
+- [ ] Constrain the guest footer to the content column rather than the full width
+- [ ] Guard `Make primary` against discarding unsaved guest edits
+- [ ] Migrate the discard alert to `PanelsUI::AlertDialog` with semantic tokens
+
 
 ### Deposits
 

@@ -243,7 +243,7 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
   it "adds and removes a guest through booking action Sheets", js: true do
     visit hotel_booking_workspace_path(hotel, booking, tab: "guest_details")
 
-    click_link "Add Guest"
+    click_link "Add guest"
     expect(page).to have_css("dialog#booking-guest-sheet[open]", wait: 3)
     within("#booking-guest-sheet") do
       fill_in "Full name", with: "Additional Guest"
@@ -328,7 +328,7 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
     within('[role="alertdialog"]') { click_button "Discard Changes" }
 
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: additional.id))
-    expect(page).to have_css("#guest-details-heading", text: "Switch Target Guest")
+    expect(page).to have_css("[data-testid='workspace-entity-rail'] a[aria-current='page']", text: "Switch Target Guest")
   end
 
   it "selects a folio from the mobile Sheet and focuses its heading", :mobile, js: true do
@@ -378,7 +378,7 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
     within('[role="alertdialog"]') { click_button "Discard Changes" }
 
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: additional.id))
-    expect(page).to have_css("#guest-details-heading:focus")
+    expect(page).to have_css("#guest-details-panel:focus")
   end
 
   it "scrolls a long grouped guest Sheet and selects the final guest", :mobile, js: true do
@@ -411,7 +411,7 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
     within("#booking-entity-selector-sheet") { click_link "Grouped Mobile Guest 12" }
 
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, target_booking, tab: "guest_details", booking_guest_id: target_guest.id))
-    expect(page).to have_css("#guest-details-heading:focus")
+    expect(page).to have_css("#guest-details-panel:focus")
   end
 
   it "prints the existing GRC in place without navigating or opening a window", js: true do
@@ -482,7 +482,7 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
 
     page.go_forward
     expect(page).to have_current_path(additional_path)
-    expect(page).to have_css("#guest-details-heading", text: "History Guest")
+    expect(page).to have_css("[data-testid='workspace-entity-rail'] a[aria-current='page']", text: "History Guest")
   end
 
   it "switches guests across group child bookings", js: true do
@@ -494,11 +494,14 @@ RSpec.describe "Booking workspace Phase 6", :business_day, type: :system do
     sibling_guest = create(:booking_guest, booking: sibling, guest: create(:guest, name: "Room 102 Guest"), is_primary: true)
     visit hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking.booking_guests.find_by!(is_primary: true).id)
 
-    within('nav[aria-label="Bookings and guests"]') { click_link "Room 102 Guest" }
+    within('nav[aria-label="Booking guests"]') { click_link "Room 102 Guest" }
 
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, sibling, tab: "guest_details", booking_guest_id: sibling_guest.id))
-    expect(page).to have_content("Room 102 · Booking #{sibling.formatted_reservation_number}")
-    expect(page).to have_css("nav[aria-label='Bookings and guests'] a[aria-current='page']", text: "Room 102 Guest")
+    expect(page).to have_css(
+      "nav[aria-label='Booking guests'] section[aria-labelledby='desktop-guest-group-#{sibling.id}'] a[aria-current='page']",
+      text: "Room 102 Guest"
+    )
+    expect(page).not_to have_content(sibling.formatted_reservation_number)
   end
 
   it "updates the reusable guest only from the explicit split-save option", js: true do

@@ -1,4 +1,4 @@
-<div class="space-y-1 py-2">
+<div class="mt-2 space-y-1">
   <% rows.each do |row| %>
     <% link_data = { turbo_frame: "_top", turbo_action: "advance" } %>
     <% if mobile_entity_selection %>
@@ -10,7 +10,7 @@
     <%= link_to row.href,
         aria: { current: ("page" if row.active) },
         data: link_data,
-        class: "mx-2 block rounded-md px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring #{row.active ? 'bg-muted text-foreground ring-1 ring-border-interactive' : 'text-foreground hover:bg-muted'}" do %>
+        class: "-mx-2 block rounded-md px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring #{row.active ? 'bg-muted text-foreground' : 'text-foreground hover:bg-muted'}" do %>
       <span class="flex items-center gap-2 font-medium">
         <% if row.active %>
           <span class="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true"></span>

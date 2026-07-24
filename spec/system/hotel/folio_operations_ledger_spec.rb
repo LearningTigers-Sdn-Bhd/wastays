@@ -67,19 +67,19 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
     sibling_path = hotel_booking_workspace_path(hotel, sibling, tab: "folio_operations", folio_id: sibling_folio.id)
     visit first_path
 
-    within('nav[aria-label="Bookings and folios"]') { click_link "Room 102 Folio" }
+    within('nav[aria-label="Booking folios"]') { click_link "Room 102 Folio" }
 
     expect(page).to have_current_path(sibling_path)
     expect(page).to have_css("#folio-operations-heading", text: "Room 102 Folio")
     expect(page).to have_content("Room 102 · Booking #{sibling.formatted_reservation_number}")
-    expect(page).to have_css("nav[aria-label='Bookings and folios'] a[aria-current='page']", text: "Room 102 Folio")
+    expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: "Room 102 Folio")
 
     page.go_back
     expect(page).to have_current_path(first_path)
-    expect(page).to have_css("nav[aria-label='Bookings and folios'] a[aria-current='page']", text: first_folio.display_name)
+    expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: first_folio.display_name)
 
     page.go_forward
     expect(page).to have_current_path(sibling_path)
-    expect(page).to have_css("nav[aria-label='Bookings and folios'] a[aria-current='page']", text: "Room 102 Folio")
+    expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: "Room 102 Folio")
   end
 end

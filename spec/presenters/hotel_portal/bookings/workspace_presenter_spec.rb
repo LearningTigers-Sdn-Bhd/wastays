@@ -724,16 +724,19 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
         tab_presenter = described_class.new(booking, params: { tab: tab })
 
         expect(tab_presenter.show_left_rail?).to eq(tab_presenter.left_rail_mode.present?)
-        expect(tab_presenter.left_rail_title.present?).to eq(tab_presenter.show_left_rail?)
       end
     end
 
-    it "uses entity-focused titles for grouped entity rails" do
+    it "uses one rail partial for standalone and grouped bookings" do
+      standalone_folios = described_class.new(booking, params: { tab: "folio_operations" }).left_rail_mode
+      standalone_guests = described_class.new(booking, params: { tab: "guest_details" }).left_rail_mode
+
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
 
-      expect(described_class.new(booking, params: { tab: "folio_operations" }).left_rail_title).to eq("Folios")
-      expect(described_class.new(booking, params: { tab: "guest_details" }).left_rail_title).to eq("Guests")
+      expect(described_class.new(booking, params: { tab: "folio_operations" }).left_rail_mode).to eq(standalone_folios)
+      expect(described_class.new(booking, params: { tab: "guest_details" }).left_rail_mode).to eq(standalone_guests)
+      expect([ standalone_folios, standalone_guests ]).to eq(%w[folio_tree guest_tree])
     end
 
     it "registers the adjusted tab order and Requests label" do
@@ -788,13 +791,13 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
       tab_presenter = described_class.new(booking, params: { tab: "folio_operations" }, hotel: hotel)
 
-      expect(tab_presenter.grouped_folio_tree_groups.map(&:label)).to include(
-        "Room 101 · #{booking.formatted_reservation_number}",
-        "Room 102 · #{sibling.formatted_reservation_number}"
+      expect(tab_presenter.folio_tree_groups.map(&:label)).to include("Room 101", "Room 102")
+      expect(tab_presenter.folio_tree_groups.map(&:description)).to include(
+        booking.booking_rooms.first.room_type.name,
+        sibling.booking_rooms.first.room_type.name
       )
-      expect(tab_presenter.grouped_folio_tree_groups.map(&:description)).to all(be_nil)
-      expect(tab_presenter.grouped_folio_tree_groups.flat_map(&:rows).map(&:label)).to include("Guest Folio", "Corporate Folio")
-      expect(tab_presenter.grouped_folio_tree_groups.flat_map(&:rows).map(&:description)).to include(
+      expect(tab_presenter.folio_tree_groups.flat_map(&:rows).map(&:label)).to include("Guest Folio", "Corporate Folio")
+      expect(tab_presenter.folio_tree_groups.flat_map(&:rows).map(&:description)).to include(
         "Open · #{booking.booking_folios.first.payer_display_label} · MYR 0.00",
         "Open · #{sibling.booking_folios.first.payer_display_label} · MYR 0.00"
       )
@@ -814,7 +817,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       )
 
       expect(group_presenter).not_to be_group_overview
-      expect(group_presenter.grouped_folio_tree_groups.flat_map(&:rows).select(&:active).map(&:id)).to eq([ current_folio.id ])
+      expect(group_presenter.folio_tree_groups.flat_map(&:rows).select(&:active).map(&:id)).to eq([ current_folio.id ])
     end
 
     it "builds grouped guest hierarchy as child bookings with guests" do
@@ -826,24 +829,27 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
       tab_presenter = described_class.new(booking, params: { tab: "guest_details" }, hotel: hotel)
 
-      expect(tab_presenter.grouped_guest_tree_groups.map(&:label)).to contain_exactly(
-        "Unassigned room · #{booking.formatted_reservation_number}",
-        "Unassigned room · #{sibling.formatted_reservation_number}"
+      expect(tab_presenter.guest_tree_groups.map(&:label)).to contain_exactly(
+        booking.formatted_reservation_number,
+        sibling.formatted_reservation_number
       )
-      expect(tab_presenter.grouped_guest_tree_groups.map(&:description)).to all(be_nil)
-      expect(tab_presenter.grouped_guest_tree_groups.flat_map(&:rows).map(&:label)).to contain_exactly("Primary One", "Primary Two")
+      expect(tab_presenter.guest_tree_groups.map(&:description)).to all(be_nil)
+      expect(tab_presenter.guest_tree_groups.flat_map(&:rows).map(&:label)).to contain_exactly("Primary One", "Primary Two")
     end
 
-    it "orders standalone guest rows and exposes exact selected child context" do
-      create(:booking_room, booking: booking, room_number: "208")
+    it "orders standalone guest rows under a room and room-type heading" do
+      room = create(:booking_room, booking: booking, room_number: "208")
       additional = create(:booking_guest, booking: booking, guest: create(:guest, name: "Additional Guest"), is_primary: false)
       primary = create(:booking_guest, booking: booking, guest: create(:guest, name: "Primary Guest"), is_primary: true)
       tab_presenter = described_class.new(booking, params: { tab: "guest_details", booking_guest_id: additional.id }, hotel: hotel)
 
-      expect(tab_presenter.guest_tree_rows.map(&:id)).to eq([ primary.id, additional.id ])
-      expect(tab_presenter.guest_tree_rows.select(&:active).map(&:id)).to eq([ additional.id ])
-      expect(tab_presenter.selected_guest_context_line).to include("Room 208", "Booking #{booking.formatted_reservation_number}")
-      expect(tab_presenter.guest_display[:role]).to eq("Additional guest")
+      expect(tab_presenter.guest_tree_groups.size).to eq(1)
+      expect(tab_presenter.guest_tree_groups.first).to have_attributes(
+        label: "Room 208",
+        description: room.room_type.name
+      )
+      expect(tab_presenter.guest_tree_groups.flat_map(&:rows).map(&:id)).to eq([ primary.id, additional.id ])
+      expect(tab_presenter.guest_tree_groups.flat_map(&:rows).select(&:active).map(&:id)).to eq([ additional.id ])
     end
 
     it "uses a failed guest form for submitted values and errors" do
@@ -865,16 +871,30 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(tab_presenter.selected_guest.errors[:name]).to be_present
     end
 
-    it "keeps duplicate room labels distinguishable with ordered booking numbers" do
+    it "falls back to booking numbers when children have no room to lead with" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
       create(:booking, hotel: hotel, group_booking: group, group_position: 2)
       tab_presenter = described_class.new(booking, params: { tab: "folio_operations" }, hotel: hotel)
-      groups = tab_presenter.grouped_folio_tree_groups
+      groups = tab_presenter.folio_tree_groups
 
       expect(groups.map(&:label)).to eq(
-        tab_presenter.child_bookings.map { |child| "Unassigned room · #{child.formatted_reservation_number}" }
+        tab_presenter.child_bookings.map(&:formatted_reservation_number)
       )
+      expect(groups.map(&:description)).to all(be_nil)
+    end
+
+    it "leads with the room number and qualifies it with the room type" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      room = create(:booking_room, booking: booking, room_number: "103")
+      create(:booking_room, booking: sibling, room_number: "107")
+
+      groups = described_class.new(booking, params: { tab: "guest_details" }, hotel: hotel).guest_tree_groups
+
+      expect(groups.map(&:label)).to eq(%w[Room\ 103 Room\ 107])
+      expect(groups.first.description).to eq(room.room_type.name)
     end
 
     it "summarizes security deposits" do
@@ -948,9 +968,12 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       folio_presenter = described_class.new(booking, params: { tab: "folio_operations" })
       room_presenter = described_class.new(booking, params: { tab: "booking_details" })
 
-      expect(folio_presenter.folio_tree_rows.find { |row| row.id == folio.id }).to have_attributes(active: true)
-      expect(folio_presenter.folio_tree_rows.find { |row| row.id == folio.id }.href).not_to include("folio_tab")
-      expect(room_presenter.folio_tree_rows.find { |row| row.id == folio.id }).to have_attributes(active: false)
+      folio_rows = folio_presenter.folio_tree_groups.flat_map(&:rows)
+      room_rows = room_presenter.folio_tree_groups.flat_map(&:rows)
+
+      expect(folio_rows.find { |row| row.id == folio.id }).to have_attributes(active: true)
+      expect(folio_rows.find { |row| row.id == folio.id }.href).not_to include("folio_tab")
+      expect(room_rows.find { |row| row.id == folio.id }).to have_attributes(active: false)
     end
   end
 end

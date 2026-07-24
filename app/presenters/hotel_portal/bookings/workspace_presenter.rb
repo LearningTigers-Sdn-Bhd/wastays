@@ -6,7 +6,7 @@ module HotelPortal
       RoomRow = Data.define(:room_number, :room_type)
       Tab = Data.define(:key, :label)
       TreeRow = Data.define(:id, :label, :description, :kind, :active, :href)
-    TreeGroup = Data.define(:label, :description, :rows, :booking_id)
+    TreeGroup = Data.define(:label, :description, :rows, :booking_id, :add_href)
     RoomRateRow = Data.define(:booking_reference, :date, :room_type, :room, :rate_plan, :nightly_rate, :rate_missing)
     RequestCard = Data.define(:id, :type, :title, :details, :room_label, :time_label, :status, :column, :record, :completed)
     RequestColumn = Data.define(:key, :label, :cards)
@@ -386,15 +386,20 @@ module HotelPortal
 
     def left_rail_mode
       case active_tab
-      when "folio_operations" then group_context_enabled? ? "grouped_folio_tree" : "folio_tree"
-      when "guest_details" then group_context_enabled? ? "grouped_guest_tree" : "guest_tree"
+      when "folio_operations" then "folio_tree"
+      when "guest_details" then "guest_tree"
       end
     end
 
-    def left_rail_title
-      case left_rail_mode
-      when "folio_tree", "grouped_folio_tree" then "Folios"
-      when "guest_tree", "grouped_guest_tree" then "Guests"
+    # Labels the mobile entity bar, which stands in for the rail below `xl`.
+    def selected_entity_label
+      child = selected_child_booking
+
+      case active_tab
+      when "folio_operations"
+        [ selected_folio&.display_name, child_booking_label(child) ].compact_blank.join(" · ")
+      when "guest_details"
+        [ booking_guest_name(selected_booking_guest, child), child_booking_label(child) ].compact_blank.join(" · ")
       end
     end
 
@@ -1037,48 +1042,28 @@ module HotelPortal
       booking.currency.presence || hotel.default_currency.presence || "MYR"
     end
 
-    def folio_tree_rows
-      folios.map do |folio|
-        folio_tree_row(folio, active: folio_operations_folio_active?(folio)).with(
-          href: path_for(booking, tab: active_tab, folio_id: folio.id)
-        )
-      end
-    end
-
-    def grouped_folio_tree_groups
-      @grouped_folio_tree_groups ||= child_bookings.map do |child|
+    # A standalone booking is a group of one, so both rails render the same shape.
+    def folio_tree_groups
+      @folio_tree_groups ||= child_bookings.map do |child|
         rows = ordered_booking_folios(child).map do |folio|
           folio_tree_row(
             folio,
             active: child.id == selected_child_booking.id && folio_operations_folio_active?(folio)
           ).with(
-            href: Rails.application.routes.url_helpers.hotel_booking_workspace_path(hotel, child, tab: active_tab, folio_id: folio.id)
+            href: path_for(child, tab: active_tab, folio_id: folio.id)
           )
         end
 
-        TreeGroup.new("#{child_booking_label(child)} · #{child_booking_number(child)}", nil, rows, child.id)
+        entity_tree_group(child, rows, add_folio_path_for(child))
       end
     end
 
-    def guest_tree_rows
-      ordered_booking_guests(booking).map do |booking_guest|
-        TreeRow.new(
-          booking_guest.id,
-          booking_guest.name_snapshot.presence || booking_guest.guest&.name.presence || booking.guest_name,
-          booking_guest.primary? ? "Primary guest" : "Additional guest",
-          "guest",
-          guest_row_active?(booking_guest),
-          path_for(booking, tab: active_tab, booking_guest_id: booking_guest.id)
-        )
-      end
-    end
-
-    def grouped_guest_tree_groups
-      @grouped_guest_tree_groups ||= child_bookings.map do |child|
+    def guest_tree_groups
+      @guest_tree_groups ||= child_bookings.map do |child|
         rows = ordered_booking_guests(child).map do |booking_guest|
           TreeRow.new(
             booking_guest.id,
-            booking_guest.name_snapshot.presence || booking_guest.guest&.name.presence || child.guest_name,
+            booking_guest_name(booking_guest, child),
             booking_guest.primary? ? "Primary guest" : "Additional guest",
             "guest",
             child.id == selected_child_booking.id && selected_booking_guest&.id == booking_guest.id,
@@ -1086,13 +1071,8 @@ module HotelPortal
           )
         end
 
-        TreeGroup.new("#{child_booking_label(child)} · #{child_booking_number(child)}", nil, rows, child.id)
+        entity_tree_group(child, rows, add_guest_path_for(child))
       end
-    end
-
-    def selected_guest_context_line
-      child = selected_child_booking
-      [ child_booking_label(child), "Booking #{child_booking_number(child)}", format_short_range(child.check_in, child.check_out) ].join(" · ")
     end
 
     def selected_folio
@@ -1168,27 +1148,6 @@ module HotelPortal
       end
 
       { key: [ "unassigned", folio.id ], name: "Unassigned", kind: "—", sort: 2 }
-    end
-
-    def explicit_entity_child_booking
-      case active_tab
-      when "folio_operations"
-        entity_id = @params[:folio_id].presence || @params[:active_folio_id].presence
-        child_bookings.find { |child| child.booking_folios.any? { |folio| folio.id.to_s == entity_id.to_s } } if entity_id
-      when "guest_details"
-        entity_id = @params[:booking_guest_id].presence
-        child_bookings.find { |child| child.booking_guests.any? { |guest| guest.id.to_s == entity_id.to_s } } if entity_id
-      end
-    end
-
-    def ordered_booking_folios(child)
-      child.booking_folios.to_a.sort_by do |folio|
-        [ folio.is_primary? ? 0 : 1, folio.folio_sequence.to_i, folio.id ]
-      end
-    end
-
-    def ordered_booking_guests(child)
-      child.booking_guests.to_a.sort_by { |guest| [ guest.primary? ? 0 : 1, guest.id ] }
     end
 
     def explicit_entity_child_booking
@@ -1322,6 +1281,41 @@ module HotelPortal
       child.formatted_reservation_number.presence || "—"
     end
 
+    # Rail headings lead with the room number because front desk works from it.
+    # An unassigned child has no room number to lead with, so it falls back to
+    # the reservation number, which is the only thing left that distinguishes it.
+    def entity_tree_group(child, rows, add_href)
+      room = child.booking_rooms.first
+      label = room&.room_number.present? ? "Room #{room.room_number}" : child_booking_number(child)
+
+      TreeGroup.new(label, child_booking_room_type(child), rows, child.id, add_href)
+    end
+
+    # Each group carries its own add action so it targets that child booking
+    # rather than whichever child happens to be selected.
+    def add_guest_path_for(child)
+      return unless child.status.in?(%w[confirmed checked_in])
+
+      Rails.application.routes.url_helpers.hotel_booking_action_manage_guest_path(
+        hotel, child, mode: "add", return_to: close_drawer_path
+      )
+    end
+
+    def add_folio_path_for(child)
+      Rails.application.routes.url_helpers.new_folio_window_hotel_booking_workspace_path(hotel, child)
+    end
+
+    def child_booking_room_type(child)
+      room = child.booking_rooms.first
+      return unless room
+
+      room.room_type&.name.presence || room.room_type_snapshot.to_h["name"].presence
+    end
+
+    def booking_guest_name(booking_guest, child)
+      booking_guest&.name_snapshot.presence || booking_guest&.guest&.name.presence || child.guest_name
+    end
+
     def request_room_label(child)
       room = child.booking_rooms.first
       room&.room_number.present? ? "Room #{room.room_number}" : "Unassigned room"
@@ -1351,10 +1345,6 @@ module HotelPortal
       return unless active_tab == "folio_operations"
 
       selected_folio&.id
-    end
-
-    def guest_row_active?(booking_guest)
-      left_rail_mode == "guest_tree" && selected_booking_guest&.id == booking_guest.id
     end
 
     def room_type_label_for(room)

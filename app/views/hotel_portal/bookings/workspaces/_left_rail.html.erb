@@ -1,11 +1,8 @@
-<aside class="hidden min-h-0 min-w-0 overflow-y-auto overscroll-contain bg-muted/60 custom-scrollbar xl:block" aria-label="Booking context">
-  <div class="border-b border-border px-4 py-3">
-    <h2 class="text-xs font-medium text-muted-foreground"><%= presenter.left_rail_title %></h2>
-  </div>
+<div class="hidden min-h-0 min-w-0 overflow-y-auto overscroll-contain bg-muted/60 custom-scrollbar xl:block" data-testid="workspace-entity-rail">
   <%= render "hotel_portal/bookings/workspaces/left_rails/#{presenter.left_rail_mode}",
     booking: booking,
     entity_booking: entity_booking,
     presenter: presenter,
     id_prefix: "desktop",
     mobile_entity_selection: false %>
-</aside>
+</div>

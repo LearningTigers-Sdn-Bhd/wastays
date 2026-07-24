@@ -9,7 +9,7 @@
 
   <% if presenter.show_left_rail? %>
     <div class="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 xl:hidden">
-      <p class="truncate text-sm font-medium text-foreground"><%= presenter.left_rail_title %></p>
+      <p class="truncate text-sm font-medium text-foreground"><%= presenter.selected_entity_label %></p>
       <%= render PanelsUI::Button.new(
             variant: :secondary,
             size: :sm,
@@ -26,6 +26,7 @@
           size: :sm,
           title: presenter.entity_selector_label,
           body_class: "bg-muted/60 px-0 py-0 overscroll-contain custom-scrollbar") do |sheet| %>
+      <%# The sheet stands in for the rail below xl, so it renders the same partial. %>
       <% sheet.with_body do %>
         <%= render "hotel_portal/bookings/workspaces/left_rails/#{presenter.left_rail_mode}",
           booking: booking,

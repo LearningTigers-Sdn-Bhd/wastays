@@ -1,5 +1,7 @@
 <%# locals: (booking:, entity_booking:, presenter:, booking_presenter: nil, folio_show: nil, audit_logs: nil, audit_history: nil) %>
-<section class="h-full min-h-0" aria-labelledby="guest-details-heading">
+<%# Guest identity lives in the entity rail; repeating it here duplicated the
+    global header, the rail row, and the Full name field. %>
+<section id="guest-details-panel" class="h-full min-h-0" aria-label="Guest details" tabindex="-1">
   <% if presenter.selected_booking_guest && presenter.selected_guest %>
     <% return_to = presenter.guest_details_return_to %>
     <% snapshots = presenter.guest_details_snapshots %>
@@ -15,14 +17,8 @@
       <%= hidden_field_tag :return_to, return_to %>
       <%= hidden_field_tag :presentation, "booking_workspace" %>
 
-      <header class="shrink-0 border-b border-border px-5 py-4">
-        <p class="text-xs tabular-nums text-muted-foreground"><%= presenter.selected_guest_context_line %></p>
-        <h2 id="guest-details-heading" class="mt-1 break-words text-base font-semibold text-foreground" tabindex="-1"><%= presenter.guest_display[:name] %></h2>
-        <p class="mt-1 text-sm text-muted-foreground"><%= presenter.guest_display[:role] %></p>
-      </header>
-
       <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar">
-        <div class="mx-auto max-w-5xl px-5 py-6 lg:px-8">
+        <div class="max-w-2xl px-5 py-6 lg:px-8">
           <% if presenter.guest_details_errors.any? %>
             <div class="mb-5 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive" role="alert" tabindex="-1" data-guest-details-error-summary>
               <p class="font-medium">Guest details could not be saved.</p>
@@ -32,7 +28,7 @@
             </div>
           <% end %>
 
-          <div class="space-y-6">
+          <div class="space-y-8">
             <%= render PanelsUI::FieldSet.new(
                   legend: "Guest details",
                   description: "Guest details recorded for this stay.",
@@ -63,15 +59,11 @@
             <%= render PanelsUI::FieldSet.new(
                   legend: "Identity information",
                   description: "Use the identification presented by the guest.",
-                  class: "border-t border-border pt-6",
                   disabled: !presenter.can_manage_bookings?(current_user)) do %>
               <%= render PanelsUI::FieldGroup.new do %>
                 <div class="grid gap-4 md:grid-cols-2">
                   <%= render PanelsUI::FormField.new(form:, attribute: :document_type, label: "Document type") do |field| %>
                     <% field.with_select_menu([["IC", "ic"], ["Passport", "passport"]], selected: snapshots[:document_type], prompt: "Select a document type", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" }) %>
-                  <% end %>
-                  <%= render PanelsUI::FormField.new(form:, attribute: :government_id, label: "IC / Passport no.") do |field| %>
-                    <% field.with_input(value: snapshots[:government_id], autocomplete: "off", spellcheck: false, placeholder: "Enter IC or passport number", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" }) %>
                   <% end %>
                   <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth, label: "Date of birth") do |field| %>
                     <% field.with_date_picker(
@@ -82,6 +74,11 @@
                          placeholder: "Select date of birth",
                          data: { guest_dob_target: "dateOfBirth" }) %>
                   <% end %>
+                  <div class="md:col-span-2">
+                    <%= render PanelsUI::FormField.new(form:, attribute: :government_id, label: "IC / Passport no.") do |field| %>
+                      <% field.with_input(value: snapshots[:government_id], autocomplete: "off", spellcheck: false, placeholder: "Enter IC or passport number", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" }) %>
+                    <% end %>
+                  </div>
                 </div>
               <% end %>
             <% end %>
@@ -90,7 +87,6 @@
               <%= render PanelsUI::FieldSet.new(
                     legend: "Boat transfer",
                     description: "Guest boat-in and boat-out timestamps.",
-                    class: "border-t border-border pt-6",
                     disabled: !presenter.can_manage_bookings?(current_user)) do %>
                 <%= render PanelsUI::FieldGroup.new do %>
                 <div class="grid gap-4 md:grid-cols-2">
