@@ -487,10 +487,6 @@ module HotelPortal
       @guest_form || selected_booking_guest&.guest
     end
 
-    def guest_details_mode
-      selected_booking_guest&.primary? ? "edit_primary" : "edit_additional"
-    end
-
     def guest_details_return_to
       return nil unless selected_booking_guest
 
@@ -504,14 +500,17 @@ module HotelPortal
 
       return GUEST_FORM_ATTRIBUTES.to_h { |attribute| [ attribute, g.public_send(attribute) ] } if @guest_form
 
+      # The three encrypted columns exist on both the stay snapshot and the
+      # reusable profile, so an unreadable value on either side falls through
+      # rather than raising on the way into the form.
       {
         name: bg.name_snapshot.presence || g.name,
-        email: bg.email_snapshot.presence || g.email,
-        phone: bg.phone_snapshot.presence || g.phone,
+        email: safe_encrypted_value(bg, :email_snapshot) || safe_encrypted_value(g, :email),
+        phone: safe_encrypted_value(bg, :phone_snapshot) || safe_encrypted_value(g, :phone),
         country: bg.country_snapshot.presence || g.country.presence || hotel.country,
         gender: bg.gender_snapshot.presence || g.gender,
         document_type: bg.document_type_snapshot.presence || g.document_type.presence || "ic",
-        government_id: bg.government_id_snapshot.presence || g.government_id,
+        government_id: safe_encrypted_value(bg, :government_id_snapshot) || safe_encrypted_value(g, :government_id),
         date_of_birth: bg.date_of_birth_snapshot.presence || g.date_of_birth
       }
     end
@@ -533,46 +532,6 @@ module HotelPortal
 
     def guest_details_errors
       [ selected_guest, guest_details_booking_guest_form ].compact.flat_map { |record| record.errors.full_messages }.uniq
-    end
-
-    def guest_details_boat_in_date
-      split_boat_time(:boat_in)&.first
-    end
-
-    def guest_details_boat_in_time
-      split_boat_time(:boat_in)&.last
-    end
-
-    def guest_details_boat_in_time_options
-      boat_time_options(hotel.boat_in_times)
-    end
-
-    def guest_details_boat_out_date
-      split_boat_time(:boat_out)&.first
-    end
-
-    def guest_details_boat_out_time
-      split_boat_time(:boat_out)&.last
-    end
-
-    def guest_details_boat_out_time_options
-      boat_time_options(hotel.boat_out_times)
-    end
-
-    def guest_display(booking_guest = selected_booking_guest)
-      record = booking_guest
-      {
-        name: safe_text((@guest_form&.name if record == selected_booking_guest) || record&.name_snapshot.presence || record&.guest&.name.presence || booking.guest_name, fallback: "Guest details"),
-        role: record&.primary? ? "Primary guest" : "Additional guest",
-        email: mask_email(safe_sensitive_snapshot(record, :email_snapshot)),
-        phone: mask_phone(safe_sensitive_snapshot(record, :phone_snapshot)),
-        country: safe_text(record&.country_snapshot.presence || record&.guest&.country, fallback: "—"),
-        document_type: safe_text(record&.document_type_snapshot.presence || record&.guest&.document_type, fallback: "Document").to_s.upcase,
-        government_id: mask_identity(safe_sensitive_snapshot(record, :government_id_snapshot)),
-        profile_name: safe_text(record&.guest&.name, fallback: "Unlinked profile"),
-        profile_updated_at: record&.guest&.updated_at ? record.guest.updated_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y %H:%M") : "—",
-        linked_profile: record&.guest.present?
-      }
     end
 
     def can_manage_bookings?(user)
@@ -700,22 +659,6 @@ module HotelPortal
           held: money_for(child, held),
           count: deposits.size
         }
-      end
-    end
-
-    def group_guest_rows
-      child_bookings.flat_map do |child|
-        child.booking_guests.map do |record|
-          {
-            booking: child,
-            booking_number: child_booking_number(child),
-            booking_guest: record,
-            name: record.guest&.name.presence || record.name_snapshot.presence || child.guest_name,
-            role: record.primary? ? "Primary" : "Additional",
-            room: child.booking_rooms.first&.room_number.presence || "Unassigned",
-            country: record.country_snapshot.presence || record.guest&.country.presence || "—"
-          }
-        end
       end
     end
 
@@ -1171,18 +1114,6 @@ module HotelPortal
       child.booking_guests.to_a.sort_by { |guest| [ guest.primary? ? 0 : 1, guest.id ] }
     end
 
-    def split_boat_time(key)
-      guest_details_boat_times[key]&.split("T")
-    end
-
-    def boat_time_options(times)
-      (times || []).sort.map do |t|
-        t_obj = Time.zone.parse("2000-01-01 #{t}") rescue nil
-        label = t_obj ? t_obj.strftime("%I:%M %p") : t
-        [ label, t ]
-      end
-    end
-
     def valid_room_rate_dates?(child)
       child.check_in.present? && child.check_out.present? && child.check_out.to_date > child.check_in.to_date
     end
@@ -1202,12 +1133,15 @@ module HotelPortal
       { "room_charges" => "room_and_rate", "billing_details" => "billing_preferences" }.fetch(value.to_s, value.to_s)
     end
 
-    def safe_sensitive_snapshot(record, attribute)
-      return "" if record.blank?
+    # Returns nil rather than a raw or half-decrypted value so callers can fall
+    # back with `||`. A corrupted column must not reach a form field, where an
+    # apparently-blank value would be written back over the good data on save.
+    def safe_encrypted_value(record, attribute)
+      return if record.blank?
 
-      safe_text(record.public_send(attribute), fallback: "")
+      safe_text(record.public_send(attribute), fallback: "").presence
     rescue ActiveRecord::Encryption::Errors::Decryption, JSON::ParserError, ArgumentError
-      ""
+      nil
     end
 
     def safe_text(value, fallback: "—")
@@ -1220,30 +1154,6 @@ module HotelPortal
 
     def encryption_envelope_like?(text)
       text.start_with?("{\"p\":", "{\"p\"=>", "{\"ct\":", "{\"iv\":") || text.include?("\"_rails\"") || text.include?("\"ciphertext\"")
-    end
-
-    def mask_email(value)
-      text = safe_text(value, fallback: "")
-      return "—" if text.blank? || !text.include?("@")
-
-      local, domain = text.split("@", 2)
-      "#{local.first}***@#{domain}"
-    end
-
-    def mask_phone(value)
-      text = safe_text(value, fallback: "").gsub(/\s+/, "")
-      return "—" if text.blank?
-
-      suffix = text.last(4)
-      prefix = text.start_with?("+") ? text[/\A\+\d{1,3}/].to_s : ""
-      "#{prefix}••••#{suffix}"
-    end
-
-    def mask_identity(value)
-      text = safe_text(value, fallback: "")
-      return "—" if text.blank?
-
-      "••••#{text.last(4)}"
     end
 
     def primary_booking_guest

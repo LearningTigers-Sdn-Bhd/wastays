@@ -867,7 +867,6 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
       expect(tab_presenter.selected_guest).to eq(guest_form)
       expect(tab_presenter.guest_details_snapshots).to include(name: "", email: "submitted@example.com")
-      expect(tab_presenter.guest_display[:name]).to eq("Guest details")
       expect(tab_presenter.selected_guest.errors[:name]).to be_present
     end
 
@@ -943,15 +942,20 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(tab_presenter.requests_kanban_columns.find { |column| column.key == "completed" }.cards.map(&:details)).to include("Water heater")
     end
 
-    it "masks safe guest display values" do
+    it "gives the guest form unmasked encrypted values" do
       guest = create(:guest, name: "Hanami Ume", email: "hanami@mail.com", phone: "+60123451234", government_id: "P4821")
       booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true)
 
-      display = described_class.new(booking, params: { tab: "guest_details", booking_guest_id: booking_guest.id }).guest_display(booking_guest)
+      snapshots = described_class.new(booking, params: { tab: "guest_details", booking_guest_id: booking_guest.id }).guest_details_snapshots
 
-      expect(display[:email]).to eq("h***@mail.com")
-      expect(display[:phone]).to end_with("1234")
-      expect(display[:government_id]).to eq("••••4821")
+      # These fields are editable, so staff need the full value to correct it.
+      # Masking belonged to the read-only display this destination no longer has.
+      expect(snapshots).to include(
+        email: "hanami@mail.com",
+        phone: "+60123451234",
+        government_id: booking_guest.government_id_snapshot
+      )
+      expect(snapshots[:government_id]).to eq("p4821")
     end
 
     it "keeps audit filters out of the context rail" do
