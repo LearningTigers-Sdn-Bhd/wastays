@@ -15,7 +15,7 @@ RSpec.describe Bookings::ProcessEarlyDeparture do
   before do
     # Ensure folio is initialized and settled (or we test the settlement logic)
     # For simplicity in this unit test, let's assume it's already settled or we don't care about the balance yet.
-    allow_any_instance_of(Folios::CloseForCheckout).to receive(:call).and_return(OpenStruct.new(success?: true, folio: folio))
+    allow_any_instance_of(Folios::CloseForCheckout).to receive(:call).and_return(Folios::CheckoutResult.success(folio: folio, balance: 0.to_d))
   end
 
   it "truncates the check_out date and completes checkout" do

@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class RecoverMissingFolio
@@ -102,11 +101,11 @@ module Folios
     end
 
     def success(folio:, created:)
-      OpenStruct.new(success?: true, folio: folio, created?: created, message: created ? "Folio recovered." : "Folio already exists.")
+      Folios::RecoveryResult.success(folio: folio, "created?": created, message: created ? "Folio recovered." : "Folio already exists.")
     end
 
     def failure(error)
-      OpenStruct.new(success?: false, folio: nil, created?: false, error: error, message: error)
+      Folios::RecoveryResult.failure(error, "created?": false, message: error)
     end
   end
 end

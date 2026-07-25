@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class CloseForCheckout
@@ -287,11 +286,11 @@ module Folios
     end
 
     def success(folio:, balance: 0.to_d)
-      OpenStruct.new(success?: true, folio: folio, balance: balance)
+      Folios::CheckoutResult.success(folio: folio, balance: balance)
     end
 
     def failure(error, folio: nil, balance: nil)
-      OpenStruct.new(success?: false, error: error, folio: folio, balance: balance)
+      Folios::CheckoutResult.failure(error, folio: folio, balance: balance)
     end
   end
 end

@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class ReopenForCorrection
@@ -83,11 +82,11 @@ module Folios
     end
 
     def success
-      OpenStruct.new(success?: true, folio: @booking_folio)
+      Folios::Result.success(folio: @booking_folio)
     end
 
     def failure(error)
-      OpenStruct.new(success?: false, error: error, folio: @booking_folio)
+      Folios::Result.failure(error, folio: @booking_folio)
     end
   end
 end

@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class CloseFolio
@@ -163,11 +162,11 @@ module Folios
     end
 
     def success(folio)
-      OpenStruct.new(success?: true, folio: folio)
+      Folios::Result.success(folio: folio)
     end
 
     def failure(error)
-      OpenStruct.new(success?: false, error: error, folio: @folio)
+      Folios::Result.failure(error, folio: @folio)
     end
   end
 end
