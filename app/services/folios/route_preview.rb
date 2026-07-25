@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class RoutePreview
+    # The forecast rows a booking would post, and the same rows grouped by the
+    # folio they would land on. Not a success/failure answer — the preview
+    # always succeeds.
+    Report = Data.define(:rows, :grouped_by_folio)
+
     def self.call(booking:, actor: nil)
       new(booking: booking, actor: actor).call
     end
@@ -15,7 +19,7 @@ module Folios
 
     def call
       rows = expected_lines.map { |line| row_for(line) }
-      OpenStruct.new(rows: rows, grouped_by_folio: grouped_by_folio(rows))
+      Report.new(rows: rows, grouped_by_folio: grouped_by_folio(rows))
     end
 
     private

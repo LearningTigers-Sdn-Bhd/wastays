@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class ProcessCheckoutActions
@@ -11,6 +10,10 @@ module Folios
     CLOSE_ACTION = "close"
     BLOCKING_ACTIONS = %w[refund_credit_handling voided].freeze
     EXCEPTION_ACTIONS = %w[keep_open manager_review write_off_approval].freeze
+
+    # Which folios checkout should treat as exceptions, and which it should send
+    # to direct bill. Checkout reads both lists back when it closes the booking.
+    Result = ApplicationResult.define(:exception_folio_ids, :direct_bill_folio_ids)
 
     def self.call(booking:, hotel:, user:, action_params:, posting_date:, options: {})
       new(
@@ -250,11 +253,11 @@ module Folios
     end
 
     def success(exception_folio_ids:, direct_bill_folio_ids:)
-      OpenStruct.new(success?: true, exception_folio_ids: exception_folio_ids, direct_bill_folio_ids: direct_bill_folio_ids)
+      Result.success(exception_folio_ids: exception_folio_ids, direct_bill_folio_ids: direct_bill_folio_ids)
     end
 
     def failure(error)
-      OpenStruct.new(success?: false, error: error, exception_folio_ids: [], direct_bill_folio_ids: [])
+      Result.failure(error, exception_folio_ids: [], direct_bill_folio_ids: [])
     end
   end
 end

@@ -1,10 +1,17 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class CloseNoShowFolios
     CLOSE_SOURCE = "no_show_finalization"
+
+    # A folio left open because it still carries a balance, and the balance that
+    # kept it open.
+    SkippedFolio = Data.define(:folio, :balance)
+
+    # Closing no-show folios is partial by nature: it reports what it closed and
+    # what it had to leave, on success and on failure alike.
+    Result = ApplicationResult.define(:closed_folios, :skipped_folios)
 
     def self.call(booking:, user:, business_date:, night_audit: nil)
       new(
@@ -39,20 +46,18 @@ module Folios
           if balance.zero?
             close!(folio)
           else
-            @skipped_folios << OpenStruct.new(folio: folio, balance: balance)
+            @skipped_folios << SkippedFolio.new(folio: folio, balance: balance)
           end
         end
       end
 
-      OpenStruct.new(
-        success?: true,
+      Result.success(
         closed_folios: @closed_folios,
         skipped_folios: @skipped_folios
       )
     rescue StandardError => e
-      OpenStruct.new(
-        success?: false,
-        error: e.message,
+      Result.failure(
+        e.message,
         closed_folios: @closed_folios,
         skipped_folios: @skipped_folios
       )

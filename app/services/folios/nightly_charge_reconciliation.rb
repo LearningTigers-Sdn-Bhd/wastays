@@ -1,9 +1,12 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class NightlyChargeReconciliation
+    # What the night should have posted against what it did. Valid means every
+    # entry came out clean; issues is the flattened list the audit blocker reads.
+    Report = Data.define(:"valid?", :entries, :issues)
+
     def self.call(booking:, business_date:)
       new(booking: booking, business_date: business_date).call
     end
@@ -15,8 +18,8 @@ module Folios
 
     def call
       entries = expected_lines.map { |line| entry_for(line) }
-      OpenStruct.new(
-        valid?: entries.all? { |entry| entry[:issues].empty? },
+      Report.new(
+        "valid?": entries.all? { |entry| entry[:issues].empty? },
         entries: entries,
         issues: entries.flat_map { |entry| entry[:issues] }
       )

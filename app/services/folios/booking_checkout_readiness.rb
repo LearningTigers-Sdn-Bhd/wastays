@@ -1,9 +1,12 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class BookingCheckoutReadiness
+    # Whether a booking can check out, and what stands in the way. Reporting no
+    # blockers is the same statement as being ready, so both travel together.
+    Report = Data.define(:"ready?", :blockers, :folios, :projected_balance)
+
     def self.call(booking:, hotel: nil)
       new(booking: booking, hotel: hotel).call
     end
@@ -45,8 +48,8 @@ module Folios
       blockers << "Audit is running." if business_date_record&.audit_running?
       blockers << "Audit is blocked." if business_date_record&.audit_blocked?
 
-      OpenStruct.new(
-        ready?: blockers.empty?,
+      Report.new(
+        "ready?": blockers.empty?,
         blockers: blockers,
         folios: folios,
         projected_balance: folios.sum { |folio| folio.projected_outstanding_balance.to_d }

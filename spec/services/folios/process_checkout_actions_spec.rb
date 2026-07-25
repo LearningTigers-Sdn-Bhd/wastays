@@ -13,7 +13,7 @@ RSpec.describe Folios::ProcessCheckoutActions do
 
   before do
     allow(Folios::BookingCheckoutReadiness).to receive(:call).and_return(
-      OpenStruct.new(blockers: [], ready?: true)
+      Folios::BookingCheckoutReadiness::Report.new("ready?": true, blockers: [], folios: [], projected_balance: 0.to_d)
     )
   end
 
