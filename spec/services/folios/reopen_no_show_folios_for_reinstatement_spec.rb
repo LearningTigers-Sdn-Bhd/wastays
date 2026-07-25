@@ -40,4 +40,32 @@ RSpec.describe Folios::ReopenNoShowFoliosForReinstatement do
       ).sole.metadata["source"]
     ).to eq("no_show_reinstatement")
   end
+
+  # The reopen authorization is granted and withdrawn per folio, so a booking
+  # with several lifecycle-closed folios must reopen every one of them — a
+  # withdrawal after the first would leave the rest blocked by the guard.
+  it "reopens every lifecycle-closed folio on the booking" do
+    folios = [
+      create(:booking_folio, booking: booking, hotel: hotel, status: "closed", closed_at: Time.current),
+      create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "closed", closed_at: Time.current),
+      create(:booking_folio, :secondary, booking: booking, hotel: hotel, status: "closed", closed_at: Time.current)
+    ]
+    folios.each do |folio|
+      create(
+        :folio_operation_log,
+        hotel: hotel,
+        booking: booking,
+        operation_type: "close_folio",
+        source_folio: folio,
+        target_folio: folio,
+        metadata: { source: "no_show_finalization" }
+      )
+    end
+
+    described_class.call(booking: booking, user: user)
+
+    expect(folios.map { |folio| folio.reload.status }).to all(eq("open"))
+    expect(folios.map { |folio| folio.reload.closed_at }).to all(be_nil)
+    expect(FolioOperationLog.where(operation_type: "reopen_folio", source_folio: folios).count).to eq(3)
+  end
 end
