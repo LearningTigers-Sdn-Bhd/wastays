@@ -123,6 +123,22 @@ class BookingFolio < ApplicationRecord
     folio_transactions.adjustment.sum(:amount)
   end
 
+  # The sanctioned door through `closed_folio_reopen_must_be_authorized`.
+  #
+  # Reopening a closed folio is guarded because it puts an invoiced, settled
+  # ledger back into an editable state. The guard is not the obstacle — it is
+  # the point — so this grants the authorization for exactly one block and
+  # always withdraws it, even when the block raises.
+  #
+  # Callers are responsible for the permission check, the lock and the
+  # operation log; this only lifts the validation.
+  def reopening_for_correction
+    authorize_reopen_for_correction!
+    yield self
+  ensure
+    clear_reopen_for_correction_authorization!
+  end
+
   private
 
   def guard_night_audit_operational_change
@@ -264,6 +280,4 @@ class BookingFolio < ApplicationRecord
   def clear_reopen_for_correction_authorization!
     @reopen_for_correction_authorized = false
   end
-
-  private :authorize_reopen_for_correction!, :clear_reopen_for_correction_authorization!
 end

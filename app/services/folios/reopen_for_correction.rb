@@ -36,13 +36,13 @@ module Folios
           return failure("Folio is already open.") if @booking_folio.open?
 
           invoice_number = @booking_folio.invoice_number
-          @booking_folio.send(:authorize_reopen_for_correction!)
-          @booking_folio.update!(status: "open")
-          record_financial_audit_event!(invoice_number)
 
-          success
-        ensure
-          @booking_folio.send(:clear_reopen_for_correction_authorization!)
+          @booking_folio.reopening_for_correction do
+            @booking_folio.update!(status: "open")
+            record_financial_audit_event!(invoice_number)
+
+            success
+          end
         end
       end
     rescue StandardError => e

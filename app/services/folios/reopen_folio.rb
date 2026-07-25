@@ -25,21 +25,20 @@ module Folios
         @folio.reload
         return failure("Only closed folios can be reopened.") unless @folio.closed?
 
-        @folio.send(:authorize_reopen_for_correction!)
-        @folio.update!(status: "open", closed_at: nil, closed_by: nil)
-        FolioOperationLog.create!(
-          hotel: @hotel,
-          booking: @booking,
-          actor: @user,
-          operation_type: "reopen_folio",
-          source_folio: @folio,
-          target_folio: @folio,
-          currency: @folio.currency,
-          reason: @reason,
-          metadata: { reopened_at: Time.current.iso8601 }
-        )
-      ensure
-        @folio.send(:clear_reopen_for_correction_authorization!)
+        @folio.reopening_for_correction do
+          @folio.update!(status: "open", closed_at: nil, closed_by: nil)
+          FolioOperationLog.create!(
+            hotel: @hotel,
+            booking: @booking,
+            actor: @user,
+            operation_type: "reopen_folio",
+            source_folio: @folio,
+            target_folio: @folio,
+            currency: @folio.currency,
+            reason: @reason,
+            metadata: { reopened_at: Time.current.iso8601 }
+          )
+        end
       end
 
       success(@folio)

@@ -335,4 +335,37 @@ RSpec.describe BookingFolio, type: :model do
       expect(folio.reload).to be_closed
     end
   end
+
+  describe "#reopening_for_correction" do
+    let(:folio) { create(:booking_folio, status: "closed") }
+
+    it "permits a reopen inside the block" do
+      folio.reopening_for_correction { folio.update!(status: "open") }
+
+      expect(folio.reload).to be_open
+    end
+
+    it "returns the block's value" do
+      expect(folio.reopening_for_correction { :reopened }).to eq(:reopened)
+    end
+
+    it "yields the folio" do
+      expect { |block| folio.reopening_for_correction(&block) }.to yield_with_args(folio)
+    end
+
+    it "withdraws the authorization once the block returns" do
+      folio.reopening_for_correction { folio.update!(status: "open") }
+      folio.update_column(:status, "closed")
+
+      expect { folio.update!(status: "open") }.to raise_error(ActiveRecord::RecordInvalid, /controlled correction workflow/)
+    end
+
+    it "withdraws the authorization when the block raises" do
+      expect {
+        folio.reopening_for_correction { raise "boom" }
+      }.to raise_error("boom")
+
+      expect { folio.update!(status: "open") }.to raise_error(ActiveRecord::RecordInvalid, /controlled correction workflow/)
+    end
+  end
 end

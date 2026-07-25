@@ -33,18 +33,24 @@ RSpec.describe Folios::ReopenFolio do
     expect(described_class.call(folio: folio, user: user).error).to eq("Only closed folios can be reopened.")
   end
 
-  it "clears the temporary reopen authorization after success" do
+  # The authorization must not outlive the service call — otherwise the folio
+  # instance would go on accepting unguarded reopens for the rest of the request.
+  it "leaves the reopen guard back in force after success" do
     described_class.call(folio: folio, user: user)
+    folio.update_column(:status, "closed")
 
-    expect(folio.instance_variable_get(:@reopen_for_correction_authorized)).to be(false)
+    expect(folio.update(status: "open")).to be(false)
+    expect(folio.errors[:status]).to include("can only be reopened through the controlled correction workflow")
   end
 
-  it "clears the temporary reopen authorization when persistence fails" do
+  it "leaves the reopen guard back in force when persistence fails" do
     allow(folio).to receive(:update!).and_raise(ActiveRecord::RecordInvalid.new(folio))
 
     result = described_class.call(folio: folio, user: user)
 
     expect(result).not_to be_success
-    expect(folio.instance_variable_get(:@reopen_for_correction_authorized)).to be(false)
+    allow(folio).to receive(:update!).and_call_original
+    expect(folio.update(status: "open")).to be(false)
+    expect(folio.errors[:status]).to include("can only be reopened through the controlled correction workflow")
   end
 end
