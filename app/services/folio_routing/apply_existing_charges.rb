@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module FolioRouting
   class ApplyExistingCharges
@@ -57,11 +56,11 @@ module FolioRouting
     end
 
     def success(transactions)
-      OpenStruct.new(success?: true, transactions: transactions)
+      FolioRouting::BatchResult.success(transactions: transactions)
     end
 
     def failure(message, transactions = [])
-      OpenStruct.new(success?: false, error: message, transactions: transactions)
+      FolioRouting::BatchResult.failure(message, transactions: transactions)
     end
   end
 end

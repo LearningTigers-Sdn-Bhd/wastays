@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class PostStaffTransaction
@@ -94,7 +93,7 @@ module Folios
     private
 
     def resolve_manual_charge_folio
-      return OpenStruct.new(success?: true, folio: @folio, route_source: nil, route_metadata: {}, error: nil) unless manual_charge_with_code?
+      return Folios::RouteResult.success(folio: @folio, route_metadata: {}) unless manual_charge_with_code?
 
       resolved = Folios::ResolveTargetFolio.call(booking: @folio.booking, transaction_code: @transaction_code, actor: @user, permission_context: @options[:permission_context] || @user)
       return resolved unless resolved.success?
@@ -112,12 +111,10 @@ module Folios
     end
 
     def selected_folio_route
-      OpenStruct.new(
-        success?: true,
+      Folios::RouteResult.success(
         folio: @folio,
         route_source: "selected_folio",
-        route_metadata: { selected_folio_id: @folio.id },
-        error: nil
+        route_metadata: { selected_folio_id: @folio.id }
       )
     end
 

@@ -45,7 +45,7 @@ module Folios
     end
 
     def resolve_route(line)
-      return OpenStruct.new(success?: false, folio: nil, route_source: nil, route_metadata: {}, error: "Missing transaction code") if line[:transaction_code].blank?
+      return Folios::RouteResult.failure("Missing transaction code", route_metadata: {}) if line[:transaction_code].blank?
 
       ResolveTargetFolio.call(
         booking: @booking,

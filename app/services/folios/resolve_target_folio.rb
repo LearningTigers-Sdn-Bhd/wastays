@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class ResolveTargetFolio
@@ -148,11 +147,11 @@ module Folios
     end
 
     def success(folio, source, metadata)
-      OpenStruct.new(success?: true, folio: folio, route_source: source, route_metadata: metadata, error: nil)
+      Folios::RouteResult.success(folio: folio, route_source: source, route_metadata: metadata)
     end
 
     def failure(error, source:, metadata: {})
-      OpenStruct.new(success?: false, folio: nil, route_source: source, route_metadata: metadata || {}, error: error)
+      Folios::RouteResult.failure(error, route_source: source, route_metadata: metadata || {})
     end
   end
 end

@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module FolioRouting
   # Kind-agnostic core: ensure an active routing rule sending a transaction code
@@ -44,7 +43,7 @@ module FolioRouting
 
     private
 
-    def success(rule) = OpenStruct.new(success?: true, rule: rule, error: nil)
-    def failure(error) = OpenStruct.new(success?: false, rule: nil, error: error)
+    def success(rule) = FolioRouting::RuleResult.success(rule: rule)
+    def failure(error) = FolioRouting::RuleResult.failure(error)
   end
 end

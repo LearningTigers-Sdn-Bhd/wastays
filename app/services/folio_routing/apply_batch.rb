@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module FolioRouting
   class ApplyBatch
@@ -42,7 +41,7 @@ module FolioRouting
       FolioRoutingRule.transaction do
         @booking.lock!
         batch = @booking.billing_route_batches.find_by(idempotency_key: @idempotency_key)
-        return OpenStruct.new(success?: true, transactions: []) if batch&.completed_at?
+        return FolioRouting::BatchResult.success(transactions: []) if batch&.completed_at?
         batch ||= @booking.billing_route_batches.create!(hotel: @booking.hotel, actor: @actor, idempotency_key: @idempotency_key)
         saved_parent_rules = changes.map { |change| [ change, save_rule(change) ] }
         saved_child_rules = child_changes.map { |change| [ change, save_child_rule(change) ] }
@@ -56,7 +55,7 @@ module FolioRouting
           saved_child_rules.each do |change, rule|
             next if changed_parent_ids.include?(change[:row].code.id)
 
-            movement_rule = rule || OpenStruct.new(booking: @booking, booking_id: @booking.id,
+            movement_rule = rule || FolioRouting::TransientRule.new(booking: @booking, booking_id: @booking.id,
               transaction_code_id: change[:child].code.id, target_folio: change[:row].target_folio,
               target_folio_id: change[:row].target_folio&.id, effective_from: nil, effective_until: nil)
             result = FolioRouting::ApplyExistingCharges.call(rule: movement_rule, actor: @actor, reason: @reason, confirmation: @confirmation)
@@ -76,7 +75,7 @@ module FolioRouting
       end
       return failure(@error) if @error
 
-      OpenStruct.new(success?: true, transactions: moved)
+      FolioRouting::BatchResult.success(transactions: moved)
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages.to_sentence)
     end
@@ -84,18 +83,19 @@ module FolioRouting
     def self.preview(booking:, routes:)
       service = new(booking:, actor: nil, routes:, confirmation: nil, forecast_confirmation: nil, reason: nil)
       changes = service.send(:validated_changes)
-      return OpenStruct.new(success?: false, error: service.instance_variable_get(:@error)) if service.instance_variable_get(:@error)
+      return FolioRouting::BatchPreview.failure(service.instance_variable_get(:@error)) if service.instance_variable_get(:@error)
       child_changes = service.send(:validated_child_changes)
-      return OpenStruct.new(success?: false, error: service.instance_variable_get(:@error)) if service.instance_variable_get(:@error)
+      return FolioRouting::BatchPreview.failure(service.instance_variable_get(:@error)) if service.instance_variable_get(:@error)
       tax_changes = service.send(:validated_tax_changes)
-      return OpenStruct.new(success?: false, error: service.instance_variable_get(:@error)) if service.instance_variable_get(:@error)
+      return FolioRouting::BatchPreview.failure(service.instance_variable_get(:@error)) if service.instance_variable_get(:@error)
 
       all_changes = changes + child_changes
       impacts = service.send(:preview, all_changes)
       upcoming = service.send(:upcoming_impact, all_changes, tax_changes)
-      OpenStruct.new(success?: true, changes:, child_changes:, tax_changes:, impacts:,
+      FolioRouting::BatchPreview.success(changes:, child_changes:, tax_changes:, impacts:,
         count: impacts.sum { |item| item[:preview].count }, amount: impacts.sum { |item| item[:preview].amount },
-        upcoming_count: upcoming[:count], upcoming_amount: upcoming[:amount], review_required?: impacts.any? || upcoming[:count].positive? || child_changes.any? || tax_changes.any?)
+        upcoming_count: upcoming[:count], upcoming_amount: upcoming[:amount],
+        "review_required?": impacts.any? || upcoming[:count].positive? || child_changes.any? || tax_changes.any?)
     end
 
     private
@@ -269,7 +269,7 @@ module FolioRouting
     end
 
     def failure(message)
-      OpenStruct.new(success?: false, error: message)
+      FolioRouting::BatchResult.failure(message, transactions: [])
     end
   end
 end

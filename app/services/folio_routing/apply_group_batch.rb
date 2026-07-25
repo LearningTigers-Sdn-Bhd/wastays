@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 require "digest"
 
 module FolioRouting
@@ -39,7 +38,7 @@ module FolioRouting
           raise ActiveRecord::Rollback, (@error = "This idempotency key was already used for a different group billing change.")
         end
         if batch&.completed_at?
-          return OpenStruct.new(success?: true, transactions: [], touched_booking_ids: [])
+          return FolioRouting::GroupBatchResult.success(transactions: [], touched_booking_ids: [])
         end
         batch ||= @group_booking.group_billing_change_batches.create!(
           hotel: @group_booking.hotel, actor: @actor, idempotency_key: @idempotency_key, payload_digest: payload_digest
@@ -78,7 +77,7 @@ module FolioRouting
       end
       return failure(@error) if @error
 
-      OpenStruct.new(success?: true, transactions: moved, touched_booking_ids: touched_ids)
+      FolioRouting::GroupBatchResult.success(transactions: moved, touched_booking_ids: touched_ids)
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages.to_sentence)
     end
@@ -89,17 +88,17 @@ module FolioRouting
         next if routes.blank?
 
         booking_preview = ApplyBatch.preview(booking: booking, routes: routes)
-        return failure(booking_preview.error) unless booking_preview.success?
+        return preview_failure(booking_preview.error) unless booking_preview.success?
 
         { booking: booking, preview: booking_preview }
       end
 
-      OpenStruct.new(success?: true, bookings: results,
+      FolioRouting::GroupBatchPreview.success(bookings: results,
         count: results.sum { |item| item[:preview].count },
         amount: results.sum { |item| item[:preview].amount },
         upcoming_count: results.sum { |item| item[:preview].upcoming_count },
         upcoming_amount: results.sum { |item| item[:preview].upcoming_amount },
-        review_required?: results.any? { |item| item[:preview].review_required? })
+        "review_required?": results.any? { |item| item[:preview].review_required? })
     end
 
     private
@@ -120,7 +119,11 @@ module FolioRouting
     end
 
     def failure(message)
-      OpenStruct.new(success?: false, error: message)
+      FolioRouting::GroupBatchResult.failure(message, transactions: [], touched_booking_ids: [])
+    end
+
+    def preview_failure(message)
+      FolioRouting::GroupBatchPreview.failure(message)
     end
   end
 end

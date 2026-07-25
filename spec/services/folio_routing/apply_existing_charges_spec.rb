@@ -35,7 +35,7 @@ RSpec.describe FolioRouting::ApplyExistingCharges do
     charge = create(:folio_transaction, booking_folio: source_folio, transaction_code: code, amount: 75)
     moved = create(:folio_transaction, booking_folio: target_folio, transaction_code: code, amount: 75)
     allow(Folios::AttachedTaxTransactions).to receive(:call).with(charge).and_return([])
-    allow(Folios::MoveTransaction).to receive(:call).and_return(OpenStruct.new(success?: true, transactions: [ moved ]))
+    allow(Folios::MoveTransaction).to receive(:call).and_return(Folios::MoveResult.success(transactions: [ moved ], transaction: moved))
 
     result = described_class.call(rule: rule, actor: actor, reason: "Move historical charge", confirmation: "existing_and_future")
 
@@ -63,7 +63,7 @@ RSpec.describe FolioRouting::ApplyExistingCharges do
     allow(Folios::AttachedTaxTransactions).to receive(:call).with(first).and_return([])
     allow(Folios::AttachedTaxTransactions).to receive(:call).with(second).and_return([])
     allow(Folios::MoveTransaction).to receive(:call)
-      .and_return(OpenStruct.new(success?: true, transactions: [ moved ]), OpenStruct.new(success?: false, error: "Move failed"))
+      .and_return(Folios::MoveResult.success(transactions: [ moved ], transaction: moved), Folios::MoveResult.failure("Move failed", transactions: []))
 
     result = described_class.call(rule: rule, actor: nil, reason: "Move", confirmation: "existing_and_future")
 
