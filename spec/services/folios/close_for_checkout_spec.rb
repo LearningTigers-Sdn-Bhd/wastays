@@ -102,7 +102,7 @@ RSpec.describe Folios::CloseForCheckout do
     folio = create(:booking_folio, booking: booking, status: "open")
     create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
     create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
-    allow(Folios::RecordPaymentFromGateway).to receive(:call).and_return(OpenStruct.new(success?: false, error: "sync failed"))
+    allow(Folios::RecordPaymentFromGateway).to receive(:call).and_return(Folios::TransactionResult.failure("sync failed"))
 
     result = described_class.call(booking: booking, user: user)
 
@@ -130,7 +130,7 @@ RSpec.describe Folios::CloseForCheckout do
     create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
     create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 100.0)
     create(:refund_request, booking: booking, status: "completed", refund_amount: 20.0)
-    allow(Folios::RecordRefund).to receive(:call).and_return(OpenStruct.new(success?: false, error: "sync failed"))
+    allow(Folios::RecordRefund).to receive(:call).and_return(Folios::TransactionResult.failure("sync failed"))
 
     result = described_class.call(booking: booking, user: user)
 

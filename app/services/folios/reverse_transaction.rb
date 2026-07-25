@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class ReverseTransaction
@@ -166,11 +165,11 @@ module Folios
     end
 
     def success(transaction, transactions = [ transaction ])
-      OpenStruct.new(success?: true, transaction: transaction, transactions: transactions)
+      Folios::TransactionResult.success(transaction: transaction, transactions: transactions)
     end
 
     def failure(error)
-      OpenStruct.new(success?: false, error: error)
+      Folios::TransactionResult.failure(error)
     end
   end
 end

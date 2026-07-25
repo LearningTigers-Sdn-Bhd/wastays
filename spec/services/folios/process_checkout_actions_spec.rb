@@ -72,7 +72,7 @@ RSpec.describe Folios::ProcessCheckoutActions do
 
   it "posts an approved checkout payment" do
     create(:folio_transaction, booking_folio: guest_folio, amount: 100)
-    posted = OpenStruct.new(success?: true)
+    posted = Folios::TransactionResult.success(transaction: nil)
     allow(Folios::PostStaffTransaction).to receive(:call).and_return(posted)
 
     result = call_service({
@@ -99,7 +99,7 @@ RSpec.describe Folios::ProcessCheckoutActions do
   }.each do |method, payment_source|
     it "posts #{method} checkout payments through the #{payment_source} payment source" do
       create(:folio_transaction, booking_folio: guest_folio, amount: 100)
-      allow(Folios::PostStaffTransaction).to receive(:call).and_return(OpenStruct.new(success?: true))
+      allow(Folios::PostStaffTransaction).to receive(:call).and_return(Folios::TransactionResult.success(transaction: nil))
 
       result = call_service({
         guest_folio.id.to_s => { action: "pay_now", amount: "100.00", payment_method: method, payment_reference: "REF-1" },

@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 require "securerandom"
 
 module Folios
@@ -275,8 +274,7 @@ module Folios
     end
 
     def success(source_transactions, target_transactions)
-      OpenStruct.new(
-        success?: true,
+      Folios::SplitResult.success(
         source_transactions: source_transactions,
         target_transactions: target_transactions,
         transaction: target_transactions.first,
@@ -285,7 +283,7 @@ module Folios
     end
 
     def failure(error)
-      OpenStruct.new(success?: false, error: error, source_transactions: [], target_transactions: [], transaction: nil)
+      Folios::SplitResult.failure(error, source_transactions: [], target_transactions: [])
     end
   end
 end

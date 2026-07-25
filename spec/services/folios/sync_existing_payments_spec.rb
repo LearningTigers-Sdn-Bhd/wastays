@@ -59,7 +59,7 @@ RSpec.describe Folios::SyncExistingPayments do
 
   it "raises when a payment transaction cannot be inserted" do
     create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: open_date.noon)
-    failed_result = OpenStruct.new(success?: false, error: "posting blocked")
+    failed_result = Folios::TransactionResult.failure("posting blocked")
     insert_service = instance_double(Folios::InsertTransaction, call: failed_result)
     allow(Folios::InsertTransaction).to receive(:new).and_return(insert_service)
 

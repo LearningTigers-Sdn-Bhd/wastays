@@ -256,7 +256,7 @@ RSpec.describe Folios::PostNightlyCharges do
       check_out: business_date + 1.day)
     create(:booking_room, booking: booking, subtotal: 100.0)
     create(:booking_folio, hotel: hotel, booking: booking)
-    allow_any_instance_of(Folios::InsertTransaction).to receive(:call).and_return(OpenStruct.new(success?: false, error: "posting failed"))
+    allow_any_instance_of(Folios::InsertTransaction).to receive(:call).and_return(Folios::TransactionResult.failure("posting failed"))
 
     expect {
       described_class.call(night_audit: night_audit, user: user)

@@ -62,7 +62,7 @@ RSpec.describe Folios::InitializeForBooking do
 
   it "rolls back folio creation when captured payments cannot be synced" do
     create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
-    failed_result = OpenStruct.new(success?: false, error: "posting blocked")
+    failed_result = Folios::TransactionResult.failure("posting blocked")
     insert_service = instance_double(Folios::InsertTransaction, call: failed_result)
     allow(Folios::InsertTransaction).to receive(:new).and_return(insert_service)
 

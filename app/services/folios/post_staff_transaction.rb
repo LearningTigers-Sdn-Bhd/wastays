@@ -85,7 +85,7 @@ module Folios
           raise ActiveRecord::Rollback
         end
 
-        result.tax_transactions = tax_results.map(&:transaction).compact
+        result = result.with(tax_transactions: tax_results.map(&:transaction).compact)
       end
 
       result
@@ -340,7 +340,7 @@ module Folios
     end
 
     def failure(error)
-      OpenStruct.new(success?: false, error: error)
+      Folios::TransactionResult.failure(error)
     end
   end
 end

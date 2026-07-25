@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class RecordPaymentFromGateway
@@ -60,11 +59,11 @@ module Folios
     end
 
     def self.success(transaction)
-      OpenStruct.new(success?: true, transaction: transaction)
+      Folios::TransactionResult.success(transaction: transaction)
     end
 
     def self.failure(error)
-      OpenStruct.new(success?: false, error: error)
+      Folios::TransactionResult.failure(error)
     end
   end
 end

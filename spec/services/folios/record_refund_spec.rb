@@ -52,7 +52,7 @@ RSpec.describe Folios::RecordRefund do
 
   it "returns the existing refund when insert fails after another process records it" do
     folio = create(:booking_folio, booking: booking)
-    failed_result = OpenStruct.new(success?: false, error: "duplicate key")
+    failed_result = Folios::TransactionResult.failure("duplicate key")
     insert_service = instance_double(Folios::InsertTransaction, call: failed_result)
     existing = nil
     allow(insert_service).to receive(:call) do
@@ -86,7 +86,7 @@ RSpec.describe Folios::RecordRefund do
 
   it "fails when the folio transaction cannot be inserted" do
     create(:booking_folio, booking: booking)
-    failed_result = OpenStruct.new(success?: false, error: "posting blocked")
+    failed_result = Folios::TransactionResult.failure("posting blocked")
     insert_service = instance_double(Folios::InsertTransaction, call: failed_result)
     allow(Folios::InsertTransaction).to receive(:new).and_return(insert_service)
 

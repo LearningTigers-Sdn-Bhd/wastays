@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class RecordTourismTaxPayment
@@ -69,11 +68,11 @@ module Folios
     end
 
     def success(transaction)
-      OpenStruct.new(success?: true, transaction: transaction)
+      Folios::TransactionResult.success(transaction: transaction)
     end
 
     def failure(error)
-      OpenStruct.new(success?: false, error: error)
+      Folios::TransactionResult.failure(error)
     end
   end
 end

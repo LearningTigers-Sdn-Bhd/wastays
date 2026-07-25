@@ -485,7 +485,7 @@ RSpec.describe Folios::PostStaffTransaction do
 
     allow(Folios::InsertTransaction).to receive(:new).and_wrap_original do |method, **kwargs|
       if kwargs[:category] == "tax"
-        instance_double(Folios::InsertTransaction, call: OpenStruct.new(success?: false, error: "tax failed"))
+        instance_double(Folios::InsertTransaction, call: Folios::TransactionResult.failure("tax failed"))
       else
         method.call(**kwargs)
       end

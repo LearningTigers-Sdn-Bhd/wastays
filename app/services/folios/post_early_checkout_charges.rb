@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
 
 module Folios
   class PostEarlyCheckoutCharges
@@ -273,11 +272,11 @@ module Folios
     end
 
     def success(transactions)
-      OpenStruct.new(success?: true, transactions: transactions)
+      Folios::TransactionResult.success(transactions: transactions)
     end
 
     def failure(error)
-      OpenStruct.new(success?: false, error: error)
+      Folios::TransactionResult.failure(error)
     end
   end
 end
