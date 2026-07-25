@@ -5,6 +5,8 @@ require "securerandom"
 
 module Folios
   class MoveTransaction
+    include Authorizable
+
     PERMISSION = "manage_folio_movements"
 
     def self.call(transaction:, target_folio:, user:, reason:, posting_date: nil, tax_routes: {})
@@ -229,8 +231,7 @@ module Folios
     end
 
     def permitted?
-      @user&.respond_to?(:superadmin?) && @user.superadmin? ||
-        @user&.respond_to?(:has_permission?) && @user.has_permission?(PERMISSION, hotel: @hotel)
+      actor_permits?(@user, PERMISSION, hotel: @hotel)
     end
 
     def validate_tax_routes

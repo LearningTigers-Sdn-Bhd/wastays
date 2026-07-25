@@ -4,6 +4,8 @@ require "ostruct"
 
 module Folios
   class UpdateFolio
+    include Authorizable
+
     PERMISSION = "manage_folio_windows"
 
     def self.call(folio:, user:, attributes: {})
@@ -115,8 +117,7 @@ module Folios
     end
 
     def permitted?
-      @user&.respond_to?(:superadmin?) && @user.superadmin? ||
-        @user&.respond_to?(:has_permission?) && @user.has_permission?(PERMISSION, hotel: @hotel)
+      actor_permits?(@user, PERMISSION, hotel: @hotel)
     end
 
     def success(folio)

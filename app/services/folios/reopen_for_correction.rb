@@ -4,6 +4,8 @@ require "ostruct"
 
 module Folios
   class ReopenForCorrection
+    include Authorizable
+
     PERMISSION = "post_folio_corrections".freeze
 
     def self.call(booking_folio:, user:, correction_reason:, correction_note:)
@@ -52,12 +54,11 @@ module Folios
     private
 
     def staff_user?
-      @user.present? && @user.respond_to?(:has_permission?)
+      @user.is_a?(User)
     end
 
     def permitted?
-      (@user.respond_to?(:superadmin?) && @user.superadmin?) ||
-        @user.has_permission?(PERMISSION, hotel: @booking_folio.hotel)
+      actor_permits?(@user, PERMISSION, hotel: @booking_folio.hotel)
     end
 
     def record_financial_audit_event!(invoice_number)

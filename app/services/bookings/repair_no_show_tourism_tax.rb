@@ -4,6 +4,8 @@ require "ostruct"
 
 module Bookings
   class RepairNoShowTourismTax
+    include Authorizable
+
     SOURCE = "no_show_tourism_tax_repair"
     REASON = "no_show_tourism_tax_not_due"
     NOTE = "Tourism tax removed because the guest did not check in."
@@ -88,10 +90,7 @@ module Bookings
     private
 
     def permitted?
-      return true if @user&.respond_to?(:superadmin?) && @user.superadmin?
-      return false unless @user&.respond_to?(:has_permission?)
-
-      REQUIRED_PERMISSIONS.all? { |permission| @user.has_permission?(permission, hotel: @booking.hotel) }
+      actor_permits_all?(@user, REQUIRED_PERMISSIONS, hotel: @booking.hotel)
     end
 
     def reopen_for_repair!(folio)

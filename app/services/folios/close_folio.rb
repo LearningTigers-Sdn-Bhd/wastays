@@ -4,6 +4,8 @@ require "ostruct"
 
 module Folios
   class CloseFolio
+    include Authorizable
+
     PERMISSION = "manage_folio_windows"
     CREDIT_OVERRIDE_PERMISSION = "override_corporate_credit_limit"
 
@@ -149,8 +151,7 @@ module Folios
     end
 
     def credit_override_permitted?
-      @user&.respond_to?(:superadmin?) && @user.superadmin? ||
-        @user&.respond_to?(:has_permission?) && @user.has_permission?(CREDIT_OVERRIDE_PERMISSION, hotel: @hotel)
+      actor_permits?(@user, CREDIT_OVERRIDE_PERMISSION, hotel: @hotel)
     end
 
     def formatted_balance(balance)
@@ -158,8 +159,7 @@ module Folios
     end
 
     def permitted?
-      @user&.respond_to?(:superadmin?) && @user.superadmin? ||
-        @user&.respond_to?(:has_permission?) && @user.has_permission?(PERMISSION, hotel: @hotel)
+      actor_permits?(@user, PERMISSION, hotel: @hotel)
     end
 
     def success(folio)

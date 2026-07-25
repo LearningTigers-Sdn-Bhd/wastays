@@ -2,6 +2,8 @@
 
 module Folios
   class TransactionActionPolicy
+    include Authorizable
+
     OVERRIDE_PERMISSION = FinancialControls::PostingGuard::OVERRIDE_PERMISSION
 
     attr_reader :transaction, :user, :posting_date
@@ -156,17 +158,11 @@ module Folios
     end
 
     def correction_permission?
-      return true if user&.respond_to?(:superadmin?) && user.superadmin?
-      return false unless user&.respond_to?(:has_permission?)
-
-      user.has_permission?("post_folio_corrections", hotel: transaction.booking_folio.hotel)
+      actor_permits?(user, "post_folio_corrections", hotel: transaction.booking_folio.hotel)
     end
 
     def override_allowed?
-      return true if user&.respond_to?(:superadmin?) && user.superadmin?
-      return false unless user&.respond_to?(:has_permission?)
-
-      user.has_permission?(OVERRIDE_PERMISSION, hotel: transaction.booking_folio.hotel)
+      actor_permits?(user, OVERRIDE_PERMISSION, hotel: transaction.booking_folio.hotel)
     end
 
     def gateway_payment_action_label

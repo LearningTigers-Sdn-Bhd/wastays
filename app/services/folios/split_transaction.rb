@@ -5,6 +5,8 @@ require "securerandom"
 
 module Folios
   class SplitTransaction
+    include Authorizable
+
     PERMISSION = "manage_folio_movements"
 
     def self.call(transaction:, target_folio:, user:, reason:, amount: nil, percent: nil, posting_date: nil)
@@ -269,8 +271,7 @@ module Folios
     end
 
     def permitted?
-      @user&.respond_to?(:superadmin?) && @user.superadmin? ||
-        @user&.respond_to?(:has_permission?) && @user.has_permission?(PERMISSION, hotel: @hotel)
+      actor_permits?(@user, PERMISSION, hotel: @hotel)
     end
 
     def success(source_transactions, target_transactions)

@@ -236,6 +236,9 @@ branch that would be riskiest to change.
 
 ### M5 — `SystemActor` + `Authorizable` concern
 
+> **Delivered as `Authorizable` only. `SystemActor` was not built — see
+> "Correction after implementation" at the end of this section.**
+
 **Decided:** null-object `SystemActor`; drop the `respond_to?` guards.
 
 Kills 16 copies of the permission idiom **and** three competing system-actor
@@ -319,6 +322,52 @@ boundary instead of silently passing.
 Be deliberate about this rather than discovering it at runtime.
 
 **Risk: low.** Behaviour-preserving given the derived allowlist.
+
+#### Correction after implementation
+
+**`SystemActor` was not built, because the premise above is wrong.** The three
+"competing system-actor bypasses" are not three bypasses of the same thing:
+
+| Claimed bypass | What it actually bypasses |
+|---|---|
+| `system_folio_initialization` (`initialize_for_booking`) | `NightAudits::OperationalChangeGuard` — an **operational** guard, not a permission check. `InitializeForBooking` has no permission check to bypass |
+| "no check at all" | same — these paths never had a permission check |
+| `skip_authorization` (`create_folio`) | a real permission check, but **not by a system caller** |
+
+The single caller of `skip_authorization` is
+`BookingBillingParties::ManageCompany`, which passes `actor: current_user` — a
+real staff member, already gated on `manage_bookings` by
+`workspace_actions_controller#authorize_manage_bookings!`. Creating the company's
+folio is part of adding the billing party, so it deliberately does not also
+demand `manage_folio_windows`. Replacing that actor with a null object would have
+**lost audit attribution**: `created_by` and the `FolioOperationLog` actor both
+record it.
+
+So there is no permission path that wants a null actor. Building `SystemActor`
+would have meant inventing an actor for a problem the permission layer does not
+have, and the allowlist — the part with the actual value — would have had nothing
+to gate.
+
+**What was delivered instead:** the `Authorizable` concern
+(`app/services/authorizable.rb`), replacing the idiom in **14** methods across 11
+files. Two findings drove its shape:
+
+- The `superadmin?` clause is **dead for Users** — `User#has_permission?`
+  already returns `true` for a superadmin (`user.rb:45`). The only actor that
+  clause can decide alone is a non-`User`.
+- Which is the hole: `respond_to?` made authorization duck-typed. `ApiKey`
+  answers `superadmin?` as `bearer.nil?` and has no `has_permission?`, so an
+  unbound key passed on the first clause and never reached a permission lookup.
+
+`actor_permits?` denies `nil` exactly as before, and raises `UnsupportedActor`
+for anything that is neither `nil` nor a `User`. Also swept in
+`FinancialControls::PostingGuard#override_permission?`, which carried the same
+idiom while gating `override_financial_date_lock` — the most sensitive
+permission of the set.
+
+The two permissions M5 wanted excluded by construction
+(`override_corporate_credit_limit`, `post_folio_corrections`) remain
+unreachable without a real user, which was the goal.
 
 ### M6 — Fix `ApplyBatch.preview`
 
@@ -423,7 +472,7 @@ navigation for either.
 | 1 | M7 delete alias · verb glossary | 3 | trivial |
 | 2 | M1 transaction-code resolver | ~20 | low |
 | 3 | M3 reopen API | 5 | low |
-| 4 | M5 `SystemActor` + `Authorizable` concern | 16 (+1 new) | low |
+| 4 | M5 `Authorizable` concern (no `SystemActor` — see M5 correction) | 11 (+1 new) | low |
 | 5 | M2 `Result`, family by family | 25 (3 slices) | med |
 | 6 | M4 `BuildGuestFolio` | 3 | low |
 | 7 | M6 `ApplyBatch` | 3 | low–med |

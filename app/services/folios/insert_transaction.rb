@@ -4,6 +4,8 @@ require "ostruct"
 
 module Folios
   class InsertTransaction
+    include Authorizable
+
     def initialize(booking_folio:, amount:, transaction_type:, category:, user:, description: nil, posting_date: nil, catch_up_key: nil, options: {})
       @booking_folio = booking_folio
       @amount = amount.to_d
@@ -90,8 +92,7 @@ module Folios
       end
 
       return if permission.blank?
-      return if @user.respond_to?(:superadmin?) && @user.superadmin?
-      return if @user.respond_to?(:has_permission?) && @user.has_permission?(permission, hotel: @booking_folio.hotel)
+      return if actor_permits?(@user, permission, hotel: @booking_folio.hotel)
 
       "You do not have permission to post this transaction (#{permission})."
     end

@@ -2,6 +2,8 @@
 
 module FinancialControls
   class PostingGuard
+    include Authorizable
+
     class PostingBlocked < StandardError; end
     class OverrideReasonRequired < PostingBlocked; end
     class PermissionRequired < PostingBlocked; end
@@ -93,11 +95,8 @@ module FinancialControls
 
     def override_permission?
       return true if system_override?
-      return false unless @permission_context
-      return true if @permission_context.respond_to?(:superadmin?) && @permission_context.superadmin?
-      return false unless @permission_context.respond_to?(:has_permission?)
 
-      @permission_context.has_permission?(OVERRIDE_PERMISSION, hotel: @hotel)
+      actor_permits?(@permission_context, OVERRIDE_PERMISSION, hotel: @hotel)
     end
 
     def system_override?

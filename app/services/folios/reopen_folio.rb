@@ -4,6 +4,8 @@ require "ostruct"
 
 module Folios
   class ReopenFolio
+    include Authorizable
+
     PERMISSION = "manage_folio_windows"
 
     def self.call(folio:, user:, reason: nil)
@@ -51,8 +53,7 @@ module Folios
     private
 
     def permitted?
-      @user&.respond_to?(:superadmin?) && @user.superadmin? ||
-        @user&.respond_to?(:has_permission?) && @user.has_permission?(PERMISSION, hotel: @hotel)
+      actor_permits?(@user, PERMISSION, hotel: @hotel)
     end
 
     def success(folio)

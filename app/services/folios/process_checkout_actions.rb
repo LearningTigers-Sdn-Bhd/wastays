@@ -4,6 +4,8 @@ require "ostruct"
 
 module Folios
   class ProcessCheckoutActions
+    include Authorizable
+
     PAYMENT_ACTION = "pay_now"
     DIRECT_BILL_ACTION = "direct_bill"
     CLOSE_ACTION = "close"
@@ -240,8 +242,7 @@ module Folios
     end
 
     def can_post_payments?
-      @user&.respond_to?(:superadmin?) && @user.superadmin? ||
-        @user&.respond_to?(:has_permission?) && @user.has_permission?("post_folio_payments", hotel: @hotel)
+      actor_permits?(@user, "post_folio_payments", hotel: @hotel)
     end
 
     def money(amount)

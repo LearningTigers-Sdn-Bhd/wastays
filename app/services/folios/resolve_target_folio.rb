@@ -4,6 +4,8 @@ require "ostruct"
 
 module Folios
   class ResolveTargetFolio
+    include Authorizable
+
     PERMISSION = "manage_folio_movements"
 
     def self.call(booking:, transaction_code:, parent_transaction: nil, fallback_transaction_code: nil, override_target_folio: nil, override_reason: nil, actor: nil, permission_context: nil, posting_date: nil)
@@ -138,9 +140,11 @@ module Folios
       }.compact
     end
 
+    # Only reached from override_route, so it gates a manual routing override and
+    # never normal routing. An absent permission context therefore means "no one
+    # asked for an override", which is correctly denied rather than escalated.
     def permitted?
-      @permission_context&.respond_to?(:superadmin?) && @permission_context.superadmin? ||
-        @permission_context&.respond_to?(:has_permission?) && @permission_context.has_permission?(PERMISSION, hotel: @hotel)
+      actor_permits?(@permission_context, PERMISSION, hotel: @hotel)
     end
 
     def success(folio, source, metadata)

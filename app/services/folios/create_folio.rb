@@ -4,6 +4,8 @@ require "ostruct"
 
 module Folios
   class CreateFolio
+    include Authorizable
+
     PERMISSION = "manage_folio_windows"
 
     def self.call(booking:, user:, attributes: {}, skip_authorization: false)
@@ -132,11 +134,15 @@ module Folios
       ActiveModel::Type::Boolean.new.cast(@attributes[:is_primary])
     end
 
+    # skip_authorization is not a system bypass — the one caller
+    # (BookingBillingParties::ManageCompany) passes a real staff actor who was
+    # already gated on "manage_bookings" upstream. Creating the company's folio
+    # is part of adding the billing party, so it deliberately does not demand
+    # "manage_folio_windows" as well. The actor is still recorded on created_by.
     def permitted?
       return true if @skip_authorization
 
-      @user&.respond_to?(:superadmin?) && @user.superadmin? ||
-        @user&.respond_to?(:has_permission?) && @user.has_permission?(PERMISSION, hotel: @hotel)
+      actor_permits?(@user, PERMISSION, hotel: @hotel)
     end
 
     def success(folio)
