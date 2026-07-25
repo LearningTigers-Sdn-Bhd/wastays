@@ -147,6 +147,10 @@ lives; a plain key lookup would leave it copied in 4 places.
 
 ### M2 — `Result` value object (replace `OpenStruct`)
 
+> **Delivered.** `OpenStruct` is gone from `app/services/folios/` and
+> `app/services/folio_routing/`. See "Notes after implementation" at the end of
+> this section.
+
 Kills 30+ ad-hoc shapes and a silent-nil bug class in money-handling code
 (`OpenStruct` answers any message, so `result.sucess?` returns `nil` — falsy,
 silent).
@@ -162,6 +166,39 @@ The real risk is the mirror image: `Data` raises where `OpenStruct` returned
 latent bugs today. **Mitigation:** land per-family — lifecycle results first
 (the most uniform shape, 8 files), then transactions, then routing, with a full
 `bin/test` between slices. **Risk: medium**, mechanical.
+
+#### Notes after implementation
+
+Landed in four commits — lifecycle, postings, routing/batches, reports — each
+with a full `bin/test` between. Three findings worth carrying forward:
+
+**One shared result per family was too coarse.** M2 proposed
+`TransactionResult(:transaction, :transactions)` for everything that posts. Move
+and split got their own shapes instead: a `MoveResult` that nil-filled
+`source_transactions` would reintroduce exactly the laxity being removed. Seven
+result types and six report types in total, each naming only what it produces.
+The reports — `RoutePreview::Report`, `BookingCheckoutReadiness::Report`,
+`NightlyChargeReconciliation::Report` — are plain `Data`, not
+`ApplicationResult`: they have no failure mode, and forcing one would invent it.
+
+**The mutation, not the read, was the real find.** `post_staff_transaction`
+wrote `result.tax_transactions =` onto the result it got back from
+`InsertTransaction` — a member `InsertTransaction` never declares. Only
+`OpenStruct` permits that; the caller was conjuring the field into existence.
+`Data` is frozen, so it is now `result.with(...)` against a declared member.
+Similarly `ApplyGroupBatch` had one `failure` serving both its preview and its
+apply, so a failed preview was structurally a batch result — safe only because
+`success? && review_required?` short-circuits before reading a member the
+failure never had.
+
+**Dropping `require "ostruct"` breaks specs that never required it.** Four
+specs used `OpenStruct` while relying on the service under test to load it.
+They pass in a batch run — some other spec loads `ostruct` first — and fail
+only when run alone. **Sweep each spec file individually, not just the
+directory**, or this hides. Roughly 20 more spec files are in this position
+today, held up by the ~100 unconverted services elsewhere in `app/services/`;
+they become failures as the conversion spreads. That is the main cost of any
+app-wide follow-up.
 
 ### M3 — Public reopen-authorization API
 
@@ -473,7 +510,7 @@ navigation for either.
 | 2 | M1 transaction-code resolver | ~20 | low |
 | 3 | M3 reopen API | 5 | low |
 | 4 | M5 `Authorizable` concern (no `SystemActor` — see M5 correction) | 11 (+1 new) | low |
-| 5 | M2 `Result`, family by family | 25 (3 slices) | med |
+| 5 | M2 `Result`, family by family — **done**, 4 slices | 25 | med |
 | 6 | M4 `BuildGuestFolio` | 3 | low |
 | 7 | M6 `ApplyBatch` | 3 | low–med |
 | 8 | Cheap renames (`apply_bill_to`, `reads/`, maintenance) | ≤6 each | low |
