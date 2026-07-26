@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Folios::RoutePreview do
+RSpec.describe Folios::Reads::RoutePreview do
   let(:business_date) { Date.current }
   let(:hotel) { create(:hotel) }
   let(:booking) do

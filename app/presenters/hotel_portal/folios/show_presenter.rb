@@ -715,7 +715,7 @@ module HotelPortal
     end
 
     def route_preview
-      @route_preview ||= ::Folios::RoutePreview.call(booking: booking, actor: user)
+      @route_preview ||= ::Folios::Reads::RoutePreview.call(booking: booking, actor: user)
     end
 
     def route_preview_row(row)

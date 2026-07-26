@@ -60,7 +60,7 @@ module Bookings
         end
 
         transition_children!(bookings) unless @booking_type == "reservation"
-        apply_bill_to!(bookings)
+        bill_room_charges_to_company!(bookings)
       end
 
       OpenStruct.new(success?: true, booking: bookings.first, bookings: bookings, group_booking: group_booking, errors: [])
@@ -151,15 +151,15 @@ module Bookings
 
     def backdated? = @booking_type == "backdated_check_in"
 
-    # Sponsor room charges to the selected bill-to party. Room revenue is
+    # Bill room charges to the selected billing party. Room revenue is
     # *routed* to the party's folio; the guest's primary folio is never
     # reassigned, so it keeps incidentals and tourism tax.
-    def apply_bill_to!(bookings)
+    def bill_room_charges_to_company!(bookings)
       account_id = @hotel_corporate_account_id
       return if account_id.blank?
 
       bookings.each do |booking|
-        result = ApplyBillTo.call(
+        result = FolioRouting::BillRoomChargesToCompany.call(
           booking: booking, actor: @user, hotel_corporate_account_id: account_id,
           bill_tourism_tax_to_company: @bill_tourism_tax_to_company
         )

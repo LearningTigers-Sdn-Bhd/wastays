@@ -28,7 +28,7 @@ module Folios
     private
 
     def expected_lines
-      @expected_lines ||= ForecastedChargeLines.call(booking: @booking, dates: [ @business_date ])
+      @expected_lines ||= Reads::ForecastedChargeLines.call(booking: @booking, dates: [ @business_date ])
     end
 
     def entry_for(line)

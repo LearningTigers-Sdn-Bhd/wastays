@@ -1,6 +1,6 @@
 # Folios / Bookings Service Reorg & Refactor Proposal
 
-> Status: **Proposed** (revision 2) — to be executed in a dedicated branch.
+> Status: **PRs 1–8 delivered** (revision 2). PRs 9–10 remain optional and unstarted.
 > Scope: `app/services/folios/` (**42** files, 5,559 LOC), `app/services/folio_routing/`
 > (10 files), and the creation-time adapters in `app/services/bookings/`.
 > Lens: DIP, ISP, OCP, SRP, DRY, KISS, Law of Demeter.
@@ -437,9 +437,47 @@ The rename analysis from v1 holds. What changes is *when*.
 
 | Current | Problem | Proposed | Refs |
 |---|---|---|---|
-| `apply_bill_to` (in `bookings/`) | verb + preposition fragment; wrong namespace | `FolioRouting::SponsorRoomChargesToCompany` | ~6 |
-| `backfill_missing_for_operational_bookings` | a maintenance script, not a domain op | `maintenance/` or a rake task | 1 |
-| `route_preview` · `forecasted_charge_lines` · `payment_source` · `refund_source` | nouns among verbs — query/value objects | `reads/` or `app/queries/` | 1–5 each |
+| `apply_bill_to` (in `bookings/`) | verb + preposition fragment; wrong namespace | `FolioRouting::BillRoomChargesToCompany` | 2 |
+| `backfill_missing_for_operational_bookings` | a maintenance script, not a domain op | `Folios::Maintenance::…` | 3 |
+| `route_preview` · `forecasted_charge_lines` | nouns among verbs — reads, not commands | `Folios::Reads::…` | 8 |
+| `payment_source` · `refund_source` | nouns among verbs | **left in place** — see PR 8 notes | — |
+
+#### Notes after implementation (PR 8)
+
+**Ref counts were overestimated.** `apply_bill_to` was measured at ~6 refs; it
+had one app caller and its spec. All three renames together came to 15 files,
+not the ~18 the sequencing table implied.
+
+**`Sponsor` was the wrong verb, `Corporate` the wrong noun.** The codebase has
+no "sponsor" anywhere, while `bill_to` is established across 7 files including
+the checkout and booking-creation views. And `corporate` names the *account*
+record (`hotel_corporate_account`), while `company` names the *payer kind*
+(`payer_type` enum, `BookingBillingParties::ManageCompany`). Routing targets
+the payer kind. Hence `BillRoomChargesToCompany`.
+
+**M2 missed this file because of its namespace.** `apply_bill_to` still built
+`OpenStruct` — the M2 sweep covered `folios/` and `folio_routing/`, and this
+lived in `bookings/`. Moving it in without converting would have reintroduced
+`OpenStruct` to a namespace M2 declared clean, so the rename carried a
+`FolioRouting::BillingResult` conversion. It also *returned*
+`ManageCompany`'s `OpenStruct` directly on the party-failure path; that now
+wraps into its own typed failure. `BookingBillingParties::ManageCompany`
+itself is still `OpenStruct` — out of scope, and one of the ~100 unconverted
+services M2's notes flag.
+
+**`payment_source` / `refund_source` did not belong in `reads/`.** They are
+frozen `SOURCES` catalogs answering `.fetch` / `.options` / `.valid?` — no DB,
+no booking, nothing read. Filing them as reads would mislabel them, and the
+only honest alternative (`catalogs/`) meant inventing a bucket and touching 9
+refs across presenters, controllers and two report services to fix nothing.
+Left where they are.
+
+**`app/queries/` was not the destination.** It holds `*Query`-suffixed AR-scope
+builders (`HotelsQuery`, `RoomTypesQuery`) — a different convention.
+
+**This is the dry run for PR 10.** `reads/` and `maintenance/` are the first
+true-nested subfolders under `folios/`, no `collapse`. If two folders already
+grate, that is cheap evidence against the full seven.
 
 ### The verb glossary — do this now, it is free
 
@@ -504,18 +542,18 @@ navigation for either.
 
 ## Sequencing
 
-| PR | Work | Files | Risk |
-|---|---|---|---|
-| 1 | M7 delete alias · verb glossary | 3 | trivial |
-| 2 | M1 transaction-code resolver | ~20 | low |
-| 3 | M3 reopen API | 5 | low |
-| 4 | M5 `Authorizable` concern (no `SystemActor` — see M5 correction) | 11 (+1 new) | low |
-| 5 | M2 `Result`, family by family — **done**, 4 slices | 25 | med |
-| 6 | M4 `BuildGuestFolio` | 3 | low |
-| 7 | M6 `ApplyBatch` | 3 | low–med |
-| 8 | Cheap renames (`apply_bill_to`, `reads/`, maintenance) | ≤6 each | low |
-| 9 | `initialize_for_booking` rename — **re-measure after PR 6** | ≤20 | med |
-| 10 | Foldering, if still wanted — true nesting, not `collapse` | 101 | high |
+| PR | Work | Files | Risk | Status |
+|---|---|---|---|---|
+| 1 | M7 delete alias · verb glossary | 3 | trivial | **done** |
+| 2 | M1 transaction-code resolver | ~20 | low | **done** |
+| 3 | M3 reopen API | 5 | low | **done** |
+| 4 | M5 `Authorizable` concern (no `SystemActor` — see M5 correction) | 11 (+1 new) | low | **done** |
+| 5 | M2 `Result`, family by family — 4 slices | 25 | med | **done** |
+| 6 | M4 — landed as `BuildPrimaryFolio` | 3 | low | **done** |
+| 7 | M6 `ApplyBatch` — landed as `RoutingChangeSet` | 3 | low–med | **done** |
+| 8 | Cheap renames (`apply_bill_to`, `reads/`, maintenance) | 15 | low | **done** |
+| 9 | `initialize_for_booking` rename — still 24 files after PR 6 | ≤24 | med | open |
+| 10 | Foldering, if still wanted — true nesting, not `collapse` | 101 | high | open |
 
 PRs 1–4 are mechanical and independently revertable. PR 5 needs a full
 `bin/test` between slices. PRs 8–10 are optional and can stop at any point.

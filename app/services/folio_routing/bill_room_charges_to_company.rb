@@ -1,19 +1,17 @@
 # frozen_string_literal: true
 
-require "ostruct"
-
-module Bookings
-  # Creation-time adapter: sponsor a booking's room charges to a bill-to party.
+module FolioRouting
+  # Bill a booking's room charges to a company billing party.
   #
-  # Resolves/ensures the bill-to party and its folio (per kind), then delegates
-  # to the kind-agnostic FolioRouting core to route room revenue onto that folio.
-  # The guest's primary folio is never reassigned — it keeps incidentals and
+  # Resolves/ensures the billing party and its folio, then delegates to the
+  # kind-agnostic routing core to route room revenue onto that folio. The
+  # guest's primary folio is never reassigned — it keeps incidentals and
   # tourism tax (which has no rule and therefore stays on the primary folio).
   #
-  # Only company/government parties are wired today. Guest/agent bill-to parties
-  # slot in as additional branches in `resolve_target_folio` with no change to
-  # the routing core.
-  class ApplyBillTo
+  # Only company/government parties are wired today. Guest/agent parties slot
+  # in as additional branches in `resolve_target_folio` with no change to the
+  # routing core.
+  class BillRoomChargesToCompany
     def self.call(booking:, actor:, hotel_corporate_account_id:, settlement_type: "cash_bank", bill_tourism_tax_to_company: false)
       new(booking: booking, actor: actor, hotel_corporate_account_id: hotel_corporate_account_id,
         settlement_type: settlement_type, bill_tourism_tax_to_company: bill_tourism_tax_to_company).call
@@ -29,7 +27,7 @@ module Bookings
 
     def call
       party_result = ensure_company_party
-      return party_result unless party_result.success?
+      return failure(party_result.error) unless party_result.success?
 
       party = party_result.party
       target_folio = folio_for(party)
@@ -38,19 +36,19 @@ module Bookings
       room_code = room_revenue_code
       return failure("This hotel has no room revenue transaction code configured.") if room_code.blank?
 
-      # Room charges always route to the bill-to party. Tourism tax stays on the
+      # Room charges always go to the billing party. Tourism tax stays on the
       # guest folio by default; only route it too when explicitly requested.
       codes = [ room_code ]
       codes << tourism_tax_code if @bill_tourism_tax_to_company && tourism_tax_code.present?
 
       codes.each do |code|
-        route = FolioRouting::RouteCodeToBillingParty.call(
+        route = RouteCodeToBillingParty.call(
           booking: @booking, transaction_code: code, target_folio: target_folio, actor: @actor
         )
         return failure(route.error) unless route.success?
       end
 
-      OpenStruct.new(success?: true, party: party, target_folio: target_folio, error: nil)
+      BillingResult.success(party: party, target_folio: target_folio)
     end
 
     private
@@ -78,6 +76,6 @@ module Bookings
       @transaction_codes ||= TransactionCodes::Resolver.for(@booking.hotel)
     end
 
-    def failure(error) = OpenStruct.new(success?: false, party: nil, target_folio: nil, error: error)
+    def failure(error) = BillingResult.failure(error)
   end
 end

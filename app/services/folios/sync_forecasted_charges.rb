@@ -65,7 +65,7 @@ module Folios
     end
 
     def expected_lines
-      ForecastedChargeLines.call(booking: @booking)
+      Reads::ForecastedChargeLines.call(booking: @booking)
     end
 
     def active_forecast_exists?(line, folio)

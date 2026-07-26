@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Bookings::ApplyBillTo do
+RSpec.describe FolioRouting::BillRoomChargesToCompany do
   let(:booking) { create(:booking) }
   let(:hotel) { booking.hotel }
   let(:actor) { create(:user, account: hotel.account) }

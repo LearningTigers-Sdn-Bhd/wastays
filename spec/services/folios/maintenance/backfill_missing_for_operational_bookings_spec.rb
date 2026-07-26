@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Folios::BackfillMissingForOperationalBookings do
+RSpec.describe Folios::Maintenance::BackfillMissingForOperationalBookings do
   it "creates missing folios for operational bookings and remains idempotent" do
     booking = create(:booking, status: "confirmed")
     create(:booking_room, booking: booking, subtotal: 100)

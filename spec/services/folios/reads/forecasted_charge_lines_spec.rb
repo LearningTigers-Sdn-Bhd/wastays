@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Folios::ForecastedChargeLines do
+RSpec.describe Folios::Reads::ForecastedChargeLines do
   it "returns accommodation and tax lines for each stay night" do
     booking = create(
       :booking,
