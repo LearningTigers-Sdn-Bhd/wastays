@@ -131,7 +131,9 @@
         </div>
 
         <%# Agent Code segment %>
-        <div class="flex items-center justify-center gap-x-2 px-3 sm:px-4 py-2 flex-1 min-w-0" data-controller="agent-code">
+        <div class="flex items-center justify-center gap-x-2 px-3 sm:px-4 py-2 flex-1 min-w-0"
+             data-controller="agent-code"
+             data-agent-code-applied-value="<%= params[:agent_code].present? %>">
           <div class="text-center min-w-0">
             <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground leading-none mb-0.5 text-center">Agent Code</p>
             <%= f.text_field :agent_code, value: params[:agent_code] || current_agent_account&.agent_code,
@@ -143,6 +145,10 @@
                 class: "hidden flex-none rounded-full bg-primary text-white text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 hover:bg-primary/90 transition-colors" do %>
             Apply Code
           <% end %>
+          <button type="button" data-agent-code-target="editButton" data-action="click->agent-code#edit"
+                class="hidden flex-none rounded-full border border-border text-foreground text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 hover:bg-muted transition-colors">
+            Edit
+          </button>
         </div>
 
       </div>
