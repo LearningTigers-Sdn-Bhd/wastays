@@ -13,6 +13,8 @@
      data-room-child-multiplier="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.child_price_multiplier&.to_f || 1.0) : 1.0 %>"
      data-room-age-bands="<%= (room_type.per_pax_billing? ? room_type.pricing_summary[:rate_plan]&.rate_plan_age_bands.to_a : []).map { |b| { minAge: b.min_age, maxAge: b.max_age, pricingMode: b.pricing_mode, value: b.price_value.to_f } }.to_json %>"
      data-room-max-capacity="<%= room_type.max_capacity %>"
+     data-room-max-adults="<%= room_type.max_adults %>"
+     data-room-max-children="<%= room_type.max_children.to_i %>"
      data-room-available-quantity="<%= available_qty %>">
   <div class="flex flex-col md:flex-row">
     <div class="md:w-80 lg:w-96 h-64 md:h-auto relative overflow-hidden cursor-pointer"
