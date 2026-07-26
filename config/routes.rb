@@ -392,6 +392,7 @@ Rails.application.routes.draw do
       match "late-checkout/:booking_id", to: "late_checkouts#show", via: [ :get, :post ], as: :late_checkout
       match "checkout/:booking_id", to: "checkouts#show", via: [ :get, :post ], as: :checkout
       match "manage-guest/:booking_id", to: "guests#show", via: [ :get, :post, :patch ], as: :manage_guest
+      match "manage-billing-party/:booking_id", to: "billing_parties#show", via: [ :get, :post, :patch, :delete ], as: :manage_billing_party
       match "remove-guest/:booking_id/:booking_guest_id", to: "guests#remove", via: [ :get, :delete ], as: :remove_guest
       patch "set-primary-guest/:booking_id/:booking_guest_id", to: "guests#set_primary", as: :set_primary_guest
       match "internal-notes/:booking_id", to: "internal_notes#show", via: [ :get, :post, :patch ], as: :internal_notes

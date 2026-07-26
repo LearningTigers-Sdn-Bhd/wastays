@@ -1,0 +1,41 @@
+<% form_id = "booking-guest-group-review-form" %>
+<% children = @booking.group_booking.bookings.includes(booking_rooms: :room_type).where(hotel_id: current_hotel.id).order(:group_position, :id) %>
+<% footer = capture do %>
+  <div class="flex w-full justify-end gap-2">
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) { "Cancel" } %>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, data: { turbo_submits_with: "Adding…" }) { "Add to group" } %>
+  </div>
+<% end %>
+
+<%= render "hotel_portal/bookings/actions/shared/sheet",
+      id: "booking-guest-group-review-sheet",
+      title: "Review group guest",
+      description: "Add #{@guest.name} to #{children.size} rooms.",
+      size: :lg,
+      footer: footer do %>
+  <%= form_with scope: :guest, url: hotel_booking_action_manage_guest_path(current_hotel, @booking, mode: "add"), method: :post, id: form_id, class: "space-y-5" do |form| %>
+    <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+    <%= hidden_field_tag :confirm_group, "1" %>
+    <%= form.hidden_field :apply_to, value: "group" %>
+    <% %i[name email phone country gender document_type government_id date_of_birth].each do |attribute| %>
+      <%= form.hidden_field attribute, value: @guest.public_send(attribute) %>
+    <% end %>
+
+    <div class="rounded-md border border-warning/30 bg-warning/10 p-4 text-sm text-foreground">
+      This creates one reusable guest record and an additional stay guest for every room. The guest will appear in operational guest, meal, and transfer reports for each booking.
+    </div>
+
+    <ul class="divide-y divide-border rounded-md border border-border" aria-label="Rooms receiving this guest">
+      <% children.each do |child| %>
+        <% room = child.booking_rooms.first %>
+        <li class="flex items-center justify-between gap-3 px-4 py-3">
+          <span>
+            <span class="block text-sm font-medium text-foreground"><%= room&.room_number.present? ? "Room #{room.room_number}" : child.formatted_reservation_number %></span>
+            <span class="block text-xs text-muted-foreground"><%= room&.room_type&.name || "Room type unavailable" %></span>
+          </span>
+          <%= render PanelsUI::Badge.new(label: child.status.humanize, variant: :neutral, size: :sm) %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+<% end %>

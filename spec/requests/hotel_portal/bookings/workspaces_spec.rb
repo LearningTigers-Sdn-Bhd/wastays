@@ -192,21 +192,21 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      billing_action = document.at_xpath("//main//a[normalize-space()='Change Billing Routes']")
-      expect(document.at_css("main h2").text).to eq("Billing")
+      billing_action = document.at_xpath("//main//a[normalize-space()='Change billing routes']")
+      expect(document.at_css("#billing-preferences-heading").text).to eq("Billing")
       expect(billing_action).to be_present
-      expect(document.at_css('[data-testid="workspace-entity-rail"]')).to be_nil
+      expect(document.at_css('[data-testid="workspace-entity-rail"]')).to be_present
     end
 
     it "shows Billing Routes to superadmins and hides them from unauthorized staff" do
       get hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences")
-      expect(Nokogiri::HTML(response.body).at_xpath("//main//a[normalize-space()='Change Billing Routes']")).to be_nil
+      expect(Nokogiri::HTML(response.body).at_xpath("//main//a[normalize-space()='Change billing routes']")).to be_nil
 
       sign_in_as(create(:user, :superadmin))
       get hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences")
 
       expect(response).to have_http_status(:success)
-      expect(Nokogiri::HTML(response.body).at_xpath("//main//a[normalize-space()='Change Billing Routes']")).to be_present
+      expect(Nokogiri::HTML(response.body).at_xpath("//main//a[normalize-space()='Change billing routes']")).to be_present
     end
 
     it "shows recorded rates even when booking dates are invalid" do
@@ -275,11 +275,19 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include("Primary guest")
       expect(response.body).to include("Acme Engineering")
       expect(response.body).to include("City Ledger · Direct bill enabled")
-      expect(response.body).to include("Corporate Folio")
+      panel = Nokogiri::HTML(response.body).at_css("#billing-preferences-panel")
+      folio_cell = panel.at_xpath(".//td[@data-column='folios'][.//*[@data-panels-ui--popover-trigger-on-value='hover']]")
+      expect(panel.at_css("th:nth-child(4)").text.squish).to eq("Outstanding (MYR)")
+      expect(folio_cell.at_xpath("./span/span").text.squish).to eq("1")
+      expect(panel.at_css("[data-panels-ui--popover-trigger-on-value='hover']")).to be_present
+      expect(panel.at_css("[role='dialog']").text).to include("Corporate Folio")
+      expect(panel.at_css("td[data-column='outstanding']").text.squish).to match(/\A\d[\d,.]*\z/)
+      expect(panel.at_css("td[data-column='outstanding']").text).not_to include("MYR")
       expect(response.body).not_to include("Advanced Billing Rules", "Billing Instructions")
     end
 
     it "renders booking-local billing parties for a child booking" do
+      role.permissions << manage_bookings
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
       create(:booking, hotel: hotel, group_booking: group, group_position: 2)
@@ -296,23 +304,25 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
       text = document.text
-      expect(text).to include("Billing parties", "Child Booking Guest", account.corporate_account.name,
-        "Child Corporate Folio", "+ Add billing party", "Edit terms")
+      expect(text).to include("Child Booking Guest", account.corporate_account.name,
+        "Add billing party", "Edit terms")
+      panel = document.at_css("#billing-preferences-panel")
+      folio_cell = panel.at_xpath(".//td[@data-column='folios'][.//*[@data-panels-ui--popover-trigger-on-value='hover']]")
+      expect(folio_cell.at_xpath("./span/span").text.squish).to eq("1")
+      expect(panel.at_css("[role='dialog']").text).to include("Child Corporate Folio")
       expect(text).not_to include("Booking-local billing exception", "Group accommodation payer")
     end
 
-    it "renders billing-party creation inline without an offcanvas target" do
+    it "keeps billing-party creation out of the workspace table" do
+      role.permissions << manage_bookings
       corporate_account = create(:account, :corporate, name: "Inline Company")
       create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_account)
 
       get hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences", billing_editor: "new_party")
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Add billing party", "Inline Company", "Settlement type")
-      document = Nokogiri::HTML(response.body)
-      form = document.at_css("form[action*='add_billing_party']")
-      expect(form).to be_present
-      expect(form["data-turbo-frame"]).not_to eq("offcanvas_drawer")
+      expect(response.body).to include("Add billing party")
+      expect(response.body).not_to include("Inline Company", "Settlement type", "form[action*='add_billing_party']")
     end
 
     it "renders flat standalone folio and guest rails" do
@@ -473,7 +483,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       create(:booking_folio, booking: booking, hotel: hotel, booking_room: room, label: "Room Guest Folio")
 
       described_class = self.class
-      standard_tabs = %w[booking_details security_deposits billing_preferences source_details housekeeping_requests audit_trails]
+      standard_tabs = %w[booking_details security_deposits source_details housekeeping_requests audit_trails]
       %w[booking_details folio_operations security_deposits billing_preferences guest_details room_and_rate source_details housekeeping_requests audit_trails].each do |tab|
         get hotel_booking_workspace_path(hotel, booking, tab: tab)
 
@@ -517,7 +527,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       create(:booking_guest, booking: sibling, guest: create(:guest, name: "Faiz Osman"), is_primary: true)
       create(:booking_folio, booking: sibling, hotel: hotel, label: "Sibling Guest Folio")
 
-      standard_tabs = %w[booking_details security_deposits billing_preferences source_details housekeeping_requests audit_trails]
+      standard_tabs = %w[booking_details security_deposits source_details housekeeping_requests audit_trails]
       %w[booking_details folio_operations security_deposits billing_preferences guest_details room_and_rate source_details housekeeping_requests audit_trails].each do |tab|
         get hotel_booking_workspace_path(hotel, booking, tab: tab)
 
@@ -874,7 +884,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expected_markers = {
         "booking_details" => "Conference Group",
         "security_deposits" => sibling.formatted_reservation_number,
-        "billing_preferences" => "Register billing parties and settlement terms",
+        "billing_preferences" => "Manage payers, settlement terms, and charge routing for this room",
         "room_and_rate" => "Room &amp; Rate",
         "source_details" => "Group Source",
         "housekeeping_requests" => "Group overview towels",
@@ -1202,6 +1212,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
     end
 
     it "keeps group billing preferences focused on billing parties" do
+      role.permissions << manage_bookings
       group = create(:group_booking, hotel: hotel, name: "Overview Group")
       booking.update!(group_booking: group, group_position: 1)
       create(:booking_guest, booking: booking, guest: create(:guest, name: "Child-only payer"), is_primary: true)
@@ -1210,7 +1221,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       expect(response).to have_http_status(:success)
       panel = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="billing-preferences-heading"]')
-      expect(panel.text).to include("Register billing parties", "Billing parties", "+ Add billing party", "Child-only payer")
+      expect(panel.text).to include("Manage payers", "Add billing party", "Child-only payer")
       expect(panel.text).not_to include("Arrangement name", "+ Add arrangement")
     end
 

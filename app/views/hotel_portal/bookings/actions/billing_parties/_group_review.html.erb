@@ -1,0 +1,38 @@
+<% form_id = "billing-party-group-review-form" %>
+<% children = @booking.group_booking.bookings.includes(booking_rooms: :room_type).where(hotel_id: current_hotel.id).order(:group_position, :id) %>
+<% account = @accounts.find { |candidate| candidate.id.to_s == @billing_party_attributes[:hotel_corporate_account_id].to_s } %>
+<% footer = capture do %>
+  <div class="flex w-full justify-end gap-2">
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) { "Cancel" } %>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, data: { turbo_submits_with: "Adding…" }) { "Add to group" } %>
+  </div>
+<% end %>
+
+<%= render "hotel_portal/bookings/actions/shared/sheet",
+      id: "billing-party-group-review-sheet",
+      title: "Review group payer",
+      description: "#{account&.corporate_account&.name || 'Account payer'} will be added to #{children.size} rooms.",
+      size: :lg,
+      footer: footer do %>
+  <%= form_with scope: :billing_party, url: hotel_booking_action_manage_billing_party_path(current_hotel, @booking, mode: "add_account"), method: :post, id: form_id, class: "space-y-5" do |form| %>
+    <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+    <%= hidden_field_tag :confirm_group, "1" %>
+    <% @billing_party_attributes.each do |attribute, value| %>
+      <%= form.hidden_field attribute, value: value %>
+    <% end %>
+
+    <div class="rounded-md border border-info/30 bg-info/10 p-4 text-sm text-foreground">
+      One account payer and one external folio will be created for every room below. The operation is atomic: no room changes if any room fails.
+    </div>
+
+    <ul class="divide-y divide-border rounded-md border border-border" aria-label="Rooms receiving this payer">
+      <% children.each do |child| %>
+        <% room = child.booking_rooms.first %>
+        <li class="px-4 py-3">
+          <span class="block text-sm font-medium text-foreground"><%= room&.room_number.present? ? "Room #{room.room_number}" : child.formatted_reservation_number %></span>
+          <span class="block text-xs text-muted-foreground"><%= room&.room_type&.name || "Room type unavailable" %></span>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+<% end %>

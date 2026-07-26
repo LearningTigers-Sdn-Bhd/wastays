@@ -12,7 +12,8 @@ module HotelPortal
     RoomRateRailRow = Data.define(:id, :rate_plan, :total_rate, :active, :href)
     RequestCard = Data.define(:id, :type, :title, :details, :room_label, :time_label, :status, :column, :record, :completed)
     RequestColumn = Data.define(:key, :label, :cards)
-    BillingPartyRow = Data.define(:id, :kind, :label, :role, :description, :folio_count, :folio_labels, :record)
+    BillingPartyRow = Data.define(:id, :kind, :label, :role, :description, :settlement, :folio_count, :folio_labels, :outstanding, :record)
+    BillingRailRow = Data.define(:id, :label, :description, :active, :href)
     FolioWindowBillingPartyOption = Data.define(:id, :group, :label, :description, :record)
     SummaryAction = Data.define(:key, :label, :tone, :offcanvas_variant, :icon, :target_booking)
     DocumentRow = Data.define(:booking, :room_type, :room_number, :guest_name, :invoice_available)
@@ -29,7 +30,7 @@ module HotelPortal
     ].freeze
     LEGACY_TABS = [ Tab.new("source_details", "Source Details") ].freeze
     ALERT_ACTIONS = %w[change_rate].freeze
-    ENTITY_TABS = %w[folio_operations guest_details room_and_rate].freeze
+    ENTITY_TABS = %w[folio_operations billing_preferences guest_details room_and_rate].freeze
     GUEST_FORM_ATTRIBUTES = %i[name email phone country gender document_type government_id date_of_birth].freeze
     BADGE_VARIANTS = {
       "slate" => :neutral, "blue" => :info, "amber" => :warning,
@@ -355,7 +356,7 @@ module HotelPortal
         booking,
         tab: active_tab,
         scope: group_overview? ? "group" : nil,
-        child_booking_id: (selected_child_booking.id if active_tab == "room_and_rate"),
+        child_booking_id: (selected_child_booking.id if active_tab.in?(%w[billing_preferences room_and_rate])),
         folio_id: @params[:folio_id].presence,
         booking_guest_id: @params[:booking_guest_id].presence,
         billing_scope: @params[:billing_scope].presence
@@ -392,6 +393,7 @@ module HotelPortal
       case active_tab
       when "folio_operations" then "folio_tree"
       when "guest_details" then "guest_tree"
+      when "billing_preferences" then "billing_tree"
       when "room_and_rate" then "room_rate_tree"
       end
     end
@@ -405,6 +407,8 @@ module HotelPortal
         [ selected_folio&.display_name, child_booking_label(child) ].compact_blank.join(" · ")
       when "guest_details"
         [ booking_guest_name(selected_booking_guest, child), child_booking_label(child) ].compact_blank.join(" · ")
+      when "billing_preferences"
+        [ child_booking_label(child), child_booking_room_type(child) ].compact_blank.join(" · ")
       when "room_and_rate"
         [ child_booking_label(child), child_booking_room_type(child) ].compact_blank.join(" · ")
       end
@@ -414,6 +418,7 @@ module HotelPortal
       case active_tab
       when "folio_operations" then "Choose Folio"
       when "guest_details" then "Choose Guest"
+      when "billing_preferences" then "Choose Room"
       when "room_and_rate" then "Choose Room"
       end
     end
@@ -472,7 +477,8 @@ module HotelPortal
               :hotel, :deposits, :housekeeping_requests, :complaint_requests, :folio_operation_logs,
               booking_folios: [ :folio_transactions, :folio_forecasted_charges, { booking_billing_party: :booking_guest, hotel_corporate_account: :corporate_account } ],
               booking_rooms: [ :room_type, :rate_plan ],
-              booking_guests: :guest
+              booking_guests: :guest,
+              booking_billing_parties: [ :billing_terms, :booking_folios, { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ]
             )
             .to_a
         end
@@ -592,7 +598,7 @@ module HotelPortal
     end
 
     def billing_preferences_path(**options)
-      path_for(booking, **{ tab: "billing_preferences", scope: ("group" if group_overview?), billing_scope: billing_scope }.merge(options).compact)
+      path_for(selected_child_booking, **{ tab: "billing_preferences", child_booking_id: selected_child_booking.id }.merge(options).compact)
     end
 
     def group_overview_path
@@ -905,14 +911,17 @@ module HotelPortal
     def billing_party_rows
       booking_billing_parties.map do |party|
         party_folios = billing_party_folios(party)
+        terms = party.billing_terms
         BillingPartyRow.new(
           party.id,
           billing_party_kind_label(party),
           safe_text(party.display_name, fallback: "Billing party"),
           billing_party_role_label(party),
           billing_party_description(party),
+          terms&.settlement_type.to_s.presence&.humanize || "Not set",
           party_folios.size,
           party_folios.map(&:display_name),
+          party_folios.sum { |folio| folio.projected_outstanding_balance.to_d },
           party
         )
       end
@@ -998,6 +1007,10 @@ module HotelPortal
       booking.currency.presence || hotel.default_currency.presence || "MYR"
     end
 
+    def billing_currency
+      selected_child_booking.currency.presence || hotel.default_currency.presence || "MYR"
+    end
+
     # A standalone booking is a group of one, so both rails render the same shape.
     def folio_tree_groups
       @folio_tree_groups ||= child_bookings.map do |child|
@@ -1028,6 +1041,25 @@ module HotelPortal
         end
 
         entity_tree_group(child, rows, add_guest_path_for(child))
+      end
+    end
+
+    def billing_tree_groups
+      @billing_tree_groups ||= child_bookings.map do |child|
+        parties = ordered_billing_parties(child)
+        guests = parties.count(&:guest?)
+        accounts = parties.count(&:company?)
+        description = [ pluralize_count(guests, "guest"), pluralize_count(accounts, "account") ].reject { |label| label.start_with?("0 ") }.join(" · ")
+        description = "No payers yet" if description.blank?
+        row = BillingRailRow.new(
+          "booking-#{child.id}",
+          pluralize_count(parties.size, "payer"),
+          description,
+          child.id == selected_child_booking.id,
+          path_for(child, tab: active_tab, child_booking_id: child.id)
+        )
+
+        entity_tree_group(child, [ row ], nil)
       end
     end
 
@@ -1135,6 +1167,11 @@ module HotelPortal
 
     def ordered_booking_guests(child)
       child.booking_guests.to_a.sort_by { |guest| [ guest.primary? ? 0 : 1, guest.id ] }
+    end
+
+    def ordered_billing_parties(child)
+      child.booking_billing_parties.to_a.select { |party| party.archived_at.nil? }
+        .sort_by { |party| billing_party_sort_key(party) }
     end
 
     def valid_room_rate_dates?(child)
@@ -1400,10 +1437,7 @@ module HotelPortal
     end
 
     def booking_billing_parties
-      @booking_billing_parties ||= booking.booking_billing_parties.active
-        .includes(:billing_terms, :booking_guest, hotel_corporate_account: :corporate_account)
-        .to_a
-        .sort_by { |party| billing_party_sort_key(party) }
+      @booking_billing_parties ||= ordered_billing_parties(selected_child_booking)
     end
 
     def billing_party_sort_key(party)
@@ -1446,7 +1480,7 @@ module HotelPortal
     end
 
     def billing_party_folios(party)
-      folios.select { |folio| folio.booking_billing_party_id == party.id }
+      party.booking_folios.to_a
     end
     end
   end

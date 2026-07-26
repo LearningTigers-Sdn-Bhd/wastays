@@ -1,0 +1,33 @@
+<nav aria-label="Booking billing parties" class="divide-y divide-border">
+  <% presenter.billing_tree_groups.each do |group| %>
+    <% heading_id = "#{id_prefix}-billing-group-#{group.booking_id}" %>
+    <section aria-labelledby="<%= heading_id %>" class="px-4 py-4">
+      <h3 id="<%= heading_id %>" class="text-xs font-semibold tabular-nums text-foreground"><%= group.label %></h3>
+      <% if group.description.present? %>
+        <p class="text-xs text-muted-foreground"><%= group.description %></p>
+      <% end %>
+
+      <div class="mt-2 space-y-1">
+        <% group.rows.each do |row| %>
+          <% link_data = { turbo_frame: "_top", turbo_action: "advance" } %>
+          <% if mobile_entity_selection %>
+            <% link_data.merge!(action: "workspace-entity-selection#select panels-ui--sheet#close", workspace_entity_selection_heading_param: "billing-preferences-panel") %>
+          <% end %>
+          <%= link_to row.href,
+              aria: { current: ("page" if row.active) },
+              data: link_data,
+              class: "-mx-2 block rounded-md px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring #{row.active ? 'bg-muted' : 'hover:bg-muted'}" do %>
+            <span class="flex items-center gap-2 text-sm font-medium text-foreground">
+              <% if row.active %>
+                <span class="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true"></span>
+                <span class="sr-only">Selected:</span>
+              <% end %>
+              <%= row.label %>
+            </span>
+            <span class="mt-0.5 block text-xs text-muted-foreground"><%= row.description %></span>
+          <% end %>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+</nav>

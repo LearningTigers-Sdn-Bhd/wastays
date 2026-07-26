@@ -74,7 +74,7 @@ module HotelPortal
           booking_billing_parties: [ :billing_terms, { booking_guest: :guest }, { hotel_corporate_account: :corporate_account }, :booking_folios ],
           booking_notes: :user,
           group_booking: [
-            { bookings: [ :hotel, :booking_folio, :deposits, :housekeeping_requests, :complaint_requests, :folio_operation_logs, { booking_rooms: [ :room_type, :rate_plan ] }, { booking_guests: :guest }, { booking_folios: [ :group_deposit_allocations, :folio_forecasted_charges, { booking_billing_party: [ { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] }, { folio_transactions: [ :user, :transaction_code ] }, { hotel_corporate_account: :corporate_account } ] } ] },
+            { bookings: [ :hotel, :booking_folio, :deposits, :housekeeping_requests, :complaint_requests, :folio_operation_logs, { booking_rooms: [ :room_type, :rate_plan ] }, { booking_guests: :guest }, { booking_billing_parties: [ :billing_terms, :booking_folios, { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] }, { booking_folios: [ :group_deposit_allocations, :folio_forecasted_charges, { booking_billing_party: [ { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] }, { folio_transactions: [ :user, :transaction_code ] }, { hotel_corporate_account: :corporate_account } ] } ] },
             { group_deposits: :group_deposit_allocations }
           ],
           booking_folios: [ :ar_invoice, :group_deposit_allocations, :folio_forecasted_charges, { booking_billing_party: [ { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] }, { folio_transactions: [ :user, :transaction_code ] }, { hotel_corporate_account: :corporate_account } ],

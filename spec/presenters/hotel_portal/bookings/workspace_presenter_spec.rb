@@ -683,7 +683,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
   describe "left rail modes" do
     it "renders no rail for ordinary standalone tabs" do
-      %w[booking_details billing_preferences security_deposits source_details housekeeping_requests].each do |tab|
+      %w[booking_details security_deposits source_details housekeeping_requests].each do |tab|
         tab_presenter = described_class.new(booking, params: { tab: tab })
 
         expect(tab_presenter.left_rail_mode).to be_nil
@@ -692,13 +692,15 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       end
     end
 
-    it "uses entity context for folio, guest, and room-rate tabs" do
+    it "uses entity context for folio, billing, guest, and room-rate tabs" do
       folio_presenter = described_class.new(booking, params: { tab: "folio_operations" })
+      billing_presenter = described_class.new(booking, params: { tab: "billing_preferences" })
       guest_presenter = described_class.new(booking, params: { tab: "guest_details" })
       room_presenter = described_class.new(booking, params: { tab: "room_and_rate" })
       audit_presenter = described_class.new(booking, params: { tab: "audit_trails" })
 
       expect(folio_presenter).to have_attributes(left_rail_mode: "folio_tree", layout_mode: "entity", show_left_rail?: true)
+      expect(billing_presenter).to have_attributes(left_rail_mode: "billing_tree", layout_mode: "entity", show_left_rail?: true)
       expect(guest_presenter).to have_attributes(left_rail_mode: "guest_tree", layout_mode: "entity", show_left_rail?: true)
       expect(room_presenter).to have_attributes(left_rail_mode: "room_rate_tree", layout_mode: "entity", show_left_rail?: true)
       expect(audit_presenter).to have_attributes(left_rail_mode: nil, layout_mode: "standard", show_left_rail?: false)
@@ -712,7 +714,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       deposits_presenter = described_class.new(booking, params: { tab: "security_deposits" })
       requests_presenter = described_class.new(booking, params: { tab: "housekeeping_requests" })
 
-      expect(billing_presenter).to have_attributes(show_left_rail?: false, billing_scope: "group")
+      expect(billing_presenter).to have_attributes(show_left_rail?: true, left_rail_mode: "billing_tree", layout_mode: "entity")
       expect(deposits_presenter).to have_attributes(show_left_rail?: false, layout_mode: "standard")
       expect(requests_presenter).to have_attributes(show_left_rail?: false, layout_mode: "standard")
     end
@@ -773,7 +775,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
       expect(alert_presenter).to have_attributes(alert_action: "change_rate", alert_open?: true, layout_mode: "entity", show_right_drawer?: false)
       expect(invalid_alert_presenter).to have_attributes(alert_action: nil, alert_open?: false)
-      expect(removed_drawer_presenter).to have_attributes(layout_mode: "standard", show_right_drawer?: false)
+      expect(removed_drawer_presenter).to have_attributes(layout_mode: "entity", show_right_drawer?: false)
       expect(drawer_presenter).to have_attributes(layout_mode: "entity", show_right_drawer?: true)
       expect(standard_drawer_presenter).to have_attributes(layout_mode: "standard", show_left_rail?: false, show_right_drawer?: true)
     end

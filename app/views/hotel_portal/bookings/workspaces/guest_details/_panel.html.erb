@@ -39,6 +39,11 @@
               <%= render PanelsUI::FieldGroup.new do %>
               <div class="grid gap-4 sm:grid-cols-2">
                 <div class="sm:col-span-2">
+                  <%= render PanelsUI::FormField.new(form:, attribute: :booking_assignment, label: "Booking", hint: "A guest stay record remains attached to its current room.", disabled: true) do |field| %>
+                    <% field.with_select_menu([[presenter.selected_entity_label, entity_booking.id]], selected: entity_booking.id) %>
+                  <% end %>
+                </div>
+                <div class="sm:col-span-2">
                   <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Full name", required: true) do |field| %>
                     <% field.with_input(value: snapshots[:name], autocomplete: "name", placeholder: "Enter full name") %>
                   <% end %>

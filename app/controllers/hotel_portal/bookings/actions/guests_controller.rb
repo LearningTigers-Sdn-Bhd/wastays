@@ -67,7 +67,18 @@ module HotelPortal
         end
 
         def create
-          result = ::BookingGuests::Add.call(booking: @booking, attributes: guest_params, actor: current_user)
+          target = resolved_guest_target
+          if target == :group && params[:confirm_group] != "1"
+            @guest = Guest.new(guest_params)
+            @review_group = true
+            return render_guest_review
+          end
+
+          result = if target == :group
+            ::BookingGuests::AddToGroup.call(group_booking: @booking.group_booking, attributes: guest_params, actor: current_user)
+          else
+            ::BookingGuests::Add.call(booking: target, attributes: guest_params, actor: current_user)
+          end
           @guest = result.guest
           return complete_action(notice: "Guest added.") if result.success?
 
@@ -118,6 +129,18 @@ module HotelPortal
           end
         end
 
+        def render_guest_review
+          respond_to do |format|
+            format.turbo_stream do
+              render turbo_stream: turbo_stream.update(
+                requesting_sheet_frame,
+                partial: "hotel_portal/bookings/actions/guests/form"
+              )
+            end
+            format.html { render :show, layout: false }
+          end
+        end
+
         def add_errors(record, errors)
           errors.each { |error| record.errors.add(:base, error) unless record.errors.full_messages.include?(error) }
         end
@@ -128,6 +151,15 @@ module HotelPortal
 
         def guest_params
           params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth)
+        end
+
+        def resolved_guest_target
+          value = params.dig(:guest, :apply_to).presence
+          return @booking if @booking.group_booking_id.blank?
+          return :group if value == "group"
+
+          id = value.to_s.delete_prefix("booking:")
+          @booking.group_booking.bookings.where(hotel_id: current_hotel.id).find(id)
         end
 
         def booking_guest_bibo_params
