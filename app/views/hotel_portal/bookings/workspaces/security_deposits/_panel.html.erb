@@ -12,16 +12,16 @@
   </header>
 
   <% rows = presenter.deposit_rows %>
-  <% if rows.any? %>
-    <div class="space-y-4 px-5 pb-5">
-      <% rows.group_by { |row| row[:currency] }.each do |currency, currency_rows| %>
-        <%= render PanelsUI::Table.new(
-              caption: "Deposits in #{currency}",
-              density: :compact,
-              hoverable: true,
-              bordered: true,
-              wrapper_class: "rounded-md border border-border",
-              class: "min-w-[860px]") do |table| %>
+  <% deposit_tables = rows.any? ? rows.group_by { |row| row[:currency] } : { presenter.currency => [] } %>
+  <div class="space-y-4 px-5 pb-5">
+    <% deposit_tables.each do |currency, currency_rows| %>
+      <%= render PanelsUI::Table.new(
+            caption: "Deposits in #{currency}",
+            density: :compact,
+            hoverable: true,
+            bordered: true,
+            wrapper_class: "rounded-md border border-border",
+            class: "min-w-[860px]") do |table| %>
           <% table.with_header do %>
             <tr>
               <th scope="col">Owner</th>
@@ -35,27 +35,33 @@
             </tr>
           <% end %>
           <% table.with_body do %>
-            <% currency_rows.each do |row| %>
-              <% deposit = row[:deposit] %>
-              <% actionable = deposit.status.in?(%w[held available]) && deposit.available_amount.positive? %>
+            <% if currency_rows.any? %>
+              <% currency_rows.each do |row| %>
+                <% deposit = row[:deposit] %>
+                <% actionable = deposit.status.in?(%w[held available]) && deposit.available_amount.positive? %>
+                <tr>
+                  <td class="font-medium text-foreground"><%= row[:owner] %></td>
+                  <td><%= row[:kind] %></td>
+                  <td><%= row[:status] %></td>
+                  <td class="text-right tabular-nums"><%= row[:amount] %></td>
+                  <td class="text-right tabular-nums"><%= row[:applied] %></td>
+                  <td class="text-right tabular-nums"><%= row[:returned] %></td>
+                  <td><span class="block"><%= row[:received_at] %></span><span class="text-xs text-muted-foreground"><%= row[:reference] %></span></td>
+                  <td>
+                    <div class="flex justify-end gap-2">
+                      <% if actionable && presenter.deposit_folio_options(deposit).any? %>
+                        <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :secondary, command: "show-modal", commandfor: "apply-deposit-#{deposit.id}", aria: { haspopup: "dialog" }) do %>Apply<% end %>
+                      <% end %>
+                      <% if actionable %>
+                        <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :ghost, command: "show-modal", commandfor: "return-deposit-#{deposit.id}", aria: { haspopup: "dialog" }) do %><%= deposit.kind_security? ? "Release" : "Refund" %><% end %>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            <% else %>
               <tr>
-                <td class="font-medium text-foreground"><%= row[:owner] %></td>
-                <td><%= row[:kind] %></td>
-                <td><%= row[:status] %></td>
-                <td class="text-right tabular-nums"><%= row[:amount] %></td>
-                <td class="text-right tabular-nums"><%= row[:applied] %></td>
-                <td class="text-right tabular-nums"><%= row[:returned] %></td>
-                <td><span class="block"><%= row[:received_at] %></span><span class="text-xs text-muted-foreground"><%= row[:reference] %></span></td>
-                <td>
-                  <div class="flex justify-end gap-2">
-                    <% if actionable && presenter.deposit_folio_options(deposit).any? %>
-                      <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :secondary, command: "show-modal", commandfor: "apply-deposit-#{deposit.id}", aria: { haspopup: "dialog" }) do %>Apply<% end %>
-                    <% end %>
-                    <% if actionable %>
-                      <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :ghost, command: "show-modal", commandfor: "return-deposit-#{deposit.id}", aria: { haspopup: "dialog" }) do %><%= deposit.kind_security? ? "Release" : "Refund" %><% end %>
-                    <% end %>
-                  </div>
-                </td>
+                <td colspan="8" class="py-10 text-center text-muted-foreground">No deposits have been recorded.</td>
               </tr>
             <% end %>
           <% end %>
@@ -66,11 +72,8 @@
             </tr>
           <% end %>
         <% end %>
-      <% end %>
-    </div>
-  <% else %>
-    <div class="px-5 py-10 text-center"><p class="text-sm text-muted-foreground">No deposits have been recorded.</p></div>
-  <% end %>
+    <% end %>
+  </div>
 
   <% applications = presenter.deposit_application_rows %>
   <% if applications.any? %>

@@ -805,6 +805,16 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include("Noisy hallway")
     end
 
+    it "renders an empty deposits table with a zero available balance" do
+      get hotel_booking_workspace_path(hotel, booking, tab: "security_deposits")
+
+      expect(response).to have_http_status(:success)
+      deposit_panel = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="deposits-heading"]')
+      expect(deposit_panel.at_css("tbody td[colspan='8']").text.squish).to eq("No deposits have been recorded.")
+      expect(deposit_panel.at_css("tfoot th").text.squish).to eq("Available")
+      expect(deposit_panel.at_css("tfoot td").text.squish).to eq("MYR 0.00")
+    end
+
     it "omits child-booking rails from grouped deposits and requests" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
