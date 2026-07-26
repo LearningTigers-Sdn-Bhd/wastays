@@ -111,7 +111,8 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       get hotel_booking_workspace_path(hotel, booking, tab: "room_and_rate")
       room_rate_table = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="room-rate-heading"] table')
-      expect(room_rate_table.text).to include("Stay Date", "Room Type", "Room", "Rate Plan", "Nightly Rate", "Rate unavailable")
+      expect(room_rate_table.css("thead th").map { |header| header.text.squish }).to eq([ "Stay date", "Nightly rate" ])
+      expect(room_rate_table.text).to include("Rate unavailable")
       expect(room_rate_table.text).not_to include("MYR 0.00", "Posted to folio", "Check-in", "Occupancy", "Status")
       expect(response.body).not_to include("Nightly Rate Schedule")
 
@@ -125,6 +126,46 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests")
       expect(response.body).to include('class="flex h-full min-h-0 flex-col"')
       expect(response.body).to include("grid min-h-0 flex-1")
+    end
+
+    it "renders Room & Rate as a selected-child entity workspace" do
+      role.permissions << manage_bookings
+      group = create(:group_booking, hotel: hotel, name: "Rate Group")
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      first_plan = create(:rate_plan, hotel: hotel, name: "Garden Saver")
+      second_plan = create(:rate_plan, hotel: hotel, name: "Ocean Flex")
+      first_room = create(:booking_room, booking: booking, room_number: "101", rate_plan: first_plan, subtotal: 600,
+        nightly_rate_snapshot: { booking.check_in.to_date.iso8601 => { "price" => "111.00" } })
+      second_room = create(:booking_room, booking: sibling, room_number: "202", rate_plan: second_plan, subtotal: 1250,
+        nightly_rate_snapshot: { sibling.check_in.to_date.iso8601 => { "price" => "333.00" } })
+
+      get hotel_booking_workspace_path(hotel, sibling, tab: "room_and_rate", child_booking_id: sibling.id)
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css('[data-layout-mode="entity"]')).to be_present
+      rail = document.at_css('[data-testid="workspace-entity-rail"] nav[aria-label="Booking rooms"]')
+      expect(rail.text).to include("Room 101", "Garden Saver", "MYR 600.00", "Room 202", "Ocean Flex", "MYR 1250.00")
+      expect(rail.at_css('a[aria-current="page"]')["href"]).to eq(
+        hotel_booking_workspace_path(hotel, sibling, tab: "room_and_rate", child_booking_id: sibling.id)
+      )
+
+      panel = document.at_css("#room-rate-panel")
+      panel_header = panel.at_css("header")
+      expect(panel_header.text).to include("Room & Rate", "Nightly rates for this room.", "Change room", "Change rate")
+      expect(panel_header.text).not_to include(sibling.formatted_reservation_number, "Room 202", "Ocean Flex", "MYR 1250.00")
+      expect(panel.at_css("table").text).to include("MYR 333.00")
+      expect(panel.at_css("table").text).not_to include("MYR 111.00")
+
+      change_room = panel.at_xpath('.//a[normalize-space()="Change room"]')
+      change_rate = panel.at_xpath('.//a[normalize-space()="Change rate"]')
+      expect(change_room["href"]).to start_with(hotel_booking_action_edit_room_path(hotel, sibling))
+      expect(change_room["href"]).to include(CGI.escape(hotel_booking_workspace_path(hotel, sibling, tab: "room_and_rate", child_booking_id: sibling.id)))
+      expect(change_rate["href"]).to eq(
+        hotel_booking_workspace_path(hotel, sibling, tab: "room_and_rate", child_booking_id: sibling.id, alert_action: "change_rate")
+      )
+      expect([ first_room, second_room ]).to all(be_persisted)
     end
 
     it "renders a full-width standalone Overview without context controls" do
@@ -432,7 +473,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       create(:booking_folio, booking: booking, hotel: hotel, booking_room: room, label: "Room Guest Folio")
 
       described_class = self.class
-      standard_tabs = %w[booking_details security_deposits billing_preferences room_and_rate source_details housekeeping_requests audit_trails]
+      standard_tabs = %w[booking_details security_deposits billing_preferences source_details housekeeping_requests audit_trails]
       %w[booking_details folio_operations security_deposits billing_preferences guest_details room_and_rate source_details housekeeping_requests audit_trails].each do |tab|
         get hotel_booking_workspace_path(hotel, booking, tab: tab)
 
@@ -476,7 +517,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       create(:booking_guest, booking: sibling, guest: create(:guest, name: "Faiz Osman"), is_primary: true)
       create(:booking_folio, booking: sibling, hotel: hotel, label: "Sibling Guest Folio")
 
-      standard_tabs = %w[booking_details security_deposits billing_preferences room_and_rate source_details housekeeping_requests audit_trails]
+      standard_tabs = %w[booking_details security_deposits billing_preferences source_details housekeeping_requests audit_trails]
       %w[booking_details folio_operations security_deposits billing_preferences guest_details room_and_rate source_details housekeeping_requests audit_trails].each do |tab|
         get hotel_booking_workspace_path(hotel, booking, tab: tab)
 
@@ -578,9 +619,10 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking, tab: "room_and_rate", alert_action: "change_rate")
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('data-layout-mode="standard"')
+      expect(response.body).to include('data-layout-mode="entity"')
       expect(response.body).to include('role="alertdialog"')
-      expect(response.body).to include("Change stay or rate?")
+      expect(response.body).to include("Change this room’s rate?")
+      expect(response.body).to include('data-controller="panels-ui--dialog warning-dialog"')
       expect(response.body).not_to include('data-testid="workspace-action-drawer"')
     end
 
@@ -591,7 +633,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       get hotel_booking_workspace_path(hotel, booking, tab: "room_and_rate")
       document = Nokogiri::HTML(response.body)
-      change_room = document.at_xpath("//a[normalize-space()='Change Room']")
+      change_room = document.at_xpath("//a[normalize-space()='Change room']")
       expect(change_room["data-turbo-frame"]).to eq("booking_action_sheet")
       change_room_uri = URI.parse(change_room["href"])
       expect(change_room_uri.path).to eq(hotel_booking_action_edit_room_path(hotel, booking))
@@ -666,7 +708,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).not_to include('data-testid="workspace-action-drawer"')
     end
 
-    it "renders grouped standard destinations full width with a group Overview link" do
+    it "renders grouped Room & Rate with a concrete room rail" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
       booking.update_column(:status, "checked_in")
@@ -678,9 +720,10 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      expect(response.body).to include('data-layout-mode="standard"')
-      expect(document.at_css("main h2").text).to eq("Room & Rate")
-      expect(document.at_css('[data-testid="workspace-entity-rail"]')).to be_nil
+      expect(response.body).to include('data-layout-mode="entity"')
+      expect(document.at_css("#room-rate-heading").text).to eq("Room & Rate")
+      expect(document.at_css('[data-testid="workspace-entity-rail"]')).to be_present
+      expect(document.at_css('nav[aria-label="Booking rooms"]').text).to include("Room 103", "Room 104")
       expect(document.at_css('[data-testid="booking-workspace-header"]').text).to include(group.formatted_reservation_number)
     end
 
@@ -849,9 +892,11 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
           expect(response.body).to include(group.formatted_receipt_number)
         end
         if tab == "room_and_rate"
-          table = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="room-rate-heading"] table')
-          expect(table.css("thead th").map { |header| header.text.strip }).to eq([ "Booking No.", "Stay Date", "Room Type", "Room", "Rate Plan", "Nightly Rate" ])
-          expect(table.text).not_to include("Guest", "Status", "Estimated Room Value")
+          document = Nokogiri::HTML(response.body)
+          table = document.at_css('section[aria-labelledby="room-rate-heading"] table')
+          expect(document.at_css('[data-layout-mode="entity"]')).to be_present
+          expect(table.css("thead th").map { |header| header.text.strip }).to eq([ "Stay date", "Nightly rate" ])
+          expect(table.text).not_to include("Booking No.", "Guest", "Status", "Estimated Room Value")
         end
       end
     end
@@ -1082,14 +1127,16 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(add_link["href"]).to eq(hotel_folio_action_new_window_path(hotel, first_child))
     end
 
-    it "ignores folio and guest IDs outside the current group" do
+    it "ignores folio, guest, and room child IDs outside the current group" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
       local_folio = create(:booking_folio, booking: booking, hotel: hotel, label: "Local Folio")
       local_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Local Guest"), is_primary: true)
+      create(:booking_room, booking: booking, nightly_rate_snapshot: { booking.check_in.to_date.iso8601 => { "price" => "171.00" } })
       foreign_booking = create(:booking, hotel: other_hotel)
       foreign_folio = create(:booking_folio, booking: foreign_booking, hotel: other_hotel, label: "Foreign Folio Secret")
       foreign_guest = create(:booking_guest, booking: foreign_booking, guest: create(:guest, name: "Foreign Guest Secret"), is_primary: true)
+      create(:booking_room, booking: foreign_booking, nightly_rate_snapshot: { foreign_booking.check_in.to_date.iso8601 => { "price" => "919.00" } })
 
       get hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: foreign_folio.id)
       expect(response).to have_http_status(:success)
@@ -1100,6 +1147,11 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include(local_guest.guest.name)
       expect(response.body).not_to include("Foreign Guest Secret")
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "room_and_rate", child_booking_id: foreign_booking.id)
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("MYR 171.00")
+      expect(response.body).not_to include("MYR 919.00")
     end
 
     it "keeps explicit grouped entity selections canonical and removes synthetic overview links" do
@@ -1166,7 +1218,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking, tab: "room_and_rate")
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("No room is attached to this booking")
+      expect(response.body).to include("Assign a room before reviewing nightly rates")
     end
 
     it "requires view booking permission" do

@@ -12,8 +12,9 @@ RSpec.describe "Booking workspace navigation", :business_day, type: :system do
     create(:complaint_request, booking: booking, complaint_details: "Noisy hallway", status: "pending")
 
     visit hotel_booking_workspace_path(hotel, booking, tab: "room_and_rate")
-    expect(page).to have_css('[data-layout-mode="standard"]')
+    expect(page).to have_css('[data-layout-mode="entity"]')
     expect(page).to have_content("Room & Rate")
+    expect(page).to have_button("Choose Room")
 
     within("#booking-workspace-tabs") { click_link "Guests" }
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "guest_details"))

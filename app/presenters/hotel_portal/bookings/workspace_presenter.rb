@@ -9,6 +9,7 @@ module HotelPortal
     FolioRailRow = Data.define(:id, :number, :payer_line, :status_badge, :outstanding, :active, :href)
     TreeGroup = Data.define(:label, :description, :rows, :booking_id, :add_href)
     RoomRateRow = Data.define(:booking_reference, :date, :room_type, :room, :rate_plan, :nightly_rate, :rate_missing)
+    RoomRateRailRow = Data.define(:id, :rate_plan, :total_rate, :active, :href)
     RequestCard = Data.define(:id, :type, :title, :details, :room_label, :time_label, :status, :column, :record, :completed)
     RequestColumn = Data.define(:key, :label, :cards)
     BillingPartyRow = Data.define(:id, :kind, :label, :role, :description, :folio_count, :folio_labels, :record)
@@ -28,7 +29,7 @@ module HotelPortal
     ].freeze
     LEGACY_TABS = [ Tab.new("source_details", "Source Details") ].freeze
     ALERT_ACTIONS = %w[change_rate].freeze
-    ENTITY_TABS = %w[folio_operations guest_details].freeze
+    ENTITY_TABS = %w[folio_operations guest_details room_and_rate].freeze
     GUEST_FORM_ATTRIBUTES = %i[name email phone country gender document_type government_id date_of_birth].freeze
     BADGE_VARIANTS = {
       "slate" => :neutral, "blue" => :info, "amber" => :warning,
@@ -340,7 +341,7 @@ module HotelPortal
     end
 
     def tab_path(tab_key)
-      entity_tab = tab_key.to_s.in?(%w[folio_operations guest_details])
+      entity_tab = tab_key.to_s.in?(ENTITY_TABS)
       scope = if !entity_tab && @params[:scope].to_s == "booking"
         "booking"
       elsif !entity_tab && group_overview?
@@ -354,6 +355,7 @@ module HotelPortal
         booking,
         tab: active_tab,
         scope: group_overview? ? "group" : nil,
+        child_booking_id: (selected_child_booking.id if active_tab == "room_and_rate"),
         folio_id: @params[:folio_id].presence,
         booking_guest_id: @params[:booking_guest_id].presence,
         billing_scope: @params[:billing_scope].presence
@@ -375,9 +377,10 @@ module HotelPortal
 
     def close_alert_path
       path_for(
-        booking,
+        active_tab == "room_and_rate" ? selected_child_booking : booking,
         tab: active_tab,
         scope: group_overview? ? "group" : nil,
+        child_booking_id: (selected_child_booking.id if active_tab == "room_and_rate"),
         folio_id: @params[:folio_id].presence,
         booking_guest_id: @params[:booking_guest_id].presence,
         billing_scope: @params[:billing_scope].presence,
@@ -389,6 +392,7 @@ module HotelPortal
       case active_tab
       when "folio_operations" then "folio_tree"
       when "guest_details" then "guest_tree"
+      when "room_and_rate" then "room_rate_tree"
       end
     end
 
@@ -401,11 +405,17 @@ module HotelPortal
         [ selected_folio&.display_name, child_booking_label(child) ].compact_blank.join(" · ")
       when "guest_details"
         [ booking_guest_name(selected_booking_guest, child), child_booking_label(child) ].compact_blank.join(" · ")
+      when "room_and_rate"
+        [ child_booking_label(child), child_booking_room_type(child) ].compact_blank.join(" · ")
       end
     end
 
     def entity_selector_label
-      active_tab == "folio_operations" ? "Choose Folio" : "Choose Guest"
+      case active_tab
+      when "folio_operations" then "Choose Folio"
+      when "guest_details" then "Choose Guest"
+      when "room_and_rate" then "Choose Room"
+      end
     end
 
     def layout_mode
@@ -1018,6 +1028,21 @@ module HotelPortal
         end
 
         entity_tree_group(child, rows, add_guest_path_for(child))
+      end
+    end
+
+    def room_rate_tree_groups
+      @room_rate_tree_groups ||= child_bookings.map do |child|
+        room = child.booking_rooms.first
+        row = RoomRateRailRow.new(
+          room&.id || "booking-#{child.id}",
+          room&.rate_plan&.name.presence || (room ? "Standard" : "Not available"),
+          room ? money_for(child, room.subtotal) : "—",
+          child.id == selected_child_booking.id,
+          path_for(child, tab: active_tab, child_booking_id: child.id)
+        )
+
+        entity_tree_group(child, [ row ], nil)
       end
     end
 

@@ -32,6 +32,35 @@ RSpec.describe "Booking workspace actions", :business_day, type: :system do
     expect(page).to have_content(booking.confirmation_token)
   end
 
+  it "opens room and rate Sheets for the selected group child", js: true do
+    group = create(:group_booking, hotel: hotel)
+    booking.update!(group_booking: group, group_position: 1)
+    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, guest_name: "Selected Rate Guest")
+    room_type = create(:room_type, hotel: hotel, name: "Lagoon Villa")
+    rate_plan = create(:rate_plan, hotel: hotel, name: "Lagoon Flexible", room_type: room_type)
+    create(:booking_room, booking: sibling, room_type: room_type, rate_plan: rate_plan, room_number: "202", subtotal: 780)
+
+    visit hotel_booking_workspace_path(hotel, sibling, tab: "room_and_rate", child_booking_id: sibling.id)
+    click_link "Change room"
+
+    expect(page).to have_css("dialog#booking-room-sheet[open]", wait: 3)
+    within("#booking-room-sheet") do
+      expect(page).to have_content("Lagoon Villa · 202")
+    end
+    find("dialog#booking-room-sheet").send_keys(:escape)
+    expect(page).to have_no_css("dialog#booking-room-sheet", wait: 3)
+
+    click_link "Change rate"
+    expect(page).to have_css("dialog#change-rate-alert[open]", wait: 3)
+    within("#change-rate-alert") { click_link "Continue to editor" }
+
+    expect(page).to have_css("dialog#booking-rate-sheet[open]", wait: 3)
+    within("#booking-rate-sheet") do
+      expect(page).to have_content("Selected Rate Guest")
+      expect(page).to have_content("Lagoon Flexible")
+    end
+  end
+
   it "cancels a booking through the action Sheet from the Actions dropdown", js: true do
     visit hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
 

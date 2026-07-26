@@ -1,73 +1,60 @@
-<% if presenter.group_overview? %>
-  <% rows = presenter.group_room_rate_rows %>
-  <% issues = presenter.group_room_rate_issues %>
-  <section aria-labelledby="room-rate-heading">
-    <header class="border-b border-border px-5 py-4">
+<% rows = presenter.room_rate_rows(entity_booking) %>
+<% room = entity_booking.booking_rooms.first %>
+<% can_manage = presenter.can_manage_bookings?(current_user) %>
+
+<section id="room-rate-panel" aria-labelledby="room-rate-heading" tabindex="-1">
+  <header class="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
       <h2 id="room-rate-heading" class="text-base font-semibold text-foreground">Room &amp; Rate</h2>
-      <p class="mt-1 text-sm text-muted-foreground">The room and agreed rate for each night across the group.</p>
-    </header>
-
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[860px] text-left text-sm">
-        <thead class="border-b border-border bg-muted text-xs font-semibold text-muted-foreground">
-          <tr><th class="px-5 py-3">Booking No.</th><th class="px-5 py-3">Stay Date</th><th class="px-5 py-3">Room Type</th><th class="px-5 py-3">Room</th><th class="px-5 py-3">Rate Plan</th><th class="px-5 py-3 text-right">Nightly Rate</th></tr>
-        </thead>
-        <tbody class="divide-y divide-border">
-          <% rows.each do |row| %>
-            <tr>
-              <td class="px-5 py-3 font-semibold text-foreground"><%= row.booking_reference %></td>
-              <td class="whitespace-nowrap px-5 py-3 font-semibold text-foreground"><%= row.date.strftime("%d %b %Y") %></td>
-              <td class="px-5 py-3 text-foreground"><%= row.room_type %></td>
-              <td class="px-5 py-3 text-foreground"><%= row.room %></td>
-              <td class="px-5 py-3 text-foreground"><%= row.rate_plan %></td>
-              <td class="px-5 py-3 text-right font-semibold tabular-nums <%= row.rate_missing ? 'text-amber-700' : 'text-foreground' %>"><%= row.nightly_rate %></td>
-            </tr>
-          <% end %>
-
-          <% issues.each do |issue| %>
-            <tr><td class="px-5 py-4 font-semibold text-foreground"><%= issue[:booking_reference] %></td><td colspan="5" class="px-5 py-4 text-muted-foreground"><%= issue[:message] %></td></tr>
-          <% end %>
-
-          <% if rows.empty? && issues.empty? %>
-            <tr><td colspan="6" class="px-5 py-10 text-center text-muted-foreground">No room-rate rows are available for this group.</td></tr>
-          <% end %>
-        </tbody>
-      </table>
+      <p class="mt-1 text-sm text-muted-foreground">Nightly rates for this room.</p>
     </div>
-  </section>
-<% else %>
-  <% rows = presenter.room_rate_rows %>
-  <% empty_message = presenter.room_rate_empty_message %>
-  <section aria-labelledby="room-rate-heading">
-    <header class="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
-      <div><% if presenter.group_context_enabled? %><p class="text-xs text-muted-foreground">Booking <%= presenter.booking_number %></p><% end %><h2 id="room-rate-heading" class="mt-1 text-base font-semibold text-foreground">Room &amp; Rate</h2><p class="mt-1 text-sm text-muted-foreground">The room and agreed rate for each night of this booking.</p></div>
+
+    <% if can_manage %>
       <div class="flex flex-wrap gap-2">
-        <%= link_to "Change Room", hotel_booking_action_edit_room_path(current_hotel, booking, return_to: request.fullpath), data: { turbo_frame: "booking_action_sheet" }, class: "rounded-md border border-border-interactive bg-card px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" %>
-        <%= link_to "Change Rate", hotel_booking_workspace_path(current_hotel, booking, tab: "room_and_rate", alert_action: "change_rate"), data: { turbo_frame: "booking_workspace", turbo_action: "advance", warning_dialog_trigger: "change-rate" }, class: "rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" %>
+        <%= render PanelsUI::Button.new(
+              href: hotel_booking_action_edit_room_path(current_hotel, entity_booking, return_to: request.fullpath),
+              variant: :secondary,
+              size: :sm,
+              data: { turbo_frame: "booking_action_sheet" }) do %>Change room<% end %>
+        <%= render PanelsUI::Button.new(
+              href: hotel_booking_workspace_path(current_hotel, entity_booking, tab: "room_and_rate", child_booking_id: entity_booking.id, alert_action: "change_rate"),
+              size: :sm,
+              disabled: room.nil?,
+              title: ("Assign a room before changing its rate." if room.nil?),
+              data: { turbo_frame: "booking_workspace", turbo_action: "advance", warning_dialog_trigger: "change-rate" }) do %>Change rate<% end %>
       </div>
-    </header>
+    <% end %>
+  </header>
 
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[720px] text-left text-sm">
-        <thead class="border-b border-border bg-muted text-xs font-semibold text-muted-foreground">
-          <tr><th class="px-5 py-3">Stay Date</th><th class="px-5 py-3">Room Type</th><th class="px-5 py-3">Room</th><th class="px-5 py-3">Rate Plan</th><th class="px-5 py-3 text-right">Nightly Rate</th></tr>
-        </thead>
-        <tbody class="divide-y divide-border">
-          <% if rows.any? %>
-            <% rows.each do |row| %>
-              <tr>
-                <td class="whitespace-nowrap px-5 py-3 font-semibold text-foreground"><%= row.date.strftime("%d %b %Y") %></td>
-                <td class="px-5 py-3 text-foreground"><%= row.room_type %></td>
-                <td class="px-5 py-3 text-foreground"><%= row.room %></td>
-                <td class="px-5 py-3 text-foreground"><%= row.rate_plan %></td>
-                <td class="px-5 py-3 text-right font-semibold tabular-nums <%= row.rate_missing ? 'text-amber-700' : 'text-foreground' %>"><%= row.nightly_rate %></td>
-              </tr>
-            <% end %>
-          <% else %>
-            <tr><td colspan="5" class="px-5 py-10 text-center text-muted-foreground"><%= empty_message || "No room-rate rows are available for this booking." %></td></tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </section>
-<% end %>
+  <div class="p-5">
+    <%= render PanelsUI::Table.new(
+          caption: "Nightly room rates",
+          density: :compact,
+          hoverable: rows.any?,
+          bordered: true,
+          wrapper_class: "rounded-md border border-border") do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Stay date</th>
+          <th scope="col" class="text-right">Nightly rate</th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% rows.each do |row| %>
+          <tr>
+            <td class="whitespace-nowrap tabular-nums"><%= row.date.strftime("%d %b %Y") %></td>
+            <td class="text-right font-medium tabular-nums <%= 'text-warning' if row.rate_missing %>"><%= row.nightly_rate %></td>
+          </tr>
+        <% end %>
+
+        <% if rows.empty? %>
+          <tr>
+            <td colspan="2" class="py-8 text-center text-muted-foreground">
+              <%= room ? "No recorded nightly rates are available for this room." : "Assign a room before reviewing nightly rates." %>
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+</section>

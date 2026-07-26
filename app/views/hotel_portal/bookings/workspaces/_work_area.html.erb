@@ -62,6 +62,6 @@
   </div>
 
   <% if presenter.alert_open? %>
-    <%= render presenter.alert_partial, booking: booking, presenter: presenter %>
+    <%= render presenter.alert_partial, booking: entity_booking, presenter: presenter %>
   <% end %>
 <% end %>
