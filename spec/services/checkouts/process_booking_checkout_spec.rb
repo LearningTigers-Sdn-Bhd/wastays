@@ -32,6 +32,23 @@ RSpec.describe Checkouts::ProcessBookingCheckout do
     expect(Folios::Checkout::ProcessCheckoutActions).not_to have_received(:call)
   end
 
+  it "does not process checkout-required bookings as early departures" do
+    booking.update_columns(status: "checkout_required")
+    booking.update!(check_out: Date.current + 2.days)
+    settlement = OpenStruct.new(success?: true, exception_folio_ids: [], direct_bill_folio_ids: [])
+    transition = instance_double(Bookings::TransitionStatus, call: OpenStruct.new(success?: true))
+    allow(hotel).to receive(:business_date_for).and_return(Date.current)
+    allow(Bookings::ProcessEarlyDeparture).to receive(:call)
+    allow(Folios::Checkout::ProcessCheckoutActions).to receive(:call).and_return(settlement)
+    allow(Bookings::TransitionStatus).to receive(:new).and_return(transition)
+
+    result = call_service
+
+    expect(result).to be_success
+    expect(Bookings::ProcessEarlyDeparture).not_to have_received(:call)
+    expect(transition).to have_received(:call)
+  end
+
   it "short-circuits when folio actions fail" do
     allow(Folios::Checkout::ProcessCheckoutActions).to receive(:call).and_return(OpenStruct.new(success?: false, error: "Settle folio first"))
     allow(Bookings::TransitionStatus).to receive(:new)
