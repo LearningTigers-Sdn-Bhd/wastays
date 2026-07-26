@@ -23,7 +23,9 @@ RSpec.describe "Booking workspace mobile entity selection", :business_day, type:
     expect(page).to have_css("#folio-operations-panel:focus")
 
     click_button "Choose Folio"
-    find("#booking-entity-selector-sheet a[href*='folio_id=#{primary.id}']").click
+    perform_turbo_navigation do
+      find("#booking-entity-selector-sheet a[href*='folio_id=#{primary.id}']").click
+    end
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: primary.id))
 
     click_button "Choose Folio"
