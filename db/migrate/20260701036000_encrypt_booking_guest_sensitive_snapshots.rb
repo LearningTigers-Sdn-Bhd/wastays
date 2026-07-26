@@ -16,8 +16,11 @@ class EncryptBookingGuestSensitiveSnapshots < ActiveRecord::Migration[8.0]
 
     MigrationBookingGuest.find_each do |booking_guest|
       attrs = raw_snapshot_values(booking_guest.id).transform_values { |value| normalize_snapshot(value) }
-      booking_guest.assign_attributes(attrs)
-      booking_guest.save!(validate: false) if booking_guest.changed?
+      # update_columns writes the freshly-computed values directly, without going
+      # through assign_attributes/save!'s dirty-check — which would force AR to
+      # decrypt the *original* stored ciphertext just to compare it, defeating the
+      # rescue-wrapped decrypt above for rows encrypted under since-rotated keys.
+      booking_guest.update_columns(attrs)
     end
   end
 
