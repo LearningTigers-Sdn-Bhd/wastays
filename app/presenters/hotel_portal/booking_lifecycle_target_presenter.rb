@@ -8,6 +8,7 @@ module HotelPortal
     ACTION_LABELS = {
       check_in: "Check-in",
       cancel: "Cancellation",
+      void: "Void",
       backdated_check_in: "Backdated Check-in",
       mark_no_show: "No-show",
       reinstate: "Reinstatement",
@@ -21,6 +22,7 @@ module HotelPortal
     ELIGIBLE_STATUSES = {
       check_in: %w[confirmed],
       cancel: %w[pending confirmed review_no_show overbooked],
+      void: Booking::STATUSES - %w[voided],
       backdated_check_in: %w[review_no_show],
       mark_no_show: %w[review_no_show],
       reinstate: %w[no_show],

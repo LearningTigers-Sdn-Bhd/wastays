@@ -1,9 +1,9 @@
 <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-  <% summary_actions = presenter.summary_actions %>
+  <% summary_actions = presenter.summary_actions(include_void: current_user.has_permission?("void_bookings", hotel: current_hotel)) %>
   <% repair_no_show_available = !presenter.group_context_enabled? && booking.status == "no_show" && current_user.has_permission?("post_folio_corrections", hotel: current_hotel) && Bookings::RepairNoShowTourismTax.needed?(booking) %>
   <% if summary_actions.any? || repair_no_show_available %>
     <% return_to = request.fullpath %>
-    <% sheet_action_keys = %i[cancel check_in edit_check_in mark_no_show undo_check_in backdated_check_in reinstate late_checkout check_out] %>
+    <% sheet_action_keys = %i[cancel void check_in edit_check_in mark_no_show undo_check_in backdated_check_in reinstate late_checkout check_out] %>
     <%= render PanelsUI::DropdownMenu.new(id: "booking-workspace-actions", placement: :bottom_end, class: "w-56") do |menu| %>
       <% menu.with_trigger(variant: :primary, size: :md, aria_label: "Booking actions") do %>
         Actions
@@ -14,6 +14,7 @@
         <% action_path = case summary_action.key
           when :check_in, :edit_check_in then hotel_booking_action_check_in_path(current_hotel, action_booking, return_to: return_to)
           when :cancel then hotel_booking_action_cancel_booking_path(current_hotel, action_booking, return_to: return_to)
+          when :void then hotel_booking_action_void_booking_path(current_hotel, action_booking, return_to: return_to)
           when :backdated_check_in then hotel_booking_action_review_backdated_check_in_path(current_hotel, action_booking, return_to: return_to)
           when :mark_no_show then hotel_booking_action_mark_no_show_path(current_hotel, action_booking, return_to: return_to)
           when :check_out then hotel_booking_action_checkout_path(current_hotel, action_booking, return_to: return_to)

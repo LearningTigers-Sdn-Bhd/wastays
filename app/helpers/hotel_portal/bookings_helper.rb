@@ -6,6 +6,7 @@ module HotelPortal::BookingsHelper
     "checked_in" => "log-in",
     "completed" => "check-check",
     "cancelled" => "circle-x",
+    "voided" => "circle-slash",
     "no_show" => "user-x",
     "review_due_out" => "triangle-alert",
     "checkout_required" => "log-out",

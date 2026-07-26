@@ -32,6 +32,7 @@ module DemoSeeds
     { name: "Manage Inventory", slug: "manage_inventory" },
     { name: "View Bookings", slug: "view_bookings" },
     { name: "Manage Bookings", slug: "manage_bookings" },
+    { name: "Void Bookings", slug: "void_bookings" },
     { name: "View Guest Records", slug: "view_guest_records" },
     { name: "View Guest Phone", slug: "view_guest_phone" },
     { name: "Manage Guest Arrival", slug: "manage_guest_arrival" },
@@ -54,8 +55,8 @@ module DemoSeeds
   ].freeze
 
   ROLE_TEMPLATES = [
-    { name: "Hotel Owner", slug: "hotel_owner", permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_records view_guest_phone delete_guest_record manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_corporate_accounts manage_ar_payments manage_night_audit post_folio_charges post_folio_payments execute_folio_refunds post_folio_adjustments post_folio_corrections post_folio_write_offs manage_general_ledger_maps view_reports view_payouts] },
-    { name: "General Manager", slug: "general_manager", permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_records view_guest_phone delete_guest_record manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_corporate_accounts manage_ar_payments manage_night_audit post_folio_charges post_folio_payments execute_folio_refunds post_folio_adjustments post_folio_corrections post_folio_write_offs manage_general_ledger_maps view_reports view_payouts] },
+    { name: "Hotel Owner", slug: "hotel_owner", permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings void_bookings view_guest_records view_guest_phone delete_guest_record manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_corporate_accounts manage_ar_payments manage_night_audit post_folio_charges post_folio_payments execute_folio_refunds post_folio_adjustments post_folio_corrections post_folio_write_offs manage_general_ledger_maps view_reports view_payouts] },
+    { name: "General Manager", slug: "general_manager", permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings void_bookings view_guest_records view_guest_phone delete_guest_record manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_corporate_accounts manage_ar_payments manage_night_audit post_folio_charges post_folio_payments execute_folio_refunds post_folio_adjustments post_folio_corrections post_folio_write_offs manage_general_ledger_maps view_reports view_payouts] },
     { name: "Front Desk", slug: "front_desk", permissions: %w[view_bookings manage_bookings view_guest_records manage_guest_arrival manage_night_audit post_folio_charges post_folio_payments] },
     { name: "Reservation Staff", slug: "reservation_staff", permissions: %w[view_bookings manage_bookings view_guest_records view_guest_phone] }
   ].freeze

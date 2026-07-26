@@ -60,7 +60,7 @@ class BookingFolio < ApplicationRecord
 
   def projected_forecasts
     return folio_forecasted_charges.none if status == "closed" || booking.blank?
-    return folio_forecasted_charges.none if booking.status.in?(%w[cancelled completed no_show])
+    return folio_forecasted_charges.none if booking.status.in?(%w[cancelled completed no_show voided])
 
     unsettled_forecasts
       .where(FolioForecastedCharge.arel_table[:stay_date].lt(booking.check_out.to_date))

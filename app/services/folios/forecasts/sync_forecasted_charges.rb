@@ -26,7 +26,7 @@ module Folios
       private
 
       def forecasts_not_applicable?
-        @booking.status.in?(%w[cancelled completed no_show])
+        @booking.status.in?(%w[cancelled completed no_show voided])
       end
 
       def sync_expected_forecasts

@@ -47,7 +47,8 @@ module HotelPortal
       "cancelled" => "Cancelled",
       "completed" => "Checked out",
       "overbooked" => "Overbooked",
-      "no_show" => "No-show"
+      "no_show" => "No-show",
+      "voided" => "Voided"
     }.freeze
     STATUS_BADGE_LABELS = STATUS_LABELS.merge(
       "checked_in" => "In house",
@@ -65,7 +66,8 @@ module HotelPortal
       "cancelled" => "rose",
       "completed" => "slate",
       "overbooked" => "rose",
-      "no_show" => "rose"
+      "no_show" => "rose",
+      "voided" => "rose"
     }.freeze
 
     attr_reader :booking
@@ -239,8 +241,14 @@ module HotelPortal
       }
     end
 
-    def summary_actions
-      group_context_enabled? ? group_summary_actions : standalone_summary_actions
+    def summary_actions(include_void: false)
+      actions = group_context_enabled? ? group_summary_actions : standalone_summary_actions
+      return actions unless include_void
+
+      target = group_context_enabled? ? child_bookings.find { |child| child.status != "voided" } : booking
+      return actions if target.nil? || target.status == "voided"
+
+      actions + [ SummaryAction.new(:void, "Void booking", :danger, "right", "circle-slash", target) ]
     end
 
     def group_summary_actions
@@ -1476,6 +1484,7 @@ module HotelPortal
       statuses = child_bookings.filter_map { |child| child.status.to_s.presence }
       return if statuses.empty?
       return status_badge(statuses.first) if statuses.uniq.one?
+      return { label: "Voided", tone: "rose" } if statuses.all? { |status| status == "voided" }
       return { label: "Cancelled", tone: "rose" } if statuses.all? { |status| status == "cancelled" }
       return { label: "Checked out", tone: "slate" } if statuses.all? { |status| status.in?(%w[completed cancelled]) }
 

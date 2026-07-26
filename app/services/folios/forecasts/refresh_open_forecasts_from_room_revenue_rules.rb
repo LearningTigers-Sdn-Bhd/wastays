@@ -11,7 +11,7 @@ module Folios
         end
       end
 
-      EXCLUDED_BOOKING_STATUSES = %w[cancelled completed no_show].freeze
+      EXCLUDED_BOOKING_STATUSES = %w[cancelled completed no_show voided].freeze
 
       def self.call(hotel:, actor: nil)
         new(hotel: hotel, actor: actor).call
