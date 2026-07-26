@@ -42,6 +42,29 @@ RSpec.describe "HotelPortal::Bookings::Actions billing parties", type: :request 
     expect(party.booking_folios.count).to eq(1)
   end
 
+  it "offers every child room and an All option when adding a group account payer" do
+    group = create(:group_booking, hotel:)
+    booking.update!(group_booking: group, group_position: 1)
+    sibling = create(:booking, hotel:, group_booking: group, group_position: 2)
+    create(:booking_room, booking:, room_number: "201")
+    create(:booking_room, booking: sibling, room_number: "202")
+    create(:hotel_corporate_account, hotel:)
+
+    get hotel_booking_action_manage_billing_party_path(hotel, booking, mode: "add_account"),
+      headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+    expect(response).to have_http_status(:success)
+    option_nodes = Nokogiri::HTML(response.body).css("select[name='billing_party[apply_to]'] option")
+    options = option_nodes
+      .map { |option| [ option.text.squish, option["value"] ] }
+    expect(options).to include(
+      [ "Room 201", "booking:#{booking.id}" ],
+      [ "Room 202", "booking:#{sibling.id}" ],
+      [ "All rooms in group (2)", "group" ]
+    )
+    expect(option_nodes.find { |option| option["selected"] }["value"]).to eq("booking:#{booking.id}")
+  end
+
   it "applies an account payer to every child in the group" do
     group = create(:group_booking, hotel:)
     booking.update!(group_booking: group, group_position: 1)
