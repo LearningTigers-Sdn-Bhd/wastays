@@ -57,21 +57,7 @@ module Folios
     private
 
     def create_folio!
-      folio_number = Folios::NextFolioNumber.call(hotel: @hotel)
-      @booking.assign_folio_account_reference_from!(folio_number)
-      @booking.create_booking_folio!(
-        hotel: @hotel,
-        folio_number: folio_number,
-        folio_sequence: 1,
-        status: "open",
-        name: "Guest Folio",
-        folio_type: "guest",
-        payer_type: "guest",
-        is_primary: true,
-        currency: @booking.currency.presence || @hotel.default_currency,
-        opened_at: Time.current,
-        created_by: @actor
-      )
+      Folios::BuildPrimaryFolio.call(booking: @booking, actor: @actor, hotel: @hotel)
     end
 
     def record_recovery_event!(folio:, created:)

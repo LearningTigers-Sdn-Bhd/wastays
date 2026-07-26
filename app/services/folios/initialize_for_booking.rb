@@ -56,39 +56,7 @@ module Folios
     end
 
     def create_folio!
-      folio_number = Folios::NextFolioNumber.call(hotel: @booking.hotel)
-      @booking.assign_folio_account_reference_from!(folio_number)
-      billing_party = agent_billing_party
-
-      @booking.create_booking_folio!(
-        hotel: @booking.hotel,
-        folio_number: folio_number,
-        folio_sequence: 1,
-        name: billing_party ? "Agent Folio" : "Guest Folio",
-        folio_type: billing_party ? "external" : "guest",
-        payer_type: billing_party ? "company" : "guest",
-        hotel_corporate_account: billing_party&.hotel_corporate_account,
-        booking_billing_party: billing_party,
-        is_primary: true,
-        currency: @booking.currency.presence || @booking.hotel.default_currency,
-        opened_at: Time.current,
-        created_by: @user
-      )
-    end
-
-    def agent_billing_party
-      return unless @booking.hotel_corporate_account_id.present?
-
-      hotel_corporate_account = @booking.hotel_corporate_account
-      return unless hotel_corporate_account&.active?
-
-      @booking.booking_billing_parties.find_or_create_by!(
-        hotel_corporate_account: hotel_corporate_account
-      ) do |party|
-        party.hotel = @booking.hotel
-        party.party_kind = "company"
-        party.account_type = hotel_corporate_account.account_type
-      end
+      Folios::BuildPrimaryFolio.call(booking: @booking, actor: @user, hotel: @booking.hotel)
     end
 
     def guard_folio_creation!

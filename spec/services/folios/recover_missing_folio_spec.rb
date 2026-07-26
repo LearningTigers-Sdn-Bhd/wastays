@@ -61,6 +61,26 @@ RSpec.describe Folios::RecoverMissingFolio do
     }.not_to change(BookingFolio, :count)
   end
 
+  it "recovers an agent booking's folio onto the agent's ledger" do
+    hotel_corporate_account = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent")
+    booking.update!(hotel_corporate_account: hotel_corporate_account)
+
+    result = described_class.call(
+      booking: booking,
+      hotel: hotel,
+      actor: actor,
+      night_audit: night_audit,
+      reason: "Night audit blocker"
+    )
+
+    expect(result).to be_success
+    expect(result.folio).to have_attributes(
+      folio_type: "external",
+      payer_type: "company",
+      hotel_corporate_account: hotel_corporate_account
+    )
+  end
+
   it "rejects a booking from another hotel" do
     other_booking = create(:booking)
 
