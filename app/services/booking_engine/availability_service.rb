@@ -181,7 +181,8 @@ module BookingEngine
       # 2. Single-Type Allocations
       room_type_data.each do |data|
         next if data[:max_capacity] <= 0
-        req_rooms = (total_pax.to_f / data[:max_capacity]).ceil
+        req_rooms = min_rooms_for(data[:room_type], @adults, @children)
+        next if req_rooms.nil?
         # Support flexibility: use room_count if the user requested more rooms (e.g. 1,1,1)
         req_rooms = [ req_rooms, @room_count ].max
 
@@ -344,6 +345,24 @@ module BookingEngine
       stay_dates.length
     end
 
+    # Minimum number of rooms of this type needed to fit the party, respecting
+    # not just total capacity but also the room's separate adult/children caps
+    # (e.g. a room with max_capacity 3 but max_adults 2 can't seat 3 adults alone).
+    # Returns nil if this room type can never fit the given adults/children combo.
+    def min_rooms_for(room_type, adults, children)
+      by_capacity = (adults + children).to_f / room_type.max_capacity
+
+      max_adults = room_type.max_adults.to_i
+      return nil if adults.positive? && max_adults <= 0
+      by_adults = adults.positive? ? adults.to_f / max_adults : 0
+
+      max_children = room_type.max_children.to_i
+      return nil if children.positive? && max_children <= 0
+      by_children = children.positive? ? children.to_f / max_children : 0
+
+      [ by_capacity, by_adults, by_children ].max.ceil
+    end
+
     def distribute_guests(adults, children, rooms, child_ages: [])
       num_rooms = rooms.size
       return nil if adults < num_rooms # Every room must have at least 1 adult
@@ -449,9 +468,23 @@ module BookingEngine
 
       return nil if remaining_pax > 0 || selected_rooms.empty?
 
-      selected_rooms = selected_rooms.sort_by { |rt| -rt.max_capacity }
+      occupancies = nil
+      attempts = 0
+      while occupancies.nil? && attempts <= selected_rooms.size + 3
+        occupancies = distribute_guests(@adults, @children, selected_rooms.sort_by { |rt| -rt.max_capacity }, child_ages: @child_ages)
+        break if occupancies.present?
 
-      occupancies = distribute_guests(@adults, @children, selected_rooms, child_ages: @child_ages)
+        # Raw capacity was enough but a per-room sub-cap (e.g. max_adults) wasn't
+        # — add another room of the cheapest available type and retry.
+        extra = room_type_data.select { |d| availability[d[:room_type].id] > 0 }
+                               .min_by { |d| d[:pricing]&.total_price || Float::INFINITY }
+        break unless extra
+
+        availability[extra[:room_type].id] -= 1
+        selected_rooms << extra[:room_type]
+        attempts += 1
+      end
+
       return nil if occupancies.nil?
 
       grouped = occupancies.group_by { |occ| [ occ[:room_type], occ[:adults], occ[:children], occ[:child_ages].to_a.sort ] }

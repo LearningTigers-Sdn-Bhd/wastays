@@ -1,19 +1,4 @@
 <div class="w-full space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(title: "Corporate Accounts", description: "Manage corporate, government, travel agent, and airline accounts for this hotel.") do |header| %>
-    <% header.with_actions do %>
-      <%= render PanelsUI::Button.new(
-            as: :a,
-            href: new_hotel_corporate_account_path(current_hotel),
-            variant: :primary,
-            size: :md,
-            class: "w-full lg:w-auto",
-            data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }) do %>
-        <%= cached_icon "plus", stroke_width: 2.5, class: "size-4" %>
-        Invite Corporate Account
-      <% end %>
-    <% end %>
-  <% end %>
-
   <% if @pending_invitations.any? %>
     <section class="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/60 shadow-sm">
       <div class="border-b border-amber-200 px-6 py-5">
@@ -37,8 +22,7 @@
   <% end %>
 
   <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-    <div class="space-y-4 border-b border-border px-6 py-5">
-      <h2 class="text-lg font-bold text-foreground">Linked Corporate Accounts</h2>
+    <div class="border-b border-border px-6 py-5">
       <%= render "filters", presenter: @presenter %>
     </div>
     <%= render "table", presenter: @presenter %>

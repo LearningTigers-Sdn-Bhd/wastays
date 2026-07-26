@@ -2,33 +2,53 @@
 
 module HotelPortal
   class BookingSourcePresenter
-    SOURCE_ICONS = {
-      "phone" => "phone",
-      "walk_in" => "user",
-      "email" => "mail",
-      "whatsapp" => "message-circle",
-      "internal" => "building-2",
-      "staff" => "building-2",
-      "direct" => "building-2",
-      "manual_at_hotel" => "building-2",
-      "booking_com" => "globe",
-      "agoda" => "globe",
-      "expedia" => "globe",
-      "traveloka" => "globe",
-      "ota" => "globe",
-      "channel_manager" => "globe"
-    }.freeze
-
     def initialize(source)
-      @source = source.to_s.downcase
+      @raw = source.to_s
+      @record = BookingSource.find_by_source(source)
     end
 
     def label
-      @source.presence&.tr("_", " ")&.titleize || "Unknown"
+      @record&.label || (@raw.presence&.tr("_", " ")&.titleize || "Unknown")
     end
 
     def icon
-      SOURCE_ICONS.fetch(@source, "link")
+      @record&.icon.presence || "link"
+    end
+
+    def ota?
+      @record&.kind == "ota"
+    end
+
+    def logo
+      @record&.logo if @record&.logo&.attached?
+    end
+
+    def badge_color
+      @record&.badge_color
+    end
+
+    def badge_text_color
+      @record&.badge_text_color || "#FFFFFF"
+    end
+
+    def badge_initial
+      @record&.badge_initial
+    end
+
+    def self.normalize(source)
+      BookingSource.normalize(source)
+    end
+
+    def self.manual_options
+      BookingSource.manual_options
+    end
+
+    def self.ota_options
+      BookingSource.ota_options
+    end
+
+    def self.other_channel_options
+      BookingSource.other_channel_options
     end
   end
 end

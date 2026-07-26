@@ -45,7 +45,7 @@ module StayView
     :dom_id, :booking_id, :booking_room_id, :guest_label, :primary_guest_name, :booking_type, :status, :check_in, :check_out,
     :check_in_at, :check_out_at, :actual_check_in, :actual_check_out, :actual_check_in_at, :actual_check_out_at,
     :start_track, :end_track, :clipped_left, :clipped_right, :accessible_label, :capabilities,
-    :group_booking_id, :group_reference, :group_name, :group_position, :group_rooms, :financial_signals, :source_label,
+    :group_booking_id, :group_reference, :group_name, :group_position, :group_rooms, :financial_signals, :source, :source_label,
     :adults, :children, :boat_in_at, :boat_out_at
   ) do
     alias_method :clipped_left?, :clipped_left
@@ -53,7 +53,7 @@ module StayView
 
     def initialize(**attributes)
       %i[check_in_at check_out_at actual_check_in actual_check_out actual_check_in_at actual_check_out_at group_booking_id group_reference
-         group_name group_position source_label adults children boat_in_at boat_out_at].each do |key|
+         group_name group_position source source_label adults children boat_in_at boat_out_at].each do |key|
         attributes[key] ||= nil
       end
       attributes[:financial_signals] ||= []
@@ -63,7 +63,7 @@ module StayView
       attributes[:booking_type] = attributes.fetch(:booking_type).to_sym
       attributes[:status] = attributes.fetch(:status).to_sym
       %i[dom_id guest_label primary_guest_name accessible_label].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
-      %i[group_reference group_name source_label].each { |key| attributes[key] = attributes[key]&.to_s&.freeze }
+      %i[group_reference group_name source source_label].each { |key| attributes[key] = attributes[key]&.to_s&.freeze }
       attributes[:group_rooms] = Immutable.array(attributes.fetch(:group_rooms, []))
       attributes[:financial_signals] = Immutable.array(attributes.fetch(:financial_signals, []))
       super(**attributes)

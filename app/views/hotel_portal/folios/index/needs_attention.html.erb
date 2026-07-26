@@ -1,0 +1,29 @@
+<div class="w-full space-y-4">
+  <div class="flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-amber-100 text-amber-700">
+        <%= cached_icon "triangle-alert", class: "size-4" %>
+      </span>
+      <div>
+        <p class="text-sm font-black text-foreground">Needs Attention</p>
+        <p class="text-xs font-medium text-muted-foreground">Folios with a balance due, a refund due, a due-out stay, or an unsynced completed refund.</p>
+      </div>
+    </div>
+
+    <%= link_to hotel_folios_path(current_hotel), class: "inline-flex shrink-0 items-center gap-1.5 text-xs font-black text-foreground transition hover:text-muted-foreground", data: { turbo_frame: "_top" } do %>
+      <%= cached_icon "arrow-left", class: "size-3.5" %>
+      Back to Folios
+    <% end %>
+  </div>
+
+  <%= render "hotel_portal/folios/index/filters",
+    folio_index: @folio_index,
+    form_url: needs_attention_hotel_folios_path(current_hotel),
+    results_turbo_frame: "folios_results" %>
+
+  <%= turbo_frame_tag "folios_results" do %>
+    <%= render "hotel_portal/folios/index/desktop_table", folio_index: @folio_index, reset_path: needs_attention_hotel_folios_path(current_hotel) %>
+    <%= render "hotel_portal/folios/index/mobile_cards", folio_index: @folio_index, reset_path: needs_attention_hotel_folios_path(current_hotel) %>
+    <%= render "hotel_portal/folios/index/pagination", folio_index: @folio_index %>
+  <% end %>
+</div>

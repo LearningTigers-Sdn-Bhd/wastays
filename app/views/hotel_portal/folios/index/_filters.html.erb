@@ -1,5 +1,7 @@
+<% form_url = local_assigns[:form_url] || hotel_folios_path(current_hotel) %>
+<% results_turbo_frame = local_assigns[:results_turbo_frame] || "folios_results" %>
 <section class="rounded-md border border-border bg-card p-3 shadow-sm">
-  <%= form_with url: hotel_folios_path(current_hotel), method: :get, class: "space-y-3", data: { controller: "auto-submit", turbo_frame: "folios_results", turbo_action: "advance" } do |f| %>
+  <%= form_with url: form_url, method: :get, class: "space-y-3", data: { controller: "auto-submit", turbo_frame: results_turbo_frame, turbo_action: "advance" } do |f| %>
     <div class="relative">
       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
         <%= cached_icon "search", stroke_width: 2.25, class: "size-4 text-muted-foreground" %>

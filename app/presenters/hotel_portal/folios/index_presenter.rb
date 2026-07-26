@@ -13,11 +13,24 @@ module HotelPortal
       [ "adjusted", "Adjusted" ]
     ].freeze
 
+    ATTENTION_FILTERS = [
+      [ "all", "All" ],
+      [ "balance_due", "Balance Due" ],
+      [ "refund_due", "Refund Due" ],
+      [ "due_out", "Due Out" ],
+      [ "review", "Review" ]
+    ].freeze
+
     attr_reader :hotel, :params
 
-    def initialize(hotel:, params:)
+    def initialize(hotel:, params:, attention_only: false)
       @hotel = hotel
       @params = params
+      @attention_only = attention_only
+    end
+
+    def attention_only?
+      @attention_only
     end
 
     def rows
@@ -28,26 +41,22 @@ module HotelPortal
       @paginated_rows ||= Kaminari.paginate_array(filtered_rows).page(params[:page]).per(25)
     end
 
-    def attention_rows
-      @attention_rows ||= rows.select(&:needs_attention?).first(5)
+    def needs_attention_count
+      @needs_attention_count ||= rows.count(&:needs_attention?)
     end
 
-    def show_all_attention?
-      params[:attention] == "all"
-    end
-
-    def visible_attention_rows
-      show_all_attention? ? rows.select(&:needs_attention?) : attention_rows
+    def active_filters
+      attention_only? ? ATTENTION_FILTERS : FILTERS
     end
 
     def filter_options
-      FILTERS.map do |key, label|
+      active_filters.map do |key, label|
         { key: key, label: label, count: count_for_filter(key) }
       end
     end
 
     def selected_filter
-      FILTERS.map(&:first).include?(params[:filter].to_s) ? params[:filter].to_s : "all"
+      active_filters.map(&:first).include?(params[:filter].to_s) ? params[:filter].to_s : "all"
     end
 
     def query
@@ -60,10 +69,10 @@ module HotelPortal
 
     def summary_cards
       [
-        { label: "Open Folios", value: rows.count(&:open?), description: "Active guest folios", icon: "book-open", class: "bg-blue-50 text-blue-700" },
-        { label: "Balance Due", value: rows.count(&:balance_due?), description: "Guest owes hotel", icon: "credit-card", class: "bg-red-50 text-red-700" },
-        { label: "Refund Due", value: rows.count(&:refund_due?), description: "Hotel owes guest", icon: "rotate-ccw", class: "bg-amber-50 text-amber-700" },
-        { label: "Closed Today", value: rows.count(&:closed_today?), description: "Settled / completed", icon: "circle-check", class: "bg-emerald-50 text-emerald-700" }
+        { label: "Open Folios", value: rows.count(&:open?), icon: "book-open", class: "bg-blue-50 text-blue-700" },
+        { label: "Balance Due", value: rows.count(&:balance_due?), icon: "credit-card", class: "bg-red-50 text-red-700" },
+        { label: "Refund Due", value: rows.count(&:refund_due?), icon: "rotate-ccw", class: "bg-amber-50 text-amber-700" },
+        { label: "Closed Today", value: rows.count(&:closed_today?), icon: "circle-check", class: "bg-emerald-50 text-emerald-700" }
       ]
     end
 
@@ -81,11 +90,15 @@ module HotelPortal
     end
 
     def filtered_rows
-      @filtered_rows ||= rows.select { |row| matches_query?(row) && matches_filter?(row) }
+      @filtered_rows ||= rows.select { |row| matches_scope?(row) && matches_query?(row) && matches_filter?(row) }
     end
 
     def count_for_filter(key)
-      rows.count { |row| matches_filter?(row, key) }
+      rows.count { |row| matches_scope?(row) && matches_filter?(row, key) }
+    end
+
+    def matches_scope?(row)
+      !attention_only? || row.needs_attention?
     end
 
     def matches_query?(row)
@@ -102,6 +115,7 @@ module HotelPortal
       when "due_out" then row.due_out?
       when "closed" then row.closed?
       when "adjusted" then row.adjusted?
+      when "review" then row.unsynced_completed_refund?
       else true
       end
     end
@@ -185,9 +199,7 @@ module HotelPortal
       end
 
       def amount_label
-        amount = balance.abs
-        suffix = balance.negative? ? " credit" : ""
-        "#{currency} #{format('%.2f', amount)}#{suffix}"
+        "#{currency} #{format('%.2f', balance.abs)}"
       end
 
       def currency
@@ -214,10 +226,7 @@ module HotelPortal
       def status_badges
         badges = []
         badges << { label: "Due out", icon: "calendar-clock", class: red_badge_class } if due_out?
-        badges << { label: "Credit", icon: "rotate-ccw", class: green_badge_class } if refund_due?
         badges << { label: "Review", icon: "triangle-alert", class: red_badge_class } if unsynced_completed_refund?
-        badges << { label: "Guest owes hotel", icon: "credit-card", class: red_badge_class } if balance_due?
-        badges << { label: "Hotel owes guest", icon: "rotate-ccw", class: red_badge_class } if refund_due?
         badges
       end
 
@@ -238,8 +247,8 @@ module HotelPortal
 
       def attention_reason
         return "Completed refund is not synced to the folio" if unsynced_completed_refund?
-        return "Hotel owes guest" if refund_due?
-        return "Guest owes hotel" if balance_due?
+        return "Refund due to guest" if refund_due?
+        return "Balance due from guest" if balance_due?
         return "Due out today with non-zero balance" if due_out? && !settled?
 
         "Review folio"

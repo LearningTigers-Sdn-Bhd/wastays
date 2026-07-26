@@ -2,8 +2,6 @@
 
 module StayView
   class ProjectBooking
-    SOURCE_LABELS = { "walk_in" => "Walk-in", "channel_manager" => "Channel" }.freeze
-
     def self.call(booking:, room_type_name:, group_rooms: [], financial_signals: [], date_window:, capabilities:)
       financial_signals = [] unless capabilities.view_financial_status?
       # Position the bar on the room's actual occupancy: once a guest has
@@ -19,7 +17,8 @@ module StayView
       booking_type = booking.group_booking_id.present? ? :group : :single
       group_reference = booking.group_reference if capabilities.view_booking?
       group_name = booking.group_name if capabilities.view_booking?
-      source_label = source_label_for(booking.source) if capabilities.view_booking?
+      source = booking.source if capabilities.view_booking?
+      source_label = HotelPortal::BookingSourcePresenter.new(source).label if source.present?
       adults = booking.adults if capabilities.view_booking?
       children = booking.children if capabilities.view_booking?
       boat_in_at = booking.boat_in_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
@@ -71,18 +70,13 @@ module StayView
         group_position: booking.group_position,
         group_rooms: project_group_rooms(group_rooms, booking, capabilities),
         financial_signals:,
+        source:,
         source_label:,
         adults:,
         children:,
         boat_in_at:,
         boat_out_at:
       )
-    end
-
-    def self.source_label_for(source)
-      return if source.blank?
-
-      SOURCE_LABELS.fetch(source.to_s, source.to_s.humanize)
     end
 
     def self.project_group_rooms(group_rooms, booking, capabilities)
@@ -101,6 +95,6 @@ module StayView
       end
     end
 
-    private_class_method :project_group_rooms, :source_label_for
+    private_class_method :project_group_rooms
   end
 end

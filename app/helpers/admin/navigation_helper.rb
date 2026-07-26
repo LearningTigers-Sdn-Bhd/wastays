@@ -11,6 +11,7 @@ module Admin::NavigationHelper
     margin_rules_active = controller_name == "margin_rules"
     setup_fee_rules_active = controller_name == "setup_fee_rules"
     exchange_rates_active = controller_name == "exchange_rates"
+    booking_sources_active = controller_name == "booking_sources"
     reconciliations_active = controller_name == "reconciliations"
     refund_requests_active = controller_name == "refund_requests"
     payouts_active = controller_name == "payout_batches"
@@ -56,6 +57,7 @@ module Admin::NavigationHelper
         label: "System",
         items: [
           PanelsUI::Navigation::Item.new(label: "Plan Access", path: admin_plans_path, search_text: "Plan Access Plans Subscription Features Pricing Tiers Gating", active: plans_active, icon: "layers"),
+          PanelsUI::Navigation::Item.new(label: "Booking Sources", path: admin_booking_sources_path, search_text: "Booking Sources OTA Logos Walk-in Channel Manager", active: booking_sources_active, icon: "tag"),
           PanelsUI::Navigation::Item.new(label: "Audit Logs", path: admin_audit_logs_path, search_text: "Audit Logs System Activity", active: audit_logs_active, icon: "file-text"),
           PanelsUI::Navigation::Item.new(label: "Observation Deck", path: admin_observation_deck_index_path, search_text: "Observation Deck Telescope Debug Mission Control", active: observation_deck_active, icon: "eye", external: true)
         ]
@@ -74,8 +76,7 @@ module Admin::NavigationHelper
 
   def admin_sidebar_footer_items
     @_admin_sidebar_footer_items ||= [
-      PanelsUI::Navigation::Item.new(label: "Homepage", path: root_path, search_text: "Homepage Website", icon: "house", active: false),
-      PanelsUI::Navigation::Item.new(label: "Help & support", path: help_center_path, search_text: "Help Support", icon: "circle-question-mark", active: false)
+      PanelsUI::Navigation::Item.new(label: "Homepage", path: root_path, search_text: "Homepage Website", icon: "house", active: false)
     ]
   end
 

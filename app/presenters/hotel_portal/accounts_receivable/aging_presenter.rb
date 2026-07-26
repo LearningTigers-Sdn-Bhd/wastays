@@ -3,31 +3,45 @@
 module HotelPortal
   module AccountsReceivable
     class AgingPresenter
-      Metric = Struct.new(:label, :amounts, :description, :icon, :class_name, keyword_init: true)
+      Metric = Struct.new(:label, :amounts, :icon, :class_name, keyword_init: true)
 
-      attr_reader :report
+      ACCOUNT_TYPE_OPTIONS = HotelCorporateAccount::ACCOUNT_TYPES.map { |type| [ type.humanize, type ] }.freeze
 
-      def initialize(report:)
+      attr_reader :report, :query, :account_type
+
+      def initialize(report:, query: nil, account_type: nil)
         @report = report
+        @query = query.to_s.strip.presence
+        @account_type = account_type.presence_in(HotelCorporateAccount::ACCOUNT_TYPES)
       end
 
       delegate :as_of_date, to: :report
 
+      def account_type_options = ACCOUNT_TYPE_OPTIONS
+
+      def filters_active?
+        query.present? || account_type.present?
+      end
+
       def rows
-        @rows ||= report.rows.map { |row| Row.new(row) }
+        @rows ||= begin
+          filtered = report.rows
+          filtered = filtered.select { |row| row.corporate_account.name.downcase.include?(query.downcase) } if query.present?
+          filtered = filtered.select { |row| row.hotel_corporate_account.account_type == account_type } if account_type.present?
+          filtered.map { |row| Row.new(row) }
+        end
       end
 
       def summary_metrics
         [
-          metric("Current", :current, "Not yet overdue", "circle-check", "bg-emerald-50 text-emerald-700"),
-          metric("1–30 days", :days_1_30, "Recently overdue", "clock-3", "bg-amber-50 text-amber-700"),
-          metric("31–60 days", :days_31_60, "Requires follow-up", "clock-alert", "bg-orange-50 text-orange-700"),
-          metric("61–90 days", :days_61_90, "High collection risk", "triangle-alert", "bg-red-50 text-red-700"),
-          metric("90+ days", :days_over_90, "Critical overdue balance", "octagon-alert", "bg-rose-50 text-rose-700"),
+          metric("Current", :current, "circle-check", "bg-emerald-50 text-emerald-700"),
+          metric("1–30 days", :days_1_30, "clock-3", "bg-amber-50 text-amber-700"),
+          metric("31–60 days", :days_31_60, "clock-alert", "bg-orange-50 text-orange-700"),
+          metric("61–90 days", :days_61_90, "triangle-alert", "bg-red-50 text-red-700"),
+          metric("90+ days", :days_over_90, "octagon-alert", "bg-rose-50 text-rose-700"),
           Metric.new(
             label: "Total outstanding",
             amounts: amounts_for(&:total),
-            description: "All open AR balances",
             icon: "wallet-cards",
             class_name: "bg-muted text-foreground"
           )
@@ -36,11 +50,10 @@ module HotelPortal
 
       private
 
-      def metric(label, bucket, description, icon, class_name)
+      def metric(label, bucket, icon, class_name)
         Metric.new(
           label: label,
           amounts: amounts_for { |totals| totals.public_send(bucket) },
-          description: description,
           icon: icon,
           class_name: class_name
         )

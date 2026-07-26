@@ -77,7 +77,7 @@ end %>
                     <% end %>
                     <%= render PanelsUI::FormField.new(form: f, attribute: :source, label: "Booking source") do |field| %>
                       <% field.with_select_menu(
-                           [["Phone", "phone"], ["Walk-in", "walk_in"], ["Email", "email"], ["WhatsApp", "whatsapp"], ["Other", "internal"]],
+                           booking_source_choices,
                            selected: @booking.source || "phone") %>
                     <% end %>
                   </div>

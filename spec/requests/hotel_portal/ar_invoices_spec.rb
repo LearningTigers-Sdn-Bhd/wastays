@@ -44,7 +44,6 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
 
       expect(response.body).to include("AR Invoices")
       expect(response.body).not_to include("Accounts Receivable Invoices (AR Invoices)")
-      expect(response.body).to include("Track Direct Bill invoices, due dates, and outstanding corporate balances.")
       expect(response.body).to include("Record Received Payment")
       expect(response.body).to include("Open AR")
       expect(response.body).to include("Overdue")
@@ -149,7 +148,8 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Aging Report")
-      expect(response.body).to include("Outstanding corporate balances as of")
+      expect(response.body).to include("Print Summary")
+      expect(document.at_css("a[href='#{hotel_ar_agent_summary_path(hotel, format: :pdf)}']")).to be_present
       expect(response.body).to include("Current")
       expect(response.body).to include("1–30 days")
       expect(response.body).to include("Total outstanding")
@@ -182,24 +182,51 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       expect(response.body).to include("No outstanding AR balances")
       expect(response.body).to include("Paid, void, and zero-balance invoices do not appear")
     end
-  end
 
-  describe "GET /hotel/:hotel_id/accounts-receivable/agent-summary" do
-    it "includes only travel_agent and airline accounts, excluding company/government" do
+    it "filters rows by corporate account name search" do
+      agent = create(:hotel_corporate_account, :direct_bill, hotel: hotel,
+        corporate_account: create(:account, :corporate, name: "Sunset Travel Agency"))
+      company = create(:hotel_corporate_account, :direct_bill, hotel: hotel,
+        corporate_account: create(:account, :corporate, name: "Acme Sdn Bhd"))
+      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGING-SEARCH-1", folio_number: 604, amount: 90, relationship: agent, due_on: Date.current - 5.days)
+      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGING-SEARCH-2", folio_number: 605, amount: 60, relationship: company, due_on: Date.current - 5.days)
+
+      get hotel_ar_aging_path(hotel, query: "sunset")
+
+      expect(response.body).to include("Sunset Travel Agency")
+      expect(response.body).not_to include("Acme Sdn Bhd")
+    end
+
+    it "filters rows by account type" do
       agent = create(:hotel_corporate_account, :direct_bill, hotel: hotel, account_type: "travel_agent",
         corporate_account: create(:account, :corporate, name: "Sunset Travel Agency"))
       company = create(:hotel_corporate_account, :direct_bill, hotel: hotel, account_type: "company",
         corporate_account: create(:account, :corporate, name: "Acme Sdn Bhd"))
-      agent_invoice = create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGENT-SUMMARY", folio_number: 701, amount: 150, relationship: agent, due_on: Date.current - 5.days)
-      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-COMPANY-HIDDEN", folio_number: 702, amount: 500, relationship: company, due_on: Date.current - 5.days)
+      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGING-TYPE-1", folio_number: 606, amount: 90, relationship: agent, due_on: Date.current - 5.days)
+      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGING-TYPE-2", folio_number: 607, amount: 60, relationship: company, due_on: Date.current - 5.days)
 
+      get hotel_ar_aging_path(hotel, account_type: "travel_agent")
+
+      expect(response.body).to include("Sunset Travel Agency")
+      expect(response.body).not_to include("Acme Sdn Bhd")
+    end
+
+    it "renders a search-specific empty state when a filter matches nothing" do
+      relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
+      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGING-NOMATCH", folio_number: 608, amount: 90, relationship: relationship, due_on: Date.current - 5.days)
+
+      get hotel_ar_aging_path(hotel, query: "no-such-account")
+
+      expect(response.body).to include("No matching accounts")
+      expect(response.body).to include("Try another search term or account type.")
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/accounts-receivable/agent-summary" do
+    it "redirects HTML requests to the Aging Report (the standalone page was folded into it)" do
       get hotel_ar_agent_summary_path(hotel)
 
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Agent Summary Statement")
-      expect(response.body).to include(agent_invoice.corporate_account.name)
-      expect(response.body).to include("MYR 150.00")
-      expect(response.body).not_to include(company.corporate_account.name)
+      expect(response).to redirect_to(hotel_ar_aging_path(hotel))
     end
 
     it "exports a PDF" do

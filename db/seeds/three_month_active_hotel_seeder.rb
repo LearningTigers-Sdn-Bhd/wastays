@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
 #
-# Seeds a fictional hotel with ~3 months of realistic operating history
-# (past/completed stays, current in-house guests, future confirmed
-# bookings) covering both guest-pay and corporate-billed business —
-# private companies, government, travel agents, and an airline — so the
-# folio, AR invoice, and AR payment screens have real-looking data to
-# review. Safe to re-run: destroys and rebuilds this hotel's bookings
-# and AR history each time.
+# Seeds a fictional hotel with realistic operating history from its opening
+# day (1 Jan 2026) through today (past/completed stays, current in-house
+# guests, future confirmed bookings) covering both guest-pay and
+# corporate-billed business — private companies, government, travel
+# agents, and an airline — so the folio, AR invoice, AR payment, and
+# Agent Summary screens have real-looking data to review. Safe to re-run:
+# destroys and rebuilds this hotel's bookings and AR history each time.
 #
 # Usage: bin/rails runner db/seeds/three_month_active_hotel_seeder.rb
 
-puts "== Seeding 3-Month Active Hotel (Corporate AR Demo) =="
+puts "== Seeding Active Hotel Since Opening Day (Corporate AR Demo) =="
 
 # Avoid the overhead of rendering/opening a browser tab for every booking
 # confirmation email while seeding dozens of bookings.
@@ -20,7 +20,7 @@ ActionMailer::Base.delivery_method = :test
 RNG = Random.new(20260714)
 
 TODAY = Date.current
-PAST_HORIZON = TODAY - 92.days
+PAST_HORIZON = Date.new(2026, 1, 1)
 FUTURE_HORIZON = TODAY + 30.days
 
 # 1. Account & Hotel
@@ -265,6 +265,13 @@ hca.save!
 find_or_create_corporate_user(account: corp_account, name: "Wanderlust Accounts", email: hca.contact_email)
 corporates[:travel_agent] = hca
 
+corp_account = find_or_create_corporate_account(name: "Sabah Sunrise Tours & Travel", slug: "sabah-sunrise-tours")
+hca = HotelCorporateAccount.find_or_initialize_by(hotel: hotel, corporate_account: corp_account)
+hca.assign_attributes(account_type: "travel_agent", relationship_type: "direct_bill", direct_bill_enabled: true, credit_limit: 12_000, credit_currency: "MYR", payment_terms_days: 21, status: "active", contact_email: "finance@sabahsunrisetours.example")
+hca.save!
+find_or_create_corporate_user(account: corp_account, name: "Sabah Sunrise Accounts", email: hca.contact_email)
+corporates[:travel_agent_2] = hca
+
 corp_account = find_or_create_corporate_account(name: "SkyBorneo Airlines Crew Desk", slug: "skyborneo-crew")
 hca = HotelCorporateAccount.find_or_initialize_by(hotel: hotel, corporate_account: corp_account)
 hca.assign_attributes(account_type: "airline", relationship_type: "direct_bill", direct_bill_enabled: true, credit_limit: 35_000, credit_currency: "MYR", payment_terms_days: 30, status: "active", contact_email: "crewaccommodation@skyborneo.example")
@@ -272,8 +279,8 @@ hca.save!
 find_or_create_corporate_user(account: corp_account, name: "SkyBorneo Crew Desk Accounts", email: hca.contact_email)
 corporates[:airline] = hca
 
-puts "5 corporate accounts ready: #{corporates.values.map { |c| c.corporate_account.name }.join(', ')}"
-puts "5 corporate logins ready (password: 12345678): #{corporates.values.map { |c| c.contact_email }.join(', ')}"
+puts "#{corporates.size} corporate accounts ready: #{corporates.values.map { |c| c.corporate_account.name }.join(', ')}"
+puts "#{corporates.size} corporate logins ready (password: 12345678): #{corporates.values.map { |c| c.contact_email }.join(', ')}"
 
 # 7. Helpers (adapted from db/seeds/per_pax_hotel_seeder.rb)
 
@@ -519,7 +526,7 @@ end
 guest_pool = guests.values
 guest_payment_methods = %w[cash card bank_transfer]
 guest_sources = %w[walk_in agoda whatsapp internal]
-corporate_accounts_pool = [ corporates[:company_direct_bill], corporates[:company_standard], corporates[:government], corporates[:travel_agent], corporates[:airline] ]
+corporate_accounts_pool = [ corporates[:company_direct_bill], corporates[:company_standard], corporates[:government], corporates[:travel_agent], corporates[:travel_agent_2], corporates[:airline] ]
 room_type_pool = room_types.values
 
 created_bookings = { past: 0, current: 0, future: 0, cancelled: 0, corporate: 0, guest_pay: 0 }
@@ -584,7 +591,8 @@ current_scenarios = [
   { room: "Family Suite", ci: -1, co: 3, adults: 3, children: 1, corporate: :company_direct_bill },
   { room: "Executive Suite", ci: 0, co: 4, adults: 2, children: 0, corporate: :airline },
   { room: "Superior Room", ci: 0, co: 1, adults: 2, children: 0, corporate: nil },
-  { room: "Deluxe Room", ci: -1, co: 2, adults: 2, children: 1, corporate: :travel_agent }
+  { room: "Deluxe Room", ci: -1, co: 2, adults: 2, children: 1, corporate: :travel_agent },
+  { room: "Superior Room", ci: -2, co: 2, adults: 2, children: 0, corporate: :travel_agent_2 }
 ]
 current_scenarios.each do |sc|
   room_type = room_types[sc[:room]]
@@ -682,39 +690,47 @@ invoices.each_with_index do |invoice, index|
 end
 puts "AR invoices: #{invoices.size} total (#{settled} fully paid, #{partial} partially paid, #{unpaid} unpaid)."
 
-# 10. A couple of agent-submitted payment slips for the corporate portal demo
-travel_agent_hca = corporates[:travel_agent]
-travel_agent_outstanding_invoices = travel_agent_hca&.ar_invoices&.select { |inv| inv.outstanding_amount.to_d.positive? } || []
+# 10. Agent-submitted payment slips for the corporate portal demo (one pending,
+# one rejected, per travel agent) so the Agent Summary / submissions review
+# screens have more than a single account to show.
+travel_agent_hcas = [ corporates[:travel_agent], corporates[:travel_agent_2] ].compact
+sample_slip_path = Rails.root.join("spec/fixtures/files/sample_image.jpg")
 
-if travel_agent_hca && travel_agent_outstanding_invoices.any? && File.exist?(Rails.root.join("spec/fixtures/files/sample_image.jpg"))
+travel_agent_hcas.each_with_index do |travel_agent_hca, idx|
+  travel_agent_outstanding_invoices = travel_agent_hca.ar_invoices.select { |inv| inv.outstanding_amount.to_d.positive? }
+
+  unless travel_agent_outstanding_invoices.any? && File.exist?(sample_slip_path)
+    puts "  [Skip] No outstanding invoice available for #{travel_agent_hca.corporate_account.name} agent payment submission demo."
+    next
+  end
+
   agent_user = travel_agent_hca.corporate_account.users.first
+  slip_prefix = "AGENT-SLIP-#{TODAY.strftime('%Y%m')}-#{idx + 1}"
 
   pending_invoice = travel_agent_outstanding_invoices.first
   pending_amount = [ 850.0, pending_invoice.outstanding_amount.to_d ].min
   pending_submission = travel_agent_hca.ar_payment_submissions.new(
     hotel: hotel, submitted_by: agent_user, amount: pending_amount, currency: "MYR",
-    reference_number: "AGENT-SLIP-#{TODAY.strftime('%Y%m')}-01", received_at: TODAY - 2.days, payment_method: "bank_transfer",
+    reference_number: "#{slip_prefix}A", received_at: TODAY - 2.days, payment_method: "bank_transfer",
     notes: "Settlement for last week's bookings"
   )
   pending_submission.ar_payment_submission_allocations.build(ar_invoice: pending_invoice, amount: pending_amount)
-  pending_submission.slip.attach(io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")), filename: "slip.jpg", content_type: "image/jpeg")
+  pending_submission.slip.attach(io: File.open(sample_slip_path), filename: "slip.jpg", content_type: "image/jpeg")
   pending_submission.save!
 
   rejected_invoice = travel_agent_outstanding_invoices.second || pending_invoice
   rejected_amount = [ 320.0, rejected_invoice.outstanding_amount.to_d ].min
   rejected_submission = travel_agent_hca.ar_payment_submissions.new(
     hotel: hotel, submitted_by: agent_user, amount: rejected_amount, currency: "MYR",
-    reference_number: "AGENT-SLIP-#{TODAY.strftime('%Y%m')}-02", received_at: TODAY - 6.days, payment_method: "bank_transfer",
+    reference_number: "#{slip_prefix}B", received_at: TODAY - 6.days, payment_method: "bank_transfer",
     status: "rejected", rejection_reason: "Reference number does not match any outstanding invoice.",
     reviewed_by: front_desk_user, reviewed_at: TODAY - 5.days
   )
   rejected_submission.ar_payment_submission_allocations.build(ar_invoice: rejected_invoice, amount: rejected_amount)
-  rejected_submission.slip.attach(io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")), filename: "slip.jpg", content_type: "image/jpeg")
+  rejected_submission.slip.attach(io: File.open(sample_slip_path), filename: "slip.jpg", content_type: "image/jpeg")
   rejected_submission.save!
 
   puts "Seeded 1 pending and 1 rejected agent payment submission for #{travel_agent_hca.corporate_account.name}."
-elsif travel_agent_hca
-  puts "  [Skip] No outstanding travel agent invoice available for agent payment submission demo."
 end
 
 puts "\n== Seeding complete =="

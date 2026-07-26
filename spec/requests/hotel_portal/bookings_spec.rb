@@ -239,6 +239,15 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(booking.reload.status).to eq("confirmed")
       expect(booking.guest_name).to eq("Updated Guest")
     end
+
+    it "updates the booking source from the manual/OTA dropdown, even when channel-managed" do
+      channel_managed_booking = create(:booking, hotel: hotel, source: "internal", channel_manager_reference: "channex-123")
+
+      patch "/hotel/#{hotel.id}/bookings/#{channel_managed_booking.id}", params: { booking: { source: "booking_com" } }
+
+      expect(response).to redirect_to(booking_details_path(channel_managed_booking))
+      expect(channel_managed_booking.reload.source).to eq("booking_com")
+    end
   end
 
   describe "POST /booking-actions/new-booking" do

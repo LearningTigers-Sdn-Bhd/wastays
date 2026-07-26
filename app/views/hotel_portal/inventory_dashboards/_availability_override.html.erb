@@ -14,27 +14,23 @@
         <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">Target Room Categories</label>
         <div class="grid gap-2 rounded-2xl border border-border bg-muted p-4 md:grid-cols-2 xl:grid-cols-3">
           <% @room_types.each do |rt| %>
-            <label class="flex items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm">
-              <%= f.check_box :room_type_ids, {
-                  multiple: true,
-                  checked: true,
-                  class: "size-4 rounded border-border-interactive text-foreground focus:ring-0 focus:ring-offset-0",
-                  data: { inventory_filter_target: "category", action: "change->inventory-filter#filter" }
-                }, rt.id, nil %>
-              <%= rt.name %>
-            </label>
+            <%= render PanelsUI::Checkbox.new(
+                  form: f, attribute: :room_type_ids, id: "availability_override_room_type_ids_#{rt.id}",
+                  label: rt.name, value: rt.id, unchecked_value: nil, multiple: true, checked: true,
+                  variant: :card, size: :sm,
+                  data: { inventory_filter_target: "category", action: "change->inventory-filter#filter" }) %>
           <% end %>
         </div>
       </div>
 
-      <div class="grid gap-4 md:grid-cols-2">
+      <div class="grid gap-4 md:grid-cols-2" data-controller="date-range-advance">
         <div>
           <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">Start Date</label>
-          <%= f.date_field :start_date, value: @start_date, class: "w-full rounded-2xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
+          <%= f.date_field :start_date, value: @start_date, class: "w-full rounded-2xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", data: { date_range_advance_target: "start", action: "change->date-range-advance#advance" } %>
         </div>
         <div>
           <label class="mb-2 block text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">End Date</label>
-          <%= f.date_field :end_date, value: @end_date, class: "w-full rounded-2xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
+          <%= f.date_field :end_date, value: @end_date, class: "w-full rounded-2xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", data: { date_range_advance_target: "end" } %>
         </div>
       </div>
 
@@ -43,11 +39,12 @@
         <div class="grid gap-2 max-h-64 overflow-y-auto rounded-2xl border border-border bg-muted p-4 md:grid-cols-2 xl:grid-cols-3">
           <% @room_types.each do |rt| %>
             <% rt.room_numbers.sort.each do |num| %>
-              <label class="flex items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm" data-inventory-filter-target="roomRow" data-room-type-id="<%= rt.id %>">
-                <%= f.check_box :room_numbers, { multiple: true, checked: true, class: "size-4 rounded border-border-interactive text-foreground focus:ring-0 focus:ring-offset-0" }, num, nil %>
-                Room <%= num %>
-                <span class="text-xs font-medium text-muted-foreground">(<%= rt.name %>)</span>
-              </label>
+              <div data-inventory-filter-target="roomRow" data-room-type-id="<%= rt.id %>">
+                <%= render PanelsUI::Checkbox.new(
+                      form: f, attribute: :room_numbers, id: "availability_override_room_numbers_#{rt.id}_#{num}",
+                      label: safe_join([ num, tag.span("(#{rt.name})", class: "text-xs font-medium text-muted-foreground") ], " "),
+                      value: num, unchecked_value: nil, multiple: true, checked: true, variant: :card, size: :sm) %>
+              </div>
             <% end %>
           <% end %>
         </div>

@@ -1,0 +1,52 @@
+<%# locals: (room_type:, booking_rooms:, show_heading: true) %>
+<div>
+  <% if show_heading %>
+    <h3 class="mb-2.5 text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2 select-none">
+      <span class="inline-flex size-1.5 rounded-full bg-indigo-500"></span>
+      <%= room_type.name %>
+      <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 tabular-nums"><%= booking_rooms.size %></span>
+    </h3>
+  <% end %>
+  <div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <table class="w-full border-collapse text-left text-sm text-slate-500">
+      <thead class="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 select-none">
+        <tr>
+          <th scope="col" class="px-4 py-2.5 w-24">Room</th>
+          <th scope="col" class="px-4 py-2.5">Guest Name</th>
+          <th scope="col" class="px-4 py-2.5">Stay Duration</th>
+          <th scope="col" class="px-4 py-2.5 text-right">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 bg-white">
+        <% booking_rooms.each do |br| %>
+          <% booking = br.booking %>
+          <tr class="hover:bg-slate-50/50 transition-colors">
+            <td class="whitespace-nowrap px-4 py-3.5 font-bold text-slate-900 tabular-nums">
+              <%= br.room_number.presence || "—" %>
+            </td>
+            <td class="px-4 py-3.5">
+              <%= link_to booking.guest_name, hotel_booking_path(current_hotel, booking), target: "_blank", data: { turbo: false }, class: "font-bold text-indigo-600 hover:text-indigo-800 hover:underline" %>
+            </td>
+            <td class="whitespace-nowrap px-4 py-3.5 font-medium text-slate-600 tabular-nums">
+              <div class="leading-none text-slate-800 font-bold"><%= booking.check_in.strftime("%b %-d") %> – <%= booking.check_out.strftime("%b %-d") %></div>
+              <div class="text-[10px] text-slate-400 font-semibold mt-1.5 leading-none"><%= pluralize(booking.duration_in_nights, "night") %></div>
+            </td>
+            <td class="whitespace-nowrap px-4 py-3.5 text-right">
+              <%
+                status_color = case booking.status.to_s
+                when "checked_in" then "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                when "confirmed" then "bg-indigo-50 text-indigo-700 border-indigo-200/60"
+                when "checked_out", "completed" then "bg-slate-50 text-slate-600 border-slate-200/60"
+                else "bg-amber-50 text-amber-700 border-amber-200/60"
+                end
+              %>
+              <span class="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold <%= status_color %>">
+                <%= booking.status.titleize %>
+              </span>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

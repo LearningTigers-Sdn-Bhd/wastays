@@ -61,6 +61,26 @@ export default class extends Controller {
     document.removeEventListener("click", this.boundHandleOutsideClick)
   }
 
+  // Opens the dropdown menu (idempotent — safe to call even if already open)
+  open() {
+    if (!this.menuElement.classList.contains("hidden")) return
+
+    document.querySelectorAll('[data-dropdown-target="menu"]').forEach(el => {
+      if (el !== this.menuElement) el.classList.add("hidden")
+    })
+
+    this.menuElement.classList.remove("hidden")
+    this.toggleButton?.setAttribute("aria-expanded", "true")
+
+    if (this.isFloatingDropdown()) {
+      this.portalFloatingMenu()
+      this.positionFloatingMenu()
+      this.startTracking()
+    }
+
+    document.addEventListener("click", this.boundHandleOutsideClick)
+  }
+
   handleOutsideClick(event) {
     if (!this.element.contains(event.target) && !this.menuElement.contains(event.target)) {
       this.close()

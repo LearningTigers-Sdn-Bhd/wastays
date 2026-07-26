@@ -16,9 +16,9 @@ module Public
     end
 
     def rooms_summary
-      rooms.map do |allocated_room|
-        "#{allocated_room.quantity}x #{allocated_room.room_type.name}"
-      end.join(", ")
+      rooms.group_by { |allocated_room| allocated_room.room_type.name }
+           .map { |name, group| "#{group.sum(&:quantity)}x #{name}" }
+           .join(", ")
     end
 
     def allocations_params

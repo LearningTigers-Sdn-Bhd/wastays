@@ -1,12 +1,10 @@
 <header class="space-y-4">
-  <%= render PanelsUI::PageHeader.new(title: "Folios", description: "Review open balances, refund due folios, checkout readiness, and guest folio activity.") %>
-
   <div class="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-card shadow-sm lg:grid-cols-4">
     <% folio_index.summary_cards.each do |card| %>
-      <div class="border-b border-r border-border px-4 py-3 last:border-r-0 lg:border-b-0">
+      <div class="border-b border-r border-border px-4 pt-2 pb-1 last:border-r-0 lg:border-b-0">
         <div class="flex items-center gap-2">
-          <span class="inline-flex size-7 items-center justify-center rounded-md <%= card[:class] %>">
-            <%= cached_icon card[:icon], class: "size-3.5" %>
+          <span class="inline-flex size-5 items-center justify-center rounded-md <%= card[:class] %>">
+            <%= cached_icon card[:icon], class: "size-3" %>
           </span>
           <p class="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground"><%= card[:label] %></p>
         </div>

@@ -111,6 +111,7 @@ export default class extends Controller {
       this.selecting = null
       this.hovered   = null
       this.closePicker()
+      window.dispatchEvent(new CustomEvent("rate-calendar:dates-selected"))
     }
     this._render()
   }

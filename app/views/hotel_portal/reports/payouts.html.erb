@@ -1,6 +1,4 @@
 <div class="w-full space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(title: "Weekly Settlements", description: "Track your weekly payouts and payment history.") %>
-
   <%= turbo_frame_tag "payouts_content", class: "block space-y-8" do %>
     <div data-testid="payout-tabs">
     <%= render PanelsUI::Tabs.new(id: "payout-tabs", active: @active_tab, variant: :pill, url: { param: "tab" }, class: "space-y-8", aria_label: "Payout sections") do |tabs| %>

@@ -149,10 +149,21 @@ module HotelPortal
             [ "Status", @segment.status.to_s.humanize ],
             [ "Stay", "#{@segment.check_in.to_fs(:medium)} – #{@segment.check_out.to_fs(:medium)}" ]
           ]
-          rows << [ "Source", @segment.source_label ] if @segment.source_label.present?
+          rows << [ "Source", source_value ] if @segment.source_label.present?
           @segment.financial_signals.each { |signal| rows << [ "Financial", signal.label ] }
           rows << [ "Group", [ @segment.group_name, @segment.group_reference ].compact_blank.join(" · ") ] if @segment.group_reference.present?
           safe_join(rows.flat_map { |label, value| [ tag.dt(label, class: "text-muted-foreground"), tag.dd(value, class: "text-foreground") ] })
+        end
+      end
+
+      def source_value
+        return @segment.source_label if @segment.source.blank?
+
+        tag.span(class: "inline-flex items-center gap-1.5") do
+          safe_join([
+            render(PanelsUI::BookingSourceBadge.new(source: @segment.source, size: :sm, with_tooltip: false)),
+            @segment.source_label
+          ])
         end
       end
 

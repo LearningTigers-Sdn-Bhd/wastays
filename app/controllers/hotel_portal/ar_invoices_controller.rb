@@ -12,16 +12,15 @@ module HotelPortal
     def aging
       ArInvoices::RefreshOverdueStatuses.call(hotel: current_hotel)
       report = ArInvoices::AgingReport.call(hotel: current_hotel)
-      @presenter = HotelPortal::AccountsReceivable::AgingPresenter.new(report: report)
+      @presenter = HotelPortal::AccountsReceivable::AgingPresenter.new(report: report, query: params[:query], account_type: params[:account_type])
     end
 
     def agent_summary
       ArInvoices::RefreshOverdueStatuses.call(hotel: current_hotel)
       report = ArInvoices::AgingReport.call(hotel: current_hotel, account_types: %w[travel_agent airline])
-      @presenter = HotelPortal::AccountsReceivable::AgingPresenter.new(report: report)
 
       respond_to do |format|
-        format.html
+        format.html { redirect_to hotel_ar_aging_path(current_hotel) }
         format.pdf do
           pdf = ::Reports::AccountsReceivable::GenerateAgentSummary.new(hotel: current_hotel, report: report).generate
           send_data pdf,

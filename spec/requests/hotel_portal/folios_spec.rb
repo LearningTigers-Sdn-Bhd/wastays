@@ -39,8 +39,6 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       get hotel_folios_path(hotel)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Folios")
-      expect(response.body).to include("Review open balances, refund due folios, checkout readiness, and guest folio activity.")
       expect(response.body).to include("Guest / Booking")
       expect(response.body).to include("Folio Reference")
       expect(response.body).to include("Stay / Room")
@@ -54,8 +52,8 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
       expect(response.body).to include("MYR 120.00")
       expect(response.body).to include("Balance Due")
-      expect(response.body).to include("rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-primary-foreground")
-      expect(response.body).to include("rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-black text-foreground")
+      expect(response.body).to include("data-controller=\"dropdown\"")
+      expect(response.body).to include("More actions for Amir Hakim")
       expect(response.body).to include("border-emerald-200 bg-emerald-50 text-emerald-700")
       expect(response.body).to include("text-red-700")
       expect(response.body).not_to include("Issue Refund")
@@ -110,7 +108,8 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       get hotel_folios_path(hotel), params: { filter: "refund_due" }
       expect(results_text).to include(refund_due.guest_name)
-      expect(results_text).to include("MYR 80.00 credit")
+      expect(results_text).to include("MYR 80.00")
+      expect(results_text).to include("Refund Due")
       expect(results_text).not_to include(balance_due.guest_name)
 
       get hotel_folios_path(hotel), params: { filter: "due_out" }
@@ -126,32 +125,38 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(results_text).not_to include(balance_due.guest_name)
     end
 
-    it "does not sync Needs Attention with table search or filters" do
+    it "does not sync the Needs Attention summary count with table search or filters" do
       create_booking_with_folio(guest_name: "Attention Guest", confirmation_token: "BK-ATT", folio_number: 351, charges: 200)
       create_booking_with_folio(guest_name: "Settled Guest", confirmation_token: "BK-SET", folio_number: 352, charges: 100, payments: 100)
 
       get hotel_folios_path(hotel), params: { query: "Settled" }
 
-      expect(response.body).to include("Attention Guest")
+      expect(response.body).to include("1 folio needs attention")
       expect(results_text).to include("Settled Guest")
       expect(results_text).not_to include("Attention Guest")
     end
 
-    it "shows operational blockers in Needs Attention, including unsynced completed refunds" do
-      balance_due = create_booking_with_folio(guest_name: "Amir Hakim", confirmation_token: "BK-8891", folio_number: 401, charges: 120)
-      refund_due = create_booking_with_folio(guest_name: "Nur Aina", confirmation_token: "BK-8893", folio_number: 402, payments: 80)
-      unsynced = create_booking_with_folio(guest_name: "Daniel Lim", confirmation_token: "BK-8898", folio_number: 403, charges: 100, payments: 100)
-      create(:refund_request, booking: unsynced, status: "completed", refund_amount: 45)
+    it "shows a Needs Attention summary with a link to the standalone review page" do
+      create_booking_with_folio(guest_name: "Amir Hakim", confirmation_token: "BK-8891", folio_number: 401, charges: 120)
+      create_booking_with_folio(guest_name: "Nur Aina", confirmation_token: "BK-8893", folio_number: 402, payments: 80)
+      create_booking_with_folio(guest_name: "Settled Guest", confirmation_token: "BK-8899", folio_number: 404, charges: 100, payments: 100)
 
       get hotel_folios_path(hotel)
 
+      document = Nokogiri::HTML(response.body)
+
       expect(response.body).to include("Needs Attention")
-      expect(response.body).to include(balance_due.guest_name)
-      expect(response.body).to include("Guest owes hotel")
-      expect(response.body).to include(refund_due.guest_name)
-      expect(response.body).to include("Hotel owes guest")
-      expect(response.body).to include(unsynced.guest_name)
-      expect(response.body).to include("Completed refund is not synced to the folio")
+      expect(response.body).to include("2 folios need attention")
+      expect(document.at_css("a[href='#{needs_attention_hotel_folios_path(hotel)}']")).to be_present
+    end
+
+    it "shows a clear state when nothing needs attention" do
+      create_booking_with_folio(guest_name: "Settled Guest", confirmation_token: "BK-8900", folio_number: 405, charges: 100, payments: 100)
+
+      get hotel_folios_path(hotel)
+
+      expect(response.body).to include("No folios need attention")
+      expect(response.body).not_to include("Review Needs Attention")
     end
 
     it "scopes folios to the current hotel" do
@@ -169,6 +174,48 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       role.permissions.delete(view_bookings)
 
       get hotel_folios_path(hotel)
+
+      expect(response).to have_http_status(:forbidden).or have_http_status(:redirect)
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/folios/needs-attention" do
+    it "lists only folios that need attention, including unsynced completed refunds" do
+      balance_due = create_booking_with_folio(guest_name: "Amir Hakim", confirmation_token: "BK-8891", folio_number: 401, charges: 120)
+      refund_due = create_booking_with_folio(guest_name: "Nur Aina", confirmation_token: "BK-8893", folio_number: 402, payments: 80)
+      unsynced = create_booking_with_folio(guest_name: "Daniel Lim", confirmation_token: "BK-8898", folio_number: 403, charges: 100, payments: 100)
+      create(:refund_request, booking: unsynced, status: "completed", refund_amount: 45)
+      settled = create_booking_with_folio(guest_name: "Settled Guest", confirmation_token: "BK-8899", folio_number: 404, charges: 100, payments: 100)
+
+      get needs_attention_hotel_folios_path(hotel)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Needs Attention")
+      expect(results_text).to include(balance_due.guest_name)
+      expect(results_text).to include("Balance Due")
+      expect(results_text).to include(refund_due.guest_name)
+      expect(results_text).to include("Refund Due")
+      expect(results_text).to include(unsynced.guest_name)
+      expect(results_text).not_to include(settled.guest_name)
+    end
+
+    it "supports its own search and filters, independent of the main folios list" do
+      balance_due = create_booking_with_folio(guest_name: "Amir Hakim", confirmation_token: "BK-8891", folio_number: 406, charges: 120)
+      refund_due = create_booking_with_folio(guest_name: "Nur Aina", confirmation_token: "BK-8893", folio_number: 407, payments: 80)
+
+      get needs_attention_hotel_folios_path(hotel), params: { query: "Amir" }
+      expect(results_text).to include(balance_due.guest_name)
+      expect(results_text).not_to include(refund_due.guest_name)
+
+      get needs_attention_hotel_folios_path(hotel), params: { filter: "refund_due" }
+      expect(results_text).to include(refund_due.guest_name)
+      expect(results_text).not_to include(balance_due.guest_name)
+    end
+
+    it "requires view booking permission" do
+      role.permissions.delete(view_bookings)
+
+      get needs_attention_hotel_folios_path(hotel)
 
       expect(response).to have_http_status(:forbidden).or have_http_status(:redirect)
     end

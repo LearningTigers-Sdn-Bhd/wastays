@@ -82,6 +82,7 @@ module HotelPortal
       def heading_indicators
         tag.div(class: "flex shrink-0 items-center gap-1.5 text-muted-foreground") do
           safe_join([
+            source_indicator,
             pax_indicator,
             helpers.app_icon(
               direction_icon,
@@ -90,6 +91,12 @@ module HotelPortal
             )
           ].compact)
         end
+      end
+
+      def source_indicator
+        return if @segment.source.blank?
+
+        render PanelsUI::BookingSourceBadge.new(source: @segment.source, size: :sm, id: "#{@segment.dom_id}-source-tooltip")
       end
 
       def context_label

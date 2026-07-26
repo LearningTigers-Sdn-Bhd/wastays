@@ -96,4 +96,24 @@ module HotelPortal::BookingsHelper
   def guest_document_type_display(doc_type)
     doc_type.presence&.to_s&.upcase || "IC/PASSPORT"
   end
+
+  def booking_source_select_options(selected)
+    grouped_options_for_select(
+      {
+        "Manual / Direct" => HotelPortal::BookingSourcePresenter.manual_options,
+        "Online Travel Agency" => HotelPortal::BookingSourcePresenter.ota_options,
+        "Other Channel" => HotelPortal::BookingSourcePresenter.other_channel_options
+      },
+      selected
+    )
+  end
+
+  # Flat [label, value] pairs for PanelsUI::SelectMenu (choices:), which has no
+  # optgroup support — grouping is only available via booking_source_select_options
+  # for plain f.select usage.
+  def booking_source_choices
+    HotelPortal::BookingSourcePresenter.manual_options +
+      HotelPortal::BookingSourcePresenter.ota_options +
+      HotelPortal::BookingSourcePresenter.other_channel_options
+  end
 end

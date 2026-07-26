@@ -225,6 +225,15 @@ Rails.application.routes.draw do
     resources :margin_rules, only: [ :index, :create, :destroy ]
     resources :setup_fee_rules, only: [ :index, :create, :destroy ]
     resources :exchange_rates, only: [ :index, :create, :update, :destroy ]
+    resources :booking_sources, only: [ :index, :new, :create, :edit, :update ] do
+      member do
+        patch :toggle
+      end
+      collection do
+        patch :reorder
+        get :icon_preview
+      end
+    end
     resources :audit_logs, only: [ :index ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
@@ -398,6 +407,9 @@ Rails.application.routes.draw do
     end
 
     resources :folios, only: [ :index, :show ], param: :booking_id do
+      collection do
+        get "needs-attention", to: "folios#needs_attention", as: :needs_attention
+      end
       get :invoice, on: :member
       get :ledger, on: :member
       get "windows/new", action: :new_window, on: :member, as: :new_window

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_21_120000) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_21_145737) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -427,6 +427,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_21_120000) do
     t.index ["booking_id"], name: "index_booking_rooms_on_booking_id"
     t.index ["rate_plan_id"], name: "index_booking_rooms_on_rate_plan_id"
     t.index ["room_type_id"], name: "index_booking_rooms_on_room_type_id"
+  end
+
+  create_table "booking_sources", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "label", null: false
+    t.string "kind", default: "ota", null: false
+    t.string "icon"
+    t.string "badge_color"
+    t.string "badge_text_color"
+    t.string "badge_initial", limit: 2
+    t.integer "position", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_booking_sources_on_active"
+    t.index ["key"], name: "index_booking_sources_on_key", unique: true
+    t.index ["kind"], name: "index_booking_sources_on_kind"
   end
 
   create_table "booking_tax_inclusion_overrides", force: :cascade do |t|

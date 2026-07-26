@@ -98,10 +98,12 @@ RSpec.describe StayView::ProjectBooking do
     )
 
     permitted = described_class.call(booking:, room_type_name: "Deluxe", date_window: window, capabilities: capabilities.with(view_booking: true))
+    expect(permitted.source).to eq("walk_in")
     expect(permitted.source_label).to eq("Walk-in")
     expect(permitted.accessible_label).to include("source Walk-in")
 
     redacted = described_class.call(booking:, room_type_name: "Deluxe", date_window: window, capabilities:)
+    expect(redacted.source).to be_nil
     expect(redacted.source_label).to be_nil
     expect(redacted.accessible_label).not_to include("Walk-in")
   end
@@ -116,7 +118,7 @@ RSpec.describe StayView::ProjectBooking do
 
     segment = described_class.call(booking:, room_type_name: "Deluxe", date_window: window, capabilities: capabilities.with(view_booking: true))
 
-    expect(segment.source_label).to eq("Channel")
+    expect(segment.source_label).to eq("Channel Manager")
   end
 
   it "projects pax and hotel-local boat times only with booking permission" do

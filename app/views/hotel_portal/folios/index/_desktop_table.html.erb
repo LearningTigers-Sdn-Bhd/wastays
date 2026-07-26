@@ -48,21 +48,12 @@
               </div>
             </td>
             <td class="sticky right-0 z-10 border-l border-border bg-card px-5 py-4 text-right shadow-[-4px_0_6px_-1px_rgba(15,23,42,0.08)] group-hover:bg-muted">
-              <div class="flex flex-col items-end gap-1.5">
-                <%= link_to hotel_booking_control_panel_path(current_hotel, row.booking, tab: "folio_operations", folio_id: row.folio.id), class: "inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary-hover", data: { turbo_frame: "_top" } do %>
-                  <%= cached_icon "book-open", class: "size-3" %>
-                  View Folio
-                <% end %>
-                <%= link_to hotel_booking_control_panel_path(current_hotel, row.booking, tab: "booking_details"), class: "inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-black text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted", data: { turbo_frame: "_top" } do %>
-                  <%= cached_icon "calendar-days", class: "size-3" %>
-                  View Booking
-                <% end %>
-              </div>
+              <%= render "hotel_portal/folios/index/row_actions", row: row %>
             </td>
           </tr>
         <% end %>
       <% else %>
-        <%= render "hotel_portal/folios/index/empty_state", colspan: 6, folio_index: folio_index %>
+        <%= render "hotel_portal/folios/index/empty_state", colspan: 6, folio_index: folio_index, reset_path: local_assigns[:reset_path] %>
       <% end %>
     </tbody>
   </table>

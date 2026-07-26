@@ -1,0 +1,5 @@
+<% if icon_name %>
+  <%= cached_icon icon_name, class: "size-5 text-muted-foreground" %>
+<% else %>
+  <%= cached_icon "circle-question-mark", class: "size-5 text-muted-foreground/50" %>
+<% end %>

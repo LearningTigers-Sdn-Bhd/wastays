@@ -121,6 +121,10 @@ end
 
 AmenitiesSeeder.run
 
+SeedLog.section('Booking sources')
+BookingSource.seed_defaults!
+SeedLog.ok("#{BookingSource.count} booking sources")
+
 if Rails.env.demo?
   DemoSeeds.run
 else

@@ -29,6 +29,8 @@ export default class extends Controller {
       const paxPrice = parseFloat(card.dataset.roomPaxPrice || 0)
       const name = card.dataset.roomName
       const maxCapacity = parseInt(card.dataset.roomMaxCapacity || 1)
+      const maxAdults = parseInt(card.dataset.roomMaxAdults || maxCapacity)
+      const maxChildren = parseInt(card.dataset.roomMaxChildren || 0)
       const availableQty = parseInt(card.dataset.roomAvailableQuantity || 0)
 
       const singleSupplement = parseFloat(card.dataset.roomSingleSupplement || 0)
@@ -45,6 +47,8 @@ export default class extends Controller {
         paxPrice,
         name,
         maxCapacity,
+        maxAdults,
+        maxChildren,
         availableQty,
         singleSupplement,
         childMultiplier,
@@ -113,14 +117,14 @@ export default class extends Controller {
         const currentTotal = occupancies[i].adults + occupancies[i].children
         let spaceLeft = room.maxCapacity - currentTotal
 
-        let specificLimit = room.maxCapacity
-        let currentSpecific = 0
+        let specificLimit
+        let currentSpecific
 
         if (pool.key === 'adults') {
-          specificLimit = room.maxCapacity
+          specificLimit = room.maxAdults
           currentSpecific = occupancies[i].adults
         } else {
-          specificLimit = room.maxCapacity
+          specificLimit = room.maxChildren
           currentSpecific = occupancies[i].children
         }
 
@@ -210,15 +214,22 @@ export default class extends Controller {
       }
     })
 
+    // Distribute guests across the selected rooms, respecting each room's own
+    // max_adults/max_children caps (not just its total capacity) — used both
+    // for pax pricing and to validate the combo can legally hold this party.
+    let occupancies = null
+    if (totalRooms > 0) {
+      occupancies = this.distributeGuests(
+        this.adultsValue,
+        this.childrenValue,
+        selectedRoomsList,
+        this.hasChildAgesValue ? this.childAgesValue : []
+      )
+    }
+
     // Calculate Price based on Mode
     if (totalRooms > 0) {
       if (this.paxPricingOnlyValue) {
-        const occupancies = this.distributeGuests(
-          this.adultsValue,
-          this.childrenValue,
-          selectedRoomsList,
-          this.hasChildAgesValue ? this.childAgesValue : []
-        )
         if (occupancies) {
           occupancies.forEach(occ => {
             const room = occ.room
@@ -271,6 +282,8 @@ export default class extends Controller {
         warningMsg = `Selected rooms capacity (${totalCapacity} guests) is less than your search party (${totalGuestsNeeded} guests).`
       } else if (totalRooms > this.adultsValue) {
         warningMsg = `You selected ${totalRooms} rooms but only entered ${this.adultsValue} adults. (Each room needs at least 1 adult).`
+      } else if (!occupancies) {
+        warningMsg = `These rooms can't fit ${this.adultsValue} adults and ${this.childrenValue} children — one or more room types have a lower adult/child limit per room. Add another room or pick a bigger room type.`
       }
 
       if (warningMsg) {
