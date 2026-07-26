@@ -101,11 +101,11 @@
        data-room-selector-child-ages-value="<%= @child_ages.to_json %>">
     <div class="flex flex-col md:flex-row gap-8 items-start">
       <%# Main Content %>
-      <div class="flex-1 w-full space-y-8 min-w-0">
+      <div class="flex-1 w-full space-y-6 min-w-0">
         
         <%# Hotel Info Header %>
-        <div class="card p-6 md:p-8">
-          <div class="flex justify-between items-start mb-4">
+        <div class="card p-6">
+          <div class="flex justify-between items-start">
             <div>
               <% if @hotel.star_rating_int.positive? %>
                 <div class="flex items-center gap-x-2 mb-2">
@@ -130,15 +130,13 @@
         </div>
 
         <%# About / Story Section %>
-        <div class="space-y-4">
-          <div class="prose prose-neutral max-w-none text-muted-foreground leading-relaxed">
-            <p>Welcome to <%= @hotel.name %>, where local hospitality meets modern comfort. Located in the heart of <%= @hotel.city %>, our property is designed for travelers who value simplicity, quality, and direct deals.</p>
-            <p>Whether you're visiting for business or leisure, we provide a seamless stay experience with all the essential amenities you need. Book directly with us through WAStays to enjoy the best rates and personalized WhatsApp support throughout your journey.</p>
-          </div>
+        <div class="prose prose-neutral max-w-none text-muted-foreground leading-relaxed">
+          <p>Welcome to <%= @hotel.name %>, where local hospitality meets modern comfort. Located in the heart of <%= @hotel.city %>, our property is designed for travelers who value simplicity, quality, and direct deals.</p>
+          <p>Whether you're visiting for business or leisure, we provide a seamless stay experience with all the essential amenities you need. Book directly with us through WAStays to enjoy the best rates and personalized WhatsApp support throughout your journey.</p>
         </div>
 
         <%# Room Options Section %>
-        <div class="space-y-6 pt-4" id="rooms-section">
+        <div class="space-y-6" id="rooms-section">
           <div class="flex justify-between items-end">
             <h2 class="text-2xl font-extrabold text-foreground">Select your room</h2>
           </div>
@@ -209,19 +207,7 @@
                                 <p class="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">
                                   <%= room_type.description %>
                                 </p>
-                                <div class="flex items-center gap-x-2 mt-1.5">
-                                  <span class="inline-flex items-center gap-x-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">
-                                    <%= allocated_room.adults %>
-                                    <%= cached_icon "adult", library: "guest", class: "w-3 h-3 fill-current" %>
-                                  </span>
-                                  <% if allocated_room.children.positive? %>
-                                    <span class="inline-flex items-center gap-x-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">
-                                      <%= allocated_room.children %>
-                                      <%= cached_icon "child", library: "guest", class: "w-2.5 h-2.5 fill-current" %>
-                                    </span>
-                                  <% end %>
-                                </div>
-                                <p class="text-[10px] text-muted-foreground mt-1">
+                                <p class="text-[10px] text-muted-foreground mt-1.5">
                                   Fits up to <%= room_type.max_adults.to_i %> adult<%= "s" if room_type.max_adults.to_i != 1 %><% if room_type.max_children.to_i > 0 %> + <%= room_type.max_children.to_i %> child<%= "ren" if room_type.max_children.to_i != 1 %><% end %>
                                 </p>
                               </div>
