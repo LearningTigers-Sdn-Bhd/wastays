@@ -51,7 +51,9 @@
         booking_presenter: booking_presenter,
         folio_show: folio_show,
         audit_logs: audit_logs,
-        audit_history: audit_history %>
+        audit_history: audit_history,
+        audit_category: local_assigns[:audit_category],
+        audit_history_available: local_assigns[:audit_history_available] %>
     </main>
 
     <% if presenter.show_right_drawer? %>

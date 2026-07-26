@@ -1398,6 +1398,36 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(frame["data-offcanvas-label"]).to eq("Audit Trail")
       expect(frame.text).to include("Audit Trail", "View Changes", "Pending", "Confirmed")
       expect(frame.at_css('[data-action="click->offcanvas#close"]')).to be_present
+      expect(frame.at_css(".tabs-root--pill a")["data-turbo-frame"]).to eq("offcanvas_drawer")
+      expect(frame.at_css("form[data-controller='auto-submit']")["data-turbo-frame"]).to eq("offcanvas_drawer")
+    end
+
+    it "renders grouped child filtering inside the booking workspace frame" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      create(:booking_audit_log, hotel: hotel, auditable: booking, user: user,
+        action_type: "status_change", category: "status",
+        old_value: { "status" => "pending" }, new_value: { "status" => "confirmed" })
+      create(:booking_audit_log, hotel: hotel, auditable: sibling, user: user,
+        action_type: "status_change", category: "status",
+        old_value: { "status" => "pending" }, new_value: { "status" => "cancelled" })
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "audit_trails", child_booking_id: sibling.id),
+        headers: { "Turbo-Frame" => "booking_workspace" }
+
+      document = Nokogiri::HTML(response.body)
+      frame = document.at_css("turbo-frame#booking_workspace")
+      expect(frame.text).to include("Booking moved to Cancelled")
+      expect(frame.text).not_to include("Booking moved to Confirmed")
+      expect(frame.at_css("select[name='child_booking_id'] option[selected]").text).to include(sibling.formatted_reservation_number)
+      status_link = frame.css(".tabs-root--pill a").find { |link| link.text.squish == "Status" }
+      expect(status_link["data-turbo-frame"]).to eq("booking_workspace")
+      expect(Rack::Utils.parse_query(URI(status_link["href"]).query)).to include(
+        "tab" => "audit_trails",
+        "category" => "status",
+        "child_booking_id" => sibling.id.to_s
+      )
     end
 
     it "renders the existing empty audit state" do

@@ -17,7 +17,7 @@ module HotelPortal
 
         def show
           @presenter = HotelPortal::Bookings::WorkspacePresenter.new(@booking, params: params, hotel: current_hotel)
-          set_audit_logs(@booking, group_booking: (@booking.group_booking if @presenter.group_overview?))
+          set_audit_logs(@presenter.audit_selected_booking || @booking, group_booking: (@booking.group_booking if @presenter.audit_group_scope?))
           render :show, layout: false
         end
 

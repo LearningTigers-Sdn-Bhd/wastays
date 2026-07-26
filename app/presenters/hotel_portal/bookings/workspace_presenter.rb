@@ -459,6 +459,22 @@ module HotelPortal
       scope == "group" || (active_tab == "booking_details" && scope.blank?)
     end
 
+    def audit_selected_booking
+      return booking unless group_context_enabled?
+
+      child_bookings.find { |child| child.id.to_s == @params[:child_booking_id].to_s } ||
+        (booking if @params[:scope].to_s == "booking")
+    end
+
+    def audit_group_scope?
+      group_context_enabled? && audit_selected_booking.nil?
+    end
+
+    def audit_booking_options
+      options = child_bookings.map { |child| [ audit_booking_option_label(child), child.id.to_s ] }
+      group_context_enabled? ? [ [ "All bookings", "" ], *options ] : options
+    end
+
     def group_booking
       booking.group_booking
     end
@@ -1277,6 +1293,13 @@ module HotelPortal
     def child_booking_label(child)
       room = child.booking_rooms.first
       room&.room_number.present? ? "Room #{room.room_number}" : "Unassigned room"
+    end
+
+    def audit_booking_option_label(child)
+      guest = child.booking_guests.find(&:primary?)
+      guest_name = guest&.name_snapshot.presence || guest&.guest&.name.presence || child.guest_name.presence || "Guest unavailable"
+
+      [ child_booking_number(child), guest_name, child_booking_label(child) ].join(" · ")
     end
 
     def child_booking_number(child)

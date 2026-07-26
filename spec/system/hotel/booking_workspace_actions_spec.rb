@@ -22,9 +22,22 @@ RSpec.describe "Booking workspace actions", :business_day, type: :system do
     expect(page.evaluate_script("document.querySelector('#booking-audit-trail-sheet').contains(document.activeElement)")).to be(true)
     within("#booking-audit-trail-sheet") do
       expect(page).to have_content("Audit Trail")
+      expect(page).to have_select("Booking", disabled: true, visible: :all)
       click_in_overlay find("summary", text: "View Changes")
       expect(page).to have_content("Pending")
       expect(page).to have_content("Confirmed")
+      click_link "Notes"
+    end
+
+    expect(page).to have_css("dialog#booking-audit-trail-sheet[open]", wait: 3)
+    within("#booking-audit-trail-sheet") do
+      expect(page).to have_content("No events match these filters.")
+      click_link "All"
+    end
+
+    expect(page).to have_css("dialog#booking-audit-trail-sheet[open]", wait: 3)
+    within("#booking-audit-trail-sheet") do
+      expect(page).to have_content("Booking details updated")
     end
     page.send_keys(:escape)
 

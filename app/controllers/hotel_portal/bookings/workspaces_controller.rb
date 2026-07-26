@@ -13,7 +13,9 @@ module HotelPortal
 
     def show
       prepare_workspace
-      set_audit_logs(@booking, group_booking: (@booking.group_booking if @presenter.group_overview?)) if @presenter.active_tab == "audit_trails"
+      if @presenter.active_tab == "audit_trails"
+        set_audit_logs(@presenter.audit_selected_booking || @booking, group_booking: (@booking.group_booking if @presenter.audit_group_scope?))
+      end
       set_breadcrumbs(@booking, @presenter)
 
       render partial: "hotel_portal/bookings/workspaces/work_area", locals: workspace_locals if turbo_frame_request?
@@ -55,7 +57,7 @@ module HotelPortal
     def audit_trail
       @booking = current_hotel.bookings.find(params[:booking_id])
       @presenter = HotelPortal::Bookings::WorkspacePresenter.new(@booking, params: params, hotel: current_hotel)
-      set_audit_logs(@booking)
+      set_audit_logs(@presenter.audit_selected_booking || @booking, group_booking: (@booking.group_booking if @presenter.audit_group_scope?))
     end
 
     private
@@ -162,7 +164,9 @@ module HotelPortal
         booking_presenter: @booking_presenter,
         folio_show: @folio_show,
         audit_logs: @audit_logs,
-        audit_history: @audit_history
+        audit_history: @audit_history,
+        audit_category: @audit_category,
+        audit_history_available: @audit_history_available
       }
     end
 
