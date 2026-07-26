@@ -7,27 +7,28 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
   let(:manage_bookings) { Permission.find_or_create_by!(slug: "manage_bookings") { |permission| permission.name = "Manage Bookings" } }
-  let(:manage_folio_windows) { Permission.find_or_create_by!(slug: "manage_folio_windows") { |permission| permission.name = "Manage Folio Windows" } }
   let(:manage_folio_movements) { Permission.find_or_create_by!(slug: "manage_folio_movements") { |permission| permission.name = "Manage Folio Movements" } }
+  let(:view_bookings) { Permission.find_or_create_by!(slug: "view_bookings") { |permission| permission.name = "View Bookings" } }
   let(:booking) { create(:booking, hotel: hotel) }
 
   before do
     role.permissions << manage_bookings
+    role.permissions << view_bookings
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
   end
 
-  it "renders the staged billing routes offcanvas for authorized staff" do
+  it "renders the staged billing routes Sheet for authorized staff" do
     role.permissions << manage_folio_movements
     party = create(:booking_billing_party, :company, booking:, hotel: hotel)
     create(:booking_folio, :secondary, booking:, hotel:, booking_billing_party: party,
       payer_type: "company", hotel_corporate_account: party.hotel_corporate_account, label: "Company Folio")
     create(:transaction_code, hotel:, kind: "charge", code: "ROOMX", name: "Room charge")
 
-    get billing_routes_hotel_booking_workspace_path(hotel, booking)
+    get hotel_folio_action_billing_routes_path(hotel, booking)
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Change Billing Routes", "Billing party", "Target folio", "Apply changes", "Room charge")
+    expect(response.body).to include("Change billing routes", "Billing party", "Target folio", "Apply changes", "Room charge")
     headers = Nokogiri::HTML(response.body).css("table thead th").map { |node| node.text.squish }
     expect(headers).not_to include("Status", "Action")
   end
@@ -48,7 +49,8 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
       }
     }
 
-    post preview_billing_routes_hotel_booking_workspace_path(hotel, booking), params: {
+    post hotel_folio_action_billing_routes_path(hotel, booking), params: {
+      workflow_step: "preview",
       idempotency_key: "tax-only-preview",
       routes: routes
     }
@@ -57,7 +59,8 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
     expect(response.body).to include("Tax inclusion changes", "SPA", "SST 8%", "Include")
 
     expect do
-      post apply_billing_routes_hotel_booking_workspace_path(hotel, booking), params: {
+      post hotel_folio_action_billing_routes_path(hotel, booking), params: {
+        workflow_step: "apply",
         idempotency_key: "tax-only-apply",
         reason: "Route SST to booking billing rules",
         routes: routes
@@ -90,11 +93,12 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
       payer_type: "company", hotel_corporate_account: party.hotel_corporate_account, label: "Sibling Company Folio")
     code = create(:transaction_code, hotel: hotel, code: "ROOMBULK", category: "accommodation")
 
-    get billing_routes_hotel_booking_workspace_path(hotel, booking, route_booking_id: sibling.id)
+    get hotel_folio_action_billing_routes_path(hotel, booking, route_booking_id: sibling.id)
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Change Billing Routes", booking.formatted_reservation_number, sibling.formatted_reservation_number, "Sibling Company Folio")
+    expect(response.body).to include("Change billing routes", booking.formatted_reservation_number, sibling.formatted_reservation_number, "Sibling Company Folio")
 
-    post apply_billing_routes_hotel_booking_workspace_path(hotel, booking), params: {
+    post hotel_folio_action_billing_routes_path(hotel, booking), params: {
+      workflow_step: "apply",
       route_booking_id: sibling.id,
       idempotency_key: "selected-child-request",
       confirmation: "future_only",
@@ -112,7 +116,7 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
     group = create(:group_booking, hotel: hotel)
     booking.update!(group_booking: group, group_position: 1)
 
-    post preview_billing_routes_hotel_booking_workspace_path(hotel, booking), params: {}
+    post hotel_folio_action_billing_routes_path(hotel, booking), params: { workflow_step: "preview" }
 
     expect(response).to have_http_status(:found)
     expect(response).to redirect_to(root_path)
@@ -125,216 +129,10 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
     create(:booking_folio, booking: booking, hotel: hotel, is_primary: true,
       booking_billing_party: guest.booking_billing_party)
 
-    get billing_routes_hotel_booking_workspace_path(hotel, booking)
+    get hotel_folio_action_billing_routes_path(hotel, booking)
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include("Keep in Guest Primary Folio")
-  end
-
-  it "renders the create folio window offcanvas from billing parties" do
-    role.permissions << manage_folio_windows
-    create(:booking_guest, booking: booking, guest: create(:guest, name: "Aina Rahman"), is_primary: true)
-
-    get new_folio_window_hotel_booking_workspace_path(hotel, booking)
-
-    expect(response).to have_http_status(:success)
-    expect(response.body).to include("Add Folio Window")
-    expect(response.body).to include("Sharer / Billing party")
-    expect(response.body).to include("Aina Rahman")
-    expect(response.body).not_to include("Set this folio as primary")
-    expect(response.body).not_to include("booking_folio[payer_type]")
-  end
-
-  it "creates a folio window from a billing party and returns to Folio Operations" do
-    role.permissions << manage_folio_windows
-    party = create(:booking_guest, booking: booking).booking_billing_party
-    routing_rule_count = FolioRoutingRule.count
-
-    expect do
-      post create_folio_window_hotel_booking_workspace_path(hotel, booking), params: {
-        folio_window: {
-          booking_billing_party_id: party.id,
-          label: "Incidentals Folio",
-          currency: "MYR"
-        }
-      }
-    end.to change(BookingFolio, :count).by(1)
-
-    folio = BookingFolio.order(:created_at).last
-    expect(folio).to have_attributes(booking_billing_party: party, label: "Incidentals Folio", is_primary: false)
-    expect(FolioRoutingRule.count).to eq(routing_rule_count)
-    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id))
-  end
-
-  it "renders a booking selector when adding a folio in group context" do
-    role.permissions << manage_folio_windows
-    group = create(:group_booking, hotel: hotel)
-    booking.update!(group_booking: group, group_position: 1, reservation_number: 41)
-    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, reservation_number: 42)
-    create(:booking_room, booking: booking, room_number: "105")
-    create(:booking_room, booking: sibling, room_number: "106")
-    create(:booking_guest, booking: booking, guest: create(:guest, name: "Guest One"), is_primary: true)
-    create(:booking_guest, booking: sibling, guest: create(:guest, name: "Guest Two"), is_primary: true)
-
-    get new_folio_window_hotel_booking_workspace_path(hotel, booking, scope: "group")
-
-    document = Nokogiri::HTML(response.body)
-    booking_select = document.at_css('select[name="folio_window[booking_id]"]')
-    expect(booking_select).to be_present
-    expect(booking_select.css("option").map(&:text)).to include(
-      "Room 105 · Booking No. #{booking.formatted_reservation_number}",
-      "Room 106 · Booking No. #{sibling.formatted_reservation_number}"
-    )
-    expect(response.body).to include("Guest One", "Guest Two")
-  end
-
-  it "creates a group-context folio on the selected child booking" do
-    role.permissions << manage_folio_windows
-    group = create(:group_booking, hotel: hotel)
-    booking.update!(group_booking: group, group_position: 1)
-    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
-    sibling_party = create(:booking_guest, booking: sibling).booking_billing_party
-    original_booking_folio_count = booking.booking_folios.count
-
-    expect do
-      post create_folio_window_hotel_booking_workspace_path(hotel, booking), params: {
-        folio_window: {
-          booking_id: sibling.id,
-          booking_billing_party_id: sibling_party.id,
-          label: "Room 106 Incidentals",
-          currency: "MYR"
-        }
-      }
-    end.to change { sibling.booking_folios.count }.by(1)
-
-    folio = sibling.booking_folios.order(:created_at).last
-    expect(booking.booking_folios.count).to eq(original_booking_folio_count)
-    expect(folio).to have_attributes(label: "Room 106 Incidentals", booking_billing_party: sibling_party)
-    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, sibling, tab: "folio_operations", folio_id: folio.id))
-  end
-
-  it "rejects a folio target outside the current group" do
-    role.permissions << manage_folio_windows
-    group = create(:group_booking, hotel: hotel)
-    booking.update!(group_booking: group, group_position: 1)
-    outsider = create(:booking, hotel: hotel)
-    outsider_party = create(:booking_guest, booking: outsider).booking_billing_party
-
-    post create_folio_window_hotel_booking_workspace_path(hotel, booking), params: {
-      folio_window: { booking_id: outsider.id, booking_billing_party_id: outsider_party.id }
-    }
-
-    expect(response).to have_http_status(:not_found)
-  end
-
-  it "redirects failed folio window creation back to Folio Operations" do
-    role.permissions << manage_folio_windows
-    foreign_party = create(:booking_guest).booking_billing_party
-
-    post create_folio_window_hotel_booking_workspace_path(hotel, booking), params: {
-      folio_window: { booking_billing_party_id: foreign_party.id }
-    }
-
-    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations"))
-    expect(flash[:alert]).to eq("Select an active billing party for this booking.")
-  end
-
-  it "edits a folio window through the control panel" do
-    role.permissions << manage_folio_windows
-    folio = create(:booking_folio, booking: booking, hotel: hotel, label: "Original Folio")
-
-    get edit_folio_window_hotel_booking_workspace_path(hotel, booking, folio)
-
-    expect(response).to have_http_status(:success)
-    expect(response.body).to include("Edit Folio Window", "Original Folio")
-
-    patch update_folio_window_hotel_booking_workspace_path(hotel, booking, folio), params: {
-      booking_folio: { label: "Updated Folio", folio_type: folio.folio_type, payer_type: folio.payer_type }
-    }
-
-    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id))
-    expect(folio.reload.label).to eq("Updated Folio")
-  end
-
-  it "closes and reopens a settled folio through the control panel" do
-    role.permissions << manage_folio_windows
-    folio = create(:booking_folio, booking: booking, hotel: hotel)
-
-    post close_folio_window_hotel_booking_workspace_path(hotel, booking, folio), params: {
-      booking_folio: { reason: "Window no longer needed" }
-    }
-
-    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id))
-    expect(folio.reload).to be_closed
-
-    post reopen_folio_window_hotel_booking_workspace_path(hotel, booking, folio), params: {
-      booking_folio: { reason: "Correction required" }
-    }
-
-    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id))
-    expect(folio.reload).to be_open
-  end
-
-  it "edits, closes, and reopens a folio window on a group child booking" do
-    role.permissions << manage_folio_windows
-    group = create(:group_booking, hotel: hotel)
-    booking.update!(group_booking: group, group_position: 1)
-    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
-    folio = create(:booking_folio, booking: sibling, hotel: hotel, label: "Original Folio")
-
-    get edit_folio_window_hotel_booking_workspace_path(hotel, sibling, folio)
-
-    expect(response).to have_http_status(:success)
-    expect(response.body).to include("Edit Folio Window", "Original Folio")
-
-    patch update_folio_window_hotel_booking_workspace_path(hotel, sibling, folio), params: {
-      booking_folio: { label: "Updated Folio", folio_type: folio.folio_type, payer_type: folio.payer_type }
-    }
-
-    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, sibling, tab: "folio_operations", folio_id: folio.id))
-    expect(folio.reload.label).to eq("Updated Folio")
-
-    post close_folio_window_hotel_booking_workspace_path(hotel, sibling, folio), params: {
-      booking_folio: { reason: "Window no longer needed" }
-    }
-
-    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, sibling, tab: "folio_operations", folio_id: folio.id))
-    expect(folio.reload).to be_closed
-
-    post reopen_folio_window_hotel_booking_workspace_path(hotel, sibling, folio), params: {
-      booking_folio: { reason: "Correction required" }
-    }
-
-    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, sibling, tab: "folio_operations", folio_id: folio.id))
-    expect(folio.reload).to be_open
-  end
-
-  it "rejects folio window edit/close/reopen through a different booking in the same group" do
-    role.permissions << manage_folio_windows
-    group = create(:group_booking, hotel: hotel)
-    booking.update!(group_booking: group, group_position: 1)
-    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
-    folio = create(:booking_folio, booking: sibling, hotel: hotel)
-
-    get edit_folio_window_hotel_booking_workspace_path(hotel, booking, folio)
-    expect(response).to have_http_status(:not_found)
-
-    patch update_folio_window_hotel_booking_workspace_path(hotel, booking, folio), params: {
-      booking_folio: { label: "Hijacked", folio_type: folio.folio_type, payer_type: folio.payer_type }
-    }
-    expect(response).to have_http_status(:not_found)
-    expect(folio.reload.label).not_to eq("Hijacked")
-
-    post close_folio_window_hotel_booking_workspace_path(hotel, booking, folio), params: {
-      booking_folio: { reason: "Window no longer needed" }
-    }
-    expect(response).to have_http_status(:not_found)
-    expect(folio.reload).to be_open
-
-    post reopen_folio_window_hotel_booking_workspace_path(hotel, booking, folio), params: {
-      booking_folio: { reason: "Correction required" }
-    }
-    expect(response).to have_http_status(:not_found)
   end
 
   it "adds and edits a company billing party through inline Billing Preferences actions" do
@@ -486,7 +284,7 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
   describe "group billing routes" do
     before { allow(BookingRedesign).to receive(:enabled?).and_return(true) }
 
-    it "renders the group billing routes offcanvas listing every sibling" do
+    it "renders the group billing routes Sheet listing every sibling" do
       role.permissions << manage_folio_movements
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1, reservation_number: 201)
@@ -494,17 +292,17 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
       create(:booking_folio, booking: booking, hotel: hotel, is_primary: true)
       create(:booking_folio, booking: sibling, hotel: hotel, is_primary: true)
 
-      get group_billing_routes_hotel_booking_workspace_path(hotel, booking)
+      get hotel_folio_action_group_billing_routes_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Change Group Billing Routes", booking.formatted_reservation_number, sibling.formatted_reservation_number)
+      expect(response.body).to include("Change group billing routes", booking.formatted_reservation_number, sibling.formatted_reservation_number)
     end
 
     it "requires folio movement permission" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
 
-      get group_billing_routes_hotel_booking_workspace_path(hotel, booking)
+      get hotel_folio_action_group_billing_routes_path(hotel, booking)
 
       expect(response).to have_http_status(:found)
       expect(response).to redirect_to(root_path)
@@ -519,7 +317,7 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
       sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
       create(:booking_folio, booking: sibling, hotel: hotel, is_primary: true)
 
-      get group_billing_routes_hotel_booking_workspace_path(hotel, booking)
+      get hotel_folio_action_group_billing_routes_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("No billing party assigned")
@@ -545,14 +343,16 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
         sibling.id.to_s => { code.id.to_s => { "billing_party_id" => party_b.id.to_s, "target_folio_id" => target_b.id.to_s } }
       }
 
-      post preview_group_billing_routes_hotel_booking_workspace_path(hotel, booking), params: {
+      post hotel_folio_action_group_billing_routes_path(hotel, booking), params: {
+        workflow_step: "preview",
         idempotency_key: "group-preview", group_routes: group_routes
       }
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Existing charge impact")
 
-      post apply_group_billing_routes_hotel_booking_workspace_path(hotel, booking), params: {
+      post hotel_folio_action_group_billing_routes_path(hotel, booking), params: {
+        workflow_step: "apply",
         idempotency_key: "group-apply", confirmation: "future_only", reason: "Split group billing", group_routes: group_routes
       }
 
@@ -576,7 +376,8 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
         booking_billing_party: other_party_b, payer_type: "company", hotel_corporate_account: other_party_b.hotel_corporate_account)
       code = create(:transaction_code, hotel: hotel, kind: "charge")
 
-      post apply_group_billing_routes_hotel_booking_workspace_path(hotel, booking), params: {
+      post hotel_folio_action_group_billing_routes_path(hotel, booking), params: {
+        workflow_step: "apply",
         idempotency_key: "group-rollback", confirmation: "future_only", reason: "Attempt", group_routes: {
           booking.id.to_s => { code.id.to_s => { "billing_party_id" => party_a.id.to_s, "target_folio_id" => target_a.id.to_s } },
           sibling.id.to_s => { code.id.to_s => { "billing_party_id" => party_b.id.to_s, "target_folio_id" => mismatched_target_b.id.to_s } }

@@ -311,10 +311,9 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include("Issue Refund")
 
       html = Nokogiri::HTML(response.body)
-      refund_link = html.at_css(%(a[href*="#{new_hotel_folio_transaction_path(hotel, booking)}"][href*="transaction_type=payment"][href*="category=refund"]))
+      refund_link = html.at_css(%(a[href*="#{hotel_folio_action_post_transaction_path(hotel, booking)}"][href*="transaction_type=payment"][href*="category=refund"]))
       expect(refund_link).to be_present
-      expect(refund_link["data-turbo-frame"]).to eq("offcanvas_drawer")
-      expect(refund_link["data-offcanvas-variant"]).to eq("right")
+      expect(refund_link["data-turbo-frame"]).to eq("folio_action_sheet")
     end
 
     it "does not show normal actions on an open business date when the user lacks permission" do
@@ -361,7 +360,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).not_to include("Add Adjustment")
       expect(response.body).not_to include("More Actions")
       expect(response.body).not_to include("Issue Refund")
-      expect(response.body).not_to include(reverse_hotel_folio_transaction_path(hotel, booking, transaction))
+      expect(response.body).not_to include(hotel_folio_action_reverse_transaction_path(hotel, booking, transaction))
     end
 
     it "replaces normal actions with a night-audit-blocked message" do
@@ -392,7 +391,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).not_to include("Add Adjustment")
       expect(response.body).not_to include("More Actions")
       expect(response.body).not_to include("Issue Refund")
-      expect(response.body).not_to include(reverse_hotel_folio_transaction_path(hotel, booking, transaction))
+      expect(response.body).not_to include(hotel_folio_action_reverse_transaction_path(hotel, booking, transaction))
     end
 
     it "shows closed-folio actions state while preserving allowed ledger corrections" do
@@ -417,7 +416,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).not_to include("Add Charge")
       expect(response.body).not_to include("Add Adjustment")
       expect(response.body).not_to include("Issue Refund")
-      expect(response.body).to include(reverse_hotel_folio_transaction_path(hotel, booking, transaction))
+      expect(response.body).to include(hotel_folio_action_reverse_transaction_path(hotel, booking, transaction))
     end
 
     it "enables booking invoice report only for completed bookings with closed folios" do
@@ -535,320 +534,6 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(html.at_css('[data-testid="booking-workspace"]')).to be_present
       expect(response.body).to include("Folios")
       expect(room_code.transaction_code_taxes).to exist
-    end
-  end
-
-  describe "billing instruction routing rules" do
-    it "requires manage_folio_movements permission" do
-      booking = create_booking_with_folio(guest_name: "No Rule Permission", confirmation_token: "BK-NORULE", folio_number: 634)
-      code = create(:transaction_code, hotel: hotel, code: "ROOM-P", name: "Room Charge", category: "accommodation")
-
-      expect {
-        post routing_rules_hotel_folio_path(hotel, booking), params: {
-          folio_routing_rule: { transaction_code_id: code.id, target_folio_id: booking.booking_folio.id }
-        }
-      }.not_to change(FolioRoutingRule, :count)
-
-      expect(response).to have_http_status(:forbidden).or have_http_status(:redirect)
-    end
-
-    it "redirects every legacy mutation entry point to Change Billing Routes" do
-      grant_permission("manage_folio_movements")
-      booking = create_booking_with_folio(guest_name: "Rule Manager", confirmation_token: "BK-RULE", folio_number: 635)
-      code = create(:transaction_code, hotel: hotel, code: "ROOM-R", name: "Room Charge", category: "accommodation")
-      rule = create(:folio_routing_rule, booking:, hotel:, transaction_code: code, target_folio: booking.booking_folio)
-      destination = billing_routes_hotel_booking_workspace_path(hotel, booking)
-
-      get new_routing_rule_hotel_folio_path(hotel, booking, origin: "folios")
-      expect(response).to redirect_to(destination)
-
-      post routing_rules_hotel_folio_path(hotel, booking)
-      expect(response).to redirect_to(destination)
-
-      get edit_routing_rule_hotel_folio_path(hotel, booking, rule)
-      expect(response).to redirect_to(destination)
-
-      patch routing_rule_hotel_folio_path(hotel, booking, rule)
-      expect(response).to redirect_to(destination)
-
-      patch deactivate_routing_rule_hotel_folio_path(hotel, booking, rule)
-      expect(response).to redirect_to(destination)
-    end
-  end
-
-  describe "POST /hotel/:hotel_id/folios/:booking_id/windows" do
-    it "requires manage_folio_windows permission" do
-      booking = create_booking_with_folio(guest_name: "No Windows", confirmation_token: "BK-NOWIN", folio_number: 619)
-      relationship = create(:hotel_corporate_account, hotel: hotel)
-
-      expect {
-        post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: { label: "Company Folio", folio_type: "external", payer_type: "company", hotel_corporate_account_id: relationship.id }
-        }
-      }.not_to change(BookingFolio, :count)
-
-      expect(response).to have_http_status(:forbidden).or have_http_status(:redirect)
-    end
-
-    it "creates a non-primary folio window and logs the operation" do
-      grant_permission("manage_folio_windows")
-      booking = create_booking_with_folio(guest_name: "Window Creator", confirmation_token: "BK-WIN", folio_number: 620)
-      relationship = create(:hotel_corporate_account, hotel: hotel)
-
-      expect {
-        post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: { label: "Company Folio", folio_type: "external", payer_type: "company", hotel_corporate_account_id: relationship.id }
-        }
-      }.to change { booking.booking_folios.count }.by(1)
-        .and change(FolioOperationLog.where(operation_type: "create_folio"), :count).by(1)
-
-      folio = booking.booking_folios.order(:id).last
-      expect(folio).not_to be_is_primary
-      expect(folio.label).to eq("Company Folio")
-      expect(folio.hotel_corporate_account).to eq(relationship)
-      expect(response).to redirect_to(folio_operations_path(booking, folio_id: folio.id))
-    end
-
-    it "creates a folio window and completes the offcanvas for Turbo Stream submissions" do
-      grant_permission("manage_folio_windows")
-      booking = create_booking_with_folio(guest_name: "Window Turbo", confirmation_token: "BK-WIN-TURBO", folio_number: 647)
-      relationship = create(:hotel_corporate_account, hotel: hotel)
-
-      expect {
-        post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: { label: "Company Folio", folio_type: "external", payer_type: "company", hotel_corporate_account_id: relationship.id }
-        }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
-      }.to change { booking.booking_folios.count }.by(1)
-
-      expect(response).to have_http_status(:success)
-      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
-      expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(hotel_booking_workspace_path(hotel, booking))
-      expect(response.body).to include("tab=folio_operations")
-    end
-
-    it "rejects Company & Government folio windows without a selected account" do
-      grant_permission("manage_folio_windows")
-      booking = create_booking_with_folio(guest_name: "Missing Account", confirmation_token: "BK-NOACCOUNT", folio_number: 629)
-
-      expect {
-        post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: { label: "Company Folio", folio_type: "external", payer_type: "company" }
-        }
-      }.not_to change { booking.booking_folios.count }
-
-      expect(flash[:alert]).to include("Company & Government")
-    end
-
-    it "creates external folio windows with every supported payer type" do
-      grant_permission("manage_folio_windows")
-      booking = create_booking_with_folio(guest_name: "External Payers", confirmation_token: "BK-PAYERS", folio_number: 627)
-
-      expect {
-        %w[guest company agent hotel custom].each do |payer_type|
-          relationship = create(:hotel_corporate_account, hotel: hotel) if payer_type == "company"
-          post windows_hotel_folio_path(hotel, booking), params: {
-            booking_folio: { label: "#{payer_type.humanize} Folio", folio_type: "external", payer_type: payer_type, hotel_corporate_account_id: relationship&.id }
-          }
-        end
-      }.to change { booking.booking_folios.count }.by(5)
-
-      expect(booking.booking_folios.order(:id).last(5).map(&:payer_type)).to eq(%w[guest company agent hotel custom])
-    end
-
-    it "coerces locked payer types submitted through the controller" do
-      grant_permission("manage_folio_windows")
-      booking = create_booking_with_folio(guest_name: "Locked Payers", confirmation_token: "BK-LOCK", folio_number: 628)
-      relationship = create(:hotel_corporate_account, hotel: hotel)
-
-      post windows_hotel_folio_path(hotel, booking), params: {
-        booking_folio: { label: "Guest Locked", folio_type: "guest", payer_type: "company", hotel_corporate_account_id: relationship.id }
-      }
-      post windows_hotel_folio_path(hotel, booking), params: {
-        booking_folio: { label: "House Locked", folio_type: "house", payer_type: "custom" }
-      }
-
-      guest_locked, house_locked = booking.booking_folios.order(:id).last(2)
-      expect(guest_locked.payer_type).to eq("guest")
-      expect(house_locked.payer_type).to eq("hotel")
-    end
-
-    it "renders the add folio window form in the right offcanvas" do
-      grant_permission("manage_folio_windows")
-      booking = create_booking_with_folio(guest_name: "Window Sheet", confirmation_token: "BK-SHEET", folio_number: 622)
-      relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel, corporate_account: create(:account, :corporate, name: "Ministry of Tourism"))
-      suspended = create(:hotel_corporate_account, hotel: hotel, corporate_account: create(:account, :corporate, name: "Suspended Agency"), status: "suspended")
-
-      get new_window_hotel_folio_path(hotel, booking, origin: "folios")
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include(%(turbo-frame id="offcanvas_drawer"))
-      expect(response.body).to include("Add Folio Window")
-      expect(response.body).to include("Set this folio as primary")
-      expect(response.body).to include("booking_folio[set_folio_as_primary_reason]")
-      expect(response.body).to include("booking_folio[hotel_corporate_account_id]")
-      expect(response.body).to include("Company &amp; Government")
-      expect(response.body).to include("Ministry of Tourism - Direct bill enabled")
-      expect(response.body).not_to include("Suspended Agency")
-      expect(response.body).to include(%(<option selected="selected" value="external">External</option>))
-      expect(response.body).to include(%(<option value="house">House</option>))
-      expect(response.body).to include(%(<option value="agent">Agent</option>))
-      expect(response.body).to include(%(<option value="hotel">Hotel</option>))
-    end
-
-    it "creates a folio as primary when requested with a primary reason" do
-      grant_permission("manage_folio_windows")
-      booking = create_booking_with_folio(guest_name: "Primary Creator", confirmation_token: "BK-PRIMARY", folio_number: 623)
-      original_primary = booking.booking_folio
-      relationship = create(:hotel_corporate_account, hotel: hotel)
-
-      expect {
-        post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: {
-            label: "Company Folio",
-            folio_type: "external",
-            payer_type: "company",
-            hotel_corporate_account_id: relationship.id,
-            is_primary: "1",
-            set_folio_as_primary_reason: "Company pays all charges"
-          }
-        }
-      }.to change { booking.booking_folios.count }.by(1)
-        .and change(FolioOperationLog.where(operation_type: "set_default_folio"), :count).by(1)
-
-      new_primary = booking.reload.booking_folio
-      expect(new_primary.label).to eq("Company Folio")
-      expect(original_primary.reload).not_to be_is_primary
-      expect(new_primary).to be_is_primary
-    end
-
-    it "rejects primary reassignment without the primary reason" do
-      grant_permission("manage_folio_windows")
-      booking = create_booking_with_folio(guest_name: "Reason Required", confirmation_token: "BK-REASON", folio_number: 624)
-      relationship = create(:hotel_corporate_account, hotel: hotel)
-
-      expect {
-        post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: { label: "Company Folio", folio_type: "external", payer_type: "company", hotel_corporate_account_id: relationship.id, is_primary: "1" }
-        }
-      }.not_to change(BookingFolio, :count)
-
-      expect(flash[:alert]).to include("Reason for setting primary folio")
-    end
-
-    it "edits, closes, and reopens folio windows with operation logs" do
-      grant_permission("manage_folio_windows")
-      booking = create_booking_with_folio(guest_name: "Window Ops", confirmation_token: "BK-WINOPS", folio_number: 621, charges: 100, payments: 100)
-      folio = booking.booking_folio
-
-      get edit_window_hotel_folio_path(hotel, booking, folio)
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("Edit Folio Window")
-      expect(response.body).to include("Save Changes")
-
-      expect {
-        patch window_hotel_folio_path(hotel, booking, folio), params: {
-          booking_folio: { label: "Guest Main", reason: "Clarify payer" }
-        }
-      }.to change(FolioOperationLog.where(operation_type: "rename_folio"), :count).by(1)
-
-      expect(folio.reload.label).to eq("Guest Main")
-
-      patch window_hotel_folio_path(hotel, booking, folio), params: {
-        booking_folio: { label: "Guest Main Turbo", reason: "Clarify payer again" }
-      }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
-
-      expect(response).to have_http_status(:success)
-      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
-      expect(response.body).to include('action="complete_offcanvas"')
-      expect(response.body).to include(hotel_booking_workspace_path(hotel, booking))
-      expect(response.body).to include("tab=folio_operations")
-      expect(folio.reload.label).to eq("Guest Main Turbo")
-
-      expect {
-        post close_window_hotel_folio_path(hotel, booking, folio), params: {
-          booking_folio: { reason: "Settled" }
-        }
-      }.to change(FolioOperationLog.where(operation_type: "close_folio"), :count).by(1)
-
-      expect(folio.reload).to be_closed
-
-      expect {
-        post reopen_window_hotel_folio_path(hotel, booking, folio), params: {
-          booking_folio: { reason: "Correction needed" }
-        }
-      }.to change(FolioOperationLog.where(operation_type: "reopen_folio"), :count).by(1)
-
-      expect(folio.reload).to be_open
-      expect(response).to redirect_to(folio_operations_path(booking, folio_id: folio.id))
-    end
-
-    it "closes an eligible company folio as Direct Bill from the window close action" do
-      grant_permission("manage_folio_windows")
-      booking = create_booking_with_folio(guest_name: "Direct Bill", confirmation_token: "BK-DBILL", folio_number: 627)
-      relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel, payment_terms_days: 14)
-      folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 628, hotel_corporate_account: relationship)
-      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 250)
-
-      get folio_operations_path(booking, folio_id: folio.id)
-      expect(response.body).to include("Close as Direct Bill")
-
-      expect {
-        post close_window_hotel_folio_path(hotel, booking, folio), params: {
-          booking_folio: { settlement_method: "direct_bill", reason: "Approved corporate credit" }
-        }
-      }.to change(ArInvoice, :count).by(1)
-
-      expect(folio.reload).to be_closed
-      expect(folio.ar_invoice).to have_attributes(amount: 250.to_d, due_on: hotel.current_business_date + 14.days)
-      expect(response).to redirect_to(folio_operations_path(booking, folio_id: folio.id))
-    end
-
-    it "leaves positive company folios open when Direct Bill is disabled" do
-      grant_permission("manage_folio_windows")
-      booking = create_booking_with_folio(guest_name: "No Direct Bill", confirmation_token: "BK-NODB", folio_number: 629)
-      relationship = create(:hotel_corporate_account, hotel: hotel, direct_bill_enabled: false)
-      folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 630, hotel_corporate_account: relationship)
-      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 250)
-
-      get folio_operations_path(booking, folio_id: folio.id)
-
-      expect(response.body).to include('id="folio-operations-panel"')
-      expect(response.body).to include(folio.folio_reference_display)
-
-      expect {
-        post close_window_hotel_folio_path(hotel, booking, folio), params: {
-          booking_folio: { reason: "Try close" }
-        }
-      }.not_to change(ArInvoice, :count)
-
-      expect(flash[:alert]).to eq("Cannot close folio with non-zero balance of MYR 250.00.")
-      expect(folio.reload).to be_open
-    end
-
-    it "sets an existing secondary folio as primary from the edit form" do
-      grant_permission("manage_folio_windows")
-      booking = create_booking_with_folio(guest_name: "Default Switch", confirmation_token: "BK-SWITCH", folio_number: 625)
-      original_primary = booking.booking_folio
-      secondary = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 626)
-      relationship = create(:hotel_corporate_account, hotel: hotel)
-
-      expect {
-        patch window_hotel_folio_path(hotel, booking, secondary), params: {
-          booking_folio: {
-            label: "Company Folio",
-            folio_type: "external",
-            payer_type: "company",
-            hotel_corporate_account_id: relationship.id,
-            is_primary: "1",
-            set_folio_as_primary_reason: "Company is now responsible"
-          }
-        }
-      }.to change(FolioOperationLog.where(operation_type: "set_default_folio"), :count).by(1)
-
-      expect(secondary.reload).to be_is_primary
-      expect(original_primary.reload).not_to be_is_primary
-      expect(booking.reload.booking_folio).to eq(secondary)
     end
   end
 

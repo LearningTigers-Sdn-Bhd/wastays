@@ -1,0 +1,69 @@
+<% booking = local_assigns.fetch(:booking) { @booking } %>
+<% target_choices = @target_folios.map { |folio| { label: folio.display_option_label, value: folio.id } } %>
+
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "folio-split-transaction-sheet",
+        side: :right,
+        size: :md,
+        title: "Split transaction",
+        description: "Split part of this posted charge to another open folio window.",
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <% if target_choices.empty? %>
+        <div class="space-y-4 p-4">
+          <%= render PanelsUI::Alert.new(tone: :warning, title: "No other open folio window") do |alert| %>
+            <% alert.with_description do %>
+              This booking has no other open folio window to split the charge to.
+              Create a folio window first.
+            <% end %>
+          <% end %>
+          <div class="flex justify-end">
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Close<% end %>
+          </div>
+        </div>
+      <% else %>
+        <%= form_with scope: :folio_operation,
+              url: hotel_folio_action_split_transaction_path(current_hotel, booking, @transaction),
+              method: :post,
+              class: "flex h-full min-h-0 flex-col" do |form| %>
+          <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+
+          <div class="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
+            <div class="rounded-lg border border-border bg-muted p-4">
+              <p class="text-sm font-semibold text-foreground"><%= @transaction.description %></p>
+              <p class="mt-1 text-xs text-muted-foreground">
+                <%= @transaction.transaction_code&.code || @transaction.category.to_s.humanize %> ·
+                <%= @transaction.posting_date.strftime("%d %b %Y") %> ·
+                <%= @transaction.currency %> <%= number_with_precision(@transaction.amount, precision: 2) %>
+              </p>
+              <p class="mt-1 text-xs text-muted-foreground">Source folio: <%= @source_folio.display_option_label %></p>
+            </div>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :target_folio_id, label: "Target folio", required: true) do |field| %>
+              <% field.with_select_menu(target_choices, prompt: "Select a folio", required: true) %>
+            <% end %>
+
+            <div class="grid gap-3 sm:grid-cols-2">
+              <%= render PanelsUI::FormField.new(form: form, attribute: :amount, label: "Amount") do |field| %>
+                <% field.with_input(type: :number, step: "0.01", min: "0.01", placeholder: "Optional") %>
+              <% end %>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :percent, label: "Percent") do |field| %>
+                <% field.with_input(type: :number, step: "0.01", min: "0.01", max: "99.99", placeholder: "Optional") %>
+              <% end %>
+            </div>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :reason, label: "Reason", required: true) do |field| %>
+              <% field.with_input(placeholder: "e.g., Split room charge with company", required: true) %>
+            <% end %>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, data: { turbo_submits_with: "Splitting…" }) do %>Split transaction<% end %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

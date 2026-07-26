@@ -63,16 +63,16 @@ export default class extends Controller {
       if (row.dataset.bookingId !== bookingId || row.dataset.routeLevel !== "parent") return false
       if (row.style.display === "none") return false
 
-      const party = row.querySelector("select[data-billing-routes-target='party']")
-      const folio = row.querySelector("select[data-billing-routes-target='folio']")
+      const party = this.nativeSelect(row, "party")
+      const folio = this.nativeSelect(row, "folio")
       return (party && party.value === "") || (folio && folio.value === "")
     })
 
     header.dataset.ready = incomplete ? "false" : "true"
     if (icon) icon.textContent = incomplete ? "⚠" : "✓"
     if (label) {
-      label.classList.toggle("text-amber-700", incomplete)
-      label.classList.toggle("text-slate-900", !incomplete)
+      label.classList.toggle("text-warning-foreground", incomplete)
+      label.classList.toggle("text-foreground", !incomplete)
     }
     if (reason) reason.textContent = incomplete ? "— Select a billing party and folio" : ""
   }
@@ -85,5 +85,12 @@ export default class extends Controller {
     this.summaryTarget.textContent =
       `${codesSelected} code${codesSelected === 1 ? "" : "s"} selected · ${total} booking${total === 1 ? "" : "s"} in group · ${needsReview} needs review`
     this.submitTarget.disabled = codesSelected === 0 || needsReview > 0
+  }
+
+  nativeSelect(row, targetName) {
+    const target = row.querySelector(`[data-billing-routes-target~='${targetName}']`)
+    if (!target) return null
+
+    return target.matches("select") ? target : target.querySelector("select")
   }
 }

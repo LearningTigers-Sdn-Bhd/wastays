@@ -341,9 +341,8 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       document = Nokogiri::HTML(response.body)
       add_folio = document.at_xpath("//a[starts-with(normalize-space(), '+ Add folio')]")
       expect(add_folio).to be_present
-      expect(add_folio["href"]).to eq(new_folio_window_hotel_booking_workspace_path(hotel, booking))
-      expect(add_folio["href"]).not_to eq(new_window_hotel_folio_path(hotel, booking))
-      expect(add_folio["data-turbo-frame"]).to eq("offcanvas_drawer")
+      expect(add_folio["href"]).to eq(hotel_folio_action_new_window_path(hotel, booking))
+      expect(add_folio["data-turbo-frame"]).to eq("folio_action_sheet")
     end
 
     it "renders an actionable guest empty state" do
@@ -575,9 +574,6 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
     it "renders rate warnings as alert dialogs without widening the workspace" do
       create(:booking_room, booking: booking)
-      folio = create(:booking_folio, booking: booking, hotel: hotel, is_primary: true)
-      transaction_code = create(:transaction_code, hotel: hotel)
-      rule = create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: transaction_code, target_folio: folio)
 
       get hotel_booking_workspace_path(hotel, booking, tab: "room_and_rate", alert_action: "change_rate")
 
@@ -586,12 +582,6 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include('role="alertdialog"')
       expect(response.body).to include("Change stay or rate?")
       expect(response.body).not_to include('data-testid="workspace-action-drawer"')
-
-      get hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences", alert_action: "routing_preview", folio_routing_rule_id: rule.id)
-
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include('data-layout-mode="standard"')
-      expect(response.body).not_to include("Apply routing change?", "existing_and_future")
     end
 
     it "opens room changes in the booking action Sheet and renders guest editing inline" do
@@ -1068,7 +1058,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("No folios are available.")
       add_action = Nokogiri::HTML(response.body).at_xpath("//main//a[normalize-space()='Add Folio']")
-      expect(add_action["href"]).to eq(new_folio_window_hotel_booking_workspace_path(hotel, first_child))
+      expect(add_action["href"]).to start_with(hotel_folio_action_new_window_path(hotel, first_child))
     end
 
     it "targets the selected folio's concrete child in context and folio actions" do
@@ -1084,13 +1074,12 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       document = Nokogiri::HTML(response.body)
       group_heading = document.at_css("#desktop-folio-group-#{first_child.id}").text
       edit_link = document.at_xpath("//a[normalize-space()='Edit']")
-      expected_close_path = close_folio_window_hotel_booking_workspace_path(hotel, first_child, folio)
-      close_form = document.css("form").find { |form| form["action"] == expected_close_path }
+      close_link = document.at_xpath("//a[normalize-space()='Close']")
       add_link = document.at_xpath("//*[@data-testid='workspace-entity-rail']//a[starts-with(normalize-space(), '+ Add folio')]")
       expect(group_heading).to include("Room 105")
-      expect(edit_link["href"]).to eq(edit_folio_window_hotel_booking_workspace_path(hotel, first_child, folio))
-      expect(close_form["action"]).to eq(expected_close_path)
-      expect(add_link["href"]).to eq(new_folio_window_hotel_booking_workspace_path(hotel, first_child))
+      expect(edit_link["href"]).to start_with(hotel_folio_action_edit_window_path(hotel, first_child, folio))
+      expect(close_link["href"]).to start_with(hotel_folio_action_close_window_path(hotel, first_child, folio))
+      expect(add_link["href"]).to eq(hotel_folio_action_new_window_path(hotel, first_child))
     end
 
     it "ignores folio and guest IDs outside the current group" do

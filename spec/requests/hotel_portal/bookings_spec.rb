@@ -190,8 +190,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Add Adjustment")
 
-      get new_hotel_folio_transaction_path(hotel, booking, transaction_type: "adjustment", active_folio_id: booking.booking_folio.id),
-        headers: { "Turbo-Frame" => "offcanvas_drawer" }
+      get hotel_folio_action_post_transaction_path(hotel, booking, transaction_type: "adjustment", active_folio_id: booking.booking_folio.id),
+        headers: { "Turbo-Frame" => "folio_action_sheet" }
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('value="write_off"')

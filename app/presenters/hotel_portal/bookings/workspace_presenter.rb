@@ -555,16 +555,6 @@ module HotelPortal
       booking_presenter.can_add_guests?(user)
     end
 
-    def selected_routing_rule
-      booking.folio_routing_rules.find { |rule| rule.id.to_s == @params[:folio_routing_rule_id].to_s }
-    end
-
-    def routing_preview
-      return unless selected_routing_rule
-
-      @routing_preview ||= Folios::Routing::PreviewExistingCharges.call(rule: selected_routing_rule)
-    end
-
     def billing_scope
       return "booking" unless group_context_enabled?
       return "group" if group_overview?
@@ -1252,7 +1242,7 @@ module HotelPortal
     end
 
     def add_folio_path_for(child)
-      Rails.application.routes.url_helpers.new_folio_window_hotel_booking_workspace_path(hotel, child)
+      Rails.application.routes.url_helpers.hotel_folio_action_new_window_path(hotel, child)
     end
 
     def child_booking_room_type(child)

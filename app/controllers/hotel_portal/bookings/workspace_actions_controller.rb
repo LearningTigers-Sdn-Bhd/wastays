@@ -5,84 +5,8 @@ require "ostruct"
 module HotelPortal
   module Bookings
     class WorkspaceActionsController < BaseController
-      include OffcanvasTransactionCompletion
-
-    before_action :authorize_manage_bookings!, except: %i[new_folio_window create_folio_window edit_folio_window update_folio_window close_folio_window reopen_folio_window]
-    before_action :authorize_manage_folio_windows!, only: %i[new_folio_window create_folio_window edit_folio_window update_folio_window close_folio_window reopen_folio_window]
-    before_action :authorize_manage_billing_routes!, only: %i[billing_routes preview_billing_routes apply_billing_routes group_billing_routes preview_group_billing_routes apply_group_billing_routes]
+    before_action :authorize_manage_bookings!
     before_action :set_booking
-
-    def new_folio_window
-      @booking_presenter = BookingPresenter.new(@booking, current_hotel)
-      @folio_show = Folios::ShowPresenter.new(booking: @booking, hotel: current_hotel, user: current_user, active_folio_id: params[:folio_id])
-      @presenter = HotelPortal::Bookings::WorkspacePresenter.new(@booking, params: params.merge(tab: "folio_operations"), hotel: current_hotel, booking_presenter: @booking_presenter, folio_show: @folio_show)
-      @folio_booking_options = folio_booking_options
-
-      render "hotel_portal/bookings/workspaces/actions/create_folio_window/offcanvas"
-    end
-
-    def create_folio_window
-      target_booking = folio_window_booking
-      result = ::BookingWorkspaces::CreateFolioWindow.call(
-        booking: target_booking,
-        user: current_user,
-        attributes: create_folio_window_params
-      )
-
-      destination = hotel_booking_workspace_path(
-        current_hotel,
-        target_booking,
-        tab: "folio_operations",
-        folio_id: result.folio&.id
-      )
-
-      if result.success?
-        respond_to do |format|
-          format.turbo_stream do
-            flash[:notice] = "Folio window created."
-            render_offcanvas_completion(destination)
-          end
-          format.html { redirect_to destination, notice: "Folio window created.", status: :see_other }
-        end
-      else
-        redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "folio_operations"), alert: result.error, status: :see_other
-      end
-    end
-
-    def edit_folio_window
-      @folio = @booking.booking_folios.find(params[:folio_id])
-      set_company_government_accounts
-      @sheet_title = "Edit Folio Window"
-      @sheet_description = "Update folio details or make this the primary folio for the booking."
-      @form_url = update_folio_window_hotel_booking_workspace_path(current_hotel, @booking, @folio)
-      @form_method = :patch
-      @submit_label = "Save Changes"
-      @folio_origin = "booking_workspace"
-      render "hotel_portal/folios/manage_windows/offcanvas"
-    end
-
-    def update_folio_window
-      folio = @booking.booking_folios.find(params[:folio_id])
-      result = ::Folios::Lifecycle::UpdateFolio.call(folio: folio, user: current_user, attributes: folio_window_params)
-      respond_with_folio_result(result, folio: folio, notice: "Folio window updated.")
-    end
-
-    def close_folio_window
-      folio = @booking.booking_folios.find(params[:folio_id])
-      result = ::Folios::Lifecycle::CloseFolio.call(
-        folio: folio,
-        user: current_user,
-        reason: folio_window_params[:reason],
-        settlement_method: folio_window_params[:settlement_method]
-      )
-      respond_with_folio_result(result, folio: folio, notice: "Folio window closed.")
-    end
-
-    def reopen_folio_window
-      folio = @booking.booking_folios.find(params[:folio_id])
-      result = ::Folios::Lifecycle::ReopenFolio.call(folio: folio, user: current_user, reason: folio_window_params[:reason])
-      respond_with_folio_result(result, folio: folio, notice: "Folio window reopened.")
-    end
 
     def update_room_rate
       result = if room_rate_params[:room_number].present? && room_rate_params.except(:room_number, :override, :override_reason).empty?
@@ -178,100 +102,6 @@ module HotelPortal
       redirect_with_result(result, tab: "billing_preferences")
     end
 
-    def apply_routing
-      rule = @booking.folio_routing_rules.find(params[:folio_routing_rule_id])
-      result = ::Folios::Routing::ApplyExistingCharges.call(
-        rule: rule,
-        actor: current_user,
-        reason: params[:reason],
-        confirmation: params[:confirmation]
-      )
-      redirect_with_result(result, tab: "billing_preferences")
-    end
-
-    def billing_routes
-      prepare_billing_routes
-      render "hotel_portal/bookings/workspaces/actions/billing_routes/offcanvas"
-    end
-
-    def preview_billing_routes
-      prepare_billing_routes
-      @route_draft = billing_routes_params
-      @batch_preview = ::Folios::Routing::ApplyBatch.preview(booking: @routing_booking, routes: @route_draft)
-      if @batch_preview.success? && !@batch_preview.review_required?
-        return apply_billing_routes
-      end
-
-      flash.now[:alert] = @batch_preview.error unless @batch_preview.success?
-      render "hotel_portal/bookings/workspaces/actions/billing_routes/offcanvas", status: (@batch_preview.success? ? :ok : :unprocessable_content)
-    end
-
-    def apply_billing_routes
-      prepare_billing_routes
-      result = ::Folios::Routing::ApplyBatch.call(
-        booking: @routing_booking, actor: current_user, routes: billing_routes_params,
-        confirmation: params[:confirmation], forecast_confirmation: params[:forecast_confirmation],
-        reason: params[:reason], idempotency_key: params[:idempotency_key]
-      )
-      destination = hotel_booking_workspace_path(current_hotel, @routing_booking, tab: "billing_preferences")
-      if result.success?
-        respond_to do |format|
-          format.turbo_stream do
-            flash[:notice] = "Billing routes updated."
-            render_offcanvas_completion(destination)
-          end
-          format.html { redirect_to destination, notice: "Billing routes updated.", status: :see_other }
-        end
-      else
-        @route_draft = billing_routes_params
-        @batch_preview = ::Folios::Routing::ApplyBatch.preview(booking: @routing_booking, routes: @route_draft)
-        flash.now[:alert] = result.error
-        render "hotel_portal/bookings/workspaces/actions/billing_routes/offcanvas", status: :unprocessable_content
-      end
-    end
-
-    def group_billing_routes
-      prepare_group_billing_routes
-      render "hotel_portal/bookings/workspaces/actions/group_billing_routes/offcanvas"
-    end
-
-    def preview_group_billing_routes
-      prepare_group_billing_routes
-      @group_route_draft = group_billing_routes_params
-      @group_batch_preview = ::Folios::Routing::ApplyGroupBatch.preview(group_booking: @group, booking_routes: @group_route_draft)
-      if @group_batch_preview.success? && !@group_batch_preview.review_required?
-        return apply_group_billing_routes
-      end
-
-      flash.now[:alert] = @group_batch_preview.error unless @group_batch_preview.success?
-      render "hotel_portal/bookings/workspaces/actions/group_billing_routes/offcanvas",
-        status: (@group_batch_preview.success? ? :ok : :unprocessable_content)
-    end
-
-    def apply_group_billing_routes
-      prepare_group_billing_routes
-      result = ::Folios::Routing::ApplyGroupBatch.call(
-        group_booking: @group, actor: current_user, booking_routes: group_billing_routes_params,
-        confirmation: params[:confirmation], forecast_confirmation: params[:forecast_confirmation],
-        reason: params[:reason], idempotency_key: params[:idempotency_key]
-      )
-      destination = hotel_booking_workspace_path(current_hotel, @booking, tab: "billing_preferences", scope: "group")
-      if result.success?
-        respond_to do |format|
-          format.turbo_stream do
-            flash[:notice] = "Group billing routes updated."
-            render_offcanvas_completion(destination)
-          end
-          format.html { redirect_to destination, notice: "Group billing routes updated.", status: :see_other }
-        end
-      else
-        @group_route_draft = group_billing_routes_params
-        @group_batch_preview = ::Folios::Routing::ApplyGroupBatch.preview(group_booking: @group, booking_routes: @group_route_draft)
-        flash.now[:alert] = result.error
-        render "hotel_portal/bookings/workspaces/actions/group_billing_routes/offcanvas", status: :unprocessable_content
-      end
-    end
-
     def allocate_deposit
       deposit = group_booking.group_deposits.find(params[:group_deposit_id])
       folio = @booking.booking_folios.find(params[:booking_folio_id])
@@ -353,55 +183,6 @@ module HotelPortal
       params.fetch(:room_rate, {}).permit(:check_in, :check_out, :room_type_id, :room_number, :rate_plan_id, :manual_rate_override, :override, :override_reason)
     end
 
-    def create_folio_window_params
-      params.fetch(:folio_window, {}).permit(:booking_billing_party_id, :label, :currency, :reason)
-    end
-
-    def folio_window_params
-      params.fetch(:booking_folio, {}).permit(
-        :label, :folio_type, :payer_type, :payer_id, :hotel_corporate_account_id, :currency,
-        :reason, :settlement_method, :is_primary, :set_folio_as_primary_reason
-      )
-    end
-
-    def set_company_government_accounts
-      @company_government_accounts = current_hotel.hotel_corporate_accounts
-        .active
-        .includes(corporate_account: :users)
-        .order(created_at: :desc)
-    end
-
-    def folio_window_booking
-      return @booking unless @booking.group_booking_id?
-
-      selected_id = params.dig(:folio_window, :booking_id).presence || @booking.id
-      current_hotel.bookings.where(group_booking_id: @booking.group_booking_id).find(selected_id)
-    end
-
-    def folio_booking_options
-      bookings = if @booking.group_booking_id?
-        current_hotel.bookings
-          .where(group_booking_id: @booking.group_booking_id)
-          .includes(:booking_rooms, booking_billing_parties: [ :booking_guest, { hotel_corporate_account: :corporate_account } ])
-          .order(:group_position, :id)
-      else
-        current_hotel.bookings
-          .where(id: @booking.id)
-          .includes(:booking_rooms, booking_billing_parties: [ :booking_guest, { hotel_corporate_account: :corporate_account } ])
-      end
-
-      bookings.map do |booking|
-        room = booking.booking_rooms.first
-        room_label = room&.room_number.present? ? "Room #{room.room_number}" : "Unassigned room"
-        number = booking.formatted_reservation_number.presence || "—"
-        {
-          booking: booking,
-          label: "#{room_label} · Booking No. #{number}",
-          parties: booking.booking_billing_parties.active.to_a.sort_by { |party| party.display_name.to_s.downcase }
-        }
-      end
-    end
-
     def billing_party_params
       params.fetch(:billing_party, {}).permit(:hotel_corporate_account_id, :account_type, :settlement_type,
         :purchase_order_reference, :authorization_reference)
@@ -411,63 +192,13 @@ module HotelPortal
       params.fetch(:billing_terms, {}).permit(:settlement_type, :purchase_order_reference, :authorization_reference)
     end
 
-    def billing_routes_params
-      params.permit(routes: {}).fetch(:routes, {}).to_h
-    end
-
-    def prepare_billing_routes
-      @routing_booking = routing_booking
-      @routing_booking_options = routing_booking_options
-      @routing_matrix = ::Folios::Routing::RoutingMatrix.new(booking: @routing_booking)
-      @batch_key = params[:idempotency_key].presence || SecureRandom.uuid
-    end
-
-    def routing_booking
-      return @booking unless @booking.group_booking_id?
-
-      selected_id = params[:route_booking_id].presence || @booking.id
-      current_hotel.bookings.where(group_booking_id: @booking.group_booking_id).find(selected_id)
-    end
-
-    def routing_booking_options
-      return [] unless @booking.group_booking_id?
-
-      current_hotel.bookings.where(group_booking_id: @booking.group_booking_id)
-        .includes(:booking_rooms, :booking_guests)
-        .order(:group_position, :id)
-    end
-
-    def group_billing_routes_params
-      params.permit(group_routes: {}).fetch(:group_routes, {}).to_h
-    end
-
     def prepare_confirm_group_scope
       @group_bookings = scoped_group_bookings.includes(:booking_rooms, :booking_guests).order(:group_position, :id)
       @billing_party_attributes = billing_party_params
     end
 
-    def prepare_group_billing_routes
-      @group = group_booking
-      @group_bookings = @group.bookings.includes(:booking_rooms, :booking_guests,
-        booking_folios: :booking_billing_party, folio_routing_rules: :target_folio)
-      @group_readiness = ::Folios::Routing::GroupRoutingReadiness.new(group_booking: @group)
-      @group_batch_key = params[:idempotency_key].presence || SecureRandom.uuid
-    end
-
     def authorize_manage_bookings!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_bookings", hotel: current_hotel)
-    end
-
-    def authorize_manage_folio_windows!
-      allowed = current_user.respond_to?(:superadmin?) && current_user.superadmin? ||
-        current_user.has_permission?("manage_folio_windows", hotel: current_hotel)
-      raise Pundit::NotAuthorizedError unless allowed
-    end
-
-    def authorize_manage_billing_routes!
-      allowed = current_user.respond_to?(:superadmin?) && current_user.superadmin? ||
-        current_user.has_permission?("manage_folio_movements", hotel: current_hotel)
-      raise Pundit::NotAuthorizedError unless allowed
     end
 
     def update_request_status(kind:, request_id:, status:)
@@ -502,20 +233,6 @@ module HotelPortal
       success = result.success?
       message = success ? "Booking workspace updated." : (result.respond_to?(:error) ? result.error : result.errors.to_a.to_sentence)
       redirect_to hotel_booking_workspace_path(current_hotel, @booking, query), success ? { notice: message } : { alert: message }
-    end
-
-
-    def respond_with_folio_result(result, folio:, notice:)
-      destination = hotel_booking_workspace_path(current_hotel, @booking, tab: "folio_operations", folio_id: folio.id)
-      options = result.success? ? { notice: notice } : { alert: result.error }
-
-      respond_to do |format|
-        format.turbo_stream do
-          flash[options.keys.first] = options.values.first
-          render_offcanvas_completion(destination)
-        end
-        format.html { redirect_to destination, **options, status: :see_other }
-      end
     end
     end
   end

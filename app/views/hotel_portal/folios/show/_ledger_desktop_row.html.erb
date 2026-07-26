@@ -2,8 +2,6 @@
 <% can_move = row.row_kind == :posted && row.movement_allowed && folio_show.can_manage_folio_movements? %>
 <% can_reverse = row.action_kind == :reverse %>
 <% has_actions = can_move || can_reverse %>
-<% split_modal_id = "folio-split-modal-#{row.transaction_id}" %>
-<% reverse_modal_id = "folio-reverse-modal-#{row.transaction_id}" %>
 <tr class="align-top <%= "bg-warning/10" if forecasted %> <%= "text-muted-foreground" if row.reversed %>">
   <td class="whitespace-nowrap">
     <span class="tabular-nums text-foreground"><%= row.date_label %></span>
@@ -37,69 +35,19 @@
           <%= cached_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %>
         <% end %>
         <% if can_move %>
-          <% menu.with_item(href: move_hotel_folio_transaction_path(hotel, booking, row.transaction_id, folio_origin: folio_origin), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }) do %>
+          <% menu.with_item(href: hotel_folio_action_move_transaction_path(hotel, booking, row.transaction_id, return_to: request.fullpath), data: { turbo_frame: "folio_action_sheet" }) do %>
             <%= cached_icon "arrow-right", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
             Move
           <% end %>
-          <% menu.with_item(command: "show-modal", commandfor: split_modal_id) do %>
+          <% menu.with_item(href: hotel_folio_action_split_transaction_path(hotel, booking, row.transaction_id, return_to: request.fullpath), data: { turbo_frame: "folio_action_sheet" }) do %>
             <%= cached_icon "split", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
             Split
           <% end %>
         <% end %>
         <% if can_reverse %>
-          <% menu.with_item(command: "show-modal", commandfor: reverse_modal_id) do %>
+          <% menu.with_item(href: hotel_folio_action_reverse_transaction_path(hotel, booking, row.transaction_id, return_to: request.fullpath), data: { turbo_frame: "folio_action_sheet" }) do %>
             <%= cached_icon "rotate-ccw", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
             <%= row.action_label %>
-          <% end %>
-        <% end %>
-      <% end %>
-
-      <% if can_move %>
-        <%= render PanelsUI::Dialog.new(id: split_modal_id, size: :sm, title: "Split transaction", description: "Split part of this posted charge to another open folio window.") do |dialog| %>
-          <% dialog.with_body do %>
-            <%= form_with scope: :folio_operation, url: split_hotel_folio_transaction_path(hotel, booking, row.transaction_id), method: :post, id: "#{split_modal_id}-form", class: "space-y-4 text-left" do |form| %>
-              <%= hidden_field_tag "redirect_to_folio", "true" %>
-              <%= hidden_field_tag "folio_origin", folio_origin if folio_origin.present? %>
-              <%= render PanelsUI::FormField.new(form:, attribute: :target_folio_id, label: "Target folio", required: true) do |field| %>
-                <% field.with_select_menu(folio_show.other_open_folios.map { |candidate| [ candidate.display_option_label, candidate.id ] }, prompt: "Select a folio") %>
-              <% end %>
-              <div class="grid gap-3 sm:grid-cols-2">
-                <%= render PanelsUI::FormField.new(form:, attribute: :amount, label: "Amount") do |field| %>
-                  <% field.with_input(type: :number, step: "0.01", min: "0.01", placeholder: "Optional") %>
-                <% end %>
-                <%= render PanelsUI::FormField.new(form:, attribute: :percent, label: "Percent") do |field| %>
-                  <% field.with_input(type: :number, step: "0.01", min: "0.01", max: "99.99", placeholder: "Optional") %>
-                <% end %>
-              </div>
-              <%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason", required: true) do |field| %>
-                <% field.with_input(placeholder: "e.g., Split room charge with company") %>
-              <% end %>
-            <% end %>
-          <% end %>
-          <% dialog.with_footer do %>
-            <%= render PanelsUI::Button.new(as: :button, variant: :secondary, size: :sm, data: { action: "panels-ui--dialog#close" }) do %>Cancel<% end %>
-            <%= render PanelsUI::Button.new(as: :button, type: :submit, form: "#{split_modal_id}-form", variant: :primary, size: :sm) do %>Split transaction<% end %>
-          <% end %>
-        <% end %>
-      <% end %>
-
-      <% if can_reverse %>
-        <%= render PanelsUI::Dialog.new(id: reverse_modal_id, size: :sm, title: row.modal_title, description: "Post an immutable correction row with the opposite amount.") do |dialog| %>
-          <% dialog.with_body do %>
-            <%= form_with scope: :folio_transaction, url: reverse_hotel_folio_transaction_path(hotel, booking, row.transaction_id), method: :post, id: "#{reverse_modal_id}-form", class: "space-y-4 text-left" do |form| %>
-              <%= hidden_field_tag "redirect_to_folio", "true" %>
-              <%= hidden_field_tag "folio_origin", folio_origin if folio_origin.present? %>
-              <%= render PanelsUI::FormField.new(form:, attribute: :correction_reason, label: "Reason", required: true) do |field| %>
-                <% field.with_input(placeholder: "e.g., Posting error") %>
-              <% end %>
-              <%= render PanelsUI::FormField.new(form:, attribute: :correction_note, label: "Note", required: true) do |field| %>
-                <% field.with_text_area(rows: 3, placeholder: "Explain why this correction is needed.") %>
-              <% end %>
-            <% end %>
-          <% end %>
-          <% dialog.with_footer do %>
-            <%= render PanelsUI::Button.new(as: :button, variant: :secondary, size: :sm, data: { action: "panels-ui--dialog#close" }) do %>Cancel<% end %>
-            <%= render PanelsUI::Button.new(as: :button, type: :submit, form: "#{reverse_modal_id}-form", variant: :primary, size: :sm) do %><%= row.action_label %><% end %>
           <% end %>
         <% end %>
       <% end %>

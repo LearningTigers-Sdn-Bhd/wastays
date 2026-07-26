@@ -1,0 +1,57 @@
+<% booking = local_assigns.fetch(:booking) { @booking } %>
+
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "folio-reverse-transaction-sheet",
+        side: :right,
+        size: :md,
+        title: @policy.modal_title,
+        description: "Post an immutable correction row with the opposite amount.",
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <% if @blocked_reason.present? %>
+        <div class="space-y-4 p-4">
+          <%= render PanelsUI::Alert.new(tone: :warning, title: "This row cannot be reversed") do |alert| %>
+            <% alert.with_description do %>
+              <%= @blocked_reason %>
+            <% end %>
+          <% end %>
+          <div class="flex justify-end">
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Close<% end %>
+          </div>
+        </div>
+      <% else %>
+        <%= form_with scope: :folio_transaction,
+              url: hotel_folio_action_reverse_transaction_path(current_hotel, booking, @transaction),
+              method: :post,
+              class: "flex h-full min-h-0 flex-col" do |form| %>
+          <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+
+          <div class="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
+            <div class="rounded-lg border border-border bg-muted p-4">
+              <p class="text-sm font-semibold text-foreground"><%= @transaction.description %></p>
+              <p class="mt-1 text-xs text-muted-foreground">
+                <%= @transaction.transaction_code&.code || @transaction.category.to_s.humanize %> ·
+                <%= @transaction.posting_date.strftime("%d %b %Y") %> ·
+                <%= @transaction.currency %> <%= number_with_precision(@transaction.amount, precision: 2) %>
+              </p>
+            </div>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :correction_reason, label: "Reason", required: true) do |field| %>
+              <% field.with_input(placeholder: "e.g., Posting error", required: true) %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :correction_note, label: "Note", required: true) do |field| %>
+              <% field.with_text_area(rows: 3, placeholder: "Explain why this correction is needed.", required: true) %>
+            <% end %>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, data: { turbo_submits_with: "Reversing…" }) do %><%= @policy.action_label %><% end %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

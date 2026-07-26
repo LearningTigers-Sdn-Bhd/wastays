@@ -218,20 +218,46 @@ RSpec.describe "Booking workspace actions", :business_day, type: :system do
     expect(page).to have_no_content("Updated operational note")
   end
 
-  xit "clicks Apply changes in the billing routes offcanvas", js: true do
-    role.permissions << Permission.find_or_create_by!(slug: "manage_folio_movements") { |record| record.name = "Manage Folio Movements" }
+  it "opens selective billing routes, nests Add folio, and applies from Sheets", js: true do
+    %w[manage_folio_movements manage_folio_windows].each do |slug|
+      role.permissions << Permission.find_or_create_by!(slug: slug) { |record| record.name = slug.humanize }
+    end
     Financials::EnsureDefaultTransactionCodes.call(hotel)
     parent_code = create(:transaction_code, hotel: hotel, kind: "charge", code: "SPA", name: "Spa charge")
+    primary_party = booking.booking_guests.find_by!(is_primary: true).booking_billing_party
+    booking.booking_folio.update!(booking_billing_party: primary_party)
+    company_party = create(:booking_billing_party, :company, booking: booking, hotel: hotel)
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Company Folio",
+      booking_billing_party: company_party, payer_type: "company", hotel_corporate_account: company_party.hotel_corporate_account)
 
     visit hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences")
     click_link "Change Billing Routes"
 
-    expect(page).to have_css("#offcanvas_drawer_container.block", visible: :all)
-    within("#offcanvas_drawer") do
+    expect(page).to have_css("turbo-frame#folio_action_sheet dialog#folio-billing-routes-sheet[open]")
+    within("dialog#folio-billing-routes-sheet") do
       expect(page).to have_content(/change billing routes/i)
       expect(page).to have_content(parent_code.code)
-      click_button "Apply changes"
+
+      click_in_overlay "Add folio"
     end
-    expect(page).to have_css("#offcanvas_drawer_container.hidden", visible: :all, wait: 3)
+
+    expect(page).to have_css("turbo-frame#folio_action_sheet_secondary dialog#folio-window-sheet[open]")
+    find("dialog#folio-window-sheet").send_keys(:escape)
+    expect(page).to have_no_css("turbo-frame#folio_action_sheet_secondary dialog#folio-window-sheet")
+    expect(page).to have_css("dialog#folio-billing-routes-sheet[open]")
+
+    within("dialog#folio-billing-routes-sheet") do
+      row = find("tr[data-route-level='parent'][data-code-id='#{parent_code.id}']")
+      party_select = row.find("select[name='routes[#{parent_code.id}][billing_party_id]']", visible: :all)
+      page.execute_script("arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", party_select, company_party.id.to_s)
+      folio_select = row.find("select[name='routes[#{parent_code.id}][target_folio_id]']", visible: :all)
+      expect(folio_select).to have_css("option[value='#{company_folio.id}']", visible: :all)
+      page.execute_script("arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", folio_select, company_folio.id.to_s)
+      click_in_overlay "Apply changes"
+    end
+
+    expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences"))
+    expect(page).to have_no_css("dialog#folio-billing-routes-sheet", wait: 5)
+    expect(booking.folio_routing_rules.active.find_by(transaction_code: parent_code)&.target_folio).to eq(company_folio)
   end
 end

@@ -1,0 +1,32 @@
+<%= form_with url: hotel_folio_action_billing_routes_path(current_hotel, @booking), method: :post,
+  class: "flex min-h-0 flex-1 flex-col", data: { controller: "billing-routes" } do |form| %>
+  <%= hidden_field_tag :workflow_step, "preview" %>
+  <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+  <%= hidden_field_tag :idempotency_key, @batch_key %>
+  <%= hidden_field_tag :route_booking_id, @routing_booking.id if @routing_booking != @booking %>
+  <div class="relative z-0 min-h-0 flex-1 overflow-auto">
+    <table class="w-full min-w-[920px] table-fixed text-left text-xs">
+      <thead class="sticky top-0 z-10 bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <tr class="border-b border-border">
+          <th class="w-10 px-3 py-2"></th>
+          <th class="w-24 px-3 py-2">Code</th>
+          <th class="px-3 py-2">Transaction</th>
+          <th class="w-44 px-3 py-2">Tax inclusions</th>
+          <th class="w-48 px-3 py-2">Billing party</th>
+          <th class="w-56 px-3 py-2">Target folio</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        <%= render "hotel_portal/folios/actions/billing_routes/routing_rows",
+          form: form, matrix: @routing_matrix, booking: @routing_booking, draft: @route_draft, field_prefix: "routes" %>
+      </tbody>
+    </table>
+  </div>
+  <div class="sticky bottom-0 z-30 flex shrink-0 items-center justify-between border-t border-border bg-card px-6 py-4 pointer-events-auto">
+    <p class="text-xs text-muted-foreground">Changes are reviewed and applied together. Need another destination? <%= link_to "Add folio", hotel_folio_action_new_window_path(current_hotel, @routing_booking, return_to: @return_to), data: { turbo_frame: "folio_action_sheet_secondary" }, class: "font-semibold text-primary hover:underline" %>.</p>
+    <div class="relative z-40 flex gap-3 pointer-events-auto">
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, data: { turbo_submits_with: "Reviewing…" }) do %>Apply changes<% end %>
+    </div>
+  </div>
+<% end %>

@@ -50,17 +50,9 @@
 
       <% if row.editable %>
         <%= link_to "Edit",
-            edit_routing_rule_hotel_folio_path(hotel, booking, row.rule, origin: folio_origin, tab: "billing_instructions", active_folio_id: active_folio_id),
+            hotel_folio_action_billing_routes_path(hotel, booking, return_to: request.fullpath),
             class: "text-xs font-black text-foreground hover:text-foreground",
-            data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right", billing_instructions_ignore: true } %>
-        <% if row.rule.active? %>
-          <%= button_to "Deactivate",
-              deactivate_routing_rule_hotel_folio_path(hotel, booking, row.rule, origin: folio_origin, tab: "billing_instructions", active_folio_id: active_folio_id),
-              method: :patch,
-              class: "text-xs font-black text-rose-700 hover:text-rose-900",
-              form_class: "inline",
-              data: { turbo_confirm: "Deactivate this billing instruction?", billing_instructions_ignore: true } %>
-        <% end %>
+            data: { turbo_frame: "folio_action_sheet", billing_instructions_ignore: true } %>
       <% elsif !has_children %>
         <span class="text-muted-foreground">—</span>
       <% end %>

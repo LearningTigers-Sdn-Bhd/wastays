@@ -44,24 +44,137 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
     expect(page).to have_css("nav[aria-label='Booking folios'] a[aria-current='page']", text: first_folio.folio_number.to_s)
   end
 
-  it "closes an eligible folio through the migrated PanelsUI dialog" do
+  it "closes an eligible folio through the folio-action Sheet" do
     role.permissions << Permission.find_or_create_by!(slug: "manage_folio_windows") { |permission| permission.name = "Manage folio windows" }
     closable = create(:booking, hotel: hotel)
     folio = create(:booking_folio, booking: closable, hotel: hotel, is_primary: true, label: "Closable Folio")
 
     visit hotel_booking_workspace_path(hotel, closable, tab: "folio_operations")
 
-    expect(page).to have_no_css("dialog#close-workspace-folio-#{folio.id}[open]")
-    click_button "Close"
-    expect(page).to have_css("dialog#close-workspace-folio-#{folio.id}[open]")
+    expect(page).to have_no_css("dialog#folio-close-window-sheet")
+    click_link "Close"
+    expect(page).to have_css("turbo-frame#folio_action_sheet dialog#folio-close-window-sheet[open]")
 
-    within("dialog#close-workspace-folio-#{folio.id}") do
+    within("dialog#folio-close-window-sheet") do
       fill_in "Reason", with: "End of stay"
-      click_button "Close Folio"
+      click_button "Close folio"
     end
 
     expect(page).to have_css("#folio-operations-panel")
     expect(folio.reload).to be_closed
+  end
+
+  it "edits a folio window through the folio-action Sheet" do
+    role.permissions << Permission.find_or_create_by!(slug: "manage_folio_windows") { |permission| permission.name = "Manage folio windows" }
+    folio = booking.booking_folios.first
+
+    visit hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id)
+
+    click_link "Edit"
+
+    expect(page).to have_css("turbo-frame#folio_action_sheet dialog#folio-window-sheet[open]")
+
+    within("dialog#folio-window-sheet") do
+      fill_in "Label", with: "Renamed Folio"
+      click_button "Save changes"
+    end
+
+    expect(page).to have_css("#folio-operations-panel")
+    expect(folio.reload.label).to eq("Renamed Folio")
+  end
+
+  # A guest or house folio has no payer choice, so the payer field hides and a
+  # hidden input carries the locked value.
+  it "locks the payer to the folio type while editing a folio window" do
+    role.permissions << Permission.find_or_create_by!(slug: "manage_folio_windows") { |permission| permission.name = "Manage folio windows" }
+    folio = booking.booking_folios.first
+    expect(folio.folio_type).to eq("guest")
+
+    visit hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id)
+    click_link "Edit"
+    expect(page).to have_css("dialog#folio-window-sheet[open]")
+
+    within("dialog#folio-window-sheet") do
+      # Guest folios lock the payer, so the field is hidden on connect.
+      expect(page).to have_no_css("[data-folio-window-payer-target='payerType']", visible: :visible)
+
+      find("[data-folio-window-payer-target='folioType'] [data-controller~='panels-ui--select-menu'] button").click
+      find("[role='option']", text: "House").click
+
+      expect(page).to have_no_css("[data-folio-window-payer-target='payerType']", visible: :visible)
+      click_button "Save changes"
+    end
+
+    expect(page).to have_css("#folio-operations-panel")
+    expect(folio.reload).to have_attributes(folio_type: "house", payer_type: "hotel")
+  end
+
+  it "posts a cash payment through the folio-action Sheet" do
+    role.permissions << Permission.find_or_create_by!(slug: "post_folio_payments") { |permission| permission.name = "Post folio payments" }
+    folio = booking.booking_folios.first
+
+    visit hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id)
+
+    click_link "Add Payment"
+
+    expect(page).to have_css("turbo-frame#folio_action_sheet dialog#folio-post-transaction-sheet[open]")
+
+    within("dialog#folio-post-transaction-sheet") do
+      find("[data-controller~='panels-ui--select-menu'] button").click
+      find("[role='option']", text: "Cash").click
+      fill_in "Amount", with: "40.00"
+      fill_in "Description", with: "Front desk cash"
+      click_button "Post payment"
+    end
+
+    expect(page).to have_css("#folio-operations-panel")
+    expect(folio.folio_transactions.payment.where(category: "cash")).to exist
+  end
+
+  it "moves a posted charge through the folio-action Sheet" do
+    role.permissions << Permission.find_or_create_by!(slug: "manage_folio_movements") { |permission| permission.name = "Manage folio movements" }
+    source_folio = booking.booking_folios.first
+    target_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Company Folio")
+    transaction = source_folio.folio_transactions.first
+
+    visit hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: source_folio.id)
+
+    find("#folio-row-actions-#{transaction.id} button").click
+    click_link "Move"
+
+    expect(page).to have_css("turbo-frame#folio_action_sheet dialog#folio-move-transaction-sheet[open]")
+
+    within("dialog#folio-move-transaction-sheet") do
+      find("[data-controller~='panels-ui--select-menu'] button").click
+      find("[role='option']", text: "Company Folio").click
+      fill_in "Reason", with: "Company settles the room"
+      click_button "Move transaction"
+    end
+
+    expect(page).to have_css("#folio-operations-panel")
+    expect(target_folio.folio_transactions.charge.where(moved_from_transaction: transaction)).to exist
+  end
+
+  it "reverses a posted charge through the folio-action Sheet" do
+    role.permissions << Permission.find_or_create_by!(slug: "post_folio_corrections") { |permission| permission.name = "Post folio corrections" }
+    folio = booking.booking_folios.first
+    transaction = folio.folio_transactions.first
+
+    visit hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id)
+
+    find("#folio-row-actions-#{transaction.id} button").click
+    click_link "Reverse"
+
+    expect(page).to have_css("turbo-frame#folio_action_sheet dialog#folio-reverse-transaction-sheet[open]")
+
+    within("dialog#folio-reverse-transaction-sheet") do
+      fill_in "Reason", with: "Posting error"
+      fill_in "Note", with: "Charged to the wrong booking"
+      click_button "Reverse"
+    end
+
+    expect(page).to have_css("#folio-operations-panel")
+    expect(transaction.reload.voided_by_transaction).to be_present
   end
 
   it "switches to a folio on another group child booking" do

@@ -10,12 +10,12 @@
             <%= app_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
           <% end %>
           <div data-dropdown-target="menu" class="absolute right-0 z-50 mt-2 hidden w-64 rounded-md border border-border bg-card p-1.5 shadow-lg" role="menu" tabindex="-1">
-            <%= link_to "Group Billing Routes", group_billing_routes_hotel_booking_workspace_path(current_hotel, booking), role: "menuitem", class: "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "fullscreen-bottom" } %>
-            <%= link_to "Selective Billing Routes", billing_routes_hotel_booking_workspace_path(current_hotel, booking), role: "menuitem", class: "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } %>
+            <%= link_to "Group Billing Routes", hotel_folio_action_group_billing_routes_path(current_hotel, booking, return_to: request.fullpath), role: "menuitem", class: "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted", data: { turbo_frame: "folio_action_sheet" } %>
+            <%= link_to "Selective Billing Routes", hotel_folio_action_billing_routes_path(current_hotel, booking, return_to: request.fullpath), role: "menuitem", class: "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted", data: { turbo_frame: "folio_action_sheet" } %>
           </div>
         </div>
       <% else %>
-        <%= render PanelsUI::Button.new(href: billing_routes_hotel_booking_workspace_path(current_hotel, booking), variant: :secondary, size: :sm, class: "shrink-0", data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }) do %>
+        <%= render PanelsUI::Button.new(href: hotel_folio_action_billing_routes_path(current_hotel, booking, return_to: request.fullpath), variant: :secondary, size: :sm, class: "shrink-0", data: { turbo_frame: "folio_action_sheet" }) do %>
           <%= app_icon "route", class: "size-4", aria: { hidden: true } %>
           Change Billing Routes
         <% end %>
