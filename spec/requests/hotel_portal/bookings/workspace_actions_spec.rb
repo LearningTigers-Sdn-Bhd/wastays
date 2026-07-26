@@ -21,7 +21,7 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
     role.permissions << manage_folio_movements
     party = create(:booking_billing_party, :company, booking:, hotel: hotel)
     create(:booking_folio, :secondary, booking:, hotel:, booking_billing_party: party,
-      payer_type: "company", hotel_corporate_account: party.hotel_corporate_account, name: "Company Folio")
+      payer_type: "company", hotel_corporate_account: party.hotel_corporate_account, label: "Company Folio")
     create(:transaction_code, hotel:, kind: "charge", code: "ROOMX", name: "Room charge")
 
     get billing_routes_hotel_booking_workspace_path(hotel, booking)
@@ -39,7 +39,7 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
     parent_code = create(:transaction_code, hotel:, kind: "charge", code: "SPA", name: "Spa charge")
     party = create(:booking_billing_party, :company, booking:, hotel:)
     folio = create(:booking_folio, :secondary, booking:, hotel:, booking_billing_party: party,
-      payer_type: "company", hotel_corporate_account: party.hotel_corporate_account, name: "Company Folio")
+      payer_type: "company", hotel_corporate_account: party.hotel_corporate_account, label: "Company Folio")
     routes = {
       parent_code.id.to_s => {
         "billing_party_id" => party.id.to_s,
@@ -87,7 +87,7 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
     end
     party = create(:booking_billing_party, :company, booking: sibling, hotel: hotel)
     target = create(:booking_folio, :secondary, booking: sibling, hotel: hotel, booking_billing_party: party,
-      payer_type: "company", hotel_corporate_account: party.hotel_corporate_account, name: "Sibling Company Folio")
+      payer_type: "company", hotel_corporate_account: party.hotel_corporate_account, label: "Sibling Company Folio")
     code = create(:transaction_code, hotel: hotel, code: "ROOMBULK", category: "accommodation")
 
     get billing_routes_hotel_booking_workspace_path(hotel, booking, route_booking_id: sibling.id)
@@ -154,14 +154,14 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
       post create_folio_window_hotel_booking_workspace_path(hotel, booking), params: {
         folio_window: {
           booking_billing_party_id: party.id,
-          name: "Incidentals Folio",
+          label: "Incidentals Folio",
           currency: "MYR"
         }
       }
     end.to change(BookingFolio, :count).by(1)
 
     folio = BookingFolio.order(:created_at).last
-    expect(folio).to have_attributes(booking_billing_party: party, name: "Incidentals Folio", is_primary: false)
+    expect(folio).to have_attributes(booking_billing_party: party, label: "Incidentals Folio", is_primary: false)
     expect(FolioRoutingRule.count).to eq(routing_rule_count)
     expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id))
   end
@@ -201,7 +201,7 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
         folio_window: {
           booking_id: sibling.id,
           booking_billing_party_id: sibling_party.id,
-          name: "Room 106 Incidentals",
+          label: "Room 106 Incidentals",
           currency: "MYR"
         }
       }
@@ -209,7 +209,7 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
 
     folio = sibling.booking_folios.order(:created_at).last
     expect(booking.booking_folios.count).to eq(original_booking_folio_count)
-    expect(folio).to have_attributes(name: "Room 106 Incidentals", booking_billing_party: sibling_party)
+    expect(folio).to have_attributes(label: "Room 106 Incidentals", booking_billing_party: sibling_party)
     expect(response).to redirect_to(hotel_booking_workspace_path(hotel, sibling, tab: "folio_operations", folio_id: folio.id))
   end
 
@@ -241,7 +241,7 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
 
   it "edits a folio window through the control panel" do
     role.permissions << manage_folio_windows
-    folio = create(:booking_folio, booking: booking, hotel: hotel, name: "Original Folio")
+    folio = create(:booking_folio, booking: booking, hotel: hotel, label: "Original Folio")
 
     get edit_folio_window_hotel_booking_workspace_path(hotel, booking, folio)
 
@@ -249,11 +249,11 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
     expect(response.body).to include("Edit Folio Window", "Original Folio")
 
     patch update_folio_window_hotel_booking_workspace_path(hotel, booking, folio), params: {
-      booking_folio: { name: "Updated Folio", folio_type: folio.folio_type, payer_type: folio.payer_type }
+      booking_folio: { label: "Updated Folio", folio_type: folio.folio_type, payer_type: folio.payer_type }
     }
 
     expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id))
-    expect(folio.reload.name).to eq("Updated Folio")
+    expect(folio.reload.label).to eq("Updated Folio")
   end
 
   it "closes and reopens a settled folio through the control panel" do
@@ -280,7 +280,7 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
     group = create(:group_booking, hotel: hotel)
     booking.update!(group_booking: group, group_position: 1)
     sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
-    folio = create(:booking_folio, booking: sibling, hotel: hotel, name: "Original Folio")
+    folio = create(:booking_folio, booking: sibling, hotel: hotel, label: "Original Folio")
 
     get edit_folio_window_hotel_booking_workspace_path(hotel, sibling, folio)
 
@@ -288,11 +288,11 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
     expect(response.body).to include("Edit Folio Window", "Original Folio")
 
     patch update_folio_window_hotel_booking_workspace_path(hotel, sibling, folio), params: {
-      booking_folio: { name: "Updated Folio", folio_type: folio.folio_type, payer_type: folio.payer_type }
+      booking_folio: { label: "Updated Folio", folio_type: folio.folio_type, payer_type: folio.payer_type }
     }
 
     expect(response).to redirect_to(hotel_booking_workspace_path(hotel, sibling, tab: "folio_operations", folio_id: folio.id))
-    expect(folio.reload.name).to eq("Updated Folio")
+    expect(folio.reload.label).to eq("Updated Folio")
 
     post close_folio_window_hotel_booking_workspace_path(hotel, sibling, folio), params: {
       booking_folio: { reason: "Window no longer needed" }
@@ -320,10 +320,10 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
     expect(response).to have_http_status(:not_found)
 
     patch update_folio_window_hotel_booking_workspace_path(hotel, booking, folio), params: {
-      booking_folio: { name: "Hijacked", folio_type: folio.folio_type, payer_type: folio.payer_type }
+      booking_folio: { label: "Hijacked", folio_type: folio.folio_type, payer_type: folio.payer_type }
     }
     expect(response).to have_http_status(:not_found)
-    expect(folio.reload.name).not_to eq("Hijacked")
+    expect(folio.reload.label).not_to eq("Hijacked")
 
     post close_folio_window_hotel_booking_workspace_path(hotel, booking, folio), params: {
       booking_folio: { reason: "Window no longer needed" }

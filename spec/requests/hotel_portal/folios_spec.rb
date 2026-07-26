@@ -268,7 +268,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response).to have_http_status(:success)
       expect(body).to include('id="folio-operations-panel"')
       expect(body).to include('data-testid="booking-workspace"')
-      expect(body).to include("Guest Folio")
+      expect(body).to include(booking.booking_folio.folio_reference_display)
       expect(body).to include(%(href="#{booking_details_path(booking)}"))
       expect(body).not_to include("Go to Booking")
       expect(body).not_to include("Close Folio")
@@ -471,7 +471,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include('id="folio-operations-panel"')
       expect(response.body).to include('data-testid="booking-workspace"')
-      expect(response.body).to include("Company Folio")
+      expect(response.body).to include(company_folio.folio_reference_display)
       expect(ledger).to include("Company Charge")
       expect(ledger).not_to include("Room Charge")
     end
@@ -501,13 +501,13 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       billing_panel = html.at_css("[data-testid='folio-billing-instructions-panel']")
 
       expect(html.at_css('[data-testid="booking-workspace"]')).to be_present
-      expect(response.body).to include("Guest Folio")
+      expect(response.body).to include(booking.booking_folio.folio_reference_display)
     end
 
     it "renders billing instructions, route preview, and activity log panels" do
       grant_permission("manage_folio_movements")
       booking = create_booking_with_folio(guest_name: "Panels Guest", confirmation_token: "BK-PANELS", folio_number: 632)
-      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 633, name: "Company Folio")
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, folio_number: 633, label: "Company Folio")
       code = create(:transaction_code, hotel: hotel, code: "FNB-P", name: "Food and Beverage", category: "fb")
       create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: code, target_folio: company_folio)
       create(:folio_operation_log, hotel: hotel, booking: booking, actor: user, operation_type: "create_routing_rule", target_folio: company_folio, metadata: { "transaction_code_code" => "FNB-P" })
@@ -583,7 +583,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect {
         post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: { name: "Company Folio", folio_type: "external", payer_type: "company", hotel_corporate_account_id: relationship.id }
+          booking_folio: { label: "Company Folio", folio_type: "external", payer_type: "company", hotel_corporate_account_id: relationship.id }
         }
       }.not_to change(BookingFolio, :count)
 
@@ -597,14 +597,14 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect {
         post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: { name: "Company Folio", folio_type: "external", payer_type: "company", hotel_corporate_account_id: relationship.id }
+          booking_folio: { label: "Company Folio", folio_type: "external", payer_type: "company", hotel_corporate_account_id: relationship.id }
         }
       }.to change { booking.booking_folios.count }.by(1)
         .and change(FolioOperationLog.where(operation_type: "create_folio"), :count).by(1)
 
       folio = booking.booking_folios.order(:id).last
       expect(folio).not_to be_is_primary
-      expect(folio.name).to eq("Company Folio")
+      expect(folio.label).to eq("Company Folio")
       expect(folio.hotel_corporate_account).to eq(relationship)
       expect(response).to redirect_to(folio_operations_path(booking, folio_id: folio.id))
     end
@@ -616,7 +616,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect {
         post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: { name: "Company Folio", folio_type: "external", payer_type: "company", hotel_corporate_account_id: relationship.id }
+          booking_folio: { label: "Company Folio", folio_type: "external", payer_type: "company", hotel_corporate_account_id: relationship.id }
         }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
       }.to change { booking.booking_folios.count }.by(1)
 
@@ -633,7 +633,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect {
         post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: { name: "Company Folio", folio_type: "external", payer_type: "company" }
+          booking_folio: { label: "Company Folio", folio_type: "external", payer_type: "company" }
         }
       }.not_to change { booking.booking_folios.count }
 
@@ -648,7 +648,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
         %w[guest company agent hotel custom].each do |payer_type|
           relationship = create(:hotel_corporate_account, hotel: hotel) if payer_type == "company"
           post windows_hotel_folio_path(hotel, booking), params: {
-            booking_folio: { name: "#{payer_type.humanize} Folio", folio_type: "external", payer_type: payer_type, hotel_corporate_account_id: relationship&.id }
+            booking_folio: { label: "#{payer_type.humanize} Folio", folio_type: "external", payer_type: payer_type, hotel_corporate_account_id: relationship&.id }
           }
         end
       }.to change { booking.booking_folios.count }.by(5)
@@ -662,10 +662,10 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       relationship = create(:hotel_corporate_account, hotel: hotel)
 
       post windows_hotel_folio_path(hotel, booking), params: {
-        booking_folio: { name: "Guest Locked", folio_type: "guest", payer_type: "company", hotel_corporate_account_id: relationship.id }
+        booking_folio: { label: "Guest Locked", folio_type: "guest", payer_type: "company", hotel_corporate_account_id: relationship.id }
       }
       post windows_hotel_folio_path(hotel, booking), params: {
-        booking_folio: { name: "House Locked", folio_type: "house", payer_type: "custom" }
+        booking_folio: { label: "House Locked", folio_type: "house", payer_type: "custom" }
       }
 
       guest_locked, house_locked = booking.booking_folios.order(:id).last(2)
@@ -705,7 +705,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect {
         post windows_hotel_folio_path(hotel, booking), params: {
           booking_folio: {
-            name: "Company Folio",
+            label: "Company Folio",
             folio_type: "external",
             payer_type: "company",
             hotel_corporate_account_id: relationship.id,
@@ -717,7 +717,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
         .and change(FolioOperationLog.where(operation_type: "set_default_folio"), :count).by(1)
 
       new_primary = booking.reload.booking_folio
-      expect(new_primary.name).to eq("Company Folio")
+      expect(new_primary.label).to eq("Company Folio")
       expect(original_primary.reload).not_to be_is_primary
       expect(new_primary).to be_is_primary
     end
@@ -729,7 +729,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect {
         post windows_hotel_folio_path(hotel, booking), params: {
-          booking_folio: { name: "Company Folio", folio_type: "external", payer_type: "company", hotel_corporate_account_id: relationship.id, is_primary: "1" }
+          booking_folio: { label: "Company Folio", folio_type: "external", payer_type: "company", hotel_corporate_account_id: relationship.id, is_primary: "1" }
         }
       }.not_to change(BookingFolio, :count)
 
@@ -748,14 +748,14 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
       expect {
         patch window_hotel_folio_path(hotel, booking, folio), params: {
-          booking_folio: { name: "Guest Main", reason: "Clarify payer" }
+          booking_folio: { label: "Guest Main", reason: "Clarify payer" }
         }
       }.to change(FolioOperationLog.where(operation_type: "rename_folio"), :count).by(1)
 
-      expect(folio.reload.name).to eq("Guest Main")
+      expect(folio.reload.label).to eq("Guest Main")
 
       patch window_hotel_folio_path(hotel, booking, folio), params: {
-        booking_folio: { name: "Guest Main Turbo", reason: "Clarify payer again" }
+        booking_folio: { label: "Guest Main Turbo", reason: "Clarify payer again" }
       }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
 
       expect(response).to have_http_status(:success)
@@ -763,7 +763,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include('action="complete_offcanvas"')
       expect(response.body).to include(hotel_booking_workspace_path(hotel, booking))
       expect(response.body).to include("tab=folio_operations")
-      expect(folio.reload.name).to eq("Guest Main Turbo")
+      expect(folio.reload.label).to eq("Guest Main Turbo")
 
       expect {
         post close_window_hotel_folio_path(hotel, booking, folio), params: {
@@ -814,7 +814,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       get folio_operations_path(booking, folio_id: folio.id)
 
       expect(response.body).to include('id="folio-operations-panel"')
-      expect(response.body).to include("Company Folio")
+      expect(response.body).to include(folio.folio_reference_display)
 
       expect {
         post close_window_hotel_folio_path(hotel, booking, folio), params: {
@@ -836,7 +836,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect {
         patch window_hotel_folio_path(hotel, booking, secondary), params: {
           booking_folio: {
-            name: "Company Folio",
+            label: "Company Folio",
             folio_type: "external",
             payer_type: "company",
             hotel_corporate_account_id: relationship.id,

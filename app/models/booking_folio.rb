@@ -26,7 +26,6 @@ class BookingFolio < ApplicationRecord
   enum :payer_type, PAYER_TYPES.index_by(&:itself), prefix: true, validate: true
 
   validates :folio_number, presence: true, uniqueness: { scope: :hotel_id }
-  validates :name, presence: true
   validates :currency, presence: true
   validates :opened_at, presence: true
   validates :status, presence: true
@@ -77,12 +76,19 @@ class BookingFolio < ApplicationRecord
     outstanding_balance + projected_forecasts.sum(:amount)
   end
 
+  # A folio is identified by its reference; the label is an optional override
+  # a human sets deliberately, and clearing it reverts to the reference.
   def display_name
-    name.presence || (is_primary? ? "Guest Folio" : "Folio #{folio_number}")
+    label.presence || folio_reference_display
   end
 
   def display_option_label
-    [ display_name, folio_reference_display ].compact_blank.join(" · ")
+    [ label.presence, folio_reference_display ].compact_blank.join(" · ")
+  end
+
+  # For dropdowns and resolvers where a bare reference is too terse.
+  def display_with_payer
+    [ display_name, payer_display_label ].compact_blank.join(" · ")
   end
 
   def payer_display_label
@@ -146,8 +152,6 @@ class BookingFolio < ApplicationRecord
   end
 
   def assign_defaults
-    self.name = "Guest Folio" if name.blank? && is_primary?
-    self.name = "Folio #{folio_number}" if name.blank? && folio_number.present?
     self.folio_type ||= "guest"
     self.payer_type ||= "guest"
     self.currency ||= booking&.currency.presence || hotel&.default_currency.presence || "MYR"

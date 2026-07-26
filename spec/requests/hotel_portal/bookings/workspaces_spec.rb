@@ -182,10 +182,10 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
     end
 
     it "consolidates folio, transaction, and billing rule content into the control panel" do
-      folio = create(:booking_folio, booking: booking, hotel: hotel, name: "PRIVATE FOLIO MARKER")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, label: "PRIVATE FOLIO MARKER")
       create(:folio_transaction, booking_folio: folio, description: "PRIVATE TRANSACTION MARKER")
       transaction_code = create(:transaction_code, hotel: hotel)
-      target_folio = create(:booking_folio, booking: booking, hotel: hotel, name: "PRIVATE ROUTE MARKER", is_primary: false)
+      target_folio = create(:booking_folio, booking: booking, hotel: hotel, label: "PRIVATE ROUTE MARKER", is_primary: false)
       create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: transaction_code, target_folio: target_folio)
 
       get hotel_booking_workspace_path(hotel, booking)
@@ -224,7 +224,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       corporate_account = create(:account, :corporate, name: "Acme Engineering")
       hotel_corporate_account = create(:hotel_corporate_account, :direct_bill, hotel: hotel, corporate_account: corporate_account)
       company_party = create(:booking_billing_party, :company, booking: booking, hotel: hotel, hotel_corporate_account: hotel_corporate_account)
-      create(:booking_folio, :secondary, booking: booking, hotel: hotel, booking_billing_party: company_party, hotel_corporate_account: hotel_corporate_account, name: "Corporate Folio")
+      create(:booking_folio, :secondary, booking: booking, hotel: hotel, booking_billing_party: company_party, hotel_corporate_account: hotel_corporate_account, label: "Corporate Folio")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences")
 
@@ -248,7 +248,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       account = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
       company_party = create(:booking_billing_party, :company, booking: booking, hotel: hotel, hotel_corporate_account: account)
       create(:booking_folio, :secondary, booking: booking, hotel: hotel, booking_billing_party: company_party,
-        hotel_corporate_account: account, name: "Child Corporate Folio")
+        hotel_corporate_account: account, label: "Child Corporate Folio")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "billing_preferences")
 
@@ -279,7 +279,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true)
       room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "208")
-      folio = create(:booking_folio, booking: booking, hotel: hotel, name: "Guest Folio")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, label: "Guest Folio")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id)
 
@@ -334,7 +334,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
     it "renders Add Folio in the folio left rail using the workspace flow" do
       role.permissions << manage_folio_windows
       create(:booking_guest, booking: booking, is_primary: true)
-      create(:booking_folio, booking: booking, hotel: hotel, name: "Guest Folio")
+      create(:booking_folio, booking: booking, hotel: hotel, label: "Guest Folio")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "folio_operations")
 
@@ -359,7 +359,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
     end
 
     it "keeps folio tree links free of obsolete subtab state" do
-      folio = create(:booking_folio, booking: booking, hotel: hotel, name: "Guest Folio")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, label: "Guest Folio")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_tab: "forecast")
 
@@ -377,8 +377,8 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       sibling.update_column(:status, "checkout_required")
       create(:booking_room, booking: booking, room_number: "101")
       create(:booking_room, booking: sibling, room_number: "102")
-      create(:booking_folio, booking: booking, hotel: hotel, name: "Current Folio")
-      create(:booking_folio, booking: sibling, hotel: hotel, name: "Sibling Folio")
+      create(:booking_folio, booking: booking, hotel: hotel, label: "Current Folio")
+      create(:booking_folio, booking: sibling, hotel: hotel, label: "Sibling Folio")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "folio_operations")
 
@@ -430,7 +430,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
       room = create(:booking_room, booking: booking, room_type: room_type, room_number: "208")
       create(:booking_guest, booking: booking, guest: guest, is_primary: true)
-      create(:booking_folio, booking: booking, hotel: hotel, booking_room: room, name: "Room Guest Folio")
+      create(:booking_folio, booking: booking, hotel: hotel, booking_room: room, label: "Room Guest Folio")
 
       described_class = self.class
       standard_tabs = %w[booking_details security_deposits billing_preferences room_and_rate source_details housekeeping_requests audit_trails]
@@ -471,11 +471,11 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
       room = create(:booking_room, booking: booking, room_type: room_type, room_number: "208")
       create(:booking_guest, booking: booking, guest: create(:guest, name: "Aina Rahman"), is_primary: true)
-      create(:booking_folio, booking: booking, hotel: hotel, booking_room: room, name: "Room Guest Folio")
+      create(:booking_folio, booking: booking, hotel: hotel, booking_room: room, label: "Room Guest Folio")
       sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
       create(:booking_room, booking: sibling, room_type: room_type, room_number: "209")
       create(:booking_guest, booking: sibling, guest: create(:guest, name: "Faiz Osman"), is_primary: true)
-      create(:booking_folio, booking: sibling, hotel: hotel, name: "Sibling Guest Folio")
+      create(:booking_folio, booking: sibling, hotel: hotel, label: "Sibling Guest Folio")
 
       standard_tabs = %w[booking_details security_deposits billing_preferences room_and_rate source_details housekeeping_requests audit_trails]
       %w[booking_details folio_operations security_deposits billing_preferences guest_details room_and_rate source_details housekeeping_requests audit_trails].each do |tab|
@@ -833,7 +833,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       [ booking, sibling ].each_with_index do |child, index|
         room = create(:booking_room, booking: child, room_number: "20#{index + 1}")
         create(:booking_guest, booking: child, guest: create(:guest, name: "Group Guest #{index + 1}"), is_primary: true)
-        create(:booking_folio, booking: child, hotel: hotel, booking_room: room, name: "Guest Folio #{index + 1}")
+        create(:booking_folio, booking: child, hotel: hotel, booking_room: room, label: "Guest Folio #{index + 1}")
       end
       create(:deposit, booking: sibling, hotel: hotel, amount: 200, status: "held")
       create(:housekeeping_request, booking: sibling, request_details: "Group overview towels")
@@ -998,7 +998,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
         first_child.id.to_s,
         "folio_id=#{primary_folio.id}"
       )
-      expect(document.at_css('nav[aria-label="Booking folios"] a[aria-current="page"]').text).to include(primary_folio.folio_number.to_s)
+      expect(document.at_css('nav[aria-label="Booking folios"] a[aria-current="page"]').text).to include(primary_folio.folio_reference_display)
     end
 
     it "renders the first child's primary guest without redirecting" do
@@ -1077,7 +1077,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       booking.update!(group_booking: group, group_position: 2)
       first_child = create(:booking, hotel: hotel, group_booking: group, group_position: 1)
       create(:booking_room, booking: first_child, room_number: "105")
-      folio = create(:booking_folio, booking: first_child, hotel: hotel, name: "First Child Folio")
+      folio = create(:booking_folio, booking: first_child, hotel: hotel, label: "First Child Folio")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "folio_operations")
 
@@ -1096,10 +1096,10 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
     it "ignores folio and guest IDs outside the current group" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
-      local_folio = create(:booking_folio, booking: booking, hotel: hotel, name: "Local Folio")
+      local_folio = create(:booking_folio, booking: booking, hotel: hotel, label: "Local Folio")
       local_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Local Guest"), is_primary: true)
       foreign_booking = create(:booking, hotel: other_hotel)
-      foreign_folio = create(:booking_folio, booking: foreign_booking, hotel: other_hotel, name: "Foreign Folio Secret")
+      foreign_folio = create(:booking_folio, booking: foreign_booking, hotel: other_hotel, label: "Foreign Folio Secret")
       foreign_guest = create(:booking_guest, booking: foreign_booking, guest: create(:guest, name: "Foreign Guest Secret"), is_primary: true)
 
       get hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: foreign_folio.id)

@@ -17,7 +17,7 @@ RSpec.describe Folios::Lifecycle::BuildPrimaryFolio do
       folio_sequence: 1,
       is_primary: true,
       status: "open",
-      name: "Guest Folio",
+      label: nil,
       folio_type: "guest",
       payer_type: "guest",
       created_by: user
@@ -40,7 +40,7 @@ RSpec.describe Folios::Lifecycle::BuildPrimaryFolio do
     folio = described_class.call(booking: booking, actor: user)
 
     expect(folio).to have_attributes(
-      name: "Agent Folio",
+      label: nil,
       folio_type: "external",
       payer_type: "company",
       hotel_corporate_account: hotel_corporate_account

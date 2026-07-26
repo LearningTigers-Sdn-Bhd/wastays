@@ -134,7 +134,7 @@ module Reports
           room_summary,
           stay_dates,
           folio.status.to_s.titleize,
-          folio.display_name,
+          folio_window_label,
           currency,
           row[:code],
           row[:posting_date]&.iso8601,
@@ -151,7 +151,7 @@ module Reports
         rows = [
           [ { content: "FOLIO", colspan: 4, font_style: :bold, text_color: TEXT_PRIMARY } ],
           [ label_cell("Folio Account Reference"), value_cell(folio_account_reference), label_cell("Folio Reference"), value_cell(folio_reference) ],
-          [ label_cell("Booking Ref"), value_cell(booking.confirmation_token), label_cell("Window"), value_cell(folio.display_name) ],
+          [ label_cell("Booking Ref"), value_cell(booking.confirmation_token), label_cell("Window"), value_cell(folio_window_label) ],
           [ label_cell("Guest Name"), value_cell(booking.guest_name), label_cell("Room No / Type"), value_cell(room_summary) ],
           [ label_cell("Stay Dates"), value_cell(stay_dates), label_cell("Folio Status"), value_cell(folio.status.to_s.titleize) ],
           [ label_cell("Currency"), value_cell(currency), label_cell(""), value_cell("") ]
@@ -435,6 +435,12 @@ module Reports
 
       def folio_reference
         folio&.folio_reference_display.presence || folio_account_reference
+      end
+
+      # The reference already has its own cells, so the window column only adds
+      # value when a human labelled the folio.
+      def folio_window_label
+        folio&.label.presence || "—"
       end
 
       def tax_type_for(transaction)

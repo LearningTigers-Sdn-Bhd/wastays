@@ -29,7 +29,7 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
 
   it "switches standalone folios and restores the prior selection with browser history" do
     first_folio = booking.booking_folios.first
-    second_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Incidentals Folio")
+    second_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Incidentals Folio")
     visit hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: first_folio.id)
 
     find("nav[aria-label='Booking folios'] a[href*='folio_id=#{second_folio.id}']").click
@@ -47,7 +47,7 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
   it "closes an eligible folio through the migrated PanelsUI dialog" do
     role.permissions << Permission.find_or_create_by!(slug: "manage_folio_windows") { |permission| permission.name = "Manage folio windows" }
     closable = create(:booking, hotel: hotel)
-    folio = create(:booking_folio, booking: closable, hotel: hotel, is_primary: true, name: "Closable Folio")
+    folio = create(:booking_folio, booking: closable, hotel: hotel, is_primary: true, label: "Closable Folio")
 
     visit hotel_booking_workspace_path(hotel, closable, tab: "folio_operations")
 
@@ -70,7 +70,7 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
     create(:booking_room, booking: booking, room_number: "101")
     sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
     create(:booking_room, booking: sibling, room_number: "102")
-    sibling_folio = create(:booking_folio, booking: sibling, hotel: hotel, name: "Room 102 Folio")
+    sibling_folio = create(:booking_folio, booking: sibling, hotel: hotel, label: "Room 102 Folio")
     first_folio = booking.booking_folios.first
     first_path = hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: first_folio.id)
     sibling_path = hotel_booking_workspace_path(hotel, sibling, tab: "folio_operations", folio_id: sibling_folio.id)

@@ -297,8 +297,8 @@ RSpec.describe Folios::Transactions::PostStaffTransaction do
   it "routes generated tax children by explicit child tax rules when present" do
     hotel = folio.hotel
     booking = folio.booking
-    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio")
-    tax_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Tax Folio")
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Company Folio")
+    tax_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Tax Folio")
     hotel.update!(sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
     Financials::EnsureDefaultTransactionCodes.call(hotel)
     code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")

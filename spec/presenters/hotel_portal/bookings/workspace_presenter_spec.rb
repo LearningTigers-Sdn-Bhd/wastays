@@ -599,7 +599,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       create(:booking_folio, booking: booking, hotel: hotel, is_primary: true, payer_type: "guest")
       create(:booking_folio, :secondary, booking: booking, hotel: hotel,
                              hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel))
-      create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Legacy Folio")
+      create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Legacy Folio")
         .update_column(:hotel_corporate_account_id, nil)
 
       rows = described_class.new(booking.reload, hotel: hotel).financial_party_rows
@@ -623,7 +623,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
     end
 
     it "selects a folio when no folio_id is provided" do
-      folio = create(:booking_folio, booking: booking, hotel: hotel, name: "Guest Folio")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, label: "Guest Folio")
 
       tab_presenter = described_class.new(booking.reload, params: { tab: "folio_operations" }, hotel: hotel)
 
@@ -786,8 +786,8 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       sibling_room = create(:booking_room, booking: sibling, room_number: "102")
       create(:booking_guest, booking: booking, guest: create(:guest, name: "Guest One"), is_primary: true)
       create(:booking_guest, booking: sibling, guest: create(:guest, name: "Guest Two"), is_primary: true)
-      create(:booking_folio, booking: booking, hotel: hotel, name: "Guest Folio")
-      create(:booking_folio, booking: sibling, hotel: hotel, name: "Corporate Folio")
+      create(:booking_folio, booking: booking, hotel: hotel, label: "Guest Folio")
+      create(:booking_folio, booking: sibling, hotel: hotel, label: "Corporate Folio")
 
       tab_presenter = described_class.new(booking, params: { tab: "folio_operations" }, hotel: hotel)
 
@@ -798,8 +798,8 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       )
       folio_rows = tab_presenter.folio_tree_groups.flat_map(&:rows)
       expect(folio_rows.map(&:number)).to include(
-        booking.booking_folios.first.folio_number.to_s,
-        sibling.booking_folios.first.folio_number.to_s
+        booking.booking_folios.first.folio_reference_display.to_s,
+        sibling.booking_folios.first.folio_reference_display.to_s
       )
       expect(folio_rows.map(&:payer_line)).to include(
         "Guest : #{booking.guest_name}",
@@ -973,7 +973,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
     end
 
     it "marks default folio active only for folio operations" do
-      folio = create(:booking_folio, booking: booking, hotel: hotel, name: "Guest Folio")
+      folio = create(:booking_folio, booking: booking, hotel: hotel, label: "Guest Folio")
 
       folio_presenter = described_class.new(booking, params: { tab: "folio_operations" })
       room_presenter = described_class.new(booking, params: { tab: "booking_details" })

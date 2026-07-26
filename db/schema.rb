@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_21_145737) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_26_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -298,7 +298,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_21_145737) do
     t.datetime "updated_at", null: false
     t.bigint "hotel_id", null: false
     t.integer "invoice_number"
-    t.string "name", null: false
+    t.string "label"
     t.string "folio_type", default: "guest", null: false
     t.string "payer_type", default: "guest", null: false
     t.bigint "payer_id"

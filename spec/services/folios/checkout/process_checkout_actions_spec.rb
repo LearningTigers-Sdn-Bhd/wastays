@@ -31,7 +31,7 @@ RSpec.describe Folios::Checkout::ProcessCheckoutActions do
     result = call_service({ guest_folio.id.to_s => { action: "close" } })
 
     expect(result).not_to be_success
-    expect(result.error).to eq("Company Folio: checkout action is required.")
+    expect(result.error).to eq("#{company_folio.display_name}: checkout action is required.")
   end
 
   it "requires the payment amount to match the projected balance" do
@@ -42,7 +42,7 @@ RSpec.describe Folios::Checkout::ProcessCheckoutActions do
       company_folio.id.to_s => { action: "close" }
     })
 
-    expect(result.error).to eq("Guest Folio: payment amount must equal MYR 100.00.")
+    expect(result.error).to eq("#{guest_folio.display_name}: payment amount must equal MYR 100.00.")
   end
 
   it "rejects unsupported payment methods" do
@@ -53,7 +53,7 @@ RSpec.describe Folios::Checkout::ProcessCheckoutActions do
       company_folio.id.to_s => { action: "close" }
     })
 
-    expect(result.error).to eq("Guest Folio: payment method is not supported.")
+    expect(result.error).to eq("#{guest_folio.display_name}: payment method is not supported.")
   end
 
   it "requires payment posting permission" do
@@ -121,7 +121,7 @@ RSpec.describe Folios::Checkout::ProcessCheckoutActions do
       company_folio.id.to_s => { action: "keep_open" }
     })
 
-    expect(result.error).to eq("Company Folio: reason is required for keep open.")
+    expect(result.error).to eq("#{company_folio.display_name}: reason is required for keep open.")
   end
 
   it "allows keeping Company & Government folios open without Direct Bill enabled" do
@@ -176,7 +176,7 @@ RSpec.describe Folios::Checkout::ProcessCheckoutActions do
       company_folio.id.to_s => { action: "direct_bill", amount: "100.00" }
     })
 
-    expect(result.error).to eq("Company Folio: Direct bill is not allowed.")
+    expect(result.error).to eq("#{company_folio.display_name}: Direct bill is not allowed.")
   end
 
   it "records an approved checkout exception" do

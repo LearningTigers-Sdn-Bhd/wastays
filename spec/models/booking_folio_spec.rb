@@ -25,7 +25,6 @@ RSpec.describe BookingFolio, type: :model do
         booking: booking,
         folio_number: 123,
         status: "open",
-        name: "Guest Folio",
         folio_type: "guest",
         payer_type: "guest",
         currency: "MYR",
@@ -40,10 +39,10 @@ RSpec.describe BookingFolio, type: :model do
     it { should validate_presence_of(:status) }
 
     it "assigns required defaults" do
-      folio = build(:booking_folio, name: nil, currency: nil, opened_at: nil)
+      folio = build(:booking_folio, label: nil, currency: nil, opened_at: nil)
 
       expect(folio).to be_valid
-      expect(folio.name).to eq("Guest Folio")
+      expect(folio.label).to be_nil
       expect(folio.currency).to eq("MYR")
       expect(folio.opened_at).to be_present
       expect(folio.folio_sequence).to eq(1)
@@ -60,6 +59,22 @@ RSpec.describe BookingFolio, type: :model do
       expect(secondary.reload.folio_sequence).to eq(2)
       expect(primary.folio_reference_display).to eq("#{account_reference}/1")
       expect(secondary.folio_reference_display).to eq("#{account_reference}/2")
+    end
+
+    it "identifies a folio by its reference until a human labels it" do
+      folio = create(:booking_folio, hotel: booking.hotel, booking: booking, folio_number: 391)
+
+      expect(folio.label).to be_nil
+      expect(folio.display_name).to eq(folio.folio_reference_display)
+      expect(folio.display_option_label).to eq(folio.folio_reference_display)
+
+      folio.update!(label: "Honeymoon extras")
+      expect(folio.display_name).to eq("Honeymoon extras")
+      expect(folio.display_option_label).to eq("Honeymoon extras · #{folio.folio_reference_display}")
+      expect(folio.display_with_payer).to eq("Honeymoon extras · Guest")
+
+      folio.update!(label: nil)
+      expect(folio.display_name).to eq(folio.folio_reference_display)
     end
 
     it "accepts open, closed, and voided statuses" do
@@ -121,7 +136,7 @@ RSpec.describe BookingFolio, type: :model do
       folio = create(:booking_folio, folio_type: "external", payer_type: "agent")
       folio.update_columns(payer_type: "company", hotel_corporate_account_id: nil)
 
-      expect(folio.update(name: "Legacy Company Folio")).to be(true)
+      expect(folio.update(label: "Legacy Company Folio")).to be(true)
     end
 
     it "allows multiple folios for the same booking when only one is primary" do

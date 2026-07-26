@@ -650,7 +650,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
         :booking_folio,
         booking:,
         hotel:,
-        name: "Acme Folio",
+        label: "Acme Folio",
         folio_type: "external",
         payer_type: "company",
         is_primary: false,

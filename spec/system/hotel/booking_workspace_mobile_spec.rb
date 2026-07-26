@@ -7,7 +7,7 @@ RSpec.describe "Booking workspace mobile entity selection", :business_day, type:
 
   it "selects a folio from the mobile Sheet and focuses its heading", :mobile, js: true do
     primary = booking.booking_folios.find_by!(is_primary: true)
-    secondary = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Mobile Company Folio")
+    secondary = create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Mobile Company Folio")
     page.current_window.resize_to(390, 844)
     visit hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: primary.id)
 

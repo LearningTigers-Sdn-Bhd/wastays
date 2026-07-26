@@ -60,7 +60,7 @@ RSpec.describe "Group billing routes", type: :system do
     guest = create(:booking_guest, booking: booking, is_primary: true)
     create(:booking_folio, booking: booking, hotel: hotel, is_primary: true, booking_billing_party: guest.booking_billing_party)
     company_party = create(:booking_billing_party, :company, booking: booking, hotel: hotel)
-    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio",
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Company Folio",
       booking_billing_party: company_party, payer_type: "company", hotel_corporate_account: company_party.hotel_corporate_account)
     sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, reservation_number: 402)
     sibling_guest = create(:booking_guest, booking: sibling, is_primary: true)

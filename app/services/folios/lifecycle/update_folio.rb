@@ -30,14 +30,14 @@ module Folios
             @folio.reload
             NightAudits::OperationalChangeGuard.call!(hotel: @hotel, action: :update_folio)
 
-            previous_name = @folio.name
+            previous_label = @folio.label
             previous_folio_type = @folio.folio_type
             previous_payer_type = @folio.payer_type
             previous_payer_id = @folio.payer_id
             previous_hotel_corporate_account_id = @folio.hotel_corporate_account_id
 
             @folio.update!(folio_attributes)
-            log_update!(previous_name, previous_folio_type, previous_payer_type, previous_payer_id, previous_hotel_corporate_account_id)
+            log_update!(previous_label, previous_folio_type, previous_payer_type, previous_payer_id, previous_hotel_corporate_account_id)
             set_primary! if set_as_primary? && !@folio.is_primary?
           end
         end
@@ -52,19 +52,23 @@ module Folios
       private
 
       def folio_attributes
-        {
-          name: @attributes[:name],
+        attributes = {
           folio_type: @attributes[:folio_type],
           payer_type: @attributes[:payer_type],
           payer_id: @attributes[:payer_id].presence,
           hotel_corporate_account_id: @attributes[:hotel_corporate_account_id].presence,
           currency: @attributes[:currency]
         }.compact
+
+        # A submitted-but-blank label clears the override, so it can't ride on
+        # `.compact` — the folio falls back to displaying its reference.
+        attributes[:label] = @attributes[:label].presence if @attributes.key?(:label)
+        attributes
       end
 
-      def log_update!(previous_name, previous_folio_type, previous_payer_type, previous_payer_id, previous_hotel_corporate_account_id)
+      def log_update!(previous_label, previous_folio_type, previous_payer_type, previous_payer_id, previous_hotel_corporate_account_id)
         changes = {
-          name: [ previous_name, @folio.name ],
+          label: [ previous_label, @folio.label ],
           folio_type: [ previous_folio_type, @folio.folio_type ],
           payer_type: [ previous_payer_type, @folio.payer_type ],
           payer_id: [ previous_payer_id, @folio.payer_id ],

@@ -7,17 +7,17 @@ RSpec.describe Folios::Lifecycle::CreateFolio do
   let(:booking) { create(:booking, hotel: hotel, status: "checked_in", currency: "MYR") }
   let(:user) { create(:user, :superadmin) }
   let(:hotel_corporate_account) { create(:hotel_corporate_account, hotel: hotel) }
-  let!(:guest_folio) { create(:booking_folio, hotel: hotel, booking: booking, folio_number: 101, name: "Guest Folio") }
-  let!(:company_folio) { create(:booking_folio, :secondary, hotel: hotel, booking: booking, folio_number: 102, name: "Company Folio") }
+  let!(:guest_folio) { create(:booking_folio, hotel: hotel, booking: booking, folio_number: 101, label: "Guest Folio") }
+  let!(:company_folio) { create(:booking_folio, :secondary, hotel: hotel, booking: booking, folio_number: 102, label: "Company Folio") }
 
   it "creates a non-primary folio and records an operation log" do
     expect {
-      @result = described_class.call(booking: booking, user: user, attributes: { name: "Incidentals", folio_type: "external", payer_type: "guest" })
+      @result = described_class.call(booking: booking, user: user, attributes: { label: "Incidentals", folio_type: "external", payer_type: "guest" })
     }.to change(BookingFolio, :count).by(1).and change(FolioOperationLog, :count).by(1)
 
     expect(@result).to be_success
     expect(@result.folio).not_to be_is_primary
-    expect(@result.folio.name).to eq("Incidentals")
+    expect(@result.folio.label).to eq("Incidentals")
     expect(@result.folio.folio_sequence).to eq(3)
     expect(@result.folio.folio_reference_display).to eq("#{booking.reload.folio_account_reference_display}/3")
     expect(FolioOperationLog.last.operation_type).to eq("create_folio")
@@ -27,7 +27,7 @@ RSpec.describe Folios::Lifecycle::CreateFolio do
     result = described_class.call(booking: booking, user: user, attributes: { hotel_corporate_account_id: hotel_corporate_account.id })
 
     expect(result).to be_success
-    expect(result.folio.name).to eq("External Folio")
+    expect(result.folio.label).to be_nil
     expect(result.folio.folio_type).to eq("external")
     expect(result.folio.payer_type).to eq("company")
     expect(result.folio.hotel_corporate_account).to eq(hotel_corporate_account)
@@ -76,7 +76,7 @@ RSpec.describe Folios::Lifecycle::CreateFolio do
       booking: booking,
       user: user,
       attributes: {
-        name: "Company Primary",
+        label: "Company Primary",
         folio_type: "external",
         payer_type: "company",
         hotel_corporate_account_id: hotel_corporate_account.id,
@@ -106,7 +106,7 @@ RSpec.describe Folios::Lifecycle::CreateFolio do
       user: user,
       attributes: {
         booking_room_id: room.id,
-        name: "Room Guest Folio",
+        label: "Room Guest Folio",
         folio_type: "guest",
         payer_type: "guest",
         is_primary: true,
@@ -132,7 +132,7 @@ RSpec.describe Folios::Lifecycle::CreateFolio do
       user: user,
       attributes: {
         booking_room_id: other_room.id,
-        name: "Invalid Room Folio",
+        label: "Invalid Room Folio",
         folio_type: "guest",
         payer_type: "guest"
       }

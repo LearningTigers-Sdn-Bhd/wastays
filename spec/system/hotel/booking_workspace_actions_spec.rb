@@ -116,7 +116,7 @@ RSpec.describe "Booking workspace actions", :business_day, type: :system do
       :secondary,
       booking: booking,
       hotel: hotel,
-      name: "Company Folio",
+      label: "Company Folio",
       hotel_corporate_account: relationship
     )
     create(:folio_transaction, booking_folio: company_folio, transaction_type: "charge", amount: 60)

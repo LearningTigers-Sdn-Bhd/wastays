@@ -17,12 +17,12 @@ RSpec.describe BookingWorkspaces::CreateFolioWindow do
   it "creates a non-primary guest folio for a guest billing party" do
     party = create(:booking_guest, booking: booking).booking_billing_party
 
-    result = described_class.call(booking: booking, user: user, attributes: { booking_billing_party_id: party.id, name: "Incidentals Folio" })
+    result = described_class.call(booking: booking, user: user, attributes: { booking_billing_party_id: party.id, label: "Incidentals Folio" })
 
     expect(result).to be_success
     expect(result.folio).to have_attributes(
       booking_billing_party: party,
-      name: "Incidentals Folio",
+      label: "Incidentals Folio",
       folio_type: "guest",
       payer_type: "guest",
       is_primary: false

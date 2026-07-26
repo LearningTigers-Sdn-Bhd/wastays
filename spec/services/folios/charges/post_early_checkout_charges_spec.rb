@@ -156,7 +156,7 @@ RSpec.describe Folios::Charges::PostEarlyCheckoutCharges do
     end
 
     it "routes to any target folio, not only company folios" do
-      guest_split_folio = create(:booking_folio, booking: booking, hotel: hotel, folio_number: 9002, name: "Split Folio", is_primary: false, folio_type: "guest", payer_type: "guest")
+      guest_split_folio = create(:booking_folio, booking: booking, hotel: hotel, folio_number: 9002, label: "Split Folio", is_primary: false, folio_type: "guest", payer_type: "guest")
       routing_rule.update!(target_folio: guest_split_folio)
 
       described_class.call(booking: booking, folio: primary_folio, user: user, departure_date: departure_date, original_check_out: original_check_out)

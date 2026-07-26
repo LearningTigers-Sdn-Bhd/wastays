@@ -18,8 +18,8 @@
 
         <div class="space-y-4" data-controller="folio-window-payer" data-folio-window-payer-requires-company-account-value="<%= (@folio.new_record? || @folio.hotel_corporate_account_id.present?).to_s %>" data-folio-window-payer-original-payer-value="<%= @folio.payer_type.presence || "company" %>">
           <div>
-            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Name</label>
-            <%= text_field_tag "booking_folio[name]", @folio.name, required: true, placeholder: "External Folio", class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0" %>
+            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Label</label>
+            <%= text_field_tag "booking_folio[label]", @folio.label, placeholder: "Optional — defaults to the folio reference", class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
           </div>
 
           <div class="grid gap-3 sm:grid-cols-2">

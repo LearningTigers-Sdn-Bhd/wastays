@@ -29,7 +29,6 @@ module Folios
           hotel: @hotel,
           folio_number: folio_number,
           folio_sequence: 1,
-          name: billing_party ? "Agent Folio" : "Guest Folio",
           folio_type: billing_party ? "external" : "guest",
           payer_type: billing_party ? "company" : "guest",
           hotel_corporate_account: billing_party&.hotel_corporate_account,

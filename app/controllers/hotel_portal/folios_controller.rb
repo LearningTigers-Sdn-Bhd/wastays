@@ -38,7 +38,6 @@ module HotelPortal
       @booking = current_hotel.bookings.find(params[:booking_id])
       set_company_government_accounts
       @folio = @booking.booking_folios.build(
-        name: "External Folio",
         folio_type: "external",
         payer_type: "company",
         currency: @booking.currency.presence || current_hotel.default_currency
@@ -174,7 +173,7 @@ module HotelPortal
     end
 
     def folio_window_params
-      params.fetch(:booking_folio, {}).permit(:name, :folio_type, :payer_type, :payer_id, :hotel_corporate_account_id, :currency, :reason, :settlement_method, :is_primary, :set_folio_as_primary_reason)
+      params.fetch(:booking_folio, {}).permit(:label, :folio_type, :payer_type, :payer_id, :hotel_corporate_account_id, :currency, :reason, :settlement_method, :is_primary, :set_folio_as_primary_reason)
     end
 
     def set_company_government_accounts

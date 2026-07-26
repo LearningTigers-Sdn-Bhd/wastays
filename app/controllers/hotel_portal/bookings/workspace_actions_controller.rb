@@ -354,12 +354,12 @@ module HotelPortal
     end
 
     def create_folio_window_params
-      params.fetch(:folio_window, {}).permit(:booking_billing_party_id, :name, :currency, :reason)
+      params.fetch(:folio_window, {}).permit(:booking_billing_party_id, :label, :currency, :reason)
     end
 
     def folio_window_params
       params.fetch(:booking_folio, {}).permit(
-        :name, :folio_type, :payer_type, :payer_id, :hotel_corporate_account_id, :currency,
+        :label, :folio_type, :payer_type, :payer_id, :hotel_corporate_account_id, :currency,
         :reason, :settlement_method, :is_primary, :set_folio_as_primary_reason
       )
     end

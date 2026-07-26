@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Folios::Checkout::BookingCheckoutReadiness do
   let(:hotel) { create(:hotel) }
   let(:booking) { create(:booking, hotel: hotel, status: "checked_in", currency: "MYR") }
-  let!(:guest_folio) { create(:booking_folio, hotel: hotel, booking: booking, name: "Guest Folio") }
-  let!(:company_folio) { create(:booking_folio, :secondary, hotel: hotel, booking: booking, name: "Company Folio") }
+  let!(:guest_folio) { create(:booking_folio, hotel: hotel, booking: booking, label: "Guest Folio") }
+  let!(:company_folio) { create(:booking_folio, :secondary, hotel: hotel, booking: booking, label: "Company Folio") }
 
   it "blocks checkout when any folio has a non-zero projected balance" do
     create(:folio_transaction, booking_folio: company_folio, transaction_type: "charge", category: "accommodation", amount: 100)

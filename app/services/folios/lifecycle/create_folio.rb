@@ -51,7 +51,7 @@ module Folios
           booking_room_id: @attributes[:booking_room_id].presence,
           folio_number: folio_number,
           folio_sequence: next_folio_sequence,
-          name: @attributes[:name].presence || default_name,
+          label: @attributes[:label].presence,
           folio_type: @attributes[:folio_type].presence || "external",
           payer_type: @attributes[:payer_type].presence || "company",
           payer_id: @attributes[:payer_id].presence,
@@ -76,14 +76,6 @@ module Folios
         @booking.booking_folios.maximum(:folio_sequence).to_i + 1
       end
 
-      def default_name
-        case @attributes[:folio_type].to_s
-        when "guest" then "Guest Folio"
-        when "house" then "House Folio"
-        else "External Folio"
-        end
-      end
-
       def log_operation!(folio)
         FolioOperationLog.create!(
           hotel: @hotel,
@@ -94,7 +86,7 @@ module Folios
           currency: folio.currency,
           reason: @attributes[:reason].presence,
           metadata: {
-            name: folio.name,
+            label: folio.label,
             folio_type: folio.folio_type,
             payer_type: folio.payer_type,
             payer_id: folio.payer_id,

@@ -210,7 +210,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('id="folio-operations-panel"')
-      expect(response.body).to include("Guest Folio")
+      expect(response.body).to include(folio.folio_reference_display)
       expect(response.body).to include('data-testid="booking-workspace"')
       expect(response.body).to include("SGD 150.00") # Outstanding = 125 charge - 50 payment + 75 upcoming
       expect(response.body).to include("Room charge")

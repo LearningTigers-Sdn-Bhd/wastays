@@ -1182,7 +1182,7 @@ module HotelPortal
     def folio_tree_row(folio, active: false)
       FolioRailRow.new(
         id: folio.id,
-        number: folio.folio_number.to_s,
+        number: folio.folio_reference_display.to_s,
         payer_line: folio_payer_line(folio),
         status_badge: folio_status_badge(folio),
         outstanding: money_for(folio.booking, folio.projected_outstanding_balance),

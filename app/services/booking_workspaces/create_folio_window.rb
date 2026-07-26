@@ -38,7 +38,7 @@ module BookingWorkspaces
     def folio_attributes(party)
       common = {
         booking_billing_party_id: party.id,
-        name: @attributes[:name].presence || default_name(party),
+        label: @attributes[:label].presence,
         currency: @attributes[:currency].presence,
         reason: @attributes[:reason].presence,
         is_primary: false
@@ -55,14 +55,6 @@ module BookingWorkspaces
         )
       else
         common
-      end
-    end
-
-    def default_name(party)
-      case party.party_kind
-      when "guest" then "#{party.display_name} Folio"
-      when "company" then party.display_name
-      else "Folio"
       end
     end
 

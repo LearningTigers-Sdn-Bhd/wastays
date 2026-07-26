@@ -655,7 +655,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
       tax_code = create(:transaction_code, hotel: hotel, code: "TTX-MOVE", name: "Tourism Tax", kind: "charge", category: "tax")
       transaction = create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100, transaction_code: room_code)
       create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "tax", amount: 10, description: "Tourism Tax", transaction_code: tax_code, metadata: { parent_folio_transaction_id: transaction.id, tax_line: { type: "tourism_tax" } })
-      create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio")
+      create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Company Folio")
 
       get move_hotel_folio_transaction_path(hotel, booking, transaction), headers: { "Turbo-Frame" => "offcanvas_drawer" }
 
@@ -687,7 +687,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
         posting_date: Date.current,
         transaction_code: tax_code,
         metadata: { stay_date: Date.current.iso8601, tax_line: { type: "tourism_tax", source_transaction_code_id: room_code.id } })
-      create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio")
+      create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Company Folio")
 
       get move_hotel_folio_transaction_path(hotel, booking, transaction), headers: { "Turbo-Frame" => "offcanvas_drawer" }
 
