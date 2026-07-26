@@ -502,6 +502,31 @@ Same logic applies to `initialize_for_booking` → `CreatePrimaryFolio`, v1's mo
 expensive rename at **20 files**. Its cost may shrink substantially after M4;
 re-measure before committing to it.
 
+#### Re-measured after PR 6 — rename dropped (PR 9)
+
+It did not shrink. M4 extracted the insert but left all 8 callers pointed at
+the orchestrator: **25 files, 37 reference lines**, up from the ≤20 estimate.
+Three reasons not to spend them:
+
+- **The proposed name now collides with what M4 landed.**
+  `initialize_for_booking.rb:59` calls `Folios::BuildPrimaryFolio`, so the
+  rename would produce `CreatePrimaryFolio` → `BuildPrimaryFolio`. "Create"
+  versus "build" is not a distinction a reader can hold. It would also sit
+  beside `CreateFolio`, where the glossary reserves `create` for a folio
+  someone explicitly asked for — two `create`s differing only by noun.
+- **`Create` is factually wrong.** The service is idempotent: it returns the
+  existing folio when one is present (line 46), and in lock mode re-reads and
+  returns the concurrent winner. On re-entry it creates nothing.
+  `EnsurePrimaryFolio` would be the honest name if the rename were worth
+  doing.
+- **The current name is already defined and accurate.** The glossary (PR 1)
+  gives `initialize` a real meaning — a step inside another workflow rather
+  than a request in its own right — and all 8 callers match it.
+
+The only genuine confusion M4 introduced was an undocumented verb. **PR 9
+therefore adds `build` to the lifecycle verbs** and notes `initialize`'s
+idempotency, in one file rather than 25.
+
 ### Foldering — optional, and not via `collapse`
 
 Target layout, if pursued, after the seams work:
@@ -552,7 +577,7 @@ navigation for either.
 | 6 | M4 — landed as `BuildPrimaryFolio` | 3 | low | **done** |
 | 7 | M6 `ApplyBatch` — landed as `RoutingChangeSet` | 3 | low–med | **done** |
 | 8 | Cheap renames (`apply_bill_to`, `reads/`, maintenance) | 15 | low | **done** |
-| 9 | `initialize_for_booking` rename — still 24 files after PR 6 | ≤24 | med | open |
+| 9 | `initialize_for_booking` rename — **dropped**, glossary entry instead | 1 | low | **done** |
 | 10 | Foldering, if still wanted — true nesting, not `collapse` | 101 | high | open |
 
 PRs 1–4 are mechanical and independently revertable. PR 5 needs a full

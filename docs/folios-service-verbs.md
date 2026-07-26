@@ -52,8 +52,9 @@ or an `apply` and should be renamed.
 
 | Verb | Means | Examples |
 |---|---|---|
+| `build` | The low-level primitive that inserts one folio row and nothing else — no locking, no guards, no recovery; the caller supplies the transaction. It is to the lifecycle what `insert` is to postings: the floor the others stand on. **Do not name a domain operation `build`** — if staff would recognise it, it is a `create` or an `initialize`. | `BuildPrimaryFolio` |
 | `create` | A new folio, because someone explicitly asked for one. | `CreateFolio` |
-| `initialize` | Sets up a booking's primary folio as a **step inside another workflow** (confirmation, check-in), not as a request in its own right. | `InitializeForBooking` |
+| `initialize` | Sets up a booking's primary folio as a **step inside another workflow** (confirmation, check-in), not as a request in its own right. Idempotent: hands back the existing folio when there is one, and the concurrent winner's when it raced. | `InitializeForBooking` |
 | `recover` | Repairs something that should already exist and does not. Reactive, and expects to find nothing to do most of the time. | `RecoverMissingFolio` |
 | `close` / `reopen` / `rename` / `update` | Exactly what they say. `reopen` always crosses an authorization boundary. | `CloseFolio`, `CloseForCheckout`, `ReopenFolio`, `ReopenForCorrection`, `RenameFolio`, `UpdateFolio` |
 
@@ -71,7 +72,8 @@ audit trail. They never quietly rewrite history.
 
 ## Nouns are deliberate
 
-`PaymentSource`, `RefundSource`, `RoutePreview`, `ForecastedChargeLines`,
+`PaymentSource`, `RefundSource`, `Reads::RoutePreview`,
+`Reads::ForecastedChargeLines`,
 `RoutingMatrix`, `ChargePostingKeys`, `NextFolioNumber`,
 `TransactionActionPolicy`, `RoutabilityPolicy`, `BookingCheckoutReadiness` — a
 noun name means it is a query or value object, not a command. **A noun that
