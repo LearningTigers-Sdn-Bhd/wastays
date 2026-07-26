@@ -11,7 +11,7 @@
 # This constraint mirrors the app rule at the database level so no path —
 # including raw SQL — can billed a guest-type folio to a company. It does NOT
 # constrain external folios, so the legitimate "external company folio as
-# primary" feature (Folios::CreateFolio set_folio_as_primary) is unaffected.
+# primary" feature (Folios::Lifecycle::CreateFolio set_folio_as_primary) is unaffected.
 class EnforceGuestFolioPayer < ActiveRecord::Migration[8.0]
   CONSTRAINT = "booking_folios_guest_type_is_guest_payer"
 

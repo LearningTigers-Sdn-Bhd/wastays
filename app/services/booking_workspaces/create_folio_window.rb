@@ -19,7 +19,7 @@ module BookingWorkspaces
       party = billing_party
       return failure("Select an active billing party for this booking.") if party.blank?
 
-      result = ::Folios::CreateFolio.call(
+      result = ::Folios::Lifecycle::CreateFolio.call(
         booking: @booking,
         user: @user,
         attributes: folio_attributes(party)

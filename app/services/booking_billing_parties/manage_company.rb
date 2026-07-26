@@ -72,7 +72,7 @@ module BookingBillingParties
     def ensure_folio!(party)
       return if party.booking_folios.exists?
 
-      result = Folios::CreateFolio.call(
+      result = Folios::Lifecycle::CreateFolio.call(
         booking: @booking,
         user: @actor,
         attributes: {

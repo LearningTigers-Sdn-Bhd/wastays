@@ -63,7 +63,7 @@ RSpec.describe Folios::Reads::RoutePreview do
       category: "accommodation",
       amount: 100.0,
       transaction_code: room_code,
-      metadata: { nightly_charge_key: Folios::ChargePostingKeys.nightly_charge_key(booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id) })
+      metadata: { nightly_charge_key: Folios::Charges::ChargePostingKeys.nightly_charge_key(booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id) })
     create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
 
     room_row = described_class.call(booking: booking).rows.find { |row| row[:transaction_code] == room_code }

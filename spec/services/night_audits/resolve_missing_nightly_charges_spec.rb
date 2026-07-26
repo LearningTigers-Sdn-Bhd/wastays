@@ -156,7 +156,7 @@ RSpec.describe NightAudits::ResolveMissingNightlyCharges do
   end
 
   def nightly_key(category, identity)
-    Folios::ChargePostingKeys.nightly_charge_key(
+    Folios::Charges::ChargePostingKeys.nightly_charge_key(
       booking: booking,
       date: business_date,
       charge_kind: category,

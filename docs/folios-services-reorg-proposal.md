@@ -1,6 +1,7 @@
 # Folios / Bookings Service Reorg & Refactor Proposal
 
-> Status: **PRs 1–8 delivered** (revision 2). PRs 9–10 remain optional and unstarted.
+> Status: **Complete.** PRs 1–10 delivered (revision 2); PR 9's rename was
+> dropped on re-measurement — see its notes.
 > Scope: `app/services/folios/` (**42** files, 5,559 LOC), `app/services/folio_routing/`
 > (10 files), and the creation-time adapters in `app/services/bookings/`.
 > Lens: DIP, ISP, OCP, SRP, DRY, KISS, Law of Demeter.
@@ -542,6 +543,59 @@ folios/
   maintenance/  recover_missing · backfill_missing
 ```
 
+#### Notes after implementation (PR 10)
+
+**The sketch above covered 15 of 46 files and was wrong about the buckets.**
+Two of the largest families had no home in it: `transactions/` (10 files — the
+correction verbs the glossary already grouped) and `checkout/` (4). The 8
+result `Data` types M2 added after the sketch was written had none either;
+they live beside the service that returns them.
+
+Final layout, and the four judgement calls:
+
+| Folder | Files | |
+|---|---|---|
+| `routing/` | 21 | `folio_routing/` **merged in** as `Folios::Routing`, per the sketch |
+| `lifecycle/` | 12 | |
+| `transactions/` | 10 | not in the sketch |
+| `charges/` | 7 | incl. `ChargePostingKeys` |
+| `payments/` | 6 | incl. `PaymentSource`/`RefundSource`, which PR 8 left at root |
+| `checkout/` | 4 | not in the sketch |
+| `maintenance/` | 3 | `RecoverMissingFolio` joined the backfill |
+| `forecasts/` · `reads/` | 2 each | |
+
+`NextFolioNumber` left the namespace entirely: it wraps
+`HotelCounter.increment!` with `type: "folio"`, exactly as
+`DocumentIdentifiers::HotelReferences` does for reservation and receipt
+numbers, so it is now `DocumentIdentifiers::NextFolioNumber`. That resolves
+"Not recommended: relocating `NextFolioNumber`" — the objection was to
+inventing a `reads/` home for it, not to filing it with the other counters.
+`ChargePostingKeys` stayed in `folios/`, in `charges/`.
+
+**Cost was 180 files, not 101** — 399 qualified references rewritten
+mechanically, plus 5 bare cross-bucket references (an `include`, two constant
+reads, a `resolve` call) fixed by hand. The 10 other bare hits the scan
+flagged were locally-nested `Result` constants — false positives, and the
+reason to review that list rather than run the rewrite blind.
+
+**Two things worth knowing for any future move of this size:**
+
+- `bin/rails zeitwerk:check` validates the constant/path alignment in seconds
+  and is the fastest signal that the re-nesting is right.
+- **`spec/services/folio_routing/` was in no `bin/test` domain**, so its 18
+  specs only ran under `bin/test all`. Moving them under `spec/services/folios/`
+  put them in `financials`. Fifteen other spec directories are still in that
+  position, including `spec/services/transaction_codes/`. `next_folio_number_spec`
+  would have fallen into the same hole, so `spec/services/document_identifiers`
+  was added to the `financials` domain.
+
+One latent spec break surfaced: `spec/requests/admin/refund_requests_spec.rb`
+stubbed `RecordRefund` with an `OpenStruct` and relied on another spec to load
+`ostruct`. It now builds the real `TransactionResult`. It fails identically on
+the pre-PR tree when run alone, so this is M2's documented trap, not fallout
+from the move — but the move is what made it fail in a domain run. **19 more
+specs are still in that position.**
+
 **Do not use Zeitwerk `collapse`.** It buys folders at the cost of
 `path = constant` — a navigation property v1 itself identifies as currently true
 and useful. If the folders are worth having, they are worth the true nesting;
@@ -578,7 +632,7 @@ navigation for either.
 | 7 | M6 `ApplyBatch` — landed as `RoutingChangeSet` | 3 | low–med | **done** |
 | 8 | Cheap renames (`apply_bill_to`, `reads/`, maintenance) | 15 | low | **done** |
 | 9 | `initialize_for_booking` rename — **dropped**, glossary entry instead | 1 | low | **done** |
-| 10 | Foldering, if still wanted — true nesting, not `collapse` | 101 | high | open |
+| 10 | Foldering — true nesting, not `collapse` | 180 | high | **done** |
 
 PRs 1–4 are mechanical and independently revertable. PR 5 needs a full
 `bin/test` between slices. PRs 8–10 are optional and can stop at any point.

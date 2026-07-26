@@ -121,8 +121,8 @@ RSpec.describe Bookings::TransitionStatus do
         create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 10_000, captured_at: Time.current)
 
         failed_result = OpenStruct.new(success?: false, error: "posting blocked")
-        insert_service = instance_double(Folios::InsertTransaction, call: failed_result)
-        allow(Folios::InsertTransaction).to receive(:new).and_return(insert_service)
+        insert_service = instance_double(Folios::Transactions::InsertTransaction, call: failed_result)
+        allow(Folios::Transactions::InsertTransaction).to receive(:new).and_return(insert_service)
 
         result = subject.call
 
@@ -486,7 +486,7 @@ RSpec.describe Bookings::TransitionStatus do
         )
         room_status.update!(dnd: true, dnd_date: booking.hotel.current_business_date)
         create_settled_folio
-        allow_any_instance_of(Folios::CloseForCheckout).to receive(:validate_all_nights_posted).and_return(nil)
+        allow_any_instance_of(Folios::Checkout::CloseForCheckout).to receive(:validate_all_nights_posted).and_return(nil)
 
         expect(room_status.active_dnd?).to be true
 
@@ -527,7 +527,7 @@ RSpec.describe Bookings::TransitionStatus do
         sibling_folio = create(:booking_folio, booking: sibling, status: "open")
         create(:folio_transaction, booking_folio: sibling_folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
         create(:folio_transaction, booking_folio: sibling_folio, transaction_type: :payment, category: "cash", amount: 100.0)
-        allow_any_instance_of(Folios::CloseForCheckout).to receive(:validate_all_nights_posted).and_return(nil)
+        allow_any_instance_of(Folios::Checkout::CloseForCheckout).to receive(:validate_all_nights_posted).and_return(nil)
 
         first_result = subject.call
         second_result = described_class.new(booking: sibling, status: "completed", timestamp: timestamp).call

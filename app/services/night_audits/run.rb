@@ -83,7 +83,7 @@ module NightAudits
         return Result.new(success?: night_audit.completed?, night_audit: night_audit)
       end
 
-      Folios::PostNightlyCharges.call(night_audit: night_audit, user: @performed_by_user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: night_audit, user: @performed_by_user)
 
       # Use the evaluation service to get blockers and exceptions
       evaluation = NightAudits::Evaluate.new(hotel: @hotel, business_date: @business_date, phase: :post_close).call

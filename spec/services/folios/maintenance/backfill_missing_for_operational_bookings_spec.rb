@@ -40,8 +40,8 @@ RSpec.describe Folios::Maintenance::BackfillMissingForOperationalBookings do
   it "reports failures without preventing other bookings from being initialized" do
     failed_booking = create(:booking, status: "confirmed")
     successful_booking = create(:booking, status: "confirmed")
-    allow(Folios::InitializeForBooking).to receive(:call).and_call_original
-    allow(Folios::InitializeForBooking).to receive(:call).with(booking: failed_booking, user: nil).and_raise("sync failed")
+    allow(Folios::Lifecycle::InitializeForBooking).to receive(:call).and_call_original
+    allow(Folios::Lifecycle::InitializeForBooking).to receive(:call).with(booking: failed_booking, user: nil).and_raise("sync failed")
 
     result = described_class.call(scope: Booking.where(id: [ failed_booking.id, successful_booking.id ]))
 

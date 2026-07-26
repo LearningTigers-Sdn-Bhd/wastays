@@ -44,7 +44,7 @@ module NightAudits
       record_resolution_log!
 
       success(
-        Folios::NightlyChargeReconciliation.call(booking: @booking.reload, business_date: @business_date),
+        Folios::Charges::NightlyChargeReconciliation.call(booking: @booking.reload, business_date: @business_date),
         evaluation: evaluation
       )
     rescue StandardError => e
@@ -99,7 +99,7 @@ module NightAudits
     end
 
     def current_reconciliation
-      @current_reconciliation ||= Folios::NightlyChargeReconciliation.call(
+      @current_reconciliation ||= Folios::Charges::NightlyChargeReconciliation.call(
         booking: @booking,
         business_date: @business_date
       )
@@ -115,7 +115,7 @@ module NightAudits
     end
 
     def reverse_transaction!(transaction, entry)
-      result = Folios::InsertTransaction.new(
+      result = Folios::Transactions::InsertTransaction.new(
         booking_folio: transaction.booking_folio,
         amount: -transaction.amount,
         transaction_type: "adjustment",
@@ -146,7 +146,7 @@ module NightAudits
         metadata[:nightly_charge_key] = entry[:nightly_charge_key]
       end
 
-      result = Folios::InsertTransaction.new(
+      result = Folios::Transactions::InsertTransaction.new(
         booking_folio: entry[:route].folio,
         amount: line[:amount],
         transaction_type: "charge",
@@ -225,7 +225,7 @@ module NightAudits
     end
 
     def refresh_forecasts!
-      Folios::SyncForecastedCharges.call(booking_folio: @booking.booking_folio) if @booking.booking_folio.present?
+      Folios::Forecasts::SyncForecastedCharges.call(booking_folio: @booking.booking_folio) if @booking.booking_folio.present?
     end
 
     def evaluate_and_persist!

@@ -31,7 +31,7 @@ module Folios
 
       def row_for(line)
         transaction_code = line[:transaction_code]
-        route = transaction_code.present? ? Folios::ResolveTargetFolio.call(
+        route = transaction_code.present? ? Folios::Routing::ResolveTargetFolio.call(
           booking: @booking,
           transaction_code: transaction_code,
           fallback_transaction_code: line[:fallback_transaction_code],

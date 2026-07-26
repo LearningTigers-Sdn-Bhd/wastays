@@ -776,7 +776,7 @@ module HotelPortal
     end
 
     def booking_checkout_readiness
-      @booking_checkout_readiness ||= ::Folios::BookingCheckoutReadiness.call(booking: booking, hotel: hotel)
+      @booking_checkout_readiness ||= ::Folios::Checkout::BookingCheckoutReadiness.call(booking: booking, hotel: hotel)
     end
 
     def unsynced_captured_payment?
@@ -849,7 +849,7 @@ module HotelPortal
     end
 
     def posted_row(transaction, effect, balance)
-      policy = ::Folios::TransactionActionPolicy.new(transaction: transaction, user: user)
+      policy = ::Folios::Transactions::TransactionActionPolicy.new(transaction: transaction, user: user)
       action_label = suppress_normal_ledger_actions? ? "—" : policy.action_label
       action_kind = suppress_normal_ledger_actions? ? :none : policy.action_kind
       LedgerRow.new(
@@ -1036,7 +1036,7 @@ module HotelPortal
     def detail_label(transaction)
       metadata = transaction.metadata.to_h
       if transaction.payment? && metadata["payment_source"].present?
-        payment_source = ::Folios::PaymentSource.fetch(metadata["payment_source"])
+        payment_source = ::Folios::Payments::PaymentSource.fetch(metadata["payment_source"])
         return [ "Payment", payment_source&.display_label, state_label(transaction) ].compact.join(" · ")
       end
 
@@ -1095,7 +1095,7 @@ module HotelPortal
       end
 
       if transaction.category == "refund"
-        refund_source = ::Folios::RefundSource.fetch(metadata["refund_source"].presence || metadata[:refund_source].presence)
+        refund_source = ::Folios::Payments::RefundSource.fetch(metadata["refund_source"].presence || metadata[:refund_source].presence)
         reference = metadata["reference"].presence || metadata[:reference].presence
         return [ reference.present? ? "Ref #{reference}" : nil, refund_source&.display_label, "Refund", source_state_label(transaction) ].compact.join(" · ")
       end
@@ -1105,7 +1105,7 @@ module HotelPortal
     end
 
     def staff_payment_reference_label(transaction, metadata)
-      payment_source = ::Folios::PaymentSource.fetch(metadata["payment_source"])
+      payment_source = ::Folios::Payments::PaymentSource.fetch(metadata["payment_source"])
       return "—" if payment_source.blank?
 
       reference = payment_source_reference(metadata, payment_source)

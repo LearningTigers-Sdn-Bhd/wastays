@@ -21,9 +21,9 @@ RSpec.describe "CorporatePortal Agent Billing Visibility", type: :request do
   it "gives the agent's corporate portal user visibility into the invoice generated from their booking" do
     booking = create(:booking, hotel: hotel, status: "checked_in", currency: "MYR", hotel_corporate_account: agent_account)
     create(:booking_room, booking: booking, subtotal: 300.0)
-    folio = Folios::InitializeForBooking.call(booking: booking, user: staff_user)
+    folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: staff_user)
     folio.folio_forecasted_charges.forecast.each do |forecast|
-      key = Folios::ChargePostingKeys.nightly_charge_key(
+      key = Folios::Charges::ChargePostingKeys.nightly_charge_key(
         booking: booking, date: forecast.stay_date, charge_kind: forecast.charge_kind, identity: forecast.identity
       )
       create(:folio_transaction,
@@ -33,7 +33,7 @@ RSpec.describe "CorporatePortal Agent Billing Visibility", type: :request do
         amount: forecast.amount,
         metadata: { nightly_charge_key: key })
     end
-    Folios::CloseForCheckout.call(booking: booking, user: staff_user, options: { direct_bill_folio_ids: [ folio.id ] })
+    Folios::Checkout::CloseForCheckout.call(booking: booking, user: staff_user, options: { direct_bill_folio_ids: [ folio.id ] })
 
     sign_in_as(corporate_user)
     get corporate_dashboard_path

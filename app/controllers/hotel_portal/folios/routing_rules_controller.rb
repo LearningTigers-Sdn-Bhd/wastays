@@ -135,7 +135,7 @@ module HotelPortal
 
       def refresh_forecasts!
         primary_folio = @booking.booking_folio
-        ::Folios::SyncForecastedCharges.call(booking_folio: primary_folio) if primary_folio.present?
+        ::Folios::Forecasts::SyncForecastedCharges.call(booking_folio: primary_folio) if primary_folio.present?
       end
 
       def routable_charge_codes

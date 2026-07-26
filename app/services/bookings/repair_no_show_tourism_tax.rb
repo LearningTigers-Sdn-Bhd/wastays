@@ -66,7 +66,7 @@ module Bookings
             folio_charges.each { |charge| reverse!(charge) }
           end
 
-          close_result = Folios::CloseNoShowFolios.call(
+          close_result = Folios::Lifecycle::CloseNoShowFolios.call(
             booking: @booking,
             user: @user,
             business_date: @booking.hotel.current_business_date
@@ -111,7 +111,7 @@ module Bookings
     end
 
     def reverse!(charge)
-      result = Folios::InsertTransaction.new(
+      result = Folios::Transactions::InsertTransaction.new(
         booking_folio: charge.booking_folio,
         amount: -charge.amount,
         transaction_type: :adjustment,

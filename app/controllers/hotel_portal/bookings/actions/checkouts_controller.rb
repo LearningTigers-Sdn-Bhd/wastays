@@ -166,7 +166,7 @@ module HotelPortal
             folio = booking.booking_folio
             business_date = current_hotel.current_business_date
             if folio && business_date < booking.check_out.to_date
-              ::Folios::PostEarlyCheckoutCharges.pending_preview(
+              ::Folios::Charges::PostEarlyCheckoutCharges.pending_preview(
                 booking: booking,
                 folio: folio,
                 departure_date: business_date,
@@ -181,7 +181,7 @@ module HotelPortal
         # Folio the manual early-departure penalty routes to (room_revenue route),
         # so the settlement JS folds the live charge into the right folio's amount.
         def checkout_penalty_folio_id(booking)
-          route = ::Folios::ResolveTargetFolio.call(
+          route = ::Folios::Routing::ResolveTargetFolio.call(
             booking: booking,
             transaction_code: ::TransactionCodes::Resolver.for(current_hotel).room_revenue
           )

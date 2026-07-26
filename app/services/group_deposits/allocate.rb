@@ -22,7 +22,7 @@ module GroupDeposits
         error = validation_error
         return failure(error) if error
 
-        result = Folios::InsertTransaction.new(
+        result = Folios::Transactions::InsertTransaction.new(
           booking_folio: @folio,
           amount: @amount,
           transaction_type: "payment",

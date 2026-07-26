@@ -562,7 +562,7 @@ module HotelPortal
     def routing_preview
       return unless selected_routing_rule
 
-      @routing_preview ||= FolioRouting::PreviewExistingCharges.call(rule: selected_routing_rule)
+      @routing_preview ||= Folios::Routing::PreviewExistingCharges.call(rule: selected_routing_rule)
     end
 
     def billing_scope

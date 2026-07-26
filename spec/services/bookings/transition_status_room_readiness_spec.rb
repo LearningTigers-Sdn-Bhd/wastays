@@ -13,7 +13,7 @@ RSpec.describe Bookings::TransitionStatus do
   before do
     create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 200)
-    Folios::InitializeForBooking.call(booking: booking, user: user)
+    Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
   end
 
   it "marks assigned rooms dirty when the guest checks out" do

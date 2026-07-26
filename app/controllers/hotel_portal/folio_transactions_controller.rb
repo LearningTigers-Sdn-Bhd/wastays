@@ -45,7 +45,7 @@ module HotelPortal
       end
       return redirect_after_post(alert: "You do not have permission to post this folio transaction.") unless allowed_to_post_folio_transaction?
 
-      result = ::Folios::PostStaffTransaction.call(
+      result = ::Folios::Transactions::PostStaffTransaction.call(
         folio: target_folio,
         user: current_user,
         transaction_type: folio_transaction_params[:transaction_type],
@@ -83,14 +83,14 @@ module HotelPortal
       end
 
       transaction = booking_transaction_scope.find(params[:id])
-      policy = ::Folios::TransactionActionPolicy.new(
+      policy = ::Folios::Transactions::TransactionActionPolicy.new(
         transaction: transaction,
         user: current_user,
         posting_date: current_hotel.current_business_date
       )
       return redirect_after_post(alert: policy.reverse_error) unless policy.reverse_allowed?
 
-      result = ::Folios::ReverseTransaction.call(
+      result = ::Folios::Transactions::ReverseTransaction.call(
         transaction: transaction,
         user: current_user,
         correction_reason: reversal_params[:correction_reason],
@@ -108,7 +108,7 @@ module HotelPortal
     def move
       transaction = booking_transaction_scope.find(params[:id])
       target_folio = @booking.booking_folios.find(folio_operation_params[:target_folio_id])
-      result = ::Folios::MoveTransaction.call(
+      result = ::Folios::Transactions::MoveTransaction.call(
         transaction: transaction,
         target_folio: target_folio,
         user: current_user,
@@ -127,7 +127,7 @@ module HotelPortal
     def split
       transaction = booking_transaction_scope.find(params[:id])
       target_folio = @booking.booking_folios.find(folio_operation_params[:target_folio_id])
-      result = ::Folios::SplitTransaction.call(
+      result = ::Folios::Transactions::SplitTransaction.call(
         transaction: transaction,
         target_folio: target_folio,
         user: current_user,
@@ -213,13 +213,13 @@ module HotelPortal
       when [ "payment", "refund" ]
         @sheet_title = "Issue Refund"
         @sheet_description = "Enter a positive refund amount. It will be recorded as a negative refund payment."
-        @refund_source_options = ::Folios::RefundSource.options
+        @refund_source_options = ::Folios::Payments::RefundSource.options
         @signed_amount = false
         @submit_label = "Issue Refund"
       when [ "payment", "" ]
         @sheet_title = "Post Payment"
         @sheet_description = "Record a staff-posted payment against the selected folio."
-        @payment_source_options = ::Folios::PaymentSource.options
+        @payment_source_options = ::Folios::Payments::PaymentSource.options
         @signed_amount = false
         @submit_label = "Post Payment"
       when [ "charge", "" ]
@@ -341,7 +341,7 @@ module HotelPortal
     end
 
     def attached_tax_transactions(transaction)
-      ::Folios::AttachedTaxTransactions.call(transaction)
+      ::Folios::Transactions::AttachedTaxTransactions.call(transaction)
     end
   end
 end

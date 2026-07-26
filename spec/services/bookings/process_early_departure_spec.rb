@@ -10,12 +10,12 @@ RSpec.describe Bookings::ProcessEarlyDeparture do
   let(:room_type) { create(:room_type, hotel: hotel, quantity: 10) }
   let(:booking) { create(:booking, hotel: hotel, status: "checked_in", check_in: Date.current, check_out: Date.current + 3.days) }
   let!(:booking_room) { create(:booking_room, booking: booking, room_type: room_type) }
-  let(:folio) { Folios::InitializeForBooking.call(booking: booking, user: user) }
+  let(:folio) { Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user) }
 
   before do
     # Ensure folio is initialized and settled (or we test the settlement logic)
     # For simplicity in this unit test, let's assume it's already settled or we don't care about the balance yet.
-    allow_any_instance_of(Folios::CloseForCheckout).to receive(:call).and_return(Folios::CheckoutResult.success(folio: folio, balance: 0.to_d))
+    allow_any_instance_of(Folios::Checkout::CloseForCheckout).to receive(:call).and_return(Folios::Checkout::CheckoutResult.success(folio: folio, balance: 0.to_d))
   end
 
   it "truncates the check_out date and completes checkout" do

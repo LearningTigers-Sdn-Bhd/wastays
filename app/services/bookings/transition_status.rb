@@ -83,7 +83,7 @@ module Bookings
 
           if @booking.checked_in?
             repair_options = @booking.booking_folio.present? ? @options : @options.reverse_merge(override_night_audit: true)
-            Folios::InitializeForBooking.call(booking: @booking, user: @user, options: repair_options, lock: false)
+            Folios::Lifecycle::InitializeForBooking.call(booking: @booking, user: @user, options: repair_options, lock: false)
 
             updates = (@options[:attributes] || {}).dup
             if @options[:reason].present? && @timestamp.present?
@@ -158,7 +158,7 @@ module Bookings
             room_status&.update!(dnd: false, dnd_date: nil)
           end
 
-          Folios::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
+          Folios::Lifecycle::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
 
           tourism_tax_result = record_tourism_tax_payment_if_requested
           unless tourism_tax_result.success?
@@ -178,7 +178,7 @@ module Bookings
           end
 
           if is_retroactive || was_review_no_show
-            Folios::ProcessCatchUpCharges.call(
+            Folios::Charges::ProcessCatchUpCharges.call(
               booking: @booking,
               user: @user,
               is_reinstate: false,
@@ -245,7 +245,7 @@ module Bookings
     def record_tourism_tax_payment_if_requested
       return OpenStruct.new(success?: true) unless @booking.tourism_tax_collected?
 
-      Folios::RecordTourismTaxPayment.call(
+      Folios::Payments::RecordTourismTaxPayment.call(
         booking: @booking,
         user: @user,
         options: @options.except(:attributes, :security_deposit)
@@ -280,7 +280,7 @@ module Bookings
             next
           end
 
-          close_result = Folios::CloseForCheckout.call(booking: @booking, user: @user, checked_out_at: @timestamp, options: @options)
+          close_result = Folios::Checkout::CloseForCheckout.call(booking: @booking, user: @user, checked_out_at: @timestamp, options: @options)
           unless close_result.success?
             error = close_result.error
             next

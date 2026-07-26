@@ -258,7 +258,7 @@ RSpec.describe NightAudits::Run do
       check_out: business_date + 1.day,
       checked_in_at: business_date.beginning_of_day)
 
-    expect(Folios::PostNightlyCharges).not_to receive(:call)
+    expect(Folios::Charges::PostNightlyCharges).not_to receive(:call)
 
     result = run_audit
 
@@ -312,7 +312,7 @@ RSpec.describe NightAudits::Run do
   end
 
   it "blocks when an in-house booking folio is missing nightly charges" do
-    allow(Folios::PostNightlyCharges).to receive(:call)
+    allow(Folios::Charges::PostNightlyCharges).to receive(:call)
     booking = create(:booking,
       hotel: hotel,
       status: "checked_in",
@@ -329,7 +329,7 @@ RSpec.describe NightAudits::Run do
   end
 
   it "blocks when nightly charges are under-posted" do
-    allow(Folios::PostNightlyCharges).to receive(:call)
+    allow(Folios::Charges::PostNightlyCharges).to receive(:call)
     booking = create(:booking,
       hotel: hotel,
       status: "checked_in",

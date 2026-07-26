@@ -68,7 +68,7 @@ module Checkouts
     end
 
     def process_folio_actions
-      Folios::ProcessCheckoutActions.call(
+      Folios::Checkout::ProcessCheckoutActions.call(
         booking: @booking,
         hotel: @hotel,
         user: @user,

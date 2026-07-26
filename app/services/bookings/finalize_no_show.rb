@@ -4,7 +4,7 @@ require "ostruct"
 
 module Bookings
   class FinalizeNoShow
-    include Folios::NightlyChargeCalculation
+    include Folios::Charges::NightlyChargeCalculation
 
     def self.call(booking:, user:, night_audit: nil, automatic: false, reason: nil)
       new(booking: booking, user: user, night_audit: night_audit, automatic: automatic, reason: reason).call
@@ -34,14 +34,14 @@ module Bookings
           @business_date = @booking.no_show_review_business_date
           return failure("No-show review business date is missing.") unless @business_date
 
-          folio = Folios::InitializeForBooking.call(
+          folio = Folios::Lifecycle::InitializeForBooking.call(
             booking: @booking,
             user: @user,
             options: { posting_source: "no_show", night_audit: @night_audit },
             lock: false
           )
           post_no_show_charges(folio)
-          @closure_result = Folios::CloseNoShowFolios.call(
+          @closure_result = Folios::Lifecycle::CloseNoShowFolios.call(
             booking: @booking,
             user: @user,
             business_date: @business_date,
@@ -114,7 +114,7 @@ module Bookings
         )
       end
 
-      result = Folios::InsertTransaction.new(
+      result = Folios::Transactions::InsertTransaction.new(
         booking_folio: folio,
         amount: amount,
         transaction_type: :charge,
@@ -141,7 +141,7 @@ module Bookings
         stay_date: @business_date.iso8601,
         booking_id: @booking.id,
         charge_kind: charge_kind,
-        no_show_charge_key: Folios::ChargePostingKeys.no_show_charge_key(
+        no_show_charge_key: Folios::Charges::ChargePostingKeys.no_show_charge_key(
           booking: @booking,
           date: @business_date,
           charge_kind: charge_kind,

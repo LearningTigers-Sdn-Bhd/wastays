@@ -126,7 +126,7 @@ module BookingEngine
       )
       booking.booking_guests.create!(guest: guest, is_primary: true)
       GuestArrival::StartPreCheckin.new(booking).call
-      Folios::InitializeForBooking.call(
+      Folios::Lifecycle::InitializeForBooking.call(
         booking: booking,
         user: nil,
         options: { system_folio_initialization: true, posting_source: "group_booking_confirmation" },

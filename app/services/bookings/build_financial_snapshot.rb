@@ -186,7 +186,7 @@ module Bookings
     def effective_room_revenue_tax_rules
       return room_revenue_transaction_code.transaction_code_taxes.includes(:hotel_tax) unless @booking
 
-      FolioRouting::EffectiveTaxRules.call(booking: @booking, transaction_code: room_revenue_transaction_code)
+      Folios::Routing::EffectiveTaxRules.call(booking: @booking, transaction_code: room_revenue_transaction_code)
     end
 
     def room_revenue_transaction_code

@@ -357,7 +357,7 @@ namespace :hotel_generator do
           )
 
           # Generate Folio & FolioTransactions
-          folio = Folios::InitializeForBooking.call(
+          folio = Folios::Lifecycle::InitializeForBooking.call(
             booking: booking,
             user: nil,
             options: { system_folio_initialization: true, posting_source: "booking_confirmation" },

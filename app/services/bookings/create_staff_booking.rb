@@ -159,7 +159,7 @@ module Bookings
       return if account_id.blank?
 
       bookings.each do |booking|
-        result = FolioRouting::BillRoomChargesToCompany.call(
+        result = Folios::Routing::BillRoomChargesToCompany.call(
           booking: booking, actor: @user, hotel_corporate_account_id: account_id,
           bill_tourism_tax_to_company: @bill_tourism_tax_to_company
         )

@@ -143,7 +143,7 @@ RSpec.describe NightAudits::Evaluate do
       company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
       room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
       create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
-      key = Folios::ChargePostingKeys.nightly_charge_key(booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id)
+      key = Folios::Charges::ChargePostingKeys.nightly_charge_key(booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id)
       create(:folio_transaction,
         booking_folio: company_folio,
         transaction_type: "charge",
@@ -170,7 +170,7 @@ RSpec.describe NightAudits::Evaluate do
       company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
       room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
       create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
-      key = Folios::ChargePostingKeys.nightly_charge_key(booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id)
+      key = Folios::Charges::ChargePostingKeys.nightly_charge_key(booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id)
       transaction = create(:folio_transaction,
         booking_folio: guest_folio,
         transaction_type: "charge",

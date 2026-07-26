@@ -335,7 +335,7 @@ def post_nightly_charges_for_dates(booking, date_limit)
   folio = booking.booking_folio
   return unless folio
 
-  Folios::SyncForecastedCharges.call(booking_folio: folio)
+  Folios::Forecasts::SyncForecastedCharges.call(booking_folio: folio)
 
   folio.folio_forecasted_charges.forecast.each do |fc|
     next if fc.stay_date > date_limit
@@ -430,7 +430,7 @@ def seed_pax_booking(hotel:, room_type:, rate_plan:, guest:, check_in:, check_ou
   )
 
   # Initialize folio
-  Folios::InitializeForBooking.call(booking: booking, user: nil, options: { override_night_audit: true }, lock: false)
+  Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: nil, options: { override_night_audit: true }, lock: false)
 
   # 1. Post nightly charges if checking in or completing
   if status == "checked_in"

@@ -124,8 +124,8 @@ RSpec.describe "Admin::RefundRequests", type: :request do
 
     it "does not complete when folio refund posting fails" do
       create(:booking_folio, booking: approved_request.booking)
-      failed_result = OpenStruct.new(success?: false, error: "posting blocked")
-      allow(Folios::RecordRefund).to receive(:call).and_return(failed_result)
+      failed_result = Folios::Transactions::TransactionResult.failure("posting blocked")
+      allow(Folios::Payments::RecordRefund).to receive(:call).and_return(failed_result)
 
       expect {
         patch complete_admin_refund_request_path(approved_request)

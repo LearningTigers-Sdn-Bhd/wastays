@@ -20,7 +20,7 @@ module GroupDeposits
 
       reversal = nil
       @allocation.group_deposit.with_lock do
-        result = Folios::ReverseTransaction.call(
+        result = Folios::Transactions::ReverseTransaction.call(
           transaction: @allocation.folio_transaction,
           user: @actor,
           correction_reason: "group_deposit_allocation_reversal",

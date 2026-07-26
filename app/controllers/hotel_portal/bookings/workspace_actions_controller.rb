@@ -63,13 +63,13 @@ module HotelPortal
 
     def update_folio_window
       folio = @booking.booking_folios.find(params[:folio_id])
-      result = ::Folios::UpdateFolio.call(folio: folio, user: current_user, attributes: folio_window_params)
+      result = ::Folios::Lifecycle::UpdateFolio.call(folio: folio, user: current_user, attributes: folio_window_params)
       respond_with_folio_result(result, folio: folio, notice: "Folio window updated.")
     end
 
     def close_folio_window
       folio = @booking.booking_folios.find(params[:folio_id])
-      result = ::Folios::CloseFolio.call(
+      result = ::Folios::Lifecycle::CloseFolio.call(
         folio: folio,
         user: current_user,
         reason: folio_window_params[:reason],
@@ -80,7 +80,7 @@ module HotelPortal
 
     def reopen_folio_window
       folio = @booking.booking_folios.find(params[:folio_id])
-      result = ::Folios::ReopenFolio.call(folio: folio, user: current_user, reason: folio_window_params[:reason])
+      result = ::Folios::Lifecycle::ReopenFolio.call(folio: folio, user: current_user, reason: folio_window_params[:reason])
       respond_with_folio_result(result, folio: folio, notice: "Folio window reopened.")
     end
 
@@ -180,7 +180,7 @@ module HotelPortal
 
     def apply_routing
       rule = @booking.folio_routing_rules.find(params[:folio_routing_rule_id])
-      result = ::FolioRouting::ApplyExistingCharges.call(
+      result = ::Folios::Routing::ApplyExistingCharges.call(
         rule: rule,
         actor: current_user,
         reason: params[:reason],
@@ -197,7 +197,7 @@ module HotelPortal
     def preview_billing_routes
       prepare_billing_routes
       @route_draft = billing_routes_params
-      @batch_preview = ::FolioRouting::ApplyBatch.preview(booking: @routing_booking, routes: @route_draft)
+      @batch_preview = ::Folios::Routing::ApplyBatch.preview(booking: @routing_booking, routes: @route_draft)
       if @batch_preview.success? && !@batch_preview.review_required?
         return apply_billing_routes
       end
@@ -208,7 +208,7 @@ module HotelPortal
 
     def apply_billing_routes
       prepare_billing_routes
-      result = ::FolioRouting::ApplyBatch.call(
+      result = ::Folios::Routing::ApplyBatch.call(
         booking: @routing_booking, actor: current_user, routes: billing_routes_params,
         confirmation: params[:confirmation], forecast_confirmation: params[:forecast_confirmation],
         reason: params[:reason], idempotency_key: params[:idempotency_key]
@@ -224,7 +224,7 @@ module HotelPortal
         end
       else
         @route_draft = billing_routes_params
-        @batch_preview = ::FolioRouting::ApplyBatch.preview(booking: @routing_booking, routes: @route_draft)
+        @batch_preview = ::Folios::Routing::ApplyBatch.preview(booking: @routing_booking, routes: @route_draft)
         flash.now[:alert] = result.error
         render "hotel_portal/bookings/workspaces/actions/billing_routes/offcanvas", status: :unprocessable_content
       end
@@ -238,7 +238,7 @@ module HotelPortal
     def preview_group_billing_routes
       prepare_group_billing_routes
       @group_route_draft = group_billing_routes_params
-      @group_batch_preview = ::FolioRouting::ApplyGroupBatch.preview(group_booking: @group, booking_routes: @group_route_draft)
+      @group_batch_preview = ::Folios::Routing::ApplyGroupBatch.preview(group_booking: @group, booking_routes: @group_route_draft)
       if @group_batch_preview.success? && !@group_batch_preview.review_required?
         return apply_group_billing_routes
       end
@@ -250,7 +250,7 @@ module HotelPortal
 
     def apply_group_billing_routes
       prepare_group_billing_routes
-      result = ::FolioRouting::ApplyGroupBatch.call(
+      result = ::Folios::Routing::ApplyGroupBatch.call(
         group_booking: @group, actor: current_user, booking_routes: group_billing_routes_params,
         confirmation: params[:confirmation], forecast_confirmation: params[:forecast_confirmation],
         reason: params[:reason], idempotency_key: params[:idempotency_key]
@@ -266,7 +266,7 @@ module HotelPortal
         end
       else
         @group_route_draft = group_billing_routes_params
-        @group_batch_preview = ::FolioRouting::ApplyGroupBatch.preview(group_booking: @group, booking_routes: @group_route_draft)
+        @group_batch_preview = ::Folios::Routing::ApplyGroupBatch.preview(group_booking: @group, booking_routes: @group_route_draft)
         flash.now[:alert] = result.error
         render "hotel_portal/bookings/workspaces/actions/group_billing_routes/offcanvas", status: :unprocessable_content
       end
@@ -418,7 +418,7 @@ module HotelPortal
     def prepare_billing_routes
       @routing_booking = routing_booking
       @routing_booking_options = routing_booking_options
-      @routing_matrix = ::FolioRouting::RoutingMatrix.new(booking: @routing_booking)
+      @routing_matrix = ::Folios::Routing::RoutingMatrix.new(booking: @routing_booking)
       @batch_key = params[:idempotency_key].presence || SecureRandom.uuid
     end
 
@@ -450,7 +450,7 @@ module HotelPortal
       @group = group_booking
       @group_bookings = @group.bookings.includes(:booking_rooms, :booking_guests,
         booking_folios: :booking_billing_party, folio_routing_rules: :target_folio)
-      @group_readiness = ::FolioRouting::GroupRoutingReadiness.new(group_booking: @group)
+      @group_readiness = ::Folios::Routing::GroupRoutingReadiness.new(group_booking: @group)
       @group_batch_key = params[:idempotency_key].presence || SecureRandom.uuid
     end
 

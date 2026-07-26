@@ -199,6 +199,7 @@ domain_paths() {
     financials)
       printf "%s\n" \
         spec/services/folios \
+        spec/services/document_identifiers \
         spec/services/financials \
         spec/services/financial_controls \
         spec/services/deposits \

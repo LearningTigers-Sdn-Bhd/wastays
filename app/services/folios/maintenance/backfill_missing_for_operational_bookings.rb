@@ -26,7 +26,7 @@ module Folios
 
           begin
             existing_folio = booking.booking_folio
-            folio = Folios::InitializeForBooking.call(booking: booking, user: nil)
+            folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: nil)
 
             if existing_folio
               @skipped << item_for(booking, "Booking already has a folio.", folio_id: folio.id)

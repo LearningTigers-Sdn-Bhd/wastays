@@ -9,7 +9,7 @@ module HotelPortal
         #
         # Early-checkout preview lines are attributed to the folio they *route*
         # to via the `target_folio_id` tagged by the folios service. Routing
-        # lives in Folios::PostEarlyCheckoutCharges; this presenter only reads
+        # lives in Folios::Charges::PostEarlyCheckoutCharges; this presenter only reads
         # the tag.
         class SheetPresenter
           include Rails.application.routes.url_helpers

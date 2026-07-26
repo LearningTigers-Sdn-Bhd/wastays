@@ -1,6 +1,6 @@
 module NightAudits
   class Evaluate
-    include Folios::NightlyChargeCalculation
+    include Folios::Charges::NightlyChargeCalculation
 
     def initialize(hotel:, business_date:, phase: :post_close)
       @hotel = hotel
@@ -133,7 +133,7 @@ module NightAudits
       @missing_nightly_charge_details ||= nightly_charge_bookings.filter_map do |booking|
         next if booking.booking_folio.blank?
 
-        reconciliation = Folios::NightlyChargeReconciliation.call(
+        reconciliation = Folios::Charges::NightlyChargeReconciliation.call(
           booking: booking,
           business_date: @business_date
         )

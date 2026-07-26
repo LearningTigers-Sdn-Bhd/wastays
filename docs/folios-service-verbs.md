@@ -2,7 +2,28 @@
 
 > Status: **Active convention.** Written as PR 1 of
 > `docs/folios-services-reorg-proposal.md`.
-> Scope: `app/services/folios/` and `app/services/folio_routing/`.
+> Scope: `app/services/folios/`, now foldered by family (PR 10). The old
+> top-level `app/services/folio_routing/` is `Folios::Routing`.
+
+## Where a service lives
+
+The folder is the family; the verb is what it does to the ledger.
+
+| Folder | Holds |
+|---|---|
+| `lifecycle/` | opening, closing, reopening, renaming a folio window |
+| `transactions/` | one transaction: insert, post staff, move, split, reverse |
+| `charges/` | posting nightly and category charges, and the calculation behind them |
+| `payments/` | money that already moved — gateway captures, refunds, tourism tax |
+| `checkout/` | the checkout sequence and its readiness check |
+| `forecasts/` | keeping forecasted charges in step with the rules |
+| `routing/` | which folio a transaction code's charges belong to |
+| `reads/` | answers questions, writes nothing |
+| `maintenance/` | backfills and repairs, not staff-facing operations |
+
+Result types live beside the service that returns them. Folio *numbering* is
+not a folio service — it is `DocumentIdentifiers::NextFolioNumber`, beside the
+reservation and receipt counters it shares `HotelCounter` with.
 
 Forty-one services share a handful of verbs, and until now none of them was
 written down — so `generate`, `sync` and `refresh` drifted into meaning roughly
@@ -26,7 +47,7 @@ here or somewhere else.
 | Verb | Means | Examples |
 |---|---|---|
 | `sync` | Makes one folio's state match a source of truth, **idempotently**. Creates what is missing, supersedes what no longer applies, leaves alone what is already right. Safe to call repeatedly — that is the defining property. | `SyncForecastedCharges`, `SyncExistingPayments` |
-| `refresh` | A `sync` swept across a scope you did not hand it — every open folio in a hotel — usually because a rule changed underneath them. **One folio is a sync; a sweep is a refresh.** | `RefreshOpenForecastsFromRoomRevenueRules`, `FolioRouting::RefreshBookingForecasts` |
+| `refresh` | A `sync` swept across a scope you did not hand it — every open folio in a hotel — usually because a rule changed underneath them. **One folio is a sync; a sweep is a refresh.** | `RefreshOpenForecastsFromRoomRevenueRules`, `Routing::RefreshBookingForecasts` |
 | ~~`generate`~~ | **Retired.** `GenerateForecastedCharges` was fifteen lines that called `SyncForecastedCharges` and nothing else, so the distinction never existed in the code. Do not reintroduce it: anything that builds records from a source, idempotently, is a `sync`. | — |
 
 ## Reading without writing
@@ -39,14 +60,14 @@ or an `apply` and should be renamed.
 | `calculate` | Pure computation from its arguments. | `NightlyChargeCalculation` (mixin) |
 | `reconcile` | Compares expected against actual and **reports the differences**. Answers "is this right?", never "make it right". | `NightlyChargeReconciliation` |
 | `resolve` | Answers "which one?" and returns it. | `ResolveTargetFolio` |
-| `preview` | A dry run of a specific write operation: same inputs, returns what *would* happen. Always paired with the writer it previews. | `PostEarlyCheckoutCharges.preview`, `FolioRouting::ApplyBatch.preview`, `FolioRouting::PreviewExistingCharges` |
+| `preview` | A dry run of a specific write operation: same inputs, returns what *would* happen. Always paired with the writer it previews. | `PostEarlyCheckoutCharges.preview`, `Routing::ApplyBatch.preview`, `Routing::PreviewExistingCharges` |
 
 ## Routing
 
 | Verb | Means | Examples |
 |---|---|---|
-| `route` | Decides which folio a transaction code's charges belong to. | `FolioRouting::RouteCodeToBillingParty` |
-| `apply` | Writes a change set that has already been decided and validated. The decision happened earlier; `apply` commits it. | `FolioRouting::ApplyBatch`, `FolioRouting::ApplyExistingCharges` |
+| `route` | Decides which folio a transaction code's charges belong to. | `Routing::RouteCodeToBillingParty` |
+| `apply` | Writes a change set that has already been decided and validated. The decision happened earlier; `apply` commits it. | `Routing::ApplyBatch`, `Routing::ApplyExistingCharges` |
 
 ## Folio lifecycle
 
@@ -72,9 +93,9 @@ audit trail. They never quietly rewrite history.
 
 ## Nouns are deliberate
 
-`PaymentSource`, `RefundSource`, `Reads::RoutePreview`,
-`Reads::ForecastedChargeLines`,
-`RoutingMatrix`, `ChargePostingKeys`, `NextFolioNumber`,
-`TransactionActionPolicy`, `RoutabilityPolicy`, `BookingCheckoutReadiness` — a
+`Payments::PaymentSource`, `Payments::RefundSource`, `Reads::RoutePreview`,
+`Reads::ForecastedChargeLines`, `Routing::RoutingMatrix`,
+`Charges::ChargePostingKeys`, `Transactions::TransactionActionPolicy`,
+`Routing::RoutabilityPolicy`, `Checkout::BookingCheckoutReadiness` — a
 noun name means it is a query or value object, not a command. **A noun that
 writes to the database is a bug in the name.**

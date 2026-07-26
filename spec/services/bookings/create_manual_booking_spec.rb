@@ -55,7 +55,7 @@ RSpec.describe Bookings::CreateManualBooking do
   end
 
   it "rolls back booking creation when folio initialization fails" do
-    allow(Folios::InitializeForBooking).to receive(:call).and_raise("folio initialization failed")
+    allow(Folios::Lifecycle::InitializeForBooking).to receive(:call).and_raise("folio initialization failed")
 
     expect { @result = subject.call }.not_to change(Booking, :count)
 

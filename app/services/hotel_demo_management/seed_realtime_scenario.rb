@@ -197,7 +197,7 @@ module HotelDemoManagement
       ).call
       raise "Failed to transition booking #{booking.id} to review_due_out: #{result.error}" unless result.success?
 
-      charge_result = Folios::PostCategoryCharge.call(
+      charge_result = Folios::Charges::PostCategoryCharge.call(
         folio: booking.booking_folio,
         user: acting_user,
         category: "late_checkout_charge",

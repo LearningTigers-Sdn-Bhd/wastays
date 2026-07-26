@@ -69,7 +69,7 @@ module HotelPortal
     def create_window
       authorize_manage_folio_windows!
       booking = current_hotel.bookings.find(params[:booking_id])
-      result = ::Folios::CreateFolio.call(booking: booking, user: current_user, attributes: folio_window_params)
+      result = ::Folios::Lifecycle::CreateFolio.call(booking: booking, user: current_user, attributes: folio_window_params)
 
       if result.success?
         respond_with_offcanvas_completion(
@@ -88,7 +88,7 @@ module HotelPortal
       authorize_manage_folio_windows!
       booking = current_hotel.bookings.includes(:booking_folios).find(params[:booking_id])
       folio = booking.booking_folios.find(params[:folio_id])
-      result = ::Folios::UpdateFolio.call(
+      result = ::Folios::Lifecycle::UpdateFolio.call(
         folio: folio,
         user: current_user,
         attributes: folio_window_params
@@ -104,7 +104,7 @@ module HotelPortal
       authorize_manage_folio_windows!
       booking = current_hotel.bookings.includes(:booking_folios).find(params[:booking_id])
       folio = booking.booking_folios.find(params[:folio_id])
-      result = ::Folios::CloseFolio.call(
+      result = ::Folios::Lifecycle::CloseFolio.call(
         folio: folio,
         user: current_user,
         reason: folio_window_params[:reason],
@@ -119,7 +119,7 @@ module HotelPortal
       authorize_manage_folio_windows!
       booking = current_hotel.bookings.includes(:booking_folios).find(params[:booking_id])
       folio = booking.booking_folios.find(params[:folio_id])
-      result = ::Folios::ReopenFolio.call(folio: folio, user: current_user, reason: folio_window_params[:reason])
+      result = ::Folios::Lifecycle::ReopenFolio.call(folio: folio, user: current_user, reason: folio_window_params[:reason])
 
       redirect_to hotel_booking_workspace_path(current_hotel, booking, tab: "folio_operations", folio_id: folio.id),
         result.success? ? { notice: "Folio window reopened." } : { alert: result.error }

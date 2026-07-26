@@ -14,8 +14,8 @@
 #     Result = ApplicationResult.define(:folio)
 #   end
 #
-#   Folios::Result.success(folio: folio)
-#   Folios::Result.failure("Folio is already closed.", folio: @folio)
+#   Folios::Lifecycle::Result.success(folio: folio)
+#   Folios::Lifecycle::Result.failure("Folio is already closed.", folio: @folio)
 #
 # Data demands every member at construction, so both builders nil-fill whatever
 # the caller leaves out. That keeps a success from having to name error, and a

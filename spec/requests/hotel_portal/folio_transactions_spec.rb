@@ -764,7 +764,7 @@ RSpec.describe "HotelPortal::FolioTransactions", type: :request do
 
     it "rejects already reversed transactions" do
       transaction = create(:folio_transaction, booking_folio: folio)
-      result = Folios::ReverseTransaction.call(
+      result = Folios::Transactions::ReverseTransaction.call(
         transaction: transaction,
         user: user,
         correction_reason: "Posting error",

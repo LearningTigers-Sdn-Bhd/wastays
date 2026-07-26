@@ -46,7 +46,7 @@ RSpec.describe BookingEngine::ConfirmGroupBooking do
     expect(result.bookings.map { |booking| booking.booking_rooms.sole.room_type }).to all(eq(room_type))
   end
 
-  # Folio creation itself is no longer what blocks this path — Folios::InitializeForBooking
+  # Folio creation itself is no longer what blocks this path — Folios::Lifecycle::InitializeForBooking
   # allows any system initialization during an audit. What blocks it is the group deposit,
   # a real posting into an audited business date, which FinancialControls::PostingGuard
   # rejects by design. Single confirmation reaches the audit with no posting to make, so it

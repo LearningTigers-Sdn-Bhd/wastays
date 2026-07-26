@@ -3,7 +3,7 @@
 module Folios
   module Reads
     class ForecastedChargeLines
-      include NightlyChargeCalculation
+      include Charges::NightlyChargeCalculation
 
       def self.call(booking:, dates: nil)
         new(booking:, dates:).call
