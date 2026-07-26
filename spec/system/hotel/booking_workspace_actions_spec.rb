@@ -150,7 +150,7 @@ RSpec.describe "Booking workspace actions", :business_day, type: :system do
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
 
     primary_folio = booking.booking_folios.find_by!(is_primary: true)
-    create(:deposit, booking: booking, hotel: hotel, booking_folio: primary_folio, amount: 175, status: "held")
+    create(:deposit, booking: booking, hotel: hotel, amount: 175, status: "held")
 
     relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
     company_folio = create(

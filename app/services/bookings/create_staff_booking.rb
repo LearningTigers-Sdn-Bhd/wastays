@@ -80,6 +80,12 @@ module Bookings
         require_room_number: @booking_type != "reservation"
       )
       params[:record_payment] = false if @room_rows.many?
+      if backdated?
+        params[:financial_posting_options] = {
+          override_night_audit: true,
+          reason: @retroactive_reason.presence || @backdate_reason
+        }
+      end
       params
     end
 
@@ -109,10 +115,11 @@ module Bookings
       amount = @common_params[:payment_amount].presence&.to_d || bookings.sum(&:total_amount)
       raise CreationFailed, "Payment amount must be greater than 0." unless amount.positive?
 
-      receipt = GroupDeposits::Receive.call(
-        group_booking: group, amount: amount, currency: bookings.first.currency || "MYR",
-        payment_method: @common_params[:payment_method].presence || "cash", received_by: @user,
+      receipt = Deposits::Record.call(
+        owner: group, kind: "prepayment", amount: amount, currency: bookings.first.currency || "MYR",
+        payment_method: @common_params[:payment_method].presence || "cash", actor: @user,
         external_reference: @common_params[:payment_reference].presence,
+        received_at: payment_received_at,
         metadata: { source: "staff_booking_creation" }
       )
       raise CreationFailed, receipt.error unless receipt.success?
@@ -128,8 +135,11 @@ module Bookings
         remaining -= value
         [ folio.id.to_s, value ]
       end
-      allocation = GroupDeposits::AllocateAcrossFolios.call(
-        deposit: receipt.deposit, folios: folios, amount: amount, strategy: "manual", actor: @user, manual_amounts: manual_amounts
+      allocation = Deposits::ApplyAcrossFolios.call(
+        deposit: receipt.deposit, folios: folios, amount: amount, strategy: "manual", actor: @user,
+        manual_amounts: manual_amounts, operation_key: "staff-group-booking:#{group.id}:payment",
+        posting_date: @posting_date, override_night_audit: backdated?,
+        override_reason: @retroactive_reason.presence || @backdate_reason
       )
       raise CreationFailed, allocation.error unless allocation.success?
 
@@ -150,6 +160,14 @@ module Bookings
     end
 
     def backdated? = @booking_type == "backdated_check_in"
+
+    def payment_received_at
+      return Time.current if @posting_date.blank?
+
+      @posting_date.to_date.in_time_zone(@hotel.hotel_time_zone) + 12.hours
+    rescue ArgumentError, TypeError
+      Time.current
+    end
 
     # Bill room charges to the selected billing party. Room revenue is
     # *routed* to the party's folio; the guest's primary folio is never

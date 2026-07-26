@@ -128,7 +128,9 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(result.bookings.map { |booking| booking.booking_rooms.sole.quantity }).to all(eq(1))
       expect(result.bookings.map { |booking| booking.booking_guests.sole.role }).to all(eq("primary"))
       expect(result.bookings.map { |booking| booking.primary_guest.date_of_birth }).to all(eq(Date.new(1990, 5, 20)))
-      expect(result.group_booking.group_deposits.sole).to have_attributes(amount: 400.to_d, status: "allocated")
+      deposit = result.group_booking.deposits.sole
+      expect(deposit).to have_attributes(kind: "prepayment", amount: 400.to_d, status: "settled")
+      expect(deposit.deposit_movements.movement_type_apply.count).to eq(2)
     end
 
     it 'returns existing booking when quote is already converted' do

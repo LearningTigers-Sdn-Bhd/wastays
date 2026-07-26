@@ -363,7 +363,10 @@ Rails.application.routes.draw do
         patch :update_billing_terms, controller: :workspace_actions
         patch :archive_billing_party, controller: :workspace_actions
         post :allocate_deposit, controller: :workspace_actions
+        post :record_deposit, controller: :workspace_actions
+        post :return_deposit, controller: :workspace_actions
         post :refund_deposit, controller: :workspace_actions
+        post :reverse_deposit_application, controller: :workspace_actions
         post :reverse_deposit_allocation, controller: :workspace_actions
         post :collect_security_deposit, controller: :workspace_actions
         post :release_security_deposits, controller: :workspace_actions

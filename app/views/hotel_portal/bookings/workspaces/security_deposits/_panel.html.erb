@@ -1,62 +1,134 @@
-<% if presenter.group_overview? %>
-  <section aria-labelledby="security-deposits-heading">
-    <header class="border-b border-border px-5 py-4">
-      <h2 id="security-deposits-heading" class="text-base font-semibold text-foreground">Deposits</h2>
-      <p class="mt-1 text-sm text-muted-foreground">Booking-level refundable deposits across this group. Select a booking before collecting or releasing a deposit.</p>
-    </header>
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[760px] text-left text-sm">
-        <thead class="border-b border-border bg-muted text-xs font-semibold text-muted-foreground"><tr><th class="px-5 py-3">Booking No.</th><th class="px-5 py-3">Guest</th><th class="px-5 py-3">Room</th><th class="px-5 py-3">Status</th><th class="px-5 py-3 text-right">Held</th><th class="px-5 py-3 text-right">Records</th></tr></thead>
-        <tbody class="divide-y divide-border">
-          <% presenter.group_security_deposit_rows.each do |row| %>
-            <tr><td class="px-5 py-3 font-semibold text-foreground"><%= row[:booking_number] %></td><td class="px-5 py-3 text-foreground"><%= row[:guest] %></td><td class="px-5 py-3 text-foreground"><%= row[:room] %></td><td class="px-5 py-3 text-foreground"><%= row[:status] %></td><td class="px-5 py-3 text-right font-semibold tabular-nums text-foreground"><%= row[:held] %></td><td class="px-5 py-3 text-right tabular-nums text-foreground"><%= row[:count] %></td></tr>
-          <% end %>
-        </tbody>
-      </table>
+<section aria-labelledby="deposits-heading" class="space-y-5">
+  <header class="flex flex-col gap-3 px-5 pt-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h2 id="deposits-heading" class="text-base font-semibold text-foreground">Deposits</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Security deposits and prepayments held for this booking<%= " group" if presenter.group_context_enabled? %>.</p>
     </div>
-    <%= render "hotel_portal/bookings/workspaces/security_deposits/group_deposits", presenter: presenter %>
-  </section>
-<% else %>
-  <% deposit_booking = presenter.security_deposit_booking %>
-  <section aria-labelledby="security-deposits-heading">
-    <header class="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
-      <div><% if presenter.group_context_enabled? %><p class="text-xs text-muted-foreground">Booking <%= deposit_booking.formatted_reservation_number.presence || "—" %></p><% end %><h2 id="security-deposits-heading" class="mt-1 text-base font-semibold text-foreground">Deposits</h2><p class="mt-1 text-sm text-muted-foreground">Refundable security deposits for this booking.</p></div>
-      <div class="text-left sm:text-right"><p class="text-xs font-semibold text-muted-foreground">Held Total</p><p class="mt-1 text-lg font-bold tabular-nums text-foreground"><%= presenter.money_for(deposit_booking, presenter.held_security_deposit_total) %></p><p class="text-xs text-muted-foreground"><%= presenter.security_deposit_status_label %></p></div>
-    </header>
+    <div class="flex items-center gap-3">
+      <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, command: "show-modal", commandfor: "record-deposit-sheet", aria: { haspopup: "dialog" }) do %>
+        Record deposit
+      <% end %>
+    </div>
+  </header>
 
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[820px] text-left text-sm">
-        <thead class="border-b border-border bg-muted text-xs font-semibold text-muted-foreground"><tr><th class="px-5 py-3">Amount</th><th class="px-5 py-3">Status</th><th class="px-5 py-3">Method</th><th class="px-5 py-3">Reference</th><th class="px-5 py-3">Collected</th><th class="px-5 py-3">Released</th><th class="px-5 py-3">Staff</th></tr></thead>
-        <tbody class="divide-y divide-border">
-          <% if presenter.security_deposit_rows.any? %>
-            <% presenter.security_deposit_rows.each do |row| %>
-              <tr><td class="px-5 py-3 font-semibold tabular-nums text-foreground"><%= row[:amount] %></td><td class="px-5 py-3 text-foreground"><%= row[:status] %></td><td class="px-5 py-3 text-foreground"><%= row[:method] %></td><td class="px-5 py-3 break-words text-foreground"><%= row[:reference] %></td><td class="px-5 py-3 whitespace-nowrap text-foreground"><%= row[:collected_at] %></td><td class="px-5 py-3 whitespace-nowrap text-foreground"><%= row[:released_at] %></td><td class="px-5 py-3 text-foreground"><%= row[:staff] %></td></tr>
+  <% rows = presenter.deposit_rows %>
+  <% if rows.any? %>
+    <div class="space-y-4 px-5 pb-5">
+      <% rows.group_by { |row| row[:currency] }.each do |currency, currency_rows| %>
+        <%= render PanelsUI::Table.new(
+              caption: "Deposits in #{currency}",
+              density: :compact,
+              hoverable: true,
+              bordered: true,
+              wrapper_class: "rounded-md border border-border",
+              class: "min-w-[860px]") do |table| %>
+          <% table.with_header do %>
+            <tr>
+              <th scope="col">Owner</th>
+              <th scope="col">Kind</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="text-right">Original (<%= currency %>)</th>
+              <th scope="col" class="text-right">Applied (<%= currency %>)</th>
+              <th scope="col" class="text-right">Returned (<%= currency %>)</th>
+              <th scope="col">Received</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          <% end %>
+          <% table.with_body do %>
+            <% currency_rows.each do |row| %>
+              <% deposit = row[:deposit] %>
+              <% actionable = deposit.status.in?(%w[held available]) && deposit.available_amount.positive? %>
+              <tr>
+                <td class="font-medium text-foreground"><%= row[:owner] %></td>
+                <td><%= row[:kind] %></td>
+                <td><%= row[:status] %></td>
+                <td class="text-right tabular-nums"><%= row[:amount] %></td>
+                <td class="text-right tabular-nums"><%= row[:applied] %></td>
+                <td class="text-right tabular-nums"><%= row[:returned] %></td>
+                <td><span class="block"><%= row[:received_at] %></span><span class="text-xs text-muted-foreground"><%= row[:reference] %></span></td>
+                <td>
+                  <div class="flex justify-end gap-2">
+                    <% if actionable && presenter.deposit_folio_options(deposit).any? %>
+                      <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :secondary, command: "show-modal", commandfor: "apply-deposit-#{deposit.id}", aria: { haspopup: "dialog" }) do %>Apply<% end %>
+                    <% end %>
+                    <% if actionable %>
+                      <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :ghost, command: "show-modal", commandfor: "return-deposit-#{deposit.id}", aria: { haspopup: "dialog" }) do %><%= deposit.kind_security? ? "Release" : "Refund" %><% end %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
             <% end %>
-          <% else %>
-            <tr><td colspan="7" class="px-5 py-10 text-center text-sm text-muted-foreground">No security deposits have been recorded. Use the form below to collect one.</td></tr>
           <% end %>
-        </tbody>
-      </table>
+          <% table.with_footer do %>
+            <tr>
+              <th colspan="7" scope="row" class="text-right font-medium text-foreground">Available</th>
+              <td class="text-right font-semibold tabular-nums text-foreground"><%= currency %> <%= presenter.deposit_amount(presenter.total_deposit_available(currency: currency)) %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
     </div>
+  <% else %>
+    <div class="px-5 py-10 text-center"><p class="text-sm text-muted-foreground">No deposits have been recorded.</p></div>
+  <% end %>
 
-    <div class="grid border-t border-border lg:grid-cols-2 lg:divide-x lg:divide-border">
-      <section class="p-5" aria-labelledby="collect-deposit-heading">
-        <h3 id="collect-deposit-heading" class="text-sm font-bold text-foreground">Collect Deposit</h3>
-        <%= form_with url: collect_security_deposit_hotel_booking_workspace_path(current_hotel, deposit_booking), method: :post, class: "mt-4 grid gap-4 sm:grid-cols-2" do %>
-          <div><%= label_tag :amount, "Amount", class: "mb-1.5 block text-xs font-semibold text-muted-foreground" %><%= number_field_tag :amount, nil, min: 0.01, step: 0.01, required: true, inputmode: "decimal", autocomplete: "off", class: "w-full rounded-md border border-border-interactive bg-card text-sm hover:border-border-interactive invalid:border-red-400 focus:border-blue-600 focus:ring-blue-600" %></div>
-          <div><%= label_tag :payment_method, "Payment Method", class: "mb-1.5 block text-xs font-semibold text-muted-foreground" %><%= select_tag :payment_method, options_for_select(::Checkouts::PaymentMethods.release_options, "cash"), class: "w-full rounded-md border border-border-interactive bg-card text-sm hover:border-border-interactive focus:border-blue-600 focus:ring-blue-600" %></div>
-          <div class="sm:col-span-2"><%= label_tag :external_reference, "Reference", class: "mb-1.5 block text-xs font-semibold text-muted-foreground" %><%= text_field_tag :external_reference, nil, autocomplete: "off", placeholder: "Receipt or transaction reference…", class: "w-full rounded-md border border-border-interactive bg-card text-sm hover:border-border-interactive focus:border-blue-600 focus:ring-blue-600" %></div>
-          <div class="sm:col-span-2"><%= submit_tag "Collect Deposit", class: "rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2" %></div>
+  <% applications = presenter.deposit_application_rows %>
+  <% if applications.any? %>
+    <div class="border-t border-border px-5 py-4">
+      <h3 class="text-sm font-semibold text-foreground">Applications</h3>
+      <div class="mt-3 divide-y divide-border rounded-lg border border-border">
+        <% applications.each do |application| %>
+          <% movement = application[:movement] %>
+          <div class="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div><p class="text-sm font-medium text-foreground"><%= application[:folio] %></p><p class="text-xs text-muted-foreground"><%= application[:owner] %> · <%= application[:occurred_at] %></p></div>
+            <div class="flex items-center justify-between gap-3 sm:justify-end"><span class="text-sm font-medium tabular-nums text-foreground"><%= application[:amount] %></span><%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :ghost, command: "show-modal", commandfor: "reverse-deposit-application-#{movement.id}", aria: { haspopup: "dialog" }) do %>Reverse<% end %></div>
+          </div>
         <% end %>
-      </section>
-      <section class="border-t border-border p-5 lg:border-t-0" aria-labelledby="release-deposit-heading">
-        <h3 id="release-deposit-heading" class="text-sm font-bold text-foreground">Release Held Deposits</h3>
-        <%= form_with url: release_security_deposits_hotel_booking_workspace_path(current_hotel, deposit_booking), method: :post, class: "mt-4 grid gap-4 sm:grid-cols-2" do %>
-          <div><%= label_tag :method, "Release Method", class: "mb-1.5 block text-xs font-semibold text-muted-foreground" %><%= select_tag :method, options_for_select(::Checkouts::PaymentMethods.release_options, "cash"), class: "w-full rounded-md border border-border-interactive bg-card text-sm hover:border-border-interactive focus:border-blue-600 focus:ring-blue-600" %></div>
-          <div><%= label_tag :reference, "Reference", class: "mb-1.5 block text-xs font-semibold text-muted-foreground" %><%= text_field_tag :reference, nil, autocomplete: "off", placeholder: "Release reference…", class: "w-full rounded-md border border-border-interactive bg-card text-sm hover:border-border-interactive focus:border-blue-600 focus:ring-blue-600" %></div>
-          <div class="sm:col-span-2"><%= submit_tag "Release Held Deposits", class: "rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground", disabled: presenter.held_security_deposit_total.zero? %><% if presenter.held_security_deposit_total.zero? %><p class="mt-2 text-xs text-muted-foreground">No held deposit is available to release.</p><% end %></div>
-        <% end %>
-      </section>
+      </div>
     </div>
-  </section>
+  <% end %>
+</section>
+
+<%= render PanelsUI::Sheet.new(id: "record-deposit-sheet", side: :right, size: :md, title: "Record deposit", description: "Hold security money or record a prepayment", body_class: "p-0") do |sheet| %>
+  <% sheet.with_body do %>
+    <%= form_with url: record_deposit_hotel_booking_workspace_path(current_hotel, presenter.selected_child_booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %>
+      <%= form.hidden_field :operation_key, value: SecureRandom.uuid %>
+      <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
+        <% if presenter.group_context_enabled? %><%= render PanelsUI::FormField.new(form:, attribute: :owner, label: "Owner", required: true) do |field| %><% field.with_select_menu(presenter.deposit_owner_options, selected: "group:#{presenter.group_booking.id}") %><% end %><% else %><%= form.hidden_field :owner, value: "booking:#{presenter.selected_child_booking.id}" %><% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :kind, label: "Kind", required: true) do |field| %><% field.with_select_menu([ { label: "Security deposit", value: "security" }, { label: "Prepayment", value: "prepayment" } ], selected: "security") %><% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :amount, label: "Amount", required: true) do |field| %><% field.with_input(type: :number, min: 0.01, step: 0.01, inputmode: "decimal") %><% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :payment_method, label: "Payment method", required: true) do |field| %><% field.with_select_menu(::Checkouts::PaymentMethods.release_options.map { |label, value| { label: label, value: value } }, selected: "cash") %><% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :external_reference, label: "Reference", hint: "Optional receipt or transaction reference.") do |field| %><% field.with_input(autocomplete: "off") %><% end %>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Recording…" }) do %>Record deposit<% end %></div>
+    <% end %>
+  <% end %>
+<% end %>
+
+<% rows.each do |row| %>
+  <% deposit = row[:deposit] %>
+  <% actionable = deposit.status.in?(%w[held available]) && deposit.available_amount.positive? %>
+  <% if actionable && presenter.deposit_folio_options(deposit).any? %>
+    <%= render PanelsUI::Sheet.new(id: "apply-deposit-#{deposit.id}", side: :right, size: :md, title: "Apply deposit", description: "#{row[:owner]} · #{row[:currency]} #{row[:available]} available", body_class: "p-0") do |sheet| %>
+      <% sheet.with_body do %><%= form_with url: allocate_deposit_hotel_booking_workspace_path(current_hotel, presenter.selected_child_booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %><%= form.hidden_field :deposit_id, value: deposit.id %><%= form.hidden_field :operation_key, value: SecureRandom.uuid %><div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5"><%= render PanelsUI::FormField.new(form:, attribute: :booking_folio_id, label: "Folio", required: true) do |field| %><% field.with_select_menu(presenter.deposit_folio_options(deposit), prompt: "Select a folio") %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :amount, label: "Amount", hint: "Maximum #{row[:currency]} #{row[:available]}", required: true) do |field| %><% field.with_input(type: :number, min: 0.01, max: deposit.available_amount, step: 0.01, inputmode: "decimal") %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason") do |field| %><% field.with_input(autocomplete: "off") %><% end %></div><div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Apply deposit<% end %></div><% end %><% end %>
+    <% end %>
+  <% end %>
+  <% if actionable %>
+    <%= render PanelsUI::Sheet.new(id: "return-deposit-#{deposit.id}", side: :right, size: :md, title: deposit.kind_security? ? "Release deposit" : "Refund deposit", description: "#{row[:owner]} · #{row[:currency]} #{row[:available]} available", body_class: "p-0") do |sheet| %>
+      <% sheet.with_body do %><%= form_with url: return_deposit_hotel_booking_workspace_path(current_hotel, presenter.selected_child_booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %><%= form.hidden_field :deposit_id, value: deposit.id %><%= form.hidden_field :operation_key, value: SecureRandom.uuid %><div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5"><%= render PanelsUI::FormField.new(form:, attribute: :amount, label: "Amount", required: true) do |field| %><% field.with_input(type: :number, value: deposit.available_amount, min: 0.01, max: deposit.available_amount, step: 0.01, inputmode: "decimal") %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :payment_method, label: "Return method", required: true) do |field| %><% field.with_select_menu(::Checkouts::PaymentMethods.release_options.map { |label, value| { label: label, value: value } }, selected: deposit.payment_method) %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :external_reference, label: "Reference") do |field| %><% field.with_input(autocomplete: "off") %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason", required: deposit.kind_prepayment?) do |field| %><% field.with_text_area(rows: 3) %><% end %></div><div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit, variant: deposit.kind_security? ? :secondary : :destructive) do %><%= deposit.kind_security? ? "Release" : "Refund" %><% end %></div><% end %><% end %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<% applications.each do |application| %>
+  <% movement = application[:movement] %>
+  <%= render PanelsUI::Sheet.new(id: "reverse-deposit-application-#{movement.id}", side: :right, size: :md, title: "Reverse deposit application", description: "#{application[:folio]} · #{application[:amount]}", body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with url: reverse_deposit_application_hotel_booking_workspace_path(current_hotel, presenter.selected_child_booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %>
+        <%= form.hidden_field :deposit_movement_id, value: movement.id %><%= form.hidden_field :operation_key, value: SecureRandom.uuid %>
+        <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5"><%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason", hint: "The original folio transaction remains in the audit trail.", required: true) do |field| %><% field.with_text_area(rows: 4) %><% end %></div>
+        <div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive) do %>Reverse application<% end %></div>
+      <% end %>
+    <% end %>
+  <% end %>
 <% end %>

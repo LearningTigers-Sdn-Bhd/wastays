@@ -280,7 +280,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
       booking = Booking.last
       expect(booking).to be_checked_in
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking))
-      expect(booking.payment_transactions.last.captured_at.to_date).to eq(past_date)
+      expect(booking.deposits.kind_prepayment.sole.received_at.to_date).to eq(past_date)
       expect(booking.booking_folio.folio_transactions.charge).to all(have_attributes(posting_date: past_date))
       expect(BookingAuditLog.where(auditable: booking, action_type: "check_in").last.metadata).to include(
         "backdate_reason_category" => "Manual offline check-in",

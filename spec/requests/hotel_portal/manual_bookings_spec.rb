@@ -249,10 +249,10 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
 
       expect {
         post hotel_booking_action_new_booking_path(hotel), params: params
-      }.to change(GroupDeposit, :count).by(1).and change(GroupDepositAllocation, :count).by(2)
+      }.to change(Deposit, :count).by(1).and change(DepositMovement.movement_type_apply, :count).by(2)
 
       group = GroupBooking.last
-      expect(group.group_deposits.last.amount).to eq(100.to_d)
+      expect(group.deposits.last).to have_attributes(kind: "prepayment", amount: 100.to_d, status: "settled")
       expect(group.bookings.pluck(:payment_status)).to all(eq("partial"))
     end
   end

@@ -440,7 +440,7 @@ module HotelPortal
     end
 
     def drawer_open?
-      drawer.in?(%w[deposit])
+      false
     end
 
     def group_booking?
@@ -490,7 +490,8 @@ module HotelPortal
           bookings
             .where(hotel_id: hotel.id)
             .includes(
-              :hotel, :deposits, :housekeeping_requests, :complaint_requests, :folio_operation_logs,
+              :hotel, :housekeeping_requests, :complaint_requests, :folio_operation_logs,
+              { deposits: { deposit_movements: [ :booking_folio, :folio_transaction ] } },
               booking_folios: [ :folio_transactions, :folio_forecasted_charges, { booking_billing_party: :booking_guest, hotel_corporate_account: :corporate_account } ],
               booking_rooms: [ :room_type, :rate_plan ],
               booking_guests: :guest,
@@ -626,7 +627,7 @@ module HotelPortal
     end
 
     def security_deposits
-      security_deposit_booking.deposits.select { |deposit| deposit.hold_type == "security" }.sort_by { |deposit| [ deposit.collected_at || deposit.created_at, deposit.id ] }.reverse
+      security_deposit_booking.deposits.select(&:kind_security?).sort_by { |deposit| [ deposit.received_at, deposit.id ] }.reverse
     end
 
     def held_security_deposit_total
@@ -642,19 +643,78 @@ module HotelPortal
     end
 
     def security_deposit_rows
-      security_deposits.map do |deposit|
+      deposit_rows.select { |row| row[:deposit].kind_security? && row[:deposit].booking_id == security_deposit_booking.id }
+    end
+
+    def unified_deposits
+      records = if group_context_enabled?
+        group_booking.deposits.to_a + child_bookings.flat_map { |child| child.deposits.to_a }
+      else
+        booking.deposits.to_a
+      end
+      records.uniq.sort_by { |deposit| [ deposit.received_at, deposit.id ] }.reverse
+    end
+
+    def deposit_rows
+      unified_deposits.map do |deposit|
         {
-          id: deposit.id,
-          amount: money_for(security_deposit_booking, deposit.amount),
-          status: deposit.status.to_s.humanize,
-          method: deposit.payment_method.to_s.presence&.humanize || "—",
-          reference: deposit.external_reference.presence || deposit.metadata.to_h["release_reference"].presence || "—",
-          collected_at: time_label(deposit.collected_at),
-          released_at: time_label(deposit.released_at),
-          staff: deposit.user&.name.presence || "—",
-          read_only: deposit.status.in?(%w[released forfeited failed])
+          deposit: deposit,
+          owner: deposit.group_booking_id.present? ? "Group" : "Booking #{deposit.booking.formatted_reservation_number}",
+          kind: deposit.kind.humanize,
+          status: deposit.status.humanize,
+          currency: deposit.currency,
+          amount: deposit_amount(deposit.amount),
+          applied: deposit_amount(deposit.applied_amount),
+          returned: deposit_amount(deposit.returned_amount),
+          available: deposit_amount(deposit.available_amount),
+          method: deposit.payment_method.humanize,
+          reference: deposit.external_reference.presence || "—",
+          received_at: time_label(deposit.received_at),
+          staff: deposit.received_by&.name.presence || "—"
         }
       end
+    end
+
+    def total_deposit_available(currency: nil)
+      deposits = currency.present? ? unified_deposits.select { |deposit| deposit.currency == currency } : unified_deposits
+      deposits.sum(&:available_amount)
+    end
+
+    def deposit_amount(amount)
+      format("%.2f", amount.to_d)
+    end
+
+    def deposit_application_rows
+      unified_deposits.flat_map do |deposit|
+        movements = deposit.deposit_movements.to_a
+        reversed_ids = movements.filter_map { |movement| movement.reversal_of_id if movement.movement_type == "reverse" }.to_set
+        movements.filter_map do |movement|
+          next unless movement.movement_type == "apply" && !reversed_ids.include?(movement.id)
+
+          folio = movement.booking_folio
+          {
+            movement: movement,
+            owner: deposit.group_booking_id.present? ? "Group" : "Booking #{deposit.booking.formatted_reservation_number}",
+            folio: folio ? "#{folio.booking.formatted_reservation_number} · #{folio.display_with_payer}" : "Folio unavailable",
+            amount: money_for(deposit.booking || folio&.booking || selected_child_booking, movement.amount),
+            occurred_at: time_label(movement.occurred_at)
+          }
+        end
+      end
+    end
+
+    def eligible_deposit_folios(deposit)
+      candidates = deposit.booking_id.present? ? deposit.booking.booking_folios : child_bookings.flat_map { |child| child.booking_folios.to_a }
+      candidates.select { |folio| folio.open? && deposit.eligible_folio?(folio) }
+    end
+
+    def deposit_folio_options(deposit)
+      eligible_deposit_folios(deposit).map { |folio| { label: "#{folio.booking.formatted_reservation_number} · #{folio.display_with_payer}", value: folio.id } }
+    end
+
+    def deposit_owner_options
+      options = child_bookings.map { |child| { label: "Booking #{child.formatted_reservation_number}", value: "booking:#{child.id}" } }
+      group_context_enabled? ? [ { label: "Group #{group_booking.formatted_reservation_number}", value: "group:#{group_booking.id}" }, *options ] : options
     end
 
     def requests_booking
@@ -683,7 +743,7 @@ module HotelPortal
 
     def group_security_deposit_rows
       child_bookings.map do |child|
-        deposits = child.deposits.select { |deposit| deposit.hold_type == "security" }
+        deposits = child.deposits.select(&:kind_security?)
         held = deposits.select { |deposit| deposit.status == "held" }.sum { |deposit| deposit.amount.to_d }
         {
           booking: child,
@@ -1101,13 +1161,6 @@ module HotelPortal
       explicit_id = @params[:folio_id].presence || @params[:active_folio_id].presence
       selected_folios.find { |folio| folio.id.to_s == explicit_id.to_s } ||
         selected_folios.find(&:is_primary?) || selected_folios.first
-    end
-
-    def group_deposit_provenance_for(transaction)
-      allocation = selected_folio&.group_deposit_allocations&.find { |candidate| candidate.folio_transaction_id == transaction.id }
-      return unless allocation
-
-      "Group deposit allocation ##{allocation.group_deposit_id}"
     end
 
     def folios

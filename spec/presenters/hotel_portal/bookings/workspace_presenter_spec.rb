@@ -776,8 +776,8 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(alert_presenter).to have_attributes(alert_action: "change_rate", alert_open?: true, layout_mode: "entity", show_right_drawer?: false)
       expect(invalid_alert_presenter).to have_attributes(alert_action: nil, alert_open?: false)
       expect(removed_drawer_presenter).to have_attributes(layout_mode: "entity", show_right_drawer?: false)
-      expect(drawer_presenter).to have_attributes(layout_mode: "entity", show_right_drawer?: true)
-      expect(standard_drawer_presenter).to have_attributes(layout_mode: "standard", show_left_rail?: false, show_right_drawer?: true)
+      expect(drawer_presenter).to have_attributes(layout_mode: "entity", show_right_drawer?: false)
+      expect(standard_drawer_presenter).to have_attributes(layout_mode: "standard", show_left_rail?: false, show_right_drawer?: false)
     end
   end
 
@@ -952,7 +952,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
       expect(tab_presenter.held_security_deposit_total).to eq(250.to_d)
       expect(tab_presenter.security_deposit_status_label).to eq("Held")
-      expect(tab_presenter.security_deposit_rows.first[:amount]).to eq("MYR 250.00")
+      expect(tab_presenter.security_deposit_rows.first[:amount]).to eq("250.00")
     end
 
     it "builds billing party rows from booking billing parties" do

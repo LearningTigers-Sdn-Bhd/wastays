@@ -81,7 +81,8 @@ RSpec.describe Bookings::CreateManualBooking do
 
     expect(result.success?).to be true
     expect(result.booking.payment_status).to eq("partial")
-    expect(result.booking.payment_transactions.first.amount_subunits).to eq(2_500)
+    expect(result.booking.payment_transactions).to be_empty
+    expect(result.booking.deposits.sole).to have_attributes(kind: "prepayment", amount: 25.to_d, status: "settled")
     expect(result.booking.booking_folio.folio_transactions.payment.sole.amount).to eq(25.to_d)
   end
 
@@ -98,7 +99,8 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(result.booking.total_amount).to eq(200.to_d)
     expect(result.booking.tourism_tax_amount).to eq(10.to_d)
     expect(result.booking.payment_status).to eq("captured")
-    expect(result.booking.payment_transactions.first.amount_subunits).to eq(20_000)
+    expect(result.booking.payment_transactions).to be_empty
+    expect(result.booking.deposits.sole).to have_attributes(kind: "prepayment", amount: 200.to_d, status: "settled")
     expect(result.booking.booking_folio.folio_transactions.payment.sole.amount).to eq(200.to_d)
   end
 

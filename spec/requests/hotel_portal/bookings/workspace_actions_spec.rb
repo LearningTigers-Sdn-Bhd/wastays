@@ -258,6 +258,38 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
     expect(booking.deposits.sole.reload).to have_attributes(status: "released")
   end
 
+  it "records and immediately applies a booking prepayment" do
+    folio = create(:booking_folio, booking: booking, hotel: hotel, is_primary: true, currency: booking.currency)
+
+    post record_deposit_hotel_booking_workspace_path(hotel, booking), params: {
+      owner: "booking:#{booking.id}", kind: "prepayment", amount: "90.00",
+      payment_method: "cash", external_reference: "PRE-001", operation_key: "record-pre-001"
+    }
+
+    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "security_deposits"))
+    deposit = booking.deposits.sole
+    expect(deposit).to have_attributes(kind: "prepayment", status: "settled", amount: 90.to_d)
+    expect(deposit.deposit_movements.movement_type_apply.sole.booking_folio).to eq(folio)
+  end
+
+  it "reverses an application from the unified deposit workflow" do
+    correction = Permission.find_or_create_by!(slug: "post_folio_corrections") do |permission|
+      permission.name = "Post Folio Corrections"
+    end
+    role.permissions << correction
+    folio = create(:booking_folio, booking: booking, hotel: hotel, is_primary: true, currency: booking.currency)
+    deposit = create(:deposit, :prepayment, booking: booking, hotel: hotel, amount: 100, currency: booking.currency)
+    application = Deposits::Apply.call(deposit: deposit, booking_folio: folio, amount: 60).movement
+
+    post reverse_deposit_application_hotel_booking_workspace_path(hotel, booking), params: {
+      deposit_movement_id: application.id, reason: "Applied to the wrong folio", operation_key: "reverse-pre-001"
+    }
+
+    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id))
+    expect(application.reload.reversal).to have_attributes(movement_type: "reverse", amount: 60.to_d)
+    expect(deposit.reload.available_amount).to eq(100.to_d)
+  end
+
   it "updates booking requests and returns to the control panel Requests tab" do
     housekeeping = create(:housekeeping_request, booking: booking, status: "pending")
     complaint = create(:complaint_request, booking: booking, status: "pending")

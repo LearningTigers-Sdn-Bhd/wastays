@@ -167,8 +167,8 @@ RSpec.describe Bookings::TransitionStatus do
         deposit = booking.reload.deposits.sole
         expect(deposit.amount).to eq(300.0)
         expect(deposit.status).to eq("held")
-        expect(deposit.hold_type).to eq("security")
-        expect(deposit.booking_folio).to eq(booking.booking_folio)
+        expect(deposit.kind).to eq("security")
+        expect(deposit.deposit_movements.sole.movement_type).to eq("hold")
         expect(deposit.transaction_code).to have_attributes(system_key: "security_deposit", code: "SECDEP", gl_account_code: "2030")
         expect(booking.deposit_status).to eq("held")
         expect(BookingAuditLog.last.metadata).to include(
@@ -346,7 +346,6 @@ RSpec.describe Bookings::TransitionStatus do
           :deposit,
           booking: booking,
           hotel: booking.hotel,
-          booking_folio: folio,
           amount: 150,
           metadata: { "collection_note" => "preserve" }
         )
@@ -364,14 +363,10 @@ RSpec.describe Bookings::TransitionStatus do
         }.not_to change(FolioTransaction, :count)
 
         expect(deposit.reload).to have_attributes(status: "released")
-        expect(deposit.reload.released_at).to be_within(0.001).of(timestamp)
-        expect(deposit.metadata).to include(
-          "collection_note" => "preserve",
-          "released_by_user_id" => user.id,
-          "release_method" => "card",
-          "release_reference" => "AUTH-9",
-          "source" => "checkout"
-        )
+        release = deposit.deposit_movements.find_by!(movement_type: "release")
+        expect(release.occurred_at).to be_within(0.001).of(timestamp)
+        expect(release).to have_attributes(performed_by: user, payment_method: "card", external_reference: "AUTH-9")
+        expect(deposit.metadata).to include("collection_note" => "preserve")
         expect(booking.reload.deposit_status).to eq("released")
         expect(BookingAuditLog.last.metadata["security_deposit_release"]).to eq(
           "deposit_ids" => [ deposit.id ],
@@ -384,7 +379,7 @@ RSpec.describe Bookings::TransitionStatus do
 
       it "leaves held deposits unchanged when release options are absent" do
         folio = create_settled_folio
-        deposit = create(:deposit, booking: booking, hotel: booking.hotel, booking_folio: folio)
+        deposit = create(:deposit, booking: booking, hotel: booking.hotel)
         booking.update!(deposit_status: "held")
 
         result = subject.call
@@ -397,8 +392,9 @@ RSpec.describe Bookings::TransitionStatus do
 
       it "rolls back folio closing and checkout when deposit release fails" do
         folio = create_settled_folio
-        failure = OpenStruct.new(success?: false, error: "Deposit release failed")
-        allow(Deposits::ReleaseHeldDeposits).to receive(:call).and_return(failure)
+        create(:deposit, booking: booking, hotel: booking.hotel)
+        failure = Deposits::MovementResult.failure("Deposit release failed")
+        allow(Deposits::Return).to receive(:call).and_return(failure)
 
         result = described_class.new(
           booking: booking,

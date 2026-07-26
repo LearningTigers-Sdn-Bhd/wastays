@@ -49,7 +49,7 @@ class FolioTransaction < ApplicationRecord
     foreign_key: :parent_transaction_id,
     inverse_of: :parent_transaction,
     dependent: :restrict_with_error
-  has_one :group_deposit_allocation, dependent: :restrict_with_error
+  has_one :deposit_movement, dependent: :restrict_with_error
 
   delegate :hotel, to: :booking_folio, allow_nil: true
 

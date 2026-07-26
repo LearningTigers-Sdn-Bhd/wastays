@@ -91,11 +91,11 @@ module HotelPortal
           end
 
           def held_deposits
-            @held_deposits ||= booking.deposits.where(status: "held")
+            @held_deposits ||= booking.deposits.kind_security.where(status: "held").includes(:deposit_movements)
           end
 
           def held_deposit_total
-            held_deposits.sum(:amount).to_d
+            held_deposits.sum(&:available_amount)
           end
 
           def can_submit?

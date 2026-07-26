@@ -3,36 +3,30 @@
 require "rails_helper"
 
 RSpec.describe Deposit do
-  it "records held security deposits with transaction code labels" do
+  it "belongs to exactly one booking or group" do
     booking = create(:booking)
-    folio = create(:booking_folio, booking: booking)
+    group = create(:group_booking, hotel: booking.hotel)
 
-    deposit = create(:deposit, booking: booking, hotel: booking.hotel, booking_folio: folio, amount: 150)
-
-    expect(deposit.hold_type).to eq("security")
-    expect(deposit.status).to eq("held")
-    expect(deposit.transaction_code).to have_attributes(system_key: "security_deposit", code: "SECDEP", gl_account_code: "2030")
-    expect(deposit.collected_at).to be_present
+    expect(build(:deposit, booking: booking, group_booking: group, hotel: booking.hotel)).not_to be_valid
+    expect(build(:deposit, booking: nil, group_booking: nil, hotel: booking.hotel)).not_to be_valid
+    expect(build(:deposit, booking: booking, group_booking: nil, hotel: booking.hotel)).to be_valid
+    expect(build(:deposit, :group_owned, booking: nil, group_booking: group, hotel: booking.hotel)).to be_valid
   end
 
-  it "requires the folio to belong to the same booking" do
-    booking = create(:booking)
-    other_folio = create(:booking_folio)
+  it "accepts security and prepayment transaction codes for their matching kinds" do
+    security = build(:deposit)
+    prepayment = build(:deposit, :prepayment)
 
-    deposit = build(:deposit, booking: booking, hotel: booking.hotel, booking_folio: other_folio)
-
-    expect(deposit).not_to be_valid
-    expect(deposit.errors[:booking_folio]).to include("must belong to the same booking")
+    expect(security).to be_valid
+    expect(prepayment).to be_valid
+    security.transaction_code = prepayment.transaction_code
+    expect(security).not_to be_valid
   end
 
-  it "requires the transaction code to be a security deposit code for the same hotel" do
-    booking = create(:booking)
-    folio = create(:booking_folio, booking: booking)
-    cash_code = booking.hotel.transaction_codes.find_by!(system_key: "cash_payment")
+  it "derives applied, returned, and available balances from movements" do
+    deposit = create(:deposit, :prepayment, amount: 500)
+    create(:deposit_movement, deposit: deposit, movement_type: "refund", amount: 125)
 
-    deposit = build(:deposit, booking: booking, hotel: booking.hotel, booking_folio: folio, transaction_code: cash_code)
-
-    expect(deposit).not_to be_valid
-    expect(deposit.errors[:transaction_code]).to include("must be a security deposit code")
+    expect(deposit).to have_attributes(applied_amount: 0.to_d, refunded_amount: 125.to_d, available_amount: 375.to_d)
   end
 end

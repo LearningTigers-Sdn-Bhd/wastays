@@ -11,7 +11,9 @@
       </div>
     </div>
 
-    <% if active_folio.group_deposit_allocations.any? %><div class="border-b border-border bg-muted px-5 py-3 text-sm text-foreground"><span class="font-medium">Group Deposit Allocation:</span> <%= active_folio.group_deposit_allocations.map { |allocation| "##{allocation.group_deposit_id} · #{presenter.money(allocation.amount)}" }.to_sentence %></div><% end %>
+    <% reversed_application_ids = active_folio.deposit_movements.filter_map { |movement| movement.reversal_of_id if movement.movement_type == "reverse" }.to_set %>
+    <% deposit_applications = active_folio.deposit_movements.select { |movement| movement.movement_type == "apply" && !reversed_application_ids.include?(movement.id) } %>
+    <% if deposit_applications.any? %><div class="border-b border-border bg-muted px-5 py-3 text-sm text-foreground"><span class="font-medium">Deposit applications:</span> <%= deposit_applications.map { |movement| "##{movement.deposit_id} · #{presenter.money(movement.amount)}" }.to_sentence %></div><% end %>
 
     <div class="px-5 pb-5 pt-5"><%= render "hotel_portal/folios/show/page_ledger", folio_show: folio_show, booking: entity_booking, hotel: current_hotel %></div>
   </section>

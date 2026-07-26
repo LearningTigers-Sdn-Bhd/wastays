@@ -268,7 +268,8 @@ module HotelPortal
     end
 
     def held_security_deposit_total
-      @held_security_deposit_total ||= booking.deposits.where(status: "held").sum(:amount).to_d
+      @held_security_deposit_total ||= booking.deposits.kind_security.where(status: "held")
+        .includes(:deposit_movements).sum(&:available_amount)
     end
 
     def projected_outstanding_balance

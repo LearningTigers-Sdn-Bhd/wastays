@@ -147,8 +147,9 @@ module BookingEngine
     end
 
     def receive_and_allocate_payment!(group, bookings)
-      result = GroupDeposits::Receive.call(
-        group_booking: group,
+      result = Deposits::Record.call(
+        owner: group,
+        kind: "prepayment",
         amount: bookings.sum(&:total_amount),
         currency: @quote.currency,
         payment_method: @payment_details[:payment_method].presence || "gateway",
@@ -158,12 +159,13 @@ module BookingEngine
       raise result.error unless result.success?
 
       manual_amounts = bookings.to_h { |booking| [ booking.booking_folio.id.to_s, booking.total_amount ] }
-      allocation = GroupDeposits::AllocateAcrossFolios.call(
+      allocation = Deposits::ApplyAcrossFolios.call(
         deposit: result.deposit,
         folios: bookings.map(&:booking_folio),
         amount: bookings.sum(&:total_amount),
         strategy: "manual",
-        manual_amounts: manual_amounts
+        manual_amounts: manual_amounts,
+        operation_key: "group-confirmation:#{group.id}:payment"
       )
       raise allocation.error unless allocation.success?
     end

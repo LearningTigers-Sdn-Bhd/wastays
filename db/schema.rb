@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_26_120000) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_27_091000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -685,31 +685,63 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_26_120000) do
 
   create_table "deposits", force: :cascade do |t|
     t.bigint "hotel_id", null: false
-    t.bigint "booking_id", null: false
-    t.bigint "booking_folio_id"
-    t.bigint "user_id"
-    t.string "hold_type", null: false
+    t.bigint "booking_id"
+    t.bigint "group_booking_id"
+    t.bigint "hotel_corporate_account_id"
+    t.bigint "transaction_code_id", null: false
+    t.bigint "received_by_id"
+    t.string "kind", null: false
     t.string "status", null: false
     t.decimal "amount", precision: 12, scale: 2, null: false
     t.string "currency", null: false
-    t.string "payment_method"
+    t.string "payment_method", null: false
     t.string "external_reference"
-    t.string "gl_code"
-    t.datetime "collected_at"
-    t.datetime "authorized_at"
-    t.datetime "released_at"
-    t.datetime "forfeited_at"
+    t.datetime "received_at", null: false
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "transaction_code_id", null: false
-    t.index ["booking_folio_id"], name: "index_deposits_on_booking_folio_id"
     t.index ["booking_id"], name: "index_deposits_on_booking_id"
-    t.index ["gl_code"], name: "index_deposits_on_gl_code"
-    t.index ["hotel_id", "hold_type", "status"], name: "index_deposits_on_hotel_id_and_hold_type_and_status"
+    t.index ["group_booking_id"], name: "index_deposits_on_group_booking_id"
+    t.index ["hotel_corporate_account_id"], name: "index_deposits_on_hotel_corporate_account_id"
+    t.index ["hotel_id", "booking_id", "external_reference"], name: "idx_deposits_booking_reference", unique: true, where: "((booking_id IS NOT NULL) AND (external_reference IS NOT NULL))"
+    t.index ["hotel_id", "group_booking_id", "external_reference"], name: "idx_deposits_group_reference", unique: true, where: "((group_booking_id IS NOT NULL) AND (external_reference IS NOT NULL))"
+    t.index ["hotel_id", "kind", "status"], name: "index_deposits_on_hotel_id_and_kind_and_status"
     t.index ["hotel_id"], name: "index_deposits_on_hotel_id"
+    t.index ["received_by_id"], name: "index_deposits_on_received_by_id"
     t.index ["transaction_code_id"], name: "index_deposits_on_transaction_code_id"
-    t.index ["user_id"], name: "index_deposits_on_user_id"
+    t.check_constraint "amount > 0::numeric", name: "deposits_amount_positive"
+    t.check_constraint "((booking_id IS NOT NULL)::integer + (group_booking_id IS NOT NULL)::integer) = 1", name: "deposits_exactly_one_owner"
+    t.check_constraint "kind::text = ANY (ARRAY['security'::character varying, 'prepayment'::character varying]::text[])", name: "deposits_kind_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'held'::character varying, 'available'::character varying, 'settled'::character varying, 'released'::character varying, 'refunded'::character varying, 'cancelled'::character varying, 'failed'::character varying]::text[])", name: "deposits_status_allowed"
+  end
+
+  create_table "deposit_movements", force: :cascade do |t|
+    t.bigint "deposit_id", null: false
+    t.bigint "booking_folio_id"
+    t.bigint "folio_transaction_id"
+    t.bigint "performed_by_id"
+    t.bigint "reversal_of_id"
+    t.string "movement_type", null: false
+    t.decimal "amount", precision: 12, scale: 2, null: false
+    t.string "payment_method"
+    t.string "external_reference"
+    t.string "operation_key"
+    t.text "reason"
+    t.datetime "occurred_at", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_folio_id"], name: "index_deposit_movements_on_booking_folio_id"
+    t.index ["deposit_id", "occurred_at"], name: "index_deposit_movements_on_deposit_id_and_occurred_at"
+    t.index ["deposit_id"], name: "index_deposit_movements_on_deposit_id"
+    t.index ["folio_transaction_id"], name: "index_deposit_movements_on_folio_transaction_id", unique: true, where: "(folio_transaction_id IS NOT NULL)"
+    t.index ["operation_key"], name: "index_deposit_movements_on_operation_key", unique: true, where: "(operation_key IS NOT NULL)"
+    t.index ["performed_by_id"], name: "index_deposit_movements_on_performed_by_id"
+    t.index ["reversal_of_id"], name: "idx_deposit_movements_one_reversal", unique: true, where: "(reversal_of_id IS NOT NULL)"
+    t.check_constraint "amount > 0::numeric", name: "deposit_movements_amount_positive"
+    t.check_constraint "movement_type::text = ANY (ARRAY['hold'::character varying, 'receive'::character varying, 'apply'::character varying, 'reverse'::character varying, 'release'::character varying, 'refund'::character varying]::text[])", name: "deposit_movements_type_allowed"
+    t.check_constraint "movement_type::text = ANY (ARRAY['apply'::character varying, 'reverse'::character varying]::text[]) AND booking_folio_id IS NOT NULL AND folio_transaction_id IS NOT NULL OR NOT (movement_type::text = ANY (ARRAY['apply'::character varying, 'reverse'::character varying]::text[])) AND booking_folio_id IS NULL AND folio_transaction_id IS NULL", name: "deposit_movements_target_shape"
+    t.check_constraint "movement_type::text = 'reverse'::text AND reversal_of_id IS NOT NULL OR movement_type::text <> 'reverse'::text AND reversal_of_id IS NULL", name: "deposit_movements_reversal_shape"
   end
 
   create_table "exchange_rates", force: :cascade do |t|
@@ -952,57 +984,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_26_120000) do
     t.index ["hotel_id"], name: "index_group_bookings_on_hotel_id"
     t.index ["organizer_guest_id"], name: "index_group_bookings_on_organizer_guest_id"
     t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'active'::character varying, 'completed'::character varying, 'cancelled'::character varying]::text[])", name: "group_bookings_status_allowed"
-  end
-
-  create_table "group_deposit_allocations", force: :cascade do |t|
-    t.bigint "group_deposit_id", null: false
-    t.bigint "booking_id", null: false
-    t.bigint "booking_folio_id", null: false
-    t.bigint "folio_transaction_id"
-    t.bigint "allocated_by_id"
-    t.bigint "reversal_of_id"
-    t.decimal "amount", precision: 12, scale: 2, null: false
-    t.string "status", default: "active", null: false
-    t.datetime "allocated_at", null: false
-    t.datetime "reversed_at"
-    t.jsonb "metadata", default: {}, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["allocated_by_id"], name: "index_group_deposit_allocations_on_allocated_by_id"
-    t.index ["booking_folio_id"], name: "index_group_deposit_allocations_on_booking_folio_id"
-    t.index ["booking_id"], name: "index_group_deposit_allocations_on_booking_id"
-    t.index ["folio_transaction_id"], name: "index_group_deposit_allocations_on_folio_transaction_id"
-    t.index ["group_deposit_id"], name: "index_group_deposit_allocations_on_group_deposit_id"
-    t.index ["reversal_of_id"], name: "idx_group_deposit_allocations_one_reversal", unique: true, where: "(reversal_of_id IS NOT NULL)"
-    t.index ["reversal_of_id"], name: "index_group_deposit_allocations_on_reversal_of_id"
-    t.check_constraint "amount > 0::numeric", name: "group_deposit_allocations_amount_positive"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'reversed'::character varying]::text[])", name: "group_deposit_allocations_status_allowed"
-  end
-
-  create_table "group_deposits", force: :cascade do |t|
-    t.bigint "group_booking_id", null: false
-    t.bigint "hotel_id", null: false
-    t.bigint "hotel_corporate_account_id"
-    t.bigint "received_by_id"
-    t.decimal "amount", precision: 12, scale: 2, null: false
-    t.string "currency", null: false
-    t.string "payment_method", null: false
-    t.string "external_reference"
-    t.string "status", default: "received", null: false
-    t.datetime "received_at", null: false
-    t.datetime "refunded_at"
-    t.jsonb "metadata", default: {}, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.decimal "refunded_amount", precision: 12, scale: 2, default: "0.0", null: false
-    t.index ["group_booking_id"], name: "index_group_deposits_on_group_booking_id"
-    t.index ["hotel_corporate_account_id"], name: "index_group_deposits_on_hotel_corporate_account_id"
-    t.index ["hotel_id", "external_reference"], name: "index_group_deposits_on_hotel_id_and_external_reference", unique: true, where: "(external_reference IS NOT NULL)"
-    t.index ["hotel_id"], name: "index_group_deposits_on_hotel_id"
-    t.index ["received_by_id"], name: "index_group_deposits_on_received_by_id"
-    t.check_constraint "amount > 0::numeric", name: "group_deposits_amount_positive"
-    t.check_constraint "refunded_amount >= 0::numeric AND refunded_amount <= amount", name: "group_deposits_refunded_amount_valid"
-    t.check_constraint "status::text = ANY (ARRAY['received'::character varying, 'partially_allocated'::character varying, 'allocated'::character varying, 'partially_refunded'::character varying, 'refunded'::character varying, 'cancelled'::character varying]::text[])", name: "group_deposits_status_allowed"
   end
 
   create_table "guest_registration_cards", force: :cascade do |t|
@@ -2112,11 +2093,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_26_120000) do
   add_foreign_key "corporate_ar_payment_intents", "hotel_corporate_accounts"
   add_foreign_key "corporate_ar_payment_intents", "hotels"
   add_foreign_key "corporate_ar_payment_intents", "users"
-  add_foreign_key "deposits", "booking_folios"
+  add_foreign_key "deposit_movements", "booking_folios"
+  add_foreign_key "deposit_movements", "deposit_movements", column: "reversal_of_id"
+  add_foreign_key "deposit_movements", "deposits"
+  add_foreign_key "deposit_movements", "folio_transactions"
+  add_foreign_key "deposit_movements", "users", column: "performed_by_id"
   add_foreign_key "deposits", "bookings"
+  add_foreign_key "deposits", "group_bookings"
+  add_foreign_key "deposits", "hotel_corporate_accounts"
   add_foreign_key "deposits", "hotels"
   add_foreign_key "deposits", "transaction_codes"
-  add_foreign_key "deposits", "users"
+  add_foreign_key "deposits", "users", column: "received_by_id"
   add_foreign_key "exchange_rates", "users", column: "created_by_id"
   add_foreign_key "features", "feature_groups"
   add_foreign_key "financial_audit_events", "booking_folios"
@@ -2156,16 +2143,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_26_120000) do
   add_foreign_key "group_billing_change_batches", "users", column: "actor_id"
   add_foreign_key "group_bookings", "guests", column: "organizer_guest_id"
   add_foreign_key "group_bookings", "hotels"
-  add_foreign_key "group_deposit_allocations", "booking_folios"
-  add_foreign_key "group_deposit_allocations", "bookings"
-  add_foreign_key "group_deposit_allocations", "folio_transactions"
-  add_foreign_key "group_deposit_allocations", "group_deposit_allocations", column: "reversal_of_id"
-  add_foreign_key "group_deposit_allocations", "group_deposits"
-  add_foreign_key "group_deposit_allocations", "users", column: "allocated_by_id"
-  add_foreign_key "group_deposits", "group_bookings"
-  add_foreign_key "group_deposits", "hotel_corporate_accounts"
-  add_foreign_key "group_deposits", "hotels"
-  add_foreign_key "group_deposits", "users", column: "received_by_id"
   add_foreign_key "guest_registration_cards", "bookings"
   add_foreign_key "guest_registration_cards", "hotels"
   add_foreign_key "guest_registration_note_templates", "hotels"

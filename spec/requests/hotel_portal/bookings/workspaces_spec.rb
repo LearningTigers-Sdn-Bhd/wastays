@@ -120,8 +120,8 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include("Not provided")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "security_deposits")
-      expect(response.body).to include("border border-border-interactive bg-card")
-      expect(response.body).to include("No held deposit is available to release")
+      expect(response.body).to include("Record deposit")
+      expect(response.body).to include('id="record-deposit-sheet"')
 
       get hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests")
       expect(response.body).to include('class="flex h-full min-h-0 flex-col"')
@@ -495,7 +495,11 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
         if expected_mode == "standard"
           expect(document.at_css('[data-testid="workspace-entity-rail"]')).to be_nil
           expect(document.at_xpath('//button[normalize-space()="Change Context"]')).to be_nil
-          expect(document.css("main h2").size).to eq(1)
+          if tab == "security_deposits"
+            expect(document.at_css("main h2#deposits-heading")).to be_present
+          else
+            expect(document.css("main h2").size).to eq(1)
+          end
         else
           expect(document.at_css('[data-testid="workspace-entity-rail"]')).to be_present
         end
@@ -703,11 +707,11 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).not_to include('data-testid="workspace-action-drawer"')
     end
 
-    it "renders only true editor drawers" do
+    it "ignores the removed deposit drawer state" do
       get hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", drawer: "deposit")
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('data-testid="workspace-action-drawer"')
+      expect(response.body).not_to include('data-testid="workspace-action-drawer"')
     end
 
     it "does not render removed billing drawer state" do
@@ -786,6 +790,13 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include('data-layout-mode="standard"')
       expect(response.body).to include("Deposits")
       expect(response.body).to include("MYR 150.00")
+      deposit_panel = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="deposits-heading"]')
+      expect(deposit_panel.at_css("header")["class"]).not_to include("border-b")
+      expect(deposit_panel.at_css(".panel-table__wrapper.rounded-md.border")).to be_present
+      expect(deposit_panel.css("thead th").map { |cell| cell.text.squish }).to include("Original (MYR)")
+      expect(deposit_panel.css("thead th").map { |cell| cell.text.squish }).not_to include("Available")
+      expect(deposit_panel.at_css("tfoot th").text.squish).to eq("Available")
+      expect(deposit_panel.at_css("tfoot td").text.squish).to eq("MYR 150.00")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests")
       expect(response).to have_http_status(:success)
@@ -1199,16 +1210,17 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(document.at_css("#booking-workspace-content #guest-details-panel")).to be_present
     end
 
-    it "renders group deposits under group security deposits" do
+    it "renders group and booking deposits in one unified panel" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
-      create(:group_deposit, group_booking: group, hotel: hotel, amount: 450, external_reference: "GROUP-DEP-450")
+      create(:deposit, :prepayment, :group_owned, booking: nil, group_booking: group, hotel: hotel,
+        amount: 450, external_reference: "GROUP-DEP-450")
 
       get hotel_booking_workspace_path(hotel, booking, tab: "security_deposits", scope: "group")
 
       expect(response).to have_http_status(:success)
-      panel = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="security-deposits-heading"]')
-      expect(panel.text).to include("Group Deposits", "GROUP-DEP-450", "MYR 450.00")
+      panel = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="deposits-heading"]')
+      expect(panel.text).to include("Group", "Prepayment", "MYR 450.00")
     end
 
     it "keeps group billing preferences focused on billing parties" do

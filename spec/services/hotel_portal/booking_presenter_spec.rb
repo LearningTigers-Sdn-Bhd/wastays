@@ -101,8 +101,8 @@ RSpec.describe HotelPortal::BookingPresenter do
   describe "security deposit helpers" do
     it "summarizes held security deposits separately from booking totals" do
       folio = create(:booking_folio, booking: booking, hotel: hotel)
-      create(:deposit, booking: booking, hotel: hotel, booking_folio: folio, amount: 200, status: "held")
-      create(:deposit, booking: booking, hotel: hotel, booking_folio: folio, amount: 50, status: "released")
+      create(:deposit, booking: booking, hotel: hotel, amount: 200, status: "held")
+      create(:deposit, booking: booking, hotel: hotel, amount: 50, status: "released")
       booking.update!(deposit_status: "held")
 
       expect(subject.security_deposit_status_label).to eq("Held")

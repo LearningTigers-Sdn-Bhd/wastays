@@ -14,7 +14,7 @@ module HotelPortal
           return create if request.post? && @mode == "add_account"
           return update if request.patch? && @mode == "edit_terms"
           return destroy if request.delete? && @mode == "remove"
-          raise ActiveRecord::RecordNotFound unless request.get?
+          raise ActiveRecord::RecordNotFound unless request.get? || request.head?
 
           render :show, layout: false
         end

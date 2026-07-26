@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require "ostruct"
-
 module HotelPortal
   module Bookings
     class WorkspaceActionsController < BaseController
+    ActionResult = ApplicationResult.define
+
     before_action :authorize_manage_bookings!
     before_action :set_booking
 
@@ -95,41 +95,63 @@ module HotelPortal
         BookingAuditLog.create!(hotel: current_hotel, auditable: @booking, user: current_user,
           action_type: "billing_party_archived", category: "financial", source: "booking_workspace",
           occurred_at: Time.current, old_value: { billing_party_id: party.id, party: party.display_name })
-        OpenStruct.new(success?: true)
+        ActionResult.success
       else
-        OpenStruct.new(success?: false, error: "Billing parties with folios cannot be archived.")
+        ActionResult.failure("Billing parties with folios cannot be archived.")
       end
       redirect_with_result(result, tab: "billing_preferences")
     end
 
     def allocate_deposit
-      deposit = group_booking.group_deposits.find(params[:group_deposit_id])
-      folio = @booking.booking_folios.find(params[:booking_folio_id])
-      result = ::GroupDeposits::Allocate.call(deposit: deposit, booking_folio: folio, amount: params[:amount], actor: current_user)
+      deposit = accessible_deposits.find(params[:deposit_id] || params[:group_deposit_id])
+      folio = eligible_folios_for(deposit).find(params[:booking_folio_id])
+      result = ::Deposits::Apply.call(
+        deposit: deposit, booking_folio: folio, amount: params[:amount], actor: current_user,
+        reason: params[:reason], operation_key: params[:operation_key]
+      )
       redirect_with_result(result, tab: "folio_operations", folio_id: folio.id)
     end
 
-    def refund_deposit
-      deposit = group_booking.group_deposits.find(params[:group_deposit_id])
-      result = ::GroupDeposits::RefundUnallocated.call(deposit: deposit, amount: params[:amount], actor: current_user, reason: params[:reason])
-      redirect_with_result(result, tab: "folio_operations")
+    def record_deposit
+      owner = deposit_owner_from_param
+      result = record_workspace_deposit(owner)
+      redirect_with_result(result, tab: "security_deposits", scope: ("group" if owner.is_a?(GroupBooking)))
     end
 
-    def reverse_deposit_allocation
-      allocation = GroupDepositAllocation.joins(:group_deposit)
-        .where(group_deposits: { group_booking_id: group_booking.id })
-        .find(params[:group_deposit_allocation_id])
-      result = ::GroupDeposits::ReverseAllocation.call(allocation: allocation, actor: current_user, reason: params[:reason])
-      redirect_with_result(result, tab: "folio_operations", folio_id: allocation.booking_folio_id)
+    def return_deposit
+      refund_deposit
     end
+
+    def refund_deposit
+      deposit = accessible_deposits.find(params[:deposit_id] || params[:group_deposit_id])
+      result = ::Deposits::Return.call(
+        deposit: deposit, amount: params[:amount], actor: current_user, reason: params[:reason],
+        payment_method: params[:payment_method], external_reference: params[:external_reference],
+        operation_key: params[:operation_key]
+      )
+      redirect_with_result(result, tab: "security_deposits")
+    end
+
+    def reverse_deposit_application
+      movement = DepositMovement.joins(:deposit)
+        .where(deposits: { id: accessible_deposits.select(:id) })
+        .find(params[:deposit_movement_id] || params[:group_deposit_allocation_id])
+      result = ::Deposits::ReverseApplication.call(
+        movement: movement, actor: current_user, reason: params[:reason], operation_key: params[:operation_key]
+      )
+      redirect_with_result(result, tab: "folio_operations", folio_id: movement.booking_folio_id)
+    end
+
+    alias_method :reverse_deposit_allocation, :reverse_deposit_application
 
     def collect_security_deposit
       folio = @booking.booking_folio || @booking.booking_folios.open.first || @booking.booking_folios.first
-      result = ::Deposits::RecordSecurityDeposit.call(
-        booking: @booking,
-        folio: folio,
-        user: current_user,
+      result = ::Deposits::Record.call(
+        owner: @booking,
+        kind: "security",
+        actor: current_user,
         amount: params[:amount],
+        currency: folio.currency,
         payment_method: params[:payment_method],
         external_reference: params[:external_reference]
       )
@@ -137,13 +159,24 @@ module HotelPortal
     end
 
     def release_security_deposits
-      result = ::Deposits::ReleaseHeldDeposits.call(
-        booking: @booking,
-        user: current_user,
-        released_at: Time.current,
-        method: params[:method],
-        reference: params[:reference]
-      )
+      movements = []
+      error = nil
+      Deposit.transaction do
+        @booking.deposits.kind_security.where(status: "held").find_each do |deposit|
+          result = ::Deposits::Return.call(
+            deposit: deposit, amount: deposit.available_amount, actor: current_user,
+            payment_method: params[:method], external_reference: params[:reference],
+            operation_key: params[:operation_key].presence && "#{params[:operation_key]}:#{deposit.id}"
+          )
+          unless result.success?
+            error = result.error
+            raise ActiveRecord::Rollback
+          end
+
+          movements << result.movement
+        end
+      end
+      result = error ? Deposits::BatchResult.failure(error, movements: []) : Deposits::BatchResult.success(movements: movements)
       redirect_with_result(result, tab: "security_deposits")
     end
 
@@ -159,6 +192,41 @@ module HotelPortal
 
     private
 
+    def record_workspace_deposit(owner)
+      result = nil
+      Deposit.transaction do
+        result = ::Deposits::Record.call(
+          owner: owner,
+          kind: params[:kind],
+          amount: params[:amount],
+          currency: owner.respond_to?(:currency) ? owner.currency : current_hotel.default_currency,
+          payment_method: params[:payment_method],
+          external_reference: params[:external_reference],
+          actor: current_user,
+          operation_key: params[:operation_key],
+          metadata: { source: "booking_workspace" }
+        )
+        raise ActiveRecord::Rollback unless result.success?
+        next unless result.deposit.kind_prepayment? && owner.is_a?(Booking)
+
+        folio = owner.booking_folio || owner.booking_folios.open.first || owner.booking_folios.first
+        unless folio
+          result = Deposits::MovementResult.failure("Create a booking folio before recording a prepayment.", deposit: result.deposit)
+          raise ActiveRecord::Rollback
+        end
+
+        result = ::Deposits::Apply.call(
+          deposit: result.deposit,
+          booking_folio: folio,
+          amount: result.deposit.amount,
+          actor: current_user,
+          operation_key: "workspace-prepayment:#{result.deposit.id}"
+        )
+        raise ActiveRecord::Rollback unless result.success?
+      end
+      result
+    end
+
     def set_booking
       @booking = current_hotel.bookings.find(params[:booking_id])
     end
@@ -171,6 +239,26 @@ module HotelPortal
 
     def scoped_group_bookings
       current_hotel.bookings.where(group_booking: group_booking)
+    end
+
+    def accessible_deposits
+      booking_scope = current_hotel.deposits.where(booking_id: @booking.id)
+      return booking_scope if @booking.group_booking_id.blank?
+
+      group_scope = current_hotel.deposits.where(group_booking_id: @booking.group_booking_id)
+      child_scope = current_hotel.deposits.where(booking_id: group_booking.bookings.select(:id))
+      group_scope.or(child_scope)
+    end
+
+    def eligible_folios_for(deposit)
+      scope = current_hotel.booking_folios.where(currency: deposit.currency)
+      scope = if deposit.booking_id.present?
+        scope.where(booking_id: deposit.booking_id)
+      else
+        scope.joins(:booking).where(bookings: { group_booking_id: deposit.group_booking_id })
+      end
+      scope = scope.where(hotel_corporate_account_id: deposit.hotel_corporate_account_id) if deposit.hotel_corporate_account_id.present?
+      scope
     end
 
     def resolved_billing_party(result)
@@ -197,12 +285,29 @@ module HotelPortal
       @billing_party_attributes = billing_party_params
     end
 
+    def deposit_owner_from_param
+      type, id = params[:owner].to_s.split(":", 2)
+      return @booking if type.blank? && id.blank?
+      return current_hotel.bookings.find(id) if type == "booking" && accessible_booking_ids.include?(id.to_i)
+      return group_booking if type == "group" && group_booking.id == id.to_i
+
+      raise ActiveRecord::RecordNotFound
+    end
+
+    def accessible_booking_ids
+      @accessible_booking_ids ||= if @booking.group_booking_id.present?
+        group_booking.bookings.where(hotel_id: current_hotel.id).pluck(:id)
+      else
+        [ @booking.id ]
+      end
+    end
+
     def authorize_manage_bookings!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_bookings", hotel: current_hotel)
     end
 
     def update_request_status(kind:, request_id:, status:)
-      return OpenStruct.new(success?: false, error: "Request does not belong to this booking.") unless request_belongs_to_booking?(kind, request_id)
+      return ActionResult.failure("Request does not belong to this booking.") unless request_belongs_to_booking?(kind, request_id)
 
       updater = ::HotelPortal::Requests::StatusUpdater.new(
         hotel: current_hotel,
@@ -212,9 +317,9 @@ module HotelPortal
       )
 
       if updater.call
-        OpenStruct.new(success?: true)
+        ActionResult.success
       else
-        OpenStruct.new(success?: false, error: "Failed to update request.")
+        ActionResult.failure("Failed to update request.")
       end
     end
 

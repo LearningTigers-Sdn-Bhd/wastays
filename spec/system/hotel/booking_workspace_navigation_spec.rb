@@ -7,7 +7,7 @@ RSpec.describe "Booking workspace navigation", :business_day, type: :system do
 
   it "uses standard and entity layouts while navigating the workspace" do
     folio = booking.booking_folios.find_by!(is_primary: true)
-    create(:deposit, booking: booking, hotel: hotel, booking_folio: folio, amount: 175, status: "held")
+    create(:deposit, booking: booking, hotel: hotel, amount: 175, status: "held")
     create(:housekeeping_request, booking: booking, request_details: "Fresh towels", status: "pending")
     create(:complaint_request, booking: booking, complaint_details: "Noisy hallway", status: "pending")
 
