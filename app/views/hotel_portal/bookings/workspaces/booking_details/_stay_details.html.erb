@@ -1,8 +1,4 @@
-<section aria-labelledby="booking-overview-heading" class="space-y-8 px-5 py-6">
-  <div>
-    <h2 id="booking-overview-heading" class="text-base font-semibold text-foreground">Overview</h2>
-    <p class="mt-1 text-sm text-muted-foreground">Stay, financial, and reference detail for this booking.</p>
-  </div>
+<section aria-label="Booking overview" class="space-y-8 px-5 py-6" data-testid="booking-overview">
   <%= render "hotel_portal/bookings/workspaces/booking_details/stay_table", booking: booking, presenter: workspace_presenter %>
 
   <%= render "hotel_portal/bookings/workspaces/booking_details/financial_table", presenter: workspace_presenter %>
@@ -11,7 +7,7 @@
 
   <% if booking.special_requests.present? %>
     <div>
-      <h3 class="text-base font-semibold text-foreground">Special requests</h3>
+      <h2 class="text-base font-semibold text-foreground">Special requests</h2>
       <p class="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground"><%= booking.special_requests %></p>
     </div>
   <% end %>
