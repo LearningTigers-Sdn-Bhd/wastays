@@ -120,6 +120,11 @@ domain_paths() {
       printf "%s\n" \
         spec/services/booking_engine \
         spec/services/bookings \
+        spec/services/booking_billing_parties \
+        spec/services/booking_guests \
+        spec/services/booking_workspaces \
+        spec/services/checkouts \
+        spec/services/group_bookings \
         spec/jobs/booking_engine \
         spec/requests/public/bookings_invoice_spec.rb \
         spec/requests/public/bookings_show_spec.rb \
@@ -169,6 +174,9 @@ domain_paths() {
         spec/services/rooms \
         spec/services/hotel_ops \
         spec/services/housekeeping \
+        spec/services/housekeeping_tasks \
+        spec/services/checkout_requests \
+        spec/services/stay_view \
         spec/services/complaints \
         spec/services/notifications \
         spec/jobs/night_audits \
@@ -199,10 +207,15 @@ domain_paths() {
     financials)
       printf "%s\n" \
         spec/services/folios \
+        spec/services/concerns/folios \
         spec/services/document_identifiers \
+        spec/services/transaction_codes \
         spec/services/financials \
         spec/services/financial_controls \
         spec/services/deposits \
+        spec/services/group_deposits \
+        spec/services/ar_invoices \
+        spec/services/ar_payments \
         spec/services/folio_ledger_export_service_spec.rb \
         spec/requests/hotel_portal/folios_spec.rb \
         spec/requests/hotel_portal/folio_transactions_spec.rb \
@@ -226,6 +239,7 @@ domain_paths() {
     payments)
       printf "%s\n" \
         spec/services/payments \
+        spec/services/corporate_ar_payments \
         spec/services/refunds \
         spec/services/payout_engine \
         spec/services/payout_export_service_spec.rb \
@@ -289,6 +303,7 @@ domain_paths() {
       printf "%s\n" \
         spec/services/admin \
         spec/services/platform_control \
+        spec/services/hotel_demo_management \
         spec/requests/admin \
         spec/system/admin \
         spec/models/plan_spec.rb \
@@ -315,19 +330,19 @@ domain_group_labels() {
       printf "%s\n" models services requests jobs helpers mailers presenters views tasks seeds migrations integration
       ;;
     bookings)
-      printf "%s\n" booking_engine lifecycle public_requests hotel_requests transactions system models
+      printf "%s\n" booking_engine lifecycle billing_parties guests workspaces checkouts groups public_requests hotel_requests transactions system models
       ;;
     hotel_management)
       printf "%s\n" profile settings room_types knowledge staff roles corporate policies system
       ;;
     hotel_operations)
-      printf "%s\n" business_dates night_audits rooms inventory requests notifications arrivals system
+      printf "%s\n" business_dates night_audits rooms inventory stay_view housekeeping requests notifications arrivals system
       ;;
     financials)
-      printf "%s\n" folios transactions taxes_fees codes gl_maps journals controls deposits models
+      printf "%s\n" folios transactions taxes_fees codes gl_maps journals controls deposits accounts_receivable models
       ;;
     payments)
-      printf "%s\n" gateways verification webhooks refunds payouts deposits settings models
+      printf "%s\n" gateways verification webhooks corporate_ar refunds payouts deposits settings models
       ;;
     reports)
       printf "%s\n" hotel_reports exports booking_exports folio_ledger pdfs requests
@@ -345,7 +360,7 @@ domain_group_labels() {
       printf "%s\n" sessions dashboard bookings refunds search guest_models system
       ;;
     admin_platform)
-      printf "%s\n" dashboard hotels plans margins payouts refunds integrations api_keys system
+      printf "%s\n" dashboard hotels plans margins payouts refunds demo_data integrations api_keys system
       ;;
     system)
       printf "%s\n" admin guest hotel public
