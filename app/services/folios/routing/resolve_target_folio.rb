@@ -8,7 +8,7 @@ module Folios
 
       PERMISSION = "manage_folio_movements"
 
-      def self.call(booking:, transaction_code:, parent_transaction: nil, fallback_transaction_code: nil, override_target_folio: nil, override_reason: nil, actor: nil, permission_context: nil, posting_date: nil)
+      def self.call(booking:, transaction_code:, parent_transaction: nil, fallback_transaction_code: nil, override_target_folio: nil, override_reason: nil, actor: nil, permission_context: nil, posting_date: nil, allow_closed_folio: false)
         new(
           booking: booking,
           transaction_code: transaction_code,
@@ -18,11 +18,12 @@ module Folios
           override_reason: override_reason,
           actor: actor,
           permission_context: permission_context,
-          posting_date: posting_date
+          posting_date: posting_date,
+          allow_closed_folio: allow_closed_folio
         ).call
       end
 
-      def initialize(booking:, transaction_code:, parent_transaction: nil, fallback_transaction_code: nil, override_target_folio: nil, override_reason: nil, actor: nil, permission_context: nil, posting_date: nil)
+      def initialize(booking:, transaction_code:, parent_transaction: nil, fallback_transaction_code: nil, override_target_folio: nil, override_reason: nil, actor: nil, permission_context: nil, posting_date: nil, allow_closed_folio: false)
         @booking = booking
         @hotel = booking&.hotel
         @transaction_code = transaction_code
@@ -33,6 +34,7 @@ module Folios
         @actor = actor
         @permission_context = permission_context || actor
         @posting_date = (posting_date || @hotel&.current_business_date || Date.current).to_date
+        @allow_closed_folio = allow_closed_folio
       end
 
       def call
@@ -85,7 +87,8 @@ module Folios
           transaction_code: @fallback_transaction_code,
           actor: @actor,
           permission_context: @permission_context,
-          posting_date: @posting_date
+          posting_date: @posting_date,
+          allow_closed_folio: @allow_closed_folio
         )
         metadata = {
           fallback_transaction_code_id: @fallback_transaction_code.id,
@@ -127,7 +130,7 @@ module Folios
         return "Resolved folio is not available." if folio.blank?
         return "Resolved folio must belong to the booking." unless folio.booking_id == @booking&.id
         return "Resolved folio must belong to the hotel." unless folio.hotel_id == @hotel&.id
-        return "Resolved folio must be open." unless folio.open?
+        return "Resolved folio must be open." unless folio.open? || (@allow_closed_folio && folio.closed?)
 
         nil
       end

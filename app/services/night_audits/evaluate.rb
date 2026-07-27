@@ -25,7 +25,7 @@ module NightAudits
         "no_show_count" => hotel_bookings.no_show.checking_in_on(@business_date, @hotel.hotel_time_zone).count,
         "due_out_count" => hotel_bookings.checking_out_on(@business_date, @hotel.hotel_time_zone).count,
         "checked_out_count" => hotel_bookings.completed.where(checked_out_at: @hotel.business_day_window_for(@business_date)).count,
-        "in_house_count" => hotel_bookings.checked_in.where("check_in::date <= ? AND check_out::date >= ?", @business_date, @business_date).count,
+        "in_house_count" => hotel_bookings.checked_in.intersecting_local_date(@business_date, @hotel.hotel_time_zone).count,
         "payment_status_counts" => payment_status_counts
       }
     end
@@ -100,13 +100,16 @@ module NightAudits
     end
 
     def financially_relevant_bookings
-      @financially_relevant_bookings ||= hotel_bookings
-        .includes(:payment_transactions, :refund_request, :booking_rooms, booking_folio: :folio_transactions)
-        .where(
-          "(status IN (?) AND check_in::date <= ? AND check_out::date >= ?) OR (status = ? AND check_in::date = ?)",
-          %w[checked_in review_due_out checkout_required completed], @business_date, @business_date, "no_show", @business_date
-        )
-        .to_a
+      @financially_relevant_bookings ||= begin
+        stay_scope = hotel_bookings
+          .where(status: %w[checked_in review_due_out checkout_required completed])
+          .intersecting_local_date(@business_date, @hotel.hotel_time_zone)
+        no_show_scope = hotel_bookings.no_show.checking_in_on(@business_date, @hotel.hotel_time_zone)
+
+        stay_scope.or(no_show_scope)
+          .includes(:payment_transactions, :refund_request, :booking_rooms, booking_folio: :folio_transactions)
+          .to_a
+      end
     end
 
     def missing_folio_bookings
@@ -125,7 +128,7 @@ module NightAudits
       @nightly_charge_bookings ||= hotel_bookings
         .includes(:booking_rooms, booking_folios: [ :folio_transactions ])
         .checked_in
-        .where("check_in::date <= ? AND check_out::date > ?", @business_date, @business_date)
+        .occupying_night_on(@business_date, @hotel.hotel_time_zone)
         .to_a
     end
 
@@ -149,7 +152,8 @@ module NightAudits
       @outstanding_balance_bookings ||= financially_relevant_bookings.select do |booking|
         next false unless booking.booking_folio
         next false if booking.status == "no_show"
-        next false unless booking.check_out.to_date == @business_date || booking.status == "completed"
+        departure_date = Bookings::ScheduledStay.local_date(hotel: @hotel, value: booking.check_out)
+        next false unless departure_date == @business_date || booking.status == "completed"
 
         folio_outstanding_balance(booking.booking_folio) != 0.to_d
       end

@@ -47,8 +47,8 @@ module Folios
       def bookings_to_post
         @bookings_to_post ||= @hotel.bookings
           .includes(:booking_rooms, :booking_folio)
-          .where(status: "checked_in")
-          .where("check_in::date <= ? AND check_out::date > ?", @business_date, @business_date)
+          .checked_in
+          .occupying_night_on(@business_date, @hotel.hotel_time_zone)
       end
 
       def post_accommodation_charges(booking)

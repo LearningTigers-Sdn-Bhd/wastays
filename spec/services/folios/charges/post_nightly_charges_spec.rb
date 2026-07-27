@@ -115,6 +115,38 @@ RSpec.describe Folios::Charges::PostNightlyCharges do
     }.not_to change { folio.folio_transactions.charge.count }
   end
 
+  it "posts every hotel-local night when UTC timestamps fall on the previous date" do
+    hotel.update!(time_zone: "Kuala Lumpur")
+    zone = hotel.hotel_time_zone
+    stay_dates = (Date.new(2026, 7, 23)..Date.new(2026, 7, 25)).to_a
+    booking = create(:booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: zone.local(2026, 7, 23, 0, 0),
+      check_out: zone.local(2026, 7, 26, 0, 0),
+      tax_posting_snapshot: stay_dates.index_with { |date| [ { "name" => "SST", "amount" => "0.80", "type" => "sst" } ] }.transform_keys(&:iso8601))
+    room = create(:booking_room,
+      booking: booking,
+      subtotal: 30.0,
+      nightly_rate_snapshot: stay_dates.index_with { |date| { "price" => "10.00" } }.transform_keys(&:iso8601))
+    folio = create(:booking_folio, hotel: hotel, booking: booking)
+
+    ([ Date.new(2026, 7, 22) ] + stay_dates + [ Date.new(2026, 7, 26) ]).each do |date|
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: date)
+      start_business_date_audit(hotel)
+      audit = create(:night_audit, hotel: hotel, business_date: date, performed_by_user: user, status: "running")
+      described_class.call(night_audit: audit, user: user)
+    end
+
+    expect(folio.folio_transactions.charge.where(category: "accommodation").order(:posting_date).pluck(:posting_date, :amount)).to eq(
+      stay_dates.map { |date| [ date, 10.to_d ] }
+    )
+    expect(folio.folio_transactions.charge.where(category: "tax").order(:posting_date).pluck(:posting_date, :amount)).to eq(
+      stay_dates.map { |date| [ date, 0.8.to_d ] }
+    )
+    expect(folio.folio_transactions.where("metadata->>'forecast_identity' = ?", room.id.to_s).count).to eq(3)
+  end
+
   it "does not duplicate nightly charges" do
     booking = create(:booking,
       hotel: hotel,

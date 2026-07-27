@@ -504,6 +504,7 @@ Rails.application.routes.draw do
         get :blockers
         post :resolve_missing_folio
         post :resolve_missing_nightly_charges
+        post :repair_completed_nightly_charges
       end
     end
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do

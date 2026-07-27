@@ -8,13 +8,22 @@ module Folios
       private
 
       def nightly_amount(total_amount, booking, business_date)
-        nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
+        stay_dates = booking_stay_dates(booking)
+        nights = stay_dates.length
         return 0.to_d unless nights.positive?
 
         per_night = (total_amount.to_d / nights).round(2)
-        return per_night unless business_date.to_date == booking.check_out.to_date - 1.day
+        return per_night unless business_date.to_date == stay_dates.last
 
         total_amount.to_d - (per_night * (nights - 1))
+      end
+
+      def booking_stay_dates(booking)
+        Bookings::ScheduledStay.stay_dates(
+          hotel: booking.hotel,
+          check_in: booking.check_in,
+          check_out: booking.check_out
+        )
       end
 
       def tax_lines_for(booking)

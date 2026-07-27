@@ -92,7 +92,7 @@ module Folios
       end
 
       def validate_all_nights_posted(folios)
-        checkout_date = @booking.check_out.to_date
+        checkout_date = Bookings::ScheduledStay.local_date(hotel: @booking.hotel, value: @booking.check_out)
         unsettled = FolioForecastedCharge.where(booking_folio_id: folios.map(&:id)).forecast
           .where(arel_table[:stay_date].lt(checkout_date))
           .reject { |forecast| matching_posted_charge_exists?(forecast) }

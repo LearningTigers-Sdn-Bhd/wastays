@@ -74,11 +74,11 @@ module Folios
       end
 
       def dates_to_check
-        final_stay_date = @booking.check_out.to_date - 1.day
-        return [] if final_stay_date < @booking.check_in.to_date
+        stay_dates = booking_stay_dates(@booking)
+        return [] if stay_dates.empty?
 
         @hotel.night_audits.where(status: "completed")
-          .where(business_date: @booking.check_in.to_date..final_stay_date)
+          .where(business_date: stay_dates.first..stay_dates.last)
           .order(:business_date)
           .pluck(:business_date)
       end

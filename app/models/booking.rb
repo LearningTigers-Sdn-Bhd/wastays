@@ -150,6 +150,15 @@ class Booking < ApplicationRecord
   scope :checking_out_between, ->(start_date, end_date, zone = Time.zone) {
     where(check_out: start_date.to_date.in_time_zone(zone).beginning_of_day..end_date.to_date.in_time_zone(zone).end_of_day)
   }
+  scope :occupying_night_on, ->(date, zone = Time.zone) {
+    next_day_start = (date.to_date + 1.day).in_time_zone(zone).beginning_of_day
+    where("check_in < ? AND check_out >= ?", next_day_start, next_day_start)
+  }
+  scope :intersecting_local_date, ->(date, zone = Time.zone) {
+    day_start = date.to_date.in_time_zone(zone).beginning_of_day
+    next_day_start = (date.to_date + 1.day).in_time_zone(zone).beginning_of_day
+    where("check_in < ? AND check_out >= ?", next_day_start, day_start)
+  }
 
   scope :unbatched_upcoming, ->(cutoff_date) {
     completed.where(payout_batch_id: nil).where("checked_out_at > ?", cutoff_date)

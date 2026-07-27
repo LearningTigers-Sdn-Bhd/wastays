@@ -97,7 +97,11 @@ module Folios
       end
 
       def snapshot_for_room(room, quantity)
-        (room.booking.check_in.to_date...room.booking.check_out.to_date).index_with do |date|
+        Bookings::ScheduledStay.stay_dates(
+          hotel: room.booking.hotel,
+          check_in: room.booking.check_in,
+          check_out: room.booking.check_out
+        ).index_with do |date|
           amount = nightly_room_amount(room, date)
           price = quantity.positive? ? amount.to_d / quantity : amount.to_d
 

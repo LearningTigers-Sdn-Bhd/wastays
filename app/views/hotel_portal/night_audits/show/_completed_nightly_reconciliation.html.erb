@@ -1,0 +1,80 @@
+<% if presenter.completed_reconciliation_visible? %>
+  <section class="mb-4 overflow-hidden rounded-xl border border-border bg-card shadow-sm" data-testid="completed-nightly-reconciliation">
+    <header class="border-b border-border bg-muted/70 px-4 py-3">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h2 class="inline-flex items-center gap-2 text-base font-semibold text-foreground">
+            <%= app_icon "bed-double", class: "size-4", aria: { hidden: true } %>
+            Nightly charge reconciliation
+          </h2>
+          <p class="mt-1 text-sm text-muted-foreground">Preview room and tax lines recorded for this closed business date before posting a correction.</p>
+        </div>
+        <%= render PanelsUI::Badge.new(
+              label: "#{presenter.historical_repair_rows.count} affected",
+              variant: presenter.historical_repair_rows.any? ? :warning : :success) %>
+      </div>
+    </header>
+
+    <% if presenter.historical_repair_rows.any? %>
+      <div class="divide-y divide-border">
+        <% presenter.historical_repair_rows.each do |row| %>
+          <article class="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.7fr)]" data-booking-id="<%= row.booking_id %>">
+            <div class="space-y-3">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 class="text-sm font-semibold text-foreground"><%= row.guest %></h3>
+                  <p class="text-xs text-muted-foreground"><%= row.reference %> · <%= pluralize(row.issue_count, "nightly line") %></p>
+                </div>
+                <p class="text-sm font-semibold tabular-nums text-foreground"><%= row.expected_total %> expected</p>
+              </div>
+              <div class="flex flex-wrap gap-2" aria-label="Detected issues">
+                <% row.issue_labels.each do |label| %>
+                  <%= render PanelsUI::Badge.new(label: label, variant: :warning) %>
+                <% end %>
+              </div>
+              <ul class="space-y-1 text-xs text-muted-foreground">
+                <% row.line_details.each do |detail| %>
+                  <li><%= detail %></li>
+                <% end %>
+              </ul>
+            </div>
+
+            <% if presenter.can_repair_completed_audit? %>
+              <%= form_with url: repair_completed_nightly_charges_hotel_night_audit_path(current_hotel, presenter.night_audit), method: :post, scope: :repair, class: "space-y-3" do |form| %>
+                <%= form.hidden_field :booking_id, value: row.booking_id %>
+                <%= render PanelsUI::FormField.new(
+                      form: form,
+                      attribute: :reason,
+                      label: "Correction reason",
+                      hint: "Recorded in the folio, audit log, and closed-date override trail.",
+                      required: true) do |field| %>
+                  <% field.with_text_area(rows: 3, placeholder: "Explain why this historical correction is required") %>
+                <% end %>
+                <%= render PanelsUI::Button.new(
+                      as: :button,
+                      type: :submit,
+                      variant: :warning,
+                      size: :sm,
+                      class: "w-full sm:w-auto",
+                      data: {
+                        turbo_confirm: "Post the previewed nightly corrections to this closed business date?",
+                        turbo_submits_with: "Repairing…"
+                      }) do %>
+                  Repair previewed lines
+                <% end %>
+              <% end %>
+            <% else %>
+              <%= render PanelsUI::Alert.new(tone: :warning, title: "Closed-date override required") do |alert| %>
+                <% alert.with_description do %>
+                  You can review these lines, but repairing them requires Night Audit management and financial date override permissions.
+                <% end %>
+              <% end %>
+            <% end %>
+          </article>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="px-4 py-4 text-sm text-muted-foreground">All expected nightly room and tax lines are reconciled for this business date.</p>
+    <% end %>
+  </section>
+<% end %>

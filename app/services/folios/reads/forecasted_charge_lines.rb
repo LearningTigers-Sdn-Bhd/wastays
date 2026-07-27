@@ -68,7 +68,11 @@ module Folios
       end
 
       def stay_dates
-        booking_dates = (@booking.check_in.to_date...@booking.check_out.to_date).to_a
+        booking_dates = Bookings::ScheduledStay.stay_dates(
+          hotel: @booking.hotel,
+          check_in: @booking.check_in,
+          check_out: @booking.check_out
+        )
         return booking_dates if @dates.blank?
 
         requested_dates = Array(@dates).flat_map { |value| value.is_a?(Range) ? value.to_a : value }.map(&:to_date)

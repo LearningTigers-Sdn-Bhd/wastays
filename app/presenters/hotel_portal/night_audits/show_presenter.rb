@@ -8,6 +8,7 @@ module HotelPortal
     ResultRow = Struct.new(:result, :reference, :details, :amount, :tone, keyword_init: true)
     IssueRow = Struct.new(:type, :guest, :reference, :details, :tone, keyword_init: true)
     AdjustmentRow = Struct.new(:time, :guest, :reference, :category, :user, :amount, :reason, keyword_init: true)
+    HistoricalRepairRow = Struct.new(:booking_id, :guest, :reference, :issue_count, :issue_labels, :line_details, :expected_total, keyword_init: true)
 
     PAYMENT_STATUS_ORDER = %w[partial pending captured failed refunded voided].freeze
     RUN_RESULT_DEFINITIONS = [
@@ -19,11 +20,13 @@ module HotelPortal
     BLOCKER_LABELS = { "missing_folio" => "Accounting blocker" }.freeze
     WARNING_LABELS = { "review_due_out" => "Due-out review carried forward" }.freeze
 
-    attr_reader :night_audit, :adjustments, :view
+    attr_reader :night_audit, :adjustments, :completed_nightly_review, :current_user, :view
 
-    def initialize(night_audit:, adjustments:, view_context:)
+    def initialize(night_audit:, adjustments:, view_context:, completed_nightly_review: [], current_user: nil)
       @night_audit = night_audit
       @adjustments = adjustments
+      @completed_nightly_review = completed_nightly_review
+      @current_user = current_user
       @view = view_context
     end
 
@@ -178,6 +181,36 @@ module HotelPortal
           reason: adjustment.metadata["reason"].presence || "—"
         )
       end
+    end
+
+    def historical_repair_rows
+      @historical_repair_rows ||= completed_nightly_review.map do |entry|
+        issue_labels = entry.issues.flat_map { |issue| issue["issue_types"] }.uniq.map(&:humanize)
+        line_details = entry.issues.map do |issue|
+          [ issue["description"], issue["expected_folio_reference"], money(issue["expected_amount"]) ].compact.join(" · ")
+        end
+
+        HistoricalRepairRow.new(
+          booking_id: entry.booking.id,
+          guest: entry.booking.guest_name,
+          reference: entry.booking.confirmation_token,
+          issue_count: entry.issues.count,
+          issue_labels: issue_labels,
+          line_details: line_details,
+          expected_total: money(entry.expected_total)
+        )
+      end
+    end
+
+    def completed_reconciliation_visible?
+      night_audit.completed?
+    end
+
+    def can_repair_completed_audit?
+      return false unless current_user&.respond_to?(:has_permission?)
+
+      current_user.has_permission?("manage_night_audit", hotel: night_audit.hotel) &&
+        current_user.has_permission?(FinancialControls::PostingGuard::OVERRIDE_PERMISSION, hotel: night_audit.hotel)
     end
 
     def empty_state(key)

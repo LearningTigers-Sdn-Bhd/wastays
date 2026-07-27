@@ -40,12 +40,19 @@ module HotelPortal
         .where(created_at: current_hotel.business_day_window_for(@night_audit.business_date))
         .includes(:user, booking_folio: :booking)
         .order(:created_at)
+      @completed_nightly_review = if @night_audit.completed?
+        ::NightAudits::CompletedNightlyChargeReview.call(night_audit: @night_audit)
+      else
+        []
+      end
 
       respond_to do |format|
         format.html do
           @presenter = HotelPortal::NightAudits::ShowPresenter.new(
             night_audit: @night_audit,
             adjustments: @adjustments,
+            completed_nightly_review: @completed_nightly_review,
+            current_user: current_user,
             view_context: view_context
           )
         end
@@ -109,6 +116,21 @@ module HotelPortal
       else
         redirect_to resolve_hotel_night_audit_path(current_hotel, @night_audit), alert: result.message
       end
+    end
+
+    def repair_completed_nightly_charges
+      @night_audit = current_hotel.night_audits.find(params[:id])
+      booking = current_hotel.bookings.find(params.dig(:repair, :booking_id))
+
+      result = ::NightAudits::RepairCompletedNightlyCharges.call(
+        night_audit: @night_audit,
+        booking: booking,
+        actor: current_user,
+        reason: params.dig(:repair, :reason)
+      )
+
+      redirect_to hotel_night_audit_path(current_hotel, @night_audit, tab: "advanced-actions"),
+        (result.success? ? { notice: result.message } : { alert: result.message })
     end
 
     def create

@@ -8,13 +8,14 @@ module Folios
       # entry came out clean; issues is the flattened list the audit blocker reads.
       Report = Data.define(:"valid?", :entries, :issues)
 
-      def self.call(booking:, business_date:)
-        new(booking: booking, business_date: business_date).call
+      def self.call(booking:, business_date:, allow_closed_folio: false)
+        new(booking: booking, business_date: business_date, allow_closed_folio: allow_closed_folio).call
       end
 
-      def initialize(booking:, business_date:)
+      def initialize(booking:, business_date:, allow_closed_folio: false)
         @booking = booking
         @business_date = business_date.to_date
+        @allow_closed_folio = allow_closed_folio
       end
 
       def call
@@ -54,7 +55,8 @@ module Folios
         Routing::ResolveTargetFolio.call(
           booking: @booking,
           transaction_code: line[:transaction_code],
-          fallback_transaction_code: line[:fallback_transaction_code]
+          fallback_transaction_code: line[:fallback_transaction_code],
+          allow_closed_folio: @allow_closed_folio
         )
       end
 

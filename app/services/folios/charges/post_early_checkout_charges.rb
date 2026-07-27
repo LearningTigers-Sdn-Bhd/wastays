@@ -55,7 +55,7 @@ module Folios
         @folio = folio
         @user = user
         @departure_date = departure_date.to_date
-        @original_check_out = original_check_out.to_date
+        @original_check_out = Bookings::ScheduledStay.local_date(hotel: @booking.hotel, value: original_check_out)
         @options = options
       end
 
@@ -214,7 +214,8 @@ module Folios
       end
 
       def nightly_amount(total_amount, date)
-        nights = (@original_check_out - @booking.check_in.to_date).to_i
+        arrival_date = Bookings::ScheduledStay.local_date(hotel: @booking.hotel, value: @booking.check_in)
+        nights = (@original_check_out - arrival_date).to_i
         return 0.to_d unless nights.positive?
 
         per_night = (total_amount.to_d / nights).round(2)
