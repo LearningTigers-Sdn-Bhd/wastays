@@ -173,6 +173,7 @@ RSpec.describe HotelDemoManagement::ResetState do
       expect(CorporateArPaymentIntent.where(id: ar_intent.id)).to be_empty
       expect(PaymentTransaction.where(id: ar_payment_transaction.id)).to be_empty
       expect(LegacyBookingSplitLineage.where(id: lineage.id)).to be_empty
+      expect(GroupBooking.where(id: group_booking.id)).to be_empty
       expect(BookingTaxInclusionOverride.where(id: tax_override.id)).to be_empty
       expect(hotel.night_audits).to be_empty
       expect(hotel.hotel_business_dates.current.count).to eq(1)

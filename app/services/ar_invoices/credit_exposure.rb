@@ -14,6 +14,9 @@ module ArInvoices
       :usage_percentage,
       :warning_state,
       :warning_message,
+      :limit_warning_state,
+      :limit_warning_message,
+      :non_comparable_currencies,
       keyword_init: true
     ) do
       def warning?
@@ -26,6 +29,14 @@ module ArInvoices
 
       def near_limit?
         warning_state == "near_limit"
+      end
+
+      def currency_mismatch?
+        non_comparable_currencies.any?
+      end
+
+      def requires_override?
+        over_limit? || currency_mismatch?
       end
     end
 
@@ -53,7 +64,10 @@ module ArInvoices
         credit_currency: credit_currency,
         usage_percentage: usage_percentage,
         warning_state: warning_state,
-        warning_message: warning_message
+        warning_message: warning_message,
+        limit_warning_state: limit_warning_state,
+        limit_warning_message: warning_message_for(limit_warning_state),
+        non_comparable_currencies: non_comparable_currencies
       )
     end
 
@@ -85,6 +99,18 @@ module ArInvoices
       0.to_d
     end
 
+    def non_comparable_currencies
+      @non_comparable_currencies ||= begin
+        currencies = @hotel_corporate_account.ar_invoices
+          .with_open_balance
+          .where.not(currency: credit_currency)
+          .distinct
+          .pluck(:currency)
+        currencies << @pending_currency if @pending_amount.positive? && @pending_currency.present? && @pending_currency != credit_currency
+        currencies.compact_blank.uniq.sort
+      end
+    end
+
     def usage_percentage
       return nil if credit_limit.blank? || credit_limit.zero?
 
@@ -92,6 +118,12 @@ module ArInvoices
     end
 
     def warning_state
+      return "currency_mismatch" if non_comparable_currencies.any?
+
+      limit_warning_state
+    end
+
+    def limit_warning_state
       return "no_limit" if credit_limit.blank?
       return "over_limit" if projected_exposure > credit_limit
       return "near_limit" if usage_percentage.present? && usage_percentage >= WARNING_THRESHOLD
@@ -100,13 +132,19 @@ module ArInvoices
     end
 
     def warning_message
-      case warning_state
+      warning_message_for(warning_state)
+    end
+
+    def warning_message_for(state)
+      case state
       when "no_limit"
         "No credit limit is set for this corporate account. Direct Bill is still allowed."
       when "near_limit"
         "Projected AR exposure #{money(projected_exposure)} is #{usage_percentage.to_i}% of credit limit #{money(credit_limit)}. Direct Bill is still allowed."
       when "over_limit"
-        "Projected AR exposure #{money(projected_exposure)} exceeds credit limit #{money(credit_limit)}. Direct Bill is still allowed."
+        "Projected AR exposure #{money(projected_exposure)} exceeds credit limit #{money(credit_limit)}. An authorized override is required."
+      when "currency_mismatch"
+        "AR exposure in #{non_comparable_currencies.join(', ')} cannot be compared with the #{credit_currency} credit limit. An authorized override is required."
       end
     end
 

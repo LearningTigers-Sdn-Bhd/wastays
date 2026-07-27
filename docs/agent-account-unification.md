@@ -24,7 +24,7 @@ Status: **Done** (2026-07-13)
 - [x] `HotelCorporateAccount`: `UNAVAILABLE_ACCOUNT_TYPES` emptied (was `[travel_agent]`)
 - [x] `HotelCorporateAccount`: added `agent_code`, `contact_email`, `contact_phone` columns (migration `20260713100101`), `agent_code` unique scoped to `hotel_id`, 6-char generator ported from `AgentAccount`, runs `before_validation on: :create` for every account type (not just agents)
 - [x] `BookingBillingParty`: `airline` added to `ACCOUNT_TYPES`, `UNAVAILABLE_ACCOUNT_TYPES` emptied
-- [x] `_party_list.html.erb`: "(coming soon)" auto-resolved (reads `UNAVAILABLE_ACCOUNT_TYPES` dynamically); relabeled "Company / Government account" → "Corporate account"
+- [x] `_party_list.html.erb`: "(coming soon)" auto-resolved (reads `UNAVAILABLE_ACCOUNT_TYPES` dynamically); uses the unified "Corporate account" label
 - [x] Data migration `20260713100102`: for each `AgentAccount` → `Account`(corporate) + `HotelCorporateAccount` carrying `account_type`, `agent_code`, `contact_email`, `contact_phone` (0 rows existed in dev DB, logic verified by code path)
 - [x] Renamed `bookings.agent_account_id` / `booking_quotes.agent_account_id` → `hotel_corporate_account_id`, backfilled in the same migration, old FK/column/table dropped
 - [x] Retired `AgentAccount` model, `agent_accounts` table, `hotel_portal/agent_accounts_controller.rb` + views + helper, `agent_account_policy.rb`, route, specs (model/request/view specs deleted; system spec + factory usage updated to `hotel_corporate_account`)
@@ -44,7 +44,7 @@ Status: **Done** (2026-07-13)
 - [x] `BookingEngine::AvailabilityService`: unaffected — keys off boolean `corporate_rate` param, not the id, no change needed
 - [x] `Folios::InitializeForBooking#create_folio!`: when `booking.hotel_corporate_account_id` is present and the account is `active?`, auto-creates/reuses a `BookingBillingParty` (`party_kind: "company"`) and makes the **primary folio itself** `folio_type: "external"`, `payer_type: "company"` — not a second folio, since `Folios::ResolveTargetFolio`'s no-routing-rule fallback always targets `booking.booking_folio` (the primary), so a second folio wouldn't receive nightly charges without also configuring a `FolioRoutingRule` (a separate manual staff feature, out of scope here). Falls back to the normal guest folio if the linked account is suspended.
   - Confirmed this composes correctly with existing checkout logic in `Folios::CloseForCheckout#valid_direct_bill_close?`: whether checkout can close with an outstanding balance depends on the account's `direct_bill_enabled` flag (already exists, defaults false) — maps directly onto "local agents pay at confirmation, international agents pay net-30" from the spec, no further code needed for that distinction.
-  - Design decision confirmed with user: **auto** (not manual-only like today's company/government flow), since local agents expect billing to just work.
+  - Design decision confirmed with user: **auto** rather than manual-only, since local agents expect billing to just work.
   - Tests: 2 new specs in `spec/services/folios/initialize_for_booking_spec.rb` (happy path + suspended-account fallback). Full run: `spec/services/folios/ spec/services/booking_engine/confirm_booking_spec.rb spec/system/public/booking_features_spec.rb` → 287 examples, 0 failures.
 
 ## Phase 3 — "Register Agent" UI (hotel_portal)
@@ -56,7 +56,7 @@ Status: **Done** (2026-07-13)
 - [x] `hotel_portal/corporate_accounts_controller.rb`: `create` permits `account_type`
 - [x] `corporate_accounts/new.html.erb`: added an account type `<select>` to the single "Invite Corporate Account" form — no separate "Register Agent" entry point; a `?account_type=`-driven header/pre-select and a second "Register Agent" button were tried and then removed as redundant (one form with a type dropdown covers both, per user feedback)
 - [x] `corporate_accounts/index.html.erb`: single "Invite Corporate Account" button; table shows account type + `agent_code` per row, and pending invitations show their account type
-- [x] Generalized "Company & Government Account" wording → "Corporate Account" in `CreateService`/`AcceptService` user-facing error messages, since the flow now serves all four account types
+- [x] Standardized `CreateService`/`AcceptService` user-facing error messages on "Corporate Account", since the flow serves all four account types
 - [x] Tests: 3 new specs (`create_service_spec.rb` account_type default/passthrough, `accept_service_spec.rb` account_type + agent_code generation on acceptance). Full run: `spec/services/corporate_invitations/ spec/models/corporate_invitation_spec.rb spec/requests/hotel_portal/corporate_accounts_spec.rb` → 29 examples, 0 failures. `new`/`index` view rendering already covered by existing request specs.
 
 ## Phase 4 — Dashboard / Invoice / SOA / Aging

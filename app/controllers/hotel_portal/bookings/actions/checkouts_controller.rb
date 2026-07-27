@@ -93,7 +93,7 @@ module HotelPortal
 
           permitted = raw_params.respond_to?(:to_unsafe_h) ? raw_params.to_unsafe_h : raw_params.to_h
           permitted.transform_values do |value|
-            value.to_h.slice("action", "amount", "payment_method", "payment_reference", "reason")
+            value.to_h.slice("action", "amount", "payment_method", "payment_reference", "reason", "credit_override", "credit_override_reason")
           end
         end
 

@@ -2,14 +2,14 @@
 
 module Folios
   module Routing
-    # Bill a booking's room charges to a company billing party.
+    # Bill a booking's room charges to a Corporate Account billing party.
     #
     # Resolves/ensures the billing party and its folio, then delegates to the
     # kind-agnostic routing core to route room revenue onto that folio. The
     # guest's primary folio is never reassigned — it keeps incidentals and
     # tourism tax (which has no rule and therefore stays on the primary folio).
     #
-    # Only company/government parties are wired today. Guest/agent parties slot
+    # Corporate Account parties use this route. Guest parties slot
     # in as additional branches in `resolve_target_folio` with no change to the
     # routing core.
     class BillRoomChargesToCompany

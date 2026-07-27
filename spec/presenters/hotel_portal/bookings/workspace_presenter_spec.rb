@@ -852,6 +852,42 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(folio_rows.map(&:outstanding)).to all(eq("MYR 0.00"))
     end
 
+    it "shows the specific external account type in folio rail payer labels" do
+      expected_labels = {
+        "company" => "Company",
+        "government" => "Government",
+        "travel_agent" => "Travel agency",
+        "airline" => "Airline"
+      }
+
+      expected_labels.each do |account_type, label|
+        account = create(:hotel_corporate_account, hotel: hotel, account_type: account_type)
+        party = create(
+          :booking_billing_party,
+          booking: booking,
+          hotel: hotel,
+          hotel_corporate_account: account,
+          account_type: account_type
+        )
+        create(
+          :booking_folio,
+          :secondary,
+          booking: booking,
+          hotel: hotel,
+          hotel_corporate_account: account,
+          booking_billing_party: party
+        )
+
+        payer_lines = described_class.new(
+          booking.reload,
+          params: { tab: "folio_operations" },
+          hotel: hotel
+        ).folio_tree_groups.flat_map(&:rows).map(&:payer_line)
+
+        expect(payer_lines).to include("#{label} : #{party.display_name}")
+      end
+    end
+
     it "treats legacy group scope as an entity view and selects the explicit folio" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
@@ -967,18 +1003,49 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
       expect(rows.map(&:label)).to include("Aina Rahman", company_party.display_name)
       expect(rows.find { |row| row.record == guest_party }).to have_attributes(kind: "Guest", role: "Primary guest", folio_count: 1, folio_labels: [ guest_folio.display_name ])
-      expect(rows.find { |row| row.record == company_party }).to have_attributes(kind: "Company", role: "Company / Government account", folio_count: 1, folio_labels: [ company_folio.display_name ])
+      expect(rows.find { |row| row.record == company_party }).to have_attributes(kind: "Company", role: "Corporate Account", folio_count: 1, folio_labels: [ company_folio.display_name ])
     end
 
-    it "groups folio-window billing party options for guests and companies" do
+    it "shows the specific account type on external billing party rows" do
+      expected_labels = {
+        "company" => "Company",
+        "government" => "Government",
+        "travel_agent" => "Travel agency",
+        "airline" => "Airline"
+      }
+
+      parties = expected_labels.map do |account_type, _label|
+        account = create(:hotel_corporate_account, hotel: hotel, account_type: account_type)
+        create(
+          :booking_billing_party,
+          booking: booking,
+          hotel: hotel,
+          hotel_corporate_account: account,
+          account_type: account_type
+        )
+      end
+
+      rows = described_class.new(booking.reload, params: { tab: "billing_preferences" }).billing_party_rows
+
+      parties.each do |party|
+        label = expected_labels.fetch(party.account_type)
+        expect(rows.find { |row| row.record == party }).to have_attributes(
+          kind: label,
+          role: "Corporate Account",
+          description: "Account settlement"
+        )
+      end
+    end
+
+    it "groups folio-window billing party options for guests and Corporate Accounts" do
       create(:booking_guest, booking: booking, guest: create(:guest, name: "Aina Rahman"), is_primary: true)
       create(:booking_billing_party, :company, booking: booking, hotel: hotel)
 
       groups = described_class.new(booking, params: { tab: "folio_operations" }).folio_window_billing_party_option_groups
 
-      expect(groups.keys).to include("Guests", "Companies / Government")
+      expect(groups.keys).to include("Guests", "Corporate Accounts")
       expect(groups["Guests"].map(&:label)).to include("Aina Rahman")
-      expect(groups["Companies / Government"].first.description).to include("Company / Government account")
+      expect(groups["Corporate Accounts"].first.description).to include("Corporate Account")
     end
 
     it "consolidates housekeeping and complaints into kanban columns" do

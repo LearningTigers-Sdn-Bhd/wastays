@@ -176,14 +176,14 @@
         <table class="w-full border-collapse border-separate border-spacing-0" data-testid="inventory-calendar-grid">
           <thead>
             <tr class="border-b border-border">
-              <th class="sticky left-0 z-30 w-60 min-w-60 max-w-60 border-b border-r border-border bg-muted px-4 py-3 text-left shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)]">
+              <th class="sticky left-0 z-30 w-60 min-w-60 max-w-60 border-b border-r border-border bg-muted px-4 py-1.5 text-left shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)]">
                 <span class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Room / Rate plan</span>
               </th>
               <% @calendar.dates.each do |date| %>
                 <% 
                   weekend = [5, 6].include?(date.wday)
                   
-                  th_class = "min-w-[86px] border-b border-r border-border px-2 py-2 text-center last:border-r-0 transition-colors "
+                  th_class = "min-w-[86px] border-b border-r border-border px-2 py-1 text-center last:border-r-0 transition-colors "
                   th_class += weekend ? "bg-indigo-100/70" : "bg-muted"
 
                   day_class = "text-[10px] font-semibold uppercase tracking-wide "
@@ -218,7 +218,7 @@
                 <% room_side_class = "border-r border-border" %>
                 <% if row.inventory_row? %>
                   <tr class="<%= room_border_class %>" data-inventory-row-target="row">
-                    <td class="sticky left-0 z-20 <%= room_border_class %> <%= room_side_class %> bg-card px-3 py-2.5 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
+                    <td class="sticky left-0 z-20 <%= room_border_class %> <%= room_side_class %> bg-card px-3 py-1.5 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
                       <button type="button"
                               data-action="inventory-row#toggle"
                               data-room-type-id="<%= row.room_type_id %>"
@@ -241,9 +241,9 @@
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
                       <% weekend = [5, 6].include?(date.wday) %>
-                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-2 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
+                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-1 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
                         <button type="button"
-                                class="w-full px-1 sm:px-2 py-2 text-center transition hover:bg-muted rounded-lg group"
+                                class="w-full px-1 sm:px-2 py-1 text-center transition hover:bg-muted rounded-lg group"
                                 data-testid="availability-cell-<%= row.room_type_id %>-<%= date %>"
                                 data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
                                 data-mode="availability"
@@ -272,7 +272,7 @@
                               { text: "text-emerald-600", bar: "bg-emerald-400", track: "bg-emerald-100" }
                             end
                           %>
-                          <div class="flex flex-col items-center gap-1">
+                          <div class="flex flex-col items-center gap-0.5">
                             <div class="flex items-baseline gap-1">
                               <span class="text-xs font-semibold tabular-nums <%= tone[:text] %>"><%= open %></span>
                               <span class="text-[12px] text-muted-foreground">open</span>
@@ -291,7 +291,7 @@
                       data-inventory-row-target="row"
                       data-parent-room-type-id="<%= row.room_type_id %>"
                       class="<%= room_border_class %> bg-muted/60">
-                    <td class="sticky left-0 z-20 <%= room_border_class %> <%= room_side_class %> bg-muted px-3 py-1.5 pl-10 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader" data-original-color="bg-muted">
+                    <td class="sticky left-0 z-20 <%= room_border_class %> <%= room_side_class %> bg-muted px-3 py-0.5 pl-10 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader" data-original-color="bg-muted">
                       <% if @calendar.connected_channels.any? %>
                         <button type="button"
                                 data-action="inventory-row#toggleAvailability"
@@ -305,8 +305,8 @@
                     </td>
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
-                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-1.5 text-center last:border-r-0">
-                        <div class="flex flex-col items-center gap-1">
+                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-0.5 text-center last:border-r-0">
+                        <div class="flex flex-col items-center gap-0.5">
                           <div class="flex items-center justify-center gap-0.5">
                             <% cell[:channels].each do |ch| %>
                               <span title="<%= ch[:channel_name] %> · <%= ch[:open] ? 'open' : 'closed' %>"
@@ -338,7 +338,7 @@
                       data-inventory-row-target="row"
                       data-parent-room-type-id="<%= row.room_type_id %>"
                       class="<%= room_border_class %> bg-card">
-                    <td class="sticky left-0 z-20 <%= room_border_class %> <%= room_side_class %> bg-card py-1.5 pl-14 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
+                    <td class="sticky left-0 z-20 <%= room_border_class %> <%= room_side_class %> bg-card py-0.5 pl-14 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
                       <% 
                         channel_name = row.channel["attributes"]["title"]
                         channel_code = row.channel["attributes"]["channel"]
@@ -355,7 +355,7 @@
                     </td>
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
-                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-1 text-center last:border-r-0">
+                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-0.5 text-center last:border-r-0">
                         <button type="button"
                                 class="relative inline-flex min-w-[52px] items-center justify-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums transition cursor-not-allowed opacity-75 <%= cell[:closed] ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600' %>"
                                 data-testid="channel-availability-cell-<%= row.room_type_id %>-<%= cell[:channel_id] %>-<%= date %>"
@@ -377,7 +377,7 @@
                   <tr data-inventory-row-target="row"
                       data-parent-room-type-id="<%= row.room_type_id %>"
                       class="<%= room_border_class %> bg-card transition-colors hover:bg-muted/50">
-                    <td class="sticky left-0 z-20 <%= room_border_class %> <%= room_side_class %> bg-card py-2 pl-10 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
+                    <td class="sticky left-0 z-20 <%= room_border_class %> <%= room_side_class %> bg-card py-1 pl-10 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
                       <%
                         rtrp = row.room_type.room_type_rate_plans.find_by(rate_plan: row.rate_plan)
                         ext_rp_id = rtrp&.channel_mapping&.external_id
@@ -399,9 +399,9 @@
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
                       <% weekend = [5, 6].include?(date.wday) %>
-                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-1.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
+                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-0.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
                         <button type="button"
-                                class="group relative mx-auto block rounded-md px-2 py-1 text-sm font-medium tabular-nums text-foreground hover:bg-muted hover:text-foreground transition-colors w-full"
+                                class="group relative mx-auto block rounded-md px-2 py-0.5 text-sm font-medium tabular-nums text-foreground hover:bg-muted hover:text-foreground transition-colors w-full"
                                 data-testid="rate-cell-<%= row.room_type_id %>-<%= row.rate_plan_id %>-<%= date %>"
                                 data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
                                 data-mode="rates"
@@ -420,7 +420,7 @@
                                 data-extra-pax-charge="<%= cell[:extra_pax_charge] %>"
                                 data-sell-mode="<%= cell[:sell_mode] %>">
                           
-                          <div class="flex flex-col items-center justify-center min-h-[20px] relative">
+                          <div class="flex flex-col items-center justify-center min-h-[16px] relative">
                             <% if cell[:conversion_missing] %>
                               <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
                             <% else %>
@@ -430,7 +430,7 @@
                             <% end %>
                           </div>
                           <% if cell[:restriction_compact].present? %>
-                            <span class="mt-1 block truncate text-center text-[7px] sm:text-[8px] font-bold uppercase tracking-[0.02em] text-amber-700 bg-amber-50 rounded px-0.5 sm:px-1"><%= cell[:restriction_compact] %></span>
+                            <span class="mt-0.5 block truncate text-center text-[7px] sm:text-[8px] font-bold uppercase tracking-[0.02em] text-amber-700 bg-amber-50 rounded px-0.5 sm:px-1"><%= cell[:restriction_compact] %></span>
                           <% end %>
                         </button>
                       </td>
@@ -442,7 +442,7 @@
                       data-parent-room-type-id="<%= row.room_type_id %>"
                       data-parent-rate-plan-row-id="room-<%= row.room_type_id %>-rate-<%= row.rate_plan_id %>"
                       class="<%= room_border_class %> bg-muted/40">
-                    <td class="sticky left-0 z-20 <%= room_border_class %> <%= room_side_class %> bg-muted py-1 pl-14 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader" data-original-color="bg-muted">
+                    <td class="sticky left-0 z-20 <%= room_border_class %> <%= room_side_class %> bg-muted py-0.5 pl-14 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader" data-original-color="bg-muted">
                       <% 
                         channel_name = row.channel["attributes"]["title"]
                         channel_code = row.channel["attributes"]["channel"]
@@ -467,9 +467,9 @@
                     </td>
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
-                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-1 text-center last:border-r-0">
+                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-0.5 text-center last:border-r-0">
                         <button type="button"
-                                class="relative w-full bg-transparent px-1 py-1 text-center transition cursor-not-allowed"
+                                class="relative w-full bg-transparent px-1 py-0.5 text-center transition cursor-not-allowed"
                                 disabled
                                 data-testid="channel-rate-cell-<%= row.room_type_id %>-<%= row.rate_plan_id %>-<%= cell[:channel_rate_plan_id] %>-<%= date %>"
                                 data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear"
@@ -492,7 +492,7 @@
                                 data-base-occupancy="<%= cell[:base_occupancy] %>"
                                 data-extra-pax-charge="<%= cell[:extra_pax_charge] %>"
                                 data-sell-mode="<%= cell[:sell_mode] %>">
-                          <div class="flex flex-col items-center justify-center min-h-[20px]">
+                          <div class="flex flex-col items-center justify-center min-h-[16px]">
                             <% if cell[:conversion_missing] %>
                               <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
                             <% else %>
@@ -509,7 +509,7 @@
                   <tr data-inventory-row-target="row"
                       data-parent-room-type-id="<%= row.room_type_id %>"
                       class="<%= room_border_class %> bg-card transition-colors hover:bg-muted/50">
-                    <td class="sticky left-0 z-20 <%= room_border_class %> <%= room_side_class %> bg-card py-2 pl-10 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
+                    <td class="sticky left-0 z-20 <%= room_border_class %> <%= room_side_class %> bg-card py-1 pl-10 pr-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60" data-inventory-highlight-target="rowHeader">
                       <div class="flex items-center gap-1.5">
                         <span class="text-[13px] font-medium text-muted-foreground" data-original-color="text-muted-foreground" data-highlight-color="text-primary-foreground"><%= row.sublabel %></span>
                       </div>
@@ -517,7 +517,7 @@
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
                       <% weekend = [5, 6].include?(date.wday) %>
-                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-1.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
+                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-0.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
                           <%
                             testid = case row.kind
                               when :walk_in then "walk-in-cell-#{row.room_type_id}-#{date}"
@@ -529,7 +529,7 @@
                             end
                           %>
                           <button type="button"
-                                  class="group relative mx-auto block rounded-md px-2 py-1 text-sm font-medium tabular-nums text-foreground hover:bg-muted hover:text-foreground transition-colors w-full"
+                                  class="group relative mx-auto block rounded-md px-2 py-0.5 text-sm font-medium tabular-nums text-foreground hover:bg-muted hover:text-foreground transition-colors w-full"
                                   data-testid="<%= testid %>"
                                   data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
                                   data-mode="rates"
@@ -540,7 +540,7 @@
                                   data-currency="<%= cell[:currency] %>"
                                   data-sell-mode="<%= cell[:sell_mode] %>">
                             
-                            <div class="flex flex-col items-center justify-center min-h-[20px] relative">
+                            <div class="flex flex-col items-center justify-center min-h-[16px] relative">
                               <% if cell[:conversion_missing] %>
                                 <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
                               <% else %>
@@ -558,7 +558,7 @@
 
               <!-- Occupancy Rate Row -->
               <tr class="border-t-2 border-b border-border-interactive bg-muted font-semibold">
-                <td class="sticky left-0 z-20 border-b border-r border-border-interactive bg-muted px-3 py-3 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60 font-extrabold text-foreground" data-original-color="bg-muted">
+                <td class="sticky left-0 z-20 border-b border-r border-border-interactive bg-muted px-3 py-1.5 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60 font-extrabold text-foreground" data-original-color="bg-muted">
                   <div class="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Occupancy Rate</div>
                 </td>
                 <% @calendar.dates.each do |date| %>
@@ -615,11 +615,11 @@
                   %>
                   <td class="min-w-[86px] border-b border-r border-border p-0 text-center last:border-r-0 <%= bg_color %> hover:bg-foreground/[0.02] active:bg-foreground/[0.04] transition-colors">
                     <button type="button"
-                            class="w-full h-full px-2 py-3 flex flex-col items-center justify-center focus:outline-none cursor-pointer"
+                            class="w-full h-full px-2 py-1.5 flex flex-col items-center justify-center focus:outline-none cursor-pointer"
                             data-action="click->inventory-calendar#openOccupancyDetails"
                             data-date="<%= date %>">
                       <span class="text-xs sm:text-sm tabular-nums font-bold leading-none <%= text_color %>"><%= rate_text %></span>
-                      <span class="text-[10px] text-muted-foreground tabular-nums mt-1 font-semibold leading-none"><%= total_sold %>/<%= total_capacity %></span>
+                      <span class="text-[10px] text-muted-foreground tabular-nums mt-0.5 font-semibold leading-none"><%= total_sold %>/<%= total_capacity %></span>
                     </button>
                   </td>
                 <% end %>

@@ -128,7 +128,7 @@ module Folios
 
       # skip_authorization is not a system bypass — the one caller
       # (BookingBillingParties::ManageCompany) passes a real staff actor who was
-      # already gated on "manage_bookings" upstream. Creating the company's folio
+      # already gated on "manage_bookings" upstream. Creating the Corporate Account folio
       # is part of adding the billing party, so it deliberately does not demand
       # "manage_folio_windows" as well. The actor is still recorded on created_by.
       def permitted?

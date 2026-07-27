@@ -86,6 +86,9 @@ RSpec.describe Checkouts::ProcessBookingCheckout do
         defer_side_effects: true,
         exception_folio_ids: [ 11 ],
         direct_bill_folio_ids: [ 22 ],
+        corporate_credit_overrides: {
+          22 => { credit_override: nil, credit_override_reason: nil }
+        },
         note: "front desk",
         release_security_deposit: true
       }

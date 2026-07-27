@@ -93,7 +93,7 @@ class BookingFolio < ApplicationRecord
   def payer_display_label
     case payer_type
     when "company"
-      [ "Company & Government", hotel_corporate_account&.corporate_account&.name ].compact_blank.join(": ")
+      [ "Corporate Account", hotel_corporate_account&.corporate_account&.name ].compact_blank.join(": ")
     else
       payer_type.to_s.humanize
     end
@@ -220,7 +220,7 @@ class BookingFolio < ApplicationRecord
     if hotel_corporate_account.blank?
       return unless new_record? || will_save_change_to_payer_type? || will_save_change_to_hotel_corporate_account_id?
 
-      errors.add(:hotel_corporate_account, "must be selected for Company & Government folios")
+      errors.add(:hotel_corporate_account, "must be selected for Corporate Account folios")
       return
     end
 

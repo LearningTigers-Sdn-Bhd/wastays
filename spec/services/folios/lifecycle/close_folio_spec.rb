@@ -53,7 +53,7 @@ RSpec.describe Folios::Lifecycle::CloseFolio do
     result = described_class.call(folio: folio, user: user, settlement_method: "direct_bill")
 
     expect(result).not_to be_success
-    expect(result.error).to eq("Direct Bill settlement is only available for Company & Government folios.")
+    expect(result.error).to eq("Direct Bill settlement is only available for Corporate Account folios.")
     expect(folio.reload).to be_open
   end
 
@@ -66,7 +66,7 @@ RSpec.describe Folios::Lifecycle::CloseFolio do
     result = described_class.call(folio: company_folio, user: user, settlement_method: "direct_bill")
 
     expect(result).not_to be_success
-    expect(result.error).to eq("Company & Government Account must be active for Direct Bill settlement.")
+    expect(result.error).to eq("Corporate Account must be active for Direct Bill settlement.")
     expect(company_folio.reload).to be_open
   end
 
@@ -78,7 +78,7 @@ RSpec.describe Folios::Lifecycle::CloseFolio do
     result = described_class.call(folio: company_folio, user: user, settlement_method: "direct_bill")
 
     expect(result).not_to be_success
-    expect(result.error).to eq("Direct Bill is not enabled for this Company & Government Account.")
+    expect(result.error).to eq("Direct Bill is not enabled for this Corporate Account.")
     expect(company_folio.reload).to be_open
   end
 
@@ -151,5 +151,24 @@ RSpec.describe Folios::Lifecycle::CloseFolio do
       "corporate_credit_override" => true,
       "corporate_credit_override_reason" => "Approved by finance"
     )
+  end
+
+  it "blocks Direct Bill in a different currency unless explicitly overridden" do
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel, credit_limit: 1_000, credit_currency: "MYR")
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel,
+      hotel_corporate_account: relationship, currency: "USD")
+    create(:folio_transaction, booking_folio: company_folio, amount: 125)
+
+    blocked = described_class.call(folio: company_folio, user: user, settlement_method: "direct_bill")
+    overridden = described_class.call(
+      folio: company_folio,
+      user: user,
+      settlement_method: "direct_bill",
+      credit_override: true,
+      credit_override_reason: "Approved without conversion"
+    )
+
+    expect(blocked.error).to include("currencies that cannot be compared")
+    expect(overridden).to be_success
   end
 end

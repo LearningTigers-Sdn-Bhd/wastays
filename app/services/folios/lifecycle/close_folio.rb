@@ -7,8 +7,6 @@ module Folios
       include Authorizable
 
       PERMISSION = "manage_folio_windows"
-      CREDIT_OVERRIDE_PERMISSION = "override_corporate_credit_limit"
-
       DIRECT_BILL_SETTLEMENT = "direct_bill"
 
       def self.call(folio:, user:, reason: nil, settlement_method: nil, credit_override: false, credit_override_reason: nil)
@@ -38,6 +36,7 @@ module Folios
 
           balance = @folio.outstanding_balance.to_d
           direct_bill = direct_bill_settlement?
+          hotel_corporate_account&.lock! if direct_bill
           validation_error = direct_bill ? validate_direct_bill_close(balance) : validate_standard_close(balance)
           return failure(validation_error) if validation_error.present?
 
@@ -78,18 +77,15 @@ module Folios
       end
 
       def validate_direct_bill_close(balance)
-        return "Direct Bill settlement is only available for Company & Government folios." unless @folio.payer_type == "company"
-        return "Direct Bill settlement requires a Company & Government Account." if hotel_corporate_account.blank?
-        return "Company & Government Account must be active for Direct Bill settlement." unless hotel_corporate_account.active?
-        return "Direct Bill is not enabled for this Company & Government Account." unless hotel_corporate_account.direct_bill_enabled?
+        return "Direct Bill settlement is only available for Corporate Account folios." unless @folio.payer_type == "company"
+        return "Direct Bill settlement requires a Corporate Account." if hotel_corporate_account.blank?
+        return "Corporate Account must be active for Direct Bill settlement." unless hotel_corporate_account.active?
+        return "Direct Bill is not enabled for this Corporate Account." unless hotel_corporate_account.direct_bill_enabled?
         return "Direct Bill settlement requires a positive folio balance." unless balance.positive?
         return "AR invoice already exists for this folio." if @folio.ar_invoice.present?
 
-        exposure = corporate_credit_exposure(balance)
-        return unless exposure.over_limit?
-        return "Corporate credit limit exceeded. An explicit override is required." unless @credit_override
-        return "Corporate credit override reason can't be blank." if @credit_override_reason.blank?
-        return "You do not have permission to override the corporate credit limit." unless credit_override_permitted?
+        authorization = authorize_credit_exposure(balance)
+        return authorization.error unless authorization.success?
 
         nil
       end
@@ -101,8 +97,8 @@ module Folios
       def close_metadata(ar_invoice)
         metadata = {
           closed_at: @folio.closed_at&.iso8601,
-          corporate_credit_override: @credit_override,
-          corporate_credit_override_reason: @credit_override_reason.presence
+          corporate_credit_override: @credit_authorization&.override_used? || false,
+          corporate_credit_override_reason: @credit_authorization&.override_reason
         }.compact
         return metadata if ar_invoice.blank?
 
@@ -132,8 +128,8 @@ module Folios
             corporate_account_id: hotel_corporate_account.corporate_account_id,
             due_on: ar_invoice.due_on.iso8601,
             settlement_method: DIRECT_BILL_SETTLEMENT,
-            corporate_credit_override: @credit_override,
-            corporate_credit_override_reason: @credit_override_reason.presence
+            corporate_credit_override: @credit_authorization&.override_used? || false,
+            corporate_credit_override_reason: @credit_authorization&.override_reason
           }
         )
       end
@@ -142,16 +138,15 @@ module Folios
         @hotel_corporate_account ||= @folio.hotel_corporate_account
       end
 
-      def corporate_credit_exposure(balance)
-        @corporate_credit_exposure ||= ArInvoices::CreditExposure.call(
+      def authorize_credit_exposure(balance)
+        @credit_authorization = ArInvoices::AuthorizeCreditExposure.call(
           hotel_corporate_account: hotel_corporate_account,
           pending_amount: balance,
-          pending_currency: @folio.currency
+          pending_currency: @folio.currency,
+          user: @user,
+          override: @credit_override,
+          override_reason: @credit_override_reason
         )
-      end
-
-      def credit_override_permitted?
-        actor_permits?(@user, CREDIT_OVERRIDE_PERMISSION, hotel: @hotel)
       end
 
       def formatted_balance(balance)

@@ -1019,7 +1019,7 @@ module HotelPortal
       billing_party_rows.map do |row|
         FolioWindowBillingPartyOption.new(
           row.id,
-          row.record.company? ? "Companies / Government" : "Guests",
+          row.record.company? ? "Corporate Accounts" : "Guests",
           row.label,
           [ row.role, row.description ].compact_blank.join(" · "),
           row.record
@@ -1339,7 +1339,10 @@ module HotelPortal
 
     def folio_payer_type_label(folio)
       case folio.payer_type
-      when "company" then "Company & Government"
+      when "company"
+        account_type = folio.booking_billing_party&.account_type.presence ||
+          folio.hotel_corporate_account&.account_type.presence
+        external_account_type_label(account_type)
       when "hotel" then "On Hotel House"
       else "Guest"
       end
@@ -1538,7 +1541,7 @@ module HotelPortal
     end
 
     def billing_party_kind_label(party)
-      party.company? ? "Company" : "Guest"
+      party.company? ? billing_party_account_type_label(party) : "Guest"
     end
 
     def billing_party_role_label(party)
@@ -1546,7 +1549,7 @@ module HotelPortal
       when "guest"
         party.booking_guest&.primary? ? "Primary guest" : "Additional guest"
       when "company"
-        "Company / Government account"
+        "Corporate Account"
       else
         party.party_kind.to_s.humanize
       end
@@ -1558,10 +1561,25 @@ module HotelPortal
         "Cash / card"
       when "company"
         account = party.hotel_corporate_account
-        account&.direct_bill_enabled? ? "City Ledger · Direct bill enabled" : "Company settlement"
+        account&.direct_bill_enabled? ? "City Ledger · Direct bill enabled" : "Account settlement"
       else
         "Billing party"
       end
+    end
+
+    def billing_party_account_type_label(party)
+      external_account_type_label(
+        party.account_type.presence || party.hotel_corporate_account&.account_type.presence
+      )
+    end
+
+    def external_account_type_label(account_type)
+      {
+        "company" => "Company",
+        "government" => "Government",
+        "travel_agent" => "Travel agency",
+        "airline" => "Airline"
+      }.fetch(account_type, "Corporate Account")
     end
 
     def billing_party_folios(party)

@@ -89,9 +89,20 @@ module Checkouts
         options: {
           defer_side_effects: true,
           exception_folio_ids: settlement_result.exception_folio_ids.to_a,
-          direct_bill_folio_ids: settlement_result.direct_bill_folio_ids.to_a
+          direct_bill_folio_ids: settlement_result.direct_bill_folio_ids.to_a,
+          corporate_credit_overrides: corporate_credit_overrides(settlement_result.direct_bill_folio_ids)
         }.merge(@checkout_options).merge(@security_deposit_options)
       ).call
+    end
+
+    def corporate_credit_overrides(direct_bill_folio_ids)
+      direct_bill_folio_ids.to_a.index_with do |folio_id|
+        params = @folio_action_params[folio_id.to_s].to_h.with_indifferent_access
+        {
+          credit_override: params[:credit_override],
+          credit_override_reason: params[:credit_override_reason]
+        }
+      end
     end
 
     def success

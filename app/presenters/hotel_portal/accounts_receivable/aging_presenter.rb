@@ -114,7 +114,7 @@ module HotelPortal
         def credit_status_label
           return "Not comparable" unless row.credit_comparable?
 
-          case row.credit_exposure.warning_state
+          case row.credit_exposure.limit_warning_state
           when "near_limit" then "Near limit"
           when "over_limit" then "Over limit"
           when "no_limit" then "No limit"
@@ -125,7 +125,7 @@ module HotelPortal
         def credit_status_class
           return "border-border bg-muted text-muted-foreground" unless row.credit_comparable?
 
-          case row.credit_exposure.warning_state
+          case row.credit_exposure.limit_warning_state
           when "near_limit" then "border-amber-200 bg-amber-50 text-amber-800"
           when "over_limit" then "border-red-200 bg-red-50 text-red-700"
           when "no_limit" then "border-border bg-muted text-foreground"
@@ -135,7 +135,7 @@ module HotelPortal
 
         def credit_status_description
           return "Credit limit is configured in #{row.credit_currency}" unless row.credit_comparable?
-          return row.credit_exposure.warning_message if row.credit_exposure.warning?
+          return row.credit_exposure.limit_warning_message if row.credit_exposure.limit_warning_state != "none"
 
           usage = row.credit_exposure.usage_percentage
           usage.present? ? "#{usage.to_i}% of credit limit used" : "Within credit limit"

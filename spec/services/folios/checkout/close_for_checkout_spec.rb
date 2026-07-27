@@ -73,6 +73,91 @@ RSpec.describe Folios::Checkout::CloseForCheckout do
     expect(folio.reload.status).to eq("open")
   end
 
+  it "blocks Direct Bill above the credit limit unless an authorized override has a reason" do
+    authorized_user = create(:user, :superadmin)
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel, credit_limit: 50, credit_currency: "MYR")
+    guest_folio = create(:booking_folio, booking: booking, status: "open")
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, hotel_corporate_account: relationship)
+    create(:folio_transaction, booking_folio: company_folio, amount: 100)
+    options = { exception_folio_ids: [], direct_bill_folio_ids: [ company_folio.id ] }
+
+    blocked = described_class.call(booking: booking, user: authorized_user, options: options)
+    overridden = described_class.call(booking: booking, user: authorized_user, options: options.merge(
+      corporate_credit_overrides: {
+        company_folio.id => { credit_override: "1", credit_override_reason: "Approved by finance" }
+      }
+    ))
+
+    expect(blocked.error).to include("credit limit exceeded")
+    expect(overridden).to be_success
+    expect(guest_folio.reload).to be_closed
+    expect(company_folio.reload.ar_invoice).to be_present
+    expect(FinancialAuditEvent.where(event_type: "direct_bill_folio_closed").last.metadata).to include(
+      "corporate_credit_override" => true,
+      "corporate_credit_override_reason" => "Approved by finance"
+    )
+  end
+
+  it "blocks cross-currency Direct Bill unless explicitly overridden" do
+    authorized_user = create(:user, :superadmin)
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel, credit_limit: 1_000, credit_currency: "MYR")
+    create(:booking_folio, booking: booking, status: "open")
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel,
+      hotel_corporate_account: relationship, currency: "USD")
+    create(:folio_transaction, booking_folio: company_folio, amount: 100)
+    options = { exception_folio_ids: [], direct_bill_folio_ids: [ company_folio.id ] }
+
+    blocked = described_class.call(booking: booking, user: authorized_user, options: options)
+    overridden = described_class.call(booking: booking, user: authorized_user, options: options.merge(
+      corporate_credit_overrides: {
+        company_folio.id => { credit_override: "1", credit_override_reason: "Approved without conversion" }
+      }
+    ))
+
+    expect(blocked.error).to include("currencies that cannot be compared")
+    expect(overridden).to be_success
+  end
+
+
+  it "checks the combined Direct Bill amount for folios on the same account" do
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel, credit_limit: 100, credit_currency: "MYR")
+    create(:booking_folio, booking: booking, status: "open")
+    company_folios = 2.times.map do
+      create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, hotel_corporate_account: relationship).tap do |folio|
+        create(:folio_transaction, booking_folio: folio, amount: 60)
+      end
+    end
+
+    result = described_class.call(
+      booking: booking,
+      user: create(:user, :superadmin),
+      options: { exception_folio_ids: [], direct_bill_folio_ids: company_folios.map(&:id) }
+    )
+
+    expect(result.error).to include("credit limit exceeded")
+    expect(company_folios.map { |folio| folio.reload.ar_invoice }).to all(be_nil)
+  end
+
+
+  it "revalidates Direct Bill eligibility from the locked corporate account" do
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel, credit_limit: 1_000)
+    create(:booking_folio, booking: booking, status: "open")
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, hotel_corporate_account: relationship)
+    create(:folio_transaction, booking_folio: company_folio, amount: 60)
+    booking.booking_folios.load
+    company_folio.hotel_corporate_account
+    HotelCorporateAccount.where(id: relationship.id).update_all(relationship_type: "standard", direct_bill_enabled: false)
+
+    result = described_class.call(
+      booking: booking,
+      user: create(:user, :superadmin),
+      options: { exception_folio_ids: [], direct_bill_folio_ids: [ company_folio.id ] }
+    )
+
+    expect(result).not_to be_success
+    expect(company_folio.reload.ar_invoice).to be_nil
+  end
+
   it "fails while the checkout business date is in night audit" do
     folio = create(:booking_folio, booking: booking, status: "open")
     create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 100.0)
