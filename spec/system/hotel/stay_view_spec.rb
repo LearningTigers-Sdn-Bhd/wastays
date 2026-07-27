@@ -268,11 +268,12 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     room_card = find("#stay_view_room_#{room_type.id}_102[data-room-state='vacant']")
     expect(room_card).to have_content("No activity today")
-    book = room_card.find("[data-slot='stay-view-room-footer'] a[aria-label^='Add booking for room 102']")
+    booking_link = "[data-slot='stay-view-room-footer'] a[aria-label^='Add booking for room 102']"
+    book = room_card.find(booking_link)
     expect(Rack::Utils.parse_nested_query(URI.parse(book[:href]).query)).to include("room_number" => "102")
-    book.send_keys(:enter)
+    room_card.find(booking_link).send_keys(:enter)
 
-    within("#booking-creation-sheet") do
+    within("dialog#booking-creation-sheet[open]") do
       expect(find("#booking_check_in", visible: :all).value).to start_with(Date.current.iso8601)
       expect(find("#booking_check_out", visible: :all).value).to start_with((Date.current + 1.day).iso8601)
     end
@@ -322,7 +323,9 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
 
     find("button[aria-label='Stay View status guide']").click
-    expect(page).to have_css("#stay-view-status-guide-panel", text: "No-show review", visible: :visible)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Arrival", visible: :visible)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "In-house", visible: :visible)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Completed", visible: :visible)
     expect(page).to have_css("#stay-view-status-guide-panel", text: "Do not disturb", visible: :visible)
     expect(page).to have_css("#stay-view-status-guide-panel", text: "Cleaning priority", visible: :visible)
     expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Timeline events", visible: :all)
@@ -400,12 +403,11 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     housekeeping_panel = "#stay_view_room_#{room_type.id}_101-housekeeping-panel"
     housekeeping_trigger = "#stay_view_room_#{room_type.id}_101 button[aria-label='1 active housekeeping request']"
-    wait_for_stimulus_controller(housekeeping_panel, "panels-ui--popover")
     within("#stay_view_room_#{room_type.id}_101") do
       expect(page).to have_css("button[aria-label='Do not disturb: on — change']")
       expect(page).to have_css("button[aria-label='Cleaning priority: on — change']")
     end
-    find(housekeeping_trigger).send_keys(:enter)
+    open_panels_ui_popover(trigger: housekeeping_trigger, panel: housekeeping_panel)
     expect(page).to have_css(housekeeping_panel, text: "Fresh towels", visible: :visible)
     expect(page).to have_css("#{housekeeping_panel} [role='alert']", text: "Do not enter / do not clean", visible: :visible)
 
@@ -646,9 +648,9 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
       })()
     JS
 
-    expect(page).to have_css(".panel-timeline__segment-proposal .panel-timeline__segment-content > span", count: 2)
+    expect(page).to have_css(".panel-timeline__segment-proposal .panel-timeline__segment-content > span", count: 1)
     expect(page).to have_css(".panel-timeline__segment-proposal", text: "Ada Lovelace")
-    expect(page).to have_css(".panel-timeline__segment-proposal", text: "Confirmed")
+    expect(page).to have_no_css(".panel-timeline__segment-proposal", text: "Confirmed")
     expect(page).to have_no_css("##{segment_id}-panel", visible: :visible)
 
     page.execute_script('window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Escape" }))')
