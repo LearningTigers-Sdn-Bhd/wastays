@@ -9,7 +9,7 @@
     ) do |sidebar| %>
   <% sidebar.with_header do %>
     <%= render PanelsUI::Tooltip.new(text: current_guest.name, placement: :top, root_class: "w-full") do %>
-      <div class="flex items-center gap-x-2.5 px-4 py-3" aria-label="Guest: <%= current_guest.name %>">
+      <div class="flex items-center gap-x-2.5 px-4 py-1" aria-label="Guest: <%= current_guest.name %>">
         <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand-primary/10 text-brand-primary shadow-xs ring-1 ring-brand-primary/20">
           <%= cached_icon "user", class: "size-4 shrink-0" %>
         </span>

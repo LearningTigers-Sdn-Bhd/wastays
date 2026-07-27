@@ -9,7 +9,7 @@
     ) do |sidebar| %>
   <% sidebar.with_header do %>
     <%= render PanelsUI::Tooltip.new(text: "Admin Panel", placement: :top, root_class: "w-full") do %>
-      <div class="flex items-center gap-x-2.5 px-4 py-3">
+      <div class="flex items-center gap-x-2.5 px-4 py-1">
         <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground shadow-xs ring-1 ring-ring">
           <%= cached_icon "settings", class: "size-4 shrink-0" %>
         </span>

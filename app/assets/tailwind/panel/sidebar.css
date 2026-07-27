@@ -23,7 +23,7 @@
 
   .panel-sidebar__header {
     @apply shrink-0 flex items-center border-b;
-    height: 53px;
+    height: 37px;
     border-color: var(--sidebar-border);
   }
 
