@@ -99,6 +99,7 @@ module HotelDemoManagement
 
     def reset_hotel_taxes
       @logger.puts "Resetting hotel taxes..."
+      BookingTaxInclusionOverride.where(hotel_id: @hotel.id).delete_all
       @hotel.hotel_taxes.destroy_all
       @hotel.hotel_taxes.create!([
         { name: "Service Tax", rate_type: "percentage", amount: 8.0, enabled: true, foreign_guests_only: false },
@@ -152,6 +153,7 @@ module HotelDemoManagement
     def delete_bookings
       booking_ids = @hotel.bookings.pluck(:id)
       folio_ids = BookingFolio.where(booking_id: booking_ids).pluck(:id)
+      billing_party_ids = BookingBillingParty.where(booking_id: booking_ids).pluck(:id)
 
       operation_log_count = FolioOperationLog.where(booking_id: booking_ids).count
       if operation_log_count > 0
@@ -165,6 +167,9 @@ module HotelDemoManagement
         FolioRoutingRule.where(booking_id: booking_ids).delete_all
       end
 
+      delete_accounts_receivable_data
+      delete_deposit_data
+
       forecasted_count = FolioForecastedCharge.where(booking_folio_id: folio_ids).count
       if forecasted_count > 0
         @logger.puts "Destroying #{forecasted_count} forecasted charges..."
@@ -177,19 +182,64 @@ module HotelDemoManagement
       @logger.puts "Deleting #{PaymentTransaction.where(booking_id: booking_ids).count} payment transactions..."
       PaymentTransaction.where(booking_id: booking_ids).destroy_all
 
-      deposit_count = Deposit.where(booking_id: booking_ids).count
-      if deposit_count > 0
-        @logger.puts "Deleting #{deposit_count} deposits..."
-        Deposit.where(booking_id: booking_ids).delete_all
-      end
-
       folio_count = BookingFolio.where(id: folio_ids).count
       @logger.puts "Force deleting #{folio_count} booking folios..."
       BookingFolio.where(id: folio_ids).delete_all
 
+      billing_party_count = billing_party_ids.size
+      if billing_party_count > 0
+        @logger.puts "Deleting #{billing_party_count} booking billing parties..."
+        BookingBillingTerms.where(booking_billing_party_id: billing_party_ids).delete_all
+        BookingBillingParty.where(id: billing_party_ids).delete_all
+      end
+
+      lineage_scope = LegacyBookingSplitLineage.where(legacy_booking_id: booking_ids)
+        .or(LegacyBookingSplitLineage.where(child_booking_id: booking_ids))
+      lineage_count = lineage_scope.count
+      if lineage_count > 0
+        @logger.puts "Force deleting #{lineage_count} immutable legacy booking split lineages..."
+        lineage_scope.delete_all
+      end
+
       booking_count = @hotel.bookings.count
       @logger.puts "Destroying #{booking_count} bookings..."
       @hotel.bookings.destroy_all
+    end
+
+    def delete_accounts_receivable_data
+      invoice_ids = @hotel.ar_invoices.ids
+      payment_ids = @hotel.ar_payments.ids
+      submission_ids = @hotel.ar_payment_submissions.ids
+      intent_ids = CorporateArPaymentIntent.where(hotel_id: @hotel.id).ids
+      allocation_ids = ArPaymentAllocation.where(ar_invoice_id: invoice_ids)
+        .or(ArPaymentAllocation.where(ar_payment_id: payment_ids)).ids
+
+      ar_record_count = invoice_ids.size + payment_ids.size + submission_ids.size + intent_ids.size
+      return if ar_record_count.zero?
+
+      @logger.puts "Force deleting accounts receivable operations..."
+      ArPaymentAllocationReversal.where(ar_payment_allocation_id: allocation_ids).delete_all
+      ArPaymentSubmissionAllocation.where(ar_payment_submission_id: submission_ids).delete_all
+      ArPaymentSubmissionAllocation.where(ar_invoice_id: invoice_ids).delete_all
+      ArPaymentAllocation.where(id: allocation_ids).delete_all
+      @hotel.ar_payment_submissions.destroy_all
+      PaymentTransaction.where(ar_payment_id: payment_ids)
+        .or(PaymentTransaction.where(corporate_ar_payment_intent_id: intent_ids)).delete_all
+      CorporateArPaymentIntent.where(id: intent_ids).delete_all
+      ArPayment.where(id: payment_ids).delete_all
+      ArInvoice.where(id: invoice_ids).delete_all
+    end
+
+    def delete_deposit_data
+      deposit_ids = Deposit.where(hotel_id: @hotel.id).ids
+      return if deposit_ids.empty?
+
+      movement_count = DepositMovement.where(deposit_id: deposit_ids).count
+      @logger.puts "Force deleting #{movement_count} immutable deposit movements..."
+      DepositMovement.where(deposit_id: deposit_ids).delete_all
+
+      @logger.puts "Deleting #{deposit_ids.size} deposits..."
+      Deposit.where(id: deposit_ids).delete_all
     end
 
     def reset_rates_and_inventories
