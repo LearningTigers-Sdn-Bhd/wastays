@@ -58,7 +58,7 @@
     </div>
 
     <!-- Toolbar -->
-    <div class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm" data-inventory-calendar-target="topPanel">
+    <div class="mb-3 flex flex-wrap items-center gap-3" data-inventory-calendar-target="topPanel">
       <!-- Date navigation -->
       <div class="flex items-center gap-1 rounded-lg border border-border bg-muted p-1">
         <% prev_target = @range_mode == "month" ? { month: inventory_month_param(@month.prev_month) } : { start_date: @start_date - @days.days } %>
@@ -171,20 +171,20 @@
     </div>
 
     <!-- Table Section -->
-    <section class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-      <div class="overflow-x-auto custom-scrollbar">
+    <section class="rounded-xl border border-border bg-card shadow-sm">
+      <div class="overflow-auto custom-scrollbar max-h-[calc(100vh-18rem)]">
         <table class="w-full border-collapse border-separate border-spacing-0" data-testid="inventory-calendar-grid">
           <thead>
             <tr class="border-b border-border">
-              <th class="sticky left-0 z-30 w-60 min-w-60 max-w-60 border-b border-r border-border bg-muted px-4 py-1.5 text-left shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)]">
+              <th class="sticky top-0 left-0 z-40 w-60 min-w-60 max-w-60 rounded-tl-xl border-b border-r border-border bg-muted px-4 py-1.5 text-left shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)]">
                 <span class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Room / Rate plan</span>
               </th>
               <% @calendar.dates.each do |date| %>
-                <% 
+                <%
                   weekend = [5, 6].include?(date.wday)
-                  
-                  th_class = "min-w-[86px] border-b border-r border-border px-2 py-1 text-center last:border-r-0 transition-colors "
-                  th_class += weekend ? "bg-indigo-100/70" : "bg-muted"
+
+                  th_class = "sticky top-0 z-30 min-w-[52px] border-b border-r border-border px-1 py-1 text-center last:border-r-0 last:rounded-tr-xl transition-colors "
+                  th_class += weekend ? "bg-indigo-100" : "bg-muted"
 
                   day_class = "text-[10px] font-semibold uppercase tracking-wide "
                   day_class += weekend ? "text-indigo-600 font-bold" : "text-muted-foreground"
@@ -241,9 +241,9 @@
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
                       <% weekend = [5, 6].include?(date.wday) %>
-                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-1 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
+                      <td class="min-w-[52px] <%= room_border_class %> <%= room_side_class %> px-1 py-1 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
                         <button type="button"
-                                class="w-full px-1 sm:px-2 py-1 text-center transition hover:bg-muted rounded-lg group"
+                                class="w-full px-0.5 sm:px-1 py-1 text-center transition hover:bg-muted rounded-lg group"
                                 data-testid="availability-cell-<%= row.room_type_id %>-<%= date %>"
                                 data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
                                 data-mode="availability"
@@ -277,7 +277,7 @@
                               <span class="text-xs font-semibold tabular-nums <%= tone[:text] %>"><%= open %></span>
                               <span class="text-[12px] text-muted-foreground">open</span>
                             </div>
-                            <div class="h-1 w-12 overflow-hidden rounded-full <%= tone[:track] %>">
+                            <div class="h-1 w-9 overflow-hidden rounded-full <%= tone[:track] %>">
                               <div class="h-full rounded-full <%= tone[:bar] %>" style="width: <%= (pct * 100).round %>%"></div>
                             </div>
                             <span class="text-[12px] tabular-nums text-muted-foreground"><%= sold %> sold</span>
@@ -305,7 +305,7 @@
                     </td>
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
-                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-0.5 text-center last:border-r-0">
+                      <td class="min-w-[52px] <%= room_border_class %> <%= room_side_class %> px-1 py-0.5 text-center last:border-r-0">
                         <div class="flex flex-col items-center gap-0.5">
                           <div class="flex items-center justify-center gap-0.5">
                             <% cell[:channels].each do |ch| %>
@@ -355,9 +355,9 @@
                     </td>
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
-                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-0.5 text-center last:border-r-0">
+                      <td class="min-w-[52px] <%= room_border_class %> <%= room_side_class %> px-1 py-0.5 text-center last:border-r-0">
                         <button type="button"
-                                class="relative inline-flex min-w-[52px] items-center justify-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums transition cursor-not-allowed opacity-75 <%= cell[:closed] ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600' %>"
+                                class="relative inline-flex min-w-[40px] items-center justify-center gap-0.5 rounded-full px-1 py-0.5 text-[11px] font-medium tabular-nums transition cursor-not-allowed opacity-75 <%= cell[:closed] ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600' %>"
                                 data-testid="channel-availability-cell-<%= row.room_type_id %>-<%= cell[:channel_id] %>-<%= date %>"
                                 data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#showLockTip"
                                 data-mode="channel_availability"
@@ -399,9 +399,9 @@
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
                       <% weekend = [5, 6].include?(date.wday) %>
-                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-0.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
+                      <td class="min-w-[52px] <%= room_border_class %> <%= room_side_class %> px-1 py-0.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
                         <button type="button"
-                                class="group relative mx-auto block rounded-md px-2 py-0.5 text-sm font-medium tabular-nums text-foreground hover:bg-muted hover:text-foreground transition-colors w-full"
+                                class="group relative mx-auto block rounded-md px-1 py-0.5 text-sm font-medium tabular-nums text-foreground hover:bg-muted hover:text-foreground transition-colors w-full"
                                 data-testid="rate-cell-<%= row.room_type_id %>-<%= row.rate_plan_id %>-<%= date %>"
                                 data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
                                 data-mode="rates"
@@ -424,7 +424,7 @@
                             <% if cell[:conversion_missing] %>
                               <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
                             <% else %>
-                              <span class="block truncate text-xs sm:text-sm font-bold tabular-nums text-foreground">
+                              <span class="block truncate text-xs sm:text-sm tabular-nums text-foreground">
                                 <%= cell[:formatted_price] %>
                               </span>
                             <% end %>
@@ -467,7 +467,7 @@
                     </td>
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
-                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-0.5 text-center last:border-r-0">
+                      <td class="min-w-[52px] <%= room_border_class %> <%= room_side_class %> px-1 py-0.5 text-center last:border-r-0">
                         <button type="button"
                                 class="relative w-full bg-transparent px-1 py-0.5 text-center transition cursor-not-allowed"
                                 disabled
@@ -517,7 +517,7 @@
                     <% @calendar.dates.each do |date| %>
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
                       <% weekend = [5, 6].include?(date.wday) %>
-                      <td class="min-w-[86px] <%= room_border_class %> <%= room_side_class %> px-2 py-0.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
+                      <td class="min-w-[52px] <%= room_border_class %> <%= room_side_class %> px-1 py-0.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
                           <%
                             testid = case row.kind
                               when :walk_in then "walk-in-cell-#{row.room_type_id}-#{date}"
@@ -529,7 +529,7 @@
                             end
                           %>
                           <button type="button"
-                                  class="group relative mx-auto block rounded-md px-2 py-0.5 text-sm font-medium tabular-nums text-foreground hover:bg-muted hover:text-foreground transition-colors w-full"
+                                  class="group relative mx-auto block rounded-md px-1 py-0.5 text-sm font-medium tabular-nums text-foreground hover:bg-muted hover:text-foreground transition-colors w-full"
                                   data-testid="<%= testid %>"
                                   data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
                                   data-mode="rates"
@@ -544,7 +544,7 @@
                               <% if cell[:conversion_missing] %>
                                 <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
                               <% else %>
-                                <span class="block truncate text-xs sm:text-sm font-bold tabular-nums text-foreground">
+                                <span class="block truncate text-xs sm:text-sm tabular-nums text-foreground">
                                   <%= cell[:formatted_price] %>
                                 </span>
                               <% end %>
@@ -558,7 +558,7 @@
 
               <!-- Occupancy Rate Row -->
               <tr class="border-t-2 border-b border-border-interactive bg-muted font-semibold">
-                <td class="sticky left-0 z-20 border-b border-r border-border-interactive bg-muted px-3 py-1.5 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60 font-extrabold text-foreground" data-original-color="bg-muted">
+                <td class="sticky bottom-0 left-0 z-40 rounded-bl-xl border-t-2 border-b border-r border-border-interactive bg-muted px-3 py-1.5 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.1)] w-60 min-w-60 max-w-60 font-extrabold text-foreground" data-original-color="bg-muted">
                   <div class="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Occupancy Rate</div>
                 </td>
                 <% @calendar.dates.each do |date| %>
@@ -602,20 +602,20 @@
                     end
 
                     bg_color = if rate == 100
-                      "bg-rose-50"
+                      "bg-rose-100"
                     elsif rate >= 70
-                      "bg-rose-50/40"
+                      "bg-rose-50"
                     elsif rate >= 40
-                      "bg-amber-50/40"
+                      "bg-amber-50"
                     elsif rate > 0
-                      "bg-emerald-50/30"
+                      "bg-emerald-50"
                     else
-                      "bg-muted/30"
+                      "bg-muted"
                     end
                   %>
-                  <td class="min-w-[86px] border-b border-r border-border p-0 text-center last:border-r-0 <%= bg_color %> hover:bg-foreground/[0.02] active:bg-foreground/[0.04] transition-colors">
+                  <td class="sticky bottom-0 z-30 min-w-[52px] border-t-2 border-b border-r border-border-interactive p-0 text-center last:border-r-0 last:rounded-br-xl <%= bg_color %> hover:bg-foreground/[0.02] active:bg-foreground/[0.04] transition-colors">
                     <button type="button"
-                            class="w-full h-full px-2 py-1.5 flex flex-col items-center justify-center focus:outline-none cursor-pointer"
+                            class="w-full h-full px-1 py-1.5 flex flex-col items-center justify-center focus:outline-none cursor-pointer"
                             data-action="click->inventory-calendar#openOccupancyDetails"
                             data-date="<%= date %>">
                       <span class="text-xs sm:text-sm tabular-nums font-bold leading-none <%= text_color %>"><%= rate_text %></span>
@@ -626,7 +626,7 @@
               </tr>
             <% else %>
               <tr>
-                <td colspan="<%= @calendar.dates.count + 1 %>" class="px-6 py-16 text-center text-sm font-semibold text-muted-foreground">
+                <td colspan="<%= @calendar.dates.count + 1 %>" class="rounded-b-xl px-6 py-16 text-center text-sm font-semibold text-muted-foreground">
                   <%= @calendar.empty_message %>
                 </td>
               </tr>
