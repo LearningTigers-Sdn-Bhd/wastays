@@ -13,7 +13,7 @@ RSpec.describe HotelKnowledges::SearchService do
   it "returns normalized nearest knowledge chunks for indexed documents in the requested categories" do
     doc = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "House Rules", embedding_status: "indexed", language: "en", version: 2)
     create(:hotel_knowledge_chunk, document: doc, chunk_index: 0, content: "Check-in starts at 3 PM.", embedding: query_vector)
-    create(:hotel_knowledge_chunk, document: doc, chunk_index: 1, content: "Pets are not allowed.", embedding: [ 0.2 ] * 1536)
+    create(:hotel_knowledge_chunk, document: doc, chunk_index: 1, content: "Pets are not allowed.", embedding: ([ 0.1 ] * 768) + ([ -0.1 ] * 768))
 
     result = described_class.new(hotel: hotel, query: "what time is check in?", categories: [ "policy" ], limit: 1).call
 
