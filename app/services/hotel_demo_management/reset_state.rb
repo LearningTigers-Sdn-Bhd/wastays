@@ -129,7 +129,16 @@ module HotelDemoManagement
     end
 
     def delete_night_audits
-      night_audit_count = @hotel.night_audits.count
+      night_audit_ids = @hotel.night_audits.ids
+      night_audit_count = night_audit_ids.size
+
+      linked_transactions = FolioTransaction.where(night_audit_id: night_audit_ids)
+      linked_transaction_count = linked_transactions.count
+      if linked_transaction_count > 0
+        @logger.puts "Clearing night audit links from #{linked_transaction_count} immutable transactions..."
+        linked_transactions.update_all(night_audit_id: nil, updated_at: Time.current)
+      end
+
       @logger.puts "Destroying #{night_audit_count} night audits..."
       @hotel.night_audits.destroy_all
     end

@@ -35,6 +35,6 @@ RSpec.describe 'Room Setup', type: :system do
     expect(page).to have_content('Deluxe Suite')
 
     visit hotel_dashboard_path(hotel)
-    expect(page).to have_content('Hotel Dashboard')
+    expect(page).to have_content('Hotel Portal')
   end
 end
