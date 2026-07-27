@@ -1,0 +1,18 @@
+<div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "folio-window-sheet",
+          side: :right,
+          size: :lg,
+          title: @folio ? "Edit folio window" : "Add folio window",
+          description: @folio ? "#{@booking.confirmation_token} · #{@folio.display_name}" : @booking.confirmation_token,
+          body_class: "p-0") do |sheet| %>
+      <% sheet.with_body do %>
+        <% if @folio %>
+          <%= render "hotel_portal/folios/actions/windows/edit_form", booking: @booking, folio: @folio %>
+        <% else %>
+          <%= render "hotel_portal/folios/actions/windows/new_form", booking: @booking %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+</div>

@@ -60,7 +60,7 @@ module HotelPortal
 
       def refund_method_label(transaction, refund_request)
         metadata = transaction.metadata.to_h
-        source = ::Folios::RefundSource.fetch(metadata["refund_source"] || metadata["posting_source"])
+        source = ::Folios::Payments::RefundSource.fetch(metadata["refund_source"] || metadata["posting_source"])
         return source.display_label if source.present?
         return "Refund request" if refund_request.present?
 

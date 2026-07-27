@@ -35,7 +35,7 @@ module Bookings
           Bookings::InventoryManager.new(@booking).reserve_by_dates(business_date, @booking.check_out.to_date)
 
           # 4. Reopen folios that were closed automatically during no-show finalization.
-          Folios::ReopenNoShowFoliosForReinstatement.call(booking: @booking, user: @user)
+          Folios::Lifecycle::ReopenNoShowFoliosForReinstatement.call(booking: @booking, user: @user)
 
           # 5. Transition status to checked_in
           @booking.transition_status_to!(
@@ -48,8 +48,8 @@ module Bookings
           )
 
           # 6. Initialize Folio if needed and process catch-up charges
-          Folios::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
-          Folios::ProcessCatchUpCharges.call(booking: @booking, user: @user, is_reinstate: true)
+          Folios::Lifecycle::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
+          Folios::Charges::ProcessCatchUpCharges.call(booking: @booking, user: @user, is_reinstate: true)
 
           # 7. Audit Log
           metadata = {

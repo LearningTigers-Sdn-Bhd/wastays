@@ -58,7 +58,7 @@ module TransactionCodes
       return unless @transaction_code.system_key == "room_revenue"
       return unless @hotel.transaction_configuration.open_folio_forecasts?
 
-      Folios::RefreshOpenForecastsFromRoomRevenueRules.call(hotel: @hotel, actor: @actor)
+      Folios::Forecasts::RefreshOpenForecastsFromRoomRevenueRules.call(hotel: @hotel, actor: @actor)
     end
 
     def record_audit!(preview, refresh_result)

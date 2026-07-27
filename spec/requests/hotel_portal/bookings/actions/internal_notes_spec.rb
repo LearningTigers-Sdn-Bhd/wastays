@@ -52,7 +52,7 @@ RSpec.describe "HotelPortal::Bookings::Actions internal notes", type: :request d
 
     patch hotel_booking_action_internal_notes_path(hotel, booking, mode: "edit", note_id: note.id),
       params: { booking_note: { body: "Updated note" } }
-    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
     expect(note.reload.body).to eq("Updated note")
 
     get hotel_booking_action_internal_notes_path(hotel, booking, mode: "history", note_id: note.id),
@@ -78,7 +78,7 @@ RSpec.describe "HotelPortal::Bookings::Actions internal notes", type: :request d
   it "renders notes and Sheet launchers in Booking Details" do
     note = create(:booking_note, booking:, user:, body: "Operational note")
 
-    get hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
+    get hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
 
     expect(response).to have_http_status(:success)
     document = Nokogiri::HTML(response.body)
@@ -86,8 +86,8 @@ RSpec.describe "HotelPortal::Bookings::Actions internal notes", type: :request d
     expect(document.text).to include("Operational note")
     links = document.css("a[data-turbo-frame='booking_action_sheet']")
     expect(links.map { |link| link["href"] }).to include(
-      hotel_booking_action_internal_notes_path(hotel, booking, mode: "add", return_to: hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")),
-      hotel_booking_action_internal_notes_path(hotel, booking, mode: "edit", note_id: note.id, return_to: hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      hotel_booking_action_internal_notes_path(hotel, booking, mode: "add", return_to: hotel_booking_workspace_path(hotel, booking, tab: "booking_details")),
+      hotel_booking_action_internal_notes_path(hotel, booking, mode: "edit", note_id: note.id, return_to: hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
     )
   end
 
@@ -103,7 +103,7 @@ RSpec.describe "HotelPortal::Bookings::Actions internal notes", type: :request d
     create(:booking_note, booking:, user:, body: "Read-only operational note")
     role.role_permissions.find_by!(permission: Permission.find_by!(slug: "manage_bookings")).destroy!
 
-    get hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
+    get hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include("Read-only operational note")

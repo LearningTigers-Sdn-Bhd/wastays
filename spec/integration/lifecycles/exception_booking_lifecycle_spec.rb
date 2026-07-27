@@ -49,7 +49,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       booking.transition_status_to!("checked_in", event: "reinstate")
 
       # Process catch up charges (Reverse charge, post Day 1 as an actual room charge)
-      Folios::ProcessCatchUpCharges.call(booking: booking, user: user, is_reinstate: true)
+      Folios::Charges::ProcessCatchUpCharges.call(booking: booking, user: user, is_reinstate: true)
 
       # Verify: The charge should be reversed (-100 adjustment), and an actual charge (+100) posted.
       expect(folio.folio_transactions.adjustment.sum(:amount)).to eq(-100.0)
@@ -74,13 +74,13 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       })
 
       booking.transition_status_to!("checked_in", event: "check_in")
-      folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+      folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
 
       # Night 1
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
       biz_date_record = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      Folios::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
       audit_day_1.update!(status: "completed")
       close_and_open_next_business_date(hotel)
 
@@ -89,7 +89,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       audit_day_2 = hotel.night_audits.create!(business_date: business_date + 1.day, status: "running", trigger_mode: "manual")
       biz_date_record_2 = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      Folios::PostNightlyCharges.call(night_audit: audit_day_2, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit_day_2, user: user)
       audit_day_2.update!(status: "completed")
       close_and_open_next_business_date(hotel)
 
@@ -100,13 +100,13 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       booking.update!(check_out: business_date + 2.days)
 
       # Guest pays for the 2 nights they stayed (200.0)
-      Folios::InsertTransaction.new(
+      Folios::Transactions::InsertTransaction.new(
         booking_folio: folio, amount: 200.0, transaction_type: :payment, category: "cash", user: user,
         description: "Payment for truncated stay", posting_date: business_date + 2.days
       ).call
 
       # Checkout should succeed because all expected dates (Day 1, Day 2) have charges!
-      result = Folios::CloseForCheckout.call(booking: booking, user: user, checked_out_at: business_date + 2.days)
+      result = Folios::Checkout::CloseForCheckout.call(booking: booking, user: user, checked_out_at: business_date + 2.days)
       expect(result.success?).to be(true)
       expect(folio.reload.status).to eq("closed")
     end
@@ -119,13 +119,13 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0)
 
       booking.transition_status_to!("checked_in", event: "check_in")
-      folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+      folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
 
       # Night Audit
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "completed", trigger_mode: "manual")
       biz_date_record = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      Folios::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
       close_and_open_next_business_date(hotel)
 
       # Next morning
@@ -133,18 +133,18 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
 
       # Guest walked out without paying.
       # Staff attempts to just close the folio
-      result = Folios::CloseForCheckout.call(booking: booking, user: user)
+      result = Folios::Checkout::CloseForCheckout.call(booking: booking, user: user)
       expect(result.success?).to be(false)
       expect(result.error).to include("Cannot check out with outstanding balance")
 
       # Staff posts a Write-Off adjustment
-      Folios::InsertTransaction.new(
+      Folios::Transactions::InsertTransaction.new(
         booking_folio: folio, amount: -100.0, transaction_type: :adjustment, category: "write_off", user: user,
         description: "Unpaid walk-out, writing off balance", posting_date: business_date + 1.day
       ).call
 
       # Now checkout succeeds
-      result2 = Folios::CloseForCheckout.call(booking: booking, user: user)
+      result2 = Folios::Checkout::CloseForCheckout.call(booking: booking, user: user)
       expect(result2.success?).to be(true)
       expect(folio.reload.status).to eq("closed")
     end
@@ -186,7 +186,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
 
       # 4. Reinstate
       booking.transition_status_to!("checked_in", event: "reinstate")
-      Folios::ProcessCatchUpCharges.call(booking: booking, user: user, is_reinstate: true)
+      Folios::Charges::ProcessCatchUpCharges.call(booking: booking, user: user, is_reinstate: true)
 
       # Verify:
       # - Original 100.0 charge reversed (adjustment of -100)
@@ -214,10 +214,10 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       })
 
       payment = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 50_000, captured_at: business_date.noon)
-      Folios::RecordPaymentFromGateway.call(payment)
+      Folios::Payments::RecordPaymentFromGateway.call(payment)
 
       booking.transition_status_to!("checked_in", event: "check_in")
-      folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+      folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
 
       # 2. Stay 2 nights
       [ 0, 1 ].each do |offset|
@@ -226,7 +226,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
         audit = hotel.night_audits.create!(business_date: date, status: "running", trigger_mode: "manual")
         biz_date_record = hotel.current_business_date_record
         start_business_date_audit(hotel)
-        Folios::PostNightlyCharges.call(night_audit: audit, user: user)
+        Folios::Charges::PostNightlyCharges.call(night_audit: audit, user: user)
         audit.update!(status: "completed")
         close_and_open_next_business_date(hotel)
       end
@@ -239,18 +239,18 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       expect(folio.outstanding_balance).to eq(-300.0)
 
       # 4. Attempt checkout -> Blocked
-      result = Folios::CloseForCheckout.call(booking: booking, user: user, checked_out_at: business_date + 2.days)
+      result = Folios::Checkout::CloseForCheckout.call(booking: booking, user: user, checked_out_at: business_date + 2.days)
       expect(result.success?).to be(false)
       expect(result.error).to include("credit balance")
 
       # 5. Process Refund
       refund_req = create(:refund_request, booking: booking, refund_amount: 300.0, status: "pending")
       # Admin completes refund
-      Folios::RecordRefund.call(refund_request: refund_req, user: user, posting_date: business_date + 2.days)
+      Folios::Payments::RecordRefund.call(refund_request: refund_req, user: user, posting_date: business_date + 2.days)
 
       # 6. Checkout now succeeds
       expect(folio.outstanding_balance).to eq(0.0)
-      result2 = Folios::CloseForCheckout.call(booking: booking, user: user, checked_out_at: business_date + 2.days)
+      result2 = Folios::Checkout::CloseForCheckout.call(booking: booking, user: user, checked_out_at: business_date + 2.days)
       expect(result2.success?).to be(true)
     end
   end
@@ -259,21 +259,21 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
     it "ensures night audit can be safely resumed without double-charging" do
       booking = create(:booking, hotel: hotel, status: "checked_in", check_in: business_date, check_out: business_date + 2.days, total_amount: 200.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0)
-      folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+      folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
 
       audit = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
       biz_date_record = hotel.current_business_date_record
       start_business_date_audit(hotel)
 
       # 1. First run of posting charges
-      Folios::PostNightlyCharges.call(night_audit: audit, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit, user: user)
       expect(folio.folio_transactions.charge.count).to eq(1)
       expect(folio.outstanding_balance).to eq(100.0)
 
       # 2. Simulate CRASH (audit status stays running, or moves to failed, but we just run the service again)
       # 3. Second run of posting charges (Resume)
       expect {
-        Folios::PostNightlyCharges.call(night_audit: audit, user: user)
+        Folios::Charges::PostNightlyCharges.call(night_audit: audit, user: user)
       }.not_to change { folio.folio_transactions.count }
 
       expect(folio.outstanding_balance).to eq(100.0)
@@ -288,7 +288,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
     it "transitions booking to review_due_out via housekeeping and applies charge" do
       booking = create(:booking, hotel: hotel, status: "checked_in", check_in: business_date, check_out: business_date + 1.day, total_amount: 100.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, room_number: "101")
-      folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+      folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
       room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
       # 1. Housekeeper detects guest still in room
@@ -296,7 +296,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       expect(booking.reload.status).to eq("review_due_out")
 
       # 2. Front desk reviews and applies charge (e.g. 50.0)
-      result = Folios::PostCategoryCharge.call(
+      result = Folios::Charges::PostCategoryCharge.call(
         folio: folio, user: user, category: "late_checkout_charge", amount: 50.0
       )
       expect(result).to be_success
@@ -318,12 +318,12 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
         (business_date + 1.day).iso8601 => { "price" => 100.0 },
         (business_date + 2.days).iso8601 => { "price" => 100.0 }
       })
-      folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+      folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
 
       # Day 1 audit posts 100
       audit = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
       start_business_date_audit(hotel)
-      Folios::PostNightlyCharges.call(night_audit: audit, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit, user: user)
       audit.update!(status: "completed")
       close_and_open_next_business_date(hotel)
 
@@ -332,7 +332,7 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 1.day)
 
       # Guest pays 400.0 (100 stay + 200 forfeited unused nights + 100 manual charge)
-      Folios::InsertTransaction.new(
+      Folios::Transactions::InsertTransaction.new(
         booking_folio: folio, amount: 400.0, transaction_type: :payment, category: "cash", user: user,
         description: "Payment for early departure", posting_date: business_date + 1.day
       ).call

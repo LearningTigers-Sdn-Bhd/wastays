@@ -27,13 +27,28 @@ RSpec.describe BookingGuest, type: :model do
     expect(booking_guest.reload.email_snapshot).to eq("private@example.test")
   end
 
-  it "keeps malformed encrypted-looking snapshots out of control-panel display" do
-    booking_guest = create(:booking_guest, email_snapshot: "safe@example.test")
+  it "keeps malformed encrypted snapshots out of the guest form" do
+    guest = create(:guest, email: "profile@example.test")
+    booking_guest = create(:booking_guest, guest: guest, email_snapshot: "safe@example.test")
     ActiveRecord::Base.connection.execute("UPDATE booking_guests SET email_snapshot = '{\"p\":malformed}' WHERE id = #{booking_guest.id}")
 
-    presenter = HotelPortal::BookingControlPanelPresenter.new(booking_guest.booking, params: { tab: "guest_details", booking_guest_id: booking_guest.id })
+    presenter = HotelPortal::Bookings::WorkspacePresenter.new(booking_guest.reload.booking, params: { tab: "guest_details", booking_guest_id: booking_guest.id })
 
-    expect(presenter.guest_display(booking_guest.reload)[:email]).to eq("—")
+    # Falls through to the reusable profile rather than raising or presenting a
+    # blank field that would overwrite the good value on save.
+    expect(presenter.guest_details_snapshots[:email]).to eq("profile@example.test")
+  end
+
+  it "leaves the guest form field empty when both encrypted sources are unreadable" do
+    guest = create(:guest, email: "profile@example.test")
+    booking_guest = create(:booking_guest, guest: guest, email_snapshot: "safe@example.test")
+    ActiveRecord::Base.connection.execute("UPDATE booking_guests SET email_snapshot = '{\"p\":malformed}' WHERE id = #{booking_guest.id}")
+    ActiveRecord::Base.connection.execute("UPDATE guests SET email = '{\"p\":malformed}' WHERE id = #{guest.id}")
+
+    presenter = HotelPortal::Bookings::WorkspacePresenter.new(booking_guest.reload.booking, params: { tab: "guest_details", booking_guest_id: booking_guest.id })
+
+    expect { presenter.guest_details_snapshots }.not_to raise_error
+    expect(presenter.guest_details_snapshots[:email]).to be_nil
   end
 
   it "allows only one primary guest per booking" do

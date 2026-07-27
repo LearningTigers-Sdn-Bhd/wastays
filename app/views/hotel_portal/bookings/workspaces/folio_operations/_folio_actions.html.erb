@@ -1,0 +1,86 @@
+<% folio_show = local_assigns[:folio_show] %>
+<% sheet_data = { turbo_frame: "folio_action_sheet" } %>
+
+<section>
+  <h3 class="sr-only">Ledger Actions</h3>
+  <div class="flex flex-wrap items-center gap-2">
+    <% if folio_show.actions_blocked? %>
+      <div class="max-w-2xl">
+        <p class="text-sm font-semibold text-foreground"><%= folio_show.actions_blocked_title %></p>
+        <p class="mt-1 text-sm text-muted-foreground"><%= folio_show.actions_blocked_reason %></p>
+        <% if folio_show.actions_blocked_url.present? %>
+          <div class="mt-3">
+            <%= render PanelsUI::Button.new(href: folio_show.actions_blocked_url, variant: :secondary, size: :sm) do %><%= folio_show.actions_blocked_link_label %><% end %>
+          </div>
+        <% end %>
+      </div>
+    <% elsif folio_show.action_section_state == :closed %>
+      <span class="text-sm text-muted-foreground"><%= folio_show.closed_folio_action_message %></span>
+    <% elsif folio_show.normal_folio_actions_available? || (booking.tourism_tax? && current_user.has_permission?("manage_bookings", hotel: hotel)) %>
+      <% if folio_show.can_post_payment? %>
+        <%= render PanelsUI::Button.new(
+              href: hotel_folio_action_post_transaction_path(hotel, booking, transaction_type: "payment", active_folio_id: folio_show.active_folio_id, return_to: request.fullpath),
+              variant: :primary,
+              size: :sm,
+              data: sheet_data) do %>
+          <%= cached_icon "credit-card", class: "size-3.5", aria: { hidden: true } %>
+          Add Payment
+        <% end %>
+      <% end %>
+      <% if folio_show.can_post_charge? %>
+        <%= render PanelsUI::Button.new(
+              href: hotel_folio_action_post_transaction_path(hotel, booking, transaction_type: "charge", active_folio_id: folio_show.active_folio_id, return_to: request.fullpath),
+              variant: :secondary,
+              size: :sm,
+              data: sheet_data) do %>
+          <%= cached_icon "plus", class: "size-3.5", aria: { hidden: true } %>
+          Add Charge
+        <% end %>
+      <% end %>
+      <% if folio_show.can_post_adjustment? %>
+        <%= render PanelsUI::Button.new(
+              href: hotel_folio_action_post_transaction_path(hotel, booking, transaction_type: "adjustment", active_folio_id: folio_show.active_folio_id, return_to: request.fullpath),
+              variant: :warning,
+              size: :sm,
+              data: sheet_data) do %>
+          <%= cached_icon "receipt-text", class: "size-3.5", aria: { hidden: true } %>
+          Add Adjustment
+        <% end %>
+      <% end %>
+
+      <%= render PanelsUI::DropdownMenu.new(id: "folio-more-actions", placement: :bottom_end) do |menu| %>
+        <% menu.with_trigger(variant: :secondary, size: :sm) do %>
+          More Actions
+          <%= cached_icon "chevron-down", class: "size-3", aria: { hidden: true } %>
+        <% end %>
+        <% if folio_show.can_execute_refund? %>
+          <% menu.with_item(href: hotel_folio_action_post_transaction_path(hotel, booking, transaction_type: "payment", category: "refund", active_folio_id: folio_show.active_folio_id, return_to: request.fullpath), data: sheet_data) do %>
+            <%= cached_icon "rotate-ccw", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+            Issue Refund
+          <% end %>
+        <% end %>
+        <% if booking.tourism_tax? && current_user.has_permission?("manage_bookings", hotel: hotel) %>
+          <% if booking.tourism_tax_voucher_number? %>
+            <% menu.with_item(href: hotel_booking_tourism_tax_voucher_path(hotel, booking), target: "_blank", rel: "noopener", data: { turbo: false }) do %>
+              <%= cached_icon "receipt", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+              Tourism Tax Voucher
+            <% end %>
+          <% else %>
+            <% menu.with_item(href: issue_hotel_booking_tourism_tax_voucher_path(hotel, booking), method: :post, form: { target: "_blank", data: { turbo: false } }) do %>
+              <%= cached_icon "receipt", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+              Issue Tourism Tax Voucher
+            <% end %>
+          <% end %>
+        <% end %>
+        <% [ [ "Transfer Charge", "arrow-right" ], [ "Print Folio", "file-text" ], [ "Void / Reverse", "rotate-ccw" ] ].each do |label, icon| %>
+          <% menu.with_item(disabled: true) do %>
+            <%= cached_icon icon, class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+            <%= label %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <span class="text-sm text-muted-foreground">No posting actions available</span>
+    <% end %>
+  </div>
+</section>

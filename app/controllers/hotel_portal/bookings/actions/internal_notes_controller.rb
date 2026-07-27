@@ -72,7 +72,7 @@ module HotelPortal
               render turbo_stream: [
                 turbo_stream.replace(
                   "booking_internal_notes",
-                  partial: "hotel_portal/booking_control_panels/booking_details/internal_notes",
+                  partial: "hotel_portal/bookings/workspaces/booking_details/internal_notes",
                   locals: { booking: @booking }
                 ),
                 helpers.turbo_stream_action_tag(

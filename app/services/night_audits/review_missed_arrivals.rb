@@ -63,7 +63,7 @@ module NightAudits
 
     def eligible?(booking)
       booking.status == "confirmed" &&
-        booking.check_in.to_date == @business_date &&
+        booking_local_date(booking.check_in) == @business_date &&
         !active_pre_checkin_hold?(booking)
     end
 
@@ -82,7 +82,7 @@ module NightAudits
       hour, minute = arrival_time.to_s.split(":").first(2).map(&:to_i)
       return nil unless hour&.between?(0, 23) && minute&.between?(0, 59)
 
-      arrival_date = booking.check_in.to_date
+      arrival_date = booking_local_date(booking.check_in)
       if business_day_crosses_midnight? && seconds_since_midnight(hour, minute) <= seconds_since_midnight(@hotel.business_ends_at.hour, @hotel.business_ends_at.min)
         arrival_date += 1.day
       end
@@ -99,6 +99,10 @@ module NightAudits
 
     def seconds_since_midnight(hour, minute)
       (hour * 3600) + (minute * 60)
+    end
+
+    def booking_local_date(value)
+      Bookings::ScheduledStay.local_date(hotel: @hotel, value: value)
     end
   end
 end

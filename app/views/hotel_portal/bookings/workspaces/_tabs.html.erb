@@ -1,0 +1,16 @@
+<div class="shrink-0 border-b border-border">
+  <%= render PanelsUI::Tabs.new(
+        id: "booking-workspace-tabs",
+        active: presenter.navigation_active_tab,
+        aria_label: "Booking workspace tabs"
+      ) do |tabs| %>
+    <% presenter.tabs.each do |tab| %>
+      <% tabs.with_tab(
+           name: tab.key,
+           label: tab.label,
+           href: presenter.tab_path(tab.key),
+           data: { turbo_frame: "booking_workspace", turbo_action: "advance" }
+         ) %>
+    <% end %>
+  <% end %>
+</div>

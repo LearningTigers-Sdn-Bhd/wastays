@@ -76,7 +76,7 @@ RSpec.describe "HotelPortal::Bookings::Actions cancellations", :business_day, ty
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="complete_sheet"')
       expect(response.body).to include('target="booking_action_sheet"')
-      expect(response.body).to include(CGI.escapeHTML(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")))
+      expect(response.body).to include(CGI.escapeHTML(hotel_booking_workspace_path(hotel, booking, tab: "booking_details")))
       expect(booking.reload.status).to eq("cancelled")
     end
 
@@ -84,7 +84,7 @@ RSpec.describe "HotelPortal::Bookings::Actions cancellations", :business_day, ty
       post hotel_booking_action_cancel_booking_path(hotel, booking),
         params: { cancellation_reason: "Guest requested" }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(flash[:notice]).to eq("Booking cancelled successfully.")
       expect(booking.reload.status).to eq("cancelled")
       expect(BookingAuditLog.where(auditable: booking, action_type: "cancel").last.metadata).to include(
@@ -152,7 +152,7 @@ RSpec.describe "HotelPortal::Bookings::Actions cancellations", :business_day, ty
       post hotel_booking_action_cancel_booking_path(hotel, pending),
         params: { cancellation_reason: "Group plans changed", target_scope: "individual", booking_ids: [ pending.id, sibling.id ] }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, pending, tab: "booking_details"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, pending, tab: "booking_details"))
       expect(pending.reload.status).to eq("cancelled")
       expect(sibling.reload.status).to eq("cancelled")
     end

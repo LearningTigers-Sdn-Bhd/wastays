@@ -1,12 +1,15 @@
 <%= render "hotel_portal/bookings/actions/shared/sheet",
       id: "booking-audit-trail-sheet",
-      aria_label: @presenter.group_overview? ? "Group Audit Trail" : "Audit Trail",
+      aria_label: @presenter.audit_group_scope? ? "Group Audit Trail" : "Audit Trail",
       size: :lg,
       body_class: "px-0 py-0" do %>
-  <%= render "hotel_portal/booking_control_panels/audit_trails/booking_audit_log",
+  <%= render "hotel_portal/bookings/workspaces/audit_trails/booking_audit_log",
         booking: @booking,
         presenter: @presenter,
         audit_logs: @audit_logs,
         audit_history: @audit_history,
-        closeable: false %>
+        audit_category: @audit_category,
+        audit_history_available: @audit_history_available,
+        closeable: false,
+        filter_frame: "booking_action_sheet" %>
 <% end %>

@@ -9,7 +9,7 @@ module HotelPortal
         #
         # Early-checkout preview lines are attributed to the folio they *route*
         # to via the `target_folio_id` tagged by the folios service. Routing
-        # lives in Folios::PostEarlyCheckoutCharges; this presenter only reads
+        # lives in Folios::Charges::PostEarlyCheckoutCharges; this presenter only reads
         # the tag.
         class SheetPresenter
           include Rails.application.routes.url_helpers
@@ -91,11 +91,11 @@ module HotelPortal
           end
 
           def held_deposits
-            @held_deposits ||= booking.deposits.where(status: "held")
+            @held_deposits ||= booking.deposits.kind_security.where(status: "held").includes(:deposit_movements)
           end
 
           def held_deposit_total
-            held_deposits.sum(:amount).to_d
+            held_deposits.sum(&:available_amount)
           end
 
           def can_submit?
@@ -125,7 +125,7 @@ module HotelPortal
               requires_input: INPUT_ACTIONS.include?(default_action),
               requires_payment: default_action == "pay_now",
               requires_reason: EXCEPTION_ACTIONS.include?(default_action),
-              ledger_path: hotel_booking_control_panel_path(hotel, booking, tab: "folio_operations", folio_id: folio.id)
+              ledger_path: hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id)
             )
           end
 
@@ -207,9 +207,8 @@ module HotelPortal
           # than the folio type, so the folio card reads "WS-…/1 · Faiz Hakim"
           # (guest) or "· Acme Sdn Bhd" (company) instead of echoing the title.
           def payer_label_for(folio)
-            text = [ folio.name, folio.display_name ].join(" ").downcase
-            return "Agent" if text.match?(/agent|travel/)
-            return "Hotel" if text.match?(/house/)
+            return "Hotel" if folio.folio_type_house?
+            return "Agent" if folio.hotel_corporate_account&.account_type == "travel_agent"
 
             case folio.payer_type
             when "company"

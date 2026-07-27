@@ -14,6 +14,12 @@ module SystemAuthHelper
     end
   end
 
+  # Fast path: establish the session through the test-only route instead of
+  # driving the login form. Saves ~4 browser round-trips per example.
+  def sign_in_as_system(user)
+    visit test_sign_in_path(user.id)
+  end
+
   def js_driver?
     Capybara.current_driver != :rack_test
   end

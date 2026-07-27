@@ -1,0 +1,28 @@
+<div class="mt-2 space-y-1">
+  <% rows.each do |row| %>
+    <% link_data = { turbo_frame: "_top", turbo_action: "advance" } %>
+    <% if mobile_entity_selection %>
+      <% link_data.merge!(
+        action: "workspace-entity-selection#select panels-ui--sheet#close",
+        workspace_entity_selection_heading_param: "folio-operations-panel"
+      ) %>
+    <% end %>
+    <%= link_to row.href,
+        aria: { current: ("page" if row.active) },
+        data: link_data,
+        class: "-mx-2 block rounded-md px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring #{row.active ? 'bg-muted' : 'hover:bg-muted'}" do %>
+      <span class="flex items-center gap-2 text-sm font-medium text-foreground">
+        <% if row.active %>
+          <span class="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true"></span>
+          <span class="sr-only">Selected:</span>
+        <% end %>
+        <span class="tabular-nums"><%= row.number %></span>
+      </span>
+      <span class="mt-0.5 block break-words text-xs text-muted-foreground"><%= row.payer_line %></span>
+      <span class="mt-1.5 flex items-center justify-between gap-2">
+        <%= render PanelsUI::Badge.new(label: row.status_badge[:label], variant: row.status_badge[:variant], size: :sm) %>
+        <span class="text-xs tabular-nums text-muted-foreground"><%= row.outstanding %></span>
+      </span>
+    <% end %>
+  <% end %>
+</div>

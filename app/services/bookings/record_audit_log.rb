@@ -9,6 +9,7 @@ module Bookings
       "check_in" => "status",
       "check_out" => "status",
       "cancel" => "status",
+      "void" => "status",
       "reinstate" => "status",
       "no_show" => "status",
       "undo_check_in" => "status",

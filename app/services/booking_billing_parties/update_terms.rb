@@ -21,7 +21,7 @@ module BookingBillingParties
       terms.updated_by = @actor
       terms.save!
       BookingAuditLog.create!(hotel: @party.hotel, auditable: @party.booking, user: @actor,
-        action_type: "billing_terms_updated", category: "financial", source: "booking_control_panel",
+        action_type: "billing_terms_updated", category: "financial", source: "booking_workspace",
         occurred_at: Time.current, old_value: previous, new_value: terms.attributes.slice(*term_keys))
       OpenStruct.new(success?: true, terms: terms, error: nil)
     rescue ActiveRecord::RecordInvalid => e

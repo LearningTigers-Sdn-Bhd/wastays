@@ -22,11 +22,11 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
 
       # 1. Booking Payment (Simulate gateway payment sync)
       payment = create(:payment_transaction, booking: booking, status: "captured", amount_subunits: 20_000, captured_at: Time.current)
-      Folios::RecordPaymentFromGateway.call(payment)
+      Folios::Payments::RecordPaymentFromGateway.call(payment)
 
       # 2. Check-in
       booking.transition_status_to!("checked_in", event: "check_in")
-      folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+      folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
 
       # Ensure booking payment synced into folio
       expect(folio.folio_transactions.payment.sum(:amount)).to eq(200.0)
@@ -36,7 +36,7 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "pending", trigger_mode: "manual")
       biz_date_record = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      Folios::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
       audit_day_1.update!(status: "completed")
       close_and_open_next_business_date(hotel)
 
@@ -47,7 +47,7 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
       audit_day_2 = hotel.night_audits.create!(business_date: business_date + 1.day, status: "pending", trigger_mode: "manual")
       biz_date_record_2 = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      Folios::PostNightlyCharges.call(night_audit: audit_day_2, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit_day_2, user: user)
       audit_day_2.update!(status: "completed")
       close_and_open_next_business_date(hotel)
 
@@ -56,7 +56,7 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
 
       # 5. Checkout on Day 3
       allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 2.days)
-      result = Folios::CloseForCheckout.call(booking: booking, user: user)
+      result = Folios::Checkout::CloseForCheckout.call(booking: booking, user: user)
 
       expect(result.success?).to be(true)
       expect(folio.reload.status).to eq("closed")
@@ -75,14 +75,14 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
 
       # 2. Check-in
       booking.transition_status_to!("checked_in", event: "check_in")
-      folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+      folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
       expect(folio.outstanding_balance).to eq(0.0)
 
       # 3. Run Night Audit for Day 1
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "pending", trigger_mode: "manual")
       biz_date_record = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      Folios::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
       audit_day_1.update!(status: "completed")
       close_and_open_next_business_date(hotel)
 
@@ -99,7 +99,7 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
       audit_day_2 = hotel.night_audits.create!(business_date: business_date + 1.day, status: "pending", trigger_mode: "manual")
       biz_date_record_2 = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      Folios::PostNightlyCharges.call(night_audit: audit_day_2, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit_day_2, user: user)
       audit_day_2.update!(status: "completed")
       close_and_open_next_business_date(hotel)
 
@@ -107,18 +107,18 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
 
       # 5. Attempt Checkout EARLY (Day 3 morning)
       allow_any_instance_of(Hotel).to receive(:business_date_for).and_return(business_date + 2.days)
-      result = Folios::CloseForCheckout.call(booking: booking, user: user)
+      result = Folios::Checkout::CloseForCheckout.call(booking: booking, user: user)
       expect(result.success?).to be(false)
       expect(result.error).to include("Cannot check out with outstanding balance")
 
       # 6. Settle balance (Cash)
-      Folios::InsertTransaction.new(
+      Folios::Transactions::InsertTransaction.new(
         booking_folio: folio, amount: 200.0, transaction_type: :payment, category: "cash", user: user,
         description: "Cash settlement", posting_date: business_date + 2.days
       ).call
 
       # Now checkout should succeed
-      result2 = Folios::CloseForCheckout.call(booking: booking, user: user)
+      result2 = Folios::Checkout::CloseForCheckout.call(booking: booking, user: user)
       expect(result2.success?).to be(true)
       expect(folio.reload.status).to eq("closed")
 
@@ -139,13 +139,13 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
       })
 
       booking.transition_status_to!("checked_in", event: "check_in")
-      folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+      folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
 
       # Night 1 posts at $100
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "completed", trigger_mode: "manual")
       biz_date_record = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      Folios::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit_day_1, user: user)
       close_and_open_next_business_date(hotel)
 
       # Next morning, guest decides to upgrade room or rate changes to $150 for remaining 2 nights.
@@ -160,7 +160,7 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
       audit_day_2 = hotel.night_audits.create!(business_date: business_date + 1.day, status: "completed", trigger_mode: "manual")
       biz_date_record_2 = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      Folios::PostNightlyCharges.call(night_audit: audit_day_2, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit_day_2, user: user)
       close_and_open_next_business_date(hotel)
 
       # Night 3 posts at $150
@@ -168,7 +168,7 @@ RSpec.describe "Standard Booking Lifecycles", type: :integration do
       audit_day_3 = hotel.night_audits.create!(business_date: business_date + 2.days, status: "completed", trigger_mode: "manual")
       biz_date_record_3 = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      Folios::PostNightlyCharges.call(night_audit: audit_day_3, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit_day_3, user: user)
       close_and_open_next_business_date(hotel)
 
       # Total charges should be 100 + 150 + 150 = 400

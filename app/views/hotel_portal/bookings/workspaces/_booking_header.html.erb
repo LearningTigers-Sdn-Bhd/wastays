@@ -1,0 +1,78 @@
+<header class="flex flex-col gap-4 px-5 pt-4 lg:flex-row lg:items-start lg:justify-between" data-testid="booking-workspace-header">
+  <div class="flex min-w-0 items-start gap-3">
+    <%= link_to hotel_front_desk_path(current_hotel, tab: "bookings", view: "list"),
+          class: "mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          aria: { label: "Back to Reservations" } do %>
+      <%= cached_icon "arrow-left", class: "size-4", aria: { hidden: true } %>
+    <% end %>
+    <div class="min-w-0 space-y-1">
+      <div class="flex flex-wrap items-center gap-2">
+        <h1 class="min-w-0 max-w-full truncate text-base font-semibold tabular-nums tracking-tight text-foreground"><%= presenter.header_title %></h1>
+        <% if presenter.group_context_enabled? %>
+          <%= render PanelsUI::Badge.new(label: "Group", variant: :info, size: :sm) %>
+        <% end %>
+        <% if (status_badge = presenter.header_status_badge) %>
+          <% status_rows = presenter.header_status_rows %>
+          <% if status_rows.any? %>
+            <%= render PanelsUI::Popover.new(
+                  id: "booking-header-status",
+                  placement: :bottom,
+                  trigger_on: :hover,
+                  delay: 100,
+                  close_delay: 150,
+                  class: "w-72 p-0") do |popover| %>
+              <% popover.with_trigger(
+                   unstyled: true,
+                   aria_label: "Show booking status by room",
+                   class: "inline-flex rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring") do %>
+                <%= render PanelsUI::Badge.new(label: status_badge[:label], variant: status_badge[:variant], size: :sm) %>
+              <% end %>
+              <div class="w-72 text-left font-normal">
+                <div class="border-b border-border px-3 py-2.5">
+                  <p class="text-sm font-semibold text-foreground">Status by room</p>
+                </div>
+                <ul class="divide-y divide-border">
+                  <% status_rows.each do |row| %>
+                    <li class="flex items-start justify-between gap-3 px-3 py-2.5">
+                      <div class="min-w-0">
+                        <p class="truncate text-xs font-medium tabular-nums text-foreground"><%= row[:room] %></p>
+                        <p class="truncate text-xs text-muted-foreground"><%= row[:room_type] %></p>
+                      </div>
+                      <% if row[:badge] %>
+                        <%= render PanelsUI::Badge.new(label: row[:badge][:label], variant: row[:badge][:variant], size: :sm) %>
+                      <% end %>
+                    </li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+          <% else %>
+            <%= render PanelsUI::Badge.new(label: status_badge[:label], variant: status_badge[:variant], size: :sm) %>
+          <% end %>
+        <% end %>
+      </div>
+      <p class="text-xs text-muted-foreground"><%= presenter.header_party_line %></p>
+      <p class="text-xs text-muted-foreground"><%= presenter.header_stay_line %></p>
+      <% if presenter.stay_dates_vary? %>
+        <dl class="flex flex-wrap gap-x-6 gap-y-1 pt-0.5 text-xs text-muted-foreground">
+          <div class="flex gap-1.5">
+            <dt>Earliest arrival</dt>
+            <dd class="font-medium tabular-nums text-foreground"><%= presenter.group_earliest_arrival %></dd>
+          </div>
+          <div class="flex gap-1.5">
+            <dt>Latest departure</dt>
+            <dd class="font-medium tabular-nums text-foreground"><%= presenter.group_latest_departure %></dd>
+          </div>
+        </dl>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-between gap-4 lg:shrink-0 lg:justify-end">
+    <div class="lg:text-right">
+      <p class="text-xs text-muted-foreground">Outstanding balance</p>
+      <p class="text-base font-semibold tabular-nums text-foreground"><%= presenter.header_outstanding_balance %></p>
+    </div>
+    <%= render "hotel_portal/bookings/workspaces/header_actions", booking: booking, presenter: presenter %>
+  </div>
+</header>

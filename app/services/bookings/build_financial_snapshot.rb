@@ -186,14 +186,11 @@ module Bookings
     def effective_room_revenue_tax_rules
       return room_revenue_transaction_code.transaction_code_taxes.includes(:hotel_tax) unless @booking
 
-      FolioRouting::EffectiveTaxRules.call(booking: @booking, transaction_code: room_revenue_transaction_code)
+      Folios::Routing::EffectiveTaxRules.call(booking: @booking, transaction_code: room_revenue_transaction_code)
     end
 
     def room_revenue_transaction_code
-      @room_revenue_transaction_code ||= begin
-        Financials::EnsureDefaultTransactionCodes.call(@hotel)
-        @hotel.transaction_codes.find_by(system_key: "room_revenue")
-      end
+      @room_revenue_transaction_code ||= transaction_code_for("room_revenue")
     end
 
     def room_transaction_code_tax_enabled?(rule)
@@ -337,7 +334,11 @@ module Bookings
 
     def transaction_code_for(system_key)
       Financials::EnsureDefaultTransactionCodes.call(@hotel)
-      @hotel.transaction_codes.find_by(system_key: system_key)
+      transaction_codes.for_key(system_key)
+    end
+
+    def transaction_codes
+      @transaction_codes ||= TransactionCodes::Resolver.for(@hotel)
     end
 
     def summarize_tax_lines(tax_posting_snapshot)

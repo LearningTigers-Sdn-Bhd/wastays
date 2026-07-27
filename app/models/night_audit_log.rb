@@ -18,6 +18,7 @@ class NightAuditLog < ApplicationRecord
     item_skipped
     item_failed
     blocker_resolved
+    completed_audit_repair
     completed
     failed
   ].freeze

@@ -2,7 +2,7 @@
 
 module StayView
   class ResolveFinancialSignals
-    TERMINAL_BOOKING_STATUSES = %w[cancelled completed no_show].freeze
+    TERMINAL_BOOKING_STATUSES = %w[cancelled completed no_show voided].freeze
 
     FolioRecord = Data.define(:id, :booking_id, :status, :currency, :billing_party_id)
     PartyRecord = Data.define(

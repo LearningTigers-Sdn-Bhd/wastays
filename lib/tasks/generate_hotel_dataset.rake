@@ -46,6 +46,7 @@ namespace :hotel_generator do
         tourism_tax_amount: 10.0
       )
       puts "   Hotel Created: ID #{hotel.id} | Prefix: #{hotel.hotel_prefix}"
+      transaction_codes = TransactionCodes::Resolver.for(hotel)
 
       # Create Property Policy
       PropertyPolicy.create!(
@@ -356,7 +357,7 @@ namespace :hotel_generator do
           )
 
           # Generate Folio & FolioTransactions
-          folio = Folios::InitializeForBooking.call(
+          folio = Folios::Lifecycle::InitializeForBooking.call(
             booking: booking,
             user: nil,
             options: { system_folio_initialization: true, posting_source: "booking_confirmation" },
@@ -365,7 +366,7 @@ namespace :hotel_generator do
 
           # Record Cash Payment transaction if captured
           if booking.payment_status == "captured"
-            payment_code = hotel.transaction_codes.find_by(system_key: "cash_payment")
+            payment_code = transaction_codes.for_key("cash_payment")
             FolioTransaction.create!(
               booking_folio: folio,
               amount: total_amount,
@@ -396,7 +397,7 @@ namespace :hotel_generator do
             nightly_room = (snapshot.room_total / nights).round(2)
             nightly_tax = (snapshot.tax_total / nights).round(2)
 
-            room_code = hotel.transaction_codes.find_by(system_key: "room_charges")
+            room_code = transaction_codes.room_revenue
             FolioTransaction.create!(
               booking_folio: folio,
               amount: nightly_room,
@@ -413,10 +414,7 @@ namespace :hotel_generator do
               tax_amount = (tax_line["amount"].to_d / nights).round(2)
               next if tax_amount.zero?
 
-              tax_code = case tax_line["type"]
-              when "sst" then hotel.transaction_codes.find_by(system_key: "sst_tax")
-              when "tourism_tax" then hotel.transaction_codes.find_by(system_key: "tourism_tax")
-              end
+              tax_code = transaction_codes.for_tax_type(tax_line["type"])
 
               FolioTransaction.create!(
                 booking_folio: folio,

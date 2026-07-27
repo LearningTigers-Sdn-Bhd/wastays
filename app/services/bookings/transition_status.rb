@@ -83,7 +83,7 @@ module Bookings
 
           if @booking.checked_in?
             repair_options = @booking.booking_folio.present? ? @options : @options.reverse_merge(override_night_audit: true)
-            Folios::InitializeForBooking.call(booking: @booking, user: @user, options: repair_options, lock: false)
+            Folios::Lifecycle::InitializeForBooking.call(booking: @booking, user: @user, options: repair_options, lock: false)
 
             updates = (@options[:attributes] || {}).dup
             if @options[:reason].present? && @timestamp.present?
@@ -158,7 +158,7 @@ module Bookings
             room_status&.update!(dnd: false, dnd_date: nil)
           end
 
-          Folios::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
+          Folios::Lifecycle::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
 
           tourism_tax_result = record_tourism_tax_payment_if_requested
           unless tourism_tax_result.success?
@@ -178,7 +178,7 @@ module Bookings
           end
 
           if is_retroactive || was_review_no_show
-            Folios::ProcessCatchUpCharges.call(
+            Folios::Charges::ProcessCatchUpCharges.call(
               booking: @booking,
               user: @user,
               is_reinstate: false,
@@ -216,11 +216,12 @@ module Bookings
       deposit_options = @options[:security_deposit]
       return OpenStruct.new(success?: true) if deposit_options.blank?
 
-      Deposits::RecordSecurityDeposit.call(
-        booking: @booking,
-        folio: @booking.booking_folio,
-        user: @user,
+      Deposits::Record.call(
+        owner: @booking,
+        kind: "security",
+        actor: @user,
         amount: deposit_options[:amount],
+        currency: @booking.currency || @booking.hotel.default_currency || "MYR",
         payment_method: deposit_options[:payment_method],
         external_reference: deposit_options[:external_reference]
       )
@@ -245,7 +246,7 @@ module Bookings
     def record_tourism_tax_payment_if_requested
       return OpenStruct.new(success?: true) unless @booking.tourism_tax_collected?
 
-      Folios::RecordTourismTaxPayment.call(
+      Folios::Payments::RecordTourismTaxPayment.call(
         booking: @booking,
         user: @user,
         options: @options.except(:attributes, :security_deposit)
@@ -280,7 +281,7 @@ module Bookings
             next
           end
 
-          close_result = Folios::CloseForCheckout.call(booking: @booking, user: @user, checked_out_at: @timestamp, options: @options)
+          close_result = Folios::Checkout::CloseForCheckout.call(booking: @booking, user: @user, checked_out_at: @timestamp, options: @options)
           unless close_result.success?
             error = close_result.error
             next
@@ -328,14 +329,37 @@ module Bookings
 
     def release_security_deposit_if_requested
       release_options = @options[:security_deposit_release]
-      return OpenStruct.new(success?: true, deposit_ids: [], total: 0.to_d) if release_options.blank?
+      return Deposits::ReturnBatchResult.success(deposit_ids: [], total: 0.to_d) if release_options.blank?
 
-      Deposits::ReleaseHeldDeposits.call(
-        booking: @booking,
-        user: @user,
-        released_at: @timestamp,
-        method: release_options[:method],
-        reference: release_options[:reference]
+      deposits = @booking.deposits.kind_security.where(status: "held").lock.to_a
+      movements = []
+      error = nil
+      Deposit.transaction do
+        deposits.each do |deposit|
+          result = Deposits::Return.call(
+            deposit: deposit,
+            amount: deposit.available_amount,
+            actor: @user,
+            payment_method: release_options[:method],
+            external_reference: release_options[:reference],
+            operation_key: "checkout:#{@booking.id}:deposit:#{deposit.id}:release",
+            occurred_at: @timestamp
+          )
+          unless result.success?
+            error = result.error
+            raise ActiveRecord::Rollback
+          end
+          movements << result.movement
+        end
+      end
+      return Deposits::ReturnBatchResult.failure(error, deposit_ids: [], total: 0.to_d) if error
+
+      Deposits::ReturnBatchResult.success(
+        deposit_ids: deposits.map(&:id),
+        total: movements.sum { |movement| movement.amount.to_d },
+        method: release_options[:method].to_s.presence || "cash",
+        reference: release_options[:reference].to_s.strip.presence,
+        released_at: movements.map(&:occurred_at).max
       )
     end
 

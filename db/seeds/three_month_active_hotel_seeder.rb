@@ -353,7 +353,7 @@ def post_nightly_charges_for_dates(booking, date_limit)
   folio = booking.booking_folio
   return unless folio
 
-  Folios::GenerateForecastedCharges.call(booking_folio: folio)
+  Folios::Forecasts::SyncForecastedCharges.call(booking_folio: folio)
 
   folio.folio_forecasted_charges.forecast.each do |fc|
     next if fc.stay_date > date_limit

@@ -100,11 +100,11 @@ module Bookings
     def truncate_stay!(departure_date, old_check_out)
       Bookings::InventoryManager.new(@booking).release_by_dates(departure_date, old_check_out)
       @booking.update!(check_out: Bookings::ScheduledStay.at_hotel_time(hotel: @booking.hotel, value: departure_date, kind: :check_out))
-      Folios::SyncForecastedCharges.call(booking_folio: @booking.booking_folio) if @booking.booking_folio.present?
+      Folios::Forecasts::SyncForecastedCharges.call(booking_folio: @booking.booking_folio) if @booking.booking_folio.present?
     end
 
     def post_early_checkout_charges(departure_date, old_check_out)
-      Folios::PostEarlyCheckoutCharges.call(
+      Folios::Charges::PostEarlyCheckoutCharges.call(
         booking: @booking,
         folio: @booking.booking_folio,
         user: @user,
@@ -121,13 +121,13 @@ module Bookings
       # The manual early-departure penalty follows the same billing route as the
       # room charges — to whatever folio that route targets, falling back to the
       # primary folio when unrouted.
-      route = Folios::ResolveTargetFolio.call(
+      route = Folios::Routing::ResolveTargetFolio.call(
         booking: @booking,
-        transaction_code: @booking.hotel.transaction_codes.find_by(system_key: "room_revenue")
+        transaction_code: TransactionCodes::Resolver.for(@booking.hotel).room_revenue
       )
       return failure(route.error) unless route.success?
 
-      Folios::PostCategoryCharge.call(
+      Folios::Charges::PostCategoryCharge.call(
         folio: route.folio,
         user: @user,
         category: "early_departure_charge",

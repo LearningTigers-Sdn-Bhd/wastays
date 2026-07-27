@@ -1,0 +1,126 @@
+<%# Shared routing matrix rows for selective and group folio-action Sheets. %>
+<% form = local_assigns.fetch(:form) %>
+<% field_prefix = local_assigns.fetch(:field_prefix, "routes") %>
+<% extra_action = local_assigns[:extra_action].presence %>
+<% action_for = ->(base) { [ base, extra_action ].compact_blank.join(" ").presence } %>
+<% draft ||= {} %>
+<% folio_choices = matrix.folios.map do |folio|
+     {
+       label: folio.display_option_label,
+       value: folio.id,
+       party_id: folio.booking_billing_party_id.to_s,
+       disabled: !folio.open?
+     }
+   end %>
+
+<% matrix.rows.each do |row| %>
+  <% current_folio = row.target_folio %>
+  <% current_party_id = current_folio&.booking_billing_party_id %>
+  <% row_draft = draft.fetch(row.code.id.to_s, {}) %>
+  <% selected_party_id = row_draft["billing_party_id"].presence || current_party_id %>
+  <% selected_folio_id = row_draft["target_folio_id"].presence || current_folio&.id %>
+  <% party_attribute = "#{field_prefix}[#{row.code.id}][billing_party_id]" %>
+  <% folio_attribute = "#{field_prefix}[#{row.code.id}][target_folio_id]" %>
+  <tr data-billing-routes-target="row"
+      data-group-billing-routes-target="row"
+      data-route-level="parent"
+      data-code-id="<%= row.code.id %>"
+      data-booking-id="<%= booking.id %>"
+      data-folio-options="<%= folio_choices.to_json %>">
+    <td class="px-3 py-3">
+      <button type="button" class="text-muted-foreground" aria-label="Show attached taxes for <%= row.code.code %>" aria-expanded="false" data-action="billing-routes#toggle"><%= cached_icon "chevron-right", class: "size-4", data: { billing_routes_target: "chevron" } %></button>
+    </td>
+    <td class="px-3 py-3 font-mono font-semibold text-foreground"><%= row.code.code %></td>
+    <td class="px-3 py-3 font-medium text-foreground"><%= row.code.name %></td>
+    <td class="px-3 py-3 text-muted-foreground"><%= row.included_children.any? ? pluralize(row.included_children.size, "attached item") : "None" %></td>
+    <td class="px-3 py-3">
+      <%= render PanelsUI::FormField.new(form: form, attribute: party_attribute,
+            label: "Billing party for #{row.code.code}", label_hidden: true, size: :sm) do |field| %>
+        <% field.with_select_menu(
+             matrix.parties.map { |party| { label: party.display_name, value: party.id, disabled: party.booking_folios.none? } }.presence ||
+               [ { label: "No billing party available", value: "", disabled: true } ],
+             selected: selected_party_id,
+             prompt: (current_party_id.blank? ? "Unassigned — add or reconcile a folio" : nil),
+             size: :sm,
+             data: { action: action_for.call("change->billing-routes#partyChanged"), billing_routes_target: "party" }) %>
+      <% end %>
+    </td>
+    <td class="px-3 py-3">
+      <% available_folios = folio_choices.select { |choice| choice[:party_id] == selected_party_id.to_s } %>
+      <%= render PanelsUI::FormField.new(form: form, attribute: folio_attribute,
+            label: "Target folio for #{row.code.code}", label_hidden: true, size: :sm) do |field| %>
+        <% field.with_select_menu(
+             available_folios.presence || [ { label: "No open folio available", value: "", disabled: true } ],
+             selected: selected_folio_id,
+             size: :sm,
+             data: { action: action_for.call("change->billing-routes#parentFolioChanged"), billing_routes_target: "folio" }) %>
+      <% end %>
+    </td>
+  </tr>
+
+  <tr class="hidden bg-muted/60" data-billing-routes-target="children" data-group-billing-routes-target="row" data-code-id="<%= row.code.id %>">
+    <td colspan="6" class="p-0">
+      <table class="w-full table-fixed border-collapse text-left text-xs">
+        <tbody class="divide-y divide-border border-y border-border">
+          <% if row.children.any? %>
+            <% row.children.each do |child| %>
+              <% draft_tax = row_draft.fetch("taxes", {})[child.key] %>
+              <% included = draft_tax.nil? ? child.included : ActiveModel::Type::Boolean.new.cast(draft_tax) %>
+              <% child_draft = row_draft.fetch("children", {}).fetch(child.key, {}) %>
+              <% child_party_id = child_draft["billing_party_id"].presence || child.target_folio&.booking_billing_party_id || selected_party_id %>
+              <% child_folio_id = child_draft["target_folio_id"].presence || child.target_folio&.id || selected_folio_id %>
+              <% guest_primary_folio_id = booking.booking_folio&.id %>
+              <% child_choice = child_draft["billing_party_choice"].presence || (child.rule&.target_folio_id == guest_primary_folio_id ? "guest_primary_folio" : (child.rule ? "party:#{child_party_id}" : "inherit")) %>
+              <% child_folio_id = guest_primary_folio_id if child_choice == "guest_primary_folio" %>
+              <% child_choice_attribute = "#{field_prefix}[#{row.code.id}][children][#{child.key}][billing_party_choice]" %>
+              <% child_folio_attribute = "#{field_prefix}[#{row.code.id}][children][#{child.key}][target_folio_id]" %>
+              <tr data-billing-routes-target="row"
+                  data-group-billing-routes-target="row"
+                  data-route-level="child"
+                  data-code-id="<%= row.code.id %>"
+                  data-parent-code-id="<%= row.code.id %>"
+                  data-primary-folio-id="<%= guest_primary_folio_id %>"
+                  data-booking-id="<%= booking.id %>"
+                  data-folio-options="<%= folio_choices.to_json %>">
+                <td class="w-10"></td>
+                <td class="w-24 px-3 py-2 font-mono font-semibold text-foreground"><%= child.code.code %></td>
+                <td class="px-3 py-2 font-medium text-foreground"><%= child.label %></td>
+                <td class="w-44 px-3 py-2">
+                  <%= hidden_field_tag "#{field_prefix}[#{row.code.id}][taxes][#{child.key}]", "0" %>
+                  <label class="inline-flex items-center gap-2 text-foreground"><%= check_box_tag "#{field_prefix}[#{row.code.id}][taxes][#{child.key}]", "1", included, class: "rounded border-border-interactive" %> Include</label>
+                </td>
+                <td class="w-48 px-3 py-2">
+                  <%= render PanelsUI::FormField.new(form: form, attribute: child_choice_attribute,
+                        label: "Billing choice for #{child.code.code}", label_hidden: true, size: :sm) do |field| %>
+                    <% field.with_select_menu(
+                         [
+                           { label: "Follow parent", value: "inherit" },
+                           { label: "Keep in Guest Primary Folio", value: "guest_primary_folio", disabled: guest_primary_folio_id.blank? }
+                         ] + matrix.parties.map { |party| { label: party.display_name, value: "party:#{party.id}", disabled: party.booking_folios.none? } },
+                         selected: child_choice,
+                         size: :sm,
+                         data: { action: action_for.call("change->billing-routes#childChoiceChanged"), billing_routes_target: "childChoice" }) %>
+                  <% end %>
+                </td>
+                <td class="w-56 px-3 py-2">
+                  <% child_available_folios = folio_choices.select { |choice| choice[:party_id] == child_party_id.to_s } %>
+                  <%= render PanelsUI::FormField.new(form: form, attribute: child_folio_attribute,
+                        label: "Target folio for #{child.code.code}", label_hidden: true, size: :sm) do |field| %>
+                    <% field.with_select_menu(
+                         child_available_folios.presence || [ { label: "No open folio available", value: "", disabled: true } ],
+                         selected: child_folio_id,
+                         disabled: child_choice.in?(%w[inherit guest_primary_folio]),
+                         size: :sm,
+                         data: { action: action_for.call(nil), billing_routes_target: "folio" }) %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          <% else %>
+            <tr><td class="px-3 py-3 text-center text-muted-foreground" colspan="6">No attached taxes or charges.</td></tr>
+          <% end %>
+        </tbody>
+      </table>
+    </td>
+  </tr>
+<% end %>

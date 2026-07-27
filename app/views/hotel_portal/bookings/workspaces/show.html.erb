@@ -1,0 +1,17 @@
+<% content_for :full_height_page, true %>
+
+<div class="flex min-h-0 w-full flex-1 flex-col gap-4" data-testid="booking-workspace">
+  <%= render "booking_header", booking: @booking, presenter: @presenter %>
+
+  <% if @entity_booking&.status == "voided" %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "This booking has been voided") do |alert| %>
+      <% alert.with_description do %>
+        Existing folios were left unchanged. Review and complete any required financial correction or settlement separately.
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <section class="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid="booking-workspace-workspace">
+    <%= render "work_area", booking: @booking, entity_booking: @entity_booking, presenter: @presenter, booking_presenter: @booking_presenter, folio_show: @folio_show, audit_logs: @audit_logs, audit_history: @audit_history, audit_category: @audit_category, audit_history_available: @audit_history_available %>
+  </section>
+</div>

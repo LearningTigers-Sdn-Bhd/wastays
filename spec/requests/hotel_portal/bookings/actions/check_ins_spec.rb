@@ -282,7 +282,7 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", :business_day, type: 
         }
       }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(booking.reload.status).to eq("checked_in")
       expect(sibling.reload.status).to eq("checked_in")
       expect(booking.deposits.reload.pluck(:amount)).to contain_exactly(40.to_d)
@@ -326,7 +326,7 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", :business_day, type: 
         check_in: { checked_in_at: Time.current.strftime("%Y-%m-%dT%H:%M") }
       }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(booking.reload.status).to eq("confirmed")
       expect(sibling.reload.status).to eq("checked_in")
     end

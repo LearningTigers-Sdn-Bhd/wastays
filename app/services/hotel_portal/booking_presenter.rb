@@ -28,6 +28,7 @@ module HotelPortal
       when "checkout_required" then "border-rose-800 text-rose-800"
       when "completed" then "border-emerald-800 text-emerald-800"
       when "cancelled" then "border-red-800 text-red-800"
+      when "voided" then "border-red-800 text-red-800"
       when "pending" then "border-yellow-800 text-yellow-800"
       else "border-border-interactive text-foreground"
       end
@@ -268,7 +269,8 @@ module HotelPortal
     end
 
     def held_security_deposit_total
-      @held_security_deposit_total ||= booking.deposits.where(status: "held").sum(:amount).to_d
+      @held_security_deposit_total ||= booking.deposits.kind_security.where(status: "held")
+        .includes(:deposit_movements).sum(&:available_amount)
     end
 
     def projected_outstanding_balance
@@ -485,6 +487,7 @@ module HotelPortal
         "checkout_required" => "peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700 peer-checked:hover:bg-rose-100",
         "completed" => "peer-checked:border-emerald-400 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 peer-checked:hover:bg-emerald-100",
         "cancelled" => "peer-checked:border-border-interactive peer-checked:bg-muted peer-checked:text-foreground peer-checked:hover:bg-muted",
+        "voided" => "peer-checked:border-destructive/30 peer-checked:bg-destructive/10 peer-checked:text-destructive",
         "no_show" => "peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700 peer-checked:hover:bg-rose-100",
         "overbooked" => "peer-checked:border-red-400 peer-checked:bg-red-50 peer-checked:text-red-700 peer-checked:hover:bg-red-100",
         "not_ready" => "peer-checked:border-red-400 peer-checked:bg-red-50 peer-checked:text-red-700 peer-checked:hover:bg-red-100"
@@ -506,6 +509,7 @@ module HotelPortal
         "checkout_required" => "border-destructive/30 bg-destructive/10 text-destructive",
         "completed" => "border-success/30 bg-success/10 text-success",
         "cancelled" => "border-border-interactive bg-muted text-muted-foreground",
+        "voided" => "border-destructive/30 bg-destructive/10 text-destructive",
         "no_show" => "border-destructive/30 bg-destructive/10 text-destructive",
         "overbooked" => "border-destructive/30 bg-destructive/10 text-destructive",
         "not_ready" => "border-destructive/30 bg-destructive/10 text-destructive"

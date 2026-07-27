@@ -123,7 +123,7 @@
                 <% end %>
               </td>
               <td>
-                <%= link_to row.booking_reference, hotel_booking_control_panel_path(current_hotel, row.booking, tab: "folio_operations", folio_id: row.folio.id) %>
+                <%= link_to row.booking_reference, hotel_booking_workspace_path(current_hotel, row.booking, tab: "folio_operations", folio_id: row.folio.id) %>
                 <span class="block text-xs text-muted-foreground">Folio <%= row.folio_number %></span>
               </td>
               <td>

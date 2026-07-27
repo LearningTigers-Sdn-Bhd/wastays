@@ -4,6 +4,8 @@ require "ostruct"
 
 module Bookings
   class RepairNoShowTourismTax
+    include Authorizable
+
     SOURCE = "no_show_tourism_tax_repair"
     REASON = "no_show_tourism_tax_not_due"
     NOTE = "Tourism tax removed because the guest did not check in."
@@ -64,7 +66,7 @@ module Bookings
             folio_charges.each { |charge| reverse!(charge) }
           end
 
-          close_result = Folios::CloseNoShowFolios.call(
+          close_result = Folios::Lifecycle::CloseNoShowFolios.call(
             booking: @booking,
             user: @user,
             business_date: @booking.hotel.current_business_date
@@ -88,32 +90,28 @@ module Bookings
     private
 
     def permitted?
-      return true if @user&.respond_to?(:superadmin?) && @user.superadmin?
-      return false unless @user&.respond_to?(:has_permission?)
-
-      REQUIRED_PERMISSIONS.all? { |permission| @user.has_permission?(permission, hotel: @booking.hotel) }
+      actor_permits_all?(@user, REQUIRED_PERMISSIONS, hotel: @booking.hotel)
     end
 
     def reopen_for_repair!(folio)
-      folio.send(:authorize_reopen_for_correction!)
-      folio.update!(status: "open", closed_at: nil, closed_by: nil)
-      FolioOperationLog.create!(
-        hotel: folio.hotel,
-        booking: @booking,
-        actor: @user,
-        operation_type: "reopen_folio",
-        source_folio: folio,
-        target_folio: folio,
-        currency: folio.currency,
-        reason: NOTE,
-        metadata: { source: SOURCE, reopened_at: Time.current.iso8601 }
-      )
-    ensure
-      folio.send(:clear_reopen_for_correction_authorization!)
+      folio.reopening_for_correction do
+        folio.update!(status: "open", closed_at: nil, closed_by: nil)
+        FolioOperationLog.create!(
+          hotel: folio.hotel,
+          booking: @booking,
+          actor: @user,
+          operation_type: "reopen_folio",
+          source_folio: folio,
+          target_folio: folio,
+          currency: folio.currency,
+          reason: NOTE,
+          metadata: { source: SOURCE, reopened_at: Time.current.iso8601 }
+        )
+      end
     end
 
     def reverse!(charge)
-      result = Folios::InsertTransaction.new(
+      result = Folios::Transactions::InsertTransaction.new(
         booking_folio: charge.booking_folio,
         amount: -charge.amount,
         transaction_type: :adjustment,

@@ -29,7 +29,7 @@ module Admin
 
     def complete
       ActiveRecord::Base.transaction do
-        folio_result = Folios::RecordRefund.call(refund_request: @refund_request, user: current_user)
+        folio_result = Folios::Payments::RecordRefund.call(refund_request: @refund_request, user: current_user)
         raise "Failed to record refund in folio: #{folio_result.error}" unless folio_result.success?
 
         @refund_request.update!(status: "completed")

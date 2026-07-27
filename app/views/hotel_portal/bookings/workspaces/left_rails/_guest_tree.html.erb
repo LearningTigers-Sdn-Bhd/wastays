@@ -1,0 +1,32 @@
+<% can_manage = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+
+<nav aria-label="Booking guests" class="divide-y divide-border">
+  <% presenter.guest_tree_groups.each do |group| %>
+    <% heading_id = "#{id_prefix}-guest-group-#{group.booking_id}" %>
+    <section aria-labelledby="<%= heading_id %>" class="px-4 py-4">
+      <h3 id="<%= heading_id %>" class="text-xs font-semibold tabular-nums text-foreground"><%= group.label %></h3>
+      <% if group.description.present? %>
+        <p class="text-xs text-muted-foreground"><%= group.description %></p>
+      <% end %>
+
+      <%= render "hotel_portal/bookings/workspaces/left_rails/guest_rows",
+        rows: group.rows,
+        mobile_entity_selection: mobile_entity_selection %>
+
+      <% if group.rows.empty? %>
+        <p class="mt-2 text-sm text-muted-foreground">No guests yet.</p>
+      <% end %>
+
+      <% if can_manage && group.add_href.present? %>
+        <%= link_to group.add_href,
+            class: "mt-1 inline-flex items-center gap-1 rounded-md px-1 py-1 text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            data: {
+              turbo_frame: "booking_action_sheet",
+              action: ("panels-ui--sheet#close" if mobile_entity_selection)
+            }.compact do %>
+          <span aria-hidden="true">+</span> Add guest<span class="sr-only"> to <%= group.label %></span>
+        <% end %>
+      <% end %>
+    </section>
+  <% end %>
+</nav>

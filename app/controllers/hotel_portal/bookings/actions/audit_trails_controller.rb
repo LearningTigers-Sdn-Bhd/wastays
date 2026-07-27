@@ -6,7 +6,7 @@ module HotelPortal
       # Read-only booking Audit Trail rendered into the booking_action_sheet.
       #
       # Gated on view_bookings + the full_audit_trail feature (like the legacy
-      # BookingControlPanelsController#audit_trail), not the base manage_bookings
+      # WorkspacesController#audit_trail), not the base manage_bookings
       # authorization.
       class AuditTrailsController < BaseController
         include BookingAuditable
@@ -16,8 +16,8 @@ module HotelPortal
         before_action :require_audit_feature!
 
         def show
-          @presenter = BookingControlPanelPresenter.new(@booking, params: params, hotel: current_hotel)
-          set_audit_logs(@booking, group_booking: (@booking.group_booking if @presenter.group_overview?))
+          @presenter = HotelPortal::Bookings::WorkspacePresenter.new(@booking, params: params, hotel: current_hotel)
+          set_audit_logs(@presenter.audit_selected_booking || @booking, group_booking: (@booking.group_booking if @presenter.audit_group_scope?))
           render :show, layout: false
         end
 

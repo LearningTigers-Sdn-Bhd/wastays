@@ -24,7 +24,8 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
     expect(document.at_css("turbo-frame#booking_action_sheet dialog#booking-guest-sheet")).to be_present
     expect(document.at_css("input[name='guest[name]'][autofocus]")).to be_present
     expect(document.css("[data-controller~='panels-ui--combobox']").size).to eq(1)
-    expect(document.css("[data-controller~='panels-ui--select-menu']").size).to eq(2)
+    expect(document.css("[data-controller~='panels-ui--select-menu']").size).to eq(3)
+    expect(document.at_css("#guest_apply_to-select-menu[data-disabled='true']")).to be_present
     expect(document.at_css("[data-controller~='panels-ui--date-picker'] input[name='guest[date_of_birth]']")).to be_present
     country_options = document.css("select[name='guest[country]'] option").map { |option| [ option.text, option["value"] ] }
     expect(country_options).to include([ "Malaysia", "Malaysia" ], [ "Singapore", "Singapore" ])
@@ -42,6 +43,28 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
     expect(booking.booking_guests.find_by!(is_primary: false).guest.name).to eq("Added Guest")
   end
 
+  it "adds one reusable guest to every eligible child when group apply is selected" do
+    group = create(:group_booking, hotel:)
+    booking.update!(group_booking: group, group_position: 1)
+    sibling = create(:booking, hotel:, group_booking: group, group_position: 2, status: "confirmed")
+
+    attributes = {
+      guest: {
+        apply_to: "group", name: "Group Guest", country: "Malaysia",
+        document_type: "passport", date_of_birth: "1993-04-05"
+      }
+    }
+
+    post hotel_booking_action_manage_guest_path(hotel, booking, mode: "add"), params: attributes
+    expect(response.body).to include("Review group guest", "operational guest, meal, and transfer reports")
+    expect(Guest.where(name: "Group Guest")).not_to exist
+
+    post hotel_booking_action_manage_guest_path(hotel, booking, mode: "add"), params: attributes.merge(confirm_group: "1")
+    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details"))
+    guest_ids = [ booking, sibling ].flat_map { |child| child.booking_guests.where(is_primary: false).pluck(:guest_id) }
+    expect(guest_ids.uniq.size).to eq(1)
+  end
+
   it "keeps the Sheet open when guest validation fails" do
     post hotel_booking_action_manage_guest_path(hotel, booking, mode: "add"),
       params: { guest: { name: "", country: "Malaysia" } },
@@ -54,7 +77,7 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
   it "updates an inline guest snapshot and redirects to the selected workspace" do
     booking_guest = create(:booking_guest, booking:, is_primary: false)
     original_name = booking_guest.guest.name
-    return_to = hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
+    return_to = hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
 
     patch hotel_booking_action_manage_guest_path(hotel, booking, mode: "edit_additional", booking_guest_id: booking_guest.id), params: {
       return_to:,
@@ -96,7 +119,7 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
 
     patch hotel_booking_action_set_primary_guest_path(hotel, booking, replacement)
 
-    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "guest_details", booking_guest_id: replacement.id))
+    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: replacement.id))
     expect(replacement.reload).to be_primary
     expect(original.reload).not_to be_primary
   end

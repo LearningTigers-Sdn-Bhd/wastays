@@ -1,0 +1,25 @@
+<% group_number = @group.formatted_reservation_number.presence || "—" %>
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "folio-group-billing-routes-sheet",
+        side: :bottom,
+        size: :full,
+        title: "Change group billing routes",
+        description: "Group No. #{group_number} · #{@group_bookings.size} bookings · Billing",
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <div class="flex h-full min-h-0 flex-col bg-card">
+
+    <% if flash.now[:alert].present? %>
+      <div class="border-b border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive" role="alert"><%= flash.now[:alert] %></div>
+    <% end %>
+
+    <% if @group_batch_preview&.success? && @group_batch_preview.review_required? %>
+      <%= render "hotel_portal/folios/actions/group_billing_routes/impact_review" %>
+    <% else %>
+      <%= render "hotel_portal/folios/actions/group_billing_routes/selector" %>
+    <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

@@ -93,7 +93,7 @@
                 <tr class="align-top">
                   <th scope="row" class="whitespace-nowrap">
                     <%= link_to "##{presenter.confirmation_token}",
-                          hotel_booking_control_panel_path(current_hotel, presenter.booking, tab: "booking_details"),
+                          hotel_booking_workspace_path(current_hotel, presenter.booking, tab: "booking_details"),
                           class: "font-mono text-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive",
                           data: { turbo: false } %>
                   </th>

@@ -22,6 +22,7 @@ module Bookings
       @apply_arrival_departure_restrictions = @params.delete(:apply_arrival_departure_restrictions)
       @apply_stay_length_restrictions = @params.delete(:apply_stay_length_restrictions)
       @posting_date = @params.delete(:posting_date)
+      @financial_posting_options = @params.delete(:financial_posting_options).to_h.symbolize_keys
 
       @user = user
       @rate_tier = rate_tier
@@ -105,9 +106,8 @@ module Bookings
           return OpenStruct.new(success?: false, errors: [ "Payment amount must be greater than 0." ])
         end
 
-        booking.payment_status = (payment_amount_value.to_d >= booking.total_amount.to_d) ? "captured" : "partial"
-
-        captured_at_time = if @posting_date.present?
+        @payment_amount_value = payment_amount_value.to_d
+        @payment_received_at = if @posting_date.present?
           begin
             @posting_date.to_date.in_time_zone(@hotel.hotel_time_zone) + 12.hours
           rescue
@@ -117,17 +117,7 @@ module Bookings
           Time.current
         end
 
-        booking.payment_transactions.build(
-          gateway: "manual",
-          payment_method: @payment_method.presence || "cash",
-          amount_subunits: (payment_amount_value.to_d * 100).to_i,
-          currency: booking.currency || "MYR",
-          status: "captured",
-          captured_at: captured_at_time,
-          external_reference: @payment_reference.presence,
-          event_source: "manual_booking",
-          metadata: { recorded_by_user_id: @user&.id }
-        )
+        booking.payment_status = "pending"
       else
         booking.payment_status = "pending"
       end
@@ -155,7 +145,9 @@ module Bookings
 
             InventoryManager.new(booking).deduct
             sync_guest(booking, selected_guest)
-            Folios::InitializeForBooking.call(booking: booking, user: @user, lock: false)
+            Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: @user, lock: false)
+            record_prepayment!(booking) if @payment_amount_value
+            booking.reload if @payment_amount_value
 
             # Record Audit Log
             Bookings::RecordAuditLog.call!(
@@ -187,6 +179,33 @@ module Bookings
     end
 
     private
+
+    def record_prepayment!(booking)
+      receipt = Deposits::Record.call(
+        owner: booking,
+        kind: "prepayment",
+        amount: @payment_amount_value,
+        currency: booking.currency || "MYR",
+        payment_method: @payment_method.presence || "cash",
+        actor: @user,
+        external_reference: @payment_reference.presence,
+        received_at: @payment_received_at,
+        metadata: { source: "manual_booking" }
+      )
+      raise receipt.error unless receipt.success?
+
+      application = Deposits::Apply.call(
+        deposit: receipt.deposit,
+        booking_folio: booking.booking_folio,
+        amount: @payment_amount_value,
+        actor: @user,
+        posting_date: @posting_date,
+        override_night_audit: @financial_posting_options[:override_night_audit],
+        override_reason: @financial_posting_options[:reason],
+        operation_key: "manual-booking:#{booking.id}:prepayment"
+      )
+      raise application.error unless application.success?
+    end
 
     def normalize_scheduled_stay!
       %i[check_in check_out].each do |kind|

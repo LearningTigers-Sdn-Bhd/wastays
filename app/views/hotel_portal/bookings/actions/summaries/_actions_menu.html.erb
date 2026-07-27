@@ -10,9 +10,9 @@
   <% end %>
 
   <% menu.with_group(label: "Booking") do |group| %>
-    <% group.with_item(href: hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"), data: { turbo: false }) do %>
+    <% group.with_item(href: hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details"), data: { turbo: false }) do %>
       <%= app_icon "external-link", class: "size-4", aria: { hidden: true } %>
-      <span>Booking Control Panel</span>
+      <span>Booking Workspace</span>
     <% end %>
   <% end %>
 

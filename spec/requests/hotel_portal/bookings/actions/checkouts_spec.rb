@@ -70,7 +70,7 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
 
     it "renders held-deposit controls through PanelsUI with top-level parameter names" do
       folio = booking.booking_folios.first
-      create(:deposit, booking: booking, hotel: hotel, booking_folio: folio, amount: 125, status: "held")
+      create(:deposit, booking: booking, hotel: hotel, amount: 125, status: "held")
 
       get hotel_booking_action_checkout_path(hotel, booking),
         headers: { "Turbo-Frame" => "booking_action_sheet" }
@@ -124,7 +124,7 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
       post hotel_booking_action_checkout_path(hotel, booking),
         params: { booking: { checked_out_at: Time.current.strftime("%Y-%m-%dT%H:%M") } }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details", checkout_success: true))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details", checkout_success: true))
       expect(flash[:notice]).to eq("Guest has been checked out.")
     end
 
@@ -143,7 +143,7 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
       booking.update!(check_out: Date.current + 2.days)
       folio = booking.booking_folios.first
       create(:folio_transaction, booking_folio: folio, amount: 50, transaction_type: "charge")
-      create(:deposit, booking: booking, hotel: hotel, booking_folio: folio, amount: 125, status: "held")
+      create(:deposit, booking: booking, hotel: hotel, amount: 125, status: "held")
       stub_checkout(success: false, error: "Payment reference is required.")
 
       post hotel_booking_action_checkout_path(hotel, booking),

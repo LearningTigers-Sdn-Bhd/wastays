@@ -11,7 +11,8 @@ module HotelPortal
       "cancelled" => "Cancelled",
       "completed" => "Checked out",
       "overbooked" => "Overbooked",
-      "no_show" => "No-show"
+      "no_show" => "No-show",
+      "voided" => "Voided"
     }.freeze
 
     FIELD_LABELS = {
@@ -74,6 +75,7 @@ module HotelPortal
         "check_in" => "Guest checked in",
         "check_out" => "Guest checked out",
         "cancel" => "Booking cancelled",
+        "void" => "Booking voided",
         "reinstate" => "No-show booking reinstated",
         "no_show" => automatic? ? "Booking automatically marked as no-show" : "Booking marked as no-show",
         "room_assignment" => "Room assignment updated",
@@ -103,6 +105,8 @@ module HotelPortal
         "#{actor_name} checked #{guest_name} out."
       when "cancel"
         "#{actor_name} cancelled the booking."
+      when "void"
+        "#{actor_name} voided the booking. Existing folios were left unchanged."
       when "reinstate"
         "#{actor_name} reinstated the no-show booking and checked the guest in."
       when "no_show"

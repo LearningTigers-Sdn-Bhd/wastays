@@ -103,7 +103,7 @@ module Bookings
       return failure("Booking folio is missing.") unless @booking.booking_folio.present?
 
       @charged = true
-      Folios::PostCategoryCharge.call(
+      Folios::Charges::PostCategoryCharge.call(
         folio: @booking.booking_folio,
         user: @user,
         category: "late_checkout_charge",

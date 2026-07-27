@@ -96,7 +96,7 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
 
     it "creates a booking with manual rate override and internal notes" do
       post hotel_booking_action_new_booking_path(hotel), params: valid_params
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, Booking.last)) if Booking.last
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, Booking.last)) if Booking.last
 
       expect(Booking.count).to eq(1)
       booking = Booking.last

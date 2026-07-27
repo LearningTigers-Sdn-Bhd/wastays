@@ -19,7 +19,7 @@
               <td class="px-4 py-4 text-sm"><%= booking.check_in.strftime("%d %b %Y") %> to <%= booking.check_out.strftime("%d %b %Y") %></td>
               <td class="px-4 py-4 text-sm"><span class="inline-flex rounded-md border px-2 py-0.5 text-xs font-medium <%= presenter.status_variant_class %>"><%= presenter.status_label_humanized %></span></td>
               <td class="px-4 py-4 text-sm"><%= rooms_summary %></td>
-              <td class="px-4 py-4 text-right"><%= link_to "View booking", hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"), class: "inline-flex min-h-9 items-center rounded-lg border border-border-interactive px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" %></td>
+              <td class="px-4 py-4 text-right"><%= link_to "View booking", hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details"), class: "inline-flex min-h-9 items-center rounded-lg border border-border-interactive px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" %></td>
             </tr>
           <% end %>
         <% else %>
@@ -41,7 +41,7 @@
           <p class="text-sm">Contact: <%= booking.guest_email %> · <%= booking.guest_phone %></p>
           <p class="text-sm">Stay Dates: <%= booking.check_in.strftime("%d %b %Y") %> to <%= booking.check_out.strftime("%d %b %Y") %></p>
           <p class="text-sm">Rooms: <%= rooms_summary %></p>
-          <%= link_to "View booking", hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details"), class: "mt-2 inline-flex min-h-9 items-center rounded-lg border border-border-interactive px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" %>
+          <%= link_to "View booking", hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details"), class: "mt-2 inline-flex min-h-9 items-center rounded-lg border border-border-interactive px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" %>
         </article>
       <% end %>
     <% else %>

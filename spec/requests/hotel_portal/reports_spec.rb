@@ -1061,7 +1061,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
       expect(page).to have_css("h1", exact_text: "Outstanding balance report")
       expect(page).to have_css("select[name='date_preset'] option[value='this_year']", text: "This Year", visible: :all)
-      expect(page).to have_link("WS-UNPAID", href: hotel_booking_control_panel_path(hotel, unpaid, tab: "booking_details"))
+      expect(page).to have_link("WS-UNPAID", href: hotel_booking_workspace_path(hotel, unpaid, tab: "booking_details"))
       expect(page).to have_text("Unpaid Guest")
       expect(page).to have_no_text("Paid Guest")
     end
@@ -1143,7 +1143,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 5)
       expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
       expect(page).to have_css("h1", exact_text: "Deposit liability report")
-      expect(page).to have_link("WS-DEP", href: hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(page).to have_link("WS-DEP", href: hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(page).to have_text("Deposit Guest")
       expect(page).to have_no_text("Gateway Guest")
     end
@@ -1748,7 +1748,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_css("[data-slot='report-date-group']", text: "06 May 2026")
       expect(page).to have_link(
         "##{booking.confirmation_token}",
-        href: hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
+        href: hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
       )
     end
 

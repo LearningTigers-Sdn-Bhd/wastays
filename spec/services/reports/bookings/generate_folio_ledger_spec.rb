@@ -49,7 +49,7 @@ RSpec.describe Reports::Bookings::GenerateFolioLedger do
       "Guest Name" => "Ledger Guest",
       "Room No / Type" => a_string_starting_with("204 / Deluxe"),
       "Folio Status" => "Open",
-      "Window" => "Guest Folio",
+      "Window" => "—",
       "Currency" => "MYR",
       "Code" => "RM-ACC",
       "Posting Date" => "2026-06-18",

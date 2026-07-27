@@ -364,7 +364,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body.scan(/booking:INHOUSE-PAGE-/).size).to eq(1)
     end
 
-    it "uses checkout search, ordering, and pagination" do
+    it "uses checkout search, ordering, and pagination", :business_day do
       older = booking(status: "completed", confirmation_token: "CHECKOUT-OLDER", checked_out_at: Time.current - 2.hours)
       newer = booking(status: "completed", confirmation_token: "CHECKOUT-NEWER", checked_out_at: Time.current - 1.hour)
 
@@ -373,7 +373,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body.index(newer.confirmation_token)).to be < response.body.index(older.confirmation_token)
     end
 
-    it "paginates checkout records at 25 per page" do
+    it "paginates checkout records at 25 per page", :business_day do
       26.times { |index| booking(status: "completed", confirmation_token: "CHECKOUT-PAGE-#{index}", checked_out_at: index.minutes.ago) }
 
       get hotel_front_desk_path(hotel), params: { tab: "checkout", view: "list", checkout_page: 2 }
@@ -608,7 +608,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body).to include(confirmed.confirmation_token)
     end
 
-    it "opens checkout actions in the booking action sheet" do
+    it "opens checkout actions in the booking action sheet", :business_day do
       grant_booking_permission
       active = booking(status: "checked_in", confirmation_token: "SHEET-ACTIVE", checked_in_at: Time.current, check_out: Date.current)
 

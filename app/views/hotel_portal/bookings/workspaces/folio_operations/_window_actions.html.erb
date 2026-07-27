@@ -1,0 +1,22 @@
+<% if folio_show.can_manage_folio_windows? %>
+  <div class="flex flex-wrap items-center gap-2">
+    <% if folio.open? %>
+      <%= render PanelsUI::Button.new(
+            href: hotel_folio_action_edit_window_path(current_hotel, booking, folio, return_to: request.fullpath),
+            variant: :secondary,
+            size: :sm,
+            data: { turbo_frame: "folio_action_sheet" }) do %>Edit<% end %>
+      <%= render PanelsUI::Button.new(
+            href: hotel_folio_action_close_window_path(current_hotel, booking, folio, return_to: request.fullpath),
+            variant: :secondary,
+            size: :sm,
+            data: { turbo_frame: "folio_action_sheet" }) do %>Close<% end %>
+    <% elsif folio.closed? %>
+      <%= render PanelsUI::Button.new(
+            href: hotel_folio_action_reopen_window_path(current_hotel, booking, folio, return_to: request.fullpath),
+            variant: :secondary,
+            size: :sm,
+            data: { turbo_frame: "folio_action_sheet" }) do %>Reopen<% end %>
+    <% end %>
+  </div>
+<% end %>

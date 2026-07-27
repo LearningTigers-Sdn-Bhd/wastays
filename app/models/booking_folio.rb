@@ -15,9 +15,8 @@ class BookingFolio < ApplicationRecord
   has_many :folio_forecasted_charges, dependent: :destroy
   has_one :ar_invoice, dependent: :restrict_with_error
   has_many :target_folio_routing_rules, class_name: "FolioRoutingRule", foreign_key: :target_folio_id, dependent: :restrict_with_error
-  has_many :deposits, dependent: :restrict_with_error
+  has_many :deposit_movements, dependent: :restrict_with_error
   has_many :financial_audit_events, dependent: :restrict_with_error
-  has_many :group_deposit_allocations, dependent: :restrict_with_error
   has_many :source_operation_logs, class_name: "FolioOperationLog", foreign_key: :source_folio_id, dependent: :restrict_with_error
   has_many :target_operation_logs, class_name: "FolioOperationLog", foreign_key: :target_folio_id, dependent: :restrict_with_error
 
@@ -26,7 +25,6 @@ class BookingFolio < ApplicationRecord
   enum :payer_type, PAYER_TYPES.index_by(&:itself), prefix: true, validate: true
 
   validates :folio_number, presence: true, uniqueness: { scope: :hotel_id }
-  validates :name, presence: true
   validates :currency, presence: true
   validates :opened_at, presence: true
   validates :status, presence: true
@@ -62,7 +60,7 @@ class BookingFolio < ApplicationRecord
 
   def projected_forecasts
     return folio_forecasted_charges.none if status == "closed" || booking.blank?
-    return folio_forecasted_charges.none if booking.status.in?(%w[cancelled completed no_show])
+    return folio_forecasted_charges.none if booking.status.in?(%w[cancelled completed no_show voided])
 
     unsettled_forecasts
       .where(FolioForecastedCharge.arel_table[:stay_date].lt(booking.check_out.to_date))
@@ -77,12 +75,19 @@ class BookingFolio < ApplicationRecord
     outstanding_balance + projected_forecasts.sum(:amount)
   end
 
+  # A folio is identified by its reference; the label is an optional override
+  # a human sets deliberately, and clearing it reverts to the reference.
   def display_name
-    name.presence || (is_primary? ? "Guest Folio" : "Folio #{folio_number}")
+    label.presence || folio_reference_display
   end
 
   def display_option_label
-    [ display_name, folio_reference_display ].compact_blank.join(" · ")
+    [ label.presence, folio_reference_display ].compact_blank.join(" · ")
+  end
+
+  # For dropdowns and resolvers where a bare reference is too terse.
+  def display_with_payer
+    [ display_name, payer_display_label ].compact_blank.join(" · ")
   end
 
   def payer_display_label
@@ -123,6 +128,22 @@ class BookingFolio < ApplicationRecord
     folio_transactions.adjustment.sum(:amount)
   end
 
+  # The sanctioned door through `closed_folio_reopen_must_be_authorized`.
+  #
+  # Reopening a closed folio is guarded because it puts an invoiced, settled
+  # ledger back into an editable state. The guard is not the obstacle — it is
+  # the point — so this grants the authorization for exactly one block and
+  # always withdraws it, even when the block raises.
+  #
+  # Callers are responsible for the permission check, the lock and the
+  # operation log; this only lifts the validation.
+  def reopening_for_correction
+    authorize_reopen_for_correction!
+    yield self
+  ensure
+    clear_reopen_for_correction_authorization!
+  end
+
   private
 
   def guard_night_audit_operational_change
@@ -130,8 +151,6 @@ class BookingFolio < ApplicationRecord
   end
 
   def assign_defaults
-    self.name = "Guest Folio" if name.blank? && is_primary?
-    self.name = "Folio #{folio_number}" if name.blank? && folio_number.present?
     self.folio_type ||= "guest"
     self.payer_type ||= "guest"
     self.currency ||= booking&.currency.presence || hotel&.default_currency.presence || "MYR"
@@ -264,6 +283,4 @@ class BookingFolio < ApplicationRecord
   def clear_reopen_for_correction_authorization!
     @reopen_for_correction_authorized = false
   end
-
-  private :authorize_reopen_for_correction!, :clear_reopen_for_correction_authorization!
 end

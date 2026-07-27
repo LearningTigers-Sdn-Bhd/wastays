@@ -12,12 +12,12 @@
   </button>
 
   <div data-dropdown-target="menu" class="hidden absolute right-0 top-full z-[100] mt-2 w-64 overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xl shadow-foreground/10" role="menu" aria-orientation="vertical" tabindex="-1">
-    <%= link_to hotel_booking_control_panel_path(current_hotel, row.booking, tab: "booking_details"), role: "menuitem", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-foreground transition hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:outline-none", data: { turbo_frame: "_top" } do %>
+    <%= link_to hotel_booking_workspace_path(current_hotel, row.booking, tab: "booking_details"), role: "menuitem", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-foreground transition hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:outline-none", data: { turbo_frame: "_top" } do %>
       <%= cached_icon "calendar-days", class: "size-4 text-muted-foreground" %>
       View Booking
     <% end %>
 
-    <%= link_to hotel_booking_control_panel_path(current_hotel, row.booking, tab: "folio_operations", folio_id: row.booking_folio.id), role: "menuitem", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-foreground transition hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:outline-none", data: { turbo_frame: "_top" } do %>
+    <%= link_to hotel_booking_workspace_path(current_hotel, row.booking, tab: "folio_operations", folio_id: row.booking_folio.id), role: "menuitem", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-foreground transition hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:outline-none", data: { turbo_frame: "_top" } do %>
       <%= cached_icon "book-open", class: "size-4 text-muted-foreground" %>
       View Folio
     <% end %>

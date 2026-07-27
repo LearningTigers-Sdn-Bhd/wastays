@@ -23,7 +23,7 @@ module NightAudits
       validation_error = validate_context
       return failure(validation_error) if validation_error.present?
 
-      recovery = Folios::RecoverMissingFolio.call(
+      recovery = Folios::Maintenance::RecoverMissingFolio.call(
         booking: @booking,
         hotel: @hotel,
         actor: @actor,

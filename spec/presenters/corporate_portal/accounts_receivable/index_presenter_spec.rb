@@ -176,8 +176,8 @@ RSpec.describe CorporatePortal::AccountsReceivable::IndexPresenter do
   def create_invoice(
     relationship:,
     confirmation_token: "BK-#{SecureRandom.hex(4)}",
-    folio_number: rand(10_000..99_999),
-    invoice_number: rand(1_000_000..9_999_999),
+    folio_number: nil,
+    invoice_number: nil,
     amount: 100,
     paid_amount: 0,
     outstanding_amount: nil,
@@ -188,6 +188,8 @@ RSpec.describe CorporatePortal::AccountsReceivable::IndexPresenter do
   )
     outstanding_amount ||= amount - paid_amount
     booking = create(:booking, hotel: relationship.hotel, confirmation_token: confirmation_token, currency: currency)
+    folio_number ||= BookingFolio.maximum(:folio_number).to_i + 1
+    invoice_number ||= ArInvoice.maximum(:invoice_number).to_i + 1
     folio = create(:booking_folio, :secondary, booking: booking, hotel: relationship.hotel, folio_number: folio_number, hotel_corporate_account: relationship, currency: currency)
     create(:ar_invoice, hotel: relationship.hotel, booking_folio: folio, hotel_corporate_account: relationship,
            invoice_number: invoice_number, amount: amount, paid_amount: paid_amount, outstanding_amount: outstanding_amount,

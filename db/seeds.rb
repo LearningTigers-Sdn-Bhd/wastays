@@ -140,6 +140,7 @@ platform_permissions = [
   { name: 'View Bookings', slug: 'view_bookings' },
   { name: 'View Financial Status', slug: 'view_financial_status' },
   { name: 'Manage Bookings', slug: 'manage_bookings' },
+  { name: 'Void Bookings', slug: 'void_bookings' },
   { name: 'View Guest Records', slug: 'view_guest_records' },
   { name: 'View Guest Phone', slug: 'view_guest_phone' },
   { name: 'Manage Guest Arrival', slug: 'manage_guest_arrival' },

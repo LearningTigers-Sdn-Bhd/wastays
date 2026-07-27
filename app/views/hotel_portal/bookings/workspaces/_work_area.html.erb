@@ -1,0 +1,69 @@
+<%= turbo_frame_tag "booking_workspace", class: "flex min-h-0 flex-1 flex-col", data: { turbo_action: "advance", controller: "workspace-entity-selection" } do %>
+  <%= render "hotel_portal/bookings/workspaces/tabs", booking: booking, presenter: presenter, audit_logs: audit_logs %>
+
+  <% grid_class = if presenter.show_left_rail?
+       presenter.show_right_drawer? ? "xl:grid-cols-[18rem_minmax(0,1fr)_22rem]" : "xl:grid-cols-[18rem_minmax(0,1fr)]"
+     else
+       presenter.show_right_drawer? ? "xl:grid-cols-[minmax(0,1fr)_22rem]" : "xl:grid-cols-[minmax(0,1fr)]"
+     end %>
+
+  <% if presenter.show_left_rail? %>
+    <div class="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 xl:hidden">
+      <p class="truncate text-sm font-medium text-foreground"><%= presenter.selected_entity_label %></p>
+      <%= render PanelsUI::Button.new(
+            variant: :secondary,
+            size: :sm,
+            command: "show-modal",
+            commandfor: "booking-entity-selector-sheet",
+            aria: { haspopup: "dialog" }) do %>
+        <%= presenter.entity_selector_label %>
+      <% end %>
+    </div>
+
+    <%= render PanelsUI::Sheet.new(
+          id: "booking-entity-selector-sheet",
+          side: :left,
+          size: :sm,
+          title: presenter.entity_selector_label,
+          body_class: "bg-muted/60 px-0 py-0 overscroll-contain custom-scrollbar") do |sheet| %>
+      <%# The sheet stands in for the rail below xl, so it renders the same partial. %>
+      <% sheet.with_body do %>
+        <%= render "hotel_portal/bookings/workspaces/left_rails/#{presenter.left_rail_mode}",
+          booking: booking,
+          entity_booking: entity_booking,
+          presenter: presenter,
+          id_prefix: "mobile",
+          mobile_entity_selection: true %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <div class="grid min-h-0 flex-1 grid-cols-1 divide-border xl:divide-x <%= grid_class %>" data-layout-mode="<%= presenter.layout_mode %>">
+    <% if presenter.show_left_rail? %>
+      <%= render "left_rail", booking: booking, entity_booking: entity_booking, presenter: presenter %>
+    <% end %>
+
+    <main class="min-h-0 min-w-0 <%= presenter.active_tab == 'guest_details' ? 'overflow-hidden' : 'overflow-y-auto overscroll-contain custom-scrollbar' %>" id="booking-workspace-content">
+      <%= render presenter.active_tab_partial,
+        booking: booking,
+        entity_booking: entity_booking,
+        presenter: presenter,
+        booking_presenter: booking_presenter,
+        folio_show: folio_show,
+        audit_logs: audit_logs,
+        audit_history: audit_history,
+        audit_category: local_assigns[:audit_category],
+        audit_history_available: local_assigns[:audit_history_available] %>
+    </main>
+
+    <% if presenter.show_right_drawer? %>
+      <aside class="min-h-0 min-w-0 overflow-y-auto overscroll-contain border-t border-border bg-card custom-scrollbar xl:border-t-0">
+        <%= render "action_drawer", booking: entity_booking, presenter: presenter, folio_show: folio_show %>
+      </aside>
+    <% end %>
+  </div>
+
+  <% if presenter.alert_open? %>
+    <%= render presenter.alert_partial, booking: entity_booking, presenter: presenter %>
+  <% end %>
+<% end %>

@@ -175,7 +175,7 @@ module HotelPortal
     def refresh_open_folio_forecasts_if_needed
       return unless @hotel.transaction_configuration.open_folio_forecasts?
 
-      ::Folios::RefreshOpenForecastsFromRoomRevenueRules.call(hotel: @hotel, actor: current_user)
+      ::Folios::Forecasts::RefreshOpenForecastsFromRoomRevenueRules.call(hotel: @hotel, actor: current_user)
     end
 
     def assign_tax_rules(transaction_code)

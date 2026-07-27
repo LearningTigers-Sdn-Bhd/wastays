@@ -116,7 +116,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking dates", :business_day, ty
   it "blocks ineligible, unauthorized, and cross-hotel access" do
     booking.update_column(:status, "completed")
     get hotel_booking_action_edit_dates_path(hotel, booking)
-    expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
 
     role.role_permissions.destroy_all
     get hotel_booking_action_edit_dates_path(hotel, booking)

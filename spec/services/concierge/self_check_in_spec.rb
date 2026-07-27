@@ -103,7 +103,7 @@ RSpec.describe Concierge::SelfCheckIn do
     end
 
     it "rolls back canonical lifecycle writes when folio initialization fails" do
-      allow(Folios::InitializeForBooking).to receive(:call).and_raise("Folio initialization failed")
+      allow(Folios::Lifecycle::InitializeForBooking).to receive(:call).and_raise("Folio initialization failed")
 
       result = call
 

@@ -15,4 +15,22 @@ RSpec.describe NightAudits::ReviewMissedArrivals do
     expect(result.reviewed_count).to eq(1)
     expect(booking.reload).to have_attributes(status: "review_no_show", no_show_review_business_date: business_date)
   end
+
+  it "uses the hotel-local arrival date when UTC falls on the previous date" do
+    hotel = create(:hotel, time_zone: "Kuala Lumpur")
+    user = create(:user, account: hotel.account)
+    business_date = Date.new(2026, 7, 23)
+    zone = hotel.hotel_time_zone
+    night_audit = create(:night_audit, hotel: hotel, business_date: business_date, status: "running", started_at: zone.local(2026, 7, 24, 3, 0))
+    booking = create(:booking,
+      hotel: hotel,
+      status: "confirmed",
+      check_in: zone.local(2026, 7, 23, 0, 0),
+      check_out: zone.local(2026, 7, 24, 0, 0))
+
+    result = described_class.call(night_audit: night_audit, user: user)
+
+    expect(result.reviewed_count).to eq(1)
+    expect(booking.reload).to have_attributes(status: "review_no_show", no_show_review_business_date: business_date)
+  end
 end

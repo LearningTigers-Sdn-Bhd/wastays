@@ -33,6 +33,28 @@ RSpec.describe PanelsUI::DropdownMenu, type: :component do
     expect(page).to have_css("#actions-menu .dropdown-menu__header[role='presentation']", text: "Booking actions")
   end
 
+  it "submits a form the entry is not nested inside" do
+    render_inline(described_class.new(id: "save")) do |menu|
+      menu.with_trigger { "Save options" }
+      menu.with_item(type: :submit, form_id: "guest-details-form", name: "save_scope", value: "profile") { "Save & update" }
+    end
+
+    expect(page).to have_css(
+      "button[type='submit'][form='guest-details-form'][name='save_scope'][value='profile'][role='menuitem']",
+      text: "Save & update"
+    )
+  end
+
+  it "defaults entries to plain buttons carrying no form association" do
+    render_inline(described_class.new(id: "plain")) do |menu|
+      menu.with_trigger { "Actions" }
+      menu.with_item { "Do something" }
+    end
+
+    expect(page).to have_css("button[type='button'][role='menuitem']", text: "Do something")
+    expect(page).to have_no_css("button[role='menuitem'][form]")
+  end
+
   it "renders non-GET entries as form buttons while keeping GET entries as anchors" do
     render_inline(described_class.new(id: "account")) do |menu|
       menu.with_trigger { "Account" }

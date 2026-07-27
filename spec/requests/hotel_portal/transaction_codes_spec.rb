@@ -114,7 +114,7 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
     end
 
     it "refreshes open folio forecasts when the open folio option is saved" do
-      allow(Folios::RefreshOpenForecastsFromRoomRevenueRules).to receive(:call)
+      allow(Folios::Forecasts::RefreshOpenForecastsFromRoomRevenueRules).to receive(:call)
 
       patch hotel_transaction_code_configuration_path(hotel), params: {
         hotel_transaction_configuration: {
@@ -122,7 +122,7 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
         }
       }
 
-      expect(Folios::RefreshOpenForecastsFromRoomRevenueRules).to have_received(:call).with(hotel: hotel, actor: user)
+      expect(Folios::Forecasts::RefreshOpenForecastsFromRoomRevenueRules).to have_received(:call).with(hotel: hotel, actor: user)
     end
   end
 
@@ -494,7 +494,7 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
       create_open_room_forecast
       Financials::EnsureDefaultTransactionCodes.call(hotel)
       code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
-      allow(Folios::RefreshOpenForecastsFromRoomRevenueRules).to receive(:call)
+      allow(Folios::Forecasts::RefreshOpenForecastsFromRoomRevenueRules).to receive(:call)
 
       attributes = {
           code: "ROOM",
@@ -510,7 +510,7 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
       confirm_hotel_tax_rule_change(code, attributes)
 
       expect(response).to redirect_to(hotel_transaction_codes_path(hotel, tab: "default_codes"))
-      expect(Folios::RefreshOpenForecastsFromRoomRevenueRules).to have_received(:call).with(hotel: hotel, actor: user)
+      expect(Folios::Forecasts::RefreshOpenForecastsFromRoomRevenueRules).to have_received(:call).with(hotel: hotel, actor: user)
     end
 
     it "completes the transaction-code offcanvas after an update with no forecast impact" do

@@ -11,8 +11,8 @@ module HotelPortal
       end
 
       def call
-        rows = folios.sort_by { |folio| [ folio.booking.check_in, folio.booking.created_at, folio.id ] }
-                     .filter_map { |folio| row_for(folio) }
+        rows = folio_rows + unapplied_deposit_rows
+        rows.sort_by! { |row| [ row[:sort_date], row[:confirmation_token].to_s, row[:folio_number].to_s ] }
 
         Result.new(
           as_of_date: @as_of_date,
@@ -58,8 +58,67 @@ module HotelPortal
           earned_amount: earned_amount.round(2),
           refund_amount: refund_amount.round(2),
           remaining_liability: remaining_liability.round(2),
-          latest_deposit_posting_date: latest_deposit_posting_date(transactions)
+          latest_deposit_posting_date: latest_deposit_posting_date(transactions),
+          sort_date: booking.check_in
         }
+      end
+
+      def folio_rows
+        folios.sort_by { |folio| [ folio.booking.check_in, folio.booking.created_at, folio.id ] }
+          .filter_map { |folio| row_for(folio) }
+      end
+
+      def unapplied_deposit_rows
+        deposits.filter_map do |deposit|
+          movements = deposit.deposit_movements.select { |movement| movement.occurred_at.to_date <= @as_of_date }
+          applied = movement_sum(movements, "apply") - movement_sum(movements, "reverse")
+          returned = movement_sum(movements, "release") + movement_sum(movements, "refund")
+          available = deposit.amount.to_d - applied - returned
+          next unless available.positive?
+
+          deposit_liability_row(deposit, available, returned)
+        end
+      end
+
+      def deposits
+        @hotel.deposits
+          .where(received_at: ..@as_of_date.end_of_day)
+          .includes(:deposit_movements, booking: { booking_rooms: :room_type }, group_booking: { bookings: { booking_rooms: :room_type } })
+      end
+
+      def movement_sum(movements, type)
+        movements.select { |movement| movement.movement_type == type }.sum { |movement| movement.amount.to_d }
+      end
+
+      def deposit_liability_row(deposit, available, returned)
+        owner = deposit.booking || deposit.group_booking
+        booking = deposit.booking
+        {
+          booking_id: booking&.id,
+          guest_name: booking&.guest_name || deposit.group_booking.name,
+          confirmation_token: owner.confirmation_token,
+          booking_status: owner.status.to_s.humanize,
+          stay_dates: booking ? stay_dates(booking) : group_stay_dates(deposit.group_booking),
+          room_details: booking ? room_details(booking) : group_room_details(deposit.group_booking),
+          folio_number: "Unapplied #{deposit.kind.humanize}",
+          booking_payment_amount: available.round(2),
+          earned_amount: 0.to_d,
+          refund_amount: returned.round(2),
+          remaining_liability: available.round(2),
+          latest_deposit_posting_date: deposit.received_at.to_date,
+          sort_date: booking&.check_in || deposit.group_booking.default_check_in || deposit.received_at.to_date
+        }
+      end
+
+      def group_stay_dates(group)
+        return "—" if group.default_check_in.blank? || group.default_check_out.blank?
+
+        "#{group.default_check_in.strftime('%d %b %Y')} - #{group.default_check_out.strftime('%d %b %Y')}"
+      end
+
+      def group_room_details(group)
+        count = group.bookings.sum { |booking| booking.booking_rooms.size }
+        "#{count} room#{'s' unless count == 1}"
       end
 
       def sum_amount(transactions, transaction_type:, category:)

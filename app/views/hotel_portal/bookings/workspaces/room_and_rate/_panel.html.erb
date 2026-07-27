@@ -1,0 +1,60 @@
+<% rows = presenter.room_rate_rows(entity_booking) %>
+<% room = entity_booking.booking_rooms.first %>
+<% can_manage = presenter.can_manage_bookings?(current_user) %>
+
+<section id="room-rate-panel" aria-labelledby="room-rate-heading" tabindex="-1">
+  <header class="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h2 id="room-rate-heading" class="text-base font-semibold text-foreground">Room &amp; Rate</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Nightly rates for this room.</p>
+    </div>
+
+    <% if can_manage %>
+      <div class="flex flex-wrap gap-2">
+        <%= render PanelsUI::Button.new(
+              href: hotel_booking_action_edit_room_path(current_hotel, entity_booking, return_to: request.fullpath),
+              variant: :secondary,
+              size: :sm,
+              data: { turbo_frame: "booking_action_sheet" }) do %>Change room<% end %>
+        <%= render PanelsUI::Button.new(
+              href: hotel_booking_workspace_path(current_hotel, entity_booking, tab: "room_and_rate", child_booking_id: entity_booking.id, alert_action: "change_rate"),
+              size: :sm,
+              disabled: room.nil?,
+              title: ("Assign a room before changing its rate." if room.nil?),
+              data: { turbo_frame: "booking_workspace", turbo_action: "advance", warning_dialog_trigger: "change-rate" }) do %>Change rate<% end %>
+      </div>
+    <% end %>
+  </header>
+
+  <div class="p-5">
+    <%= render PanelsUI::Table.new(
+          caption: "Nightly room rates",
+          density: :compact,
+          hoverable: rows.any?,
+          bordered: true,
+          wrapper_class: "rounded-md border border-border") do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Stay date</th>
+          <th scope="col" class="text-right">Nightly rate</th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% rows.each do |row| %>
+          <tr>
+            <td class="whitespace-nowrap tabular-nums"><%= row.date.strftime("%d %b %Y") %></td>
+            <td class="text-right font-medium tabular-nums <%= 'text-warning' if row.rate_missing %>"><%= row.nightly_rate %></td>
+          </tr>
+        <% end %>
+
+        <% if rows.empty? %>
+          <tr>
+            <td colspan="2" class="py-8 text-center text-muted-foreground">
+              <%= room ? "No recorded nightly rates are available for this room." : "Assign a room before reviewing nightly rates." %>
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+</section>

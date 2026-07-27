@@ -28,7 +28,7 @@ RSpec.describe "Operational Exceptions", type: :system do
 
       booking = create(:booking, hotel: hotel, status: "review_due_out", guest_name: "John Doe", check_in: 1.day.ago, check_out: Date.current, total_amount: 100.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, nightly_rate_snapshot: { 1.day.ago.to_date.iso8601 => { "price" => 100.0 } })
-      folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+      folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
 
       visit hotel_booking_path(hotel, booking)
 
@@ -55,7 +55,7 @@ RSpec.describe "Operational Exceptions", type: :system do
       click_button "Process late checkout"
 
       expect(page).to have_current_path(
-        hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")
+        hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
       )
       expect(booking.reload.status).to eq("checked_in")
       expect(folio.reload.outstanding_balance).to eq(174.99)
@@ -75,13 +75,13 @@ RSpec.describe "Operational Exceptions", type: :system do
         1.day.from_now.to_date.iso8601 => { "price" => 100.0 },
         2.days.from_now.to_date.iso8601 => { "price" => 100.0 }
       })
-      folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+      folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
 
       # Let's post the nightly charge for yesterday
       audit = hotel.night_audits.create!(business_date: 1.day.ago.to_date, status: "running", trigger_mode: "manual")
       BusinessDates::ResetAuthority.call!(hotel: hotel, date: 1.day.ago.to_date)
       start_business_date_audit(hotel)
-      Folios::PostNightlyCharges.call(night_audit: audit, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit, user: user)
       audit.update!(status: "completed")
       close_and_open_next_business_date(hotel)
 

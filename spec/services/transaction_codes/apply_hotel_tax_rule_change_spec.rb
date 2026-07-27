@@ -47,7 +47,7 @@ RSpec.describe TransactionCodes::ApplyHotelTaxRuleChange do
     create(:transaction_code_tax, transaction_code: transaction_code, hotel_tax: nil, primary_tax_key: "tourism_tax")
     proposed_keys = [ "primary:sst_tax", "hotel_tax:#{custom_tax.id}" ]
     preview = TransactionCodes::HotelTaxRuleChange.preview(transaction_code: transaction_code, proposed_keys: proposed_keys)
-    allow(Folios::RefreshOpenForecastsFromRoomRevenueRules).to receive(:call)
+    allow(Folios::Forecasts::RefreshOpenForecastsFromRoomRevenueRules).to receive(:call)
 
     expect {
       @result = described_class.call(
@@ -65,7 +65,7 @@ RSpec.describe TransactionCodes::ApplyHotelTaxRuleChange do
     expect(result).to be_success
     expect(transaction_code.reload.name).to eq("Food Revenue")
     expect(transaction_code.transaction_code_taxes.reload.map(&:tax_rule_key)).to match_array(proposed_keys)
-    expect(Folios::RefreshOpenForecastsFromRoomRevenueRules).not_to have_received(:call)
+    expect(Folios::Forecasts::RefreshOpenForecastsFromRoomRevenueRules).not_to have_received(:call)
     expect(audit).to have_attributes(hotel: hotel, actor: actor, source: "transaction_codes", reason: "Align tax setup")
     expect(audit.metadata).to include(
       "transaction_code_id" => transaction_code.id,
@@ -84,7 +84,7 @@ RSpec.describe TransactionCodes::ApplyHotelTaxRuleChange do
     actor = create(:user, account: hotel.account)
     preview = TransactionCodes::HotelTaxRuleChange.preview(transaction_code: transaction_code, proposed_keys: [ "primary:sst_tax" ])
     refresh_result = OpenStruct.new(forecasts_changed: 3)
-    allow(Folios::RefreshOpenForecastsFromRoomRevenueRules).to receive(:call).and_return(refresh_result)
+    allow(Folios::Forecasts::RefreshOpenForecastsFromRoomRevenueRules).to receive(:call).and_return(refresh_result)
     allow(FinancialControls::AuditEventRecorder).to receive(:call!)
 
     result = described_class.call(
@@ -98,7 +98,7 @@ RSpec.describe TransactionCodes::ApplyHotelTaxRuleChange do
 
     expect(result).to be_success
     expect(result.refresh_result).to eq(refresh_result)
-    expect(Folios::RefreshOpenForecastsFromRoomRevenueRules).to have_received(:call).with(hotel: hotel, actor: actor)
+    expect(Folios::Forecasts::RefreshOpenForecastsFromRoomRevenueRules).to have_received(:call).with(hotel: hotel, actor: actor)
     expect(FinancialControls::AuditEventRecorder).to have_received(:call!).with(hash_including(
       hotel: hotel,
       event_type: "hotel_tax_rules_changed",
