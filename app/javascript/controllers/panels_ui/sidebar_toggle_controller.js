@@ -9,20 +9,31 @@ export default class extends Controller {
 
   connect() {
     this.onBeforeRender = () => this.collapseBeforeRender()
+    this.onTurboLoad = () => this.initializeDesktop({ hideWhenMissing: true })
     document.addEventListener("turbo:before-render", this.onBeforeRender)
-
-    const sidebar = this.desktop
-    const collapsible = Boolean(sidebar) && sidebar.dataset.collapsible !== "false"
-    this.element.hidden = !collapsible
-    this.applyDesktopState(sidebar, collapsible)
+    document.addEventListener("turbo:load", this.onTurboLoad)
+    this.initializeDesktop()
   }
 
   disconnect() {
     document.removeEventListener("turbo:before-render", this.onBeforeRender)
+    document.removeEventListener("turbo:load", this.onTurboLoad)
   }
 
   get desktop() {
     return document.getElementById(`${this.keyValue}-sidebar`)
+  }
+
+  initializeDesktop({ hideWhenMissing = false } = {}) {
+    const sidebar = this.desktop
+    if (!sidebar) {
+      if (hideWhenMissing) this.element.hidden = true
+      return
+    }
+
+    const collapsible = sidebar.dataset.collapsible !== "false"
+    this.element.hidden = !collapsible
+    this.applyDesktopState(sidebar, collapsible)
   }
 
   // ── Desktop collapse ──

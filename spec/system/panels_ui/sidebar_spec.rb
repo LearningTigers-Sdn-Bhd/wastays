@@ -378,6 +378,31 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
     expect(page).to have_css("button[data-controller='panels-ui--sidebar-toggle'][hidden]", visible: :all)
   end
 
+  it "keeps the toggle visible while Turbo restores its permanent sidebar" do
+    hidden_without_sidebar = page.evaluate_script(<<~JS)
+      (() => {
+        const sidebar = document.getElementById("sd-nav-sidebar")
+        const parent = sidebar.parentNode
+        const nextSibling = sidebar.nextSibling
+        const toggle = document.querySelector("[data-controller='panels-ui--sidebar-toggle']")
+        const controller = window.Stimulus.getControllerForElementAndIdentifier(toggle, "panels-ui--sidebar-toggle")
+
+        sidebar.remove()
+        controller.disconnect()
+        controller.connect()
+        const hidden = toggle.hidden
+
+        parent.insertBefore(sidebar, nextSibling)
+        document.dispatchEvent(new CustomEvent("turbo:load"))
+        return hidden
+      })()
+    JS
+
+    expect(hidden_without_sidebar).to be(false)
+    expect(page).to have_css("button[data-controller='panels-ui--sidebar-toggle']:not([hidden])")
+    expect(page).to have_css("#sd-nav-sidebar[data-collapsed='true']")
+  end
+
   it "cleans up mobile scroll locking after Turbo-style removal" do
     page.current_window.resize_to(390, 844)
     original_overflow = page.evaluate_script("document.body.style.overflow")

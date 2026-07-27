@@ -175,6 +175,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
 
     expect(page).to have_no_css("#hotel-sidebar", visible: :all)
     expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='true']")
+    expect(page).to have_css("button[aria-controls='hotel-settings-sidebar']:not([hidden])")
     expect(page).to have_no_link("Back to previous page")
   end
 
