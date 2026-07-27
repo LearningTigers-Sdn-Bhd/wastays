@@ -112,6 +112,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
 
   it "aligns the settings header with the breadcrumb and fills the header menu width" do
     visit hotel_general_settings_path(hotel)
+    find("#hotel-settings-sidebar").hover
 
     measurements = page.evaluate_script(<<~JS)
       (() => {
@@ -166,37 +167,40 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
     end
   end
 
-  it "collapses the sidebar across layout boundaries" do
+  it "carries a locked sidebar across layout boundaries" do
     visit hotel_dashboard_path(hotel)
-    find('button[aria-label="Expand navigation"]').click
-    expect(page).to have_css("#hotel-sidebar[data-collapsed='false']")
+    find('button[aria-label="Lock navigation open"]').click
+    expect(page).to have_css("#hotel-sidebar[data-collapsed='false'][data-locked='true']")
 
     open_settings_from_profile
 
     expect(page).to have_no_css("#hotel-sidebar", visible: :all)
-    expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='true']")
-    expect(page).to have_css("button[aria-controls='hotel-settings-sidebar']:not([hidden])")
+    expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='false'][data-locked='true']")
+    expect(page).to have_css("button[aria-controls='hotel-settings-sidebar'][aria-pressed='true'][aria-label='Unlock navigation']:not([hidden])")
     expect(page).to have_no_link("Back to previous page")
   end
 
-  it "collapses an expanded sidebar when navigating between settings pages" do
+  it "keeps the sidebar locked through settings navigation until explicitly unlocked" do
     visit hotel_general_settings_path(hotel)
 
-    find('button[aria-label="Expand navigation"]').click
-    expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='false']")
+    find('button[aria-label="Lock navigation open"]').click
+    expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='false'][data-locked='true']")
 
-    visit hotel_notification_settings_path(hotel)
-    expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='true']")
+    perform_turbo_navigation do
+      within("[data-testid='settings-tabs']") { click_link "Notifications" }
+    end
+    expect(page).to have_current_path(hotel_notification_settings_path(hotel))
+    expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='false'][data-locked='true']")
 
     perform_turbo_navigation do
       within("#hotel-settings-sidebar .panel-sidebar__header") do
         find_hotel_home_link(visible: :all).click
       end
     end
-    expect(page).to have_css("#hotel-sidebar[data-collapsed='true']")
+    expect(page).to have_css("#hotel-sidebar[data-collapsed='false'][data-locked='true']")
 
-    find('button[aria-label="Expand navigation"]').click
-    expect(page).to have_css("#hotel-sidebar[data-collapsed='false']")
+    find('button[aria-label="Unlock navigation"]').click
+    expect(page).to have_css("#hotel-sidebar[data-collapsed='true'][data-locked='false']")
   end
 
   def open_settings_from_profile

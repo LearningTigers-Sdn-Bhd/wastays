@@ -15,7 +15,7 @@ module PanelsUI
   #
   # Behavior is split across small Stimulus controllers, all namespaced panels-ui--sidebar*:
   #   • panels-ui--sidebar        active-link resync + scroll persistence
-  #   • panels-ui--sidebar-toggle desktop collapse (reset after navigation)
+  #   • panels-ui--sidebar-toggle desktop hover expansion + navigation-scoped lock
   #   • panels-ui--sidebar-search type-to-filter (only when searchable:)
   #
   # Collapsible, Tooltip, and Popover own their interaction and accessibility contracts;

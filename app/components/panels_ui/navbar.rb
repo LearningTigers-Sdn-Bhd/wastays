@@ -6,15 +6,16 @@ module PanelsUI
     renders_one :actions
     renders_one :profile
 
-    def initialize(key:, navigation: true, sticky: true, class: nil, **attributes)
+    def initialize(key:, navigation: true, sidebar_state_key: key, sticky: true, class: nil, **attributes)
       @key = key.to_s
       @navigation = navigation
+      @sidebar_state_key = sidebar_state_key.to_s
       @sticky = sticky
       @class = binding.local_variable_get(:class)
       @attributes = attributes
     end
 
-    attr_reader :key
+    attr_reader :key, :sidebar_state_key
 
     def before_render
       raise ArgumentError, "Navbar key is required" if key.blank?

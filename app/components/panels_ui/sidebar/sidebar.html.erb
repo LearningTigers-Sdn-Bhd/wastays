@@ -23,6 +23,7 @@
        class="<%= tw_merge("panel-sidebar hidden lg:flex", @class) %>"
        data-collapsed="<%= collapsible? %>"
        data-collapsible="<%= collapsible? %>"
+       data-locked="false"
        <%= "data-turbo-permanent" if permanent? %>
        data-controller="<%= desktop_controllers %>"
        data-panels-ui--sidebar-key-value="<%= key %>"
