@@ -430,16 +430,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_100000) do
   end
 
   create_table "booking_sources", force: :cascade do |t|
-    t.string "key", null: false
-    t.string "label", null: false
-    t.string "kind", default: "ota", null: false
-    t.string "icon"
-    t.string "badge_color"
-    t.string "badge_text_color"
-    t.string "badge_initial", limit: 2
-    t.integer "position", default: 0, null: false
     t.boolean "active", default: true, null: false
+    t.string "badge_color"
+    t.string "badge_initial", limit: 2
+    t.string "badge_text_color"
     t.datetime "created_at", null: false
+    t.string "icon"
+    t.string "key", null: false
+    t.string "kind", default: "ota", null: false
+    t.string "label", null: false
+    t.integer "position", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_booking_sources_on_active"
     t.index ["key"], name: "index_booking_sources_on_key", unique: true
