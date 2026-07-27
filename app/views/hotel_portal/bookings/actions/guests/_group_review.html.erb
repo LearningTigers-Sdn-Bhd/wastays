@@ -1,5 +1,5 @@
 <% form_id = "booking-guest-group-review-form" %>
-<% children = @booking.group_booking.bookings.includes(booking_rooms: :room_type).where(hotel_id: current_hotel.id).order(:group_position, :id) %>
+<% children = @booking.group_booking.bookings.includes(:hotel, booking_rooms: :room_type).where(hotel_id: current_hotel.id).order(:group_position, :id) %>
 <% footer = capture do %>
   <div class="flex w-full justify-end gap-2">
     <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) { "Cancel" } %>

@@ -1,5 +1,5 @@
 <% form_id = "billing-party-group-review-form" %>
-<% children = @booking.group_booking.bookings.includes(booking_rooms: :room_type).where(hotel_id: current_hotel.id).order(:group_position, :id) %>
+<% children = @booking.group_booking.bookings.includes(:hotel, booking_rooms: :room_type).where(hotel_id: current_hotel.id).order(:group_position, :id) %>
 <% account = @accounts.find { |candidate| candidate.id.to_s == @billing_party_attributes[:hotel_corporate_account_id].to_s } %>
 <% footer = capture do %>
   <div class="flex w-full justify-end gap-2">
