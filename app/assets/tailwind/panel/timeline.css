@@ -475,6 +475,12 @@
     --panel-timeline-segment-border: var(--status-success-border);
   }
 
+  :is(.panel-timeline__segment, .panel-timeline__legend-swatch[data-presentation="segment"])[data-tone="completed"] {
+    --panel-timeline-segment-background: var(--stay-view-completed-background);
+    --panel-timeline-segment-foreground: var(--stay-view-completed-foreground);
+    --panel-timeline-segment-border: var(--stay-view-completed-border);
+  }
+
   :is(.panel-timeline__segment, .panel-timeline__legend-swatch[data-presentation="segment"])[data-tone="warning"] {
     --panel-timeline-segment-background: var(--status-warning-background);
     --panel-timeline-segment-foreground: var(--status-warning-foreground);
@@ -556,6 +562,10 @@
     text-decoration: none;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .stay-view-booking-guest-name {
+    font-size: 0.625rem;
   }
 
   .panel-timeline__segment[data-clipped-left="true"] .panel-timeline__segment-content {

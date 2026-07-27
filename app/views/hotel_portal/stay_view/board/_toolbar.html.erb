@@ -112,7 +112,10 @@ end %>
     <% end %>
 
     <div class="shrink-0 pb-0.5">
-      <%= render HotelPortal::StayView::StatusGuide.new(view_financial_status: board.capabilities.view_financial_status?) %>
+      <%= render HotelPortal::StayView::StatusGuide.new(
+        view_booking: board.capabilities.view_booking?,
+        view_financial_status: board.capabilities.view_financial_status?
+      ) %>
     </div>
   <% end %>
 

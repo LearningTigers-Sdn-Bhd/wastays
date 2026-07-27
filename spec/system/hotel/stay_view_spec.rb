@@ -346,7 +346,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_css("#stay_view_room_#{room_type.id}_102-status-trigger:focus")
   end
 
-  it "shows authorized projected financial signals in Timeline and Room views" do
+  it "shows authorized projected financial details in the Timeline popover and Room view" do
     permission = Permission.find_or_create_by!(slug: "view_financial_status") do |record|
       record.name = "View Financial Status"
     end
@@ -358,10 +358,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
 
     segment = find("#stay_view_booking_room_#{booking.booking_rooms.sole.id}")
-    expect(segment).to have_css(
-      "[data-slot='stay-view-financial-attention']" \
-      "[aria-label='Guest: Ada Lovelace · Balance due · MYR 240.00']"
-    )
+    expect(segment).to have_no_css("[data-slot='stay-view-financial-attention']")
     page.execute_script("document.querySelector('##{segment[:id]}-trigger').focus()")
     expect(page).to have_css(
       "##{segment[:id]}-panel",

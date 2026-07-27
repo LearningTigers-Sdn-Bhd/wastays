@@ -40,4 +40,25 @@ RSpec.describe PanelsUI::BookingSourceBadge, type: :component do
     expect(page).not_to have_css("span[role='img']")
     expect(page).to have_css("svg")
   end
+
+  it "renders every decorative badge variant without a nested focus target or accessible duplicate" do
+    generic = create(:booking_source, key: "embedded_phone", kind: "manual", icon: "phone")
+    initial = create(:booking_source, key: "embedded_ota", kind: "ota", badge_color: "#010101", badge_initial: "E")
+    logo = create(:booking_source, key: "embedded_logo", kind: "ota")
+    logo.logo.attach(io: Rails.root.join("spec/fixtures/files/sample_image.jpg").open, filename: "logo.jpg", content_type: "image/jpeg")
+
+    [ generic, initial ].each do |source|
+      render_inline(described_class.new(source: source.key, with_tooltip: false, decorative: true))
+
+      expect(page).to have_css("span[aria-hidden='true']")
+      expect(page).to have_no_css("[tabindex]")
+      expect(page).to have_no_css("[role='img']")
+    end
+
+    render_inline(described_class.new(source: logo.key, with_tooltip: false, decorative: true))
+
+    expect(page).to have_css("img[alt='']")
+    expect(page).to have_no_css("[tabindex]")
+    expect(page).to have_no_css("[role='img']")
+  end
 end

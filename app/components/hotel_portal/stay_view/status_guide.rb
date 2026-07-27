@@ -4,19 +4,10 @@ module HotelPortal
   module StayView
     class StatusGuide < PanelsUI::BaseComponent
       BOOKING_ENTRIES = [
-        { state: :confirmed, label: "Confirmed", icon: "circle-check" },
-        { state: :review_no_show, label: "No-show review", icon: "clock-3" },
-        { state: :checked_in, label: "Checked in", icon: "log-in" },
-        { state: :review_due_out, label: "Due-out review", icon: "triangle-alert" },
-        { state: :checkout_required, label: "Checkout required", icon: "log-out" },
-        { state: :completed, label: "Completed", icon: "check-check" }
-      ].map do |entry|
-        entry.merge(
-          presentation: :segment,
-          tone: BookingBar::STATUS_TONES.fetch(entry.fetch(:state)),
-          emphasis: :solid
-        ).freeze
-      end.freeze
+        { state: :arrival, label: "Arrival", icon: "circle-check", presentation: :segment, tone: :info, emphasis: :solid }.freeze,
+        { state: :in_house, label: "In-house", icon: "log-in", presentation: :segment, tone: :success, emphasis: :solid }.freeze,
+        { state: :completed, label: "Completed", icon: "check-check", presentation: :segment, tone: :completed, emphasis: :solid }.freeze
+      ].freeze
 
       ROOM_STATUS_ENTRIES = [
         { state: :ready, label: "Ready" },
@@ -51,6 +42,15 @@ module HotelPortal
         presentation.merge(state:, presentation: :badge).freeze
       end.freeze
 
+      GUEST_STATUS_ENTRIES = [
+        { state: :blacklisted, label: "Blacklisted", icon: "ban", presentation: :badge, variant: :destructive }.freeze,
+        {
+          state: :vip, label: "VIP", icon: "crown-simple", presentation: :badge, variant: :warning,
+          library: "phosphor", icon_variant: "duotone"
+        }.freeze,
+        { state: :repeat, label: "Repeat", icon: "repeat", presentation: :badge, variant: :info }.freeze
+      ].freeze
+
       GROUPS = [
         {
           label: "Booking status",
@@ -80,7 +80,8 @@ module HotelPortal
         }.freeze
       ].freeze
 
-      def initialize(view_financial_status:)
+      def initialize(view_booking:, view_financial_status:)
+        @view_booking = view_booking
         @view_financial_status = view_financial_status
       end
 
@@ -118,9 +119,11 @@ module HotelPortal
       end
 
       def groups
-        return GROUPS unless @view_financial_status
+        visible_groups = GROUPS
+        visible_groups = [ *visible_groups, { label: "Guest status", entries: GUEST_STATUS_ENTRIES } ] if @view_booking
+        visible_groups = [ *visible_groups, { label: "Financial", entries: FINANCIAL_ENTRIES } ] if @view_financial_status
 
-        [ *GROUPS, { label: "Financial", entries: FINANCIAL_ENTRIES } ]
+        visible_groups
       end
 
       def group_content(group)
@@ -160,7 +163,10 @@ module HotelPortal
           }.compact,
           aria: { hidden: true }
         ) do
-          helpers.app_icon(entry.fetch(:icon), class: "size-3", aria: { hidden: true })
+          helpers.app_icon(
+            entry.fetch(:icon),
+            **entry.slice(:library).merge(variant: entry[:icon_variant], class: "size-3", aria: { hidden: true }).compact
+          )
         end
       end
     end

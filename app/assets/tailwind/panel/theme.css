@@ -68,6 +68,10 @@
   --status-destructive-border: oklch(0.8350 0.0750 22.22);
   --status-destructive-indicator: var(--destructive-on-surface);
 
+  --stay-view-completed-background: oklch(0.9550 0 0);
+  --stay-view-completed-foreground: oklch(0.4050 0 0);
+  --stay-view-completed-border: oklch(0.8400 0 0);
+
   --border: oklch(0.8800 0.0180 160.00);
   --border-interactive: oklch(0.5350 0.0450 167.73);
   --ring: oklch(0.6000 0.1250 163.22);
@@ -165,6 +169,10 @@
   --status-destructive-foreground: oklch(0.8500 0.1000 22.22);
   --status-destructive-border: oklch(0.4750 0.0950 22.22);
   --status-destructive-indicator: var(--destructive-on-surface);
+
+  --stay-view-completed-background: oklch(0.2850 0 0);
+  --stay-view-completed-foreground: oklch(0.8500 0 0);
+  --stay-view-completed-border: oklch(0.4650 0 0);
 
   --border: oklch(0.3279 0.0313 162.32);
   --border-interactive: oklch(0.5450 0.0460 167.73);

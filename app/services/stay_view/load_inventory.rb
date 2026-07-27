@@ -136,12 +136,13 @@ module StayView
       children_column = capabilities.view_booking? ? "bookings.children" : Arel.sql("NULL")
       boat_in_column = load_boat_information? ? primary_guest_attribute_column(:boat_in_at) : Arel.sql("NULL")
       boat_out_column = load_boat_information? ? primary_guest_attribute_column(:boat_out_at) : Arel.sql("NULL")
+      primary_guest_id = capabilities.view_booking? ? primary_guest_id_column : Arel.sql("NULL")
       columns = [
         "booking_rooms.id", "bookings.id", "booking_rooms.room_type_id", "booking_rooms.room_number",
         "bookings.status", guest_column, primary_guest_column, "bookings.check_in", "bookings.check_out",
         "bookings.checked_in_at", "bookings.checked_out_at", "bookings.group_booking_id",
         group_reference_column, group_name_column, "bookings.group_position", "bookings.source",
-        adults_column, children_column, boat_in_column, boat_out_column
+        adults_column, children_column, boat_in_column, boat_out_column, primary_guest_id
       ]
 
       scope = BookingRoom.joins(:booking)
@@ -159,11 +160,13 @@ module StayView
         window_start: date_window.window_start_at
       )
 
-      scope
-        .pluck(*columns)
-        .map do |booking_room_id, booking_id, room_type_id, room_number, status, guest_name, primary_guest_name, check_in, check_out,
-                 checked_in_at, checked_out_at, group_booking_id, group_reservation_number, group_name, group_position, source,
-                 adults, children, boat_in_at, boat_out_at|
+      rows = scope.pluck(*columns)
+      guest_contexts = load_guest_contexts(rows.filter_map { |row| row[20] }.uniq)
+
+      rows.map do |booking_room_id, booking_id, room_type_id, room_number, status, guest_name, primary_guest_name, check_in, check_out,
+                  checked_in_at, checked_out_at, group_booking_id, group_reservation_number, group_name, group_position, source,
+                  adults, children, boat_in_at, boat_out_at, primary_guest_id|
+          guest_context = guest_contexts[primary_guest_id]
           check_in_at = check_in.in_time_zone(date_window.time_zone_name)
           check_out_at = check_out.in_time_zone(date_window.time_zone_name)
           actual_check_in_at = checked_in_at&.in_time_zone(date_window.time_zone_name)
@@ -192,9 +195,29 @@ module StayView
             adults:,
             children:,
             boat_in_at:,
-            boat_out_at:
+            boat_out_at:,
+            vip: guest_context&.fetch(:vip, false) || false,
+            blacklisted: guest_context&.fetch(:blacklisted, false) || false,
+            repeat: guest_context&.fetch(:completed_booking_count, 0).to_i > (status.to_sym == :completed ? 1 : 0)
           )
         end
+    end
+
+    def load_guest_contexts(guest_ids)
+      return {} if guest_ids.empty? || !capabilities.view_booking?
+
+      completed_booking_counts = BookingGuest.joins(:booking)
+        .where(role: "primary", guest_id: guest_ids, bookings: { hotel_id: hotel.id, status: "completed" })
+        .group(:guest_id)
+        .count
+
+      Guest.where(id: guest_ids).select(:id, :vip, :blacklisted, :created_by_hotel_id, :metadata).each_with_object({}) do |guest, result|
+        result[guest.id] = {
+          vip: guest.vip?,
+          blacklisted: guest.blacklisted_at?(hotel),
+          completed_booking_count: completed_booking_counts.fetch(guest.id, 0)
+        }.freeze
+      end.freeze
     end
 
     def primary_guest_name_column
@@ -203,6 +226,14 @@ module StayView
         .select("COALESCE(booking_guests.name_snapshot, guests.name)")
         .limit(1)
       Arel.sql("COALESCE((#{primary_guest.to_sql}), bookings.guest_name)")
+    end
+
+    def primary_guest_id_column
+      primary_guest = BookingGuest
+        .where("booking_guests.booking_id = bookings.id", role: "primary")
+        .select(:guest_id)
+        .limit(1)
+      Arel.sql("(#{primary_guest.to_sql})")
     end
 
     def primary_guest_attribute_column(attribute)

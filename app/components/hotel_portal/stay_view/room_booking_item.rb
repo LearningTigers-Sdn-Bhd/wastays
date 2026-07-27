@@ -7,6 +7,11 @@ module HotelPortal
       SURFACES = %i[standalone joined].freeze
       COMPLETED_STATUSES = %i[completed].freeze
       CHECKED_IN_STATUSES = %i[checked_in review_due_out checkout_required].freeze
+      GUEST_STATUS_VARIANTS = {
+        "Blacklisted" => :destructive,
+        "VIP" => :warning,
+        "Repeat" => :info
+      }.freeze
 
       def initialize(segment:, state:, context:, surface: :standalone)
         @segment = segment
@@ -69,10 +74,28 @@ module HotelPortal
       def heading
         tag.div(class: "flex min-w-0 items-start justify-between gap-2") do
           safe_join([
-            tag.p(@segment.guest_label, class: "min-w-0 truncate text-sm font-medium text-foreground"),
+            tag.div(class: "flex min-w-0 flex-wrap items-center gap-1.5") do
+              safe_join([
+                tag.p(@segment.guest_label, class: "min-w-0 truncate text-sm font-medium text-foreground"),
+                guest_status_badges
+              ].compact)
+            end,
             heading_indicators
           ])
         end
+      end
+
+      def guest_status_badges
+        return if @segment.guest_statuses.empty?
+
+        safe_join(@segment.guest_statuses.map do |status|
+          render PanelsUI::Badge.new(
+            label: status,
+            variant: GUEST_STATUS_VARIANTS.fetch(status),
+            size: :sm,
+            data: { slot: "stay-view-guest-status", status: status.downcase }
+          )
+        end)
       end
 
       def operational_metadata
