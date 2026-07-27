@@ -23,8 +23,6 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
   end
 
   it "shows instant tooltips and hover-opened report children in a compact rail" do
-    find('button[aria-label="Collapse navigation"]').click
-
     expect(page).to have_css("#hotel-sidebar[data-collapsed='true']")
     compact_section_spacing = page.evaluate_script(<<~JS)
       (() => {
@@ -98,8 +96,6 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
   end
 
   it "renders report flyout leaves directly in a compact rail, without a wrapping Reports group" do
-    find('button[aria-label="Collapse navigation"]').click
-
     within("#hotel-sidebar") do
       find("button.panel-sidebar__group-trigger[aria-label='Financial']", visible: :all).click
       expect(page).to have_css(".panel-sidebar__flyout[data-state='open']")
@@ -110,8 +106,6 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
   end
 
   it "closes compact rail flyouts on Escape" do
-    find('button[aria-label="Collapse navigation"]').click
-
     within("#hotel-sidebar") do
       find("button.panel-sidebar__group-trigger[aria-label='Financial']", visible: :all).click
 
@@ -127,6 +121,7 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
 
   it "keeps the most-specific parent route active on nested pages" do
     nested_report_path = "#{hotel_reports_path(hotel)}/nested"
+    find('button[aria-label="Expand navigation"]').click
 
     page.execute_script(<<~JS)
       window.history.pushState({}, "", "#{nested_report_path}")
@@ -140,6 +135,8 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
   end
 
   it "keeps active and user-opened groups expanded through Turbo navigation" do
+    find('button[aria-label="Expand navigation"]').click
+
     within("#hotel-sidebar") do
       expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
       find("button.panel-sidebar__group-trigger", text: "Accounting", visible: :all).click
@@ -159,6 +156,8 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
 
     expect(page).to have_current_path(refund_report_hotel_reports_path(hotel))
     expect(page.evaluate_script("window.sidebarActiveGroupOpenBeforeVisit")).to be(true)
+    expect(page).to have_css("#hotel-sidebar[data-collapsed='true']")
+    find('button[aria-label="Expand navigation"]').click
 
     within("#hotel-sidebar") do
       expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Refund Report")

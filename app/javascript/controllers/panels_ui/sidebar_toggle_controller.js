@@ -5,18 +5,24 @@ import { Controller } from "@hotwired/stimulus"
 // Lives on the desktop collapse trigger. Mobile navigation is a PanelsUI::Sheet and
 // uses the native command/commandfor contract instead of sidebar-owned overlay state.
 export default class extends Controller {
-  static values = { key: String, stateKey: String }
+  static values = { key: String }
 
   connect() {
-    this.applyStoredCollapse()
+    this.onBeforeRender = () => this.collapseBeforeRender()
+    document.addEventListener("turbo:before-render", this.onBeforeRender)
+
+    const sidebar = this.desktop
+    const collapsible = Boolean(sidebar) && sidebar.dataset.collapsible !== "false"
+    this.element.hidden = !collapsible
+    this.applyDesktopState(sidebar, collapsible)
+  }
+
+  disconnect() {
+    document.removeEventListener("turbo:before-render", this.onBeforeRender)
   }
 
   get desktop() {
     return document.getElementById(`${this.keyValue}-sidebar`)
-  }
-
-  get storageKey() {
-    return `wastays:${this.stateKeyValue}-sidebar-collapsed`
   }
 
   // ── Desktop collapse ──
@@ -32,18 +38,22 @@ export default class extends Controller {
 
     this.closeFloatingLayers()
     this.applyDesktopState(sidebar, collapsed)
-    window.localStorage.setItem(this.storageKey, collapsed ? "1" : "0")
     sidebar.dispatchEvent(new CustomEvent("panels-ui-sidebar:state-change", { detail: { collapsed } }))
   }
 
-  applyStoredCollapse() {
+  collapseBeforeRender() {
     const sidebar = this.desktop
     if (!sidebar || sidebar.dataset.collapsible === "false") return
-    this.applyDesktopState(sidebar, window.localStorage.getItem(this.storageKey) === "1")
+
+    this.setCollapsed(sidebar, true)
   }
 
   applyDesktopState(sidebar, collapsed) {
+    if (!sidebar) return
+
     sidebar.dataset.collapsed = String(collapsed)
+    this.element.setAttribute("aria-label", collapsed ? "Expand navigation" : "Collapse navigation")
+    this.element.setAttribute("aria-expanded", String(!collapsed))
     sidebar.querySelectorAll("[data-sidebar-presentation]").forEach((presentation) => {
       const active = presentation.dataset.sidebarPresentation === (collapsed ? "collapsed" : "expanded")
       presentation.hidden = !active

@@ -166,9 +166,10 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
     end
   end
 
-  it "carries the hotel collapse state across layout boundaries" do
+  it "collapses the sidebar across layout boundaries" do
     visit hotel_dashboard_path(hotel)
-    find('button[aria-label="Collapse navigation"]').click
+    find('button[aria-label="Expand navigation"]').click
+    expect(page).to have_css("#hotel-sidebar[data-collapsed='false']")
 
     open_settings_from_profile
 
@@ -177,12 +178,11 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
     expect(page).to have_no_link("Back to previous page")
   end
 
-  it "persists settings changes to the shared hotel collapse state" do
+  it "collapses an expanded sidebar when navigating between settings pages" do
     visit hotel_general_settings_path(hotel)
-    page.execute_script("window.localStorage.removeItem('wastays:hotel-sidebar-collapsed')")
 
-    find('button[aria-label="Collapse navigation"]').click
-    expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='true']")
+    find('button[aria-label="Expand navigation"]').click
+    expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='false']")
 
     visit hotel_notification_settings_path(hotel)
     expect(page).to have_css("#hotel-settings-sidebar[data-collapsed='true']")
@@ -194,7 +194,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
     end
     expect(page).to have_css("#hotel-sidebar[data-collapsed='true']")
 
-    find('button[aria-label="Collapse navigation"]').click
+    find('button[aria-label="Expand navigation"]').click
     expect(page).to have_css("#hotel-sidebar[data-collapsed='false']")
   end
 

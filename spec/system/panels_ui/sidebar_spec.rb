@@ -78,19 +78,20 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
   end
 
   it "collapses and expands the desktop sidebar, hiding labels while collapsed" do
-    expect(sidebar["data-collapsed"]).to eq("false")
-
-    click_button "Toggle collapse"
-    expect(page).to have_css("#sd-nav-sidebar[data-collapsed='true']")
+    expect(sidebar["data-collapsed"]).to eq("true")
     expect(page).to have_no_css("#sd-nav-sidebar .panel-sidebar__label", visible: true)
 
     click_button "Toggle collapse"
     expect(page).to have_css("#sd-nav-sidebar[data-collapsed='false']")
+    expect(page).to have_css("button[aria-controls='sd-nav-sidebar'][aria-expanded='true']")
     expect(page).to have_css("#sd-nav-sidebar .panel-sidebar__label", visible: true, text: "Bookings")
+
+    click_button "Toggle collapse"
+    expect(page).to have_css("#sd-nav-sidebar[data-collapsed='true']")
+    expect(page).to have_css("button[aria-controls='sd-nav-sidebar'][aria-expanded='false']")
   end
 
   it "uses the compact Shadcn-like rail and item geometry" do
-    click_button "Toggle collapse"
     wait_until("sidebar did not finish collapsing") { computed_style("#sd-nav-sidebar", "width") == "48px" }
     link = "#sd-nav-sidebar [data-sidebar-presentation='collapsed'] a[href='#arrivals']"
     group = "#sd-nav-sidebar-desktop-section-1-item-2-popover-trigger"
@@ -104,7 +105,6 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
   end
 
   it "gives collapsed links and group triggers identical visual states" do
-    click_button "Toggle collapse"
     link = "#sd-nav-sidebar [data-sidebar-presentation='collapsed'] a[href='#arrivals']"
     group = "#sd-nav-sidebar-desktop-section-1-item-2-popover-trigger"
 
@@ -132,9 +132,9 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
     expect(computed_color(group, "color")).to eq(computed_color(active_link, "color"))
   end
 
-  it "persists the collapsed state across a reload" do
+  it "resets an expanded sidebar after navigation" do
     click_button "Toggle collapse"
-    expect(page).to have_css("#sd-nav-sidebar[data-collapsed='true']")
+    expect(page).to have_css("#sd-nav-sidebar[data-collapsed='false']")
 
     visit_when_loaded "/system-design?only=sidebar_preview"
     expect(page).to have_css("#sd-nav-sidebar[data-collapsed='true']")
@@ -152,6 +152,7 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
   end
 
   it "toggles an expanded group through the shared collapsible primitive" do
+    click_button "Toggle collapse"
     trigger = find("#sd-nav-sidebar-desktop-section-1-item-2-collapsible-trigger")
     content = "#sd-nav-sidebar-desktop-section-1-item-2-collapsible-content"
 
@@ -180,6 +181,7 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
   end
 
   it "preserves a manually closed group across navigation" do
+    click_button "Toggle collapse"
     trigger = find("#sd-nav-sidebar-desktop-section-1-item-2-collapsible-trigger")
     trigger.click
     expect(trigger["aria-expanded"]).to eq("true")
@@ -200,7 +202,6 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
   end
 
   it "opens a collapsed group through Popover, supports pinning, and closes outside" do
-    click_button "Toggle collapse"
     expect(page).to have_css("#sd-nav-sidebar[data-collapsed='true']")
 
     trigger = find("#sd-nav-sidebar-desktop-section-1-item-2-popover-trigger")
@@ -222,7 +223,6 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
   end
 
   it "shows the shared tooltip only for a collapsed top-level link" do
-    click_button "Toggle collapse"
     find("#sd-nav-sidebar [data-sidebar-presentation='collapsed'] a[href='#bookings']").hover
 
     expect(page).to have_css("#sd-nav-sidebar .tooltip:popover-open", text: "Bookings")
@@ -235,7 +235,6 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
   end
 
   it "uses the elevated sidebar-only flyout surface" do
-    click_button "Toggle collapse"
     find("#sd-nav-sidebar-desktop-section-1-item-2-popover-trigger").click
     flyout = "#sd-nav-sidebar-desktop-section-1-item-2-popover-panel:popover-open"
     expect(page).to have_css(flyout)
@@ -246,13 +245,13 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
   end
 
   it "does not show flyouts or tooltips while expanded" do
+    click_button "Toggle collapse"
     find("#sd-nav-sidebar [data-sidebar-presentation='expanded'] a[href='#bookings']").hover
     expect(page).to have_no_css("#sd-nav-sidebar .tooltip:popover-open")
     expect(page).to have_no_css("#sd-nav-sidebar .popover:popover-open")
   end
 
   it "closes an open flyout when the sidebar presentation changes" do
-    click_button "Toggle collapse"
     trigger = find("#sd-nav-sidebar-desktop-section-1-item-2-popover-trigger")
     panel = "#sd-nav-sidebar-desktop-section-1-item-2-popover-panel"
     trigger.click
@@ -264,7 +263,6 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
   end
 
   it "closes a pinned flyout on Escape and restores trigger focus" do
-    click_button "Toggle collapse"
     trigger = find("#sd-nav-sidebar-desktop-section-1-item-2-popover-trigger")
     panel = "#sd-nav-sidebar-desktop-section-1-item-2-popover-panel"
     trigger.click
@@ -365,12 +363,19 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
   end
 
 
-  it "ignores desktop collapse requests when collapsing is disabled" do
-    page.execute_script("document.getElementById('sd-nav-sidebar').dataset.collapsible = 'false'")
-
-    click_button "Toggle collapse"
+  it "keeps non-collapsible navigation expanded and hides its toggle" do
+    page.execute_script(<<~JS)
+      const sidebar = document.getElementById("sd-nav-sidebar")
+      const toggle = document.querySelector("[data-controller='panels-ui--sidebar-toggle']")
+      const controller = window.Stimulus.getControllerForElementAndIdentifier(toggle, "panels-ui--sidebar-toggle")
+      sidebar.dataset.collapsible = "false"
+      controller.disconnect()
+      controller.connect()
+    JS
 
     expect(page).to have_css("#sd-nav-sidebar[data-collapsed='false']")
+    expect(page).to have_css("#sd-nav-sidebar .panel-sidebar__label", visible: true, text: "Bookings")
+    expect(page).to have_css("button[data-controller='panels-ui--sidebar-toggle'][hidden]", visible: :all)
   end
 
   it "cleans up mobile scroll locking after Turbo-style removal" do

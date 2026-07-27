@@ -21,7 +21,7 @@
 
 <aside id="<%= desktop_id %>"
        class="<%= tw_merge("panel-sidebar hidden lg:flex", @class) %>"
-       data-collapsed="false"
+       data-collapsed="<%= collapsible? %>"
        data-collapsible="<%= collapsible? %>"
        <%= "data-turbo-permanent" if permanent? %>
        data-controller="<%= desktop_controllers %>"

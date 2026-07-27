@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe PanelsUI::Navbar, type: :component do
-  def render_navbar(navigation: true, sidebar_state_key: "hotel", sticky: true)
-    render_inline(described_class.new(key: "hotel", navigation:, sidebar_state_key:, sticky:)) do |navbar|
+  def render_navbar(navigation: true, sticky: true)
+    render_inline(described_class.new(key: "hotel", navigation:, sticky:)) do |navbar|
       navbar.with_brand { '<a href="/">WAStays</a>'.html_safe }
       navbar.with_actions { '<a href="/help">Help</a>'.html_safe }
       navbar.with_profile { '<span data-profile>Profile</span>'.html_safe }
@@ -22,16 +22,7 @@ RSpec.describe PanelsUI::Navbar, type: :component do
     expect(page).to have_css(
       "button[data-controller='panels-ui--sidebar-toggle']" \
       "[data-panels-ui--sidebar-toggle-key-value='hotel']" \
-      "[data-panels-ui--sidebar-toggle-state-key-value='hotel']"
-    )
-  end
-
-  it "can target one sidebar while sharing another sidebar's stored state" do
-    render_navbar(sidebar_state_key: "shared-hotel")
-
-    expect(page).to have_css(
-      "button[data-panels-ui--sidebar-toggle-key-value='hotel']" \
-      "[data-panels-ui--sidebar-toggle-state-key-value='shared-hotel']"
+      "[aria-controls='hotel-sidebar'][aria-expanded='false'][aria-label='Expand navigation']"
     )
   end
 

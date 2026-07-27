@@ -19,7 +19,7 @@
 
   <body class="h-full overflow-hidden" data-theme="panel-light" data-controller="<%= content_for(:body_controllers) %>" <%= content_for(:body_attributes) %>>
     <div class="flex flex-col h-screen h-dvh min-h-screen min-h-dvh bg-background">
-      <%= render PanelsUI::Navbar.new(key: navigation_key, sidebar_state_key: navigation_state_key, navigation: !locked_hotel_portal_shell?) do |navbar| %>
+      <%= render PanelsUI::Navbar.new(key: navigation_key, navigation: !locked_hotel_portal_shell?) do |navbar| %>
         <% navbar.with_brand do %>
           <a href="<%= current_hotel ? hotel_dashboard_path(current_hotel) : '#' %>" class="flex items-center" aria-label="WAStays">
             <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>

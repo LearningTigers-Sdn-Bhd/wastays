@@ -24,7 +24,8 @@ RSpec.describe PanelsUI::Sidebar, type: :component do
   it "renders the desktop aside and mobile Sheet wired to their controllers" do
     render_sidebar
 
-    expect(page).to have_css("aside#hotel-sidebar.panel-sidebar[data-collapsed='false'][data-collapsible='true'][data-panels-ui--sidebar-key-value='hotel']")
+    expect(page).to have_css("aside#hotel-sidebar.panel-sidebar[data-collapsed='true'][data-collapsible='true'][data-panels-ui--sidebar-key-value='hotel']")
+    expect(page).to have_css("aside#hotel-sidebar [data-sidebar-presentation='collapsed']:not([hidden])", visible: :all)
     expect(page).to have_css("aside#hotel-sidebar[data-controller~='panels-ui--sidebar']")
     expect(page).to have_css("dialog#hotel-sidebar-mobile.panel-sidebar--mobile-sheet[data-controller='panels-ui--sheet']", visible: :all)
     expect(page).to have_css(
