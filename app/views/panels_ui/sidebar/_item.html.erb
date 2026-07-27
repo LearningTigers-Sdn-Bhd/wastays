@@ -69,7 +69,7 @@
 
     <% if component.collapsible? %>
       <div class="panel-sidebar__presentation panel-sidebar__presentation--collapsed"
-           data-sidebar-presentation="collapsed" hidden inert>
+           data-sidebar-presentation="collapsed">
         <% if item.children? %>
           <%= render PanelsUI::Popover.new(
             id: "#{item_id}-popover",

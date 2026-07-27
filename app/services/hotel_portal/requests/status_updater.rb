@@ -3,11 +3,12 @@ module HotelPortal
     class StatusUpdater
       attr_reader :hotel, :kind, :request_id, :status, :request
 
-      def initialize(hotel:, kind:, request_id:, status:)
+      def initialize(hotel:, kind:, request_id:, status:, trigger_webhook: true)
         @hotel = hotel
         @kind = kind.to_s
         @request_id = request_id
         @status = status.to_s
+        @trigger_webhook = trigger_webhook
       end
 
       def call
@@ -26,6 +27,7 @@ module HotelPortal
       private
 
       def trigger_webhook_if_done(old_status, new_status)
+        return unless @trigger_webhook
         return if old_status == new_status
 
         is_done = (kind == "housekeeping" && new_status == "completed") ||
@@ -183,7 +185,8 @@ module HotelPortal
         active_checkout = CheckOutRequest.where(booking_id: record.booking_id)
                                          .where(status: %w[new assigned in_progress pending acknowledged])
                                          .where.not(id: record.id)
-                                         .exists?
+                                         .includes(booking: :booking_rooms)
+                                         .any? { |request| checkout_room(request)&.room_number.to_s == room.room_number.to_s }
         return if active_housekeeping || active_checkout
 
         room_status = RoomStatus.find_or_create_by!(hotel: record.booking.hotel, room_type: room.room_type, room_number: room.room_number)

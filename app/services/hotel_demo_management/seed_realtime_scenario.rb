@@ -411,6 +411,26 @@ module HotelDemoManagement
       raise "Failed to check out booking #{booking.id}: #{result.error}" unless result.success?
 
       booking.update!(payment_status: "captured") if company_folio_ids.empty?
+      complete_historical_checkout_cleaning(booking) if date < current_hotel_date
+    end
+
+    def complete_historical_checkout_cleaning(booking)
+      requests = booking.check_out_requests.where(status: %w[new assigned in_progress pending acknowledged]).order(:id)
+
+      ActiveRecord::Base.transaction do
+        requests.each do |request|
+          %w[in_progress completed].each do |status|
+            result = HotelPortal::Requests::StatusUpdater.new(
+              hotel: @hotel,
+              kind: :checkout,
+              request_id: request.id,
+              status: status,
+              trigger_webhook: false
+            ).call
+            raise "Failed to mark checkout cleaning #{status} for booking #{booking.id}" unless result
+          end
+        end
+      end
     end
 
     def sync_group_statuses

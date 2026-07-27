@@ -13,7 +13,7 @@
   }
 
   .panel-navbar__inner {
-    @apply flex h-12 items-center gap-2 px-3;
+    @apply flex h-11 items-center gap-2 px-3;
   }
 
   .panel-navbar__navigation-trigger {

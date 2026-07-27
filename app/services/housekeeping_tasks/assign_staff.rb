@@ -2,68 +2,51 @@
 
 module HousekeepingTasks
   class AssignStaff
-    def initialize(hotel:, request_id:, assigned_to_id:, current_user:)
+    def initialize(hotel:, request_id: nil, checkout_request: nil, assigned_to_id:, current_user:)
       @hotel = hotel
       @request_id = request_id
+      @request = checkout_request
       @assigned_to_id = assigned_to_id.presence
       @current_user = current_user
     end
 
     def call
-      @request = HousekeepingRequest.left_joins(:booking)
-                                    .where("housekeeping_requests.hotel_id = :hotel_id OR bookings.hotel_id = :hotel_id", hotel_id: @hotel.id)
-                                    .find(@request_id)
+      @request ||= HousekeepingRequest.left_joins(:booking)
+                                      .where(
+                                        "housekeeping_requests.hotel_id = :hotel_id OR (housekeeping_requests.hotel_id IS NULL AND bookings.hotel_id = :hotel_id)",
+                                        hotel_id: @hotel.id
+                                      )
+                                      .find(@request_id)
+      raise ActiveRecord::RecordNotFound if @request.is_a?(CheckOutRequest) && @request.booking.hotel_id != @hotel.id
 
-      room_number = @request.room_number.presence
-      room_number ||= @request.booking&.booking_rooms&.where.not(room_number: [ nil, "" ])&.first&.room_number.presence
+      room_number = request_room_number(@request)
+      staff = find_housekeeper if @assigned_to_id
+      raise ActiveRecord::RecordNotFound, "Housekeeper not found" if @assigned_to_id && staff.nil?
 
-      active_requests = []
-      if room_number.present?
-        active_requests = HousekeepingRequest.left_joins(booking: :booking_rooms)
-                                             .where("housekeeping_requests.hotel_id = :hotel_id OR bookings.hotel_id = :hotel_id", hotel_id: @hotel.id)
-                                             .where(
-                                               "housekeeping_requests.room_number = :room_number OR (housekeeping_requests.room_number IS NULL AND booking_rooms.room_number = :room_number)",
-                                               room_number: room_number
-                                             )
-                                             .where.not(status: %w[pending completed failed cancelled])
-                                             .distinct
-                                             .to_a
-      end
+      ActiveRecord::Base.transaction do
+        active_requests = active_housekeeping_requests(room_number) + active_checkout_requests(room_number)
+        active_requests = [ @request.lock! ] if active_requests.empty?
 
-      active_requests = [ @request ] if active_requests.empty?
+        real_active = active_requests.reject { |request| request.is_a?(HousekeepingRequest) && request.status == "no_task" }
+        active_requests = real_active if real_active.any?
+        changed_requests = []
 
-      real_active = active_requests.reject { |r| r.status == "no_task" }
-      active_requests = real_active if real_active.any?
+        active_requests.each do |request|
+          metadata = request.metadata.to_h
+          status = request.status
+          old_assignment = metadata["assigned_to"]
 
-      active_requests.each do |req|
-        req_metadata = req.metadata.to_h
-        req_status = req.status
-
-        if @assigned_to_id
-          staff = find_housekeeper
           if staff
-            if req_metadata["assigned_to"] != staff.id
-              history = Array(req_metadata["assignment_history"])
-              history << {
-                "assigned_to_id" => staff.id,
-                "assigned_to_name" => staff.name,
-                "assigned_by_id" => @current_user.id,
-                "assigned_by_name" => @current_user.name,
-                "timestamp" => Time.current.iso8601
-              }
-              req_metadata["assignment_history"] = history
-            end
-            req_metadata["assigned_to"] = staff.id
-            req_metadata["assigned_to_name"] = staff.name
-            req_status = "assigned" if req_status.in?(%w[new no_task])
+            metadata, status = assign_metadata(request, metadata, status, staff)
           else
-            req_metadata, req_status = unassign_metadata(req_metadata, req_status)
+            metadata, status = unassign_metadata(request, metadata, status)
           end
-        else
-          req_metadata, req_status = unassign_metadata(req_metadata, req_status)
+
+          request.update!(metadata: metadata, status: status)
+          changed_requests << request if old_assignment != metadata["assigned_to"]
         end
 
-        req.update!(metadata: req_metadata, status: req_status)
+        record_audit_log(room_number, changed_requests, staff) if changed_requests.any?
       end
     end
 
@@ -73,21 +56,107 @@ module HousekeepingTasks
       HotelPortal::ActiveHousekeepersQuery.new(hotel: @hotel).call.find_by(id: @assigned_to_id)
     end
 
-    def unassign_metadata(metadata, status)
+    def request_room_number(request)
+      return request.room_number.presence if request.respond_to?(:room_number) && request.room_number.present?
+
+      request.metadata.to_h["room_number"].presence ||
+        request.booking&.booking_rooms&.where.not(room_number: [ nil, "" ])&.first&.room_number.presence
+    end
+
+    def active_housekeeping_requests(room_number)
+      return [] if room_number.blank?
+
+      request_ids = HousekeepingRequest.left_joins(booking: :booking_rooms)
+                                       .where(
+                                         "housekeeping_requests.hotel_id = :hotel_id OR (housekeeping_requests.hotel_id IS NULL AND bookings.hotel_id = :hotel_id)",
+                                         hotel_id: @hotel.id
+                                       )
+                                       .where(
+                                         "housekeeping_requests.room_number = :room_number OR (housekeeping_requests.room_number IS NULL AND booking_rooms.room_number = :room_number)",
+                                         room_number: room_number
+                                       )
+                                       .where.not(status: %w[pending completed failed cancelled])
+                                       .distinct
+                                       .ids
+
+      HousekeepingRequest.where(id: request_ids).includes(booking: :booking_rooms).lock.to_a
+    end
+
+    def active_checkout_requests(room_number)
+      return [] if room_number.blank?
+
+      request_ids = CheckOutRequest.joins(booking: :booking_rooms)
+                                   .where(bookings: { hotel_id: @hotel.id })
+                                   .where(status: %w[new assigned in_progress pending acknowledged])
+                                   .where(
+                                     "check_out_requests.metadata ->> 'room_number' = :room_number OR " \
+                                     "(COALESCE(check_out_requests.metadata ->> 'room_number', '') = '' " \
+                                     "AND booking_rooms.id = (SELECT MIN(first_room.id) FROM booking_rooms first_room " \
+                                     "WHERE first_room.booking_id = bookings.id AND COALESCE(first_room.room_number, '') <> '') " \
+                                     "AND booking_rooms.room_number = :room_number)",
+                                     room_number: room_number
+                                   )
+                                   .distinct
+                                   .ids
+
+      CheckOutRequest.where(id: request_ids).includes(booking: :booking_rooms).lock.to_a
+    end
+
+    def assign_metadata(request, metadata, status, staff)
+      if metadata["assigned_to"] != staff.id
+        history = Array(metadata["assignment_history"])
+        history << history_entry(assigned_to_id: staff.id, assigned_to_name: staff.name)
+        metadata["assignment_history"] = history
+      end
+      metadata["assigned_to"] = staff.id
+      metadata["assigned_to_name"] = staff.name
+      metadata["workflow_status"] = "assigned" if request.is_a?(CheckOutRequest)
+      status = "assigned" if status.in?(request.is_a?(CheckOutRequest) ? %w[new pending acknowledged] : %w[new no_task])
+      [ metadata, status ]
+    end
+
+    def unassign_metadata(request, metadata, status)
       if metadata["assigned_to"].present?
         history = Array(metadata["assignment_history"])
-        history << {
-          "assigned_to_name" => "Unassigned",
-          "assigned_by_id" => @current_user.id,
-          "assigned_by_name" => @current_user.name,
-          "timestamp" => Time.current.iso8601
-        }
+        history << history_entry(assigned_to_name: "Unassigned")
         metadata["assignment_history"] = history
       end
       metadata.delete("assigned_to")
       metadata.delete("assigned_to_name")
-      status = "new" if status == "assigned"
+      metadata["workflow_status"] = "new" if request.is_a?(CheckOutRequest)
+      status = "new" if status.in?(request.is_a?(CheckOutRequest) ? %w[assigned in_progress acknowledged] : %w[assigned])
       [ metadata, status ]
+    end
+
+    def history_entry(assigned_to_name:, assigned_to_id: nil)
+      {
+        "assigned_to_id" => assigned_to_id,
+        "assigned_to_name" => assigned_to_name,
+        "assigned_by_id" => @current_user.id,
+        "assigned_by_name" => @current_user.name,
+        "timestamp" => Time.current.iso8601
+      }.compact
+    end
+
+    def record_audit_log(room_number, requests, staff)
+      reference = requests.first
+      booking = reference.booking
+      room = booking&.booking_rooms&.find { |booking_room| booking_room.room_number.to_s == room_number.to_s }
+
+      RoomOperationalAuditLog.create!(
+        hotel: @hotel,
+        room_type: (reference.room_type if reference.respond_to?(:room_type)) || room&.room_type,
+        booking: booking,
+        user: @current_user,
+        room_number: room_number,
+        event_type: "housekeeping_assignment_changed",
+        reason: staff ? "Assigned room cleaning tasks to #{staff.name}" : "Unassigned room cleaning tasks",
+        metadata: {
+          "assigned_to_id" => staff&.id,
+          "assigned_to_name" => staff&.name,
+          "tasks" => requests.map { |request| { "type" => request.class.name, "id" => request.id } }
+        }.compact
+      )
     end
   end
 end

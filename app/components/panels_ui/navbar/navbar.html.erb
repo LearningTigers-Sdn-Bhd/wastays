@@ -15,8 +15,12 @@
               data-panels-ui--sidebar-toggle-key-value="<%= key %>"
               data-panels-ui--sidebar-toggle-state-key-value="<%= sidebar_state_key %>"
               data-action="click->panels-ui--sidebar-toggle#toggleDesktop"
-              aria-label="Collapse navigation">
-        <%= helpers.app_icon "panel-left-close", class: "panel-navbar__icon", aria: { hidden: "true" } %>
+              aria-controls="<%= key %>-sidebar"
+              aria-expanded="false"
+              aria-pressed="false"
+              aria-label="Lock navigation open">
+        <%= helpers.app_icon "pin", class: "panel-navbar__icon", data: { sidebar_toggle_icon: "lock" }, aria: { hidden: "true" } %>
+        <%= helpers.app_icon "pin-off", class: "panel-navbar__icon", data: { sidebar_toggle_icon: "unlock" }, hidden: true, aria: { hidden: "true" } %>
       </button>
     <% end %>
 

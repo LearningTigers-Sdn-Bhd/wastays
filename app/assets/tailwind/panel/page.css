@@ -3,7 +3,7 @@
      dashboards, tables, and operational workspaces. Pages own their internal layout,
      while this wrapper owns standard-page padding and mobile-nav clearance. */
   .panel-page {
-    @apply w-full p-4;
+    @apply w-full p-2.5;
   }
 
   .panel-page--workspace {

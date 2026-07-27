@@ -23,7 +23,7 @@ module StayView
     :booking_room_id, :booking_id, :room_type_id, :room_number, :status, :guest_name, :primary_guest_name, :check_in, :check_out,
     :check_in_at, :check_out_at, :actual_check_in, :actual_check_out, :actual_check_in_at, :actual_check_out_at,
     :group_booking_id, :group_reference, :group_name, :group_position, :source,
-    :adults, :children, :boat_in_at, :boat_out_at
+    :adults, :children, :boat_in_at, :boat_out_at, :vip, :blacklisted, :repeat
   ) do
     def initialize(**attributes)
       %i[check_in_at check_out_at actual_check_in actual_check_out actual_check_in_at actual_check_out_at group_booking_id group_reference
@@ -31,6 +31,7 @@ module StayView
         attributes[key] ||= nil
       end
       attributes[:primary_guest_name] ||= attributes[:guest_name]
+      %i[vip blacklisted repeat].each { |key| attributes[key] = false if attributes[key].nil? }
       attributes[:room_number] = attributes.fetch(:room_number).to_s.freeze
       attributes[:status] = attributes.fetch(:status).to_sym
       %i[guest_name primary_guest_name group_reference group_name source].each do |key|
@@ -38,6 +39,10 @@ module StayView
       end
       super(**attributes)
     end
+
+    alias_method :vip?, :vip
+    alias_method :blacklisted?, :blacklisted
+    alias_method :repeat?, :repeat
   end
   GroupRoomRecord = Data.define(:group_booking_id, :booking_id, :booking_room_id, :group_position, :room_number, :room_type_name) do
     def initialize(**attributes)

@@ -108,6 +108,29 @@ RSpec.describe StayView::ProjectBooking do
     expect(redacted.accessible_label).not_to include("Walk-in")
   end
 
+  it "projects authorized guest statuses into immutable accessible text" do
+    booking = StayView::BookingRecord.new(
+      booking_room_id: 11, booking_id: 7, room_type_id: 3, room_number: "101",
+      status: :confirmed, guest_name: "Ada Lovelace",
+      check_in: Date.new(2026, 7, 16), check_out: Date.new(2026, 7, 18),
+      vip: true, blacklisted: true, repeat: true
+    )
+
+    permitted = described_class.call(
+      booking:, room_type_name: "Deluxe", date_window: window,
+      capabilities: capabilities.with(view_booking: true)
+    )
+    expect(permitted).to have_attributes(vip: true, blacklisted: true, repeat: true)
+    expect(permitted.guest_statuses).to eq([ "Blacklisted", "VIP", "Repeat" ])
+    expect(permitted.guest_statuses).to be_frozen
+    expect(permitted.accessible_label).to include("guest status Blacklisted, VIP, and Repeat")
+
+    redacted = described_class.call(booking:, room_type_name: "Deluxe", date_window: window, capabilities:)
+    expect(redacted).to have_attributes(vip: false, blacklisted: false, repeat: false)
+    expect(redacted.guest_statuses).to be_empty
+    expect(redacted.accessible_label).not_to include("Blacklisted", "VIP", "Repeat")
+  end
+
   it "maps a channel booking source to a concise label" do
     booking = StayView::BookingRecord.new(
       booking_room_id: 11, booking_id: 7, room_type_id: 3, room_number: "101",

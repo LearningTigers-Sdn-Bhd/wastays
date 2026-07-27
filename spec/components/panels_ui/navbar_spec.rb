@@ -22,17 +22,18 @@ RSpec.describe PanelsUI::Navbar, type: :component do
     expect(page).to have_css(
       "button[data-controller='panels-ui--sidebar-toggle']" \
       "[data-panels-ui--sidebar-toggle-key-value='hotel']" \
-      "[data-panels-ui--sidebar-toggle-state-key-value='hotel']"
+      "[data-panels-ui--sidebar-toggle-state-key-value='hotel']" \
+      "[aria-controls='hotel-sidebar'][aria-expanded='false']" \
+      "[aria-pressed='false'][aria-label='Lock navigation open']"
     )
+    expect(page).to have_css("[data-sidebar-toggle-icon='lock']")
+    expect(page).to have_css("[data-sidebar-toggle-icon='unlock'][hidden]", visible: :all)
   end
 
-  it "can target one sidebar while sharing another sidebar's stored state" do
+  it "can share lock state across different sidebars" do
     render_navbar(sidebar_state_key: "shared-hotel")
 
-    expect(page).to have_css(
-      "button[data-panels-ui--sidebar-toggle-key-value='hotel']" \
-      "[data-panels-ui--sidebar-toggle-state-key-value='shared-hotel']"
-    )
+    expect(page).to have_css("[data-panels-ui--sidebar-toggle-state-key-value='shared-hotel']")
   end
 
   it "omits navigation controls when navigation is disabled" do

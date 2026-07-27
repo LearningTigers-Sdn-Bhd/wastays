@@ -128,7 +128,8 @@ RSpec.describe StayView::LoadInventory do
       end_date: start_date + 1.day
     )
 
-    inventory = described_class.call(hotel:, date_window: window, capabilities:)
+    sql = capture_sql { @inventory = described_class.call(hotel:, date_window: window, capabilities:) }
+    inventory = @inventory
 
     expect(inventory.room_types.map(&:id)).to eq([ room_type.id ])
     expect(inventory.bookings.map(&:guest_name)).to eq([ nil ])
@@ -136,12 +137,70 @@ RSpec.describe StayView::LoadInventory do
       group_booking_id: booking.group_booking_id,
       group_reference: nil,
       group_name: nil,
-      group_position: 1
+      group_position: 1,
+      vip: false,
+      blacklisted: false,
+      repeat: false
     )
     expect(inventory.room_statuses.map(&:status)).to eq([ :dirty ])
     expect(inventory.room_blocks.size).to eq(1)
     expect(inventory).to be_frozen
     expect(inventory.bookings).to be_frozen
+    expect(sql.join(" ")).not_to include('FROM "guests"', 'FROM "booking_guests" INNER JOIN "bookings"')
+  end
+
+  it "loads primary-guest VIP, hotel-scoped blacklist, and same-hotel repeat status in bounded queries" do
+    room_type = create(:room_type, hotel:, room_numbers: %w[101 102 103])
+    other_hotel = create(:hotel)
+    repeat_guest = create(
+      :guest,
+      name: "Repeat VIP",
+      vip: true,
+      blacklisted: true,
+      created_by_hotel: hotel,
+      metadata: { "blacklisted_hotel_ids" => [ hotel.id ] }
+    )
+    cross_hotel_guest = create(:guest, name: "Other Hotel Repeat")
+    first_stay_guest = create(:guest, name: "First Stay")
+
+    repeat_booking = create(:booking, hotel:, check_in: start_date, check_out: start_date + 2.days)
+    cross_hotel_booking = create(:booking, hotel:, check_in: start_date, check_out: start_date + 2.days)
+    first_stay = create(:booking, hotel:, status: "completed", check_in: start_date, check_out: start_date + 1.day)
+    create(:booking_room, booking: repeat_booking, room_type:, room_number: "101")
+    create(:booking_room, booking: cross_hotel_booking, room_type:, room_number: "102")
+    create(:booking_room, booking: first_stay, room_type:, room_number: "103")
+    create(:booking_guest, booking: repeat_booking, guest: repeat_guest, is_primary: true)
+    create(:booking_guest, booking: cross_hotel_booking, guest: cross_hotel_guest, is_primary: true)
+    create(:booking_guest, booking: first_stay, guest: first_stay_guest, is_primary: true)
+    create(:booking_guest, booking: cross_hotel_booking, guest: create(:guest, vip: true), is_primary: false)
+    cross_hotel_booking.update_column(:vip, true)
+
+    prior_stay = create(
+      :booking,
+      hotel:,
+      status: "completed",
+      check_in: start_date - 10.days,
+      check_out: start_date - 8.days
+    )
+    create(:booking_guest, booking: prior_stay, guest: repeat_guest, is_primary: true)
+    other_hotel_stay = create(
+      :booking,
+      hotel: other_hotel,
+      status: "completed",
+      check_in: start_date - 10.days,
+      check_out: start_date - 8.days
+    )
+    create(:booking_guest, booking: other_hotel_stay, guest: cross_hotel_guest, is_primary: true)
+
+    visible = capabilities.with(view_booking: true)
+    sql = capture_sql { @inventory = described_class.call(hotel:, date_window: window, capabilities: visible) }
+    records = @inventory.bookings.index_by(&:booking_id)
+
+    expect(records.fetch(repeat_booking.id)).to have_attributes(vip: true, blacklisted: true, repeat: true)
+    expect(records.fetch(cross_hotel_booking.id)).to have_attributes(vip: false, blacklisted: false, repeat: false)
+    expect(records.fetch(first_stay.id)).to have_attributes(vip: false, blacklisted: false, repeat: false)
+    expect(sql.count { |query| query.include?('FROM "guests"') }).to eq(1)
+    expect(sql.count { |query| query.include?('INNER JOIN "bookings"') && query.include?('"bookings"."status" =') }).to eq(1)
   end
 
   it "loads late checkouts into both the Room and Timeline views by actual occupancy" do

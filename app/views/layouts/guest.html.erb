@@ -56,7 +56,7 @@
 
         <main class="flex-1 flex flex-col overflow-hidden">
           <% if guest_logged_in? && guest_breadcrumb_parts.present? %>
-            <div class="shrink-0 h-[53px] flex items-center border-b border-sidebar-border bg-sidebar text-sidebar-foreground px-4 sm:px-6">
+            <div class="flex h-[37px] shrink-0 items-center border-b border-sidebar-border bg-sidebar px-4 text-sidebar-foreground sm:px-6">
               <div class="w-full overflow-x-auto overscroll-x-contain whitespace-nowrap custom-scrollbar">
                 <%= render_guest_breadcrumbs %>
               </div>
