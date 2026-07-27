@@ -28,7 +28,7 @@ RSpec.describe Authorizable do
     it "grants a user holding the permission at the hotel" do
       user = create(:user)
       role = create(:role, account: hotel.account)
-      role.permissions << create(:permission, slug: "manage_folio_windows")
+      role.permissions << permission("manage_folio_windows", "Manage Folio Windows")
       create(:user_hotel_access, user: user, hotel: hotel, role: role)
 
       expect(service.permits?(user, "manage_folio_windows", hotel: hotel)).to be(true)
@@ -74,11 +74,11 @@ RSpec.describe Authorizable do
     before { create(:user_hotel_access, user: user, hotel: hotel, role: role) }
 
     it "requires every permission" do
-      role.permissions << create(:permission, slug: "manage_bookings")
+      role.permissions << permission("manage_bookings", "Manage Bookings")
 
       expect(service.permits_all?(user, %w[manage_bookings post_folio_corrections], hotel: hotel)).to be(false)
 
-      role.permissions << create(:permission, slug: "post_folio_corrections")
+      role.permissions << permission("post_folio_corrections", "Post Folio Corrections")
 
       expect(service.permits_all?(user.reload, %w[manage_bookings post_folio_corrections], hotel: hotel)).to be(true)
     end
@@ -86,5 +86,9 @@ RSpec.describe Authorizable do
     it "denies an absent actor" do
       expect(service.permits_all?(nil, %w[manage_bookings], hotel: hotel)).to be(false)
     end
+  end
+
+  def permission(slug, name)
+    Permission.find_or_create_by!(slug: slug) { |record| record.name = name }
   end
 end
