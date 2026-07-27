@@ -63,6 +63,10 @@ RSpec.describe HotelDemoManagement::ResetState do
       user = create(:user, account: account)
       booking = create(:booking, hotel: hotel)
       folio = create(:booking_folio, hotel: hotel, booking: booking)
+      booking_guest = create(:booking_guest, booking: booking, is_primary: true)
+      billing_party = booking_guest.reload.booking_billing_party
+      billing_terms = billing_party.billing_terms
+
       night_audit = create(:night_audit, hotel: hotel, performed_by_user: user)
       transaction = create(
         :folio_transaction,
@@ -74,6 +78,68 @@ RSpec.describe HotelDemoManagement::ResetState do
       create(:folio_operation_log, hotel: hotel, booking: booking, source_folio: folio, source_transaction: transaction)
       create(:folio_routing_rule, hotel: hotel, booking: booking, target_folio: folio)
       create(:payment_transaction, booking: booking, booking_quote: nil)
+      deposit = create(:deposit, booking: booking)
+
+      company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
+      ar_invoice = create(
+        :ar_invoice,
+        hotel: hotel,
+        booking_folio: company_folio,
+        hotel_corporate_account: company_folio.hotel_corporate_account
+      )
+      ar_payment = create(
+        :ar_payment,
+        hotel: hotel,
+        hotel_corporate_account: company_folio.hotel_corporate_account
+      )
+      ar_allocation = create(:ar_payment_allocation, ar_payment: ar_payment, ar_invoice: ar_invoice)
+      ar_reversal = create(:ar_payment_allocation_reversal, ar_payment_allocation: ar_allocation, reversed_by: user)
+      ar_submission = create(
+        :ar_payment_submission,
+        hotel: hotel,
+        hotel_corporate_account: company_folio.hotel_corporate_account,
+        submitted_by: user,
+        auto_invoice: ar_invoice
+      )
+      ar_submission_allocation = ar_submission.ar_payment_submission_allocations.sole
+      ar_intent = create(
+        :corporate_ar_payment_intent,
+        hotel: hotel,
+        hotel_corporate_account: company_folio.hotel_corporate_account,
+        corporate_account: company_folio.hotel_corporate_account.corporate_account,
+        user: user,
+        ar_payment: ar_payment
+      )
+      ar_payment_transaction = create(
+        :payment_transaction,
+        booking: nil,
+        booking_quote: nil,
+        ar_payment: ar_payment,
+        corporate_ar_payment_intent: ar_intent
+      )
+
+      group_booking = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group_booking, group_position: 1)
+      booking_room = create(:booking_room, booking: booking, room_type: room_type)
+      lineage = create(
+        :legacy_booking_split_lineage,
+        group_booking: group_booking,
+        legacy_booking: booking,
+        child_booking: booking,
+        booking_room: booking_room
+      )
+
+      hotel_tax = hotel.hotel_taxes.create!(name: "Old Booking Tax", rate_type: "flat", amount: 5)
+      tax_code = create(:transaction_code, hotel: hotel)
+      tax_override = create(
+        :booking_tax_inclusion_override,
+        booking: booking,
+        hotel: hotel,
+        transaction_code: tax_code,
+        hotel_tax: hotel_tax,
+        primary_tax_key: nil
+      )
+
       create(:hotel_business_date, hotel: hotel, business_date: hotel.current_business_date - 1.day, status: "closed")
       create(:financial_audit_event, hotel: hotel)
       create(:booking_audit_log, hotel: hotel, auditable: booking, user: user)
@@ -94,6 +160,20 @@ RSpec.describe HotelDemoManagement::ResetState do
       expect(FolioOperationLog.where(booking_id: booking.id)).to be_empty
       expect(FolioRoutingRule.where(booking_id: booking.id)).to be_empty
       expect(PaymentTransaction.where(booking_id: booking.id)).to be_empty
+      expect(BookingBillingParty.where(id: billing_party.id)).to be_empty
+      expect(BookingBillingTerms.where(id: billing_terms.id)).to be_empty
+      expect(Deposit.where(id: deposit.id)).to be_empty
+      expect(DepositMovement.where(deposit_id: deposit.id)).to be_empty
+      expect(ArInvoice.where(id: ar_invoice.id)).to be_empty
+      expect(ArPayment.where(id: ar_payment.id)).to be_empty
+      expect(ArPaymentAllocation.where(id: ar_allocation.id)).to be_empty
+      expect(ArPaymentAllocationReversal.where(id: ar_reversal.id)).to be_empty
+      expect(ArPaymentSubmission.where(id: ar_submission.id)).to be_empty
+      expect(ArPaymentSubmissionAllocation.where(id: ar_submission_allocation.id)).to be_empty
+      expect(CorporateArPaymentIntent.where(id: ar_intent.id)).to be_empty
+      expect(PaymentTransaction.where(id: ar_payment_transaction.id)).to be_empty
+      expect(LegacyBookingSplitLineage.where(id: lineage.id)).to be_empty
+      expect(BookingTaxInclusionOverride.where(id: tax_override.id)).to be_empty
       expect(hotel.night_audits).to be_empty
       expect(hotel.hotel_business_dates.current.count).to eq(1)
       expect(hotel.hotel_business_dates.count).to eq(1)
