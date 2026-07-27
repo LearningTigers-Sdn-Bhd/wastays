@@ -34,6 +34,7 @@ RSpec.describe "CorporatePortal::Dashboard", type: :request do
     expect(response).to have_http_status(:success)
     expect(response.body).to include('id="corporate-sidebar"')
     expect(response.body).to include('aria-label="Corporate account:')
+    expect(response.body).to include("href=\"#{corporate_dashboard_path}\"")
     expect(response.body).to include(CGI.escapeHTML(user.account.name))
     expect(response.body).to include('class="panel-sidebar__link"')
     expect(response.body).to include('aria-current="page"')
