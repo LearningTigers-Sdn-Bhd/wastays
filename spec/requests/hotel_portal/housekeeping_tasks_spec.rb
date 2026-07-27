@@ -220,6 +220,28 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       expect(request.metadata["workflow_status"]).to eq("assigned")
     end
 
+    it "assigns every active room task together and records the collective audit event" do
+      booking = create(:booking, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      checkout_request = create(:check_out_request, booking: booking, status: "pending", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" })
+      housekeeping_request = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
+      staff = create(:user, account: account)
+      hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
+      UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
+      UserRole.create!(user: staff, role: hk_role)
+
+      patch hotel_assign_checkout_request_path(hotel, checkout_request), params: { assigned_to: staff.id }
+
+      expect(checkout_request.reload.metadata).to include("assigned_to" => staff.id, "assigned_to_name" => staff.name)
+      expect(housekeeping_request.reload.metadata).to include("assigned_to" => staff.id, "assigned_to_name" => staff.name)
+      audit = RoomOperationalAuditLog.find_by!(hotel: hotel, event_type: "housekeeping_assignment_changed")
+      expect(audit).to have_attributes(room_number: "101", user: user)
+      expect(audit.metadata["tasks"]).to contain_exactly(
+        { "type" => "CheckOutRequest", "id" => checkout_request.id },
+        { "type" => "HousekeepingRequest", "id" => housekeeping_request.id }
+      )
+    end
+
     it "updates checkout requests through the checkout status route" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
