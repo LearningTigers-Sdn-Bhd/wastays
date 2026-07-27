@@ -63,11 +63,17 @@ RSpec.describe HotelDemoManagement::ResetState do
       user = create(:user, account: account)
       booking = create(:booking, hotel: hotel)
       folio = create(:booking_folio, hotel: hotel, booking: booking)
-      transaction = create(:folio_transaction, booking_folio: folio, user: user)
+      night_audit = create(:night_audit, hotel: hotel, performed_by_user: user)
+      transaction = create(
+        :folio_transaction,
+        booking_folio: folio,
+        user: user,
+        night_audit: night_audit,
+        metadata: { night_audit_id: night_audit.id }
+      )
       create(:folio_operation_log, hotel: hotel, booking: booking, source_folio: folio, source_transaction: transaction)
       create(:folio_routing_rule, hotel: hotel, booking: booking, target_folio: folio)
       create(:payment_transaction, booking: booking, booking_quote: nil)
-      create(:night_audit, hotel: hotel, performed_by_user: user)
       create(:hotel_business_date, hotel: hotel, business_date: hotel.current_business_date - 1.day, status: "closed")
       create(:financial_audit_event, hotel: hotel)
       create(:booking_audit_log, hotel: hotel, auditable: booking, user: user)

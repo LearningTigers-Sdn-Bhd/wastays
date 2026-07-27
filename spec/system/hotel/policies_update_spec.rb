@@ -34,7 +34,8 @@ RSpec.describe 'Hotel Policies Update', type: :system do
 
     expect(page).to have_content('Hotel policies updated successfully.')
     expect(hotel.property_policy.reload.check_in_time).to eq('15:00')
-    expect(page).to have_content('Hotel Dashboard')
+    expect(page).to have_current_path(hotel_dashboard_path(hotel))
+    expect(page).to have_content('Hotel Portal')
   end
 
   it 'denies access without the manage_hotel_profile permission' do
