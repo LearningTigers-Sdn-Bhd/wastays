@@ -6,10 +6,10 @@ module HotelPortal
       STATUS_TONES = {
         pending: :neutral,
         confirmed: :info,
-        review_no_show: :info,
+        review_no_show: :warning,
         checked_in: :success,
-        review_due_out: :success,
-        checkout_required: :success,
+        review_due_out: :warning,
+        checkout_required: :destructive,
         cancelled: :destructive,
         completed: :completed,
         overbooked: :destructive,

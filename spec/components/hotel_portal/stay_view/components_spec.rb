@@ -434,10 +434,10 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
   it "groups booking lifecycle statuses into distinct timeline stage tones" do
     {
       confirmed: "info",
-      review_no_show: "info",
+      review_no_show: "warning",
       checked_in: "success",
-      review_due_out: "success",
-      checkout_required: "success",
+      review_due_out: "warning",
+      checkout_required: "destructive",
       completed: "completed"
     }.each do |status, tone|
       render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment.with(status:)))
