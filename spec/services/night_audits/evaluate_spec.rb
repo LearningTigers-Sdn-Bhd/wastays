@@ -143,7 +143,7 @@ RSpec.describe NightAudits::Evaluate do
       company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
       room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
       create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
-      key = Folios::ChargePostingKeys.nightly_charge_key(booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id)
+      key = Folios::Charges::ChargePostingKeys.nightly_charge_key(booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id)
       create(:folio_transaction,
         booking_folio: company_folio,
         transaction_type: "charge",
@@ -170,7 +170,7 @@ RSpec.describe NightAudits::Evaluate do
       company_folio = create(:booking_folio, :secondary, hotel: hotel, booking: booking)
       room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
       create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
-      key = Folios::ChargePostingKeys.nightly_charge_key(booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id)
+      key = Folios::Charges::ChargePostingKeys.nightly_charge_key(booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id)
       transaction = create(:folio_transaction,
         booking_folio: guest_folio,
         transaction_type: "charge",
@@ -184,6 +184,48 @@ RSpec.describe NightAudits::Evaluate do
       expect(issue["issue_types"]).to include("misrouted")
       expect(issue["expected_folio_id"]).to eq(company_folio.id)
       expect(issue.dig("actual_transactions", 0, "folio_transaction_id")).to eq(transaction.id)
+    end
+
+    it "blocks a missing final-night charge using the hotel's local dates" do
+      hotel.update!(time_zone: "Kuala Lumpur")
+      zone = hotel.hotel_time_zone
+      local_business_date = Date.new(2026, 7, 25)
+      booking = create(:booking,
+        status: "checked_in",
+        hotel: hotel,
+        check_in: zone.local(2026, 7, 23, 0, 0),
+        check_out: zone.local(2026, 7, 26, 0, 0),
+        checked_in_at: zone.local(2026, 7, 23, 0, 0))
+      create(:booking_room,
+        booking: booking,
+        subtotal: 30.0,
+        nightly_rate_snapshot: { local_business_date.iso8601 => { "price" => "10.00" } })
+      create(:booking_folio, booking: booking, hotel: hotel)
+
+      result = described_class.new(hotel: hotel, business_date: local_business_date, phase: :post_close).call
+
+      blocker = result[:blocked_details]["missing_nightly_charges"].sole
+      expect(blocker["booking_id"]).to eq(booking.id)
+      expect(blocker["line_issues"].sole["stay_date"]).to eq("2026-07-25")
+      expect(blocker["line_issues"].sole["issue_types"]).to include("missing")
+    end
+
+    it "evaluates checkout balances on the hotel's local departure date" do
+      hotel.update!(time_zone: "Kuala Lumpur")
+      zone = hotel.hotel_time_zone
+      local_business_date = Date.new(2026, 7, 25)
+      booking = create(:booking,
+        status: "checked_in",
+        hotel: hotel,
+        check_in: zone.local(2026, 7, 24, 0, 0),
+        check_out: zone.local(2026, 7, 25, 0, 0),
+        checked_in_at: zone.local(2026, 7, 24, 0, 0))
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, :charge, booking_folio: folio, amount: 50, category: "other")
+
+      result = described_class.new(hotel: hotel, business_date: local_business_date, phase: :pre_close).call
+
+      expect(result[:blocked_details]["outstanding_folio_balance"].sole["booking_id"]).to eq(booking.id)
     end
   end
 end

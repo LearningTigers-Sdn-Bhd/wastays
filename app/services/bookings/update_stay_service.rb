@@ -109,7 +109,7 @@ module Bookings
 
             # Reconcile forecasts against the changed stay without recreating already-posted nights.
             if @booking.booking_folio.present?
-              Folios::SyncForecastedCharges.call(booking_folio: @booking.booking_folio)
+              Folios::Forecasts::SyncForecastedCharges.call(booking_folio: @booking.booking_folio)
             end
           end
 

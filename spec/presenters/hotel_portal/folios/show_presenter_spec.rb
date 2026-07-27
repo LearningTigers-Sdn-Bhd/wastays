@@ -58,7 +58,7 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
   it "builds booking-level billing instruction and default rows" do
     room_code = create(:transaction_code, hotel: hotel, code: "ROOM2", name: "Room Charge", category: "accommodation")
     fnb_code = create(:transaction_code, hotel: hotel, code: "FNB2", name: "Food and Beverage", category: "fb")
-    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio")
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Company Folio")
     create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
 
     rows = presenter.billing_instruction_rows
@@ -96,7 +96,7 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
     room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
     sst_code = hotel.transaction_codes.find_by!(system_key: "sst_tax")
     room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
-    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio")
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Company Folio")
     create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: sst_code, target_folio: company_folio)
 
     row = presenter.default_billing_instruction_rows.find { |default_row| default_row.code == "ROOM" }
@@ -111,7 +111,7 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
     hotel.update!(sst_enabled: true)
     Financials::EnsureDefaultTransactionCodes.call(hotel)
     room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
-    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio")
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Company Folio")
     create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
     booking.booking_rooms.first.update!(subtotal: 100.0)
     booking.update!(tax_posting_snapshot: { business_date.iso8601 => [] })
@@ -179,7 +179,7 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
 
     expect(row.code).to eq("PAY")
     expect(row.description).to eq("Booking payment")
-    expect(row.date_label).to eq("18 Jun")
+    expect(row.date_label).to eq(booking.check_in.to_date.strftime("%d/%m/%Y"))
     expect(row.debit).to eq("—")
     expect(row.credit).to eq("100.00")
     expect(row.balance).to eq("-100.00")
@@ -204,7 +204,7 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
     row = folio_show.forecasted_rows.first
 
     expect(folio_show.forecasted_rows.size).to eq(1)
-    expect(row.date_label).to eq("10 Jun")
+    expect(row.date_label).to eq(Date.new(2026, 6, 10).strftime("%d/%m/%Y"))
     expect(row.code).to eq("EARLY_DEP")
     expect(row.description).to eq("Early checkout charge - Night 1")
     expect(row.debit).to eq("50.00")
@@ -478,7 +478,7 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
 
     expect(row.code).to eq("SVC")
     expect(row.description).to eq("Tax: Service Charge - 2026-06-18")
-    expect(row.date_label).to eq("18 Jun")
+    expect(row.date_label).to eq(Date.new(2026, 6, 18).strftime("%d/%m/%Y"))
     expect(row.detail_label).to eq("Tax linked to ROOM")
     expect(row.source_label).to eq("Upcoming")
     expect(row.balance).to eq("Pending")

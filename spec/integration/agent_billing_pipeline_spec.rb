@@ -25,11 +25,11 @@ RSpec.describe "Agent Billing Pipeline", type: :integration do
   end
 
   # Posts a real charge for every open forecast on the folio, matching the
-  # posting key Folios::CloseForCheckout looks for, instead of hand-rolling
+  # posting key Folios::Checkout::CloseForCheckout looks for, instead of hand-rolling
   # a charge that would leave the auto-generated forecast "unsettled."
   def post_forecasted_charges!(folio)
     folio.folio_forecasted_charges.forecast.each do |forecast|
-      key = Folios::ChargePostingKeys.nightly_charge_key(
+      key = Folios::Charges::ChargePostingKeys.nightly_charge_key(
         booking: folio.booking, date: forecast.stay_date, charge_kind: forecast.charge_kind, identity: forecast.identity
       )
       create(:folio_transaction,
@@ -45,8 +45,8 @@ RSpec.describe "Agent Billing Pipeline", type: :integration do
     booking_a = booking_billed_to(agent_account)
     booking_b = booking_billed_to(agent_account)
 
-    folio_a = Folios::InitializeForBooking.call(booking: booking_a, user: user)
-    folio_b = Folios::InitializeForBooking.call(booking: booking_b, user: user)
+    folio_a = Folios::Lifecycle::InitializeForBooking.call(booking: booking_a, user: user)
+    folio_b = Folios::Lifecycle::InitializeForBooking.call(booking: booking_b, user: user)
 
     # Both rooms route to the same agent ledger, sharing one BookingBillingParty.
     expect(folio_a.payer_type).to eq("company")
@@ -61,8 +61,8 @@ RSpec.describe "Agent Billing Pipeline", type: :integration do
     post_forecasted_charges!(folio_a)
     post_forecasted_charges!(folio_b)
 
-    result_a = Folios::CloseForCheckout.call(booking: booking_a, user: user, options: { direct_bill_folio_ids: [ folio_a.id ] })
-    result_b = Folios::CloseForCheckout.call(booking: booking_b, user: user, options: { direct_bill_folio_ids: [ folio_b.id ] })
+    result_a = Folios::Checkout::CloseForCheckout.call(booking: booking_a, user: user, options: { direct_bill_folio_ids: [ folio_a.id ] })
+    result_b = Folios::Checkout::CloseForCheckout.call(booking: booking_b, user: user, options: { direct_bill_folio_ids: [ folio_b.id ] })
 
     expect(result_a.success?).to be(true)
     expect(result_b.success?).to be(true)
@@ -94,10 +94,10 @@ RSpec.describe "Agent Billing Pipeline", type: :integration do
 
   it "leaves an agent-booked folio open at checkout when direct billing is not selected" do
     booking = booking_billed_to(agent_account)
-    folio = Folios::InitializeForBooking.call(booking: booking, user: user)
+    folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
     post_forecasted_charges!(folio)
 
-    result = Folios::CloseForCheckout.call(booking: booking, user: user)
+    result = Folios::Checkout::CloseForCheckout.call(booking: booking, user: user)
 
     expect(result.success?).to be(false)
     expect(result.error).to include("balance")

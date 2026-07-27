@@ -24,6 +24,7 @@
       <%= render "hotel_portal/night_audits/show/financial_summary", presenter: presenter %>
     <% end %>
     <% tabs.with_panel(name: "advanced-actions", id: "advanced-actions-panel", data: { testid: "show-advanced-actions-panel" }) do %>
+      <%= render "hotel_portal/night_audits/show/completed_nightly_reconciliation", presenter: presenter %>
       <%= render "hotel_portal/night_audits/show/manual_adjustments", presenter: presenter %>
     <% end %>
   <% end %>

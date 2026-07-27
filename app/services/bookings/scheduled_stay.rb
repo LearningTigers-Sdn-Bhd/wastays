@@ -23,8 +23,19 @@ module Bookings
       policy_value || (kind.to_sym == :check_in ? DEFAULT_CHECK_IN_TIME : DEFAULT_CHECK_OUT_TIME)
     end
 
-    def date(value)
-      value&.to_date
+    def local_date(hotel:, value:)
+      return if value.blank?
+      return value.in_time_zone(hotel.hotel_time_zone).to_date if value.respond_to?(:acts_like_time?) && value.acts_like_time?
+
+      value.to_date
+    end
+
+    def stay_dates(hotel:, check_in:, check_out:)
+      arrival_date = local_date(hotel: hotel, value: check_in)
+      departure_date = local_date(hotel: hotel, value: check_out)
+      return [] if arrival_date.blank? || departure_date.blank? || departure_date <= arrival_date
+
+      (arrival_date...departure_date).to_a
     end
   end
 end

@@ -95,7 +95,7 @@ RSpec.describe "HotelPortal::Bookings::Actions no-shows", :business_day, type: :
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="complete_sheet"')
       expect(response.body).to include('target="booking_action_sheet"')
-      expect(response.body).to include(CGI.escapeHTML(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details")))
+      expect(response.body).to include(CGI.escapeHTML(hotel_booking_workspace_path(hotel, booking, tab: "booking_details")))
       expect(booking.reload.status).to eq("no_show")
     end
 
@@ -103,7 +103,7 @@ RSpec.describe "HotelPortal::Bookings::Actions no-shows", :business_day, type: :
       post hotel_booking_action_mark_no_show_path(hotel, booking),
         params: { no_show_reason: "Guest did not arrive" }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(flash[:notice]).to include("Booking marked as no-show.")
       expect(booking.reload.status).to eq("no_show")
       expect(BookingAuditLog.where(auditable: booking, action_type: "no_show").last.metadata).to include(

@@ -1,0 +1,18 @@
+<%# Opened from the document event the guest form dispatches when a dirty form is
+    about to be left. AlertDialog is non-dismissible, so Escape and backdrop
+    clicks cannot skip the choice. %>
+<%= render PanelsUI::AlertDialog.new(
+      id: "confirm-discard-alert",
+      title: "Discard your changes?",
+      description: "The changes made to this guest have not been saved. Discard them and continue?",
+      tone: :warning,
+      data: {
+        controller: "confirm-discard",
+        action: "guest-details:confirm-discard@document->confirm-discard#open"
+      }) do |alert| %>
+  <% alert.with_icon do %>
+    <%= cached_icon "triangle-alert", class: "size-5", aria: { hidden: true } %>
+  <% end %>
+  <% alert.with_cancel(label: "Keep Editing", data: { action: "confirm-discard#keepEditing" }) %>
+  <% alert.with_action(label: "Discard Changes", data: { action: "confirm-discard#discard" }) %>
+<% end %>

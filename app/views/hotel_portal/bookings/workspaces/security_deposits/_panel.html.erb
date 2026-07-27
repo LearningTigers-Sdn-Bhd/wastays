@@ -1,0 +1,137 @@
+<section aria-labelledby="deposits-heading" class="space-y-5">
+  <header class="flex flex-col gap-3 px-5 pt-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h2 id="deposits-heading" class="text-base font-semibold text-foreground">Deposits</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Security deposits and prepayments held for this booking<%= " group" if presenter.group_context_enabled? %>.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, command: "show-modal", commandfor: "record-deposit-sheet", aria: { haspopup: "dialog" }) do %>
+        Record deposit
+      <% end %>
+    </div>
+  </header>
+
+  <% rows = presenter.deposit_rows %>
+  <% deposit_tables = rows.any? ? rows.group_by { |row| row[:currency] } : { presenter.currency => [] } %>
+  <div class="space-y-4 px-5 pb-5">
+    <% deposit_tables.each do |currency, currency_rows| %>
+      <%= render PanelsUI::Table.new(
+            caption: "Deposits in #{currency}",
+            density: :compact,
+            hoverable: true,
+            bordered: true,
+            wrapper_class: "rounded-md border border-border",
+            class: "min-w-[860px]") do |table| %>
+          <% table.with_header do %>
+            <tr>
+              <th scope="col">Owner</th>
+              <th scope="col">Kind</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="text-right">Original (<%= currency %>)</th>
+              <th scope="col" class="text-right">Applied (<%= currency %>)</th>
+              <th scope="col" class="text-right">Returned (<%= currency %>)</th>
+              <th scope="col">Received</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          <% end %>
+          <% table.with_body do %>
+            <% if currency_rows.any? %>
+              <% currency_rows.each do |row| %>
+                <% deposit = row[:deposit] %>
+                <% actionable = deposit.status.in?(%w[held available]) && deposit.available_amount.positive? %>
+                <tr>
+                  <td class="font-medium text-foreground"><%= row[:owner] %></td>
+                  <td><%= row[:kind] %></td>
+                  <td><%= row[:status] %></td>
+                  <td class="text-right tabular-nums"><%= row[:amount] %></td>
+                  <td class="text-right tabular-nums"><%= row[:applied] %></td>
+                  <td class="text-right tabular-nums"><%= row[:returned] %></td>
+                  <td><span class="block"><%= row[:received_at] %></span><span class="text-xs text-muted-foreground"><%= row[:reference] %></span></td>
+                  <td>
+                    <div class="flex justify-end gap-2">
+                      <% if actionable && presenter.deposit_folio_options(deposit).any? %>
+                        <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :secondary, command: "show-modal", commandfor: "apply-deposit-#{deposit.id}", aria: { haspopup: "dialog" }) do %>Apply<% end %>
+                      <% end %>
+                      <% if actionable %>
+                        <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :ghost, command: "show-modal", commandfor: "return-deposit-#{deposit.id}", aria: { haspopup: "dialog" }) do %><%= deposit.kind_security? ? "Release" : "Refund" %><% end %>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            <% else %>
+              <tr>
+                <td colspan="8" class="py-10 text-center text-muted-foreground">No deposits have been recorded.</td>
+              </tr>
+            <% end %>
+          <% end %>
+          <% table.with_footer do %>
+            <tr>
+              <th colspan="7" scope="row" class="text-right font-medium text-foreground">Available</th>
+              <td class="text-right font-semibold tabular-nums text-foreground"><%= currency %> <%= presenter.deposit_amount(presenter.total_deposit_available(currency: currency)) %></td>
+            </tr>
+          <% end %>
+        <% end %>
+    <% end %>
+  </div>
+
+  <% applications = presenter.deposit_application_rows %>
+  <% if applications.any? %>
+    <div class="border-t border-border px-5 py-4">
+      <h3 class="text-sm font-semibold text-foreground">Applications</h3>
+      <div class="mt-3 divide-y divide-border rounded-lg border border-border">
+        <% applications.each do |application| %>
+          <% movement = application[:movement] %>
+          <div class="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div><p class="text-sm font-medium text-foreground"><%= application[:folio] %></p><p class="text-xs text-muted-foreground"><%= application[:owner] %> · <%= application[:occurred_at] %></p></div>
+            <div class="flex items-center justify-between gap-3 sm:justify-end"><span class="text-sm font-medium tabular-nums text-foreground"><%= application[:amount] %></span><%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :ghost, command: "show-modal", commandfor: "reverse-deposit-application-#{movement.id}", aria: { haspopup: "dialog" }) do %>Reverse<% end %></div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</section>
+
+<%= render PanelsUI::Sheet.new(id: "record-deposit-sheet", side: :right, size: :md, title: "Record deposit", description: "Hold security money or record a prepayment", body_class: "p-0") do |sheet| %>
+  <% sheet.with_body do %>
+    <%= form_with url: record_deposit_hotel_booking_workspace_path(current_hotel, presenter.selected_child_booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %>
+      <%= form.hidden_field :operation_key, value: SecureRandom.uuid %>
+      <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
+        <% if presenter.group_context_enabled? %><%= render PanelsUI::FormField.new(form:, attribute: :owner, label: "Owner", required: true) do |field| %><% field.with_select_menu(presenter.deposit_owner_options, selected: "group:#{presenter.group_booking.id}") %><% end %><% else %><%= form.hidden_field :owner, value: "booking:#{presenter.selected_child_booking.id}" %><% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :kind, label: "Kind", required: true) do |field| %><% field.with_select_menu([ { label: "Security deposit", value: "security" }, { label: "Prepayment", value: "prepayment" } ], selected: "security") %><% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :amount, label: "Amount", required: true) do |field| %><% field.with_input(type: :number, min: 0.01, step: 0.01, inputmode: "decimal") %><% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :payment_method, label: "Payment method", required: true) do |field| %><% field.with_select_menu(::Checkouts::PaymentMethods.release_options.map { |label, value| { label: label, value: value } }, selected: "cash") %><% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :external_reference, label: "Reference", hint: "Optional receipt or transaction reference.") do |field| %><% field.with_input(autocomplete: "off") %><% end %>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Recording…" }) do %>Record deposit<% end %></div>
+    <% end %>
+  <% end %>
+<% end %>
+
+<% rows.each do |row| %>
+  <% deposit = row[:deposit] %>
+  <% actionable = deposit.status.in?(%w[held available]) && deposit.available_amount.positive? %>
+  <% if actionable && presenter.deposit_folio_options(deposit).any? %>
+    <%= render PanelsUI::Sheet.new(id: "apply-deposit-#{deposit.id}", side: :right, size: :md, title: "Apply deposit", description: "#{row[:owner]} · #{row[:currency]} #{row[:available]} available", body_class: "p-0") do |sheet| %>
+      <% sheet.with_body do %><%= form_with url: allocate_deposit_hotel_booking_workspace_path(current_hotel, presenter.selected_child_booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %><%= form.hidden_field :deposit_id, value: deposit.id %><%= form.hidden_field :operation_key, value: SecureRandom.uuid %><div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5"><%= render PanelsUI::FormField.new(form:, attribute: :booking_folio_id, label: "Folio", required: true) do |field| %><% field.with_select_menu(presenter.deposit_folio_options(deposit), prompt: "Select a folio") %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :amount, label: "Amount", hint: "Maximum #{row[:currency]} #{row[:available]}", required: true) do |field| %><% field.with_input(type: :number, min: 0.01, max: deposit.available_amount, step: 0.01, inputmode: "decimal") %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason") do |field| %><% field.with_input(autocomplete: "off") %><% end %></div><div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Apply deposit<% end %></div><% end %><% end %>
+    <% end %>
+  <% end %>
+  <% if actionable %>
+    <%= render PanelsUI::Sheet.new(id: "return-deposit-#{deposit.id}", side: :right, size: :md, title: deposit.kind_security? ? "Release deposit" : "Refund deposit", description: "#{row[:owner]} · #{row[:currency]} #{row[:available]} available", body_class: "p-0") do |sheet| %>
+      <% sheet.with_body do %><%= form_with url: return_deposit_hotel_booking_workspace_path(current_hotel, presenter.selected_child_booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %><%= form.hidden_field :deposit_id, value: deposit.id %><%= form.hidden_field :operation_key, value: SecureRandom.uuid %><div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5"><%= render PanelsUI::FormField.new(form:, attribute: :amount, label: "Amount", required: true) do |field| %><% field.with_input(type: :number, value: deposit.available_amount, min: 0.01, max: deposit.available_amount, step: 0.01, inputmode: "decimal") %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :payment_method, label: "Return method", required: true) do |field| %><% field.with_select_menu(::Checkouts::PaymentMethods.release_options.map { |label, value| { label: label, value: value } }, selected: deposit.payment_method) %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :external_reference, label: "Reference") do |field| %><% field.with_input(autocomplete: "off") %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason", required: deposit.kind_prepayment?) do |field| %><% field.with_text_area(rows: 3) %><% end %></div><div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit, variant: deposit.kind_security? ? :secondary : :destructive) do %><%= deposit.kind_security? ? "Release" : "Refund" %><% end %></div><% end %><% end %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<% applications.each do |application| %>
+  <% movement = application[:movement] %>
+  <%= render PanelsUI::Sheet.new(id: "reverse-deposit-application-#{movement.id}", side: :right, size: :md, title: "Reverse deposit application", description: "#{application[:folio]} · #{application[:amount]}", body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with url: reverse_deposit_application_hotel_booking_workspace_path(current_hotel, presenter.selected_child_booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %>
+        <%= form.hidden_field :deposit_movement_id, value: movement.id %><%= form.hidden_field :operation_key, value: SecureRandom.uuid %>
+        <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5"><%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason", hint: "The original folio transaction remains in the audit trail.", required: true) do |field| %><% field.with_text_area(rows: 4) %><% end %></div>
+        <div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive) do %>Reverse application<% end %></div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# LEGACY: frozen pending booking-control-panel migration. Do not add features here.
+# LEGACY: frozen pending booking-workspace migration. Do not add features here.
 
 class HotelPortal::BookingsController < HotelPortal::BaseController
   include BookingAuditable
@@ -15,7 +15,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   def show
     booking = current_hotel.bookings.find(params[:id])
     tab = { "requests" => "housekeeping_requests", "history" => "audit_trails" }.fetch(params[:tab].to_s, "booking_details")
-    redirect_to hotel_booking_control_panel_path(current_hotel, booking, tab: tab), status: :moved_permanently
+    redirect_to hotel_booking_workspace_path(current_hotel, booking, tab: tab), status: :moved_permanently
   end
 
   def update
@@ -31,7 +31,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     if result.success?
       release_room_locks(@booking)
       respond_to do |format|
-        format.html { redirect_to hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details"), notice: "Booking updated successfully." }
+        format.html { redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "booking_details"), notice: "Booking updated successfully." }
         format.json { render json: { success: true, booking: @booking } }
       end
     else

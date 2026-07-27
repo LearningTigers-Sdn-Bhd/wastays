@@ -8,7 +8,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
   let(:room_type) { create(:room_type, hotel: hotel, quantity: 10) }
   let(:booking) { create(:booking, hotel: hotel, status: "checked_in", check_in: Date.current, check_out: Date.current + 1.day) }
   let!(:booking_room) { create(:booking_room, booking: booking, room_type: room_type, room_number: "101") }
-  let!(:folio) { Folios::InitializeForBooking.call(booking: booking, user: user) }
+  let!(:folio) { Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user) }
 
   before do
     booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
@@ -57,7 +57,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
     start_business_date_audit(hotel)
 
     expect {
-      Folios::PostNightlyCharges.call(night_audit: audit, user: user)
+      Folios::Charges::PostNightlyCharges.call(night_audit: audit, user: user)
     }.to change { folio.folio_transactions.where(category: "accommodation").count }.by(1)
 
     expect(booking.reload.status).to eq("checked_in")

@@ -323,6 +323,89 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     end
   end
 
+  describe "completed-audit nightly charge repair" do
+    let(:business_date) { Date.new(2026, 7, 25) }
+    let(:zone) { hotel.hotel_time_zone }
+    let(:override_permission) do
+      Permission.find_or_create_by!(slug: "override_financial_date_lock") do |record|
+        record.name = "Override Financial Date Lock"
+      end
+    end
+    let(:booking) do
+      create(:booking,
+        hotel: hotel,
+        status: "completed",
+        check_in: zone.local(2026, 7, 23, 0, 0),
+        check_out: zone.local(2026, 7, 26, 0, 0),
+        checked_out_at: zone.local(2026, 7, 26, 0, 0))
+    end
+    let(:night_audit) do
+      create(:night_audit,
+        hotel: hotel,
+        business_date: business_date,
+        status: "completed",
+        performed_by_user: user)
+    end
+
+    before do
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date + 1.day)
+      create(:hotel_business_date, hotel: hotel, business_date: business_date, status: "closed")
+      create(:night_audit_financial_summary, night_audit: night_audit, room_revenue: 0)
+      create(:booking_room,
+        booking: booking,
+        subtotal: 30,
+        nightly_rate_snapshot: { business_date.iso8601 => { "price" => "10.00" } })
+      create(:booking_folio, booking: booking, hotel: hotel, status: "closed", closed_at: Time.current)
+    end
+
+    it "previews affected lines without changing the ledger" do
+      sign_in(user)
+
+      expect {
+        get hotel_night_audit_path(hotel, night_audit, tab: "advanced-actions")
+      }.not_to change(FolioTransaction, :count)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css("[data-testid='completed-nightly-reconciliation']")
+      expect(page).to have_text("Nightly charge reconciliation")
+      expect(page).to have_text(booking.confirmation_token)
+      expect(page).to have_text("$10.00 expected")
+      expect(page).to have_text("Missing")
+      expect(page).to have_text("Closed-date override required")
+      expect(page).not_to have_button("Repair previewed lines")
+    end
+
+    it "repairs only the selected booking when the user has both permissions" do
+      role.permissions << override_permission
+      sign_in(user)
+
+      expect {
+        post repair_completed_nightly_charges_hotel_night_audit_path(hotel, night_audit), params: {
+          repair: {
+            booking_id: booking.id,
+            reason: "Repair timezone omission"
+          }
+        }
+      }.to change { booking.booking_folios.joins(:folio_transactions).count }.by(1)
+
+      expect(response).to redirect_to(hotel_night_audit_path(hotel, night_audit, tab: "advanced-actions"))
+      expect(flash[:notice]).to eq("Historical nightly charges repaired and accounting summaries refreshed.")
+      expect(night_audit.reload).to be_completed
+    end
+
+    it "rejects repair without the closed-date override permission" do
+      sign_in(user)
+
+      expect {
+        post repair_completed_nightly_charges_hotel_night_audit_path(hotel, night_audit), params: {
+          repair: { booking_id: booking.id, reason: "Attempted repair" }
+        }
+      }.not_to change(FolioTransaction, :count)
+
+      expect(flash[:alert]).to include("closed business date")
+    end
+  end
+
   it "shows structured run results on the audit page" do
     night_audit = create(:night_audit,
       hotel: hotel,

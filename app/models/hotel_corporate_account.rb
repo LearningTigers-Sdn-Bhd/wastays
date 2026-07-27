@@ -6,7 +6,7 @@ class HotelCorporateAccount < ApplicationRecord
   has_many :ar_invoices, dependent: :restrict_with_error
   has_many :ar_payments, dependent: :restrict_with_error
   has_many :ar_payment_submissions, dependent: :restrict_with_error
-  has_many :group_deposits, dependent: :restrict_with_error
+  has_many :deposits, dependent: :restrict_with_error
   has_many :booking_billing_parties, dependent: :restrict_with_error
   has_many :bookings, dependent: :nullify
   has_many :booking_quotes, dependent: :nullify

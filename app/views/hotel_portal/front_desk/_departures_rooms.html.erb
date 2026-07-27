@@ -10,7 +10,7 @@
         <% balance = transactions.sum { |transaction| transaction.amount.to_d } %>
         <% total = booking.total_amount.to_d %>
         <% paid = [total - balance, 0].max %>
-        <% actions = [{ label: "View booking", path: hotel_booking_control_panel_path(current_hotel, booking, tab: "booking_details") }] %>
+        <% actions = [{ label: "View booking", path: hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details") }] %>
         <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
           <% if booking.status == "checkout_required" %><% actions << { label: "Complete checkout", path: hotel_booking_action_checkout_path(current_hotel, booking, return_to: request.fullpath), data: { turbo_frame: "booking_action_sheet" } } %>
           <% elsif booking.status == "checked_in" %><% actions << { label: "Check out", path: hotel_booking_action_checkout_path(current_hotel, booking, return_to: request.fullpath), data: { turbo_frame: "booking_action_sheet" } } %><% end %>

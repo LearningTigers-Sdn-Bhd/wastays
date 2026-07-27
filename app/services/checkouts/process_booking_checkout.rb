@@ -64,11 +64,13 @@ module Checkouts
     end
 
     def early_departure_checkout?
+      return false if @booking.checkout_required?
+
       @hotel.business_date_for(@timestamp.presence || Time.current).to_date < @booking.check_out.to_date
     end
 
     def process_folio_actions
-      Folios::ProcessCheckoutActions.call(
+      Folios::Checkout::ProcessCheckoutActions.call(
         booking: @booking,
         hotel: @hotel,
         user: @user,

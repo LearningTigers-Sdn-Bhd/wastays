@@ -30,7 +30,7 @@ module HotelPortal
         end
 
         def set_panel_presenter
-          @panel_presenter = HotelPortal::BookingControlPanelPresenter.new(
+          @panel_presenter = HotelPortal::Bookings::WorkspacePresenter.new(
             @booking,
             params: (@booking.group_booking_id? ? { scope: "group" } : {}),
             hotel: current_hotel,

@@ -22,4 +22,16 @@ RSpec.describe Bookings::ScheduledStay do
     expect(check_in.in_time_zone(hotel.hotel_time_zone).strftime("%H:%M")).to eq("15:00")
     expect(check_out.in_time_zone(hotel.hotel_time_zone).strftime("%H:%M")).to eq("12:00")
   end
+
+  it "derives dates and exclusive stay nights in the hotel's timezone" do
+    zone = hotel.hotel_time_zone
+    check_in = zone.local(2026, 7, 23, 0, 0)
+    check_out = zone.local(2026, 7, 26, 0, 0)
+
+    expect(described_class.local_date(hotel: hotel, value: check_in)).to eq(Date.new(2026, 7, 23))
+    expect(described_class.local_date(hotel: hotel, value: check_out)).to eq(Date.new(2026, 7, 26))
+    expect(described_class.stay_dates(hotel: hotel, check_in: check_in, check_out: check_out)).to eq(
+      [ Date.new(2026, 7, 23), Date.new(2026, 7, 24), Date.new(2026, 7, 25) ]
+    )
+  end
 end

@@ -107,7 +107,7 @@ RSpec.describe "HotelPortal::Bookings::Actions review-backdated check-ins", :bus
       post hotel_booking_action_review_backdated_check_in_path(hotel, booking),
         params: { booking: { checked_in_at: Time.current }, retroactive_reason: "Late arrival" }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(flash[:notice]).to eq("Backdated check-in completed.")
       expect(booking.reload.status).to eq("checked_in")
     end
@@ -116,7 +116,7 @@ RSpec.describe "HotelPortal::Bookings::Actions review-backdated check-ins", :bus
       post hotel_booking_action_review_backdated_check_in_path(hotel, booking),
         params: { booking: { checked_in_at: Time.current }, backdate_reason: "System / internet issue", retroactive_reason: "" }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(booking.reload.status).to eq("checked_in")
     end
 

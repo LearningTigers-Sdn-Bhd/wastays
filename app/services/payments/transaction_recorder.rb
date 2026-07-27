@@ -67,7 +67,7 @@ module Payments
       transaction.save!
 
       if transaction.captured_at.present? && transaction.booking.present? && transaction.booking.booking_folio.present?
-        Folios::RecordPaymentFromGateway.call(transaction)
+        Folios::Payments::RecordPaymentFromGateway.call(transaction)
       end
 
       transaction

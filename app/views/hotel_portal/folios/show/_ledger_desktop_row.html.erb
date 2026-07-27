@@ -1,113 +1,55 @@
-<tr class="transition hover:bg-muted/70 <%= "hidden" if local_assigns[:initially_hidden] %> <%= "text-muted-foreground" if row.reversed %>"
-    data-folio-ledger-target="row"
-    data-section="<%= section %>">
-  <td class="px-4 py-2 whitespace-nowrap text-muted-foreground"><%= row.date_label %></td>
-  <td class="px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-wide text-foreground"><%= row.code %></td>
-  <td class="px-4 py-2">
-    <p class="font-medium text-foreground <%= "line-through text-muted-foreground" if row.reversed %>"><%= row.description %></p>
-    <p class="mt-0.5 text-[10px] font-medium text-muted-foreground">
-      <%= row.reference_label %> · <%= row.detail_label %> · <%= row.source_label %>
-    </p>
+<% forecasted = row.row_kind == :forecasted %>
+<% can_move = row.row_kind == :posted && row.movement_allowed && folio_show.can_manage_folio_movements? %>
+<% can_reverse = row.action_kind == :reverse %>
+<% has_actions = can_move || can_reverse %>
+<tr class="align-top <%= "bg-warning/10" if forecasted %> <%= "text-muted-foreground" if row.reversed %>">
+  <td class="whitespace-nowrap">
+    <span class="tabular-nums text-foreground"><%= row.date_label %></span>
+    <span class="ml-1 text-muted-foreground"><%= row.weekday_label %></span>
   </td>
-  <td class="px-4 py-2 text-right font-semibold tabular-nums text-foreground"><%= row.debit %></td>
-  <td class="px-4 py-2 text-right font-semibold tabular-nums text-emerald-700"><%= row.credit %></td>
-  <td class="px-4 py-2 text-right font-semibold text-muted-foreground">
-    <% movement_controls_rendered = false %>
-    <% if row.row_kind == :posted && row.movement_allowed && folio_show.can_manage_folio_movements? %>
-      <% movement_controls_rendered = true %>
-      <% split_modal_id = "folio-split-modal-#{row.transaction_id}" %>
-      <%= link_to move_hotel_folio_transaction_path(hotel, booking, row.transaction_id, folio_origin: folio_origin),
-            class: "mr-1 inline-flex items-center rounded-md border border-border bg-card px-2 py-1 text-[11px] font-bold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted",
-            data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } do %>
-        Move
+  <td class="whitespace-nowrap font-mono text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><%= row.code %></td>
+  <td>
+    <div class="flex items-start gap-1.5">
+      <span class="font-medium text-foreground <%= "line-through text-muted-foreground" if row.reversed %>"><%= row.description %></span>
+      <% if row.info_rows.present? %>
+        <%= render PanelsUI::Popover.new(id: "ledger-info-#{row.transaction_id || row.forecast_id}", trigger_on: :hover, placement: :top_start, arrow: true) do |popover| %>
+          <% popover.with_trigger(unstyled: true, aria_label: "Transaction details", class: "mt-px inline-flex shrink-0 rounded text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring") do %>
+            <%= cached_icon row.info_icon.to_s, class: "size-3.5", aria: { hidden: true } %>
+          <% end %>
+          <dl class="grid w-64 grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-left text-xs">
+            <% row.info_rows.each do |label, value| %>
+              <dt class="font-medium text-muted-foreground"><%= label %></dt>
+              <dd class="text-foreground"><%= value %></dd>
+            <% end %>
+          </dl>
+        <% end %>
       <% end %>
-      <button type="button"
-              class="mr-1 inline-flex items-center rounded-md border border-border bg-card px-2 py-1 text-[11px] font-bold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted"
-              onclick="document.getElementById('<%= split_modal_id %>').showModal()">
-        Split
-      </button>
-      <dialog id="<%= split_modal_id %>" class="fixed inset-0 m-auto w-[min(92vw,30rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-primary/50" onclick="if(event.target===this){this.close()}">
-        <div class="bg-card text-left" onclick="event.stopPropagation()">
-          <div class="border-b border-border px-6 py-5">
-            <h3 class="text-lg font-bold text-foreground">Split Transaction</h3>
-            <p class="mt-1 text-sm text-muted-foreground">Split part of this posted charge to another open folio window.</p>
-          </div>
-          <%= form_with url: split_hotel_folio_transaction_path(hotel, booking, row.transaction_id), method: :post, local: true, class: "space-y-4 p-6" do %>
-            <%= hidden_field_tag "redirect_to_folio", "true" %>
-            <% if folio_origin.present? %>
-              <%= hidden_field_tag "folio_origin", folio_origin %>
-            <% end %>
-            <div>
-              <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Target Folio</label>
-              <%= select_tag "folio_operation[target_folio_id]", options_from_collection_for_select(folio_show.other_open_folios, :id, :display_option_label), required: true, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground" %>
-            </div>
-            <div class="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Amount</label>
-                <%= number_field_tag "folio_operation[amount]", nil, step: "0.01", min: "0.01", placeholder: "Optional", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground" %>
-              </div>
-              <div>
-                <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Percent</label>
-                <%= number_field_tag "folio_operation[percent]", nil, step: "0.01", min: "0.01", max: "99.99", placeholder: "Optional", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground" %>
-              </div>
-            </div>
-            <div>
-              <label class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Reason</label>
-              <%= text_field_tag "folio_operation[reason]", nil, required: true, placeholder: "e.g., Split room charge with company", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground" %>
-            </div>
-            <div class="flex items-center justify-end gap-x-3 pt-2">
-              <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted" onclick="this.closest('dialog').close()">Cancel</button>
-              <%= submit_tag "Split Transaction", class: "rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" %>
-            </div>
+    </div>
+  </td>
+  <td class="whitespace-nowrap text-right font-semibold tabular-nums text-foreground"><%= row.debit %></td>
+  <td class="whitespace-nowrap text-right font-semibold tabular-nums text-success"><%= row.credit %></td>
+  <td class="text-right">
+    <% if has_actions %>
+      <%= render PanelsUI::DropdownMenu.new(id: "folio-row-actions-#{row.transaction_id}", placement: :bottom_end) do |menu| %>
+        <% menu.with_trigger(variant: :ghost, size: :icon_sm, aria_label: "Row actions") do %>
+          <%= cached_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %>
+        <% end %>
+        <% if can_move %>
+          <% menu.with_item(href: hotel_folio_action_move_transaction_path(hotel, booking, row.transaction_id, return_to: request.fullpath), data: { turbo_frame: "folio_action_sheet" }) do %>
+            <%= cached_icon "arrow-right", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+            Move
           <% end %>
-        </div>
-      </dialog>
-    <% end %>
-
-    <% if row.action_kind == :reverse %>
-      <% modal_id = "folio-reversal-modal-#{section.parameterize}-#{row.transaction_id}" %>
-      <% modal_title_id = "#{modal_id}-title" %>
-      <% reason_field_id = "#{modal_id}-reason" %>
-      <% note_field_id = "#{modal_id}-note" %>
-      <button type="button"
-              class="inline-flex items-center rounded-md border border-border bg-card px-2 py-1 text-[11px] font-bold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted"
-              onclick="document.getElementById('<%= modal_id %>').showModal()">
-        <%= row.action_label %>
-      </button>
-
-      <dialog id="<%= modal_id %>" aria-labelledby="<%= modal_title_id %>" class="fixed inset-0 m-auto w-[min(92vw,30rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-primary/50" onclick="if(event.target===this){this.close()}">
-        <div class="bg-card text-left" onclick="event.stopPropagation()">
-          <div class="border-b border-border px-6 py-5">
-            <h3 id="<%= modal_title_id %>" class="text-lg font-bold text-foreground"><%= row.modal_title %></h3>
-            <p class="mt-1 text-sm text-muted-foreground">Post an immutable correction row with the opposite amount.</p>
-          </div>
-
-          <%= form_with url: reverse_hotel_folio_transaction_path(hotel, booking, row.transaction_id), method: :post, local: true, class: "space-y-4 p-6" do %>
-            <%= hidden_field_tag "redirect_to_folio", "true" %>
-            <% if folio_origin.present? %>
-              <%= hidden_field_tag "folio_origin", folio_origin %>
-            <% end %>
-
-            <div>
-              <label for="<%= reason_field_id %>" class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Reason</label>
-              <%= text_field_tag "folio_transaction[correction_reason]", nil, id: reason_field_id, required: true, placeholder: "e.g., Posting error", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
-            </div>
-
-            <div>
-              <label for="<%= note_field_id %>" class="mb-2 block text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Note</label>
-              <%= text_area_tag "folio_transaction[correction_note]", nil, id: note_field_id, rows: 3, required: true, placeholder: "Explain why this correction is needed.", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
-            </div>
-
-            <div class="flex items-center justify-end gap-x-3 pt-2">
-              <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted" onclick="this.closest('dialog').close()">Cancel</button>
-              <%= submit_tag row.action_label, class: "rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" %>
-            </div>
+          <% menu.with_item(href: hotel_folio_action_split_transaction_path(hotel, booking, row.transaction_id, return_to: request.fullpath), data: { turbo_frame: "folio_action_sheet" }) do %>
+            <%= cached_icon "split", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+            Split
           <% end %>
-        </div>
-      </dialog>
-    <% else %>
-      <% unless movement_controls_rendered %>
-        <span><%= row.action_label %></span>
+        <% end %>
+        <% if can_reverse %>
+          <% menu.with_item(href: hotel_folio_action_reverse_transaction_path(hotel, booking, row.transaction_id, return_to: request.fullpath), data: { turbo_frame: "folio_action_sheet" }) do %>
+            <%= cached_icon "rotate-ccw", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+            <%= row.action_label %>
+          <% end %>
+        <% end %>
       <% end %>
     <% end %>
   </td>

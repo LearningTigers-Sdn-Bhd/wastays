@@ -74,7 +74,7 @@ RSpec.describe BookingBillingParty, type: :model do
     party = create(:booking_guest, booking: booking).booking_billing_party
 
     first = create(:booking_folio, booking: booking, hotel: hotel, booking_billing_party: party)
-    second = create(:booking_folio, booking: booking, hotel: hotel, booking_billing_party: party, is_primary: false, name: "Incidentals Folio")
+    second = create(:booking_folio, booking: booking, hotel: hotel, booking_billing_party: party, is_primary: false, label: "Incidentals Folio")
 
     expect(party.booking_folios).to contain_exactly(first, second)
   end

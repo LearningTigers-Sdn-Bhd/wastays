@@ -15,6 +15,12 @@ Rails.application.routes.draw do
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # Fast, UI-less sign-in for system/request specs only. Sets the session the
+  # same way SessionsController#create does, without the login round-trip.
+  if Rails.env.test?
+    get "test/sign_in/:user_id", to: "test_sessions#create", as: :test_sign_in
+  end
+
   # PanelsUI component library showcase (not exposed in production).
   unless Rails.env.production?
     get "system-design", to: "system_designs#index", as: :system_design
@@ -349,34 +355,23 @@ Rails.application.routes.draw do
       resource :tourism_tax_voucher, only: [ :show ], module: :bookings do
         post :issue
       end
-    end
-    resources :booking_control_panels, only: :show, param: :booking_id, path: "booking-control-panels" do
-      member do
+
+      resource :workspace, only: [ :show, :update ], module: :bookings do
         get :audit_trail
-        patch :update_room_rate, controller: :booking_control_panel_actions
-        get :new_folio_window, controller: :booking_control_panel_actions
-        post :create_folio_window, controller: :booking_control_panel_actions
-        get "folio_windows/:folio_id/edit", action: :edit_folio_window, controller: :booking_control_panel_actions, as: :edit_folio_window
-        patch "folio_windows/:folio_id", action: :update_folio_window, controller: :booking_control_panel_actions, as: :update_folio_window
-        post "folio_windows/:folio_id/close", action: :close_folio_window, controller: :booking_control_panel_actions, as: :close_folio_window
-        post "folio_windows/:folio_id/reopen", action: :reopen_folio_window, controller: :booking_control_panel_actions, as: :reopen_folio_window
-        post :add_billing_party, controller: :booking_control_panel_actions
-        patch :update_billing_terms, controller: :booking_control_panel_actions
-        patch :archive_billing_party, controller: :booking_control_panel_actions
-        post :apply_routing, controller: :booking_control_panel_actions
-        get :billing_routes, controller: :booking_control_panel_actions
-        post :preview_billing_routes, controller: :booking_control_panel_actions
-        post :apply_billing_routes, controller: :booking_control_panel_actions
-        get :group_billing_routes, controller: :booking_control_panel_actions
-        post :preview_group_billing_routes, controller: :booking_control_panel_actions
-        post :apply_group_billing_routes, controller: :booking_control_panel_actions
-        post :allocate_deposit, controller: :booking_control_panel_actions
-        post :refund_deposit, controller: :booking_control_panel_actions
-        post :reverse_deposit_allocation, controller: :booking_control_panel_actions
-        post :collect_security_deposit, controller: :booking_control_panel_actions
-        post :release_security_deposits, controller: :booking_control_panel_actions
-        post :complete_housekeeping_request, controller: :booking_control_panel_actions
-        post :resolve_complaint_request, controller: :booking_control_panel_actions
+        patch :update_room_rate, controller: :workspace_actions
+        post :add_billing_party, controller: :workspace_actions
+        patch :update_billing_terms, controller: :workspace_actions
+        patch :archive_billing_party, controller: :workspace_actions
+        post :allocate_deposit, controller: :workspace_actions
+        post :record_deposit, controller: :workspace_actions
+        post :return_deposit, controller: :workspace_actions
+        post :refund_deposit, controller: :workspace_actions
+        post :reverse_deposit_application, controller: :workspace_actions
+        post :reverse_deposit_allocation, controller: :workspace_actions
+        post :collect_security_deposit, controller: :workspace_actions
+        post :release_security_deposits, controller: :workspace_actions
+        post :complete_housekeeping_request, controller: :workspace_actions
+        post :resolve_complaint_request, controller: :workspace_actions
       end
     end
     scope "booking-actions", as: :booking_action, module: "bookings/actions" do
@@ -392,6 +387,7 @@ Rails.application.routes.draw do
       match "edit-rate/:booking_id", to: "rate_changes#show", via: [ :get, :patch ], as: :edit_rate
       match "check-in/:booking_id", to: "check_ins#show", via: [ :get, :post ], as: :check_in
       match "cancel-booking/:booking_id", to: "cancellations#show", via: [ :get, :post ], as: :cancel_booking
+      match "void-booking/:booking_id", to: "voids#show", via: [ :get, :post ], as: :void_booking
       match "mark-no-show/:booking_id", to: "no_shows#show", via: [ :get, :post ], as: :mark_no_show
       match "undo-check-in/:booking_id", to: "undo_check_ins#show", via: [ :get, :post ], as: :undo_check_in
       match "review-backdated-check-in/:booking_id", to: "review_backdated_check_ins#show", via: [ :get, :post ], as: :review_backdated_check_in
@@ -400,10 +396,24 @@ Rails.application.routes.draw do
       match "late-checkout/:booking_id", to: "late_checkouts#show", via: [ :get, :post ], as: :late_checkout
       match "checkout/:booking_id", to: "checkouts#show", via: [ :get, :post ], as: :checkout
       match "manage-guest/:booking_id", to: "guests#show", via: [ :get, :post, :patch ], as: :manage_guest
+      match "manage-billing-party/:booking_id", to: "billing_parties#show", via: [ :get, :post, :patch, :delete ], as: :manage_billing_party
       match "remove-guest/:booking_id/:booking_guest_id", to: "guests#remove", via: [ :get, :delete ], as: :remove_guest
       patch "set-primary-guest/:booking_id/:booking_guest_id", to: "guests#set_primary", as: :set_primary_guest
       match "internal-notes/:booking_id", to: "internal_notes#show", via: [ :get, :post, :patch ], as: :internal_notes
       match "internal-notes/:booking_id/:note_id/delete", to: "internal_notes#delete", via: [ :get, :delete ], as: :delete_internal_note
+    end
+
+    scope "folio-actions", as: :folio_action, module: "folios/actions" do
+      match "post-transaction/:booking_id", to: "transactions#show", via: [ :get, :post ], as: :post_transaction
+      match "move-transaction/:booking_id/:transaction_id", to: "transaction_moves#show", via: [ :get, :post ], as: :move_transaction
+      match "split-transaction/:booking_id/:transaction_id", to: "transaction_splits#show", via: [ :get, :post ], as: :split_transaction
+      match "reverse-transaction/:booking_id/:transaction_id", to: "transaction_reversals#show", via: [ :get, :post ], as: :reverse_transaction
+      match "new-window/:booking_id", to: "windows#show", via: [ :get, :post ], as: :new_window
+      match "edit-window/:booking_id/:folio_id", to: "windows#show", via: [ :get, :patch ], as: :edit_window
+      match "close-window/:booking_id/:folio_id", to: "window_closures#show", via: [ :get, :post ], as: :close_window
+      match "reopen-window/:booking_id/:folio_id", to: "window_reopenings#show", via: [ :get, :post ], as: :reopen_window
+      match "billing-routes/:booking_id", to: "billing_routes#show", via: [ :get, :post ], as: :billing_routes
+      match "group-billing-routes/:booking_id", to: "group_billing_routes#show", via: [ :get, :post ], as: :group_billing_routes
     end
 
     resources :folios, only: [ :index, :show ], param: :booking_id do
@@ -412,23 +422,6 @@ Rails.application.routes.draw do
       end
       get :invoice, on: :member
       get :ledger, on: :member
-      get "windows/new", action: :new_window, on: :member, as: :new_window
-      post :windows, action: :create_window, on: :member
-      get "windows/:folio_id/edit", action: :edit_window, on: :member, as: :edit_window
-      patch "windows/:folio_id", action: :update_window, on: :member, as: :window
-      post "windows/:folio_id/close", action: :close_window, on: :member, as: :close_window
-      post "windows/:folio_id/reopen", action: :reopen_window, on: :member, as: :reopen_window
-      get "routing_rules/new", to: "folios/routing_rules#new", on: :member, as: :new_routing_rule
-      post "routing_rules", to: "folios/routing_rules#create", on: :member, as: :routing_rules
-      get "routing_rules/:routing_rule_id/edit", to: "folios/routing_rules#edit", on: :member, as: :edit_routing_rule
-      patch "routing_rules/:routing_rule_id", to: "folios/routing_rules#update", on: :member, as: :routing_rule
-      patch "routing_rules/:routing_rule_id/deactivate", to: "folios/routing_rules#deactivate", on: :member, as: :deactivate_routing_rule
-      resources :transactions, only: [ :new, :create ], controller: "folios/transactions" do
-        get :move, on: :member, action: :move_form
-        post :reverse, on: :member
-        post :move, on: :member
-        post :split, on: :member
-      end
     end
 
     get "requests", to: "requests#index", as: :requests
@@ -511,6 +504,7 @@ Rails.application.routes.draw do
         get :blockers
         post :resolve_missing_folio
         post :resolve_missing_nightly_charges
+        post :repair_completed_nightly_charges
       end
     end
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do

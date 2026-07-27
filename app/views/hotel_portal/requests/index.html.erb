@@ -191,7 +191,7 @@
 
                     <div class="flex justify-end gap-3 border-t border-border bg-muted px-8 py-6">
                       <button type="button" class="px-6 py-2.5 text-sm font-black uppercase tracking-widest text-muted-foreground transition hover:text-foreground" data-action="request-dialog#close">Close</button>
-                      <%= link_to "Full Booking Details", hotel_booking_control_panel_path(current_hotel, card[:booking_id], tab: "housekeeping_requests"), class: "rounded-xl bg-primary px-6 py-2.5 text-sm font-black uppercase tracking-widest text-primary-foreground shadow-lg transition hover:bg-primary-hover", data: { turbo: false } %>
+                      <%= link_to "Full Booking Details", hotel_booking_workspace_path(current_hotel, card[:booking_id], tab: "housekeeping_requests"), class: "rounded-xl bg-primary px-6 py-2.5 text-sm font-black uppercase tracking-widest text-primary-foreground shadow-lg transition hover:bg-primary-hover", data: { turbo: false } %>
                     </div>
                   </div>
                 </dialog>

@@ -39,6 +39,93 @@ RSpec.describe "HotelPortal::Bookings::Actions::AuditTrails", type: :request do
       expect(dialog.at_css('[data-action="click->offcanvas#close"]')).to be_nil
     end
 
+    it "renders the simplified header with PanelsUI category and booking filters" do
+      get hotel_booking_action_audit_trail_path(hotel, booking)
+
+      document = Nokogiri::HTML(response.body)
+      header = document.at_css("section[aria-labelledby='audit-history-heading'] header")
+      tabs = document.at_css("#booking_action_sheet-audit-category-filter")
+      booking_select = document.at_css("select[name='child_booking_id']")
+
+      expect(header.text.squish).to eq("Audit Trail Important booking, stay, room, and financial changes.")
+      expect(header.text).not_to include(booking.formatted_reservation_number, "of 0 events")
+      expect(tabs["class"]).to include("tabs-root--pill")
+      expect(tabs.css("a").map { |link| link.text.squish }).to eq([ "All", "Status", "Stay & Guest", "Rooms", "Financial", "Notes" ])
+      expect(booking_select).to be_present
+      expect(booking_select["disabled"]).to eq("disabled")
+      expect(booking_select.css("option").size).to eq(1)
+      expect(booking_select.at_css("option[selected]").text).to include(booking.formatted_reservation_number)
+    end
+
+    it "lists every group child and filters the audit trail to the selected child" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      create(:booking_audit_log, hotel: hotel, auditable: booking, user: user,
+        action_type: "status_change", category: "status",
+        old_value: { "status" => "pending" }, new_value: { "status" => "confirmed" })
+      create(:booking_audit_log, hotel: hotel, auditable: sibling, user: user,
+        action_type: "status_change", category: "status",
+        old_value: { "status" => "pending" }, new_value: { "status" => "cancelled" })
+
+      get hotel_booking_action_audit_trail_path(hotel, booking)
+
+      expect(response.body).to include("Booking moved to Confirmed", "Booking moved to Cancelled")
+      document = Nokogiri::HTML(response.body)
+      booking_select = document.at_css("select[name='child_booking_id']")
+      expect(booking_select["disabled"]).to be_nil
+      expect(booking_select.css("option").map { |option| option.text.squish }).to include(
+        "All bookings",
+        a_string_including(booking.formatted_reservation_number),
+        a_string_including(sibling.formatted_reservation_number)
+      )
+      expect(booking_select.at_css("option[selected]").text).to eq("All bookings")
+
+      get hotel_booking_action_audit_trail_path(hotel, booking, child_booking_id: booking.id)
+
+      expect(response.body).to include("Booking moved to Confirmed")
+      expect(response.body).not_to include("Booking moved to Cancelled")
+      expect(Nokogiri::HTML(response.body).at_css("select[name='child_booking_id'] option[selected]").text).to include(booking.formatted_reservation_number)
+    end
+
+    it "filters by an allowlisted category and preserves scope in filter links" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      create(:booking_audit_log, hotel: hotel, auditable: booking, user: user,
+        action_type: "status_change", category: "status",
+        old_value: { "status" => "pending" }, new_value: { "status" => "confirmed" })
+      create(:booking_audit_log, hotel: hotel, auditable: booking, user: user,
+        action_type: "note_added", category: "notes")
+
+      get hotel_booking_action_audit_trail_path(hotel, booking, child_booking_id: booking.id, category: "notes")
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.text).to include("Internal note added")
+      expect(document.text).not_to include("Booking moved to Confirmed")
+      status_link = document.css("#booking_action_sheet-audit-category-filter a").find { |link| link.text.squish == "Status" }
+      expect(Rack::Utils.parse_query(URI(status_link["href"]).query)).to include("category" => "status", "child_booking_id" => booking.id.to_s)
+      expect(document.at_css("#booking_action_sheet-audit-category-filter a[aria-current='page']").text.squish).to eq("Notes")
+    end
+
+    it "falls back to all categories for an invalid filter" do
+      create(:booking_audit_log, hotel: hotel, auditable: booking, user: user, action_type: "note_added", category: "notes")
+
+      get hotel_booking_action_audit_trail_path(hotel, booking, category: "forged")
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.text).to include("Internal note added")
+      expect(document.at_css("#booking_action_sheet-audit-category-filter a[aria-current='page']").text.squish).to eq("All")
+    end
+
+    it "distinguishes an empty filter from a booking with no audit history" do
+      create(:booking_audit_log, hotel: hotel, auditable: booking, user: user, category: "status")
+
+      get hotel_booking_action_audit_trail_path(hotel, booking, category: "notes")
+
+      expect(response.body).to include("No events match these filters.")
+      expect(response.body).not_to include("No audit history recorded.")
+    end
+
     it "renders the empty audit state" do
       get hotel_booking_action_audit_trail_path(hotel, booking)
 

@@ -54,7 +54,8 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
       "cancelled" => [],
       "completed" => [],
       "overbooked" => [],
-      "no_show" => []
+      "no_show" => [],
+      "voided" => []
     }
 
     expect(expected.keys).to match_array(Booking::STATUSES)

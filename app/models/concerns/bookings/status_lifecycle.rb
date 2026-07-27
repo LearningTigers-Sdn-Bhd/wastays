@@ -5,44 +5,53 @@ module Bookings
     EVENTS = {
       "pending" => {
         "confirm" => "confirmed",
-        "cancel" => "cancelled"
+        "cancel" => "cancelled",
+        "void" => "voided"
       },
       "confirmed" => {
         "check_in" => "checked_in",
         "cancel" => "cancelled",
         "review_no_show" => "review_no_show",
-        "mark_overbooked" => "overbooked"
+        "mark_overbooked" => "overbooked",
+        "void" => "voided"
       },
       "review_no_show" => {
         "backdated_check_in" => "checked_in",
         "mark_no_show" => "no_show",
         "auto_mark_no_show" => "no_show",
-        "cancel" => "cancelled"
+        "cancel" => "cancelled",
+        "void" => "voided"
       },
       "overbooked" => {
         "resolve_overbooking" => "confirmed",
-        "cancel" => "cancelled"
+        "cancel" => "cancelled",
+        "void" => "voided"
       },
       "checked_in" => {
         "check_out" => "completed",
         "detect_late_checkout" => "review_due_out",
-        "undo_check_in" => "confirmed"
+        "undo_check_in" => "confirmed",
+        "void" => "voided"
       },
       "review_due_out" => {
         "resolve_late_checkout" => "checked_in",
-        "reject_late_checkout" => "checkout_required"
+        "reject_late_checkout" => "checkout_required",
+        "void" => "voided"
       },
       "checkout_required" => {
-        "check_out" => "completed"
+        "check_out" => "completed",
+        "void" => "voided"
       },
       "no_show" => {
-        "reinstate" => "checked_in"
+        "reinstate" => "checked_in",
+        "void" => "voided"
       },
-      "cancelled" => {},
-      "completed" => {}
+      "cancelled" => { "void" => "voided" },
+      "completed" => { "void" => "voided" },
+      "voided" => {}
     }.freeze
 
-    TERMINAL_STATUSES = %w[cancelled completed].freeze
+    TERMINAL_STATUSES = %w[cancelled completed voided].freeze
 
     module_function
 

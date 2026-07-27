@@ -1,0 +1,15 @@
+<nav aria-label="Booking rooms" class="divide-y divide-border">
+  <% presenter.room_rate_tree_groups.each do |group| %>
+    <% heading_id = "#{id_prefix}-room-rate-group-#{group.booking_id}" %>
+    <section aria-labelledby="<%= heading_id %>" class="px-4 py-4">
+      <h3 id="<%= heading_id %>" class="text-xs font-semibold tabular-nums text-foreground"><%= group.label %></h3>
+      <% if group.description.present? %>
+        <p class="text-xs text-muted-foreground"><%= group.description %></p>
+      <% end %>
+
+      <%= render "hotel_portal/bookings/workspaces/left_rails/room_rate_rows",
+        rows: group.rows,
+        mobile_entity_selection: mobile_entity_selection %>
+    </section>
+  <% end %>
+</nav>

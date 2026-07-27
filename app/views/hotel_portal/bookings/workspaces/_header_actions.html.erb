@@ -1,0 +1,40 @@
+<% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+  <% summary_actions = presenter.summary_actions(include_void: current_user.has_permission?("void_bookings", hotel: current_hotel)) %>
+  <% repair_no_show_available = !presenter.group_context_enabled? && booking.status == "no_show" && current_user.has_permission?("post_folio_corrections", hotel: current_hotel) && Bookings::RepairNoShowTourismTax.needed?(booking) %>
+  <% if summary_actions.any? || repair_no_show_available %>
+    <% return_to = request.fullpath %>
+    <% sheet_action_keys = %i[cancel void check_in edit_check_in mark_no_show undo_check_in backdated_check_in reinstate late_checkout check_out] %>
+    <%= render PanelsUI::DropdownMenu.new(id: "booking-workspace-actions", placement: :bottom_end, class: "w-56") do |menu| %>
+      <% menu.with_trigger(variant: :primary, size: :md, aria_label: "Booking actions") do %>
+        Actions
+        <%= cached_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
+      <% end %>
+      <% summary_actions.each do |summary_action| %>
+        <% action_booking = summary_action.target_booking %>
+        <% action_path = case summary_action.key
+          when :check_in, :edit_check_in then hotel_booking_action_check_in_path(current_hotel, action_booking, return_to: return_to)
+          when :cancel then hotel_booking_action_cancel_booking_path(current_hotel, action_booking, return_to: return_to)
+          when :void then hotel_booking_action_void_booking_path(current_hotel, action_booking, return_to: return_to)
+          when :backdated_check_in then hotel_booking_action_review_backdated_check_in_path(current_hotel, action_booking, return_to: return_to)
+          when :mark_no_show then hotel_booking_action_mark_no_show_path(current_hotel, action_booking, return_to: return_to)
+          when :check_out then hotel_booking_action_checkout_path(current_hotel, action_booking, return_to: return_to)
+          when :undo_check_in then hotel_booking_action_undo_check_in_path(current_hotel, action_booking, return_to: return_to)
+          when :late_checkout then hotel_booking_action_late_checkout_path(current_hotel, action_booking, return_to: return_to)
+          when :reinstate then hotel_booking_action_reinstate_no_show_path(current_hotel, action_booking, return_to: return_to)
+          end %>
+        <% action_variant = case summary_action.tone when :danger then :danger when :warning then :warning else :default end %>
+        <% action_data = summary_action.key.in?(sheet_action_keys) ? { turbo_frame: "booking_action_sheet" } : { turbo_frame: "offcanvas_drawer", offcanvas_variant: summary_action.offcanvas_variant } %>
+        <% menu.with_item(href: action_path, variant: action_variant, data: action_data) do %>
+          <%= cached_icon summary_action.icon, class: "size-4 shrink-0", aria: { hidden: true } %>
+          <span><%= summary_action.label %></span>
+        <% end %>
+      <% end %>
+      <% if repair_no_show_available %>
+        <% menu.with_item(href: hotel_booking_action_repair_no_show_folio_path(current_hotel, booking, return_to: return_to), variant: :warning, data: { turbo_frame: "booking_action_sheet" }) do %>
+          <%= cached_icon "wrench", class: "size-4 shrink-0", aria: { hidden: true } %>
+          <span>Repair No-show Folio</span>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

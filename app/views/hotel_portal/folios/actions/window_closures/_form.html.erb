@@ -1,0 +1,31 @@
+<div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "folio-close-window-sheet",
+          side: :right,
+          size: :sm,
+          title: "Close #{@folio.display_name}",
+          description: @direct_bill_available ? "Close this folio as Direct Bill and create an AR invoice." : "Only settled folios with no pending charges can be closed.",
+          body_class: "p-0") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with scope: :booking_folio,
+              url: hotel_folio_action_close_window_path(current_hotel, @booking, @folio),
+              method: :post,
+              class: "flex h-full min-h-0 flex-col" do |form| %>
+          <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+          <%= form.hidden_field :settlement_method, value: "direct_bill" if @direct_bill_available %>
+
+          <div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+            <%= render PanelsUI::FormField.new(form: form, attribute: :reason, label: "Reason") do |field| %>
+              <% field.with_input(placeholder: "Optional internal reason") %>
+            <% end %>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Keep folio open<% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, data: { turbo_submits_with: "Closing…" }) do %><%= @direct_bill_available ? "Close as Direct Bill" : "Close folio" %><% end %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+</div>

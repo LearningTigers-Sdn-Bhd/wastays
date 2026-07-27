@@ -9,10 +9,13 @@ module PanelsUI
     VARIANTS = %i[default primary info success warning danger].freeze
 
     class Entry < PanelsUI::BaseComponent
-      def initialize(href: nil, method: nil, form: {}, variant: :default, disabled: false, class: nil, **attributes)
+      # `form:` carries button_to's form options; `form_id:` is the HTML form
+      # attribute, letting a menu item submit a form it is not nested inside.
+      def initialize(href: nil, method: nil, form: {}, form_id: nil, variant: :default, disabled: false, class: nil, **attributes)
         @href = href
         @method = method&.to_sym
         @form = form
+        @form_id = form_id
         @variant = VARIANTS.include?(variant) ? variant : :default
         @disabled = disabled
         @class = binding.local_variable_get(:class)
@@ -49,7 +52,8 @@ module PanelsUI
         aria = attributes.delete(:aria) || {}
         attributes.merge(
           href: (method_button? ? nil : @href),
-          type: (@href.present? ? nil : "button"),
+          type: (@href.present? ? nil : attributes.delete(:type) || "button"),
+          form: @form_id,
           role: "menuitem",
           tabindex: "-1",
           class: tw_merge("dropdown-menu__item", @class),

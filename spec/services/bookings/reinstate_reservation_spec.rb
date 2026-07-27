@@ -16,8 +16,8 @@ RSpec.describe Bookings::ReinstateReservation, type: :service do
   subject { described_class.new(booking: booking, params: params, user: user, options: options) }
 
   before do
-    allow(Folios::ProcessCatchUpCharges).to receive(:call)
-    allow(Folios::InitializeForBooking).to receive(:call)
+    allow(Folios::Charges::ProcessCatchUpCharges).to receive(:call)
+    allow(Folios::Lifecycle::InitializeForBooking).to receive(:call)
     allow(Bookings::RecordAuditLog).to receive(:call)
   end
 
@@ -29,9 +29,9 @@ RSpec.describe Bookings::ReinstateReservation, type: :service do
       expect(booking.checked_in_at).to be_present
     end
 
-    it "calls Folios::ProcessCatchUpCharges with is_reinstate: true" do
+    it "calls Folios::Charges::ProcessCatchUpCharges with is_reinstate: true" do
       subject.call
-      expect(Folios::ProcessCatchUpCharges).to have_received(:call).with(
+      expect(Folios::Charges::ProcessCatchUpCharges).to have_received(:call).with(
         booking: booking,
         user: user,
         is_reinstate: true
@@ -50,7 +50,7 @@ RSpec.describe Bookings::ReinstateReservation, type: :service do
         target_folio: folio,
         metadata: { source: "no_show_finalization" }
       )
-      allow(Folios::ProcessCatchUpCharges).to receive(:call) do
+      allow(Folios::Charges::ProcessCatchUpCharges).to receive(:call) do
         expect(folio.reload).to be_open
       end
 

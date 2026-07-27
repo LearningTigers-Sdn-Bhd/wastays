@@ -166,7 +166,7 @@ module HotelPortal
             folio = booking.booking_folio
             business_date = current_hotel.current_business_date
             if folio && business_date < booking.check_out.to_date
-              ::Folios::PostEarlyCheckoutCharges.pending_preview(
+              ::Folios::Charges::PostEarlyCheckoutCharges.pending_preview(
                 booking: booking,
                 folio: folio,
                 departure_date: business_date,
@@ -181,9 +181,9 @@ module HotelPortal
         # Folio the manual early-departure penalty routes to (room_revenue route),
         # so the settlement JS folds the live charge into the right folio's amount.
         def checkout_penalty_folio_id(booking)
-          route = ::Folios::ResolveTargetFolio.call(
+          route = ::Folios::Routing::ResolveTargetFolio.call(
             booking: booking,
-            transaction_code: current_hotel.transaction_codes.find_by(system_key: "room_revenue")
+            transaction_code: ::TransactionCodes::Resolver.for(current_hotel).room_revenue
           )
           route.success? ? route.folio&.id : booking.booking_folio&.id
         end
@@ -203,7 +203,7 @@ module HotelPortal
         end
 
         def checkout_success_path
-          booking_action_return_to(fallback: hotel_booking_control_panel_path(current_hotel, @booking, tab: "booking_details", checkout_success: true))
+          booking_action_return_to(fallback: hotel_booking_workspace_path(current_hotel, @booking, tab: "booking_details", checkout_success: true))
         end
 
         def render_checkout_error(error)
@@ -225,7 +225,7 @@ module HotelPortal
           @booking = current_hotel.bookings
                                   .includes(
                                     :deposits,
-                                    booking_folios: [ :folio_forecasted_charges, { folio_transactions: :user }, { hotel_corporate_account: :corporate_account } ]
+                                    booking_folios: [ :hotel, :folio_forecasted_charges, { folio_transactions: :user }, { hotel_corporate_account: :corporate_account } ]
                                   )
                                   .find(params[:booking_id])
           @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)

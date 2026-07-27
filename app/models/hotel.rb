@@ -54,13 +54,13 @@ class Hotel < ApplicationRecord
   has_many :guest_registration_cards, dependent: :restrict_with_error
   has_many :guest_registration_note_templates, dependent: :destroy
   has_many :group_bookings, dependent: :restrict_with_error
-  has_many :group_deposits, dependent: :restrict_with_error
   has_many :booking_folios, dependent: :restrict_with_error
   has_many :ar_invoices, dependent: :restrict_with_error
   has_many :ar_payments, dependent: :restrict_with_error
   has_many :ar_payment_submissions, dependent: :restrict_with_error
   has_many :folio_routing_rules, dependent: :destroy
   has_many :deposits, dependent: :restrict_with_error
+  has_many :deposit_movements, through: :deposits
   has_many :hotel_taxes, dependent: :destroy
   has_many :transaction_codes, dependent: :destroy
   has_one :hotel_transaction_configuration, dependent: :destroy

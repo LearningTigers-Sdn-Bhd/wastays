@@ -98,7 +98,7 @@ module TransactionCodes
       forecasts = FolioForecastedCharge.forecast
         .joins(booking_folio: :booking)
         .merge(@hotel.booking_folios.open)
-        .where.not(bookings: { status: Folios::RefreshOpenForecastsFromRoomRevenueRules::EXCLUDED_BOOKING_STATUSES })
+        .where.not(bookings: { status: Folios::Forecasts::RefreshOpenForecastsFromRoomRevenueRules::EXCLUDED_BOOKING_STATUSES })
       { count: forecasts.count, amount: forecasts.sum(:amount) }
     end
 

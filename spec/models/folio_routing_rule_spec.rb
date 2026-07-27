@@ -67,7 +67,7 @@ RSpec.describe FolioRoutingRule do
 
   it "allows only one active rule per booking and transaction code" do
     create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: transaction_code, target_folio: target_folio)
-    second_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, name: "Company Folio 2")
+    second_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, label: "Company Folio 2")
     duplicate = build(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: transaction_code, target_folio: second_folio)
 
     expect(duplicate).not_to be_valid

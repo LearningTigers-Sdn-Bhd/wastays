@@ -2,10 +2,10 @@
 
 require "rails_helper"
 
-RSpec.describe Folios::NightlyChargeCalculation, type: :service do
+RSpec.describe Folios::Charges::NightlyChargeCalculation, type: :service do
   let(:dummy_class) do
     Class.new do
-      include Folios::NightlyChargeCalculation
+      include Folios::Charges::NightlyChargeCalculation
       def public_nightly_amount(total, booking, date)
         nightly_amount(total, booking, date)
       end

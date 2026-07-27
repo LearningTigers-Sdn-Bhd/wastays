@@ -65,7 +65,7 @@ RSpec.describe StayView::ResolveFinancialSignals do
       :booking_folio,
       booking:,
       hotel: booking.hotel,
-      name: "#{name} Folio",
+      label: "#{name} Folio",
       folio_type: "external",
       payer_type: "company",
       is_primary: false,
@@ -91,7 +91,7 @@ RSpec.describe StayView::ResolveFinancialSignals do
       :booking_folio,
       booking: due_booking,
       hotel:,
-      name: "Secondary Guest Folio",
+      label: "Secondary Guest Folio",
       is_primary: false,
       booking_billing_party: due_folio.booking_billing_party
     )
@@ -133,7 +133,7 @@ RSpec.describe StayView::ResolveFinancialSignals do
       :booking_folio,
       booking:,
       hotel:,
-      name: "Additional Guest Folio",
+      label: "Additional Guest Folio",
       is_primary: false,
       booking_billing_party: additional_booking_guest.booking_billing_party
     )
@@ -179,7 +179,7 @@ RSpec.describe StayView::ResolveFinancialSignals do
       :booking_folio,
       booking: billed_booking,
       hotel:,
-      name: "Billed Corp Current Folio",
+      label: "Billed Corp Current Folio",
       folio_type: "external",
       payer_type: "company",
       is_primary: false,
@@ -281,7 +281,7 @@ RSpec.describe StayView::ResolveFinancialSignals do
       hotel:,
       folio_type: "house",
       payer_type: "hotel",
-      name: "House Folio"
+      label: "House Folio"
     )
     create(:folio_transaction, booking_folio: house_folio, amount: 50)
 
@@ -305,7 +305,7 @@ RSpec.describe StayView::ResolveFinancialSignals do
       booking: mixed_booking,
       hotel:,
       currency: "USD",
-      name: "USD Guest Folio",
+      label: "USD Guest Folio",
       is_primary: false,
       booking_billing_party: myr.booking_billing_party
     )

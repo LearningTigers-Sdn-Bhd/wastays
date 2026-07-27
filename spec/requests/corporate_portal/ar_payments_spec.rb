@@ -270,14 +270,17 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
   end
 
   it "shows the outstanding balance and a Pay button on pay balance, without invoice details" do
-    relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
+    hotel = create(:hotel, name: "Corporate Balance Hotel")
+    relationship = create(:hotel_corporate_account, hotel: hotel, corporate_account: user.account, status: "active")
     invoice = create_invoice(relationship)
 
     get pay_balance_corporate_ar_payments_path(hotel_corporate_account_id: relationship.id)
 
+    body_text = response.parsed_body.text
+
     expect(response).to have_http_status(:success)
     expect(response.body).to include("Pay Account Balance")
-    expect(response.body).to include(relationship.hotel.name)
+    expect(body_text).to include(hotel.name)
     expect(response.body).to include("Outstanding balance")
     expect(response.body).to include("MYR 100.00")
     expect(response.body).to include(new_corporate_ar_payment_submission_path)

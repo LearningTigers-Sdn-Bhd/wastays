@@ -105,7 +105,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", :business_day, t
       post hotel_booking_action_late_checkout_path(hotel, booking),
         params: { charge_type: "charge", charge_calculation: "standard", amount: "50.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") }
 
-      expect(response).to redirect_to(hotel_booking_control_panel_path(hotel, booking, tab: "booking_details"))
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(flash[:notice]).to eq("Late checkout charge applied.")
       expect(booking.reload.status).to eq("checked_in")
     end

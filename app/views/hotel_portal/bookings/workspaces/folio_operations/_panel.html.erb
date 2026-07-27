@@ -1,0 +1,34 @@
+<% active_folio = presenter.selected_folio %>
+<% if active_folio %>
+  <%# Folio identity (name, payer, status) lives in the entity rail, and the
+      Outstanding balance lives in the ledger footer — so this panel opens with a
+      single operational toolbar: posting actions left, lifecycle right. %>
+  <section id="folio-operations-panel" aria-label="Folio details" tabindex="-1">
+    <div class="border-b border-border px-5 py-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <%= render "hotel_portal/bookings/workspaces/folio_operations/folio_actions", booking: entity_booking, hotel: current_hotel, folio_show: folio_show %>
+        <%= render "hotel_portal/bookings/workspaces/folio_operations/window_actions", booking: entity_booking, folio: active_folio, folio_show: folio_show %>
+      </div>
+    </div>
+
+    <% reversed_application_ids = active_folio.deposit_movements.filter_map { |movement| movement.reversal_of_id if movement.movement_type == "reverse" }.to_set %>
+    <% deposit_applications = active_folio.deposit_movements.select { |movement| movement.movement_type == "apply" && !reversed_application_ids.include?(movement.id) } %>
+    <% if deposit_applications.any? %><div class="border-b border-border bg-muted px-5 py-3 text-sm text-foreground"><span class="font-medium">Deposit applications:</span> <%= deposit_applications.map { |movement| "##{movement.deposit_id} · #{presenter.money(movement.amount)}" }.to_sentence %></div><% end %>
+
+    <div class="px-5 pb-5 pt-5"><%= render "hotel_portal/folios/show/page_ledger", folio_show: folio_show, booking: entity_booking, hotel: current_hotel %></div>
+  </section>
+<% else %>
+  <div class="px-5 py-12 text-center">
+    <p class="font-semibold text-foreground">No folios are available.</p>
+    <p class="mt-1 text-sm text-muted-foreground">Create a folio before posting charges or payments.</p>
+    <% if presenter.can_manage_folio_windows?(current_user) %>
+      <div class="mt-4">
+        <%= render PanelsUI::Button.new(
+              href: hotel_folio_action_new_window_path(current_hotel, entity_booking, return_to: request.fullpath),
+              variant: :primary,
+              size: :sm,
+              data: { turbo_frame: "folio_action_sheet" }) do %>Add Folio<% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

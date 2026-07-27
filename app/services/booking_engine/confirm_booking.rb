@@ -165,7 +165,7 @@ module BookingEngine
     end
 
     def initialize_folio(booking)
-      Folios::InitializeForBooking.call(
+      Folios::Lifecycle::InitializeForBooking.call(
         booking: booking,
         user: nil,
         options: {

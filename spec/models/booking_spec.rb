@@ -9,6 +9,10 @@ RSpec.describe Booking, type: :model do
     it "includes no_show in STATUSES" do
       expect(Booking::STATUSES).to include('no_show')
     end
+
+    it "includes voided in STATUSES" do
+      expect(Booking::STATUSES).to include('voided')
+    end
   end
 
   describe "scopes" do
@@ -142,6 +146,9 @@ RSpec.describe Booking, type: :model do
       expect_transition(from: "review_due_out", to: "checkout_required", event: "reject_late_checkout")
       expect_transition(from: "checkout_required", to: "completed", event: "check_out")
       expect_transition(from: "no_show", to: "checked_in", event: "reinstate")
+      (Booking::STATUSES - %w[voided]).each do |status|
+        expect_transition(from: status, to: "voided", event: "void")
+      end
     end
 
     it "rejects direct persisted status updates without an event" do
@@ -186,6 +193,15 @@ RSpec.describe Booking, type: :model do
       expect(booking.update(status: "checked_in")).to be(false)
       expect(booking.errors[:status]).to include("completed is a terminal status")
       expect(booking.reload.status).to eq("completed")
+    end
+
+    it "treats voided as a hard terminal status" do
+      booking = create(:booking, status: "voided")
+      booking.status_transition_event = "confirm"
+
+      expect(booking.update(status: "confirmed")).to be(false)
+      expect(booking.errors[:status]).to include("voided is a terminal status")
+      expect(booking.reload.status).to eq("voided")
     end
 
     it "allows setting the initial status on create" do

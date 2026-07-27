@@ -40,6 +40,7 @@ RSpec.describe "Hotel AR payments index", type: :system, js: true do
     role.permissions.delete_all
 
     visit hotel_ar_payments_path(hotel)
+    wait_for_stimulus_controller("#toast-viewport", "toast")
 
     expect(page).to have_current_path(root_path)
     expect(page).to have_content("You are not authorized to perform this action.")

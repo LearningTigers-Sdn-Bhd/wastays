@@ -1,0 +1,82 @@
+<%= form_with url: hotel_folio_action_group_billing_routes_path(current_hotel, @booking), method: :post,
+  class: "flex min-h-0 flex-1", data: { controller: "group-billing-routes" } do |form| %>
+  <%= hidden_field_tag :workflow_step, "preview" %>
+  <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+  <%= hidden_field_tag :idempotency_key, @group_batch_key %>
+
+  <aside class="flex w-72 shrink-0 flex-col overflow-y-auto border-r border-border bg-muted/60 custom-scrollbar">
+    <div class="flex items-center justify-between border-b border-border px-4 py-3">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Transaction Codes</h3>
+      <label class="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+        <%= check_box_tag "select_all_codes", "1", false, data: { group_billing_routes_target: "selectAll", action: "group-billing-routes#toggleAll" }, class: "size-3.5 rounded border-border-interactive" %>
+        Select all
+      </label>
+    </div>
+    <div class="divide-y divide-border">
+      <% @group_readiness.codes.each do |code| %>
+        <% status = @group_readiness.code_status(code) %>
+        <label class="flex items-start gap-2.5 px-4 py-3 text-sm">
+          <%= check_box_tag "codes[#{code.id}]", "1", false,
+            data: { group_billing_routes_target: "codeCheckbox", code_id: code.id, action: "group-billing-routes#codeToggled" },
+            class: "mt-0.5 size-3.5 rounded border-border-interactive" %>
+          <span class="min-w-0 flex-1">
+            <span class="block font-mono text-[11px] font-bold text-muted-foreground"><%= code.code %></span>
+            <span class="block truncate font-semibold text-foreground"><%= code.name %></span>
+            <span class="block text-xs font-medium <%= status.state == :inconsistent ? "text-warning-foreground" : "text-muted-foreground" %>" data-group-billing-routes-target="hint" data-code-id="<%= code.id %>">
+              <% case status.state
+                 when :consistent %>✓ consistent
+              <% when :inconsistent %>⚠ <%= status.folio_count %> different folios
+              <% else %>— not yet routed
+              <% end %>
+            </span>
+          </span>
+        </label>
+      <% end %>
+    </div>
+  </aside>
+
+  <div class="flex min-h-0 flex-1 flex-col">
+    <div class="relative z-0 min-h-0 flex-1 overflow-auto">
+      <table class="w-full min-w-[920px] table-fixed text-left text-xs">
+        <thead class="sticky top-0 z-10 bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <tr class="border-b border-border">
+            <th class="w-10 px-3 py-2"></th>
+            <th class="w-24 px-3 py-2">Code</th>
+            <th class="px-3 py-2">Transaction</th>
+            <th class="w-44 px-3 py-2">Tax inclusions</th>
+            <th class="w-48 px-3 py-2">Billing party</th>
+            <th class="w-56 px-3 py-2">Target folio</th>
+          </tr>
+        </thead>
+        <% @group_bookings.each do |booking| %>
+          <% booking_status = @group_readiness.booking_status(booking) %>
+          <% room = booking.booking_rooms.first %>
+          <% booking_number = booking.formatted_reservation_number.presence || "—" %>
+          <tbody data-controller="billing-routes">
+            <tr class="sticky top-[29px] z-[5] border-y border-border bg-card" data-group-billing-routes-target="bookingHeader" data-booking-id="<%= booking.id %>" data-ready="<%= booking_status.ready %>">
+              <td colspan="6" class="px-3 py-2.5">
+                <span class="inline-flex items-center gap-1.5 text-sm font-semibold <%= booking_status.ready ? "text-foreground" : "text-warning-foreground" %>" data-group-billing-routes-target="bookingLabel">
+                  <span data-group-billing-routes-target="bookingIcon"><%= booking_status.ready ? "✓" : "⚠" %></span>
+                  Booking No. <%= booking_number %> · <%= room&.room_number.present? ? "Room #{room.room_number}" : "Unassigned room" %> · <%= booking.guest_name %>
+                  <span data-group-billing-routes-target="bookingReason" class="font-medium text-warning-foreground"><%= "— #{booking_status.reason}" if !booking_status.ready %></span>
+                </span>
+              </td>
+            </tr>
+            <%= render "hotel_portal/folios/actions/billing_routes/routing_rows",
+              form: form, matrix: @group_readiness.matrix_for(booking), booking: booking,
+              draft: (@group_route_draft || {}).fetch(booking.id.to_s, {}),
+              field_prefix: "group_routes[#{booking.id}]", extra_action: "change->group-billing-routes#rowChanged" %>
+          </tbody>
+        <% end %>
+      </table>
+    </div>
+    <div class="sticky bottom-0 z-30 flex shrink-0 items-center justify-between border-t border-border bg-card px-6 py-4 pointer-events-auto">
+      <p class="text-xs text-muted-foreground" data-group-billing-routes-target="summary">0 codes selected</p>
+      <div class="relative z-40 flex gap-3 pointer-events-auto">
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, disabled: true,
+              data: { group_billing_routes_target: "submit", turbo_submits_with: "Reviewing…" }) do %>Review &amp; Apply<% end %>
+      </div>
+    </div>
+  </div>
+<% end %>
