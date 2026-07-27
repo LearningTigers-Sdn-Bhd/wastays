@@ -22,7 +22,7 @@ RSpec.describe "HotelPortal::Bookings::Actions billing parties", type: :request 
     expect(response).to have_http_status(:success)
     document = Nokogiri::HTML(response.body)
     expect(document.at_css("turbo-frame#booking_action_sheet dialog#billing-party-choice-sheet")).to be_present
-    expect(document.text).to include("Add guest", "Add account payer")
+    expect(document.text).to include("Add guest", "Add Corporate Account payer")
   end
 
   it "adds an account payer to the selected booking and completes the Sheet" do
@@ -40,6 +40,16 @@ RSpec.describe "HotelPortal::Bookings::Actions billing parties", type: :request 
     party = booking.booking_billing_parties.companies.sole
     expect(party).to have_attributes(hotel_corporate_account: account)
     expect(party.booking_folios.count).to eq(1)
+  end
+
+  it "shows an empty state when no corporate accounts are available" do
+    get hotel_booking_action_manage_billing_party_path(hotel, booking, mode: "add_account"),
+      headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+    expect(response).to have_http_status(:success)
+    document = Nokogiri::HTML(response.body)
+    expect(document.text).to include("No active Corporate Accounts yet")
+    expect(document.at_css("button[form='billing-party-form'][disabled]")).to be_present
   end
 
   it "offers every child room and an All option when adding a group account payer" do

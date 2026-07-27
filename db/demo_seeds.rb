@@ -1183,13 +1183,15 @@ module DemoSeeds
     property_policy.usd_rate = usd_conversion_rate
     property_policy.save!
 
-    rooms.each do |attrs|
+    rooms.each_with_index do |attrs, index|
       room_type = RoomType.find_or_initialize_by(hotel: hotel, name: attrs[:name])
       room_type.description = attrs[:description]
       room_type.max_adults = attrs[:adults]
       room_type.max_children = attrs[:children]
       room_type.quantity = attrs[:quantity]
       room_type.base_price = attrs[:base_price]
+      room_type.room_number_mode = "custom"
+      room_type.room_numbers = attrs.fetch(:room_numbers) { room_numbers_for(index, attrs[:quantity]) }
       room_type.save!
 
       ensure_room_calendar(
@@ -1203,6 +1205,11 @@ module DemoSeeds
     ensure_default_gl_maps(hotel)
 
     hotel
+  end
+
+  def room_numbers_for(room_index, quantity)
+    floor = room_index + 1
+    1.upto(quantity).map { |number| ((floor * 100) + number).to_s }
   end
 
   def ensure_default_gl_maps(hotel)
@@ -1219,6 +1226,7 @@ module DemoSeeds
       inventory = RoomInventory.find_or_initialize_by(room_type: room_type, date: date)
       inventory.quantity = date.wday == 2 ? [ room_type.quantity - 1, 1 ].max : room_type.quantity
       inventory.status = "open"
+      inventory.available_room_numbers = room_type.room_numbers.first(inventory.quantity)
       inventory.save!
 
       rate = RoomRate.find_or_initialize_by(room_type: room_type, date: date)

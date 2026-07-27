@@ -124,7 +124,7 @@ RSpec.describe Folios::Checkout::ProcessCheckoutActions do
     expect(result.error).to eq("#{company_folio.display_name}: reason is required for keep open.")
   end
 
-  it "allows keeping Company & Government folios open without Direct Bill enabled" do
+  it "allows keeping Corporate Account folios open without Direct Bill enabled" do
     company_relationship.update!(relationship_type: "standard")
     create(:folio_transaction, booking_folio: company_folio, amount: 100)
 
@@ -139,7 +139,7 @@ RSpec.describe Folios::Checkout::ProcessCheckoutActions do
     expect(@result.exception_folio_ids).to eq([ company_folio.id ])
   end
 
-  it "keeps unlinked Company & Government folios open when Direct Bill is not available" do
+  it "keeps unlinked Corporate Account folios open when Direct Bill is not available" do
     company_folio.update_columns(hotel_corporate_account_id: nil)
     create(:folio_transaction, booking_folio: company_folio, amount: 100)
 
@@ -154,7 +154,7 @@ RSpec.describe Folios::Checkout::ProcessCheckoutActions do
     expect(@result.exception_folio_ids).to eq([ company_folio.id ])
   end
 
-  it "accepts Direct Bill for eligible Company & Government folios" do
+  it "accepts Direct Bill for eligible Corporate Account folios" do
     create(:folio_transaction, booking_folio: company_folio, amount: 100)
 
     result = call_service({
@@ -167,7 +167,55 @@ RSpec.describe Folios::Checkout::ProcessCheckoutActions do
     expect(result.exception_folio_ids).to eq([])
   end
 
-  it "rejects Direct Bill when the Company & Government account is not eligible" do
+  it "blocks Direct Bill above the credit limit unless an authorized override has a reason" do
+    company_relationship.update!(credit_limit: 50, credit_currency: "MYR")
+    create(:folio_transaction, booking_folio: company_folio, amount: 100)
+    actions = {
+      guest_folio.id.to_s => { action: "close" },
+      company_folio.id.to_s => { action: "direct_bill", amount: "100.00" }
+    }
+
+    blocked = call_service(actions)
+    overridden = call_service(actions.deep_merge(company_folio.id.to_s => {
+      credit_override: "1", credit_override_reason: "Approved by finance"
+    }))
+
+    expect(blocked.error).to include("credit limit exceeded")
+    expect(overridden).to be_success
+  end
+
+  it "does not accept a credit override from an unauthorized user" do
+    company_relationship.update!(credit_limit: 50, credit_currency: "MYR")
+    create(:folio_transaction, booking_folio: company_folio, amount: 100)
+
+    result = call_service({
+      guest_folio.id.to_s => { action: "close" },
+      company_folio.id.to_s => {
+        action: "direct_bill", amount: "100.00", credit_override: "1", credit_override_reason: "Approved"
+      }
+    }, actor: create(:user))
+
+    expect(result.error).to include("do not have permission")
+  end
+
+
+  it "checks the combined Direct Bill amount for folios on the same account" do
+    company_relationship.update!(credit_limit: 100, credit_currency: "MYR")
+    second_company_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel,
+      hotel_corporate_account: company_relationship)
+    create(:folio_transaction, booking_folio: company_folio, amount: 60)
+    create(:folio_transaction, booking_folio: second_company_folio, amount: 60)
+
+    result = call_service({
+      guest_folio.id.to_s => { action: "close" },
+      company_folio.id.to_s => { action: "direct_bill", amount: "60.00" },
+      second_company_folio.id.to_s => { action: "direct_bill", amount: "60.00" }
+    })
+
+    expect(result.error).to include("credit limit exceeded")
+  end
+
+  it "rejects Direct Bill when the Corporate Account is not eligible" do
     company_relationship.update!(relationship_type: "standard")
     create(:folio_transaction, booking_folio: company_folio, amount: 100)
 

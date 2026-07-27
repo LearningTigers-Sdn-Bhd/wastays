@@ -25,9 +25,9 @@
             class: "w-full justify-start",
             data: { turbo_frame: sheet_frame }) do %>
         <%= app_icon "building-2", class: "size-4", aria: { hidden: true } %>
-        Add account payer
+        Add Corporate Account payer
       <% end %>
-      <p class="text-xs text-muted-foreground">Links a company or government account and creates its external folio.</p>
+      <p class="text-xs text-muted-foreground">Links a Corporate Account and creates its external folio.</p>
     </div>
   <% end %>
 <% elsif @mode == "remove" %>
@@ -46,12 +46,13 @@
   <% end %>
 <% else %>
   <% editing = @mode == "edit_terms" %>
+  <% accounts_available = @accounts.any? %>
   <% form_id = editing ? "billing-terms-form" : "billing-party-form" %>
   <% submit_label = editing ? "Save terms" : "Add account payer" %>
   <% footer = capture do %>
     <div class="flex w-full justify-end gap-2">
       <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) { "Cancel" } %>
-      <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, data: { turbo_submits_with: "Saving…" }) { submit_label } %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, disabled: !editing && !accounts_available, data: { turbo_submits_with: "Saving…" }) { submit_label } %>
     </div>
   <% end %>
   <%= render "hotel_portal/bookings/actions/shared/sheet",
@@ -99,8 +100,12 @@
           <%= render PanelsUI::FormField.new(form:, attribute: :account_type, label: "Account type", required: true) do |field| %>
             <% field.with_select_menu(BookingBillingParty::ACCOUNT_TYPES.map { |type| [type.humanize, type] }, selected: @billing_party_attributes[:account_type].presence || "company") %>
           <% end %>
-          <%= render PanelsUI::FormField.new(form:, attribute: :hotel_corporate_account_id, label: "Corporate account", required: true) do |field| %>
-            <% field.with_combobox(@accounts.map { |account| [account.corporate_account.name, account.id] }, selected: @billing_party_attributes[:hotel_corporate_account_id], prompt: "Search accounts") %>
+          <% if accounts_available %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :hotel_corporate_account_id, label: "Corporate account", required: true) do |field| %>
+              <% field.with_combobox(@accounts.map { |account| [account.corporate_account.name, account.id] }, selected: @billing_party_attributes[:hotel_corporate_account_id], prompt: "Search accounts") %>
+            <% end %>
+          <% else %>
+            <p class="rounded-md border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">No active Corporate Accounts yet. Add one in settings to bill a Corporate Account.</p>
           <% end %>
         </div>
       <% end %>

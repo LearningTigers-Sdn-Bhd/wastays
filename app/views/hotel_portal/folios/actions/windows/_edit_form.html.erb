@@ -43,7 +43,7 @@
       <div data-folio-window-payer-target="payerType" data-action="change->folio-window-payer#syncCompanyAccount">
         <%= render PanelsUI::FormField.new(form: form, attribute: :payer_type, label: "Payer") do |field| %>
           <% field.with_select_menu(
-               [ { label: "Guest", value: "guest" }, { label: "Company & Government", value: "company" },
+               [ { label: "Guest", value: "guest" }, { label: "Corporate Account", value: "company" },
                  { label: "Agent", value: "agent" }, { label: "Hotel", value: "hotel" }, { label: "Custom", value: "custom" } ],
                selected: folio.payer_type.presence || "company") %>
         <% end %>
@@ -51,7 +51,7 @@
     </div>
 
     <div data-folio-window-payer-target="companyAccount">
-      <%= render PanelsUI::FormField.new(form: form, attribute: :hotel_corporate_account_id, label: "Company & Government account",
+      <%= render PanelsUI::FormField.new(form: form, attribute: :hotel_corporate_account_id, label: "Corporate Account",
             hint: account_choices.empty? ? nil : "Standard accounts can be selected, but only direct-bill accounts can be kept open at checkout.") do |field| %>
         <% field.with_select_menu(
              account_choices.presence || [ { label: "No active account", value: "", disabled: true } ],
@@ -59,7 +59,7 @@
              selected: folio.hotel_corporate_account_id) %>
       <% end %>
       <% if account_choices.empty? %>
-        <p class="mt-2 text-xs font-medium text-warning-foreground">Create or reactivate a Company &amp; Government Account before saving this folio.</p>
+        <p class="mt-2 text-xs font-medium text-warning-foreground">Create or reactivate a Corporate Account before saving this folio.</p>
       <% end %>
     </div>
 
@@ -88,7 +88,7 @@
       <div data-folio-primary-toggle-target="reasonWrapper" class="mt-4 hidden">
         <%= render PanelsUI::FormField.new(form: form, attribute: :set_folio_as_primary_reason, label: "Reason for setting as primary") do |field| %>
           <% field.with_input(
-               placeholder: "e.g., Company & Government folio is now responsible for settlement",
+               placeholder: "e.g., Corporate Account folio is now responsible for settlement",
                data: { folio_primary_toggle_target: "reasonInput" }) %>
         <% end %>
       </div>

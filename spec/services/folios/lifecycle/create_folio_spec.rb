@@ -23,7 +23,7 @@ RSpec.describe Folios::Lifecycle::CreateFolio do
     expect(FolioOperationLog.last.operation_type).to eq("create_folio")
   end
 
-  it "defaults new folios to external Company & Government payer with the selected account" do
+  it "defaults new folios to an external Corporate Account payer with the selected account" do
     result = described_class.call(booking: booking, user: user, attributes: { hotel_corporate_account_id: hotel_corporate_account.id })
 
     expect(result).to be_success
@@ -33,14 +33,14 @@ RSpec.describe Folios::Lifecycle::CreateFolio do
     expect(result.folio.hotel_corporate_account).to eq(hotel_corporate_account)
   end
 
-  it "rejects Company & Government folios without a selected account" do
+  it "rejects Corporate Account folios without a selected account" do
     result = described_class.call(booking: booking, user: user, attributes: {})
 
     expect(result).not_to be_success
-    expect(result.error).to include("Company & Government")
+    expect(result.error).to include("Corporate Account")
   end
 
-  it "rejects suspended Company & Government accounts" do
+  it "rejects suspended Corporate Accounts" do
     hotel_corporate_account.update!(status: "suspended", suspended_at: Time.current)
 
     result = described_class.call(booking: booking, user: user, attributes: { hotel_corporate_account_id: hotel_corporate_account.id })
@@ -49,7 +49,7 @@ RSpec.describe Folios::Lifecycle::CreateFolio do
     expect(result.error).to include("must be active")
   end
 
-  it "rejects Company & Government accounts from another hotel" do
+  it "rejects Corporate Accounts from another hotel" do
     other_relationship = create(:hotel_corporate_account)
 
     result = described_class.call(booking: booking, user: user, attributes: { hotel_corporate_account_id: other_relationship.id })

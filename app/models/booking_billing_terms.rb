@@ -22,7 +22,7 @@ class BookingBillingTerms < ApplicationRecord
     party = booking_billing_party
     account = party&.hotel_corporate_account
     unless party&.company? && account&.active? && account&.direct_bill_enabled?
-      errors.add(:settlement_type, "requires an active Direct Bill Company & Government Account")
+      errors.add(:settlement_type, "requires an active Direct Bill Corporate Account")
     end
   end
 end

@@ -69,7 +69,7 @@ module ArPayments
     end
 
     def validate_payment_inputs
-      return "Company & Government Account must belong to the hotel." if @hotel_corporate_account.blank? || @hotel_corporate_account.hotel_id != @hotel.id
+      return "Corporate Account must belong to the hotel." if @hotel_corporate_account.blank? || @hotel_corporate_account.hotel_id != @hotel.id
       return "Payment amount must be greater than zero." unless @amount.positive?
       return "Payment reference number can't be blank." if @reference_number.blank?
       return "Received date can't be blank." if @received_at.blank?

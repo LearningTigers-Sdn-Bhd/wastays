@@ -4,6 +4,22 @@
 <% group_checkout = local_assigns.fetch(:group_checkout, false) %>
 <% currency = local_assigns.fetch(:currency) %>
 <% checkout_business_date = local_assigns.fetch(:checkout_business_date) %>
+<% pending_direct_bill_amounts = Hash.new(0.to_d) %>
+<% credit_exposures = {} %>
+<% sheets.each do |checkout_booking, sheet| %>
+  <% next unless form_state.selected?(checkout_booking) %>
+  <% sheet.folio_rows.each do |row| %>
+    <% values = form_state.folio_values(checkout_booking, row) %>
+    <% relationship = row.folio.hotel_corporate_account %>
+    <% next unless values[:action] == "direct_bill" && relationship.present? && row.balance.to_d.positive? %>
+    <% key = [ relationship.id, row.folio.currency ] %>
+    <% pending_direct_bill_amounts[key] += row.balance.to_d %>
+    <% credit_exposures[[ checkout_booking.id, row.folio.id ]] = ArInvoices::CreditExposure.call(
+         hotel_corporate_account: relationship,
+         pending_amount: pending_direct_bill_amounts[key],
+         pending_currency: row.folio.currency) %>
+  <% end %>
+<% end %>
 
 <section aria-labelledby="folio-resolver-heading" class="space-y-4">
   <div>
@@ -52,7 +68,8 @@
                   </div>
                 <% end %>
                 <% sheet.folio_rows.each do |row| %>
-                  <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row, bordered: false %>
+                  <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row, bordered: false,
+                        credit_exposure: credit_exposures[[ checkout_booking.id, row.folio.id ]] %>
                 <% end %>
               </div>
             <% end %>
@@ -66,7 +83,8 @@
             </div>
           <% end %>
           <% sheet.folio_rows.each do |row| %>
-            <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row, bordered: true %>
+            <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row, bordered: true,
+                  credit_exposure: credit_exposures[[ checkout_booking.id, row.folio.id ]] %>
           <% end %>
         </div>
       <% end %>

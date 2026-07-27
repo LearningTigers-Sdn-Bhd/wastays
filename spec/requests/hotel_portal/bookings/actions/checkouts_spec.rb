@@ -81,6 +81,22 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
       expect(dialog.at_css("input[name='security_deposit_release_reference']")).to be_present
     end
 
+    it "renders authorized credit override controls for Direct Bill above the limit" do
+      grant_permission(role, "override_corporate_credit_limit")
+      relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel, credit_limit: 50, credit_currency: "MYR")
+      folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, hotel_corporate_account: relationship)
+      create(:folio_transaction, booking_folio: folio, amount: 100)
+
+      get hotel_booking_action_checkout_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-checkout-sheet")
+      prefix = "checkout_bookings[#{booking.id}][folios][#{folio.id}]"
+      expect(dialog.text).to include("authorized override is required")
+      expect(dialog.at_css("input[name='#{prefix}[credit_override]']")).to be_present
+      expect(dialog.at_css("input[name='#{prefix}[credit_override_reason]']")).to be_present
+    end
+
     it "renders the group target selector for a group booking" do
       group = create(:group_booking, hotel: hotel, name: "Conference Group")
       booking.update!(group_booking: group, group_position: 1)

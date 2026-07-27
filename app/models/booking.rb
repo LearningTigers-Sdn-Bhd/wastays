@@ -271,8 +271,8 @@ class Booking < ApplicationRecord
   end
 
   before_save :set_payout_status, if: :status_changed?
-  after_create_commit :enqueue_receipt_email, if: -> { status == "confirmed" }
-  after_create_commit :enqueue_whatsapp_receipt, if: -> { status == "confirmed" }
+  after_create_commit :enqueue_receipt_email, if: :send_creation_notifications?
+  after_create_commit :enqueue_whatsapp_receipt, if: :send_creation_notifications?
 
   def pre_checkin_display_status
     metadata = pre_checkin&.metadata || {}
@@ -487,6 +487,10 @@ class Booking < ApplicationRecord
 
   def set_payout_status
     self.payout_status = "pending" if status == "completed" && payout_status.blank?
+  end
+
+  def send_creation_notifications?
+    status == "confirmed" && !Thread.current[:skip_booking_creation_notifications]
   end
 
   def enqueue_receipt_email

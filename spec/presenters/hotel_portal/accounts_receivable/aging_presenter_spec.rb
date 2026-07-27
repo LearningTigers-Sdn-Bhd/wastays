@@ -29,8 +29,11 @@ RSpec.describe HotelPortal::AccountsReceivable::AgingPresenter do
     expect(metrics.fetch("31–60 days").amounts).to eq([ "MYR 0.00", "USD 25.00" ])
     expect(metrics.fetch("Total outstanding").amounts).to eq([ "MYR 90.00", "USD 25.00" ])
     expect(myr_row.credit_status_label).to eq("Near limit")
+    expect(myr_row.credit_status_description).to include("90% of credit limit")
     expect(usd_row.credit_status_label).to eq("Not comparable")
     expect(usd_row.credit_status_description).to eq("Credit limit is configured in MYR")
+    expect(myr_row.row.credit_exposure.warning_state).to eq("currency_mismatch")
+    expect(myr_row.row.credit_exposure).to be_requires_override
   end
 
   def create_invoice(amount:, currency:, due_on:)

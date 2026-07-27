@@ -53,7 +53,7 @@ module Folios
 
       # Folios are booking-scoped, so raw folio ids are never comparable across siblings.
       # Bucket by the cross-booking-comparable identity instead: the shared corporate
-      # account for company folios, or the payer type for guest folios.
+      # account for Corporate Account folios, or the payer type for guest folios.
       def folio_bucket(folio)
         return nil unless folio
 

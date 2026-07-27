@@ -33,7 +33,7 @@ RSpec.describe ArInvoices::CreditExposure do
 
     expect(result.warning_state).to eq("over_limit")
     expect(result.warning_message).to include("exceeds credit limit")
-    expect(result.warning_message).to include("Direct Bill is still allowed")
+    expect(result.warning_message).to include("An authorized override is required")
   end
 
   it "warns when no credit limit is set" do
@@ -45,7 +45,7 @@ RSpec.describe ArInvoices::CreditExposure do
     expect(result.warning_message).to include("No credit limit is set")
   end
 
-  it "only includes outstanding invoices in the account credit currency" do
+  it "flags outstanding invoices outside the account credit currency as non-comparable" do
     relationship = create(:hotel_corporate_account, credit_limit: 1_000, credit_currency: "MYR")
     create_invoice(relationship: relationship, amount: 700)
     create_invoice(relationship: relationship, amount: 600, currency: "USD")
@@ -53,10 +53,12 @@ RSpec.describe ArInvoices::CreditExposure do
     result = described_class.call(hotel_corporate_account: relationship)
 
     expect(result.current_outstanding).to eq(700.to_d)
-    expect(result.warning_state).to eq("none")
+    expect(result.warning_state).to eq("currency_mismatch")
+    expect(result.non_comparable_currencies).to eq([ "USD" ])
+    expect(result).to be_requires_override
   end
 
-  it "does not add a pending balance in another currency" do
+  it "requires an override for a pending balance in another currency" do
     relationship = create(:hotel_corporate_account, credit_limit: 1_000, credit_currency: "MYR")
     create_invoice(relationship: relationship, amount: 800)
 
@@ -68,7 +70,9 @@ RSpec.describe ArInvoices::CreditExposure do
 
     expect(result.pending_amount).to eq(0.to_d)
     expect(result.projected_exposure).to eq(800.to_d)
-    expect(result.warning_state).to eq("none")
+    expect(result.warning_state).to eq("currency_mismatch")
+    expect(result.non_comparable_currencies).to eq([ "USD" ])
+    expect(result).to be_requires_override
   end
 
   def create_invoice(relationship:, amount:, currency: "MYR")

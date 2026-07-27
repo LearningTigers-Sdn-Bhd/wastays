@@ -44,7 +44,9 @@ module HotelPortal
               amount: submitted_value(*prefix, "amount", default: format("%.2f", row.balance.to_d)),
               payment_method: submitted_value(*prefix, "payment_method", default: DEFAULT_PAYMENT_METHOD),
               payment_reference: submitted_value(*prefix, "payment_reference", default: nil),
-              reason: submitted_value(*prefix, "reason", default: nil)
+              reason: submitted_value(*prefix, "reason", default: nil),
+              credit_override: submitted_value(*prefix, "credit_override", default: "0"),
+              credit_override_reason: submitted_value(*prefix, "credit_override_reason", default: nil)
             }
           end
 

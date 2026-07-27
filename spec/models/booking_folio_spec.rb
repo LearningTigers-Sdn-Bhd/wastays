@@ -119,13 +119,13 @@ RSpec.describe BookingFolio, type: :model do
       end.to raise_error(ActiveRecord::StatementInvalid, /booking_folios_guest_type_is_guest_payer/)
     end
 
-    it "requires an active same-hotel Company & Government account for company payer folios" do
+    it "requires an active same-hotel Corporate Account for company payer folios" do
       missing = build(:booking_folio, folio_type: "external", payer_type: "company", hotel_corporate_account: nil)
       suspended = build(:booking_folio, folio_type: "external", payer_type: "company", hotel: booking.hotel, booking: booking, hotel_corporate_account: create(:hotel_corporate_account, hotel: booking.hotel, status: "suspended"))
       wrong_hotel = build(:booking_folio, folio_type: "external", payer_type: "company", hotel: booking.hotel, booking: booking, hotel_corporate_account: create(:hotel_corporate_account))
 
       expect(missing).not_to be_valid
-      expect(missing.errors[:hotel_corporate_account]).to include("must be selected for Company & Government folios")
+      expect(missing.errors[:hotel_corporate_account]).to include("must be selected for Corporate Account folios")
       expect(suspended).not_to be_valid
       expect(suspended.errors[:hotel_corporate_account]).to include("must be active")
       expect(wrong_hotel).not_to be_valid

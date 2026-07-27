@@ -70,6 +70,7 @@ module Folios
         pending_error = pending_charge_error(readiness)
         return pending_error if pending_error.present?
 
+        pending_direct_bill_amounts = Hash.new(0.to_d)
         folios.each do |folio|
           params = params_for(folio)
           action = action_for(folio)
@@ -90,6 +91,11 @@ module Folios
           if action == DIRECT_BILL_ACTION
             return "#{folio.display_name}: Direct Bill is not available." unless direct_bill_enabled?(folio)
             return "#{folio.display_name}: Direct Bill requires a positive balance." unless balance.positive?
+
+            key = [ folio.hotel_corporate_account_id, folio.currency ]
+            pending_direct_bill_amounts[key] += balance
+            authorization = authorize_credit_exposure(folio, pending_direct_bill_amounts[key])
+            return "#{folio.display_name}: #{authorization.error}" unless authorization.success?
           end
 
           if EXCEPTION_ACTIONS.include?(action) && reason_for(folio).blank?
@@ -243,6 +249,17 @@ module Folios
       def direct_bill_enabled?(folio)
         relationship = folio.hotel_corporate_account
         relationship.present? && relationship.active? && relationship.direct_bill_enabled?
+      end
+
+      def authorize_credit_exposure(folio, balance)
+        ArInvoices::AuthorizeCreditExposure.call(
+          hotel_corporate_account: folio.hotel_corporate_account,
+          pending_amount: balance,
+          pending_currency: folio.currency,
+          user: @user,
+          override: params_for(folio)[:credit_override],
+          override_reason: params_for(folio)[:credit_override_reason]
+        )
       end
 
       def can_post_payments?

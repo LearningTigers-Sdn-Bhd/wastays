@@ -34,6 +34,7 @@ module HotelDemoManagement
           delete_night_audits
           reset_business_date_authority
           delete_bookings
+          delete_group_bookings
           reset_rates_and_inventories
           reset_room_statuses
           self.class.delete_ai_concierge_data(@hotel, logger: @logger)
@@ -206,6 +207,15 @@ module HotelDemoManagement
       @hotel.bookings.destroy_all
     end
 
+    def delete_group_bookings
+      group_booking_ids = @hotel.group_bookings.ids
+      return if group_booking_ids.empty?
+
+      GroupBillingChangeBatch.where(group_booking_id: group_booking_ids).delete_all
+      @logger.puts "Destroying #{group_booking_ids.size} group bookings..."
+      @hotel.group_bookings.destroy_all
+    end
+
     def delete_accounts_receivable_data
       invoice_ids = @hotel.ar_invoices.ids
       payment_ids = @hotel.ar_payments.ids
@@ -243,8 +253,9 @@ module HotelDemoManagement
     end
 
     def reset_rates_and_inventories
-      @start_date = Date.current - 10.days
-      @end_date = Date.new(Date.current.year, 12, 31)
+      hotel_date = Time.current.in_time_zone(@hotel.hotel_time_zone).to_date
+      @start_date = hotel_date - 1.year
+      @end_date = hotel_date + 1.year
 
       @logger.puts "Resetting rates and inventories from #{@start_date} to #{@end_date}..."
       @hotel.room_types.each do |room_type|

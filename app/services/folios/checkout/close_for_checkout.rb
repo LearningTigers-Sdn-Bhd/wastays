@@ -15,6 +15,8 @@ module Folios
         @options = options
         @exception_folio_ids = Array(@options[:exception_folio_ids]).map(&:to_i)
         @direct_bill_folio_ids = Array(@options[:direct_bill_folio_ids]).map(&:to_i)
+        @corporate_credit_overrides = @options.fetch(:corporate_credit_overrides, {}).to_h.transform_keys(&:to_s).with_indifferent_access
+        @credit_authorizations = {}
       end
 
       def call
@@ -45,6 +47,7 @@ module Folios
 
           balances = folios.index_with { |folio| calculate_fresh_balance(folio) }
           closable_folios = folios.reject { |folio| exception_folio?(folio) || folio.closed? }
+          lock_direct_bill_accounts!(closable_folios)
           invalid_closable = closable_folios.find { |folio| invalid_closable_balance?(folio, balances.fetch(folio)) }
           if invalid_closable.present?
             balance = balances.fetch(invalid_closable)
@@ -52,6 +55,18 @@ module Folios
 
             return failure("Cannot check out with #{invalid_closable.display_name} balance of #{formatted_balance(balance)}.", folio: primary_folio, balance: total_balance(balances))
           end
+
+          pending_direct_bill_amounts = Hash.new(0.to_d)
+          direct_bill_credit_error = closable_folios.filter_map do |folio|
+            next unless direct_bill_folio?(folio)
+
+            key = [ folio.hotel_corporate_account_id, folio.currency ]
+            pending_direct_bill_amounts[key] += balances.fetch(folio)
+            authorization = authorize_credit_exposure(folio, pending_direct_bill_amounts[key])
+            @credit_authorizations[folio.id] = authorization
+            "#{folio.display_name}: #{authorization.error}" unless authorization.success?
+          end.first
+          return failure(direct_bill_credit_error, folio: primary_folio, balance: total_balance(balances)) if direct_bill_credit_error.present?
 
           guest_exception = folios.find { |folio| guest_folio?(folio) && exception_folio?(folio) }
           return failure("#{guest_exception.display_name}: guest folio must be financially resolved before checkout.", folio: primary_folio, balance: total_balance(balances)) if guest_exception.present?
@@ -173,6 +188,27 @@ module Folios
         Folios::Lifecycle::CreateDirectBillArInvoice.call!(folio: folio, balance: balance)
       end
 
+      def authorize_credit_exposure(folio, balance)
+        override = @corporate_credit_overrides[folio.id.to_s].to_h.with_indifferent_access
+        ArInvoices::AuthorizeCreditExposure.call(
+          hotel_corporate_account: folio.hotel_corporate_account,
+          pending_amount: balance,
+          pending_currency: folio.currency,
+          user: @user,
+          override: override[:credit_override],
+          override_reason: override[:credit_override_reason]
+        )
+      end
+
+      def lock_direct_bill_accounts!(folios)
+        account_ids = folios.select { |folio| direct_bill_folio?(folio) }.filter_map(&:hotel_corporate_account_id).uniq.sort
+        locked_accounts = HotelCorporateAccount.where(id: account_ids).order(:id).lock.index_by(&:id)
+        folios.each do |folio|
+          account = locked_accounts[folio.hotel_corporate_account_id]
+          folio.association(:hotel_corporate_account).target = account if account.present?
+        end
+      end
+
       def guest_folio?(folio)
         folio.folio_type == "guest" && folio.payer_type == "guest"
       end
@@ -275,9 +311,16 @@ module Folios
             hotel_corporate_account_id: relationship.id,
             corporate_account_id: relationship.corporate_account_id,
             due_on: ar_invoice.due_on.iso8601,
-            settlement_method: "direct_bill"
+            settlement_method: "direct_bill",
+            corporate_credit_override: credit_authorization_for(folio)&.override_used? || false,
+            corporate_credit_override_reason: credit_authorization_for(folio)&.override_reason
           }
         )
+      end
+
+
+      def credit_authorization_for(folio)
+        @credit_authorizations[folio.id]
       end
 
       def checked_out_at_for_metadata

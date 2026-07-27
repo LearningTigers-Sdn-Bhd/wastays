@@ -46,14 +46,14 @@ module BookingBillingParties
 
     def call
       account = @booking.hotel.hotel_corporate_accounts.active.find_by(id: @attributes[:hotel_corporate_account_id])
-      return failure("Select an active Company & Government Account.") unless account
+      return failure("Select an active Corporate Account.") unless account
 
       party = nil
       BookingBillingParty.transaction do
         party = @booking.booking_billing_parties.find_or_initialize_by(hotel_corporate_account: account)
         newly_created_or_reactivated = party.new_record? || party.archived_at.present?
         party.assign_attributes(hotel: @booking.hotel, party_kind: "company", archived_at: nil,
-          account_type: @attributes[:account_type].presence || party.account_type || "company")
+          account_type: account.account_type)
         party.created_by ||= @actor
         party.save!
         save_terms!(party)

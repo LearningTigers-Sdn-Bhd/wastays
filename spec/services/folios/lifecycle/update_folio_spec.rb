@@ -26,7 +26,7 @@ RSpec.describe Folios::Lifecycle::UpdateFolio do
     expect(folio.hotel_corporate_account).to be_nil
   end
 
-  it "assigns a Company & Government account and logs it" do
+  it "assigns a Corporate Account and logs it" do
     result = described_class.call(
       folio: folio,
       user: user,
@@ -43,7 +43,7 @@ RSpec.describe Folios::Lifecycle::UpdateFolio do
     expect(FolioOperationLog.last.metadata.dig("changes", "hotel_corporate_account_id", "to")).to eq(hotel_corporate_account.id)
   end
 
-  it "rejects Company & Government accounts from another hotel" do
+  it "rejects Corporate Accounts from another hotel" do
     other_relationship = create(:hotel_corporate_account)
 
     result = described_class.call(
