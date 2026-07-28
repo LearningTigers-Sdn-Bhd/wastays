@@ -60,9 +60,9 @@ module Reports
         "Balance"
       ].freeze
 
-      def initialize(booking:, printed_by: nil)
-        @booking = booking
-        @folio = booking.booking_folio
+      def initialize(folio:, printed_by: nil)
+        @folio = folio
+        @booking = folio.booking
         @printed_by = printed_by
       end
 

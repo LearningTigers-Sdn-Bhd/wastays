@@ -62,6 +62,7 @@ RSpec.describe "Guest::Bookings invoice", type: :request do
       category: "accommodation",
       amount: 300,
       description: "Room Charge - Standard Room")
+    create(:folio_invoice, booking_folio: folio)
     folio
   end
 
@@ -86,7 +87,7 @@ RSpec.describe "Guest::Bookings invoice", type: :request do
       get invoice_guest_booking_path(booking)
 
       expect(response).to redirect_to(guest_bookings_path)
-      expect(flash[:alert]).to eq("Invoice is only available after checkout.")
+      expect(flash[:alert]).to eq("No finalized guest invoice is available for this booking.")
     end
 
     it "redirects when the booking belongs to another guest" do

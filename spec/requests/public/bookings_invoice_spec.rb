@@ -40,6 +40,7 @@ RSpec.describe "Public::Bookings invoice", type: :request do
       category: "accommodation",
       amount: 200,
       description: "Room Charge - Standard Room")
+    create(:folio_invoice, booking_folio: folio)
     folio
   end
 

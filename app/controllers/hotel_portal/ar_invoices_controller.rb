@@ -42,6 +42,21 @@ module HotelPortal
       @presenter = HotelPortal::AccountsReceivable::ShowPresenter.new(invoice: @ar_invoice, hotel: current_hotel)
     end
 
+    def pdf
+      invoice = current_hotel.ar_invoices
+        .includes(
+          { booking_folio: [ :folio_transactions, :booking_room, { booking: { booking_rooms: :room_type } }, { booking_billing_party: :billing_terms } ] },
+          hotel_corporate_account: :corporate_account
+        )
+        .find(params[:id])
+      document = ::Reports::AccountsReceivable::GenerateInvoice.new(invoice:, printed_by: current_user&.name).generate
+
+      send_data document,
+        filename: "ar-invoice-#{invoice.formatted_invoice_number}.pdf",
+        type: "application/pdf",
+        disposition: "inline"
+    end
+
     private
 
     def authorize_view_reports!

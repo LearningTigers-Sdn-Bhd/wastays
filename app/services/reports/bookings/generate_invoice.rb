@@ -21,9 +21,12 @@ module Reports
       BOTTOM_MARGIN = 72
       FOOTER_Y = -26
 
-      def initialize(booking:, printed_by: nil)
-        @booking = booking
-        @records = Reports::Bookings::GenerateFolioRecords.new(booking: booking, printed_by: printed_by).call
+      def initialize(folio:, printed_by: nil, revision_number: nil)
+        @records = Reports::Bookings::GenerateFolioRecords.new(
+          folio:,
+          printed_by:,
+          revision_number:
+        ).call
       end
 
       def generate
@@ -38,7 +41,13 @@ module Reports
           }
         )
 
+        render_into(pdf, footer: true)
+        pdf.render
+      end
+
+      def render_into(pdf, footer: false)
         draw_header(pdf)
+        draw_legacy_notice(pdf) if @records.legacy_generated?
         pdf.move_down 14
         draw_hotel_information(pdf)
         pdf.move_down 12
@@ -53,9 +62,8 @@ module Reports
         draw_notes(pdf)
         pdf.move_down 18
         draw_signatures(pdf)
-        draw_footer(pdf)
-
-        pdf.render
+        draw_footer(pdf) if footer
+        pdf
       end
 
       private
@@ -92,6 +100,15 @@ module Reports
           column(0).font_style = :bold
           column(0).text_color = TEXT_MUTED
         end
+      end
+
+      def draw_legacy_notice(pdf)
+        pdf.move_down 10
+        pdf.fill_color "92400e"
+        pdf.text "LEGACY-GENERATED RECONSTRUCTION", size: 9, style: :bold, align: :center
+        pdf.fill_color TEXT_MUTED
+        pdf.text "Reconstructed from currently available records; an original issue-time snapshot was not available.", size: 7.5, align: :center
+        pdf.fill_color TEXT_PRIMARY
       end
 
       def draw_guest_booking_details(pdf)

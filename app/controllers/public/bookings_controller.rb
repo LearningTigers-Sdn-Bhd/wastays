@@ -27,7 +27,7 @@ class Public::BookingsController < ApplicationController
 
   def invoice
     @booking = Booking.with_confirmation_token(params[:id]).first!
-    pdf_bytes = ::Reports::Bookings::GenerateInvoice.new(booking: @booking).generate
+    pdf_bytes = ::Reports::Bookings::GeneratePrimaryGuestInvoice.new(booking: @booking).generate
     send_data pdf_bytes,
       filename: "wastays-invoice-#{@booking.confirmation_token}.pdf",
       type: "application/pdf",
