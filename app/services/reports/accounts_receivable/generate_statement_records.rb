@@ -194,16 +194,19 @@ module Reports
       end
 
       def invoice_includes
-        return { booking_folio: [ :booking, { booking_billing_party: :billing_terms } ] } unless @include_invoice_details
+        return [ :invoice, { booking_folio: [ :booking, { booking_billing_party: :billing_terms } ] } ] unless @include_invoice_details
 
-        {
-          booking_folio: [
-            :folio_transactions,
-            { booking: { booking_rooms: :room_type } },
-            { booking_room: :room_type },
-            { booking_billing_party: :billing_terms }
-          ]
-        }
+        [
+          :invoice,
+          {
+            booking_folio: [
+              :folio_transactions,
+              { booking: { booking_rooms: :room_type } },
+              { booking_room: :room_type },
+              { booking_billing_party: :billing_terms }
+            ]
+          }
+        ]
       end
 
       def payments

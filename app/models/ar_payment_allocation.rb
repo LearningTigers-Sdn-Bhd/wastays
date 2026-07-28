@@ -2,7 +2,8 @@
 
 class ArPaymentAllocation < ApplicationRecord
   belongs_to :ar_payment
-  belongs_to :ar_invoice, class_name: "Receivable", foreign_key: :ar_invoice_id
+  belongs_to :ar_invoice
+  belongs_to :receivable, class_name: "Receivable", foreign_key: :ar_invoice_id
   has_one :reversal, class_name: "ArPaymentAllocationReversal", dependent: :restrict_with_error
 
   validates :amount, presence: true, numericality: { greater_than: 0 }

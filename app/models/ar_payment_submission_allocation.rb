@@ -2,7 +2,8 @@
 
 class ArPaymentSubmissionAllocation < ApplicationRecord
   belongs_to :ar_payment_submission
-  belongs_to :ar_invoice, class_name: "Receivable", foreign_key: :ar_invoice_id
+  belongs_to :ar_invoice
+  belongs_to :receivable, class_name: "Receivable", foreign_key: :ar_invoice_id
 
   validates :amount, presence: true, numericality: { greater_than: 0 }
   validates :ar_invoice_id, uniqueness: { scope: :ar_payment_submission_id }
