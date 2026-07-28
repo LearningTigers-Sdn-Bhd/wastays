@@ -90,14 +90,16 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
       metadata: {
         refund_request_id: 152
       })
+
+    FolioInvoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
   end
 
   describe "#generate" do
     it "renders the redesigned guest folio invoice text" do
       travel_to Time.zone.local(2026, 6, 22, 14, 35, 0) do
-        text = pdf_text(described_class.new(booking: booking, printed_by: "F. Suhaila").generate)
+        text = pdf_text(described_class.new(folio: folio, printed_by: "F. Suhaila").generate)
 
-        expect(text).to include("GUEST FOLIO / INVOICE")
+        expect(text).to include("FOLIO INVOICE")
         expect(text).to include("HOTEL INFORMATION")
         expect(text).to include("Hotel Name")
         expect(text).to include("Hotel ABC Resort")
@@ -141,7 +143,7 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
     end
 
     it "does not expose internal folio metadata" do
-      text = pdf_text(described_class.new(booking: booking).generate)
+      text = pdf_text(described_class.new(folio: folio).generate)
 
       expect(text).not_to include("night_audit_id")
       expect(text).not_to include("catch_up_key")
@@ -151,10 +153,104 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
 
     it "rejects open folios" do
       open_booking = create(:booking, hotel: hotel)
-      create(:booking_folio, booking: open_booking, hotel: hotel, status: "open")
+      open_folio = create(:booking_folio, booking: open_booking, hotel: hotel, status: "open")
 
-      expect { described_class.new(booking: open_booking).generate }
+      expect { described_class.new(folio: open_folio).generate }
         .to raise_error(::Reports::Bookings::GenerateFolioRecords::UnavailableError)
+    end
+
+    it "renders historical values from the finalized revision snapshot" do
+      original_name = hotel.name
+      hotel.update!(name: "Renamed Hotel")
+
+      text = pdf_text(described_class.new(folio: folio).generate)
+
+      expect(text).to include(original_name)
+      expect(text).not_to include("Renamed Hotel")
+    end
+
+    it "renders a requested historical revision separately from the current revision" do
+      invoice = folio.folio_invoice
+      invoice.update!(state: "under_correction")
+      folio.update_column(:status, "open")
+      create(:folio_transaction,
+        booking_folio: folio,
+        transaction_type: "adjustment",
+        category: "correction",
+        amount: -20,
+        description: "Revision two correction")
+      folio.update_column(:status, "closed")
+      FolioInvoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+
+      original_text = pdf_text(described_class.new(folio:, revision_number: 1).generate)
+      current_text = pdf_text(described_class.new(folio:).generate)
+
+      expect(original_text).not_to include("Revision two correction")
+      expect(current_text).to include("Revision two correction")
+      expect(current_text).to include("#{invoice.invoice_reference}-2")
+    end
+
+    it "marks a legacy invoice as a reconstruction" do
+      legacy_folio = create(:booking_folio, booking:, hotel:, status: "closed", invoice_number: 98_232, is_primary: false)
+      create(:folio_transaction, booking_folio: legacy_folio, amount: 50, description: "Legacy charge")
+      create(:folio_invoice, booking_folio: legacy_folio, legacy: true)
+
+      text = pdf_text(described_class.new(folio: legacy_folio).generate)
+
+      expect(text).to include("LEGACY-GENERATED RECONSTRUCTION")
+      expect(text).to include("original issue-time snapshot was not available")
+    end
+
+    it "uses the issuance-time hotel time zone for historical stay timestamps" do
+      expected_arrival = folio.folio_invoice.current_revision.snapshot.dig("booking", "check_in")
+      original_zone = folio.folio_invoice.current_revision.snapshot.dig("hotel", "time_zone")
+      hotel.update!(time_zone: "Pacific Time (US & Canada)")
+
+      records = Reports::Bookings::GenerateFolioRecords.new(folio:).call
+
+      expect(records.booking_stay_detail_rows).to include(
+        [ "Arrival", Time.zone.parse(expected_arrival).in_time_zone(original_zone).strftime("%d %b %Y %H:%M") ]
+      )
+    end
+
+    it "uses snapshotted corporate payer and immediate-payment references" do
+      relationship = create(
+        :hotel_corporate_account,
+        hotel:,
+        corporate_account: create(:account, :corporate, name: "Acme Events"),
+        account_type: "company"
+      )
+      party = create(
+        :booking_billing_party,
+        :company,
+        booking:,
+        hotel:,
+        hotel_corporate_account: relationship,
+        account_type: "company"
+      )
+      terms = create(
+        :booking_billing_terms,
+        booking_billing_party: party,
+        purchase_order_reference: "PO-CASH-42",
+        authorization_reference: "AUTH-CASH-9"
+      )
+      corporate_folio = create(
+        :booking_folio,
+        :secondary,
+        booking:,
+        hotel:,
+        booking_billing_party: party,
+        hotel_corporate_account: relationship,
+        status: "closed"
+      )
+      FolioInvoices::Finalize.call!(folio: corporate_folio, issued_by: nil, balance: 0)
+      relationship.corporate_account.update!(name: "Renamed Events")
+      terms.update!(purchase_order_reference: "PO-CHANGED", authorization_reference: "AUTH-CHANGED")
+
+      text = pdf_text(described_class.new(folio: corporate_folio).generate)
+
+      expect(text).to include("FOLIO INVOICE", "PAYER / FOLIO DETAILS", "Acme Events", "Company", "PO-CASH-42", "AUTH-CASH-9")
+      expect(text).not_to include("Renamed Events", "PO-CHANGED", "AUTH-CHANGED")
     end
   end
 

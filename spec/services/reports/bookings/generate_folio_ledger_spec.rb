@@ -35,7 +35,7 @@ RSpec.describe Reports::Bookings::GenerateFolioLedger do
       posting_date: Date.new(2026, 6, 19),
       metadata: { "payment_source" => "cash", "receipt_reference" => "RCP-000821" })
 
-    rows = CSV.parse(described_class.new(booking: booking).generate_csv, headers: true)
+    rows = CSV.parse(described_class.new(folio: folio).generate_csv, headers: true)
 
     expect(rows.size).to eq(2)
     expect(rows.headers).to eq([
@@ -43,8 +43,8 @@ RSpec.describe Reports::Bookings::GenerateFolioLedger do
       "Code", "Posting Date", "Description", "Reference", "Source", "Debit", "Credit", "Balance"
     ])
     expect(rows.first.to_h).to include(
-      "Folio Account Reference" => "LED-30000123",
-      "Folio Reference" => "LED-30000123/1",
+      "Folio Account Reference" => "LED-26300123",
+      "Folio Reference" => "LED-26300123/1",
       "Booking Ref" => "BK-LEDGER",
       "Guest Name" => "Ledger Guest",
       "Room No / Type" => a_string_starting_with("204 / Deluxe"),
@@ -77,7 +77,7 @@ RSpec.describe Reports::Bookings::GenerateFolioLedger do
     other_folio = create(:booking_folio, booking: other_booking, hotel: hotel)
     create(:folio_transaction, booking_folio: other_folio, amount: 999, description: "Other Booking Charge")
 
-    csv = described_class.new(booking: booking).generate_csv
+    csv = described_class.new(folio: folio).generate_csv
 
     expect(csv).to include("Room Charge")
     expect(csv).not_to include("Other Booking Charge")
@@ -100,15 +100,15 @@ RSpec.describe Reports::Bookings::GenerateFolioLedger do
     reader = nil
     text = nil
     travel_to Time.zone.local(2026, 6, 22, 14, 35, 0) do
-      pdf = described_class.new(booking: booking, printed_by: "Platform Admin").generate_pdf
+      pdf = described_class.new(folio: folio, printed_by: "Platform Admin").generate_pdf
       reader = PDF::Reader.new(StringIO.new(pdf))
       text = reader.pages.map(&:text).join("\n")
     end
 
     expect(pdf.dup.force_encoding("BINARY")[0, 5]).to eq("%PDF-")
-    expect(reader.info[:Title]).to eq("Folio Ledger - LED-30000123/1")
+    expect(reader.info[:Title]).to eq("Folio Ledger - LED-26300123/1")
     expect(text).to include("Folio Ledger")
-    expect(text).to include("LED-30000123")
+    expect(text).to include("LED-26300123")
     expect(text).to include("BK-LEDGER")
     expect(text).to include("Ledger & Guest")
     expect(text).to include("Room Charge")
@@ -125,7 +125,7 @@ RSpec.describe Reports::Bookings::GenerateFolioLedger do
   end
 
   it "credits negative charge amounts when building debit and credit values" do
-    report = described_class.new(booking: booking)
+    report = described_class.new(folio: folio)
     transaction = instance_double(FolioTransaction, amount: -25.to_d, transaction_type: "charge")
 
     debit, credit = report.send(:debit_credit_for, transaction)

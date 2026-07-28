@@ -1,67 +1,72 @@
-<% presenter = @panel_presenter %>
-<% can_manage_bookings = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-
 <%= render "hotel_portal/bookings/actions/shared/sheet",
-      id: "booking-group-documents-sheet",
-      title: "Print / Send",
-      description: "Choose documents for individual rooms in this group.",
-      side: :right,
-      size: :lg do %>
-  <div class="space-y-6">
-    <%= render PanelsUI::Button.new(
-          variant: :ghost,
-          size: :sm,
-          data: { action: "panels-ui--sheet#close" }) do %>
-      <%= app_icon "arrow-left", class: "size-4", aria: { hidden: true } %>
-      <span>Back to booking summary</span>
+           id: "quick-documents-sheet",
+           title: "Quick Documents",
+           description: (@booking.group_booking_id? ? "#{@booking.group_booking.formatted_reservation_number} document shortcuts" : "#{@booking.confirmation_token} document shortcuts"),
+           size: :sm do %>
+  <div class="space-y-5">
+    <% if @booking.group_booking_id? %>
+      <p class="text-sm text-muted-foreground">Open the Documents tab to view invoices, ledgers, receipts, utility documents, and consolidated statements for the group.</p>
+    <% else %>
+      <% quick_rows = [
+           [ "Invoice", "file-text", @quick_documents[:invoice] ],
+           [ "Folio Ledger", "book-open", @quick_documents[:ledger] ],
+           [ "Receipt", "receipt", @quick_documents[:receipt] ],
+           [ "Registration Card", "clipboard-list", @quick_documents[:registration_card] ]
+         ] %>
+
+      <div class="divide-y divide-border rounded-md border border-border">
+        <% quick_rows.each do |label, icon, row| %>
+          <div class="flex items-center justify-between gap-3 px-3 py-2.5">
+            <div class="flex min-w-0 items-center gap-2.5">
+              <%= app_icon icon, class: "size-4 shrink-0 text-muted-foreground", aria: { hidden: true } %>
+              <span class="truncate text-sm font-medium text-foreground"><%= label %></span>
+            </div>
+            <% if row&.available? %>
+              <%= render PanelsUI::Button.new(href: row.href, target: "_blank", data: { turbo: false }, variant: :secondary, size: :xs) do %>
+                Open
+              <% end %>
+            <% else %>
+              <%= render PanelsUI::Button.new(label: "Open", variant: :secondary, size: :xs, disabled: true) %>
+            <% end %>
+          </div>
+        <% end %>
+
+        <% if @booking.tourism_tax? %>
+          <div class="flex items-center justify-between gap-3 px-3 py-2.5">
+            <div class="flex min-w-0 items-center gap-2.5">
+              <%= app_icon "receipt", class: "size-4 shrink-0 text-muted-foreground", aria: { hidden: true } %>
+              <span class="truncate text-sm font-medium text-foreground">Tourism Tax Voucher</span>
+            </div>
+            <% if @booking.tourism_tax_voucher_number? %>
+              <%= render PanelsUI::Button.new(href: hotel_booking_tourism_tax_voucher_path(current_hotel, @booking), target: "_blank", data: { turbo: false }, variant: :secondary, size: :xs) do %>
+                Open
+              <% end %>
+            <% elsif current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+              <%= button_to "Open", issue_hotel_booking_tourism_tax_voucher_path(current_hotel, @booking), method: :post, form: { target: "_blank", data: { turbo: false } }, class: "inline-flex h-7 items-center rounded-md border border-border bg-background px-2.5 text-xs font-medium text-foreground hover:bg-muted" %>
+            <% else %>
+              <%= render PanelsUI::Button.new(label: "Open", variant: :secondary, size: :xs, disabled: true) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
     <% end %>
 
-    <section aria-labelledby="group-documents-heading" class="overflow-hidden rounded-lg border border-border">
-      <div class="border-b border-border bg-muted px-4 py-3">
-        <h3 id="group-documents-heading" class="text-base font-semibold">Group documents</h3>
-      </div>
-      <ul class="divide-y divide-border">
-        <% [ [ "receipt", "Group Receipt" ], [ "file-text", "Group Invoice" ], [ "send", "Resend Group Confirmation" ] ].each do |icon, label| %>
-          <li class="flex items-center justify-between gap-3 px-4 py-3">
-            <span class="flex items-center gap-2 text-sm font-medium text-muted-foreground"><%= app_icon icon, class: "size-4", aria: { hidden: true } %><%= label %></span>
-            <%= render PanelsUI::Badge.new(label: "Unavailable", variant: :neutral, size: :sm) %>
-          </li>
-        <% end %>
-      </ul>
-    </section>
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+      <%= render PanelsUI::Button.new(
+            href: hotel_booking_workspace_path(current_hotel, @booking, tab: "documents"),
+            variant: :ghost,
+            size: :sm,
+            data: { turbo_frame: "_top" }
+          ) do %>
+        View all documents
+      <% end %>
 
-    <div class="space-y-5">
-      <% presenter.document_row_groups.each do |room_type, rows| %>
-        <section aria-labelledby="document-room-type-<%= room_type.parameterize %>" class="overflow-hidden rounded-lg border border-border">
-          <div class="border-b border-border bg-muted px-4 py-3">
-            <h3 id="document-room-type-<%= room_type.parameterize %>" class="text-sm font-semibold"><%= room_type %> (<%= rows.size %>)</h3>
-          </div>
-          <ul class="divide-y divide-border">
-            <% rows.each do |row| %>
-              <li class="space-y-3 px-4 py-3">
-                <p class="text-sm font-medium text-foreground"><%= row.room_number %> · <%= row.guest_name %></p>
-                <div class="flex flex-wrap items-center gap-2">
-                  <%= render PanelsUI::Button.new(href: receipt_booking_path(row.booking.confirmation_token), variant: :secondary, size: :xs, target: "_blank", data: { turbo: false }) do %>
-                    <%= app_icon "receipt", class: "size-4", aria: { hidden: true } %><span>Receipt</span>
-                  <% end %>
-
-                  <%= render PanelsUI::Button.new(href: (invoice_booking_path(row.booking.confirmation_token) if row.invoice_available), variant: :secondary, size: :xs, disabled: !row.invoice_available, target: "_blank", data: { turbo: false }, title: ("Available after checkout" unless row.invoice_available)) do %>
-                    <%= app_icon "file-text", class: "size-4", aria: { hidden: true } %><span>Invoice</span>
-                  <% end %>
-
-                  <% if can_manage_bookings %>
-                    <%= render PanelsUI::Button.new(href: hotel_booking_guest_registration_card_path(current_hotel, row.booking), variant: :secondary, size: :xs, target: "_blank", data: { turbo: false }) do %>
-                      <%= app_icon "clipboard-list", class: "size-4", aria: { hidden: true } %><span>Registration card</span>
-                    <% end %>
-                  <% end %>
-
-                  <%= render PanelsUI::Button.new(label: "Resend confirmation", variant: :secondary, size: :xs, disabled: true) %>
-                  <%= render PanelsUI::Button.new(label: "Resend pre-check-in", variant: :secondary, size: :xs, disabled: true) %>
-                </div>
-              </li>
-            <% end %>
-          </ul>
-        </section>
+      <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+        <%= render "hotel_portal/bookings/shared/invoice_resend",
+                   preview: @invoice_delivery_preview,
+                   booking: @booking,
+                   dialog_id: "quick-documents-resend-dialog",
+                   return_to: hotel_booking_workspace_path(current_hotel, @booking, tab: "documents") %>
       <% end %>
     </div>
   </div>

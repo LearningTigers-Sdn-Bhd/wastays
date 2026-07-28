@@ -1,0 +1,7 @@
+<p>We received your payment to <strong><%= @hotel.name %></strong>.</p>
+<p>
+  Receipt: <strong><%= @receipt.public_number %></strong><br>
+  Amount: <strong><%= @receipt.currency %> <%= format("%.2f", @receipt.amount) %></strong><br>
+  Received: <%= @receipt.received_at.strftime("%d %B %Y %H:%M") %>
+</p>
+<p>Your individual payment receipt is attached.</p>

@@ -19,7 +19,7 @@ RSpec.describe GroupBookings::CreateFromBookings do
     expect(result).to be_success
     expect(result.group_booking.confirmation_token).to be_present
     expect(result.group_booking.reservation_number).to be_present
-    expect(result.group_booking.receipt_number).to be_present
+    expect(result.group_booking.receipt_number).to be_nil
     expect(result.group_booking.bookings.reload).to contain_exactly(first, second)
     expect(result.group_booking.bookings).to all(satisfy { |child| child.booking_rooms.one? })
     expect(first.reload.group_position).to eq(1)

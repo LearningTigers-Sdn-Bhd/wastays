@@ -117,11 +117,13 @@ Rails.application.routes.draw do
     end
     resources :bookings, only: [ :show ] do
       member do
+        get :confirmation
         get :receipt
         get :invoice
         get :voucher
       end
     end
+    resources :receipts, only: [ :show ]
     resources :pre_checkins, only: [ :show, :update ], param: :token, path: "pre-checkin" do
       post :cancel, on: :member
     end
@@ -302,7 +304,9 @@ Rails.application.routes.draw do
       end
       get "aging", to: "ar_invoices#aging", as: :ar_aging
       get "agent-summary", to: "ar_invoices#agent_summary", as: :ar_agent_summary
-      resources :ar_invoices, only: [ :index, :show ], path: "invoices"
+      resources :ar_invoices, only: [ :index, :show ], path: "invoices" do
+        get :pdf, on: :member
+      end
       resources :ar_statements, only: [ :index, :show ], path: "statements"
       resources :ar_payments, only: [ :index, :show, :new, :create ], path: "payments" do
         get :eligible_invoices, on: :collection
@@ -374,10 +378,12 @@ Rails.application.routes.draw do
         post :resolve_complaint_request, controller: :workspace_actions
       end
     end
+    get "bookings/:booking_id/group-statement", to: "bookings/group_statements#show", as: :booking_group_statement
     scope "booking-actions", as: :booking_action, module: "bookings/actions" do
       get "audit-trail/:booking_id", to: "audit_trails#show", as: :audit_trail
       get "show-booking/:booking_id", to: "summaries#show", as: :show_booking
       get "show-booking/:booking_id/print-send", to: "documents#show", as: :group_print_send
+      post "show-booking/:booking_id/print-send/resend", to: "documents#resend", as: :group_print_send_resend
       match "new-booking", to: "new_bookings#show", via: [ :get, :post ], as: :new_booking
       match "quick-booking", to: "quick_bookings#show", via: [ :get, :post ], as: :quick_booking
       match "walk-in-check-in", to: "walk_in_check_ins#show", via: [ :get, :post ], as: :walk_in_check_in
@@ -420,9 +426,10 @@ Rails.application.routes.draw do
       collection do
         get "needs-attention", to: "folios#needs_attention", as: :needs_attention
       end
-      get :invoice, on: :member
-      get :ledger, on: :member
     end
+    get "folio-documents/:folio_id/invoice", to: "folios#invoice", as: :folio_invoice
+    get "folio-documents/:folio_id/invoice/revisions/:revision_number", to: "folios#invoice", as: :folio_invoice_revision
+    get "folio-documents/:folio_id/ledger", to: "folios#ledger", as: :folio_ledger
 
     get "requests", to: "requests#index", as: :requests
     get "requests/archive", to: "requests#archive", as: :request_archive

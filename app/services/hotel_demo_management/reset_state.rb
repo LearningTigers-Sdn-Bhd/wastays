@@ -156,6 +156,9 @@ module HotelDemoManagement
       folio_ids = BookingFolio.where(booking_id: booking_ids).pluck(:id)
       billing_party_ids = BookingBillingParty.where(booking_id: booking_ids).pluck(:id)
 
+      @logger.puts "Force deleting #{Receipt.where(hotel_id: @hotel.id).count} issued receipts..."
+      Receipt.where(hotel_id: @hotel.id).delete_all
+
       operation_log_count = FolioOperationLog.where(booking_id: booking_ids).count
       if operation_log_count > 0
         @logger.puts "Force deleting #{operation_log_count} immutable folio operation logs..."
@@ -169,6 +172,7 @@ module HotelDemoManagement
       end
 
       delete_accounts_receivable_data
+      delete_invoice_documents(folio_ids)
       delete_deposit_data
 
       forecasted_count = FolioForecastedCharge.where(booking_folio_id: folio_ids).count
@@ -238,6 +242,29 @@ module HotelDemoManagement
       CorporateArPaymentIntent.where(id: intent_ids).delete_all
       ArPayment.where(id: payment_ids).delete_all
       ArInvoice.where(id: invoice_ids).delete_all
+    end
+
+    def delete_invoice_documents(folio_ids)
+      invoice_ids = Invoice.where(booking_folio_id: folio_ids).ids
+      legacy_invoice_ids = FolioInvoice.where(booking_folio_id: folio_ids).ids
+      return if invoice_ids.empty? && legacy_invoice_ids.empty?
+
+      @logger.puts "Force deleting #{invoice_ids.size} unified invoice documents..."
+      with_revision_deletion_enabled do
+        FolioInvoiceRevision.where(folio_invoice_id: legacy_invoice_ids).delete_all
+        FolioInvoice.where(id: legacy_invoice_ids).delete_all
+        InvoiceRevision.where(invoice_id: invoice_ids).delete_all
+        Invoice.where(id: invoice_ids).delete_all
+      end
+    end
+
+    def with_revision_deletion_enabled
+      connection = ActiveRecord::Base.connection
+      connection.execute("ALTER TABLE folio_invoice_revisions DISABLE TRIGGER USER")
+      connection.execute("ALTER TABLE invoice_revisions DISABLE TRIGGER USER")
+      yield
+      connection.execute("ALTER TABLE invoice_revisions ENABLE TRIGGER USER")
+      connection.execute("ALTER TABLE folio_invoice_revisions ENABLE TRIGGER USER")
     end
 
     def delete_deposit_data

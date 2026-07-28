@@ -11,7 +11,7 @@ module CorporatePortal
       if params[:legacy] == "true"
         @payment = ArPayment.joins(:hotel_corporate_account)
           .where(hotel_corporate_accounts: { corporate_account_id: current_user.account.id })
-           .includes(:hotel, ar_payment_allocations: [ { ar_invoice: :hotel }, { reversal: :reversed_by } ])
+          .includes(:hotel, ar_payment_allocations: [ { ar_invoice: [ :hotel, :invoice ] }, { reversal: :reversed_by } ])
           .find(params[:id])
         append_breadcrumb @payment.reference_number, corporate_ar_payment_path(@payment, legacy: true)
       else

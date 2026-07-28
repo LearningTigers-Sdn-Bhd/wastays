@@ -56,6 +56,9 @@ class Hotel < ApplicationRecord
   has_many :group_bookings, dependent: :restrict_with_error
   has_many :booking_folios, dependent: :restrict_with_error
   has_many :ar_invoices, dependent: :restrict_with_error
+  has_many :folio_invoices, dependent: :restrict_with_error
+  has_many :invoices, dependent: :restrict_with_error
+  has_many :receivables, class_name: "Receivable", dependent: :restrict_with_error
   has_many :ar_payments, dependent: :restrict_with_error
   has_many :ar_payment_submissions, dependent: :restrict_with_error
   has_many :folio_routing_rules, dependent: :destroy
@@ -92,11 +95,14 @@ class Hotel < ApplicationRecord
                            length: { in: 3..6 },
                            format: { with: /\A[A-Z0-9]+\z/, message: "must be uppercase letters and numbers only" },
                            if: -> { hotel_prefix.present? }
+  has_many :hotel_prefix_histories, dependent: :destroy
+  validate :hotel_prefix_has_not_been_used_by_another_hotel
 
   before_validation :normalize_default_currency
   before_validation :reset_pax_pricing_only_if_not_allowed
   before_validation :normalize_hotel_prefix
-  before_create :assign_hotel_prefix
+  before_validation :assign_hotel_prefix, on: :create
+  after_save :record_hotel_prefix_history, if: :saved_change_to_hotel_prefix?
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
   validates :city, presence: true
@@ -616,6 +622,22 @@ class Hotel < ApplicationRecord
 
   private
 
+  def hotel_prefix_has_not_been_used_by_another_hotel
+    return if hotel_prefix.blank?
+    return unless HotelPrefixHistory.where(prefix: hotel_prefix).where.not(hotel_id: id).exists?
+
+    errors.add(:hotel_prefix, "has already been used by another hotel")
+  end
+
+  def record_hotel_prefix_history
+    return if hotel_prefix.blank?
+
+    hotel_prefix_histories.where.not(prefix: hotel_prefix).where(retired_at: nil).update_all(retired_at: Time.current, updated_at: Time.current)
+    history = hotel_prefix_histories.find_or_initialize_by(prefix: hotel_prefix)
+    history.retired_at = nil
+    history.save!
+  end
+
   def assign_hotel_prefix
     return if hotel_prefix.present?
     self.hotel_prefix = generate_unique_prefix
@@ -632,7 +654,7 @@ class Hotel < ApplicationRecord
     base = build_prefix_base
     candidate = base
     counter = 2
-    while Hotel.exists?(hotel_prefix: candidate)
+    while Hotel.exists?(hotel_prefix: candidate) || HotelPrefixHistory.exists?(prefix: candidate)
       candidate = "#{base}#{counter}"
       counter += 1
     end
@@ -642,7 +664,7 @@ class Hotel < ApplicationRecord
   def build_prefix_base
     cleaned = name.to_s.upcase.gsub(/[^A-Z\s]/, "").strip
     words = cleaned.split(/\s+/).reject(&:empty?)
-    return "WS" if words.empty?
+    return "WAS" if words.empty?
 
     base =
       if words.length >= PREFIX_MIN_LENGTH

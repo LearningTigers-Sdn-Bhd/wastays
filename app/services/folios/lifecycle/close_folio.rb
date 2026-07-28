@@ -41,7 +41,13 @@ module Folios
           return failure(validation_error) if validation_error.present?
 
           @folio.update!(status: "closed", closed_at: Time.current, closed_by: @user)
-          ar_invoice = create_ar_invoice!(balance) if direct_bill
+          document = Folios::Lifecycle::IssueClosingDocument.call!(
+            folio: @folio,
+            settlement_method: (DIRECT_BILL_SETTLEMENT if direct_bill),
+            balance:,
+            user: @user
+          )
+          ar_invoice = document.receivable
           FolioOperationLog.create!(
             hotel: @hotel,
             booking: @booking,
@@ -61,6 +67,7 @@ module Folios
       rescue ActiveRecord::RecordInvalid => e
         failure(e.record.errors.full_messages.to_sentence)
       rescue StandardError => e
+        Rails.logger.error("#{self.class.name} failed: #{e.full_message(highlight: false, order: :top)}")
         failure(e.message)
       end
 
@@ -88,10 +95,6 @@ module Folios
         return authorization.error unless authorization.success?
 
         nil
-      end
-
-      def create_ar_invoice!(balance)
-        Folios::Lifecycle::CreateDirectBillArInvoice.call!(folio: @folio, balance: balance)
       end
 
       def close_metadata(ar_invoice)

@@ -21,13 +21,14 @@ module Folios
       end
 
       def call
-        folio_number = DocumentIdentifiers::NextFolioNumber.call(hotel: @hotel)
-        @booking.assign_folio_account_reference_from!(folio_number)
+        allocation = DocumentIdentifiers::NextFolioNumber.issue(hotel: @hotel)
+        @booking.assign_folio_account_reference_from!(allocation.number, folio_year: allocation.year)
         billing_party = agent_billing_party
 
         @booking.create_booking_folio!(
           hotel: @hotel,
-          folio_number: folio_number,
+          folio_number: allocation.number,
+          folio_year: allocation.year,
           folio_sequence: 1,
           folio_type: billing_party ? "external" : "guest",
           payer_type: billing_party ? "company" : "guest",

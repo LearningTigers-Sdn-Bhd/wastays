@@ -22,7 +22,7 @@ class Api::V1::Bookings::HousekeepingRequestsController < Api::V1::BaseControlle
   private
 
   def set_booking
-    @booking = booking_scope.find_by(confirmation_token: params[:booking_id]) || booking_scope.find_by(id: params[:booking_id])
+    @booking = booking_scope.with_confirmation_token(params[:booking_id]).first || booking_scope.find_by(id: params[:booking_id])
 
     unless @booking
       render json: { error: "Booking not found or access denied" }, status: :not_found

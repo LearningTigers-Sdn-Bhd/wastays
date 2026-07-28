@@ -14,6 +14,10 @@ class BookingFolio < ApplicationRecord
   has_many :folio_transactions, dependent: :restrict_with_error
   has_many :folio_forecasted_charges, dependent: :destroy
   has_one :ar_invoice, dependent: :restrict_with_error
+  has_one :folio_invoice, dependent: :restrict_with_error
+  has_one :invoice, dependent: :restrict_with_error
+  has_one :receivable, class_name: "Receivable", dependent: :restrict_with_error
+  has_many :receipts, through: :folio_transactions
   has_many :target_folio_routing_rules, class_name: "FolioRoutingRule", foreign_key: :target_folio_id, dependent: :restrict_with_error
   has_many :deposit_movements, dependent: :restrict_with_error
   has_many :financial_audit_events, dependent: :restrict_with_error
@@ -24,11 +28,11 @@ class BookingFolio < ApplicationRecord
   enum :folio_type, FOLIO_TYPES.index_by(&:itself), prefix: true, validate: true
   enum :payer_type, PAYER_TYPES.index_by(&:itself), prefix: true, validate: true
 
-  validates :folio_number, presence: true, uniqueness: { scope: :hotel_id }
+  validates :folio_number, presence: true, uniqueness: { scope: [ :hotel_id, :folio_year ] }
   validates :currency, presence: true
   validates :opened_at, presence: true
   validates :status, presence: true
-  validates :invoice_number, uniqueness: { scope: :hotel_id, allow_nil: true }
+  validates :invoice_number, uniqueness: { scope: [ :hotel_id, :invoice_year ], allow_nil: true }
   validates :folio_sequence, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validates :folio_sequence, uniqueness: { scope: :booking_id, allow_nil: true }
   validates :is_primary, uniqueness: { scope: [ :booking_id, :booking_room_id ], conditions: -> { where(is_primary: true) }, if: :is_primary? }
@@ -41,6 +45,7 @@ class BookingFolio < ApplicationRecord
   validate :last_primary_folio_cannot_be_unset
   validate :closed_folio_fields_are_restricted, on: :update
   before_validation :assign_defaults
+  before_validation :assign_invoice_reference
   before_validation :normalize_payer_type
   before_validation :clear_hotel_corporate_account_unless_company_payer
   after_create :ensure_booking_folio_account_reference
@@ -144,6 +149,19 @@ class BookingFolio < ApplicationRecord
     clear_reopen_for_correction_authorization!
   end
 
+  # Invoice allocation is part of the controlled close transaction. Closed
+  # folios otherwise remain immutable through the normal update path.
+  def assign_invoice_identifier_for_closure!(allocation)
+    @assign_invoice_identifier_for_closure_authorized = true
+    update!(
+      invoice_number: allocation.number,
+      invoice_year: allocation.year,
+      invoice_reference: allocation.reference
+    )
+  ensure
+    @assign_invoice_identifier_for_closure_authorized = false
+  end
+
   private
 
   def guard_night_audit_operational_change
@@ -155,7 +173,13 @@ class BookingFolio < ApplicationRecord
     self.payer_type ||= "guest"
     self.currency ||= booking&.currency.presence || hotel&.default_currency.presence || "MYR"
     self.opened_at ||= Time.current
+    self.folio_year ||= DocumentIdentifiers::Issuer.sequence_year(hotel:) if hotel && folio_number.present?
     self.folio_sequence ||= next_folio_sequence if booking.present?
+  end
+
+  def assign_invoice_reference
+    self.invoice_year ||= DocumentIdentifiers::Issuer.sequence_year(hotel:) if hotel && invoice_number.present?
+    self.invoice_reference ||= DocumentIdentifiers::Issuer.format(hotel:, type: :invoice, year: invoice_year, number: invoice_number)
   end
 
   def normalize_payer_type
@@ -254,6 +278,7 @@ class BookingFolio < ApplicationRecord
   def closed_folio_fields_are_restricted
     return unless status_in_database.in?(%w[closed voided])
     return if will_save_change_to_status?
+    return if @assign_invoice_identifier_for_closure_authorized
 
     allowed = %w[updated_at]
     changed = changes.keys - allowed
@@ -273,7 +298,7 @@ class BookingFolio < ApplicationRecord
   def ensure_booking_folio_account_reference
     return if booking.blank? || booking.folio_account_reference.present? || folio_number.blank?
 
-    booking.assign_folio_account_reference_from!(folio_number)
+    booking.assign_folio_account_reference_from!(folio_number, folio_year: folio_year)
   end
 
   def authorize_reopen_for_correction!

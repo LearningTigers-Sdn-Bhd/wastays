@@ -26,9 +26,6 @@ module BookingEngine
           return OpenStruct.new(success?: false, message: "Quote has expired.")
         end
 
-        reservation_num = HotelCounter.increment!(hotel: @quote.hotel, type: "reservation")
-        receipt_num     = HotelCounter.increment!(hotel: @quote.hotel, type: "receipt")
-
         # 2. Create Booking from Quote snapshots
         margin_rate = @quote.hotel.effective_margin_rate
         margin_amount = (@quote.total_amount * (margin_rate / 100.0)).round(2)
@@ -83,8 +80,6 @@ module BookingEngine
           tourism_tax_applied: tourism_tax_amount.positive?,
           tax_lines: tax_lines,
           tax_posting_snapshot: financial_snapshot.tax_posting_snapshot,
-          reservation_number: reservation_num,
-          receipt_number: receipt_num,
           hotel_corporate_account_id: @quote.hotel_corporate_account_id
         )
 

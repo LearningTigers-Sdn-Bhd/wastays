@@ -24,6 +24,29 @@ RSpec.describe Hotel, type: :model do
     end
   end
 
+  describe "prefix history" do
+    it "keeps issued document references stable when the hotel prefix changes" do
+      hotel = create(:hotel, hotel_prefix: "OLD")
+      booking = create(:booking, hotel: hotel)
+      original_reference = booking.formatted_reservation_number
+
+      hotel.update!(hotel_prefix: "NEW")
+
+      expect(booking.reload.formatted_reservation_number).to eq(original_reference)
+      expect(hotel.hotel_prefix_histories.pluck(:prefix)).to contain_exactly("OLD", "NEW")
+    end
+
+    it "does not allow another hotel to reuse a retired prefix" do
+      hotel = create(:hotel, hotel_prefix: "OLD")
+      hotel.update!(hotel_prefix: "NEW")
+
+      other = build(:hotel, hotel_prefix: "OLD")
+
+      expect(other).not_to be_valid
+      expect(other.errors[:hotel_prefix]).to include("has already been used by another hotel")
+    end
+  end
+
   describe 'constants' do
     it 'defines allowed statuses' do
       expect(Hotel::STATUSES).to match_array(%w[

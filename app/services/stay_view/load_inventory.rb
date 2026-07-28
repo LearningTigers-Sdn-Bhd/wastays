@@ -130,7 +130,7 @@ module StayView
     def load_bookings
       guest_column = capabilities.view_booking? ? "bookings.guest_name" : Arel.sql("NULL")
       primary_guest_column = capabilities.view_booking? ? primary_guest_name_column : Arel.sql("NULL")
-      group_reference_column = capabilities.view_booking? ? "group_bookings.reservation_number" : Arel.sql("NULL")
+      group_reference_column = capabilities.view_booking? ? "group_bookings.reservation_reference" : Arel.sql("NULL")
       group_name_column = capabilities.view_booking? ? "group_bookings.name" : Arel.sql("NULL")
       adults_column = capabilities.view_booking? ? "bookings.adults" : Arel.sql("NULL")
       children_column = capabilities.view_booking? ? "bookings.children" : Arel.sql("NULL")
@@ -262,9 +262,7 @@ module StayView
         .group_by(&:group_booking_id)
     end
 
-    def group_reference(reservation_number)
-      DocumentIdentifiers::HotelReferences.format(hotel:, number: reservation_number, type_code: 1)
-    end
+    def group_reference(reference) = reference
 
     def visible_booking_statuses
       Booking::OCCUPYING_STATUSES

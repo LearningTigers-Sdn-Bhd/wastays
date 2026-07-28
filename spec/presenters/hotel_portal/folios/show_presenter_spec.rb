@@ -25,6 +25,16 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
     folio
   end
 
+  it "offers the invoice report only for a finalized canonical folio invoice" do
+    expect(presenter.booking_invoice_report_available?).to be(false)
+    folio.update!(status: "closed", closed_at: Time.current)
+    create(:folio_invoice, booking_folio: folio)
+
+    fresh_presenter = described_class.new(booking: booking.reload, hotel: hotel)
+
+    expect(fresh_presenter.booking_invoice_report_available?).to be(true)
+  end
+
   it "uses the folio reference instead of the booking confirmation as the title reference" do
     expect(presenter.folio_account_reference).to eq(booking.reload.folio_account_reference_display)
     expect(presenter.folio_reference).to eq("#{booking.folio_account_reference_display}/1")

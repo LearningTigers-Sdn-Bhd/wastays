@@ -57,13 +57,13 @@ class Guest::BookingsController < Guest::BaseController
 
   def invoice
     @booking = current_guest.bookings.find(params[:id])
-    pdf_bytes = ::Reports::Bookings::GenerateInvoice.new(booking: @booking).generate
+    pdf_bytes = ::Reports::Bookings::GeneratePrimaryGuestInvoice.new(booking: @booking).generate
     send_data pdf_bytes,
       filename: "wastays-invoice-#{@booking.confirmation_token}.pdf",
       type: "application/pdf",
       disposition: "attachment"
   rescue ::Reports::Bookings::GenerateFolioRecords::UnavailableError
-    redirect_to guest_bookings_path, alert: "Invoice is only available after checkout."
+    redirect_to guest_bookings_path, alert: "No finalized guest invoice is available for this booking."
   rescue ActiveRecord::RecordNotFound
     redirect_to guest_bookings_path, alert: "Booking not found."
   end

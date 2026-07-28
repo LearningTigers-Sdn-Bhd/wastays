@@ -56,15 +56,15 @@ module HotelPortal
 
     def audit_trail
       @booking = current_hotel.bookings.find(params[:booking_id])
-      @presenter = HotelPortal::Bookings::WorkspacePresenter.new(@booking, params: params, hotel: current_hotel)
+      @presenter = HotelPortal::Bookings::WorkspacePresenter.new(@booking, params: params, hotel: current_hotel, user: current_user)
       set_audit_logs(@presenter.audit_selected_booking || @booking, group_booking: (@booking.group_booking if @presenter.audit_group_scope?))
     end
 
     private
 
     def set_workspace_booking
-      @booking = current_hotel.bookings
-        .includes(
+      scope = current_hotel.bookings
+      scope = scope.includes(
           { booking_rooms: [ :room_type, :rate_plan ] },
           { booking_guests: :guest },
           :hotel,
@@ -83,7 +83,7 @@ module HotelPortal
           folio_routing_rules: [ :transaction_code, :target_folio, :created_by, :updated_by ],
           folio_operation_logs: [ :actor, :source_folio, :target_folio, :source_transaction, :target_transaction ]
         )
-        .find(params[:booking_id])
+      @booking = scope.find(params[:booking_id])
     end
 
     def prepare_workspace(guest_form: nil, booking_guest_form: nil)
@@ -92,10 +92,17 @@ module HotelPortal
         @booking,
         params: params,
         hotel: current_hotel,
+        user: current_user,
         booking_presenter: @booking_presenter,
         guest_form: guest_form,
         booking_guest_form: booking_guest_form
       )
+      if @presenter.active_tab == "documents"
+        @invoice_delivery_preview = Notifications::InvoiceDelivery.preview(
+          hotel: current_hotel,
+          bookings: @presenter.document_context_bookings
+        )
+      end
       @entity_booking = @presenter.selected_child_booking
       @folio_show = Folios::ShowPresenter.new(
         booking: @entity_booking,

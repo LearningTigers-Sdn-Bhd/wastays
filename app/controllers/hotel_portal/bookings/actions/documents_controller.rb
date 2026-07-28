@@ -3,17 +3,47 @@
 module HotelPortal
   module Bookings
     module Actions
-      # Group Print / Send documents. A standalone, lazily-loaded action: launch it
-      # into `booking_action_sheet_secondary` to stack it above the booking summary,
-      # or into `booking_action_sheet` to open it on its own.
       class DocumentsController < OverviewBaseController
-        def show
-          unless @booking.group_booking_id?
-            return redirect_to hotel_booking_action_show_booking_path(current_hotel, @booking, navigation_params),
-              alert: "Print / Send group view is only available for group bookings."
-          end
+        before_action :authorize_manage_bookings!, only: :resend
 
-          render :show, layout: false
+        def show
+          @workspace_presenter = workspace_presenter
+          @quick_documents = @workspace_presenter.quick_documents unless @booking.group_booking_id?
+          @invoice_delivery_preview = Notifications::InvoiceDelivery.preview(
+            hotel: current_hotel,
+            bookings: @workspace_presenter.document_context_bookings
+          )
+        end
+
+        def resend
+          result = Notifications::InvoiceDelivery.queue(
+            hotel: current_hotel,
+            bookings: context_bookings,
+            anchor_booking: @booking,
+            source: "manual_resend",
+            requested_by: current_user
+          )
+
+          queued = result.deliveries.count { |delivery| delivery.status == "pending" }
+          skipped = result.deliveries.count { |delivery| delivery.status == "skipped" }
+          notice = "Queued #{queued} invoice #{'email'.pluralize(queued)}."
+          notice += " Skipped #{skipped} #{'payer'.pluralize(skipped)} without a saved email." if skipped.positive?
+          complete_action(notice:)
+        end
+
+        private
+
+        def context_bookings
+          workspace_presenter.document_context_bookings
+        end
+
+        def workspace_presenter
+          @workspace_presenter ||= HotelPortal::Bookings::WorkspacePresenter.new(
+            @booking,
+            params: { tab: "documents" },
+            hotel: current_hotel,
+            user: current_user
+          )
         end
       end
     end

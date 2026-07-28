@@ -12,6 +12,10 @@ class Deposit < ApplicationRecord
   belongs_to :received_by, class_name: "User", optional: true
   has_many :deposit_movements, -> { chronological }, dependent: :restrict_with_error,
     inverse_of: :deposit
+  has_one :receipt, dependent: :restrict_with_error
+
+  after_create :issue_payment_receipt
+  after_update :issue_payment_receipt, if: :became_receiptable?
 
   enum :kind, KINDS.index_by(&:itself), prefix: true, validate: true
   enum :status, STATUSES.index_by(&:itself), validate: true
@@ -69,6 +73,14 @@ class Deposit < ApplicationRecord
   end
 
   private
+
+  def issue_payment_receipt
+    Receipts::Issue.call!(source: self)
+  end
+
+  def became_receiptable?
+    saved_change_to_status? && status.in?(%w[held available settled]) && receipt.blank?
+  end
 
   def movement_total(type)
     if deposit_movements.loaded?

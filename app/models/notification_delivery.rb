@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class NotificationDelivery < ApplicationRecord
-  NOTIFICATION_TYPES = NotificationConfig::NOTIFICATION_TYPES
+  NOTIFICATION_TYPES = (NotificationConfig::NOTIFICATION_TYPES + %w[invoice_package]).freeze
   CHANNELS = NotificationConfig::CHANNELS
   STATUSES = %w[pending sent failed skipped].freeze
 

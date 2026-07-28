@@ -8,8 +8,11 @@ module DocumentIdentifiers
   # it past the max, and subsequent calls run straight off the counter again.
   class NextFolioNumber
     def self.call(hotel:)
-      floor = BookingFolio.where(hotel_id: hotel.id).maximum(:folio_number)
-      HotelCounter.increment!(hotel: hotel, type: "folio", floor: floor)
+      issue(hotel:).number
+    end
+
+    def self.issue(hotel:)
+      DocumentIdentifiers::Issuer.issue!(hotel:, type: :folio)
     end
   end
 end

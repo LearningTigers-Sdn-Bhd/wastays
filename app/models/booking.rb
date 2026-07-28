@@ -33,6 +33,7 @@ class Booking < ApplicationRecord
   has_many :check_out_requests, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
+  has_one :booking_confirmation_token, dependent: :destroy
   has_many :folio_operation_logs, dependent: :restrict_with_error
   has_many :room_operational_audit_logs, dependent: :nullify
   attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :guest_date_of_birth, :status_transition_event
@@ -119,9 +120,14 @@ class Booking < ApplicationRecord
   before_validation :assign_confirmation_token, on: :create
   before_create :assign_document_counters
   before_validation :normalize_guest_data
-  before_create :assign_guest_registration_number
+  before_validation :assign_existing_document_references
+  after_create :register_confirmation_token
+  after_update :sync_confirmation_token, if: :saved_change_to_confirmation_token?
 
   scope :recent_first, -> { order(created_at: :desc) }
+  scope :with_confirmation_token, ->(token) {
+    joins(:booking_confirmation_token).where(booking_confirmation_tokens: { token: token.to_s.strip.upcase })
+  }
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }
   scope :completed, -> { where(status: "completed") }
@@ -293,6 +299,7 @@ class Booking < ApplicationRecord
   end
 
   delegate :folio_number, to: :booking_folio, allow_nil: true
+  delegate :folio_year, to: :booking_folio, allow_nil: true
   delegate :invoice_number, to: :booking_folio, allow_nil: true
 
   def pre_checkin_completed?
@@ -321,11 +328,11 @@ class Booking < ApplicationRecord
     folio_account_reference.presence || formatted_folio_number
   end
 
-  def assign_folio_account_reference_from!(folio_number)
+  def assign_folio_account_reference_from!(folio_number, folio_year: DocumentIdentifiers::Issuer.sequence_year(hotel:))
     return folio_account_reference if folio_account_reference.present?
     return if folio_number.blank?
 
-    update!(folio_account_reference: format_number(folio_number, type_code: 3))
+    update!(folio_account_reference: DocumentIdentifiers::Issuer.format(hotel:, type: :folio, year: folio_year, number: folio_number))
     folio_account_reference
   end
 
@@ -374,27 +381,27 @@ class Booking < ApplicationRecord
   end
 
   def formatted_reservation_number
-    format_number(reservation_number, type_code: 1)
+    reservation_reference.presence || DocumentIdentifiers::Issuer.format(hotel:, type: :reservation, year: reservation_year, number: reservation_number)
   end
 
   def formatted_receipt_number
-    format_number(receipt_number, type_code: 5)
+    DocumentIdentifiers::Issuer.format(hotel:, type: :receipt, year: created_at&.year, number: receipt_number)
   end
 
   def formatted_folio_number
-    format_number(folio_number, type_code: 3)
+    DocumentIdentifiers::Issuer.format(hotel:, type: :folio, year: folio_year, number: folio_number)
   end
 
   def formatted_invoice_number
-    format_number(invoice_number, type_code: 3)
+    booking_folio&.invoice_reference.presence || DocumentIdentifiers::Issuer.format(hotel:, type: :invoice, year: booking_folio&.invoice_year, number: invoice_number)
   end
 
   def formatted_guest_registration_number
-    format_number(guest_registration_number, type_code: 2)
+    guest_registration_reference.presence || DocumentIdentifiers::Issuer.format(hotel:, type: :guest_registration, year: guest_registration_year, number: guest_registration_number)
   end
 
   def formatted_tourism_tax_voucher_number
-    format_number(tourism_tax_voucher_number, type_code: 6)
+    tourism_tax_voucher_reference.presence || DocumentIdentifiers::Issuer.format(hotel:, type: :tourism_tax_voucher, year: tourism_tax_voucher_year, number: tourism_tax_voucher_number)
   end
 
   def assign_tourism_tax_voucher_number!(user:)
@@ -402,8 +409,12 @@ class Booking < ApplicationRecord
       reload
       return tourism_tax_voucher_number if tourism_tax_voucher_number.present?
 
-      number = HotelCounter.increment!(hotel: hotel, type: "tourism_tax_voucher")
-      update!(tourism_tax_voucher_number: number)
+      allocation = DocumentIdentifiers::Issuer.issue!(hotel:, type: :tourism_tax_voucher)
+      update!(
+        tourism_tax_voucher_number: allocation.number,
+        tourism_tax_voucher_year: allocation.year,
+        tourism_tax_voucher_reference: allocation.reference
+      )
       Bookings::RecordAuditLog.new(
         auditable: self,
         user: user,
@@ -411,10 +422,10 @@ class Booking < ApplicationRecord
         category: "financial",
         source: "staff",
         old_value: {},
-        new_value: { "tourism_tax_voucher_number" => number },
+        new_value: { "tourism_tax_voucher_number" => allocation.number },
         metadata: { "tourism_tax_total" => tourism_tax_total.to_s, "tourism_tax_collected" => tourism_tax_collected? }
       ).call!
-      number
+      allocation.number
     end
   end
 
@@ -481,10 +492,6 @@ class Booking < ApplicationRecord
     errors.add(:status, Bookings::StatusLifecycle.transition_error(from: from, to: to, event: event))
   end
 
-  def format_number(number, type_code:)
-    DocumentIdentifiers::HotelReferences.format(hotel: hotel, number: number, type_code: type_code)
-  end
-
   def set_payout_status
     self.payout_status = "pending" if status == "completed" && payout_status.blank?
   end
@@ -509,13 +516,31 @@ class Booking < ApplicationRecord
     DocumentIdentifiers::HotelReferences.assign_confirmation_token(self, unique_against: [ Booking, GroupBooking ])
   end
 
-  def assign_document_counters
-    DocumentIdentifiers::HotelReferences.assign_counter(self, attribute: :reservation_number, counter_type: "reservation")
-    DocumentIdentifiers::HotelReferences.assign_counter(self, attribute: :receipt_number, counter_type: "receipt")
+  def register_confirmation_token
+    DocumentIdentifiers::RegisterConfirmationToken.call!(record: self)
   end
 
-  def assign_guest_registration_number
-    self.guest_registration_number ||= HotelCounter.increment!(hotel: hotel, type: "guest_registration")
+  def sync_confirmation_token
+    DocumentIdentifiers::SyncConfirmationToken.call!(record: self)
+  end
+
+  def assign_document_counters
+    return if reservation_number.present? && reservation_year.present? && reservation_reference.present?
+
+    allocation = DocumentIdentifiers::Issuer.issue!(hotel:, type: :reservation)
+    self.reservation_number = allocation.number
+    self.reservation_year = allocation.year
+    self.reservation_reference = allocation.reference
+  end
+
+  def assign_existing_document_references
+    current_year = DocumentIdentifiers::Issuer.sequence_year(hotel:) if hotel
+    self.reservation_year ||= current_year if reservation_number.present?
+    self.guest_registration_year ||= current_year if guest_registration_number.present?
+    self.tourism_tax_voucher_year ||= current_year if tourism_tax_voucher_number.present?
+    self.reservation_reference ||= DocumentIdentifiers::Issuer.format(hotel:, type: :reservation, year: reservation_year, number: reservation_number)
+    self.guest_registration_reference ||= DocumentIdentifiers::Issuer.format(hotel:, type: :guest_registration, year: guest_registration_year, number: guest_registration_number)
+    self.tourism_tax_voucher_reference ||= DocumentIdentifiers::Issuer.format(hotel:, type: :tourism_tax_voucher, year: tourism_tax_voucher_year, number: tourism_tax_voucher_number)
   end
 
   def normalize_guest_data

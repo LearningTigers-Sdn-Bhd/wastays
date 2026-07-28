@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "ostruct"
 
 RSpec.describe DocumentIdentifiers::HotelReferences do
   describe ".assign_confirmation_token" do
@@ -65,13 +66,13 @@ RSpec.describe DocumentIdentifiers::HotelReferences do
     it "formats a hotel-prefixed document number" do
       hotel = build(:hotel, hotel_prefix: "HTL")
 
-      expect(described_class.format(hotel: hotel, number: 12, type_code: "R")).to eq("HTL-R0000012")
+      expect(described_class.format(hotel: hotel, year: 2026, number: 12, type_code: "R")).to eq("HTL-26R00012")
     end
 
     it "falls back to the Wastays prefix" do
       hotel = build(:hotel, hotel_prefix: nil)
 
-      expect(described_class.format(hotel: hotel, number: 3, type_code: "F")).to eq("WS-F0000003")
+      expect(described_class.format(hotel: hotel, year: 2026, number: 3, type_code: "F")).to eq("WS-26F00003")
     end
   end
 end

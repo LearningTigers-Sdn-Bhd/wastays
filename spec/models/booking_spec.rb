@@ -67,10 +67,10 @@ RSpec.describe Booking, type: :model do
   end
 
   describe "#guest_registration_card_number_display" do
-    it "assigns a guest registration number when booking is created" do
+    it "does not assign a guest registration number before check-in" do
       booking = create(:booking, guest_registration_number: nil)
 
-      expect(booking.guest_registration_number).to be_present
+      expect(booking.guest_registration_number).to be_nil
     end
 
     it "shows pending only for legacy bookings without a guest registration number" do
@@ -81,9 +81,19 @@ RSpec.describe Booking, type: :model do
 
     it "shows formatted guest registration number when present" do
       hotel = build(:hotel, hotel_prefix: "ABC")
-      booking = build(:booking, hotel: hotel, guest_registration_number: 1)
+      booking = build(:booking, hotel: hotel, guest_registration_number: 1, guest_registration_year: 2026)
 
-      expect(booking.guest_registration_card_number_display).to eq("ABC-20000001")
+      expect(booking.guest_registration_card_number_display).to eq("ABC-26200001")
+    end
+  end
+
+  describe "document formatting" do
+    it "uses type code 7 for standard invoices" do
+      hotel = create(:hotel, hotel_prefix: "ABC")
+      booking = create(:booking, hotel: hotel)
+      create(:booking_folio, booking: booking, hotel: hotel, invoice_number: 42)
+
+      expect(booking.formatted_invoice_number).to eq("ABC-26700042")
     end
   end
 

@@ -38,12 +38,29 @@ module Bookings
           Folios::Lifecycle::ReopenNoShowFoliosForReinstatement.call(booking: @booking, user: @user)
 
           # 5. Transition status to checked_in
+          guest_registration = if @booking.guest_registration_number.present?
+            year = @booking.guest_registration_year || DocumentIdentifiers::Issuer.sequence_year(hotel: @booking.hotel)
+            DocumentIdentifiers::Issuer::Allocation.new(
+              number: @booking.guest_registration_number,
+              year:,
+              reference: @booking.guest_registration_reference || DocumentIdentifiers::Issuer.format(
+                hotel: @booking.hotel,
+                type: :guest_registration,
+                year:,
+                number: @booking.guest_registration_number
+              )
+            )
+          else
+            DocumentIdentifiers::Issuer.issue!(hotel: @booking.hotel, type: :guest_registration)
+          end
           @booking.transition_status_to!(
             "checked_in",
             event: "reinstate",
             attributes: {
               checked_in_at: Time.current,
-              guest_registration_number: @booking.guest_registration_number || HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
+              guest_registration_number: guest_registration.number,
+              guest_registration_year: guest_registration.year,
+              guest_registration_reference: guest_registration.reference
             }
           )
 

@@ -60,6 +60,26 @@ class NotificationMailer < ApplicationMailer
     )
   end
 
+  def invoice_package(delivery)
+    assign_delivery(delivery)
+    group = Notifications::InvoiceDelivery.load!(delivery:)
+    pdf = Reports::Bookings::GenerateCombinedInvoices.new(
+      hotel: delivery.hotel,
+      invoices: group.invoices,
+      recipient: group.recipient,
+      printed_by: @payload[:requested_by_name]
+    ).generate
+    attachments["combined-invoices-#{@booking.confirmation_token}.pdf"] = {
+      mime_type: "application/pdf",
+      content: pdf
+    }
+
+    mail(
+      to: @payload.fetch(:recipient_email),
+      subject: "Your invoices from #{@payload[:hotel_name]}"
+    )
+  end
+
   private
 
   def load_delivery_context
