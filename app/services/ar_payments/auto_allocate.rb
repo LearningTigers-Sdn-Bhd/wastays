@@ -45,7 +45,7 @@ module ArPayments
     end
 
     def open_invoices
-      @payment.hotel.ar_invoices
+      @payment.hotel.receivables
         .with_open_balance
         .where(hotel_corporate_account: @payment.hotel_corporate_account, currency: @payment.currency)
         .order(due_on: :asc, invoice_number: :asc)

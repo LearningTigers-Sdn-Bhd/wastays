@@ -74,7 +74,7 @@ module ArInvoices
     private
 
     def current_outstanding
-      @current_outstanding ||= @hotel_corporate_account.ar_invoices
+      @current_outstanding ||= @hotel_corporate_account.receivables
         .with_open_balance
         .where(currency: credit_currency)
         .sum(:outstanding_amount)
@@ -101,7 +101,7 @@ module ArInvoices
 
     def non_comparable_currencies
       @non_comparable_currencies ||= begin
-        currencies = @hotel_corporate_account.ar_invoices
+        currencies = @hotel_corporate_account.receivables
           .with_open_balance
           .where.not(currency: credit_currency)
           .distinct

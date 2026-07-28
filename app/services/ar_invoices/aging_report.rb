@@ -46,7 +46,7 @@ module ArInvoices
 
     def invoices
       @invoices ||= begin
-        scope = @hotel.ar_invoices
+        scope = @hotel.receivables
           .with_open_balance
           .includes(hotel_corporate_account: :corporate_account)
         scope = scope.joins(:hotel_corporate_account).where(hotel_corporate_accounts: { account_type: @account_types }) if @account_types.present?

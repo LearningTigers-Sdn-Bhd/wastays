@@ -111,7 +111,7 @@ module ArPayments
     end
 
     def invoices
-      @invoices ||= @hotel.ar_invoices.where(id: allocation_rows.map { |row| row[:invoice_id] }).to_a
+      @invoices ||= @hotel.receivables.where(id: allocation_rows.map { |row| row[:invoice_id] }).to_a
     end
 
     def invoices_by_id

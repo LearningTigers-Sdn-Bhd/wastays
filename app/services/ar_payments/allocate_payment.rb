@@ -84,7 +84,7 @@ module ArPayments
     end
 
     def invoices
-      @invoices ||= @payment.hotel.ar_invoices
+      @invoices ||= @payment.hotel.receivables
         .with_open_balance
         .where(hotel_corporate_account: @payment.hotel_corporate_account, currency: @payment.currency)
         .where(id: allocation_rows.map { |row| row[:invoice_id] })
