@@ -66,8 +66,7 @@ module Notifications
 
     def load!
       payload = @delivery.payload.to_h.with_indifferent_access
-      ids = Array(payload[:folio_invoice_ids]).map(&:to_i)
-      revision_ids = Array(payload[:folio_invoice_revision_ids]).map(&:to_i)
+      ids, revision_numbers = payload_document_identity(payload)
       raise UnavailableError, "Delivery has no invoices." if ids.empty?
 
       invoices = delivery_scope.where(id: ids).index_by(&:id)
@@ -78,7 +77,7 @@ module Notifications
         folio = invoice.booking_folio
         recipient = recipient_for(invoice)
         valid = invoice.finalized? && folio.closed? && folio.ar_invoice.blank? &&
-          invoice.current_revision&.id == revision_ids[index] &&
+          invoice.current_revision&.revision_number == revision_numbers[index] &&
           recipient.key == payload[:payer_key] &&
           recipient.email.present? && recipient.email == payload[:recipient_email]
         raise UnavailableError, "Invoice #{invoice.invoice_reference} is no longer available to send." unless valid
@@ -92,16 +91,15 @@ module Notifications
 
       delivery_scope
         .joins(:booking_folio)
-        .where(state: "finalized", booking_folios: { booking_id: @booking_ids, status: "closed" })
+        .where(kind: "settled", state: "finalized", booking_folios: { booking_id: @booking_ids, status: "closed" })
         .order("booking_folios.booking_id", "booking_folios.folio_sequence", :id)
-        .select { |invoice| invoice.current_revision.present? && invoice.booking_folio.ar_invoice.blank? }
+        .select { |invoice| invoice.current_revision.present? }
     end
 
     def delivery_scope
-      @hotel.folio_invoices.includes(
+      @hotel.invoices.includes(
         :revisions,
         booking_folio: [
-          :ar_invoice,
           :booking_room,
           { booking: [ { booking_rooms: :room_type }, { booking_guests: :guest } ] },
           { folio_transactions: [ :transaction_code, :user ] },
@@ -109,6 +107,24 @@ module Notifications
           { hotel_corporate_account: { corporate_account: :users } }
         ]
       )
+    end
+
+    def payload_document_identity(payload)
+      ids = Array(payload[:invoice_ids]).map(&:to_i)
+      revision_ids = Array(payload[:invoice_revision_ids]).map(&:to_i)
+      if ids.any?
+        revisions = InvoiceRevision.where(id: revision_ids).index_by(&:id)
+        return [ ids, revision_ids.map { |id| revisions[id]&.revision_number } ]
+      end
+
+      legacy_ids = Array(payload[:folio_invoice_ids]).map(&:to_i)
+      legacy_revision_ids = Array(payload[:folio_invoice_revision_ids]).map(&:to_i)
+      legacy_invoices = @hotel.folio_invoices.where(id: legacy_ids).index_by(&:id)
+      legacy_revisions = FolioInvoiceRevision.where(id: legacy_revision_ids).index_by(&:id)
+      [
+        legacy_ids.filter_map { |id| legacy_invoices[id]&.invoice_id },
+        legacy_revision_ids.map { |id| legacy_revisions[id]&.revision_number }
+      ]
     end
 
     def recipient_for(invoice)
@@ -139,6 +155,11 @@ module Notifications
       invoice_ids = group.invoices.map(&:id).sort
       invoices_by_id = group.invoices.index_by(&:id)
       revision_ids = invoice_ids.map { |id| invoices_by_id.fetch(id).current_revision.id }
+      legacy_invoices = group.invoices.filter_map(&:folio_invoice).index_by(&:invoice_id)
+      legacy_invoice_ids = invoice_ids.filter_map { |id| legacy_invoices[id]&.id }
+      legacy_revision_ids = invoice_ids.filter_map do |id|
+        legacy_invoices[id]&.revisions&.find_by(revision_number: invoices_by_id.fetch(id).current_revision_number)&.id
+      end
       recipient = group.recipient
       skipped = recipient.email.blank?
       delivery = NotificationDelivery.find_or_initialize_by(
@@ -155,8 +176,10 @@ module Notifications
         status: skipped ? "skipped" : "pending",
         error_message: ("No saved email is available for #{recipient.name}." if skipped),
         payload: {
-          folio_invoice_ids: invoice_ids,
-          folio_invoice_revision_ids: revision_ids,
+          invoice_ids: invoice_ids,
+          invoice_revision_ids: revision_ids,
+          folio_invoice_ids: legacy_invoice_ids,
+          folio_invoice_revision_ids: legacy_revision_ids,
           payer_key: recipient.key,
           payer_kind: recipient.kind,
           payer_name: recipient.name,
