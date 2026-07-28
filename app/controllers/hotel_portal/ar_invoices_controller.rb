@@ -45,6 +45,7 @@ module HotelPortal
     def pdf
       invoice = current_hotel.ar_invoices
         .includes(
+          { invoice: :revisions },
           { booking_folio: [ :folio_transactions, :booking_room, { booking: { booking_rooms: :room_type } }, { booking_billing_party: :billing_terms } ] },
           hotel_corporate_account: :corporate_account
         )

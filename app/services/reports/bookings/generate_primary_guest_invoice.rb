@@ -15,7 +15,7 @@ module Reports
       private
 
       def guest_folio
-        folios = @booking.booking_folios.includes(:folio_invoice, :ar_invoice).to_a
+        folios = @booking.booking_folios.includes(:invoice).to_a
         folio = folios.find { |candidate| candidate.id == @booking.booking_folio&.id && guest_invoice?(candidate) }
         folio ||= folios.find { |candidate| candidate.is_primary? && guest_invoice?(candidate) }
         folio ||= folios.find { |candidate| guest_invoice?(candidate) }
@@ -28,8 +28,8 @@ module Reports
       def guest_invoice?(folio)
         folio.payer_type == "guest" &&
           folio.closed? &&
-          folio.ar_invoice.blank? &&
-          folio.folio_invoice&.finalized?
+          folio.invoice&.kind_settled? &&
+          folio.invoice&.finalized?
       end
     end
   end

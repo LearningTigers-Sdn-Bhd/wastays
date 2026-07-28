@@ -92,8 +92,8 @@ RSpec.describe Reports::AccountsReceivable::GenerateInvoice do
 
     expect(records.line_total).to eq(invoice.amount)
     expect(text).to include("Payment - Advance corporate payment")
-    expect(text).to include("-150.00")
-    expect(text).to include("BALANCE TRANSFERRED TO AR", "300.00")
+    expect(text).to include("(150.00)")
+    expect(text).to include("Balance", "300.00")
   end
 
   it "marks an AR invoice reconstructed from live records as legacy-generated" do

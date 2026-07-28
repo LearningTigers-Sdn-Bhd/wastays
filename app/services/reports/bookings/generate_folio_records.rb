@@ -112,13 +112,15 @@ module Reports
         [ "refund_request_id", "Refund Ref" ]
       ].freeze
 
-      attr_reader :booking, :hotel, :folio, :revision
+      attr_reader :booking, :hotel, :folio, :revision, :invoice_document, :receivable
 
-      def initialize(folio:, printed_by: nil, revision_number: nil)
-        @folio = folio
-        @booking = folio.booking
-        @hotel = folio.hotel
-        @folio_invoice = folio.folio_invoice
+      def initialize(folio: nil, invoice: nil, receivable: nil, printed_by: nil, revision_number: nil)
+        @invoice_document = invoice || folio&.invoice || folio&.folio_invoice&.invoice
+        @folio = folio || @invoice_document&.booking_folio
+        @booking = @folio&.booking
+        @hotel = @folio&.hotel
+        @receivable = receivable || @invoice_document&.receivable || @folio&.receivable || @folio&.ar_invoice
+        @folio_invoice = @folio&.folio_invoice
         @revision_number = revision_number.presence&.to_i
         @printed_by = printed_by
         @legend = {}
@@ -131,11 +133,11 @@ module Reports
       end
 
       def document_title
-        "FOLIO INVOICE"
+        direct_bill? ? "ACCOUNTS RECEIVABLE INVOICE" : "FOLIO INVOICE"
       end
 
       def pdf_title
-        "Folio Invoice - #{invoice_number}"
+        "#{direct_bill? ? 'AR' : 'Folio'} Invoice - #{invoice_number}"
       end
 
       def metadata_left
@@ -213,7 +215,23 @@ module Reports
       end
 
       def legacy_generated?
-        @folio_invoice.legacy? || @snapshot["legacy_generated"] == true
+        invoice_document.legacy? || @snapshot["legacy_generated"] == true
+      end
+
+      def direct_bill?
+        invoice_document&.kind_direct_bill?
+      end
+
+      def current_payment_status_rows
+        return [] unless direct_bill? && receivable.present?
+
+        [
+          [ "Status", receivable.status.humanize ],
+          [ "Original Amount", amount(receivable.amount) ],
+          [ "Paid Amount", amount(receivable.paid_amount) ],
+          [ "Outstanding Amount", amount(receivable.outstanding_amount) ],
+          [ "Status as of", Time.current.strftime("%d %b %Y %H:%M") ]
+        ]
       end
 
       def total_due
@@ -253,7 +271,7 @@ module Reports
         account_type = snapshot_or_live("payer", "account_type") do
           folio.booking_billing_party&.account_type.presence || folio.hotel_corporate_account&.account_type
         end
-        [
+        rows = [
           [ "Corporate Payer", guest_value(snapshot_or_live("payer", "name") { document_live_payer_name }) ],
           [ "Account Type", account_type.to_s.humanize.presence || "-" ],
           [ "Purchase Order", guest_value(snapshot_or_live("payer", "purchase_order_reference") { terms&.purchase_order_reference }) ],
@@ -262,6 +280,14 @@ module Reports
           [ "Cashier", printed_by ],
           [ "Currency", currency ]
         ]
+        if direct_bill?
+          days = snapshot_or_live("payer", "payment_terms_days") { receivable&.hotel_corporate_account&.payment_terms_days }
+          terms_label = days.to_i.zero? ? "Due on receipt" : "Net #{days.to_i} days"
+          rows.insert(4, [ "Issue Date", invoice_document.issued_on.strftime("%d %b %Y") ])
+          rows.insert(5, [ "Due Date", receivable.due_on.strftime("%d %b %Y") ])
+          rows.insert(6, [ "Payment Terms", terms_label ])
+        end
+        rows
       end
 
       def corporate_payer?
@@ -275,21 +301,21 @@ module Reports
       end
 
       def resolve_revision!
-        raise UnavailableError, "Folio has no issued invoice." if @folio_invoice.blank?
+        raise UnavailableError, "Folio has no issued invoice." if invoice_document.blank?
 
         @revision = if @revision_number.present?
-          @folio_invoice.revisions.find_by(revision_number: @revision_number)
+          invoice_document.revisions.find_by(revision_number: @revision_number)
         else
-          @folio_invoice.current_revision
+          invoice_document.current_revision
         end
         raise UnavailableError, "Invoice revision is unavailable." if revision.blank?
         @snapshot = revision.snapshot.to_h.deep_stringify_keys
       end
 
       def validate_invoice!
-        raise UnavailableError, "Direct Bill folios use the AR invoice document." if folio.ar_invoice.present?
         return if @revision_number.present?
-        return if folio.closed? && @folio_invoice.finalized?
+        return if direct_bill? && invoice_document.finalized?
+        return if folio.closed? && invoice_document.finalized?
 
         raise UnavailableError, "Invoice is unavailable while the folio is open or under correction."
       end
@@ -373,6 +399,9 @@ module Reports
 
       def payment_description(transaction)
         return "Refund - #{payment_label(transaction)}" if transaction.category == "refund"
+        if direct_bill? && transaction.description.present?
+          return "Payment - #{transaction.description}"
+        end
 
         "Payment - #{payment_label(transaction)}"
       end

@@ -18,7 +18,9 @@ module Reports
 
       def initialize(hotel:, invoices:, recipient:, printed_by: nil)
         @hotel = hotel
-        @invoices = Array(invoices)
+        @invoices = Array(invoices).map do |invoice|
+          invoice.is_a?(FolioInvoice) ? invoice.invoice : invoice
+        end
         @recipient = recipient
         @printed_by = printed_by.presence || "-"
       end
@@ -58,7 +60,7 @@ module Reports
 
         @invoices.each do |invoice|
           folio = invoice.booking_folio
-          valid = invoice.finalized? && folio.closed? && folio.ar_invoice.blank? && invoice.current_revision.present?
+          valid = invoice.kind_settled? && invoice.finalized? && folio.closed? && invoice.current_revision.present?
           raise InvalidCombinedInvoicesError, "Invoice #{invoice.invoice_reference} is no longer available to send." unless valid
         end
       end

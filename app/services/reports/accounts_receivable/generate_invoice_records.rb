@@ -10,7 +10,11 @@ module Reports
       def initialize(invoice:, printed_by: nil)
         @invoice = invoice
         @printed_by = printed_by.presence || "-"
-        @snapshot = invoice.metadata.to_h["document_snapshot"].to_h.deep_stringify_keys
+        @snapshot = if invoice.invoice&.current_revision
+          invoice.invoice.current_revision.snapshot.to_h.deep_stringify_keys
+        else
+          invoice.metadata.to_h["document_snapshot"].to_h.deep_stringify_keys
+        end
       end
 
       def invoice_reference
@@ -18,7 +22,7 @@ module Reports
       end
 
       def legacy_generated?
-        @snapshot.empty?
+        invoice.invoice&.legacy? || @snapshot.empty? || @snapshot["legacy_generated"] == true
       end
 
       def company_name

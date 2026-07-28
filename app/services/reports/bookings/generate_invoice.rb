@@ -21,9 +21,11 @@ module Reports
       BOTTOM_MARGIN = 72
       FOOTER_Y = -26
 
-      def initialize(folio:, printed_by: nil, revision_number: nil)
+      def initialize(folio: nil, invoice: nil, receivable: nil, printed_by: nil, revision_number: nil)
         @records = Reports::Bookings::GenerateFolioRecords.new(
           folio:,
+          invoice:,
+          receivable:,
           printed_by:,
           revision_number:
         ).call
@@ -56,6 +58,10 @@ module Reports
         draw_transactions(pdf)
         pdf.move_down 16
         draw_summary(pdf)
+        if @records.direct_bill?
+          pdf.move_down 14
+          draw_current_payment_status(pdf)
+        end
         pdf.move_down 14
         draw_legend(pdf)
         pdf.move_down 14
@@ -277,6 +283,26 @@ module Reports
           cells.border_color = BORDER_GRAY
           cells.padding = [ 4, 6, 4, 6 ]
           cells.size = 7.5
+        end
+      end
+
+      def draw_current_payment_status(pdf)
+        rows = @records.current_payment_status_rows
+        return if rows.empty?
+
+        section_title(pdf, "CURRENT PAYMENT STATUS (SUPPLEMENTAL)")
+        pdf.fill_color TEXT_MUTED
+        pdf.text "This dated status is not part of the immutable issued invoice body.", size: 7.5
+        pdf.fill_color TEXT_PRIMARY
+        pdf.move_down 5
+        width = pdf.bounds.width * 0.54
+        pdf.table(rows, width:, position: :right, column_widths: [ width * 0.58, width * 0.42 ]) do
+          cells.border_color = BORDER_GRAY
+          cells.padding = [ 5, 8 ]
+          cells.size = 8
+          column(1).align = :right
+          row(3).font_style = :bold
+          row(3).background_color = LIGHT_GRAY
         end
       end
 

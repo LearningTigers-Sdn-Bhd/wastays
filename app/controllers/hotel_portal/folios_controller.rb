@@ -36,7 +36,7 @@ module HotelPortal
     def invoice
       authorize_invoice_revision! if params[:revision_number].present?
       @folio = current_hotel.booking_folios
-        .includes(:folio_invoice, :ar_invoice, :booking_room, { booking: { booking_rooms: :room_type } }, folio_transactions: [ :transaction_code, :user ])
+        .includes({ invoice: :revisions }, :folio_invoice, :ar_invoice, :booking_room, { booking: { booking_rooms: :room_type } }, folio_transactions: [ :transaction_code, :user ])
         .find(params[:folio_id])
       @booking = @folio.booking
       report = ::Reports::Bookings::GenerateInvoice.new(
