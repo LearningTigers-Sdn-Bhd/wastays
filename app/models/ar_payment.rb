@@ -7,6 +7,9 @@ class ArPayment < ApplicationRecord
   belongs_to :hotel_corporate_account
   has_many :ar_payment_allocations, dependent: :restrict_with_error
   has_many :ar_invoices, through: :ar_payment_allocations
+  has_one :receipt, dependent: :restrict_with_error
+
+  after_create :issue_payment_receipt
 
   delegate :corporate_account, to: :hotel_corporate_account
 
@@ -39,6 +42,10 @@ class ArPayment < ApplicationRecord
   before_destroy :prevent_destroy
 
   private
+
+  def issue_payment_receipt
+    Receipts::Issue.call!(source: self)
+  end
 
   def prevent_update
     errors.add(:base, "AR payments are immutable.")

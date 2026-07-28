@@ -18,6 +18,7 @@ RSpec.describe "Guest navigation shell", type: :system do
       expect(page).to have_link("My Bookings", href: guest_bookings_path)
       expect(page).to have_link("Refunds", href: guest_refund_requests_path)
       expect(page).to have_text("Aisha Rahman")
+      expect(page).to have_link("Aisha Rahman", href: guest_dashboard_path)
       expect(page).to have_css("a.panel-sidebar__link[data-sidebar-route][aria-current='page']", text: "Dashboard")
     end
 

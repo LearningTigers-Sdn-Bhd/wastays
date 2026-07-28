@@ -1,0 +1,126 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe Notifications::InvoiceDelivery, type: :job do
+  let(:hotel) { create(:hotel, hotel_prefix: "DLV") }
+  let(:group) { create(:group_booking, hotel:) }
+
+  it "combines same-payer invoices into one logged delivery" do
+    first_booking = booking_for("payer@example.test", 1)
+    second_booking = booking_for("payer@example.test", 2)
+    first = finalized_invoice(first_booking)
+    second = finalized_invoice(second_booking)
+
+    expect do
+      @result = described_class.queue(
+        hotel:,
+        bookings: [ first_booking, second_booking ],
+        anchor_booking: first_booking,
+        source: "automatic_checkout"
+      )
+    end.to have_enqueued_job(Notifications::DeliverJob).once
+
+    delivery = @result.deliveries.sole
+    expect(delivery).to have_attributes(notification_type: "invoice_package", status: "pending")
+    expect(delivery.payload["invoice_ids"]).to contain_exactly(first.id, second.id)
+    expect(delivery.payload["invoice_revision_ids"]).to contain_exactly(first.current_revision.id, second.current_revision.id)
+    expect(delivery.payload["recipient_email"]).to eq("payer@example.test")
+  end
+
+  it "separates different payers and logs a missing contact as skipped" do
+    valid_booking = booking_for("valid@example.test", 1)
+    missing_booking = booking_for("guest@example.test", 2)
+    finalized_invoice(valid_booking)
+    finalized_company_invoice(missing_booking)
+
+    result = described_class.queue(
+      hotel:,
+      bookings: [ valid_booking, missing_booking ],
+      anchor_booking: valid_booking,
+      source: "manual_resend"
+    )
+
+    expect(result.groups.size).to eq(2)
+    expect(result.deliveries.map(&:status)).to contain_exactly("pending", "skipped")
+    skipped = result.deliveries.find { |delivery| delivery.status == "skipped" }
+    expect(skipped.error_message).to include("No saved email")
+  end
+
+  it "is idempotent for the same automatic invoice revisions" do
+    booking = booking_for("payer@example.test", 1)
+    finalized_invoice(booking)
+    arguments = { hotel:, bookings: [ booking ], anchor_booking: booking, source: "automatic_checkout" }
+
+    expect do
+      2.times { described_class.queue(**arguments) }
+    end.to change(NotificationDelivery, :count).by(1)
+  end
+
+  it "rejects a delivery when the queued revision or recipient changes" do
+    booking = booking_for("original@example.test", 1)
+    invoice = finalized_invoice(booking)
+    result = described_class.queue(
+      hotel:,
+      bookings: [ booking ],
+      anchor_booking: booking,
+      source: "automatic_checkout"
+    )
+    delivery = result.deliveries.sole
+
+    booking.update!(guest_email: "changed@example.test")
+
+    expect { described_class.load!(delivery:) }
+      .to raise_error(described_class::UnavailableError, /no longer available/)
+
+    booking.update!(guest_email: "original@example.test")
+    revision = create(:invoice_revision, invoice:, hotel:, revision_number: 2)
+    invoice.update!(current_revision_number: revision.revision_number)
+
+    expect { described_class.load!(delivery:) }
+      .to raise_error(described_class::UnavailableError, /no longer available/)
+  end
+
+  it "rejects a delivery when its folio is reopened" do
+    booking = booking_for("payer@example.test", 1)
+    invoice = finalized_invoice(booking)
+    delivery = described_class.queue(
+      hotel:,
+      bookings: [ booking ],
+      anchor_booking: booking,
+      source: "automatic_checkout"
+    ).deliveries.sole
+
+    invoice.booking_folio.update_column(:status, "open")
+
+    expect { described_class.load!(delivery:) }
+      .to raise_error(described_class::UnavailableError, /no longer available/)
+  end
+
+  def booking_for(email, position)
+    create(:booking,
+      hotel:,
+      group_booking: group,
+      group_position: position,
+      guest_email: email,
+      confirmation_token: "DLV-#{position}")
+  end
+
+  def finalized_invoice(booking)
+    folio = create(:booking_folio, booking:, hotel:, status: "closed")
+    Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+  end
+
+  def finalized_company_invoice(booking)
+    relationship = create(:hotel_corporate_account, hotel:, contact_email: nil)
+    folio = create(:booking_folio,
+      booking:,
+      hotel:,
+      status: "closed",
+      is_primary: false,
+      folio_type: "external",
+      payer_type: "company",
+      hotel_corporate_account: relationship)
+    Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+  end
+end

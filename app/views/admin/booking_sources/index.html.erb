@@ -21,7 +21,7 @@
               data-id="<%= source.id %>"
               data-action="dragstart->booking-source-reorder#dragStart dragend->booking-source-reorder#dragEnd dragover->booking-source-reorder#dragOver drop->booking-source-reorder#drop">
             <span class="shrink-0 cursor-grab text-muted-foreground" aria-hidden="true"><%= cached_icon "grip-vertical", class: "size-4" %></span>
-            <%= render PanelsUI::BookingSourceBadge.new(source: source.key, size: :md, with_tooltip: false) %>
+            <%= render PanelsUI::BookingSourceBadge.new(source:, size: :md, with_tooltip: false) %>
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-bold text-foreground"><%= source.label %></p>
               <p class="truncate text-xs font-mono text-muted-foreground"><%= source.key %></p>

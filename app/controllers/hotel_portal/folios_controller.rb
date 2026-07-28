@@ -34,23 +34,35 @@ module HotelPortal
     end
 
     def invoice
-      @booking = current_hotel.bookings.includes(booking_folio: :folio_transactions, booking_rooms: :room_type).find(params[:booking_id])
-      unless @booking.booking_folio&.status == "closed"
-        return redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "folio_operations"), alert: "Folio invoice is only available for checked-out bookings with a closed folio."
-      end
+      authorize_invoice_revision! if params[:revision_number].present?
+      @folio = current_hotel.booking_folios
+        .includes({ invoice: :revisions }, :ar_invoice, :booking_room, { booking: { booking_rooms: :room_type } }, folio_transactions: [ :transaction_code, :user ])
+        .find(params[:folio_id])
+      @booking = @folio.booking
+      report = ::Reports::Bookings::GenerateInvoice.new(
+        folio: @folio,
+        printed_by: current_user&.name,
+        revision_number: params[:revision_number]
+      )
 
-      send_data ::Reports::Bookings::GenerateInvoice.new(booking: @booking, printed_by: current_user&.name).generate,
-        filename: "folio-invoice-#{@booking.formatted_invoice_number || @booking.confirmation_token}.pdf",
+      send_data report.generate,
+        filename: "folio-invoice-#{invoice_filename_reference}.pdf",
         type: "application/pdf",
         disposition: request.format.pdf? ? "inline" : "attachment"
+    rescue ::Reports::Bookings::GenerateFolioRecords::UnavailableError => e
+      redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "folio_operations", folio_id: @folio.id), alert: e.message
+    rescue ActiveRecord::RecordNotFound
+      head :not_found
     end
 
     def ledger
-      @booking = current_hotel.bookings.includes(:booking_rooms, booking_folios: [ { folio_transactions: :transaction_code }, { hotel_corporate_account: :corporate_account } ]).find(params[:booking_id])
-      return redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "folio_operations"), alert: "Booking has no folio." unless @booking.booking_folio
+      @folio = current_hotel.booking_folios
+        .includes({ booking: { booking_rooms: :room_type } }, folio_transactions: [ :transaction_code, :user, :night_audit ])
+        .find(params[:folio_id])
+      @booking = @folio.booking
 
-      ledger_report = ::Reports::Bookings::GenerateFolioLedger.new(booking: @booking, printed_by: current_user&.name)
-      filename = "folio-ledger-#{@booking.folio_account_reference_display.presence || @booking.confirmation_token}"
+      ledger_report = ::Reports::Bookings::GenerateFolioLedger.new(folio: @folio, printed_by: current_user&.name)
+      filename = "folio-ledger-#{@folio.folio_reference_display.presence || @booking.confirmation_token}"
 
       respond_to do |format|
         format.csv do
@@ -67,12 +79,24 @@ module HotelPortal
             disposition: "inline"
         end
       end
+    rescue ActiveRecord::RecordNotFound
+      head :not_found
     end
 
     private
 
+    def invoice_filename_reference
+      revision = @folio.invoice&.current_revision
+      revision = @folio.invoice&.revisions&.find_by(revision_number: params[:revision_number]) if params[:revision_number].present?
+      revision&.document_reference.presence || @booking.confirmation_token
+    end
+
     def authorize_view_bookings!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_bookings", hotel: current_hotel)
+    end
+
+    def authorize_invoice_revision!
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_audit_logs", hotel: current_hotel)
     end
   end
 end

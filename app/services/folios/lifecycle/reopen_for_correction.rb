@@ -36,11 +36,15 @@ module Folios
           @booking_folio.with_lock do
             @booking_folio.reload
             return failure("Folio is already open.") if @booking_folio.open?
+            if @booking_folio.ar_invoice.present?
+              return failure("A folio with an AR invoice must be corrected through Accounts Receivable.")
+            end
 
             invoice_number = @booking_folio.invoice_number
 
             @booking_folio.reopening_for_correction do
               @booking_folio.update!(status: "open")
+              Invoices::MarkUnderCorrection.call!(folio: @booking_folio)
               record_financial_audit_event!(invoice_number)
 
               success

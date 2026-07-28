@@ -78,15 +78,15 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(global_actions.at_css("a[href^='#{hotel_booking_action_quick_booking_path(hotel)}']").text.squish).to eq("Add booking")
       operational_counts = document.css("[data-slot='stay-view-operational-count']")
       expect(operational_counts.map { |badge| badge["data-state"] }).to eq(
-        %w[all vacant arrival occupied departure turnover blocked dirty]
+        %w[all vacant arrival occupied departure blocked dirty]
       )
       expect(operational_counts.map { |badge| badge.css("span").map(&:text) }).to eq(
         [ [ "All", "2" ], [ "Vacant", "1" ], [ "Arrival", "1" ], [ "Occupied", "0" ],
-         [ "Departure", "0" ], [ "Turnover", "0" ], [ "Blocked", "0" ], [ "Dirty", "0" ] ]
+         [ "Departure", "0" ], [ "Blocked", "0" ], [ "Dirty", "0" ] ]
       )
       expect(document.at_css("button[aria-label='Stay View status guide']")).to be_present
-      expect(document.at_css("#stay-view-status-guide-panel").text).to include("No-show review", "Do not disturb")
-      expect(document.at_css("#stay-view-status-guide-panel").text).not_to include("Financial attention", "Direct Bill")
+      expect(document.at_css("#stay-view-status-guide-panel").text).to include("Arrival", "In-house", "Completed", "Do not disturb")
+      expect(document.at_css("#stay-view-status-guide-panel").text).not_to include("Payment needed", "Company pays")
       badges = document.css("[data-slot='stay-view-inventory-badge']")
       expect(badges.size).to eq(7)
       expect(badges.first.text).to eq("1")
@@ -378,6 +378,63 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).not_to include("stay-view-timeline")
     end
 
+    it "shows primary-guest VIP, hotel blacklist, and same-hotel repeat context in both views" do
+      guest = create(
+        :guest,
+        name: "Recognized Guest",
+        vip: true,
+        blacklisted: true,
+        created_by_hotel: hotel,
+        metadata: { "blacklisted_hotel_ids" => [ hotel.id ] }
+      )
+      prior_stay = create(
+        :booking,
+        hotel:,
+        status: "completed",
+        guest_name: guest.name,
+        check_in: Date.current - 10.days,
+        check_out: Date.current - 8.days
+      )
+      create(:booking_guest, booking: prior_stay, guest:, is_primary: true)
+      booking = create(
+        :booking,
+        hotel:,
+        guest_name: guest.name,
+        check_in: Date.current,
+        check_out: Date.current + 2.days
+      )
+      create(:booking_guest, booking:, guest:, is_primary: true)
+      create(:booking_room, booking:, room_type:, room_number: "101")
+
+      get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
+
+      timeline = Nokogiri::HTML(response.body)
+      segment = timeline.at_css("#stay_view_booking_room_#{booking.booking_rooms.sole.id}")
+      expect(segment.css("[id$='-trigger'] [data-slot='stay-view-guest-status']")).to be_empty
+      expect(segment.css("[id$='-panel'] [data-slot='stay-view-guest-status']").map { |status| status["data-status"] }).to eq(
+        %w[blacklisted vip repeat]
+      )
+      expect(segment.css("dt").none? { |node| node.text.squish == "Guest status" }).to be(true)
+      expect(segment.at_css("[id$='-panel'] [aria-label='Blacklisted guest']")).to be_present
+      expect(segment.at_css("[id$='-panel'] [aria-label='VIP guest']")).to be_present
+      expect(segment.at_css("[id$='-panel'] [aria-label='Repeat guest']")).to be_present
+      expect(timeline.at_css("#stay-view-status-guide-panel").text.squish).to include(
+        "Guest status", "Blacklisted", "VIP", "Repeat"
+      )
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
+
+      room_item = Nokogiri::HTML(response.body).at_css(
+        "#stay_view_room_#{room_type.id}_101 [data-slot='stay-view-room-booking-item']"
+      )
+      statuses = room_item.css("[data-slot='stay-view-guest-status']")
+      expect(statuses.map { |status| [ status["data-status"], status.text ] }).to eq(
+        [ [ "blacklisted", "Blacklisted" ], [ "vip", "VIP" ], [ "repeat", "Repeat" ] ]
+      )
+      expect(statuses.map { |status| status["data-variant"] }).to eq(%w[destructive warning info])
+      expect(room_item["aria-label"]).to include("guest status Blacklisted, VIP, and Repeat")
+    end
+
     it "groups Room View by room type by default and flattens it on request" do
       create(:room_type, hotel:, name: "Suite", room_numbers: [ "201" ])
       room_type
@@ -604,7 +661,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).not_to include("All room states")
     end
 
-    it "renders authorized financial attention in Timeline View and a full badge in Room View" do
+    it "renders authorized financial details in the Timeline popover and a full badge in Room View" do
       grant("view_financial_status")
       booking = create(:booking, hotel:, guest_name: "Financial Guest", check_in: Date.current, check_out: Date.current + 2.days)
       create(:booking_room, booking:, room_type:, room_number: "101")
@@ -616,16 +673,14 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
       timeline = Nokogiri::HTML(response.body)
       expect(response).to have_http_status(:success)
-      expect(timeline.at_css("[data-slot='stay-view-financial-attention']")["aria-label"]).to eq(
-        "Guest: Financial Guest · Balance due · MYR 240.00"
-      )
-      expect(response.body).to include("Guest: Financial Guest · Balance due · MYR 240.00")
+      expect(timeline.css("[id$='-trigger'] [data-slot='stay-view-financial-attention']")).to be_empty
+      expect(response.body).to include("Collect MYR 240.00 · Financial Guest")
 
       get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
 
       room_view = Nokogiri::HTML(response.body)
       badge = room_view.at_css("[data-slot='stay-view-financial-signal']")
-      expect(badge.text).to eq("Guest: Financial Guest · Balance due · MYR 240.00")
+      expect(badge.text).to eq("Collect MYR 240.00 · Financial Guest")
       expect(badge["data-variant"]).to eq("warning")
     end
 
@@ -662,13 +717,13 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Direct bill planned: Acme Sdn Bhd · MYR 240.00")
+      expect(response.body).to include("Company pays MYR 240.00 · Acme Sdn Bhd")
       expect(Nokogiri::HTML(response.body).css("[data-slot='stay-view-financial-attention']")).to be_empty
 
       get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
 
       badge = Nokogiri::HTML(response.body).at_css("[data-slot='stay-view-financial-signal']")
-      expect(badge.text).to eq("Direct bill planned: Acme Sdn Bhd · MYR 240.00")
+      expect(badge.text).to eq("Company pays MYR 240.00 · Acme Sdn Bhd")
       expect(badge["data-variant"]).to eq("info")
     end
 
@@ -694,8 +749,8 @@ RSpec.describe "HotelPortal Stay View", type: :request do
         "folio_transactions", "folio_forecasted_charges", "ar_invoices"
       )
       expect(response.body).not_to include(
-        "987.65", "Balance due", "Payment due", "Credit", "Direct bill", "Projected settled",
-        "Financial review required", "stay-view-financial"
+        "987.65", "Collect MYR", "Unpaid MYR", "Refund MYR", "Company pays MYR", "Invoiced MYR",
+        "Nothing due", "Check folio", "stay-view-financial"
       )
     end
 

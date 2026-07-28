@@ -48,6 +48,12 @@ module HotelPortal
           return render_checkout_error(error) if error.present?
 
           completed.each { |booking| dispatch_checkout_side_effects(booking) }
+          Notifications::InvoiceDelivery.queue(
+            hotel: current_hotel,
+            bookings: completed,
+            anchor_booking: @booking,
+            source: "automatic_checkout"
+          )
           notice = completed.one? ? "Guest has been checked out." : "#{completed.size} bookings checked out."
           complete_booking_action(destination: checkout_success_path, notice: notice, frame: requesting_sheet_frame)
         rescue BatchTargetError => e
@@ -199,7 +205,6 @@ module HotelPortal
         def dispatch_checkout_side_effects(booking)
           ::Bookings::WebhookTriggerService.new(booking).trigger(:booking_completed)
           ::Notifications::Dispatcher.new(event: :booking_completed, booking: booking).call
-          SendInvoiceEmailJob.perform_later(booking.id)
         end
 
         def checkout_success_path

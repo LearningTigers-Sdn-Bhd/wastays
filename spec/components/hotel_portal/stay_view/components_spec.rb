@@ -124,26 +124,44 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
       [ [ "All", "6" ], [ "Vacant", "0" ], [ "Arrival", "1" ], [ "Occupied", "2" ],
        [ "Departure", "1" ], [ "Turnover", "1" ], [ "Blocked", "1" ], [ "Dirty", "1" ] ]
     )
-    expect(page).to have_css("[data-state='vacant'][data-variant='success'][aria-label='Vacant: 0 rooms']")
-    expect(page).to have_css("[data-state='blocked'][data-variant='destructive']")
+    expect(page).to have_css("[data-state='vacant'][data-variant='outline'][aria-label='Vacant: 0 rooms']")
+    expect(badges.map { |badge| badge["data-variant"] }.uniq).to eq([ "outline" ])
+  end
+
+  it "hides the turnover count in the timeline view" do
+    render_inline(HotelPortal::StayView::OperationalCounts.new(counts: status_counts, view_mode: :timeline))
+
+    expect(page.all("[data-slot='stay-view-operational-count']").map { |badge| badge["data-state"] }).to eq(
+      %w[all vacant arrival occupied departure blocked dirty]
+    )
   end
 
   it "renders only Stay View statuses and permission-gates financial guide entries" do
-    render_inline(HotelPortal::StayView::StatusGuide.new(view_financial_status: false))
+    render_inline(HotelPortal::StayView::StatusGuide.new(view_booking: false, view_financial_status: false))
 
     expect(page).to have_css("button[aria-label='Stay View status guide']")
-    expect(page).to have_css("#stay-view-status-guide-panel", text: "No-show review", visible: :all)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Arrival", visible: :all)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "In-house", visible: :all)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Completed", visible: :all)
     expect(page).to have_css("#stay-view-status-guide-panel", text: "Do not disturb", visible: :all)
     expect(page).to have_css("#stay-view-status-guide-panel", text: "Cleaning priority", visible: :all)
     expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Timeline events", visible: :all)
-    expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Arrival", visible: :all)
     expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Departure", visible: :all)
-    expect(page).to have_css("div[data-slot='stay-view-status-swatch']", count: 20)
-    expect(page).to have_css("div[data-slot='stay-view-status-swatch'] svg.size-3", count: 20)
+    expect(page).to have_no_css("#stay-view-status-guide-panel", text: "No-show review", visible: :all)
+    expect(page).to have_css("div[data-slot='stay-view-status-swatch']", count: 17)
+    expect(page).to have_css("div[data-slot='stay-view-status-swatch'] svg.size-3", count: 17)
     expect(page).to have_no_css("#stay-view-status-guide-panel .panel-badge-rounded", visible: :all)
     expect(page).to have_css(
-      "[data-slot='stay-view-status-swatch'][data-state='confirmed']" \
-      "[data-presentation='segment'][data-tone='primary'][data-emphasis='solid'] svg"
+      "[data-slot='stay-view-status-swatch'][data-state='arrival']" \
+      "[data-presentation='segment'][data-tone='info'][data-emphasis='solid'] svg"
+    )
+    expect(page).to have_css(
+      "[data-slot='stay-view-status-swatch'][data-state='in_house']" \
+      "[data-presentation='segment'][data-tone='success'][data-emphasis='solid'] svg"
+    )
+    expect(page).to have_css(
+      "[data-slot='stay-view-status-swatch'][data-state='completed']" \
+      "[data-presentation='segment'][data-tone='completed'][data-emphasis='solid'] svg"
     )
     expect(page).to have_css(
       ".panel-badge.panel-timeline__legend-swatch[data-state='dirty']" \
@@ -153,13 +171,18 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
       "[data-slot='stay-view-status-swatch'][data-state='maintenance']" \
       "[data-presentation='segment'][data-tone='warning'][data-emphasis='hatched'] svg"
     )
-    expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Financial attention", visible: :all)
+    expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Payment needed", visible: :all)
+    expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Guest status", visible: :all)
     expect(page).to have_no_text("Single Lady")
 
-    render_inline(HotelPortal::StayView::StatusGuide.new(view_financial_status: true))
+    render_inline(HotelPortal::StayView::StatusGuide.new(view_booking: true, view_financial_status: true))
 
-    expect(page).to have_css("#stay-view-status-guide-panel", text: "Financial attention", visible: :all)
-    expect(page).to have_css("#stay-view-status-guide-panel", text: "Direct Bill", visible: :all)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Payment needed", visible: :all)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Company pays", visible: :all)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Guest status", visible: :all)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Blacklisted", visible: :all)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "VIP", visible: :all)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Repeat", visible: :all)
     expect(page).to have_css(
       ".panel-badge.panel-timeline__legend-swatch[data-state='financial_attention']" \
       "[data-presentation='badge'][data-variant='warning'] svg"
@@ -408,33 +431,79 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     )
     expect(page.find("#stay-view-booking-1-trigger")[:"aria-label"]).to eq(booking_segment.accessible_label)
     expect(page.find("#stay-view-booking-1-trigger")).to have_text(booking_segment.guest_label)
-    expect(page.find("#stay-view-booking-1-trigger")).to have_text("Checked in")
+    expect(page).to have_css("#stay-view-booking-1-trigger .stay-view-booking-guest-name", text: booking_segment.guest_label)
+    expect(page.find("#stay-view-booking-1-trigger")).to have_no_text("Checked in")
     expect(page).to have_css("#stay-view-booking-1[data-action*='mouseenter->panels-ui--popover#show']")
     expect(page).to have_css("#stay-view-booking-1-panel", text: "Single booking", visible: :all)
+    expect(page).to have_css("#stay-view-booking-1-panel dt", text: "Status", visible: :all)
+    expect(page).to have_css("#stay-view-booking-1-panel dd", text: "Checked in", visible: :all)
   end
 
-  it "shows the booking source in the popover when present" do
+  it "groups booking lifecycle statuses into distinct timeline stage tones" do
+    {
+      confirmed: "info",
+      review_no_show: "warning",
+      checked_in: "success",
+      review_due_out: "warning",
+      checkout_required: "destructive",
+      completed: "completed"
+    }.each do |status, tone|
+      render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment.with(status:)))
+
+      expect(page).to have_css("#stay-view-booking-1[data-tone='#{tone}']")
+    end
+  end
+
+  it "shows the booking source at the left of the bar and in the popover when present" do
     render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment.with(source: "walk_in", source_label: "Walk-in")))
 
-    expect(page).to have_css("#stay-view-booking-1-panel dt", text: "Source", visible: :all)
-    expect(page).to have_css("#stay-view-booking-1-panel dd", text: "Walk-in", visible: :all)
+    trigger = page.find("#stay-view-booking-1-trigger")
+    source = trigger.find("[data-slot='stay-view-booking-source']")
+    expect(source).to have_css("[aria-hidden='true']")
+    expect(source).to have_no_css("[tabindex]")
+    expect(trigger.all("[data-slot='stay-view-booking-source'], .stay-view-booking-guest-name").map { |node| node[:class] }.first)
+      .to include("shrink-0")
+    heading = page.find("#stay-view-booking-1-panel", visible: :all)
+    expect(heading).to have_css("[data-slot='stay-view-popover-source']", visible: :all)
+    expect(heading).to have_text("via Walk-in")
+    expect(page).to have_no_css("#stay-view-booking-1-panel dt", text: "Source", visible: :all)
+  end
+
+  it "shows guest status icons beside the guest name inside the popover" do
+    segment = booking_segment.with(
+      vip: true,
+      blacklisted: true,
+      repeat: true,
+      accessible_label: "#{booking_segment.accessible_label}, guest status Blacklisted, VIP, and Repeat"
+    )
+
+    render_inline(HotelPortal::StayView::BookingBar.new(segment:))
+
+    expect(page).to have_no_css("#stay-view-booking-1-trigger [data-slot='stay-view-guest-status']")
+    expect(page).to have_css("#stay-view-booking-1-panel [data-slot='stay-view-guest-status'][data-status='blacklisted'][aria-label='Blacklisted guest']", visible: :all)
+    expect(page).to have_css("#stay-view-booking-1-panel [data-slot='stay-view-guest-status'][data-status='vip'][aria-label='VIP guest']", visible: :all)
+    expect(page).to have_css("#stay-view-booking-1-panel [data-slot='stay-view-guest-status'][data-status='repeat'][aria-label='Repeat guest']", visible: :all)
+    expect(page).to have_css("#stay-view-booking-1-panel [data-slot='stay-view-guest-status'] svg[aria-hidden='true']", count: 3, visible: :all)
+    expect(page).to have_no_css("#stay-view-booking-1-panel dt", text: "Guest status", visible: :all)
+    expect(page.find("#stay-view-booking-1-trigger")[:"aria-label"]).to include("guest status Blacklisted, VIP, and Repeat")
   end
 
   it "renders a colored OTA badge for a recognized channel source" do
     render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment.with(source: "booking.com", source_label: "Booking.com")))
 
-    expect(page).to have_css("#stay-view-booking-1-panel dd", text: "Booking.com", visible: :all)
-    expect(page.find("#stay-view-booking-1-panel", visible: :all)).to have_css("span[role='img']", text: "B", visible: :all)
+    panel = page.find("#stay-view-booking-1-panel", visible: :all)
+    expect(panel).to have_text("via Booking.com")
+    expect(panel).to have_css("[data-slot='stay-view-popover-source'] span", text: "B", visible: :all)
   end
 
-  it "renders financial attention on the bar and full details in the popover" do
+  it "keeps financial attention off the bar and shows full details in the popover" do
     credit = StayView::FinancialSignal.new(
       state: :credit,
       label: "Guest: Ada Lovelace · Credit · MYR 20.00"
     )
     balance = StayView::FinancialSignal.new(
       state: :balance_due,
-      label: "Company: Acme · Payment due · MYR 240.00"
+      label: "Unpaid MYR 240.00 · Acme"
     )
     segment = booking_segment.with(
       financial_signals: [ credit, balance ],
@@ -443,20 +512,17 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
 
     render_inline(HotelPortal::StayView::BookingBar.new(segment:))
 
-    expect(page).to have_css(
-      "[data-slot='stay-view-financial-attention'][role='img']" \
-      "[aria-label='Guest: Ada Lovelace · Credit · MYR 20.00; Company: Acme · Payment due · MYR 240.00']"
-    )
+    expect(page).to have_no_css("#stay-view-booking-1-trigger [data-slot='stay-view-financial-attention']")
     expect(page).to have_css("#stay-view-booking-1-panel", text: credit.label, visible: :all)
     expect(page).to have_css("#stay-view-booking-1-panel", text: balance.label, visible: :all)
     expect(page.find("#stay-view-booking-1-trigger")[:"aria-label"]).to include(credit.label, balance.label)
   end
 
-  it "shows settled and Direct Bill details without adding timeline attention" do
-    settled = StayView::FinancialSignal.new(state: :settled, label: "Projected settled")
+  it "shows settled and Direct Bill details only in the popover" do
+    settled = StayView::FinancialSignal.new(state: :settled, label: "Nothing due")
     direct_bill = StayView::FinancialSignal.new(
       state: :direct_bill_planned,
-      label: "Direct bill planned: Acme · MYR 240.00"
+      label: "Company pays MYR 240.00 · Acme"
     )
 
     render_inline(
@@ -464,7 +530,7 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     )
 
     expect(page).to have_no_css("[data-slot='stay-view-financial-attention']")
-    expect(page).to have_css("#stay-view-booking-1-panel", text: "Projected settled", visible: :all)
+    expect(page).to have_css("#stay-view-booking-1-panel", text: "Nothing due", visible: :all)
     expect(page).to have_css("#stay-view-booking-1-panel", text: direct_bill.label, visible: :all)
   end
 
@@ -521,8 +587,10 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
 
     render_inline(HotelPortal::StayView::BookingBar.new(segment: grouped))
 
-    expect(page).to have_text("#{booking_segment.guest_label} · 0000001-1")
+    expect(page.find("#stay-view-booking-1-trigger")).to have_text(booking_segment.guest_label)
+    expect(page.find("#stay-view-booking-1-trigger")).to have_no_text("0000001-1")
     expect(page).to have_css("#stay-view-booking-1-panel", text: "Group booking", visible: :all)
+    expect(page).to have_css("#stay-view-booking-1-panel", text: "Tour Group · 0000001-1", visible: :all)
     expect(page).to have_css("#stay-view-booking-1-panel", text: "201 – Suite", visible: :all)
   end
 
@@ -543,7 +611,7 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
 
     expect(page).to have_no_link
     expect(page).to have_css("#stay-view-booking-1-trigger", text: "Reserved")
-    expect(page).to have_css("#stay-view-booking-1-trigger", text: "Checked in")
+    expect(page.find("#stay-view-booking-1-trigger")).to have_no_text("Checked in")
     expect(page.find("#stay-view-booking-1-trigger")[:"aria-label"]).to eq(booking_segment.accessible_label)
   end
 

@@ -125,7 +125,6 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
 
     sign_in_through_ui(user)
     visit hotel_dashboard_path(hotel)
-    find('button[aria-label="Collapse navigation"]').click
 
     expect(page).to have_css("#hotel-sidebar[data-collapsed='true']")
     within("#hotel-sidebar") do

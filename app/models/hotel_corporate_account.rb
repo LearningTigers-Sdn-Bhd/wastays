@@ -4,6 +4,7 @@ class HotelCorporateAccount < ApplicationRecord
   belongs_to :hotel
   belongs_to :corporate_account, class_name: "Account"
   has_many :ar_invoices, dependent: :restrict_with_error
+  has_many :receivables, class_name: "Receivable", dependent: :restrict_with_error
   has_many :ar_payments, dependent: :restrict_with_error
   has_many :ar_payment_submissions, dependent: :restrict_with_error
   has_many :deposits, dependent: :restrict_with_error

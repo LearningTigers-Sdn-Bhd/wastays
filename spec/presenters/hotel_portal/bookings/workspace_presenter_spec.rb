@@ -116,6 +116,9 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(child_presenter).not_to be_group_overview
       expect(child_presenter.tab_path("room_and_rate")).not_to include("scope=booking")
       expect(child_presenter.tab_path("folio_operations")).not_to include("scope=booking")
+      expect(default_presenter.tab_path("documents")).to eq(
+        Rails.application.routes.url_helpers.hotel_booking_workspace_path(hotel, booking, tab: "documents")
+      )
     end
 
     it "returns compact status badge metadata for group child bookings" do
@@ -523,7 +526,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
         group: true,
         booking_number: group.formatted_reservation_number,
         confirmation_code: group.confirmation_token,
-        receipt_number: group.formatted_receipt_number,
+        receipt_number: "—",
         invoice_number: "—",
         folio_account: "—",
         guest_registration: "—"
@@ -692,15 +695,17 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       end
     end
 
-    it "uses entity context for folio, billing, guest, and room-rate tabs" do
+    it "uses entity context only for tabs that select a concrete workspace entity" do
       folio_presenter = described_class.new(booking, params: { tab: "folio_operations" })
       billing_presenter = described_class.new(booking, params: { tab: "billing_preferences" })
+      documents_presenter = described_class.new(booking, params: { tab: "documents" })
       guest_presenter = described_class.new(booking, params: { tab: "guest_details" })
       room_presenter = described_class.new(booking, params: { tab: "room_and_rate" })
       audit_presenter = described_class.new(booking, params: { tab: "audit_trails" })
 
       expect(folio_presenter).to have_attributes(left_rail_mode: "folio_tree", layout_mode: "entity", show_left_rail?: true)
       expect(billing_presenter).to have_attributes(left_rail_mode: "billing_tree", layout_mode: "entity", show_left_rail?: true)
+      expect(documents_presenter).to have_attributes(left_rail_mode: nil, layout_mode: "standard", show_left_rail?: false)
       expect(guest_presenter).to have_attributes(left_rail_mode: "guest_tree", layout_mode: "entity", show_left_rail?: true)
       expect(room_presenter).to have_attributes(left_rail_mode: "room_rate_tree", layout_mode: "entity", show_left_rail?: true)
       expect(audit_presenter).to have_attributes(left_rail_mode: nil, layout_mode: "standard", show_left_rail?: false)
@@ -750,6 +755,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
         [ "folio_operations", "Folios" ],
         [ "security_deposits", "Deposits" ],
         [ "billing_preferences", "Billing" ],
+        [ "documents", "Documents" ],
         [ "guest_details", "Guests" ],
         [ "room_and_rate", "Room & Rate" ],
         [ "housekeeping_requests", "Requests" ],
@@ -778,6 +784,110 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(removed_drawer_presenter).to have_attributes(layout_mode: "entity", show_right_drawer?: false)
       expect(drawer_presenter).to have_attributes(layout_mode: "entity", show_right_drawer?: false)
       expect(standard_drawer_presenter).to have_attributes(layout_mode: "standard", show_left_rail?: false, show_right_drawer?: false)
+    end
+  end
+
+  describe "document sections" do
+    it "places actual records in five sections without synthetic or historical rows" do
+      folio = create(:booking_folio, booking:, hotel:, status: "closed")
+      Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+
+      documents_presenter = described_class.new(booking, params: { tab: "documents" }, hotel:)
+      sections = documents_presenter.document_sections.to_h { |section| [ section.key, section.rows.map(&:type) ] }
+
+      expect(sections).to eq(
+        invoices: [ "Folio invoice" ],
+        ledgers: [ "Folio ledger" ],
+        receipts: [],
+        utility: [],
+        statements: []
+      )
+      expect(documents_presenter.document_sections.map(&:type_heading)).to eq(
+        [ "Folio type", "Folio type", "Receipt type", "Document type", "Statement type" ]
+      )
+      expect(documents_presenter.documents.map(&:status)).not_to include("Not issued", "Unavailable", "Historical")
+    end
+
+    it "keeps the complete group record set when a legacy child booking parameter is present" do
+      group = create(:group_booking, hotel:)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel:, group_booking: group, group_position: 2)
+      create(:booking_folio, booking:, hotel:)
+      create(:booking_folio, booking: sibling, hotel:)
+      documents_presenter = described_class.new(
+        booking,
+        params: { tab: "documents", child_booking_id: 999 },
+        hotel:
+      )
+
+      expect(documents_presenter.documents.select { |row| row.type == "Folio ledger" }.map(&:booking)).to contain_exactly(
+        booking.formatted_reservation_number,
+        sibling.formatted_reservation_number
+      )
+      expect(documents_presenter.selected_child_booking).to eq(booking)
+    end
+
+    it "exposes immutable revision history only to audit users when multiple revisions exist" do
+      folio = create(:booking_folio, booking:, hotel:, status: "closed")
+      invoice = Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+      revision = create(:invoice_revision, invoice:, hotel:, revision_number: 2)
+      invoice.update!(current_revision_number: revision.revision_number)
+      audit_user = instance_double(User)
+      allow(audit_user).to receive(:has_permission?) do |slug, hotel:|
+        slug == "view_audit_logs" && hotel == self.hotel
+      end
+
+      audit_row = described_class.new(booking, params: { tab: "documents" }, hotel:, user: audit_user).documents.find { |row| row.type == "Folio invoice" }
+      regular_row = described_class.new(booking, params: { tab: "documents" }, hotel:).documents.find { |row| row.type == "Folio invoice" }
+
+      expect(audit_row.revision_actions).to contain_exactly(
+        label: invoice.invoice_reference,
+        href: Rails.application.routes.url_helpers.hotel_folio_invoice_revision_path(hotel, folio, 1)
+      )
+      expect(regular_row.revision_actions).to be_empty
+    end
+
+    it "keeps under-correction and voided invoice records visible without current-document actions" do
+      correction_folio = create(:booking_folio, booking:, hotel:, status: "closed")
+      correction_invoice = Invoices::Finalize.call!(folio: correction_folio, issued_by: nil, balance: 0)
+      correction_invoice.update!(state: "under_correction")
+      voided_booking = create(:booking, hotel:)
+      voided_folio = create(:booking_folio, booking: voided_booking, hotel:, status: "closed")
+      voided_invoice = Invoices::Finalize.call!(folio: voided_folio, issued_by: nil, balance: 0)
+      voided_invoice.update!(state: "voided")
+
+      correction_row = described_class.new(booking, params: { tab: "documents" }, hotel:).documents.find { |row| row.type == "Folio invoice" }
+      voided_row = described_class.new(voided_booking, params: { tab: "documents" }, hotel:).documents.find { |row| row.type == "Folio invoice" }
+
+      expect(correction_row).to have_attributes(status: "Under correction", href: nil)
+      expect(voided_row).to have_attributes(status: "Voided", href: nil)
+    end
+
+    it "loads Quick Documents without composing the full document catalog" do
+      documents_presenter = described_class.new(booking, params: { tab: "documents" }, hotel:)
+
+      expect(documents_presenter.quick_documents.keys).to eq(%i[invoice ledger receipt registration_card])
+      expect(documents_presenter.instance_variable_defined?(:@documents)).to be(false)
+    end
+
+    it "keeps document composition queries bounded for a large group" do
+      group = create(:group_booking, hotel:)
+      booking.update!(group_booking: group, group_position: 1)
+      create(:booking_folio, booking:, hotel:)
+      11.times do |index|
+        child = create(:booking, hotel:, group_booking: group, group_position: index + 2)
+        create(:booking_folio, booking: child, hotel:)
+      end
+      statements = []
+      subscriber = lambda do |_name, _started, _finished, _unique_id, payload|
+        statements << payload[:sql] unless payload[:cached] || payload[:name].in?(%w[SCHEMA TRANSACTION])
+      end
+
+      ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+        described_class.new(booking, params: { tab: "documents" }, hotel:).documents
+      end
+
+      expect(statements.size).to be <= 30
     end
   end
 

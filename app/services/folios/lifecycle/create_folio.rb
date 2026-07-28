@@ -43,13 +43,14 @@ module Folios
       private
 
       def folio_attributes
-        folio_number = DocumentIdentifiers::NextFolioNumber.call(hotel: @hotel)
-        ensure_folio_account_reference!(folio_number)
+        allocation = DocumentIdentifiers::NextFolioNumber.issue(hotel: @hotel)
+        ensure_folio_account_reference!(allocation)
 
         {
           hotel: @hotel,
           booking_room_id: @attributes[:booking_room_id].presence,
-          folio_number: folio_number,
+          folio_number: allocation.number,
+          folio_year: allocation.year,
           folio_sequence: next_folio_sequence,
           label: @attributes[:label].presence,
           folio_type: @attributes[:folio_type].presence || "external",
@@ -65,11 +66,14 @@ module Folios
         }
       end
 
-      def ensure_folio_account_reference!(fallback_folio_number)
+      def ensure_folio_account_reference!(fallback_allocation)
         return if @booking.folio_account_reference.present?
 
         base_folio = @booking.booking_folios.where.not(folio_number: nil).order(is_primary: :desc, created_at: :asc, id: :asc).first
-        @booking.assign_folio_account_reference_from!(base_folio&.folio_number || fallback_folio_number)
+        @booking.assign_folio_account_reference_from!(
+          base_folio&.folio_number || fallback_allocation.number,
+          folio_year: base_folio&.folio_year || fallback_allocation.year
+        )
       end
 
       def next_folio_sequence

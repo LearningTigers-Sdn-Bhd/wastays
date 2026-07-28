@@ -3,8 +3,13 @@
 module HotelPortal
   class BookingSourcePresenter
     def initialize(source)
-      @raw = source.to_s
-      @record = BookingSource.find_by_source(source)
+      if source.is_a?(BookingSource)
+        @raw = source.key
+        @record = source
+      else
+        @raw = source.to_s
+        @record = BookingSource.find_by_source(source)
+      end
     end
 
     def label

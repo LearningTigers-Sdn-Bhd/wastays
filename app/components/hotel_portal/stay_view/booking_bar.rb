@@ -5,15 +5,20 @@ module HotelPortal
     class BookingBar < PanelsUI::BaseComponent
       STATUS_TONES = {
         pending: :neutral,
-        confirmed: :primary,
+        confirmed: :info,
         review_no_show: :warning,
         checked_in: :success,
         review_due_out: :warning,
-        checkout_required: :warning,
+        checkout_required: :destructive,
         cancelled: :destructive,
-        completed: :neutral,
+        completed: :completed,
         overbooked: :destructive,
         no_show: :destructive
+      }.freeze
+      GUEST_STATUS_PRESENTATIONS = {
+        "Blacklisted" => { icon: "ban", class: "text-destructive" }.freeze,
+        "VIP" => { icon: "crown-simple", class: "text-warning", library: "phosphor", variant: "duotone" }.freeze,
+        "Repeat" => { icon: "repeat", class: "text-info" }.freeze
       }.freeze
 
       def initialize(segment:, href: nil, id: nil, class: nil, link_attributes: {}, interaction: {}, **attributes)
@@ -47,9 +52,8 @@ module HotelPortal
           popover.with_trigger(**trigger_attributes) do
             safe_join([
               resize_handle(:start),
-              tag.span(segment_label, class: "min-w-0 truncate"),
-              financial_attention,
-              tag.span(@segment.status.to_s.humanize, class: "min-w-0 shrink-[3] truncate text-xs font-medium"),
+              booking_source,
+              tag.span(@segment.guest_label, class: "stay-view-booking-guest-name min-w-0 flex-1 truncate"),
               resize_handle(:end)
             ].compact)
           end
@@ -61,10 +65,6 @@ module HotelPortal
 
       def permitted_href
         @href if @href.present? && @segment.capabilities.view_booking?
-      end
-
-      def segment_label
-        [ @segment.guest_label, @segment.group_reference ].compact_blank.join(" · ")
       end
 
       def segment_data
@@ -134,13 +134,45 @@ module HotelPortal
         end
       end
 
+      # Source leads the heading as a large badge, with the guest identity stacked
+      # beside it: name, booking type, then the source spelled out.
       def popover_heading
-        tag.div do
+        tag.div(class: "flex items-center gap-2.5") do
           safe_join([
-            tag.p(@segment.primary_guest_name, class: "text-sm font-semibold text-foreground"),
-            tag.p(@segment.booking_type == :group ? "Group booking" : "Single booking", class: "text-xs text-muted-foreground")
-          ])
+            popover_source_badge,
+            tag.div(class: "min-w-0 flex-1") do
+              safe_join([
+                tag.div(class: "flex min-w-0 items-center gap-1.5") do
+                  safe_join([
+                    tag.p(@segment.primary_guest_name, class: "min-w-0 truncate text-sm font-semibold text-foreground"),
+                    guest_status_indicators
+                  ].compact)
+                end,
+                tag.p(@segment.booking_type == :group ? "Group booking" : "Single booking", class: "text-xs text-muted-foreground"),
+                source_line
+              ].compact)
+            end
+          ].compact)
         end
+      end
+
+      def popover_source_badge
+        return if @segment.source.blank?
+
+        tag.span(class: "shrink-0", data: { slot: "stay-view-popover-source" }) do
+          render PanelsUI::BookingSourceBadge.new(
+            source: @segment.source,
+            size: :lg,
+            with_tooltip: false,
+            decorative: true
+          )
+        end
+      end
+
+      def source_line
+        return if @segment.source_label.blank?
+
+        tag.p("via #{@segment.source_label}", class: "truncate text-xs text-muted-foreground")
       end
 
       def popover_details
@@ -149,37 +181,45 @@ module HotelPortal
             [ "Status", @segment.status.to_s.humanize ],
             [ "Stay", "#{@segment.check_in.to_fs(:medium)} – #{@segment.check_out.to_fs(:medium)}" ]
           ]
-          rows << [ "Source", source_value ] if @segment.source_label.present?
-          @segment.financial_signals.each { |signal| rows << [ "Financial", signal.label ] }
+          @segment.financial_signals.each { |signal| rows << [ "Payment", signal.label ] }
           rows << [ "Group", [ @segment.group_name, @segment.group_reference ].compact_blank.join(" · ") ] if @segment.group_reference.present?
           safe_join(rows.flat_map { |label, value| [ tag.dt(label, class: "text-muted-foreground"), tag.dd(value, class: "text-foreground") ] })
         end
       end
 
-      def source_value
-        return @segment.source_label if @segment.source.blank?
+      def guest_status_icon_options(presentation)
+        { class: "size-3.5", aria: { hidden: true } }
+          .merge(presentation.slice(:library, :variant))
+      end
 
-        tag.span(class: "inline-flex items-center gap-1.5") do
-          safe_join([
-            render(PanelsUI::BookingSourceBadge.new(source: @segment.source, size: :sm, with_tooltip: false)),
-            @segment.source_label
-          ])
+      def guest_status_indicators
+        return if @segment.guest_statuses.empty?
+
+        tag.span(class: "flex shrink-0 items-center gap-1", data: { slot: "stay-view-guest-statuses" }) do
+          safe_join(@segment.guest_statuses.map do |status|
+            presentation = GUEST_STATUS_PRESENTATIONS.fetch(status)
+            tag.span(
+              helpers.app_icon(presentation.fetch(:icon), **guest_status_icon_options(presentation)),
+              class: presentation.fetch(:class),
+              role: "img",
+              aria: { label: "#{status} guest" },
+              data: { slot: "stay-view-guest-status", status: status.downcase }
+            )
+          end)
         end
       end
 
-      def financial_attention
-        signals = @segment.financial_signals.select(&:attention?)
-        return if signals.empty?
+      def booking_source
+        return if @segment.source.blank?
 
-        warning = signals.any? { |signal| signal.state.in?(%i[balance_due review]) }
-        icon = warning ? "triangle-alert" : "rotate-ccw"
-        tag.span(
-          helpers.app_icon(icon, class: "size-3.5", aria: { hidden: true }),
-          class: "shrink-0 text-warning",
-          role: "img",
-          aria: { label: signals.map(&:label).join("; ") },
-          data: { slot: "stay-view-financial-attention" }
-        )
+        tag.span(class: "shrink-0", data: { slot: "stay-view-booking-source" }) do
+          render PanelsUI::BookingSourceBadge.new(
+            source: @segment.source,
+            size: :sm,
+            with_tooltip: false,
+            decorative: true
+          )
+        end
       end
 
       def group_rooms

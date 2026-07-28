@@ -1,6 +1,6 @@
 class Api::V1::PreCheckinLinksController < Api::V1::BaseController
   def create
-    booking = booking_scope.find_by(confirmation_token: params[:booking_token])
+    booking = booking_scope.with_confirmation_token(params[:booking_token]).first
 
     unless booking
       render json: { error: "Booking not found or access denied" }, status: :not_found

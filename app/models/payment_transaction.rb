@@ -3,6 +3,7 @@ class PaymentTransaction < ApplicationRecord
   belongs_to :booking, optional: true
   belongs_to :corporate_ar_payment_intent, optional: true
   belongs_to :ar_payment, optional: true
+  has_one :receipt, dependent: :nullify
 
   STATUSES = %w[pending captured failed checkout_initiated authorized].freeze
 

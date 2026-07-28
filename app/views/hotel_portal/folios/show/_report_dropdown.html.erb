@@ -16,11 +16,11 @@
         <%= cached_icon "chevron-right", class: "ml-auto size-4 text-muted-foreground" %>
       </button>
       <div class="hidden absolute right-full top-0 z-50 mr-1 w-44 rounded-2xl border border-border bg-card p-1.5 shadow-xl shadow-foreground/10 group-hover:block group-focus-within:block" role="menu" aria-label="Folio Ledger exports">
-        <%= link_to ledger_hotel_folio_path(hotel, booking, format: :pdf), role: "menuitem", target: "_blank", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none", data: { turbo: false } do %>
+        <%= link_to hotel_folio_ledger_path(hotel, folio_show.folio, format: :pdf), role: "menuitem", target: "_blank", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none", data: { turbo: false } do %>
           <%= cached_icon "file-text", class: "size-4 text-muted-foreground" %>
           <span>Download PDF</span>
         <% end %>
-        <%= link_to ledger_hotel_folio_path(hotel, booking, format: :csv), role: "menuitem", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none", data: { turbo: false } do %>
+        <%= link_to hotel_folio_ledger_path(hotel, folio_show.folio, format: :csv), role: "menuitem", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none", data: { turbo: false } do %>
           <%= cached_icon "table", class: "size-4 text-muted-foreground" %>
           <span>Download CSV</span>
         <% end %>
@@ -28,7 +28,7 @@
     </div>
 
     <% if folio_show.booking_invoice_report_available? %>
-      <%= link_to invoice_hotel_folio_path(hotel, booking, format: :pdf), role: "menuitem", target: "_blank", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none", data: { turbo: false } do %>
+      <%= link_to hotel_folio_invoice_path(hotel, folio_show.folio, format: :pdf), role: "menuitem", target: "_blank", class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none", data: { turbo: false } do %>
         <%= cached_icon "file-text", class: "size-4 text-muted-foreground" %>
         <span>Booking Invoices</span>
       <% end %>

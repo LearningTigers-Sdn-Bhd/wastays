@@ -6,7 +6,7 @@ module Admin
     before_action :set_icon_names, only: [ :new, :create, :edit, :update ]
 
     def index
-      @booking_sources = BookingSource.ordered
+      @booking_sources = BookingSource.includes(logo_attachment: :blob).ordered
     end
 
     def new

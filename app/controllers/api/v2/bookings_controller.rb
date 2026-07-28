@@ -17,20 +17,20 @@ class Api::V2::BookingsController < Api::V2::BaseController
   private
 
   def find_booking
-    booking_scope.find_by(confirmation_token: params[:id]) || booking_scope.find_by(id: params[:id])
+    booking_scope.with_confirmation_token(params[:id]).first || booking_scope.find_by(id: params[:id])
   end
 
   def find_group
     scope = GroupBooking.where(id: booking_scope.where.not(group_booking_id: nil).select(:group_booking_id))
     identifier = params[:id].to_s
     group_id = identifier.delete_prefix("group-") if identifier.start_with?("group-")
-    group = scope.find_by(confirmation_token: identifier) ||
+    group = scope.with_confirmation_token(identifier).first ||
       scope.find_by(external_reference: identifier) ||
       scope.find_by(channel_manager_reference: identifier) ||
       scope.find_by(id: group_id)
     return group if group
 
-    reservation_number = identifier[/\d{7}\z/]&.to_i
+    reservation_number = identifier[/\d{5}\z/]&.to_i
     scope.where(reservation_number:).detect { |candidate| candidate.formatted_reservation_number == identifier } if reservation_number
   end
 

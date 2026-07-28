@@ -50,6 +50,9 @@ class FolioTransaction < ApplicationRecord
     inverse_of: :parent_transaction,
     dependent: :restrict_with_error
   has_one :deposit_movement, dependent: :restrict_with_error
+  has_one :receipt, dependent: :restrict_with_error
+
+  after_create :issue_payment_receipt
 
   delegate :hotel, to: :booking_folio, allow_nil: true
 
@@ -101,6 +104,10 @@ class FolioTransaction < ApplicationRecord
   end
 
   private
+
+  def issue_payment_receipt
+    Receipts::Issue.call!(source: self)
+  end
 
   def assign_gl_code
     return if gl_code.present? || hotel.blank?

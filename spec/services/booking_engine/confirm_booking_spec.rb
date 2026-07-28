@@ -121,15 +121,16 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(result).to be_success
       expect(result.group_booking.confirmation_token).to be_present
       expect(result.group_booking.reservation_number).to eq(1)
-      expect(result.group_booking.receipt_number).to eq(1)
+      expect(result.group_booking.receipt_number).to be_nil
       expect(result.group_booking.bookings.count).to eq(2)
       expect(result.bookings.map(&:reservation_number)).to eq([ 2, 3 ])
-      expect(result.bookings.map(&:receipt_number)).to eq([ 2, 3 ])
+      expect(result.bookings.map(&:receipt_number)).to eq([ nil, nil ])
       expect(result.bookings.map { |booking| booking.booking_rooms.sole.quantity }).to all(eq(1))
       expect(result.bookings.map { |booking| booking.booking_guests.sole.role }).to all(eq("primary"))
       expect(result.bookings.map { |booking| booking.primary_guest.date_of_birth }).to all(eq(Date.new(1990, 5, 20)))
       deposit = result.group_booking.deposits.sole
       expect(deposit).to have_attributes(kind: "prepayment", amount: 400.to_d, status: "settled")
+      expect(deposit.receipt).to be_present
       expect(deposit.deposit_movements.movement_type_apply.count).to eq(2)
     end
 

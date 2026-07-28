@@ -136,8 +136,8 @@ RSpec.describe Bookings::TransitionStatus do
         other_booking = create(:booking, status: "confirmed")
         BusinessDates::ResetAuthority.call!(hotel: other_booking.hotel, date: timestamp.to_date)
         allow(HotelCounter).to receive(:increment!).and_call_original
-        allow(HotelCounter).to receive(:increment!).with(hotel: booking.hotel, type: "folio").and_return(1)
-        allow(HotelCounter).to receive(:increment!).with(hotel: other_booking.hotel, type: "folio").and_return(1)
+        allow(HotelCounter).to receive(:increment!).with(hotel: booking.hotel, type: "folio", year: timestamp.year, floor: nil).and_return(1)
+        allow(HotelCounter).to receive(:increment!).with(hotel: other_booking.hotel, type: "folio", year: timestamp.year, floor: nil).and_return(1)
 
         first_result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp).call
         second_result = described_class.new(booking: other_booking, status: "checked_in", timestamp: timestamp).call
@@ -329,11 +329,12 @@ RSpec.describe Bookings::TransitionStatus do
           expect(result.success?).to be true
         }.to change(BookingAuditLog, :count).by(1)
           .and have_enqueued_job(WebhookBroadcastJob).with('booking_completed', anything)
-          .and have_enqueued_job(Notifications::DeliverJob).exactly(3).times
+          .and have_enqueued_job(Notifications::DeliverJob).exactly(4).times
 
         expect(booking.reload.status).to eq("completed")
         expect(booking.checked_out_at).to be_within(1.second).of(timestamp)
         expect(folio.reload.status).to eq("closed")
+        expect(NotificationDelivery.where(notification_type: "invoice_package", booking:)).to exist
 
         log = BookingAuditLog.last
         expect(log.action_type).to eq("check_out")

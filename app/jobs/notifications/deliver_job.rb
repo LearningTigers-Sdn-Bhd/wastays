@@ -12,6 +12,8 @@ module Notifications
 
       adapter_for(delivery).call
       delivery.update!(status: "sent", sent_at: Time.current, failed_at: nil, error_message: nil)
+    rescue Notifications::InvoiceDelivery::UnavailableError => e
+      delivery&.update!(status: "skipped", failed_at: nil, error_message: e.message)
     rescue StandardError => e
       delivery&.update!(status: "failed", failed_at: Time.current, error_message: e.message)
       raise

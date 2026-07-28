@@ -5,7 +5,7 @@ class Api::V1::WorkflowWebhooksController < ApplicationController
   def create
     # Find booking by confirmation token or a specialized webhook token if we added one
     # For now, we'll assume the external system sends our confirmation_token
-    booking = Booking.find_by!(confirmation_token: params[:booking_token])
+    booking = Booking.with_confirmation_token(params[:booking_token]).first!
 
     result = GuestArrival::SyncWorkflowEvent.new(booking, webhook_params).call
 

@@ -18,7 +18,7 @@ module ArInvoices
     private
 
     def scope
-      @hotel.ar_invoices
+      @hotel.receivables
         .with_open_balance
         .where(status: %w[open partially_paid])
         .where(ArInvoice.arel_table[:due_on].lt(@as_of_date))

@@ -1,3 +1,3 @@
-<% content_for :title, "Stay View" %>
+<% content_for :title, stay_view_board_title(@board.view_mode) %>
 
 <%= render "board", board: @board, state: @stay_view_state %>

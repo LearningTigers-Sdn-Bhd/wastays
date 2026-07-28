@@ -28,7 +28,7 @@ RSpec.describe ArInvoice, type: :model do
     folio = create(:booking_folio, :secondary, hotel: hotel, booking: create(:booking, hotel: hotel), hotel_corporate_account: relationship)
     invoice = create(:ar_invoice, hotel: hotel, booking_folio: folio, hotel_corporate_account: relationship, invoice_number: 42)
 
-    expect(invoice.formatted_invoice_number).to eq("ABC-40000042")
+    expect(invoice.formatted_invoice_number).to eq("ABC-26400042")
   end
 
   it "requires the invoice company account to match the folio company account" do

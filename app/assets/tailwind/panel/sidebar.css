@@ -3,21 +3,27 @@
      global .sidebar-* rules, which retire in Phase 5). Collapse/drawer state is driven
      purely by data-collapsed / data-open attributes so the controllers stay tiny. */
   .panel-sidebar {
-    @apply flex flex-col shrink-0 h-full border-e;
+    @apply relative flex flex-col shrink-0 h-full border-e;
     background: var(--sidebar);
     border-color: var(--sidebar-border);
     color: var(--sidebar-foreground);
     width: 260px;
-    transition: width 150ms ease;
+    transition: width 150ms ease, margin-inline-end 150ms ease, box-shadow 150ms ease;
   }
 
   .panel-sidebar[data-collapsed="true"] {
     width: 48px;
   }
 
+  .panel-sidebar[data-collapsible="true"][data-collapsed="false"][data-locked="false"] {
+    z-index: var(--z-dropdown);
+    margin-inline-end: -212px;
+    box-shadow: var(--shadow-lg);
+  }
+
   .panel-sidebar__header {
     @apply shrink-0 flex items-center border-b;
-    height: 53px;
+    height: 37px;
     border-color: var(--sidebar-border);
   }
 

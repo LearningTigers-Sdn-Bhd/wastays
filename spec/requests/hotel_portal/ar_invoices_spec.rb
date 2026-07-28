@@ -362,6 +362,28 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
     end
   end
 
+  describe "GET /hotel/:hotel_id/accounts-receivable/invoices/:id/pdf" do
+    it "renders the hotel-scoped AR invoice PDF" do
+      invoice = create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AR-PDF", folio_number: 804, amount: 300)
+      create(:folio_transaction, booking_folio: invoice.booking_folio, amount: 300, description: "Corporate accommodation")
+
+      get pdf_hotel_ar_invoice_path(hotel, invoice)
+
+      expect(response).to have_http_status(:success)
+      expect(response.media_type).to eq("application/pdf")
+      expect(response.body).to start_with("%PDF")
+      expect(response.headers["Content-Disposition"]).to include("inline")
+    end
+
+    it "does not expose another hotel's AR invoice PDF" do
+      invoice = create_ar_invoice_for(hotel: other_hotel, confirmation_token: "BK-AR-PDF-HIDDEN", folio_number: 805, amount: 300)
+
+      get pdf_hotel_ar_invoice_path(hotel, invoice)
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   describe "GET /hotel/:hotel_id/ar-payments/new" do
     it "renders a corporate payment form for an invoice account" do
       invoice = create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-PAY-FORM", folio_number: 811, amount: 300)

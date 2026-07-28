@@ -110,7 +110,7 @@ module CorporatePortal
       hotel_corporate_account.hotel.ar_invoices
         .with_open_balance
         .where(hotel_corporate_account: hotel_corporate_account, currency: currency)
-        .includes(:hotel, hotel_corporate_account: :corporate_account)
+        .includes(:hotel, :invoice, hotel_corporate_account: :corporate_account)
         .order(due_on: :asc, invoice_number: :asc)
     end
 

@@ -6,9 +6,10 @@ module Bookings
   class SplitLegacyMultiRoom
     MONEY_COLUMNS = %w[total_amount margin_amount net_amount tourism_tax_amount].freeze
     CHILD_CLEARED_COLUMNS = %w[
-      id created_at updated_at confirmation_token reservation_number receipt_number guest_registration_number
-      folio_account_reference group_booking_id group_position payout_batch_id payout_at payout_reference
-      external_reference channel_manager_reference tourism_tax_voucher_number
+      id created_at updated_at confirmation_token reservation_number reservation_year reservation_reference receipt_number
+      guest_registration_number guest_registration_year guest_registration_reference folio_account_reference group_booking_id
+      group_position payout_batch_id payout_at payout_reference external_reference channel_manager_reference
+      tourism_tax_voucher_number tourism_tax_voucher_year tourism_tax_voucher_reference
     ].freeze
     GUEST_LINK_COLUMNS = %w[
       guest_id is_primary role name_snapshot email_snapshot phone_snapshot government_id_snapshot
@@ -27,6 +28,8 @@ module Bookings
     end
 
     def call
+      previous_notification_setting = Thread.current[:skip_booking_creation_notifications]
+      Thread.current[:skip_booking_creation_notifications] = true
       result = nil
       Booking.transaction do
         @booking.lock!
@@ -67,6 +70,8 @@ module Bookings
       result
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
       failure(e.message)
+    ensure
+      Thread.current[:skip_booking_creation_notifications] = previous_notification_setting
     end
 
     private
@@ -106,14 +111,19 @@ module Bookings
 
     def create_child!(group:, position:, allocation:)
       attributes = @booking.attributes.except(*CHILD_CLEARED_COLUMNS)
+      reservation = DocumentIdentifiers::Issuer.issue!(hotel: @booking.hotel, type: :reservation)
+      guest_registration = DocumentIdentifiers::Issuer.issue!(hotel: @booking.hotel, type: :guest_registration)
       attributes.merge!(allocation.stringify_keys)
       attributes.merge!(
         "group_booking_id" => group.id,
         "group_position" => position,
         "confirmation_token" => next_confirmation_token,
-        "reservation_number" => HotelCounter.increment!(hotel: @booking.hotel, type: "reservation"),
-        "receipt_number" => HotelCounter.increment!(hotel: @booking.hotel, type: "receipt"),
-        "guest_registration_number" => HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration"),
+        "reservation_number" => reservation.number,
+        "reservation_year" => reservation.year,
+        "reservation_reference" => reservation.reference,
+        "guest_registration_number" => guest_registration.number,
+        "guest_registration_year" => guest_registration.year,
+        "guest_registration_reference" => guest_registration.reference,
         "external_reference" => nil,
         "channel_manager_reference" => nil,
         "revision_number" => 0,
@@ -125,8 +135,7 @@ module Bookings
         "updated_at" => Time.current
       )
 
-      id = Booking.insert_all!([ attributes ], returning: %w[id]).rows.first.first
-      Booking.find(id)
+      Booking.create!(attributes)
     end
 
     def next_confirmation_token

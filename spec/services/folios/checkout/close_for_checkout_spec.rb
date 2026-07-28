@@ -23,12 +23,47 @@ RSpec.describe Folios::Checkout::CloseForCheckout do
     expect(result.folio).to eq(folio)
     expect(result.balance).to eq(0.to_d)
     expect(folio.reload.status).to eq("closed")
+    expect(folio.invoice).to be_finalized
 
     event = FinancialAuditEvent.last
     expect(event.event_type).to eq("folio_closed_for_checkout")
     expect(event.booking_folio).to eq(folio)
     expect(event.booking).to eq(booking)
     expect(event.metadata["invoice_number"]).to eq(folio.invoice_number)
+  end
+
+  it "issues a separate folio invoice for every settled folio" do
+    guest_folio = create(:booking_folio, booking: booking, status: "open")
+    relationship = create(:hotel_corporate_account, hotel: booking.hotel)
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, hotel_corporate_account: relationship)
+
+    result = described_class.call(
+      booking: booking,
+      user: user,
+      options: { exception_folio_ids: [], direct_bill_folio_ids: [] }
+    )
+
+    expect(result).to be_success
+    expect([ guest_folio, company_folio ].map { |record| record.reload.invoice }).to all(be_finalized)
+    expect([ guest_folio, company_folio ].map(&:invoice_number)).to all(be_present)
+    expect(guest_folio.invoice_number).not_to eq(company_folio.invoice_number)
+  end
+
+  it "creates only an AR invoice when the first folio is settled by Direct Bill" do
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel, credit_limit: 1_000)
+    company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, hotel_corporate_account: relationship)
+    create(:folio_transaction, booking_folio: company_folio, amount: 100)
+
+    result = described_class.call(
+      booking: booking,
+      user: create(:user, :superadmin),
+      options: { exception_folio_ids: [], direct_bill_folio_ids: [ company_folio.id ] }
+    )
+
+    expect(result).to be_success
+    expect(company_folio.reload.ar_invoice).to be_present
+    expect(company_folio.invoice).to be_kind_direct_bill
+    expect(company_folio.invoice_number).to be_nil
   end
 
   it "fails when the booking has no folio" do

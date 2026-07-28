@@ -112,12 +112,15 @@ end %>
     <% end %>
 
     <div class="shrink-0 pb-0.5">
-      <%= render HotelPortal::StayView::StatusGuide.new(view_financial_status: board.capabilities.view_financial_status?) %>
+      <%= render HotelPortal::StayView::StatusGuide.new(
+        view_booking: board.capabilities.view_booking?,
+        view_financial_status: board.capabilities.view_financial_status?
+      ) %>
     </div>
   <% end %>
 
   <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border p-2">
-    <%= render HotelPortal::StayView::OperationalCounts.new(counts: board.status_counts) %>
+    <%= render HotelPortal::StayView::OperationalCounts.new(counts: board.status_counts, view_mode: board.view_mode) %>
     <% if board.capabilities.create_booking? %>
       <div class="flex flex-wrap items-center gap-2" data-slot="stay-view-global-actions">
         <%= render PanelsUI::Button.new(

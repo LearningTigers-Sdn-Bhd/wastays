@@ -25,7 +25,7 @@ class ReceiptPdfService
     pdf = Prawn::Document.new(
       page_size: "A4",
       margin: [ 40, 40, 40, 40 ],
-      info: { Title: "Receipt - #{@booking.confirmation_token}", Author: "WAStays", Creator: "WAStays", CreationDate: Time.now }
+      info: { Title: "Booking Confirmation - #{@booking.confirmation_token}", Author: "WAStays", Creator: "WAStays", CreationDate: Time.now }
     )
 
     draw_header(pdf)
@@ -48,7 +48,7 @@ class ReceiptPdfService
     File.exist?(logo_path) ? pdf.image(logo_path, height: 32) : (pdf.fill_color DARK_GREEN; pdf.text "WAStays", size: 22, style: :bold)
     pdf.move_up 32
     pdf.fill_color DARK_GREEN
-    pdf.text "RECEIPT", size: 22, style: :bold, align: :right
+    pdf.text "BOOKING CONFIRMATION", size: 18, style: :bold, align: :right
     pdf.move_down 12
     pdf.stroke_color DARK_GREEN
     pdf.line_width 0.5
@@ -57,9 +57,9 @@ class ReceiptPdfService
   end
 
   def draw_meta(pdf)
-    is_paid     = @booking.payment_status == "captured"
-    status_text = is_paid ? "PAID" : @booking.payment_status.upcase.tr("_", " ")
-    status_color = is_paid ? SUCCESS : WARNING
+    is_confirmed = @booking.status == "confirmed"
+    status_text = @booking.status.upcase.tr("_", " ")
+    status_color = is_confirmed ? SUCCESS : WARNING
 
     pdf.fill_color status_color
     pdf.fill_rectangle [ 0, pdf.cursor ], 50, 16
@@ -69,7 +69,7 @@ class ReceiptPdfService
     pdf.fill_color TEXT_PRIMARY
 
     pdf.table([
-      [ { content: "RECEIPT NUMBER", font_style: :bold, text_color: GOLD, size: 8, borders: [] },
+      [ { content: "CONFIRMATION CODE", font_style: :bold, text_color: GOLD, size: 8, borders: [] },
         { content: "ISSUE DATE", font_style: :bold, text_color: GOLD, size: 8, borders: [], align: :right } ],
       [ { content: @booking.confirmation_token, font_style: :bold, size: 14, text_color: TEXT_PRIMARY, borders: [] },
         { content: @booking.created_at.strftime("%d %B %Y"), size: 11, text_color: TEXT_PRIMARY, borders: [], align: :right } ]
@@ -135,7 +135,7 @@ class ReceiptPdfService
     pdf.fill_color DARK_GREEN
     pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, band_h
     pdf.fill_color WHITE
-    pdf.draw_text "TOTAL PAID", at: [ 18, pdf.cursor - 32 ], size: 10, style: :bold
+    pdf.draw_text "BOOKING TOTAL", at: [ 18, pdf.cursor - 32 ], size: 10, style: :bold
     pdf.text_box "MYR #{fmt(@booking.total_amount)}", at: [ 0, pdf.cursor ], width: pdf.bounds.width - 18, height: band_h, align: :right, valign: :center, size: 20, style: :bold
     pdf.move_down band_h + 40
     pdf.fill_color TEXT_PRIMARY
@@ -148,7 +148,7 @@ class ReceiptPdfService
     pdf.fill_color TEXT_MUTED
     pdf.text "Thank you for choosing WAStays. We hope you have a pleasant stay!", size: 9, align: :center, style: :italic
     pdf.move_down 12
-    pdf.text "This is a system-generated receipt. No signature required.", size: 8, align: :center
+    pdf.text "This is a system-generated booking confirmation, not a payment receipt.", size: 8, align: :center
     pdf.text "WAStays · hello@wastays.com · www.wastays.com", size: 8, align: :center
   end
 

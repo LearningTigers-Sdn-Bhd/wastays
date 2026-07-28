@@ -21,9 +21,14 @@ module Reports
       BOTTOM_MARGIN = 72
       FOOTER_Y = -26
 
-      def initialize(booking:, printed_by: nil)
-        @booking = booking
-        @records = Reports::Bookings::GenerateFolioRecords.new(booking: booking, printed_by: printed_by).call
+      def initialize(folio: nil, invoice: nil, receivable: nil, printed_by: nil, revision_number: nil)
+        @records = Reports::Bookings::GenerateFolioRecords.new(
+          folio:,
+          invoice:,
+          receivable:,
+          printed_by:,
+          revision_number:
+        ).call
       end
 
       def generate
@@ -38,7 +43,13 @@ module Reports
           }
         )
 
+        render_into(pdf, footer: true)
+        pdf.render
+      end
+
+      def render_into(pdf, footer: false)
         draw_header(pdf)
+        draw_legacy_notice(pdf) if @records.legacy_generated?
         pdf.move_down 14
         draw_hotel_information(pdf)
         pdf.move_down 12
@@ -47,15 +58,18 @@ module Reports
         draw_transactions(pdf)
         pdf.move_down 16
         draw_summary(pdf)
+        if @records.direct_bill?
+          pdf.move_down 14
+          draw_current_payment_status(pdf)
+        end
         pdf.move_down 14
         draw_legend(pdf)
         pdf.move_down 14
         draw_notes(pdf)
         pdf.move_down 18
         draw_signatures(pdf)
-        draw_footer(pdf)
-
-        pdf.render
+        draw_footer(pdf) if footer
+        pdf
       end
 
       private
@@ -94,6 +108,15 @@ module Reports
         end
       end
 
+      def draw_legacy_notice(pdf)
+        pdf.move_down 10
+        pdf.fill_color "92400e"
+        pdf.text "LEGACY-GENERATED RECONSTRUCTION", size: 9, style: :bold, align: :center
+        pdf.fill_color TEXT_MUTED
+        pdf.text "Reconstructed from currently available records; an original issue-time snapshot was not available.", size: 7.5, align: :center
+        pdf.fill_color TEXT_PRIMARY
+      end
+
       def draw_guest_booking_details(pdf)
         left_rows = @records.guest_folio_detail_rows
         right_rows = @records.booking_stay_detail_rows
@@ -101,7 +124,7 @@ module Reports
 
         rows = [
           [
-            { content: "GUEST / FOLIO DETAILS", colspan: 2, font_style: :bold, text_color: TEXT_PRIMARY, background_color: LIGHT_GRAY },
+            { content: @records.payer_section_title, colspan: 2, font_style: :bold, text_color: TEXT_PRIMARY, background_color: LIGHT_GRAY },
             { content: "BOOKING / STAY DETAILS", colspan: 2, font_style: :bold, text_color: TEXT_PRIMARY, background_color: LIGHT_GRAY }
           ]
         ]
@@ -260,6 +283,26 @@ module Reports
           cells.border_color = BORDER_GRAY
           cells.padding = [ 4, 6, 4, 6 ]
           cells.size = 7.5
+        end
+      end
+
+      def draw_current_payment_status(pdf)
+        rows = @records.current_payment_status_rows
+        return if rows.empty?
+
+        section_title(pdf, "CURRENT PAYMENT STATUS (SUPPLEMENTAL)")
+        pdf.fill_color TEXT_MUTED
+        pdf.text "This dated status is not part of the immutable issued invoice body.", size: 7.5
+        pdf.fill_color TEXT_PRIMARY
+        pdf.move_down 5
+        width = pdf.bounds.width * 0.54
+        pdf.table(rows, width:, position: :right, column_widths: [ width * 0.58, width * 0.42 ]) do
+          cells.border_color = BORDER_GRAY
+          cells.padding = [ 5, 8 ]
+          cells.size = 8
+          column(1).align = :right
+          row(3).font_style = :bold
+          row(3).background_color = LIGHT_GRAY
         end
       end
 

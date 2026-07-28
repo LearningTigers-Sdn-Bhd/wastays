@@ -3,7 +3,7 @@ class Api::V1::ComplaintWebhooksController < ApplicationController
   skip_before_action :authenticate_user! if respond_to?(:authenticate_user!)
 
   def create
-    booking = Booking.find_by!(confirmation_token: params[:booking_token])
+    booking = Booking.with_confirmation_token(params[:booking_token]).first!
     result = Complaints::SyncRequest.new(booking, webhook_params).call
 
     if result.success?

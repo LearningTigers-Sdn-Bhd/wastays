@@ -1,7 +1,7 @@
 <%= turbo_frame_tag "stay_view_board", data: { turbo_action: "advance" } do %>
   <div class="space-y-5">
     <%= render PanelsUI::PageHeader.new(
-      title: "Stay View",
+      title: stay_view_board_title(board.view_mode),
       description: stay_view_board_description(board.view_mode)
     ) do |header| %>
       <% header.with_caption do %>

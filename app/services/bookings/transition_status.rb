@@ -135,11 +135,27 @@ module Bookings
             next
           end
 
-          guest_reg = @booking.guest_registration_number || HotelCounter.increment!(hotel: @booking.hotel, type: "guest_registration")
+          guest_registration = if @booking.guest_registration_number.present?
+            year = @booking.guest_registration_year || DocumentIdentifiers::Issuer.sequence_year(hotel: @booking.hotel)
+            DocumentIdentifiers::Issuer::Allocation.new(
+              number: @booking.guest_registration_number,
+              year:,
+              reference: @booking.guest_registration_reference || DocumentIdentifiers::Issuer.format(
+                hotel: @booking.hotel,
+                type: :guest_registration,
+                year:,
+                number: @booking.guest_registration_number
+              )
+            )
+          else
+            DocumentIdentifiers::Issuer.issue!(hotel: @booking.hotel, type: :guest_registration)
+          end
 
           attributes = (@options[:attributes] || {}).merge(
             checked_in_at: @timestamp,
-            guest_registration_number: guest_reg
+            guest_registration_number: guest_registration.number,
+            guest_registration_year: guest_registration.year,
+            guest_registration_reference: guest_registration.reference
           )
 
           @booking.transition_status_to!(
@@ -319,7 +335,12 @@ module Bookings
       unless @options[:defer_side_effects]
         Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
         Notifications::Dispatcher.new(event: :booking_completed, booking: @booking).call
-        SendInvoiceEmailJob.perform_later(@booking.id)
+        Notifications::InvoiceDelivery.queue(
+          hotel: @booking.hotel,
+          bookings: [ @booking ],
+          anchor_booking: @booking,
+          source: "automatic_checkout"
+        )
       end
 
       success

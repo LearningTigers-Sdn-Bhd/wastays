@@ -27,6 +27,9 @@ module StayView
       check_out_at = booking.check_out_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
       actual_check_in_at = booking.actual_check_in_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
       actual_check_out_at = booking.actual_check_out_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
+      vip = capabilities.view_booking? && booking.vip?
+      blacklisted = capabilities.view_booking? && booking.blacklisted?
+      repeat = capabilities.view_booking? && booking.repeat?
       room_label = booking.room_number
       dates_label = "#{booking.check_in.to_fs(:long)} to #{booking.check_out.to_fs(:long)}"
       group_label = [ group_name, group_reference ].compact_blank.join(", ")
@@ -40,6 +43,8 @@ module StayView
       accessible_parts << "checked out #{actual_check_out_at.strftime('%H:%M')}" if actual_check_out_at.present?
       accessible_parts << "boat-in #{boat_in_at.to_fs(:time)}" if boat_in_at.present?
       accessible_parts << "boat-out #{boat_out_at.to_fs(:time)}" if boat_out_at.present?
+      guest_statuses = [ ("Blacklisted" if blacklisted), ("VIP" if vip), ("Repeat" if repeat) ].compact
+      accessible_parts << "guest status #{guest_statuses.to_sentence}" if guest_statuses.any?
       accessible_parts.concat(financial_signals.map(&:label))
 
       BookingSegment.new(
@@ -75,7 +80,10 @@ module StayView
         adults:,
         children:,
         boat_in_at:,
-        boat_out_at:
+        boat_out_at:,
+        vip:,
+        blacklisted:,
+        repeat:
       )
     end
 

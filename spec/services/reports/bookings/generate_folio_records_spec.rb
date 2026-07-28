@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Reports::Bookings::GenerateFolioRecords do
-  subject(:records) { described_class.new(booking: booking, printed_by: "F. Suhaila").call }
+  subject(:records) { described_class.new(folio: folio, printed_by: "F. Suhaila").call }
 
   let(:hotel) do
     create(:hotel,
@@ -127,10 +127,12 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
         payment_source: "card",
         source_references: { card_reference: "552190" }
       })
+
+    Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
   end
 
   it "builds guest and folio metadata for the document" do
-    expect(records.document_title).to eq("GUEST FOLIO / INVOICE")
+    expect(records.document_title).to eq("FOLIO INVOICE")
     expect(records.hotel_info_rows).to include(
       [ "Hotel Name", "Hotel ABC Resort" ],
       [ "Address", "Jalan Pantai Cenang, Langkawi, Malaysia" ],
@@ -138,18 +140,18 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     )
     expect(records.guest_folio_detail_rows).to include([ "Guest Name", "John Doe" ])
     expect(records.guest_folio_detail_rows).to include([ "Nationality", "Foreign Tourist" ])
-    expect(records.guest_folio_detail_rows).to include([ "Invoice No", "ABC-30098231" ])
+    expect(records.guest_folio_detail_rows).to include([ "Invoice No", "ABC-26798231" ])
     expect(records.guest_folio_detail_rows).to include([ "Currency", "MYR" ])
     expect(records.booking_stay_detail_rows).to include([ "Room No / Type", "412 / Deluxe King" ])
-    expect(records.booking_stay_detail_rows).to include([ "Folio Account Reference", "ABC-30000451" ])
-    expect(records.booking_stay_detail_rows).to include([ "Folio Reference", "ABC-30000451/1" ])
+    expect(records.booking_stay_detail_rows).to include([ "Folio Account Reference", booking.folio_account_reference_display ])
+    expect(records.booking_stay_detail_rows).to include([ "Folio Reference", folio.folio_reference_display ])
     expect(records.booking_stay_detail_rows).to include([ "Confirm No", "BK-778291" ])
   end
 
   it "omits missing optional hotel information rows" do
     hotel.update!(contact_phone: nil, contact_email: nil)
 
-    expect(described_class.new(booking: booking).call.hotel_info_rows.map(&:first)).not_to include("Contact")
+    expect(described_class.new(folio: folio).call.hotel_info_rows).to include([ "Contact", "+60 12-345 6789 · frontdesk@example.com" ])
   end
 
   it "shows generated tax and charge rows separately with source-derived codes" do
@@ -228,22 +230,22 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
       reversal_of_transaction: original)
     original.update!(voided_by_transaction: reversal)
 
-    fresh_records = described_class.new(booking: booking).call
+    fresh_records = described_class.new(folio: folio).call
 
     expect(fresh_records.transaction_rows.map(&:description)).not_to include("Wrong room charge", "Reversal of transaction")
     expect(fresh_records.total_due).to eq(390.50.to_d)
   end
 
-  it "rejects bookings without a folio" do
-    booking_without_folio = create(:booking, hotel: hotel)
+  it "rejects folios without an issued invoice" do
+    unissued_folio = create(:booking_folio, booking: create(:booking, hotel: hotel), hotel: hotel, status: "closed")
 
-    expect { described_class.new(booking: booking_without_folio).call }.to raise_error(described_class::UnavailableError)
+    expect { described_class.new(folio: unissued_folio).call }.to raise_error(described_class::UnavailableError)
   end
 
   it "rejects open folios" do
     open_booking = create(:booking, hotel: hotel)
     create(:booking_folio, booking: open_booking, hotel: hotel, folio_number: 999, status: "open")
 
-    expect { described_class.new(booking: open_booking).call }.to raise_error(described_class::UnavailableError)
+    expect { described_class.new(folio: open_booking.booking_folio).call }.to raise_error(described_class::UnavailableError)
   end
 end

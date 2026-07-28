@@ -268,11 +268,12 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     room_card = find("#stay_view_room_#{room_type.id}_102[data-room-state='vacant']")
     expect(room_card).to have_content("No activity today")
-    book = room_card.find("[data-slot='stay-view-room-footer'] a[aria-label^='Add booking for room 102']")
+    booking_link = "[data-slot='stay-view-room-footer'] a[aria-label^='Add booking for room 102']"
+    book = room_card.find(booking_link)
     expect(Rack::Utils.parse_nested_query(URI.parse(book[:href]).query)).to include("room_number" => "102")
-    book.send_keys(:enter)
+    room_card.find(booking_link).send_keys(:enter)
 
-    within("#booking-creation-sheet") do
+    within("dialog#booking-creation-sheet[open]") do
       expect(find("#booking_check_in", visible: :all).value).to start_with(Date.current.iso8601)
       expect(find("#booking_check_out", visible: :all).value).to start_with((Date.current + 1.day).iso8601)
     end
@@ -322,7 +323,9 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
 
     find("button[aria-label='Stay View status guide']").click
-    expect(page).to have_css("#stay-view-status-guide-panel", text: "No-show review", visible: :visible)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Arrival", visible: :visible)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "In-house", visible: :visible)
+    expect(page).to have_css("#stay-view-status-guide-panel", text: "Completed", visible: :visible)
     expect(page).to have_css("#stay-view-status-guide-panel", text: "Do not disturb", visible: :visible)
     expect(page).to have_css("#stay-view-status-guide-panel", text: "Cleaning priority", visible: :visible)
     expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Timeline events", visible: :all)
@@ -346,7 +349,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_css("#stay_view_room_#{room_type.id}_102-status-trigger:focus")
   end
 
-  it "shows authorized projected financial signals in Timeline and Room views" do
+  it "shows authorized projected financial details in the Timeline popover and Room view" do
     permission = Permission.find_or_create_by!(slug: "view_financial_status") do |record|
       record.name = "View Financial Status"
     end
@@ -358,21 +361,18 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
 
     segment = find("#stay_view_booking_room_#{booking.booking_rooms.sole.id}")
-    expect(segment).to have_css(
-      "[data-slot='stay-view-financial-attention']" \
-      "[aria-label='Guest: Ada Lovelace · Balance due · MYR 240.00']"
-    )
+    expect(segment).to have_no_css("[data-slot='stay-view-financial-attention']")
     page.execute_script("document.querySelector('##{segment[:id]}-trigger').focus()")
     expect(page).to have_css(
       "##{segment[:id]}-panel",
-      text: "Guest: Ada Lovelace · Balance due · MYR 240.00",
+      text: "Collect MYR 240.00 · Ada Lovelace",
       visible: :visible
     )
 
     click_link "Rooms"
     expect(page).to have_css(
       "[data-slot='stay-view-financial-signal'][data-variant='warning']",
-      text: "Guest: Ada Lovelace · Balance due · MYR 240.00"
+      text: "Collect MYR 240.00 · Ada Lovelace"
     )
   end
 
@@ -403,12 +403,11 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
 
     housekeeping_panel = "#stay_view_room_#{room_type.id}_101-housekeeping-panel"
     housekeeping_trigger = "#stay_view_room_#{room_type.id}_101 button[aria-label='1 active housekeeping request']"
-    wait_for_stimulus_controller(housekeeping_panel, "panels-ui--popover")
     within("#stay_view_room_#{room_type.id}_101") do
       expect(page).to have_css("button[aria-label='Do not disturb: on — change']")
       expect(page).to have_css("button[aria-label='Cleaning priority: on — change']")
     end
-    find(housekeeping_trigger).send_keys(:enter)
+    open_panels_ui_popover(trigger: housekeeping_trigger, panel: housekeeping_panel)
     expect(page).to have_css(housekeeping_panel, text: "Fresh towels", visible: :visible)
     expect(page).to have_css("#{housekeeping_panel} [role='alert']", text: "Do not enter / do not clean", visible: :visible)
 
@@ -451,7 +450,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_no_button("Actions for room 101")
   end
 
-  it "opens group documents in the booking summary Sheet and restores launcher focus" do
+  it "opens group documents in the booking workspace" do
     group = create(:group_booking, hotel:, name: "Conference Group")
     booking.update!(group_booking: group, group_position: 1)
     sibling = create(:booking, hotel:, group_booking: group, group_position: 2, guest_name: "Grace Hopper")
@@ -466,17 +465,12 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     # hit-testing is unreliable for controls inside a showModal() top-layer dialog.
     within("#booking-summary-sheet") do
       click_in_overlay "Actions"
-      click_in_overlay "Print / Send"
+      click_in_overlay "Documents"
     end
-    expect(page).to have_css("dialog#booking-group-documents-sheet[open]", text: "Group documents")
-
-    within("#booking-group-documents-sheet") { click_in_overlay "Back to booking summary" }
-    expect(page).to have_css("dialog#booking-summary-sheet[open]", text: "Conference Group")
-    expect(page).to have_css("#booking-summary-actions-trigger:focus")
-    find("dialog#booking-summary-sheet").send_keys(:escape)
-
-    expect(page).to have_no_css("dialog#booking-summary-sheet", wait: 3)
-    expect(page.evaluate_script("document.activeElement.id")).to eq(launcher[:id])
+    within("#quick-documents-sheet") { click_link "View all documents" }
+    expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "documents"))
+    expect(page).to have_css('[data-testid="booking-documents"]', text: "Invoices")
+    expect(page).to have_no_css('[data-testid="workspace-entity-rail"]')
   end
 
   it "moves a Timeline stay through the keyboard-accessible booking Sheets and restores focus" do
@@ -649,9 +643,9 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
       })()
     JS
 
-    expect(page).to have_css(".panel-timeline__segment-proposal .panel-timeline__segment-content > span", count: 2)
+    expect(page).to have_css(".panel-timeline__segment-proposal .panel-timeline__segment-content > span", count: 1)
     expect(page).to have_css(".panel-timeline__segment-proposal", text: "Ada Lovelace")
-    expect(page).to have_css(".panel-timeline__segment-proposal", text: "Confirmed")
+    expect(page).to have_no_css(".panel-timeline__segment-proposal", text: "Confirmed")
     expect(page).to have_no_css("##{segment_id}-panel", visible: :visible)
 
     page.execute_script('window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Escape" }))')

@@ -46,7 +46,7 @@ module StayView
     :check_in_at, :check_out_at, :actual_check_in, :actual_check_out, :actual_check_in_at, :actual_check_out_at,
     :start_track, :end_track, :clipped_left, :clipped_right, :accessible_label, :capabilities,
     :group_booking_id, :group_reference, :group_name, :group_position, :group_rooms, :financial_signals, :source, :source_label,
-    :adults, :children, :boat_in_at, :boat_out_at
+    :adults, :children, :boat_in_at, :boat_out_at, :vip, :blacklisted, :repeat
   ) do
     alias_method :clipped_left?, :clipped_left
     alias_method :clipped_right?, :clipped_right
@@ -57,6 +57,7 @@ module StayView
         attributes[key] ||= nil
       end
       attributes[:financial_signals] ||= []
+      %i[vip blacklisted repeat].each { |key| attributes[key] = false if attributes[key].nil? }
       attributes[:primary_guest_name] ||= attributes[:guest_label]
       attributes[:booking_type] ||= attributes[:group_booking_id].present? ? :group : :single
       attributes[:group_rooms] ||= []
@@ -67,6 +68,14 @@ module StayView
       attributes[:group_rooms] = Immutable.array(attributes.fetch(:group_rooms, []))
       attributes[:financial_signals] = Immutable.array(attributes.fetch(:financial_signals, []))
       super(**attributes)
+    end
+
+    alias_method :vip?, :vip
+    alias_method :blacklisted?, :blacklisted
+    alias_method :repeat?, :repeat
+
+    def guest_statuses
+      [ ("Blacklisted" if blacklisted?), ("VIP" if vip?), ("Repeat" if repeat?) ].compact.freeze
     end
   end
 
