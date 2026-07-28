@@ -14,6 +14,7 @@ class BookingFolio < ApplicationRecord
   has_many :folio_transactions, dependent: :restrict_with_error
   has_many :folio_forecasted_charges, dependent: :destroy
   has_one :ar_invoice, dependent: :restrict_with_error
+  has_one :folio_invoice, dependent: :restrict_with_error
   has_many :receipts, through: :folio_transactions
   has_many :target_folio_routing_rules, class_name: "FolioRoutingRule", foreign_key: :target_folio_id, dependent: :restrict_with_error
   has_many :deposit_movements, dependent: :restrict_with_error
@@ -146,6 +147,19 @@ class BookingFolio < ApplicationRecord
     clear_reopen_for_correction_authorization!
   end
 
+  # Invoice allocation is part of the controlled close transaction. Closed
+  # folios otherwise remain immutable through the normal update path.
+  def assign_invoice_identifier_for_closure!(allocation)
+    @assign_invoice_identifier_for_closure_authorized = true
+    update!(
+      invoice_number: allocation.number,
+      invoice_year: allocation.year,
+      invoice_reference: allocation.reference
+    )
+  ensure
+    @assign_invoice_identifier_for_closure_authorized = false
+  end
+
   private
 
   def guard_night_audit_operational_change
@@ -262,6 +276,7 @@ class BookingFolio < ApplicationRecord
   def closed_folio_fields_are_restricted
     return unless status_in_database.in?(%w[closed voided])
     return if will_save_change_to_status?
+    return if @assign_invoice_identifier_for_closure_authorized
 
     allowed = %w[updated_at]
     changed = changes.keys - allowed

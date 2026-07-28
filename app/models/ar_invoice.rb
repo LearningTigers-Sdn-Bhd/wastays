@@ -23,6 +23,7 @@ class ArInvoice < ApplicationRecord
   validates :metadata, exclusion: { in: [ nil ] }
   validate :references_match_hotel
   validate :hotel_corporate_account_matches_folio
+  validate :folio_has_no_folio_invoice
 
   before_update :prevent_immutable_changes
   before_validation :assign_invoice_reference
@@ -62,6 +63,12 @@ class ArInvoice < ApplicationRecord
     return if booking_folio.hotel_corporate_account_id == hotel_corporate_account_id
 
     errors.add(:hotel_corporate_account, "must match the folio company account")
+  end
+
+  def folio_has_no_folio_invoice
+    return if booking_folio_id.blank? || !FolioInvoice.exists?(booking_folio_id:)
+
+    errors.add(:booking_folio, "cannot have both an AR invoice and a folio invoice")
   end
 
   def prevent_immutable_changes
