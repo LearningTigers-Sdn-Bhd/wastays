@@ -5,14 +5,16 @@ module HotelPortal
     class GroupStatementsController < HotelPortal::BaseController
       before_action :authorize_view_reports!
 
-      def create
+      def show
         booking = current_hotel.bookings.includes(:group_booking).find(params[:booking_id])
         raise ActiveRecord::RecordNotFound unless booking.group_booking
+        hotel_corporate_account = current_hotel.hotel_corporate_accounts.find(params[:hotel_corporate_account_id])
 
         pdf = ::Reports::AccountsReceivable::GenerateGroupStatement.new(
           hotel: current_hotel,
           group_booking: booking.group_booking,
-          ar_invoice_ids: params[:ar_invoice_ids],
+          hotel_corporate_account:,
+          currency: params[:currency],
           printed_by: current_user.name
         ).generate
 
@@ -21,7 +23,7 @@ module HotelPortal
           type: "application/pdf",
           disposition: "inline"
       rescue ::Reports::AccountsReceivable::GenerateGroupStatement::ValidationError => e
-        redirect_to hotel_booking_workspace_path(current_hotel, params[:booking_id], tab: "documents"), alert: e.message, status: :see_other
+        redirect_to hotel_booking_workspace_path(current_hotel, params[:booking_id], tab: "documents"), alert: e.message
       end
 
       private

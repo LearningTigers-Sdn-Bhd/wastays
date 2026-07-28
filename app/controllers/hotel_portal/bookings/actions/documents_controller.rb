@@ -7,17 +7,16 @@ module HotelPortal
         before_action :authorize_manage_bookings!, only: :resend
 
         def show
-          @documents = HotelPortal::Bookings::DocumentsQuery.call(
-            booking: @booking,
-            group_booking: @booking.group_booking,
+          @workspace_presenter = workspace_presenter
+          @quick_documents = @workspace_presenter.quick_documents unless @booking.group_booking_id?
+          @invoice_delivery_preview = Notifications::InvoiceDelivery.preview(
             hotel: current_hotel,
-            user: current_user
+            bookings: @workspace_presenter.document_context_bookings
           )
-          @invoice_package_preview = package_preview
         end
 
         def resend
-          result = FolioInvoicePackages::QueueDeliveries.call(
+          result = Notifications::InvoiceDelivery.queue(
             hotel: current_hotel,
             bookings: context_bookings,
             anchor_booking: @booking,
@@ -34,14 +33,17 @@ module HotelPortal
 
         private
 
-        def package_preview
-          FolioInvoicePackages::Preview.call(hotel: current_hotel, bookings: context_bookings)
+        def context_bookings
+          workspace_presenter.document_context_bookings
         end
 
-        def context_bookings
-          return [ @booking ] unless @booking.group_booking_id?
-
-          current_hotel.bookings.where(group_booking_id: @booking.group_booking_id).to_a
+        def workspace_presenter
+          @workspace_presenter ||= HotelPortal::Bookings::WorkspacePresenter.new(
+            @booking,
+            params: { tab: "documents" },
+            hotel: current_hotel,
+            user: current_user
+          )
         end
       end
     end

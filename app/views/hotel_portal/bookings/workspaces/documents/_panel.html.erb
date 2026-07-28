@@ -6,44 +6,12 @@
           <h2 id="documents-<%= section.key %>-heading" class="text-base font-semibold text-foreground"><%= section.title %></h2>
           <% if section.key == :invoices && current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
             <%= render "hotel_portal/bookings/shared/invoice_resend",
-                       preview: @invoice_package_preview,
+                       preview: @invoice_delivery_preview,
                        booking: booking,
                        dialog_id: "documents-tab-resend-dialog",
                        return_to: hotel_booking_workspace_path(current_hotel, booking, tab: "documents") %>
           <% end %>
         </div>
-
-        <% if section.key == :invoices && booking.group_booking_id? && current_user.has_permission?("view_reports", hotel: current_hotel) %>
-          <% ar_rows = section.rows.select { |row| row.type == "AR invoice" && row.available? } %>
-          <% if ar_rows.any? %>
-            <%= form_with url: hotel_booking_group_statement_path(current_hotel, booking), method: :post, html: { target: "_blank" } do %>
-              <div class="rounded-md border border-border bg-muted/30 p-3">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p class="text-sm font-medium text-foreground">Generate group statement</p>
-                    <p class="mt-0.5 text-xs text-muted-foreground">Select AR invoices from one payer and currency. This creates a PDF and does not send email.</p>
-                  </div>
-                  <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, size: :sm) do %>
-                    Generate statement
-                  <% end %>
-                </div>
-                <div class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  <% ar_rows.each do |row| %>
-                    <% ar_invoice_id = row.key.delete_prefix("ar-invoice-") %>
-                    <%= render PanelsUI::Checkbox.new(
-                          name: "ar_invoice_ids[]",
-                          value: ar_invoice_id,
-                          unchecked_value: nil,
-                          label: row.number,
-                          description: "#{row.payer} · #{row.currency} #{number_with_precision(row.amount, precision: 2, delimiter: ',')}",
-                          size: :sm
-                        ) %>
-                  <% end %>
-                </div>
-              </div>
-            <% end %>
-          <% end %>
-        <% end %>
 
         <%= render PanelsUI::Table.new(
               caption: section.caption,
@@ -80,9 +48,6 @@
                       <span class="block truncate font-medium text-foreground"><%= document.number %></span>
                       <div class="flex min-w-0 items-center gap-1.5">
                         <%= render PanelsUI::Badge.new(label: document.status, variant: badge_variant, size: :sm) %>
-                        <% if document.unavailable_reason.present? %>
-                          <span class="min-w-0 truncate text-xs text-muted-foreground"><%= document.unavailable_reason %></span>
-                        <% end %>
                       </div>
                     </div>
                   </th>
@@ -113,13 +78,28 @@
                   <% end %>
                   <td>
                     <div class="flex justify-end">
-                      <% if document.available? %>
+                      <% if document.type == "Folio invoice" && (document.available? || document.history?) %>
+                        <%= render PanelsUI::DropdownMenu.new(id: "document-actions-#{document.key}", placement: :bottom_end) do |menu| %>
+                          <% menu.with_trigger(variant: :secondary, size: :sm, aria_label: "Actions for #{document.number}") do %>
+                            Actions
+                            <%= app_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
+                          <% end %>
+                          <% if document.available? %>
+                            <% menu.with_item(href: document.href, target: "_blank", data: { turbo: false }) { "Open current" } %>
+                          <% end %>
+                          <% if document.history? %>
+                            <% menu.with_submenu(label: "History", id: "document-history-#{document.key}") do |history| %>
+                              <% document.revision_actions.each do |revision| %>
+                                <% history.with_item(href: revision[:href], target: "_blank", data: { turbo: false }) { revision[:label] } %>
+                              <% end %>
+                            <% end %>
+                          <% end %>
+                        <% end %>
+                      <% elsif document.available? %>
                         <%= render PanelsUI::Button.new(href: document.href, variant: :secondary, size: :xs, target: "_blank", data: { turbo: false }, aria: { label: "Open #{document.type} #{document.number}" }) do %>
                           <%= app_icon "external-link", class: "size-4", aria: { hidden: true } %>
                           <span>Open</span>
                         <% end %>
-                      <% else %>
-                        <%= render PanelsUI::Button.new(label: "Open", variant: :secondary, size: :xs, disabled: true, aria: { label: "Open #{document.type} #{document.number}" }) %>
                       <% end %>
                     </div>
                   </td>

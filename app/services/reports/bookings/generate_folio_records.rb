@@ -131,11 +131,11 @@ module Reports
       end
 
       def document_title
-        "GUEST FOLIO / INVOICE"
+        "FOLIO INVOICE"
       end
 
       def pdf_title
-        "Guest Folio Invoice - #{invoice_number}"
+        "Folio Invoice - #{invoice_number}"
       end
 
       def metadata_left
@@ -155,6 +155,8 @@ module Reports
       end
 
       def guest_folio_detail_rows
+        return corporate_folio_detail_rows if corporate_payer?
+
         [
           [ "Guest Name", guest_value(snapshot_or_live("booking", "guest_name") { booking.guest_name }) ],
           [ "Nationality", guest_value(snapshot_or_live("booking", "guest_country") { booking.guest_country }) ],
@@ -162,6 +164,10 @@ module Reports
           [ "Cashier", printed_by ],
           [ "Currency", currency ]
         ]
+      end
+
+      def payer_section_title
+        corporate_payer? ? "PAYER / FOLIO DETAILS" : "GUEST / FOLIO DETAILS"
       end
 
       def booking_stay_detail_rows
@@ -241,6 +247,32 @@ module Reports
       end
 
       private
+
+      def corporate_folio_detail_rows
+        terms = folio.booking_billing_party&.billing_terms
+        account_type = snapshot_or_live("payer", "account_type") do
+          folio.booking_billing_party&.account_type.presence || folio.hotel_corporate_account&.account_type
+        end
+        [
+          [ "Corporate Payer", guest_value(snapshot_or_live("payer", "name") { document_live_payer_name }) ],
+          [ "Account Type", account_type.to_s.humanize.presence || "-" ],
+          [ "Purchase Order", guest_value(snapshot_or_live("payer", "purchase_order_reference") { terms&.purchase_order_reference }) ],
+          [ "Authorization", guest_value(snapshot_or_live("payer", "authorization_reference") { terms&.authorization_reference }) ],
+          [ "Invoice No", invoice_number ],
+          [ "Cashier", printed_by ],
+          [ "Currency", currency ]
+        ]
+      end
+
+      def corporate_payer?
+        snapshot_or_live("payer", "type") { folio.payer_type } == "company"
+      end
+
+      def document_live_payer_name
+        folio.booking_billing_party&.display_name.presence ||
+          folio.hotel_corporate_account&.corporate_account&.name.presence ||
+          booking.guest_name
+      end
 
       def resolve_revision!
         raise UnavailableError, "Folio has no issued invoice." if @folio_invoice.blank?

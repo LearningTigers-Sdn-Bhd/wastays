@@ -72,6 +72,7 @@ RSpec.describe "Booking workspace mobile entity selection", :business_day, type:
     expect(page).to have_no_button("Choose Documents")
     expect(page).to have_no_css("#booking-entity-selector-sheet")
     expect(page).to have_css("#documents-panel", text: "Invoices")
+    expect(page).to have_css("#documents-panel h2", text: "Statements")
     expect(page).to have_css("#documents-panel [data-document-context]", text: booking.formatted_reservation_number)
     expect(page).to have_css("#documents-panel [data-document-context]", text: sibling.formatted_reservation_number)
     expect(page.evaluate_script(<<~JS)).to be(true)
@@ -82,7 +83,7 @@ RSpec.describe "Booking workspace mobile entity selection", :business_day, type:
     JS
     expect(page.evaluate_script(<<~JS)).to be(true)
       Array.from(document.querySelectorAll('#documents-panel .panel-table__wrapper'))
-        .some((wrapper) => wrapper.scrollWidth > wrapper.clientWidth)
+        .every((wrapper) => wrapper.scrollWidth > wrapper.clientWidth)
     JS
   end
 

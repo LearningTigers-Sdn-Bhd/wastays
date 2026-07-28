@@ -132,7 +132,7 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
   end
 
   it "builds guest and folio metadata for the document" do
-    expect(records.document_title).to eq("GUEST FOLIO / INVOICE")
+    expect(records.document_title).to eq("FOLIO INVOICE")
     expect(records.hotel_info_rows).to include(
       [ "Hotel Name", "Hotel ABC Resort" ],
       [ "Address", "Jalan Pantai Cenang, Langkawi, Malaysia" ],

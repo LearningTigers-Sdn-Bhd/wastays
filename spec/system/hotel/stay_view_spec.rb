@@ -467,9 +467,10 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
       click_in_overlay "Actions"
       click_in_overlay "Documents"
     end
+    within("#quick-documents-sheet") { click_link "View all documents" }
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "documents"))
     expect(page).to have_css('[data-testid="booking-documents"]', text: "Invoices")
-    expect(page).to have_css('[data-testid="workspace-entity-rail"] nav[aria-label="Booking documents"]', text: "All documents", visible: :visible)
+    expect(page).to have_no_css('[data-testid="workspace-entity-rail"]')
   end
 
   it "moves a Timeline stay through the keyboard-accessible booking Sheets and restores focus" do

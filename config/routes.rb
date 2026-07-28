@@ -378,7 +378,7 @@ Rails.application.routes.draw do
         post :resolve_complaint_request, controller: :workspace_actions
       end
     end
-    post "bookings/:booking_id/group-statement", to: "bookings/group_statements#create", as: :booking_group_statement
+    get "bookings/:booking_id/group-statement", to: "bookings/group_statements#show", as: :booking_group_statement
     scope "booking-actions", as: :booking_action, module: "bookings/actions" do
       get "audit-trail/:booking_id", to: "audit_trails#show", as: :audit_trail
       get "show-booking/:booking_id", to: "summaries#show", as: :show_booking

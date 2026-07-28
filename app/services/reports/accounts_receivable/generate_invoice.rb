@@ -31,6 +31,7 @@ module Reports
         )
 
         draw_header(pdf)
+        draw_legacy_notice(pdf) if @records.legacy_generated?
         pdf.move_down 16
         draw_parties(pdf)
         pdf.move_down 14
@@ -44,6 +45,15 @@ module Reports
       end
 
       private
+
+      def draw_legacy_notice(pdf)
+        pdf.move_down 10
+        pdf.fill_color "92400e"
+        pdf.text "LEGACY-GENERATED RECONSTRUCTION", size: 9, style: :bold, align: :center
+        pdf.fill_color TEXT_MUTED
+        pdf.text "Reconstructed from currently available records; an original issue-time snapshot was not available.", size: 7.5, align: :center
+        pdf.fill_color TEXT_PRIMARY
+      end
 
       def draw_header(pdf)
         pdf.fill_color DARK_GREEN

@@ -14,7 +14,7 @@ RSpec.describe "HotelPortal::Bookings::GroupStatements", type: :request do
     sign_in_as(user)
   end
 
-  it "returns the selected group AR statement as an inline PDF" do
+  it "returns the deterministic group AR statement as an inline PDF" do
     group = create(:group_booking, hotel:)
     booking = create(:booking, hotel:, group_booking: group, group_position: 1)
     relationship = create(:hotel_corporate_account, hotel:)
@@ -28,20 +28,31 @@ RSpec.describe "HotelPortal::Bookings::GroupStatements", type: :request do
       hotel_corporate_account: relationship)
     invoice = create(:ar_invoice, booking_folio: folio, hotel:, hotel_corporate_account: relationship)
 
-    post hotel_booking_group_statement_path(hotel, booking), params: { ar_invoice_ids: [ invoice.id ] }
+    get hotel_booking_group_statement_path(
+      hotel,
+      booking,
+      hotel_corporate_account_id: relationship.id,
+      currency: invoice.currency
+    )
 
     expect(response).to have_http_status(:success)
     expect(response.media_type).to eq("application/pdf")
     expect(response.headers["Content-Disposition"]).to include("inline", "group-statement")
   end
 
-  it "redirects with the validation message when nothing is selected" do
+  it "redirects with the validation message when the payer has no matching invoices" do
     group = create(:group_booking, hotel:)
     booking = create(:booking, hotel:, group_booking: group)
+    relationship = create(:hotel_corporate_account, hotel:)
 
-    post hotel_booking_group_statement_path(hotel, booking)
+    get hotel_booking_group_statement_path(
+      hotel,
+      booking,
+      hotel_corporate_account_id: relationship.id,
+      currency: "MYR"
+    )
 
     expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "documents"))
-    expect(flash[:alert]).to eq("Select at least one AR invoice.")
+    expect(flash[:alert]).to eq("No AR invoices are available for this payer and currency.")
   end
 end

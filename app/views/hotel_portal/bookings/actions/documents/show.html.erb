@@ -5,25 +5,14 @@
            size: :sm do %>
   <div class="space-y-5">
     <% if @booking.group_booking_id? %>
-      <% count_groups = {
-           "Invoices" => @documents.count { |row| row.type == "Folio invoice" && row.available? },
-           "Receipts" => @documents.count { |row| row.type.include?("receipt") && row.available? },
-           "Registration cards" => @documents.count { |row| row.type == "Registration card" && row.available? },
-           "Statements" => @documents.count { |row| row.type == "Payer statement" && row.available? }
-         } %>
-      <div class="divide-y divide-border rounded-md border border-border">
-        <% count_groups.each do |label, count| %>
-          <div class="flex items-center justify-between gap-4 px-3 py-2.5">
-            <span class="text-sm text-foreground"><%= label %></span>
-            <%= render PanelsUI::Badge.new(label: count.to_s, variant: :neutral, size: :sm) %>
-          </div>
-        <% end %>
-      </div>
+      <p class="text-sm text-muted-foreground">Open the Documents tab to view invoices, ledgers, receipts, utility documents, and consolidated statements for the group.</p>
     <% else %>
-      <% invoice = @documents.find { |row| row.type == "Folio invoice" && !row.historical } %>
-      <% receipt = @documents.find { |row| row.type.in?([ "Payment receipt", "Deposit receipt" ]) && row.available? } %>
-      <% registration_card = @documents.find { |row| row.type == "Registration card" } %>
-      <% quick_rows = [ [ "Invoice", "file-text", invoice ], [ "Receipt", "receipt", receipt ], [ "Registration Card", "clipboard-list", registration_card ] ] %>
+      <% quick_rows = [
+           [ "Invoice", "file-text", @quick_documents[:invoice] ],
+           [ "Folio Ledger", "book-open", @quick_documents[:ledger] ],
+           [ "Receipt", "receipt", @quick_documents[:receipt] ],
+           [ "Registration Card", "clipboard-list", @quick_documents[:registration_card] ]
+         ] %>
 
       <div class="divide-y divide-border rounded-md border border-border">
         <% quick_rows.each do |label, icon, row| %>
@@ -74,7 +63,7 @@
 
       <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
         <%= render "hotel_portal/bookings/shared/invoice_resend",
-                   preview: @invoice_package_preview,
+                   preview: @invoice_delivery_preview,
                    booking: @booking,
                    dialog_id: "quick-documents-resend-dialog",
                    return_to: hotel_booking_workspace_path(current_hotel, @booking, tab: "documents") %>

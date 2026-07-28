@@ -62,7 +62,7 @@ RSpec.describe "Public::Bookings invoice", type: :request do
       get invoice_booking_path(booking.confirmation_token)
 
       text = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
-      expect(text).to include("GUEST FOLIO / INVOICE")
+      expect(text).to include("FOLIO INVOICE")
       expect(text).to include("Room Charge - Standard Room")
       expect(text).to include("SUMMARY (MYR)")
     end

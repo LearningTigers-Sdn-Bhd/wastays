@@ -96,6 +96,15 @@ RSpec.describe Reports::AccountsReceivable::GenerateInvoice do
     expect(text).to include("BALANCE TRANSFERRED TO AR", "300.00")
   end
 
+  it "marks an AR invoice reconstructed from live records as legacy-generated" do
+    invoice = create(:ar_invoice, booking_folio: folio, hotel:, hotel_corporate_account: relationship, metadata: {})
+
+    text = pdf_text(described_class.new(invoice:).generate)
+
+    expect(text).to include("LEGACY-GENERATED RECONSTRUCTION")
+    expect(text).to include("original issue-time snapshot was not available")
+  end
+
   def pdf_text(pdf)
     PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
   end

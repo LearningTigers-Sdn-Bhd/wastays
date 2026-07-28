@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FolioInvoicePackages::QueueDeliveries, type: :job do
+RSpec.describe Notifications::InvoiceDelivery, type: :job do
   let(:hotel) { create(:hotel, hotel_prefix: "DLV") }
   let(:group) { create(:group_booking, hotel:) }
 
@@ -13,7 +13,7 @@ RSpec.describe FolioInvoicePackages::QueueDeliveries, type: :job do
     second = finalized_invoice(second_booking)
 
     expect do
-      @result = described_class.call(
+      @result = described_class.queue(
         hotel:,
         bookings: [ first_booking, second_booking ],
         anchor_booking: first_booking,
@@ -34,7 +34,7 @@ RSpec.describe FolioInvoicePackages::QueueDeliveries, type: :job do
     finalized_invoice(valid_booking)
     finalized_company_invoice(missing_booking)
 
-    result = described_class.call(
+    result = described_class.queue(
       hotel:,
       bookings: [ valid_booking, missing_booking ],
       anchor_booking: valid_booking,
@@ -53,8 +53,48 @@ RSpec.describe FolioInvoicePackages::QueueDeliveries, type: :job do
     arguments = { hotel:, bookings: [ booking ], anchor_booking: booking, source: "automatic_checkout" }
 
     expect do
-      2.times { described_class.call(**arguments) }
+      2.times { described_class.queue(**arguments) }
     end.to change(NotificationDelivery, :count).by(1)
+  end
+
+  it "rejects a delivery when the queued revision or recipient changes" do
+    booking = booking_for("original@example.test", 1)
+    invoice = finalized_invoice(booking)
+    result = described_class.queue(
+      hotel:,
+      bookings: [ booking ],
+      anchor_booking: booking,
+      source: "automatic_checkout"
+    )
+    delivery = result.deliveries.sole
+
+    booking.update!(guest_email: "changed@example.test")
+
+    expect { described_class.load!(delivery:) }
+      .to raise_error(described_class::UnavailableError, /no longer available/)
+
+    booking.update!(guest_email: "original@example.test")
+    revision = create(:folio_invoice_revision, folio_invoice: invoice, hotel:, revision_number: 2)
+    invoice.update!(current_revision_number: revision.revision_number)
+
+    expect { described_class.load!(delivery:) }
+      .to raise_error(described_class::UnavailableError, /no longer available/)
+  end
+
+  it "rejects a delivery when its folio is reopened" do
+    booking = booking_for("payer@example.test", 1)
+    invoice = finalized_invoice(booking)
+    delivery = described_class.queue(
+      hotel:,
+      bookings: [ booking ],
+      anchor_booking: booking,
+      source: "automatic_checkout"
+    ).deliveries.sole
+
+    invoice.booking_folio.update_column(:status, "open")
+
+    expect { described_class.load!(delivery:) }
+      .to raise_error(described_class::UnavailableError, /no longer available/)
   end
 
   def booking_for(email, position)

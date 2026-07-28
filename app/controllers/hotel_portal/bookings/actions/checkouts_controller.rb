@@ -48,7 +48,7 @@ module HotelPortal
           return render_checkout_error(error) if error.present?
 
           completed.each { |booking| dispatch_checkout_side_effects(booking) }
-          FolioInvoicePackages::QueueDeliveries.call(
+          Notifications::InvoiceDelivery.queue(
             hotel: current_hotel,
             bookings: completed,
             anchor_booking: @booking,

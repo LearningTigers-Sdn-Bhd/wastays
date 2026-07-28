@@ -17,6 +17,10 @@ module Reports
         invoice.formatted_invoice_number
       end
 
+      def legacy_generated?
+        @snapshot.empty?
+      end
+
       def company_name
         snapshot_or_live("payer", "name") { invoice.corporate_account.name }.presence || "-"
       end

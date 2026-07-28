@@ -18,5 +18,4 @@ RSpec.describe FolioInvoiceRevision do
     expect(invoice.update(current_revision_number: 2)).to be(false)
     expect(invoice.errors[:current_revision_number]).to include("must reference an issued revision")
   end
-
 end

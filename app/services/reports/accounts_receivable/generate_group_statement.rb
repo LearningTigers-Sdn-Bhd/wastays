@@ -10,10 +10,11 @@ module Reports
     class GenerateGroupStatement
       ValidationError = Class.new(StandardError)
 
-      def initialize(hotel:, group_booking:, ar_invoice_ids:, printed_by: nil)
+      def initialize(hotel:, group_booking:, hotel_corporate_account:, currency:, printed_by: nil)
         @hotel = hotel
         @group_booking = group_booking
-        @raw_ids = Array(ar_invoice_ids).map(&:to_s)
+        @hotel_corporate_account = hotel_corporate_account
+        @currency = currency.to_s
         @printed_by = printed_by
       end
 
@@ -29,23 +30,26 @@ module Reports
       private
 
       def validate_and_load!
-        raise ValidationError, "Select at least one AR invoice." if @raw_ids.empty?
-        raise ValidationError, "Duplicate AR invoices are not allowed." if @raw_ids.uniq.size != @raw_ids.size
+        raise ValidationError, "Booking group must belong to this hotel." unless @group_booking.hotel_id == @hotel.id
+        unless @hotel_corporate_account.hotel_id == @hotel.id
+          raise ValidationError, "Corporate account must belong to this hotel."
+        end
+        raise ValidationError, "Currency is required." if @currency.blank?
 
-        @invoices = ArInvoice
+        @invoices = @hotel.ar_invoices
           .includes(:hotel, { hotel_corporate_account: :corporate_account }, booking_folio: :booking)
-          .where(id: @raw_ids)
+          .joins(booking_folio: :booking)
+          .where(
+            hotel_corporate_account: @hotel_corporate_account,
+            currency: @currency,
+            bookings: { group_booking_id: @group_booking.id }
+          )
+          .where.not(status: "void")
           .order(:issued_on, :id)
           .to_a
-        raise ValidationError, "One or more selected AR invoices no longer exist." unless @invoices.size == @raw_ids.size
-        raise ValidationError, "Selected AR invoices must belong to this hotel." unless @invoices.all? { |invoice| invoice.hotel_id == @hotel.id }
-        raise ValidationError, "Voided AR invoices cannot be included." if @invoices.any?(&:void?)
-        raise ValidationError, "Selected AR invoices must belong to this booking group." unless @invoices.all? { |invoice| invoice.booking.group_booking_id == @group_booking.id }
-        raise ValidationError, "Selected AR invoices must use one corporate account." unless @invoices.map(&:hotel_corporate_account_id).uniq.one?
-        raise ValidationError, "Selected AR invoices must use one currency." unless @invoices.map(&:currency).uniq.one?
+        raise ValidationError, "No AR invoices are available for this payer and currency." if @invoices.empty?
 
         @account = @invoices.first.corporate_account
-        @currency = @invoices.first.currency
       end
 
       def draw_header(pdf)

@@ -118,7 +118,7 @@ module Reports
 
         rows = [
           [
-            { content: "GUEST / FOLIO DETAILS", colspan: 2, font_style: :bold, text_color: TEXT_PRIMARY, background_color: LIGHT_GRAY },
+            { content: @records.payer_section_title, colspan: 2, font_style: :bold, text_color: TEXT_PRIMARY, background_color: LIGHT_GRAY },
             { content: "BOOKING / STAY DETAILS", colspan: 2, font_style: :bold, text_color: TEXT_PRIMARY, background_color: LIGHT_GRAY }
           ]
         ]

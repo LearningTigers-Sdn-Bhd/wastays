@@ -5,8 +5,8 @@ require "prawn/table"
 
 module Reports
   module Bookings
-    class GenerateInvoicePackage
-      InvalidPackageError = Class.new(StandardError)
+    class GenerateCombinedInvoices
+      InvalidCombinedInvoicesError = Class.new(StandardError)
 
       DARK_GREEN = GenerateInvoice::DARK_GREEN
       LIGHT_GRAY = GenerateInvoice::LIGHT_GRAY
@@ -16,20 +16,21 @@ module Reports
       BOTTOM_MARGIN = GenerateInvoice::BOTTOM_MARGIN
       FOOTER_Y = GenerateInvoice::FOOTER_Y
 
-      def initialize(hotel:, folio_invoice_ids:, printed_by: nil)
+      def initialize(hotel:, invoices:, recipient:, printed_by: nil)
         @hotel = hotel
-        @invoice_ids = Array(folio_invoice_ids).map(&:to_i)
+        @invoices = Array(invoices)
+        @recipient = recipient
         @printed_by = printed_by.presence || "-"
       end
 
       def generate
-        load_invoices
         validate!
+        @invoices.sort_by! { |invoice| [ invoice.booking.id, invoice.booking_folio.folio_sequence.to_i, invoice.id ] }
         pdf = Prawn::Document.new(
           page_size: "A4",
           margin: [ 36, 32, BOTTOM_MARGIN, 32 ],
           info: {
-            Title: "Invoice package - #{recipient.name}",
+            Title: "Combined invoices - #{@recipient.name}",
             Author: "WAStays",
             Creator: "WAStays",
             CreationDate: Time.current
@@ -47,54 +48,27 @@ module Reports
 
       private
 
-      def load_invoices
-        raise InvalidPackageError, "Duplicate invoices are not allowed." if @invoice_ids.uniq.size != @invoice_ids.size
-
-        records = @hotel.folio_invoices
-          .where(id: @invoice_ids)
-          .includes(
-            :revisions,
-            booking_folio: [
-              :ar_invoice,
-              :booking_room,
-              { booking: [ :booking_rooms, { booking_guests: :guest } ] },
-              { booking_billing_party: [ { booking_guest: :guest }, { hotel_corporate_account: { corporate_account: :users } } ] },
-              { hotel_corporate_account: { corporate_account: :users } }
-            ]
-          )
-          .index_by(&:id)
-        @invoices = @invoice_ids.filter_map { |id| records[id] }
-        raise InvalidPackageError, "One or more invoices do not belong to this hotel." unless @invoices.size == @invoice_ids.size
-
-        @invoices.sort_by! { |invoice| [ invoice.booking.id, invoice.booking_folio.folio_sequence.to_i, invoice.id ] }
-      end
-
       def validate!
-        raise InvalidPackageError, "Select at least one finalized invoice." if @invoices.empty?
+        raise InvalidCombinedInvoicesError, "Select at least one finalized invoice." if @invoices.empty?
+        raise InvalidCombinedInvoicesError, "Recipient is required." if @recipient.blank?
 
         hotel_ids = @invoices.map(&:hotel_id).uniq
-        raise InvalidPackageError, "All invoices must belong to the same hotel." unless hotel_ids.one?
-
-        keys = @invoices.map { |invoice| FolioInvoicePackages::RecipientResolver.call(invoice).key }.uniq
-        raise InvalidPackageError, "All invoices in a package must belong to the same payer." unless keys.one?
+        raise InvalidCombinedInvoicesError, "All invoices must belong to this hotel." unless hotel_ids == [ @hotel.id ]
+        raise InvalidCombinedInvoicesError, "Duplicate invoices are not allowed." unless @invoices.map(&:id).uniq.size == @invoices.size
 
         @invoices.each do |invoice|
           folio = invoice.booking_folio
           valid = invoice.finalized? && folio.closed? && folio.ar_invoice.blank? && invoice.current_revision.present?
-          raise InvalidPackageError, "Invoice #{invoice.invoice_reference} is no longer available to send." unless valid
+          raise InvalidCombinedInvoicesError, "Invoice #{invoice.invoice_reference} is no longer available to send." unless valid
         end
-      end
-
-      def recipient
-        @recipient ||= FolioInvoicePackages::RecipientResolver.call(@invoices.first)
       end
 
       def draw_summary(pdf)
         pdf.fill_color DARK_GREEN
-        pdf.text "INVOICE PACKAGE", size: 18, style: :bold
+        pdf.text "COMBINED INVOICES", size: 18, style: :bold
         pdf.move_down 5
         pdf.fill_color TEXT_MUTED
-        pdf.text "Prepared for #{recipient.name}", size: 10
+        pdf.text "Prepared for #{@recipient.name}", size: 10
         pdf.move_down 12
         pdf.stroke_color DARK_GREEN
         pdf.stroke_horizontal_rule
@@ -123,21 +97,24 @@ module Reports
       end
 
       def summary_row(invoice)
-        snapshot = invoice.current_revision.snapshot.to_h.deep_stringify_keys
         folio = invoice.booking_folio
         booking = folio.booking
+        records = invoice_records(invoice)
+        snapshot = invoice.current_revision.snapshot.to_h.deep_stringify_keys
         rooms = Array(snapshot["rooms"]).filter_map do |room|
           values = room.to_h.stringify_keys
           [ values["room_number"], values["room_type"] ].compact_blank.join(" / ").presence
         end
-        amount = snapshot.dig("totals", "charges").to_d + snapshot.dig("totals", "adjustments").to_d
+        rooms = booking.booking_rooms.map do |room|
+          [ room.room_number, room.room_type_snapshot.to_h.with_indifferent_access[:name] || room.room_type&.name ].compact_blank.join(" / ").presence
+        end.compact if rooms.empty?
 
         [
           invoice.current_document_reference,
-          [ booking.formatted_reservation_number.presence || booking.confirmation_token, rooms.to_sentence.presence || "Unassigned" ].join(" · "),
-          recipient.name,
-          snapshot.dig("totals", "currency").presence || folio.currency,
-          format("%.2f", amount)
+          [ booking.formatted_reservation_number.presence || booking.confirmation_token, rooms.to_sentence.presence || "Room unavailable" ].join(" · "),
+          @recipient.name,
+          records.currency,
+          format("%.2f", records.total_due)
         ]
       end
 
@@ -157,12 +134,16 @@ module Reports
       end
 
       def invoice_currency(invoice)
-        invoice.current_revision.snapshot.to_h.dig("totals", "currency").presence || invoice.booking_folio.currency
+        invoice_records(invoice).currency
       end
 
       def invoice_amount(invoice)
-        totals = invoice.current_revision.snapshot.to_h.fetch("totals", {})
-        totals["charges"].to_d + totals["adjustments"].to_d
+        invoice_records(invoice).total_due
+      end
+
+      def invoice_records(invoice)
+        @invoice_records ||= {}
+        @invoice_records[invoice.id] ||= GenerateFolioRecords.new(folio: invoice.booking_folio, printed_by: @printed_by).call
       end
 
       def summary_widths(pdf)

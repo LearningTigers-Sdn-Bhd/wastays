@@ -14,6 +14,13 @@ module HotelPortal
     RequestColumn = Data.define(:key, :label, :cards)
     BillingPartyRow = Data.define(:id, :kind, :label, :role, :description, :settlement, :folio_count, :folio_labels, :outstanding, :record)
     BillingRailRow = Data.define(:id, :label, :description, :active, :href)
+    DocumentRow = Data.define(
+      :key, :type, :number, :booking, :room, :payer, :currency, :amount,
+      :status, :issued_at, :href, :context_type, :revision_actions
+    ) do
+      def available? = href.present?
+      def history? = revision_actions.present?
+    end
     DocumentSection = Data.define(:key, :title, :caption, :primary_heading, :type_heading, :party_heading, :amount_heading, :rows, :empty_message) do
       def single_currency?
         rows.filter_map { |row| row.currency.presence }.uniq.one?
@@ -37,7 +44,6 @@ module HotelPortal
     ENTITY_TABS = %w[folio_operations billing_preferences guest_details room_and_rate].freeze
     DOCUMENT_SECTION_BY_TYPE = {
       "Folio invoice" => :invoices,
-      "Invoice revision" => :invoices,
       "AR invoice" => :invoices,
       "Folio ledger" => :ledgers,
       "Payment receipt" => :receipts,
@@ -45,8 +51,9 @@ module HotelPortal
       "Group deposit receipt" => :receipts,
       "AR payment receipt" => :receipts,
       "Registration card" => :utility,
-      "Payer statement" => :utility
+      "Group statement" => :statements
     }.freeze
+    DOCUMENT_TYPE_ORDER = DOCUMENT_SECTION_BY_TYPE.keys.each_with_index.to_h.freeze
     GUEST_FORM_ATTRIBUTES = %i[name email phone country gender document_type government_id date_of_birth].freeze
     BADGE_VARIANTS = {
       "slate" => :neutral, "blue" => :info, "amber" => :warning,
@@ -88,15 +95,15 @@ module HotelPortal
 
     attr_reader :booking
 
-    attr_reader :hotel, :booking_presenter, :folio_show, :documents
+    attr_reader :hotel, :booking_presenter, :folio_show
 
-    def initialize(booking, params: {}, hotel: booking.hotel, booking_presenter: nil, folio_show: nil, documents: nil, guest_form: nil, booking_guest_form: nil)
+    def initialize(booking, params: {}, hotel: booking.hotel, user: nil, booking_presenter: nil, folio_show: nil, guest_form: nil, booking_guest_form: nil)
       @booking = booking
       @params = params
       @hotel = hotel
+      @user = user
       @booking_presenter = booking_presenter || BookingPresenter.new(booking, hotel)
       @folio_show = folio_show
-      @documents = documents || []
       @guest_form = guest_form
       @booking_guest_form = booking_guest_form
     end
@@ -220,24 +227,21 @@ module HotelPortal
     end
 
     def header_outstanding_balance
-      return documents_outstanding_balance if active_tab == "documents"
-
       money(group_context_enabled? ? group_total_balance : total_balance)
     end
 
-    def documents_outstanding_balance
-      balances = documents.select { |document| document.type == "Folio ledger" }
-        .group_by(&:currency)
-        .transform_values { |rows| rows.sum { |row| row.amount.to_d } }
-      return money(0) if balances.empty?
-      return "Multiple currencies" if balances.size > 1
+    def documents = @documents ||= build_documents
 
-      currency, amount = balances.first
-      format("%<currency>s %<amount>.2f", currency:, amount:)
+    def document_context_bookings
+      @document_context_bookings ||= if booking.group_booking_id?
+        hotel.bookings.where(group_booking_id: booking.group_booking_id).order(:group_position, :id).to_a
+      else
+        [ booking ]
+      end
     end
 
-    def documents
-      @documents
+    def quick_documents
+      @quick_documents ||= build_quick_documents
     end
 
     def document_sections
@@ -249,7 +253,8 @@ module HotelPortal
         DocumentSection.new(:invoices, "Invoices", "Booking invoices", "Invoice", "Folio type", "Payer", document_amount_heading("Amount", invoices), invoices, "No invoices are available."),
         DocumentSection.new(:ledgers, "Folio ledgers", "Folio ledgers", "Folio", "Folio type", "Payer", document_amount_heading("Balance", ledgers), ledgers, "No folio ledgers are available."),
         DocumentSection.new(:receipts, "Receipts", "Payment and deposit receipts", "Receipt", "Receipt type", "Payer", document_amount_heading("Amount", receipts), receipts, "No receipts have been issued."),
-        DocumentSection.new(:utility, "Utility", "Registration cards and payer statements", "Document", "Document type", "Subject", nil, grouped.fetch(:utility, []), "No utility documents are available.")
+        DocumentSection.new(:utility, "Utility", "Registration cards", "Document", "Document type", "Subject", nil, grouped.fetch(:utility, []), "No utility documents are available."),
+        DocumentSection.new(:statements, "Statements", "Consolidated group accounts receivable statements", "Statement", "Statement type", "Payer", nil, grouped.fetch(:statements, []), "No consolidated statements are available.")
       ]
     end
 
@@ -402,10 +407,10 @@ module HotelPortal
     end
 
     def tab_path(tab_key)
+      return path_for(booking, tab: tab_key) if tab_key.to_s == "documents"
+
       entity_tab = tab_key.to_s.in?(ENTITY_TABS)
-      scope = if tab_key.to_s == "documents"
-        nil
-      elsif !entity_tab && @params[:scope].to_s == "booking"
+      scope = if !entity_tab && @params[:scope].to_s == "booking"
         "booking"
       elsif !entity_tab && group_overview?
         "group"
@@ -566,7 +571,7 @@ module HotelPortal
     end
 
     def selected_child_booking
-      explicit_child = child_bookings.find { |child| child.id.to_s == @params[:child_booking_id].to_s } unless active_tab == "documents"
+      explicit_child = child_bookings.find { |child| child.id.to_s == @params[:child_booking_id].to_s }
       return explicit_child if explicit_child
       return booking unless active_tab.in?(ENTITY_TABS)
 
@@ -1227,6 +1232,375 @@ module HotelPortal
     end
 
     private
+
+    def build_quick_documents
+      quick_folios = hotel.booking_folios
+        .where(booking_id: booking.id)
+        .includes(
+          :booking_room,
+          { folio_invoice: :revisions },
+          { booking: [ { booking_rooms: :room_type }, { booking_guests: :guest } ] },
+          { booking_billing_party: [ { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] },
+          { hotel_corporate_account: :corporate_account }
+        )
+        .order(is_primary: :desc, folio_sequence: :asc, id: :asc)
+        .to_a
+      @document_folios_by_id = quick_folios.index_by(&:id)
+      load_document_transaction_totals
+
+      transaction_scope = FolioTransaction.where(booking_folio_id: @document_folios_by_id.keys)
+      receipt_rows = Receipt
+        .where(hotel_id: hotel.id, folio_transaction_id: transaction_scope.select(:id))
+        .includes(folio_transaction: { booking_folio: :booking })
+        .map do |receipt|
+          folio = receipt.folio_transaction.booking_folio
+          document_receipt_row(receipt, type: "Payment receipt", child: booking, room: document_room_label(folio))
+        end
+      receipt_rows.concat(
+        Deposit.where(hotel_id: hotel.id, booking_id: booking.id).includes(:receipt).filter_map do |deposit|
+          next unless deposit.receipt
+
+          document_receipt_row(deposit.receipt, type: "Deposit receipt", child: booking, room: document_booking_room_label(booking))
+        end
+      )
+      card = booking.guest_registration_card
+
+      {
+        invoice: quick_folios.filter_map { |folio| document_folio_invoice_row(folio) }.find(&:available?),
+        ledger: quick_folios.map { |folio| document_ledger_row(folio) }.find(&:available?),
+        receipt: receipt_rows.select(&:available?).max_by(&:issued_at),
+        registration_card: (document_registration_card_row(booking, card) if card && (document_permission?("manage_bookings") || document_permission?("view_reports")))
+      }
+    end
+
+    def build_documents
+      load_document_records
+      rows = document_folio_invoice_rows + document_ar_invoice_rows + document_ledger_rows +
+        document_receipt_rows + document_registration_card_rows + document_statement_rows
+      rows.sort_by do |row|
+        [ @document_booking_positions.fetch(row.booking, [ -1, 0 ]), DOCUMENT_TYPE_ORDER.fetch(row.type), row.issued_at || Time.zone.at(0), row.key ]
+      end
+    end
+
+    def load_document_records
+      ids = if booking.group_booking_id?
+        hotel.bookings.where(group_booking_id: booking.group_booking_id).pluck(:id)
+      else
+        [ booking.id ]
+      end
+
+      @document_bookings = hotel.bookings
+        .where(id: ids)
+        .includes(
+          :guest_registration_card,
+          { booking_rooms: :room_type },
+          { booking_guests: :guest },
+          booking_folios: [
+            :booking_room,
+            { folio_invoice: :revisions },
+            { ar_invoice: { hotel_corporate_account: :corporate_account } },
+            { booking_billing_party: [ { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] },
+            { hotel_corporate_account: :corporate_account }
+          ]
+        )
+        .order(:group_position, :id)
+        .to_a
+      @document_booking_positions = @document_bookings.to_h do |child|
+        [ document_booking_label(child), [ child.group_position || 0, child.id ] ]
+      end
+      @document_folios = @document_bookings.flat_map(&:booking_folios)
+      @document_folios_by_id = @document_folios.index_by(&:id)
+      load_document_transaction_totals
+      load_document_receipts
+    end
+
+    def load_document_transaction_totals
+      totals = FolioTransaction
+        .where(booking_folio_id: @document_folios_by_id.keys)
+        .group(:booking_folio_id, :transaction_type)
+        .sum(:amount)
+      @document_folio_totals = Hash.new { |hash, key| hash[key] = Hash.new(0.to_d) }
+      totals.each { |(folio_id, type), amount| @document_folio_totals[folio_id][type] = amount.to_d }
+    end
+
+    def load_document_receipts
+      transaction_scope = FolioTransaction.where(booking_folio_id: @document_folios_by_id.keys)
+      @document_folio_receipts = Receipt
+        .where(hotel_id: hotel.id, folio_transaction_id: transaction_scope.select(:id))
+        .includes(folio_transaction: :booking_folio)
+        .to_a
+
+      booking_deposits = Deposit.where(hotel_id: hotel.id, booking_id: @document_bookings.map(&:id)).includes(:receipt).to_a
+      group_deposits = if booking.group_booking_id?
+        Deposit.where(hotel_id: hotel.id, group_booking_id: booking.group_booking_id).includes(:receipt).to_a
+      else
+        []
+      end
+      @document_deposits = booking_deposits + group_deposits
+
+      @document_ar_invoices = @document_folios.filter_map(&:ar_invoice)
+      @document_ar_invoices_by_id = @document_ar_invoices.index_by(&:id)
+      payment_ids = ArPaymentAllocation.where(ar_invoice_id: @document_ar_invoices.map(&:id)).select(:ar_payment_id)
+      @document_ar_receipts = Receipt.where(hotel_id: hotel.id, ar_payment_id: payment_ids).includes(:ar_payment).to_a
+      pairs = ArPaymentAllocation
+        .where(ar_invoice_id: @document_ar_invoices.map(&:id), ar_payment_id: @document_ar_receipts.map(&:ar_payment_id))
+        .pluck(:ar_payment_id, :ar_invoice_id)
+      @document_ar_invoice_ids_by_payment = pairs.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |(payment_id, invoice_id), grouped|
+        grouped[payment_id] << invoice_id
+      end
+    end
+
+    def document_folio_invoice_rows
+      @document_folios.filter_map { |folio| document_folio_invoice_row(folio) }
+    end
+
+    def document_folio_invoice_row(folio)
+      invoice = folio.folio_invoice
+      return unless invoice
+
+      revision = invoice.current_revision
+      return unless revision
+
+      snapshot = revision.snapshot.to_h.deep_stringify_keys
+      DocumentRow.new(
+        key: "folio-invoice-#{invoice.id}",
+        type: "Folio invoice",
+        number: revision.document_reference,
+        booking: document_booking_label(folio.booking),
+        room: document_room_label(folio),
+        payer: document_invoice_payer(snapshot, folio),
+        currency: snapshot.dig("totals", "currency").presence || folio.currency,
+        amount: document_invoice_amount(snapshot, folio),
+        status: invoice.state.humanize,
+        issued_at: revision.issued_at,
+        href: (routes.hotel_folio_invoice_path(hotel, folio) if invoice.finalized? && folio.closed?),
+        context_type: folio.folio_type.humanize,
+        revision_actions: document_revision_actions(folio, invoice)
+      )
+    end
+
+    def document_revision_actions(folio, invoice)
+      return [] unless document_permission?("view_audit_logs")
+      return [] unless invoice.revisions.many?
+
+      invoice.revisions.reject { |revision| invoice.finalized? && revision.revision_number == invoice.current_revision_number }.map do |revision|
+        {
+          label: revision.document_reference,
+          href: routes.hotel_folio_invoice_revision_path(hotel, folio, revision.revision_number)
+        }
+      end
+    end
+
+    def document_ar_invoice_rows
+      return [] unless document_permission?("view_reports")
+
+      @document_ar_invoices.map do |invoice|
+        folio = invoice.booking_folio
+        DocumentRow.new(
+          key: "ar-invoice-#{invoice.id}",
+          type: "AR invoice",
+          number: invoice.formatted_invoice_number,
+          booking: document_booking_label(folio.booking),
+          room: document_room_label(folio),
+          payer: invoice.corporate_account.name,
+          currency: invoice.currency,
+          amount: invoice.amount,
+          status: invoice.status.humanize,
+          issued_at: invoice.issued_on&.in_time_zone,
+          href: routes.pdf_hotel_ar_invoice_path(hotel, invoice),
+          context_type: folio.folio_type.humanize,
+          revision_actions: []
+        )
+      end
+    end
+
+    def document_ledger_rows
+      @document_folios.map { |folio| document_ledger_row(folio) }
+    end
+
+    def document_ledger_row(folio)
+      DocumentRow.new(
+        key: "folio-ledger-#{folio.id}",
+        type: "Folio ledger",
+        number: folio.folio_reference_display,
+        booking: document_booking_label(folio.booking),
+        room: document_room_label(folio),
+        payer: document_folio_payer(folio),
+        currency: folio.currency,
+        amount: document_folio_balance(folio),
+        status: folio.status.humanize,
+        issued_at: folio.closed_at || folio.opened_at,
+        href: routes.hotel_folio_ledger_path(hotel, folio, format: :pdf),
+        context_type: folio.folio_type.humanize,
+        revision_actions: []
+      )
+    end
+
+    def document_receipt_rows
+      rows = @document_folio_receipts.map do |receipt|
+        folio = receipt.folio_transaction.booking_folio
+        document_receipt_row(receipt, type: "Payment receipt", child: folio.booking, room: document_room_label(folio))
+      end
+      rows.concat(@document_deposits.filter_map do |deposit|
+        next unless deposit.receipt
+
+        child = deposit.booking
+        type = deposit.group_booking_id? ? "Group deposit receipt" : "Deposit receipt"
+        document_receipt_row(
+          deposit.receipt,
+          type:,
+          child:,
+          room: child ? document_booking_room_label(child) : "Group"
+        )
+      end)
+      rows.concat(document_ar_receipt_rows) if document_permission?("view_reports")
+      rows
+    end
+
+    def document_ar_receipt_rows
+      @document_ar_receipts.filter_map do |receipt|
+        invoices = @document_ar_invoice_ids_by_payment[receipt.ar_payment_id]
+          .filter_map { |id| @document_ar_invoices_by_id[id] }
+        next if invoices.empty?
+
+        child = invoices.one? ? invoices.first.booking : nil
+        room = invoices.one? ? document_room_label(invoices.first.booking_folio) : "Multiple rooms"
+        payer = invoices.map { |invoice| invoice.corporate_account.name }.uniq.to_sentence
+        document_receipt_row(receipt, type: "AR payment receipt", child:, room:, payer:)
+      end
+    end
+
+    def document_receipt_row(receipt, type:, child:, room:, payer: nil)
+      DocumentRow.new(
+        key: "#{type.parameterize}-#{receipt.id}",
+        type:,
+        number: receipt.public_number,
+        booking: child ? document_booking_label(child) : document_group_label,
+        room:,
+        payer: payer || receipt.payer_snapshot.to_h.stringify_keys["name"].presence || "Payer unavailable",
+        currency: receipt.currency,
+        amount: receipt.amount,
+        status: receipt.status.humanize,
+        issued_at: receipt.issued_at,
+        href: routes.receipt_path(receipt.access_token),
+        context_type: type,
+        revision_actions: []
+      )
+    end
+
+    def document_registration_card_rows
+      return [] unless document_permission?("manage_bookings") || document_permission?("view_reports")
+
+      @document_bookings.filter_map do |child|
+        card = child.guest_registration_card
+        next unless card
+
+        document_registration_card_row(child, card)
+      end
+    end
+
+    def document_registration_card_row(child, card)
+      DocumentRow.new(
+        key: "registration-card-#{card.id}",
+        type: "Registration card",
+        number: child.guest_registration_card_number_display.presence || "Registration card",
+        booking: document_booking_label(child),
+        room: document_booking_room_label(child),
+        payer: document_primary_guest_name(child),
+        currency: nil,
+        amount: nil,
+        status: card.status.humanize,
+        issued_at: card.created_at,
+        href: routes.hotel_booking_guest_registration_card_path(hotel, child),
+        context_type: "Registration card",
+        revision_actions: []
+      )
+    end
+
+    def document_statement_rows
+      return [] unless booking.group_booking_id? && document_permission?("view_reports")
+
+      @document_ar_invoices.reject(&:void?).group_by { |invoice| [ invoice.hotel_corporate_account, invoice.currency ] }.map do |(account, currency), invoices|
+        DocumentRow.new(
+          key: "group-statement-#{account.id}-#{currency}",
+          type: "Group statement",
+          number: "#{account.corporate_account.name} · #{currency}",
+          booking: document_group_label,
+          room: "All rooms",
+          payer: account.corporate_account.name,
+          currency:,
+          amount: nil,
+          status: "Available",
+          issued_at: invoices.map(&:issued_on).compact.max&.in_time_zone,
+          href: routes.hotel_booking_group_statement_path(
+            hotel,
+            booking,
+            hotel_corporate_account_id: account.id,
+            currency:
+          ),
+          context_type: "Consolidated AR",
+          revision_actions: []
+        )
+      end
+    end
+
+    def document_invoice_amount(snapshot, folio)
+      totals = snapshot["totals"].to_h
+      return totals["charges"].to_d + totals["adjustments"].to_d if totals.key?("charges")
+
+      values = @document_folio_totals[folio.id]
+      values["charge"] + values["adjustment"]
+    end
+
+    def document_folio_balance(folio)
+      values = @document_folio_totals[folio.id]
+      values["charge"] - values["payment"] + values["adjustment"]
+    end
+
+    def document_invoice_payer(snapshot, folio)
+      snapshot.dig("payer", "name").presence || document_folio_payer(folio)
+    end
+
+    def document_folio_payer(folio)
+      folio.booking_billing_party&.display_name.presence ||
+        folio.hotel_corporate_account&.corporate_account&.name.presence ||
+        document_primary_guest_name(folio.booking)
+    end
+
+    def document_primary_guest_name(child)
+      child.booking_guests.find(&:primary?)&.guest&.name.presence || child.guest_name.presence || "Guest unavailable"
+    end
+
+    def document_booking_label(child)
+      child.formatted_reservation_number.presence || child.confirmation_token
+    end
+
+    def document_group_label
+      booking.group_booking&.formatted_reservation_number.presence || document_booking_label(booking)
+    end
+
+    def document_room_label(folio)
+      document_room(folio.booking_room || folio.booking.booking_rooms.first)
+    end
+
+    def document_booking_room_label(child)
+      document_room(child.booking_rooms.first)
+    end
+
+    def document_room(room)
+      return "Unassigned" unless room
+
+      [ room.room_number.presence && "Room #{room.room_number}", room.room_type&.name ].compact_blank.join(" · ").presence || "Unassigned"
+    end
+
+    def document_permission?(slug)
+      @document_permissions ||= {}
+      return @document_permissions[slug] if @document_permissions.key?(slug)
+
+      @document_permissions[slug] = !!@user&.has_permission?(slug, hotel:)
+    end
+
+    def routes = Rails.application.routes.url_helpers
 
     # Only 40 of 76 folios carry a booking_billing_party. The rest are resolvable from the
     # folio itself: an auto-created primary guest folio belongs to the guest, and a company

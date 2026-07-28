@@ -99,7 +99,7 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
       travel_to Time.zone.local(2026, 6, 22, 14, 35, 0) do
         text = pdf_text(described_class.new(folio: folio, printed_by: "F. Suhaila").generate)
 
-        expect(text).to include("GUEST FOLIO / INVOICE")
+        expect(text).to include("FOLIO INVOICE")
         expect(text).to include("HOTEL INFORMATION")
         expect(text).to include("Hotel Name")
         expect(text).to include("Hotel ABC Resort")
@@ -211,6 +211,46 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
       expect(records.booking_stay_detail_rows).to include(
         [ "Arrival", Time.zone.parse(expected_arrival).in_time_zone(original_zone).strftime("%d %b %Y %H:%M") ]
       )
+    end
+
+    it "uses snapshotted corporate payer and immediate-payment references" do
+      relationship = create(
+        :hotel_corporate_account,
+        hotel:,
+        corporate_account: create(:account, :corporate, name: "Acme Events"),
+        account_type: "company"
+      )
+      party = create(
+        :booking_billing_party,
+        :company,
+        booking:,
+        hotel:,
+        hotel_corporate_account: relationship,
+        account_type: "company"
+      )
+      terms = create(
+        :booking_billing_terms,
+        booking_billing_party: party,
+        purchase_order_reference: "PO-CASH-42",
+        authorization_reference: "AUTH-CASH-9"
+      )
+      corporate_folio = create(
+        :booking_folio,
+        :secondary,
+        booking:,
+        hotel:,
+        booking_billing_party: party,
+        hotel_corporate_account: relationship,
+        status: "closed"
+      )
+      FolioInvoices::Finalize.call!(folio: corporate_folio, issued_by: nil, balance: 0)
+      relationship.corporate_account.update!(name: "Renamed Events")
+      terms.update!(purchase_order_reference: "PO-CHANGED", authorization_reference: "AUTH-CHANGED")
+
+      text = pdf_text(described_class.new(folio: corporate_folio).generate)
+
+      expect(text).to include("FOLIO INVOICE", "PAYER / FOLIO DETAILS", "Acme Events", "Company", "PO-CASH-42", "AUTH-CASH-9")
+      expect(text).not_to include("Renamed Events", "PO-CHANGED", "AUTH-CHANGED")
     end
   end
 
