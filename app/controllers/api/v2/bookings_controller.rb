@@ -30,7 +30,7 @@ class Api::V2::BookingsController < Api::V2::BaseController
       scope.find_by(id: group_id)
     return group if group
 
-    reservation_number = identifier[/\d{7}\z/]&.to_i
+    reservation_number = identifier[/\d{5}\z/]&.to_i
     scope.where(reservation_number:).detect { |candidate| candidate.formatted_reservation_number == identifier } if reservation_number
   end
 

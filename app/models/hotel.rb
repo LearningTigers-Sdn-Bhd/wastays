@@ -95,7 +95,7 @@ class Hotel < ApplicationRecord
                            length: { in: 3..6 },
                            format: { with: /\A[A-Z0-9]+\z/, message: "must be uppercase letters and numbers only" },
                            if: -> { hotel_prefix.present? }
-  has_many :hotel_prefix_histories, dependent: :restrict_with_error
+  has_many :hotel_prefix_histories, dependent: :destroy
   validate :hotel_prefix_has_not_been_used_by_another_hotel
 
   before_validation :normalize_default_currency

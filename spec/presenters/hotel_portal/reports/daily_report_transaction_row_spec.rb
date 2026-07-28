@@ -142,7 +142,7 @@ RSpec.describe HotelPortal::Reports::DailyReportTransactionRow do
 
     expect(row.invoice_number).to eq(20260007)
 
-    folio.update_column(:invoice_number, nil)
+    folio.update_columns(invoice_number: nil, invoice_year: nil)
     expect(described_class.new(transaction.reload).invoice_number).to eq("—")
   end
 end
