@@ -71,10 +71,16 @@ module Folios
           guest_exception = folios.find { |folio| guest_folio?(folio) && exception_folio?(folio) }
           return failure("#{guest_exception.display_name}: guest folio must be financially resolved before checkout.", folio: primary_folio, balance: total_balance(balances)) if guest_exception.present?
 
-          invoice_num = HotelCounter.increment!(hotel: primary_folio.hotel, type: "invoice")
+          invoice_allocation = DocumentIdentifiers::Issuer.issue!(hotel: primary_folio.hotel, type: :invoice)
           closable_folios.each do |folio|
             attributes = { status: "closed", closed_at: Time.current, closed_by: @user }
-            attributes[:invoice_number] = invoice_num if folio.id == primary_folio.id
+            if folio.id == primary_folio.id
+              attributes.merge!(
+                invoice_number: invoice_allocation.number,
+                invoice_year: invoice_allocation.year,
+                invoice_reference: invoice_allocation.reference
+              )
+            end
             folio.update!(attributes)
             ar_invoice = create_direct_bill_ar_invoice!(folio, balances.fetch(folio)) if direct_bill_folio?(folio)
             record_financial_audit_event!(folio, balances.fetch(folio))

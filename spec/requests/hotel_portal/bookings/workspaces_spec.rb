@@ -66,7 +66,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include("Booking workspace")
       expect(response.body).to include(booking.confirmation_token)
       expect(response.body).to include(booking.formatted_reservation_number)
-      expect(response.body).to include(booking.formatted_receipt_number)
+      expect(response.body).to include("Receipt No.")
       expect(response.body).to include("Aina Rahman")
       expect(response.body).to include("Garden Suite")
       expect(response.body).to include("208")
@@ -928,7 +928,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
         expect(response.body).to include(group.formatted_reservation_number)
         if tab == "booking_details"
           expect(response.body).to include(group.confirmation_token)
-          expect(response.body).to include(group.formatted_receipt_number)
+          expect(response.body).to include("Receipt No.")
         end
         if tab == "room_and_rate"
           document = Nokogiri::HTML(response.body)

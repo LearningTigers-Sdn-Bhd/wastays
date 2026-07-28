@@ -136,8 +136,8 @@ RSpec.describe Bookings::TransitionStatus do
         other_booking = create(:booking, status: "confirmed")
         BusinessDates::ResetAuthority.call!(hotel: other_booking.hotel, date: timestamp.to_date)
         allow(HotelCounter).to receive(:increment!).and_call_original
-        allow(HotelCounter).to receive(:increment!).with(hotel: booking.hotel, type: "folio").and_return(1)
-        allow(HotelCounter).to receive(:increment!).with(hotel: other_booking.hotel, type: "folio").and_return(1)
+        allow(HotelCounter).to receive(:increment!).with(hotel: booking.hotel, type: "folio", year: timestamp.year, floor: nil).and_return(1)
+        allow(HotelCounter).to receive(:increment!).with(hotel: other_booking.hotel, type: "folio", year: timestamp.year, floor: nil).and_return(1)
 
         first_result = described_class.new(booking: booking, status: "checked_in", timestamp: timestamp).call
         second_result = described_class.new(booking: other_booking, status: "checked_in", timestamp: timestamp).call

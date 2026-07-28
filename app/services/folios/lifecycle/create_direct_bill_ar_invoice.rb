@@ -22,7 +22,9 @@ module Folios
           hotel: @hotel,
           booking_folio: @folio,
           hotel_corporate_account: @hotel_corporate_account,
-          invoice_number: HotelCounter.increment!(hotel: @hotel, type: "ar_invoice"),
+          invoice_number: invoice_allocation.number,
+          invoice_year: invoice_allocation.year,
+          invoice_reference: invoice_allocation.reference,
           status: "open",
           amount: @balance,
           paid_amount: 0,
@@ -35,6 +37,10 @@ module Folios
       end
 
       private
+
+      def invoice_allocation
+        @invoice_allocation ||= DocumentIdentifiers::Issuer.issue!(hotel: @hotel, type: :ar_invoice)
+      end
 
       def metadata(terms_days)
         {

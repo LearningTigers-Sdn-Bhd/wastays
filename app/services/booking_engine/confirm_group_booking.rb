@@ -113,9 +113,7 @@ module BookingEngine
         tourism_tax_amount: tourism_tax&.fetch("amount", 0).to_d,
         tourism_tax_applied: tourism_tax.present?,
         tax_lines: snapshot.tax_lines,
-        tax_posting_snapshot: snapshot.tax_posting_snapshot,
-        reservation_number: HotelCounter.increment!(hotel: @quote.hotel, type: "reservation"),
-        receipt_number: HotelCounter.increment!(hotel: @quote.hotel, type: "receipt")
+        tax_posting_snapshot: snapshot.tax_posting_snapshot
       )
       booking.booking_rooms.create!(
         room_type: item.room_type,

@@ -3,8 +3,6 @@
 class ArInvoice < ApplicationRecord
   STATUSES = %w[open partially_paid paid overdue void].freeze
   MUTABLE_FIELDS = %w[paid_amount outstanding_amount status metadata updated_at].freeze
-  DOCUMENT_NUMBER_PAD_LENGTH = 7
-  DOCUMENT_TYPE_CODE = 4
 
   belongs_to :hotel
   belongs_to :booking_folio
@@ -17,7 +15,7 @@ class ArInvoice < ApplicationRecord
 
   enum :status, STATUSES.index_by(&:itself), validate: true
 
-  validates :invoice_number, presence: true, uniqueness: { scope: :hotel_id }
+  validates :invoice_number, presence: true, uniqueness: { scope: [ :hotel_id, :invoice_year ] }
   validates :booking_folio_id, uniqueness: true
   validates :amount, presence: true, numericality: { greater_than: 0 }
   validates :paid_amount, :outstanding_amount, presence: true, numericality: { greater_than_or_equal_to: 0 }
@@ -27,6 +25,7 @@ class ArInvoice < ApplicationRecord
   validate :hotel_corporate_account_matches_folio
 
   before_update :prevent_immutable_changes
+  before_validation :assign_invoice_reference
 
   scope :with_open_balance, -> { where.not(status: %w[paid void]).where(arel_table[:outstanding_amount].gt(0)) }
   scope :due_before, ->(date) { where(arel_table[:due_on].lt(date)) }
@@ -36,14 +35,15 @@ class ArInvoice < ApplicationRecord
   end
 
   def formatted_invoice_number
-    return nil unless invoice_number
-
-    prefix = hotel&.hotel_prefix.presence || "WS"
-    padded = invoice_number.to_s.rjust(DOCUMENT_NUMBER_PAD_LENGTH, "0")
-    "#{prefix}-#{DOCUMENT_TYPE_CODE}#{padded}"
+    invoice_reference.presence || DocumentIdentifiers::Issuer.format(hotel:, type: :ar_invoice, year: invoice_year, number: invoice_number)
   end
 
   private
+
+  def assign_invoice_reference
+    self.invoice_year ||= DocumentIdentifiers::Issuer.sequence_year(hotel:) if hotel && invoice_number.present?
+    self.invoice_reference ||= DocumentIdentifiers::Issuer.format(hotel:, type: :ar_invoice, year: invoice_year, number: invoice_number)
+  end
 
   def references_match_hotel
     return if hotel.blank?

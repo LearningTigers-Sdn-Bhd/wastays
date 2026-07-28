@@ -35,7 +35,16 @@ RSpec.describe BookingFolio, type: :model do
     let(:hotel_corporate_account) { create(:hotel_corporate_account, hotel: booking.hotel) }
 
     it { should validate_presence_of(:folio_number) }
-    it { should validate_uniqueness_of(:folio_number).scoped_to(:hotel_id) }
+    it "scopes folio number uniqueness by hotel and year" do
+      existing = create(:booking_folio, hotel: booking.hotel, booking: booking, folio_year: 2026, folio_number: 900)
+      duplicate = build(:booking_folio, hotel: booking.hotel, booking: create(:booking, hotel: booking.hotel), folio_year: 2026, folio_number: 900)
+      next_year = build(:booking_folio, hotel: booking.hotel, booking: create(:booking, hotel: booking.hotel), folio_year: 2027, folio_number: 900)
+
+      expect(duplicate).not_to be_valid
+      expect(duplicate.errors[:folio_number]).to include("has already been taken")
+      expect(next_year).to be_valid
+      expect(existing).to be_persisted
+    end
     it { should validate_presence_of(:status) }
 
     it "assigns required defaults" do

@@ -16,13 +16,13 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
   end
 
   describe "GET /hotel/:hotel_id/bookings/:booking_id/guest_registration_card" do
-    it "creates a draft card on first open and shows guest registration number" do
+    it "creates a draft card on first open and shows the pending registration number" do
       get hotel_booking_guest_registration_card_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
       expect(booking.reload.guest_registration_card).to be_present
       expect(response.body).to include("Guest Registration No.")
-      expect(response.body).to include(booking.formatted_guest_registration_number)
+      expect(response.body).to include("Pending check-in")
       expect(response.body).to include("Please read the terms and conditions carefully before signing")
       expect(response.body.scan("Print official form").size).to eq(1)
       expect(response.body).not_to include("Hotel acknowledgement")
@@ -30,12 +30,13 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
     end
 
     it "shows formatted guest registration number after check-in number exists" do
-      booking.update!(guest_registration_number: 1)
+      year = hotel.current_business_date.year
+      booking.update!(guest_registration_number: 1, guest_registration_year: year)
 
       get hotel_booking_guest_registration_card_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("#{hotel.hotel_prefix}-20000001")
+      expect(response.body).to include("#{hotel.hotel_prefix}-#{year.to_s.last(2)}200001")
     end
 
     it "keeps the existing official print button and printable document" do

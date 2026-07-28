@@ -6,7 +6,7 @@ module Concierge
     end
 
     def call
-      booking = @hotel.bookings.find_by(confirmation_token: @token)
+      booking = @hotel.bookings.with_confirmation_token(@token).first
       return failure(:not_found) unless booking
 
       Result.success(booking: booking)
