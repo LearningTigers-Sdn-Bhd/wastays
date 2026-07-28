@@ -19,11 +19,11 @@
   <% end %>
 
   <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
-    { label: "Bookings", value: @report.totals[:booking_count].to_s, detail: "Open liabilities" },
-    { label: "Booking payments", value: "MYR #{number_with_precision(@report.totals[:booking_payment_amount], precision: 2)}", detail: "Held amount", detail_variant: :warning },
-    { label: "Earned", value: "MYR #{number_with_precision(@report.totals[:earned_amount], precision: 2)}", detail: "Recognised charges" },
-    { label: "Refunds", value: "MYR #{number_with_precision(@report.totals[:refund_amount], precision: 2)}", detail: "Released amount" },
-    { label: "Remaining liability", value: "MYR #{number_with_precision(@report.totals[:remaining_liability], precision: 2)}", detail: "Still held", detail_variant: :warning }
+    { label: "Bookings", value: format_number(@report.totals[:booking_count]), detail: "Open liabilities" },
+    { label: "Booking payments", value: "MYR #{format_number(@report.totals[:booking_payment_amount], precision: 2)}", detail: "Held amount", detail_variant: :warning },
+    { label: "Earned", value: "MYR #{format_number(@report.totals[:earned_amount], precision: 2)}", detail: "Recognised charges" },
+    { label: "Refunds", value: "MYR #{format_number(@report.totals[:refund_amount], precision: 2)}", detail: "Released amount" },
+    { label: "Remaining liability", value: "MYR #{format_number(@report.totals[:remaining_liability], precision: 2)}", detail: "Still held", detail_variant: :warning }
   ]) %>
 
   <aside class="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-foreground" aria-label="Deposit liability scope">
@@ -69,10 +69,10 @@
                 <p><%= row[:room_details] %></p>
                 <p class="text-xs text-muted-foreground">Folio: <%= row[:folio_number] %></p>
               </td>
-              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:booking_payment_amount], precision: 2) %></td>
-              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:earned_amount], precision: 2) %></td>
-              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:refund_amount], precision: 2) %></td>
-              <td class="whitespace-nowrap text-right font-semibold tabular-nums text-warning">MYR <%= number_with_precision(row[:remaining_liability], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= format_number(row[:booking_payment_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= format_number(row[:earned_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= format_number(row[:refund_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums text-warning">MYR <%= format_number(row[:remaining_liability], precision: 2) %></td>
             </tr>
           <% end %>
         <% else %>

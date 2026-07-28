@@ -1,7 +1,7 @@
 <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
-  { label: "Guests", value: @report.totals[:guest_count].to_s, detail: "Selected period" },
-  { label: "Total tax due", value: "MYR #{number_with_precision(@report.totals[:total_due], precision: 2)}", detail: "Selected period" },
-  { label: "Total tax collected", value: "MYR #{number_with_precision(@report.totals[:total_collected], precision: 2)}", detail: "Selected period" }
+  { label: "Guests", value: format_number(@report.totals[:guest_count]), detail: "Selected period" },
+  { label: "Total tax due", value: "MYR #{format_number(@report.totals[:total_due], precision: 2)}", detail: "Selected period" },
+  { label: "Total tax collected", value: "MYR #{format_number(@report.totals[:total_collected], precision: 2)}", detail: "Selected period" }
 ]) %>
 
 <section class="space-y-3" aria-labelledby="tourism-tax-records-heading">
@@ -46,8 +46,8 @@
               <td class="whitespace-nowrap"><%= row[:check_out].strftime("%d %b %Y") %></td>
               <td class="text-right font-semibold tabular-nums"><%= row[:nights] %></td>
               <td><%= row[:room_numbers] %></td>
-              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:tax_due], precision: 2) %></td>
-              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:tax_collected], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= format_number(row[:tax_due], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= format_number(row[:tax_collected], precision: 2) %></td>
               <td class="whitespace-nowrap"><%= row[:collection_status] %></td>
             </tr>
           <% end %>
