@@ -4,8 +4,13 @@ require "rails_helper"
 require Rails.root.join("db/migrate/20260728111000_enforce_unified_invoice_integrity")
 
 RSpec.describe EnforceUnifiedInvoiceIntegrity do
-  before(:context) { described_class.new.up }
-  after(:context) { described_class.new.down }
+  before(:context) do
+    ActiveRecord::Migration.suppress_messages { described_class.new.up }
+  end
+
+  after(:context) do
+    ActiveRecord::Migration.suppress_messages { described_class.new.down }
+  end
 
   it "rejects direct SQL updates to unified invoice revisions" do
     revision = create(:invoice).current_revision

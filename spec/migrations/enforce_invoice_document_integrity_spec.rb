@@ -4,8 +4,13 @@ require "rails_helper"
 require Rails.root.join("db/migrate/20260728103000_enforce_invoice_document_integrity")
 
 RSpec.describe EnforceInvoiceDocumentIntegrity do
-  before(:context) { described_class.new.up }
-  after(:context) { described_class.new.down }
+  before(:context) do
+    ActiveRecord::Migration.suppress_messages { described_class.new.up }
+  end
+
+  after(:context) do
+    ActiveRecord::Migration.suppress_messages { described_class.new.down }
+  end
 
   it "rejects direct SQL updates to folio invoice revisions" do
     revision = create(:folio_invoice).current_revision
