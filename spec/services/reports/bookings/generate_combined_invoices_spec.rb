@@ -26,8 +26,8 @@ RSpec.describe Reports::Bookings::GenerateCombinedInvoices do
     legacy_booking = booking_for("legacy@example.test", 1)
     folio = create(:booking_folio, booking: legacy_booking, hotel:, status: "closed")
     create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
-    invoice = create(:folio_invoice, booking_folio: folio, create_revision: false, legacy: true)
-    create(:folio_invoice_revision, folio_invoice: invoice, hotel:, snapshot: { legacy_generated: true })
+    invoice = create(:invoice, booking_folio: folio, create_revision: false, legacy: true)
+    create(:invoice_revision, invoice: invoice, hotel:, snapshot: { legacy_generated: true })
 
     text = PDF::Reader.new(StringIO.new(described_class.new(hotel:, invoices: [ invoice ], recipient:).generate)).pages.map(&:text).join("\n")
     expect(text).to include("Total (MYR)", "100.00")
@@ -59,6 +59,6 @@ RSpec.describe Reports::Bookings::GenerateCombinedInvoices do
     folio = create(:booking_folio, booking:, hotel:, status: "closed")
     create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount:)
     create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount:)
-    FolioInvoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+    Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
   end
 end

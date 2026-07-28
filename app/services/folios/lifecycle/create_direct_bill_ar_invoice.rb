@@ -20,7 +20,7 @@ module Folios
           @folio.reload
           raise ArgumentError, "Direct Bill invoice requires a closed folio." unless @folio.closed?
 
-          if @folio.invoice.present? || @folio.folio_invoice.present? || @folio.invoice_number.present?
+          if @folio.invoice.present? || @folio.invoice_number.present?
             raise ArgumentError, "Direct Bill folios cannot also have a folio invoice."
           end
 
@@ -36,7 +36,7 @@ module Folios
       terms_days = @hotel_corporate_account.payment_terms_days.to_i
       allocation = invoice_allocation
       issued_at = Time.current
-      snapshot = FolioInvoices::Snapshot.call(folio: @folio)
+      snapshot = Invoices::Snapshot.call(folio: @folio)
       invoice = Invoice.create!(
         hotel: @hotel,
         booking_folio: @folio,

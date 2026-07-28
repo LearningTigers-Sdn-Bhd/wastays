@@ -128,7 +128,7 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
         source_references: { card_reference: "552190" }
       })
 
-    FolioInvoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+    Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
   end
 
   it "builds guest and folio metadata for the document" do

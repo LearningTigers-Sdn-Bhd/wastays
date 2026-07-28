@@ -18,9 +18,7 @@ module Reports
 
       def initialize(hotel:, invoices:, recipient:, printed_by: nil)
         @hotel = hotel
-        @invoices = Array(invoices).map do |invoice|
-          invoice.is_a?(FolioInvoice) ? invoice.invoice : invoice
-        end
+        @invoices = Array(invoices)
         @recipient = recipient
         @printed_by = printed_by.presence || "-"
       end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_28_111000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_29_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -870,49 +870,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_28_111000) do
     t.index ["booking_folio_id", "status"], name: "index_folio_forecasted_charges_on_booking_folio_id_and_status"
     t.index ["booking_folio_id", "stay_date"], name: "idx_on_booking_folio_id_stay_date_5ee8190530"
     t.index ["booking_folio_id"], name: "index_folio_forecasted_charges_on_booking_folio_id"
-  end
-
-  create_table "folio_invoice_revisions", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.string "document_reference", null: false
-    t.bigint "folio_invoice_id", null: false
-    t.bigint "hotel_id", null: false
-    t.datetime "issued_at", null: false
-    t.bigint "issued_by_id"
-    t.integer "revision_number", null: false
-    t.jsonb "snapshot", default: {}, null: false
-    t.datetime "updated_at", null: false
-    t.index ["folio_invoice_id", "revision_number"], name: "idx_folio_invoice_revisions_number", unique: true
-    t.index ["folio_invoice_id"], name: "index_folio_invoice_revisions_on_folio_invoice_id"
-    t.index ["hotel_id", "document_reference"], name: "idx_folio_invoice_revisions_reference", unique: true
-    t.index ["hotel_id"], name: "index_folio_invoice_revisions_on_hotel_id"
-    t.index ["issued_by_id"], name: "index_folio_invoice_revisions_on_issued_by_id"
-    t.check_constraint "revision_number > 0", name: "folio_invoice_revisions_number_positive"
-  end
-
-  create_table "folio_invoices", force: :cascade do |t|
-    t.bigint "booking_folio_id", null: false
-    t.datetime "created_at", null: false
-    t.integer "current_revision_number", default: 1, null: false
-    t.bigint "hotel_id", null: false
-    t.bigint "invoice_id"
-    t.integer "invoice_number", null: false
-    t.string "invoice_reference", null: false
-    t.integer "invoice_year", null: false
-    t.datetime "issued_at", null: false
-    t.bigint "issued_by_id"
-    t.boolean "legacy", default: false, null: false
-    t.jsonb "metadata", default: {}, null: false
-    t.string "state", default: "finalized", null: false
-    t.datetime "updated_at", null: false
-    t.index ["booking_folio_id"], name: "index_folio_invoices_on_booking_folio_id", unique: true
-    t.index ["hotel_id", "invoice_reference"], name: "idx_folio_invoices_reference", unique: true
-    t.index ["hotel_id", "invoice_year", "invoice_number"], name: "idx_folio_invoices_year_number", unique: true
-    t.index ["hotel_id"], name: "index_folio_invoices_on_hotel_id"
-    t.index ["invoice_id"], name: "index_folio_invoices_on_invoice_id", unique: true
-    t.index ["issued_by_id"], name: "index_folio_invoices_on_issued_by_id"
-    t.check_constraint "current_revision_number > 0", name: "folio_invoices_current_revision_positive"
-    t.check_constraint "state::text = ANY (ARRAY['finalized'::character varying, 'under_correction'::character varying, 'voided'::character varying]::text[])", name: "folio_invoices_state_allowed"
   end
 
   create_table "folio_operation_logs", force: :cascade do |t|
@@ -2292,13 +2249,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_28_111000) do
   add_foreign_key "financial_audit_events", "refund_requests"
   add_foreign_key "folio_forecasted_charges", "booking_folios"
   add_foreign_key "folio_forecasted_charges", "folio_transactions", column: "actualizing_transaction_id"
-  add_foreign_key "folio_invoice_revisions", "folio_invoices"
-  add_foreign_key "folio_invoice_revisions", "hotels"
-  add_foreign_key "folio_invoice_revisions", "users", column: "issued_by_id"
-  add_foreign_key "folio_invoices", "booking_folios"
-  add_foreign_key "folio_invoices", "hotels"
-  add_foreign_key "folio_invoices", "invoices"
-  add_foreign_key "folio_invoices", "users", column: "issued_by_id"
   add_foreign_key "folio_operation_logs", "booking_folios", column: "source_folio_id"
   add_foreign_key "folio_operation_logs", "booking_folios", column: "target_folio_id"
   add_foreign_key "folio_operation_logs", "bookings"

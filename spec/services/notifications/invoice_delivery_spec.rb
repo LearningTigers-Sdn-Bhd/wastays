@@ -25,11 +25,6 @@ RSpec.describe Notifications::InvoiceDelivery, type: :job do
     expect(delivery).to have_attributes(notification_type: "invoice_package", status: "pending")
     expect(delivery.payload["invoice_ids"]).to contain_exactly(first.id, second.id)
     expect(delivery.payload["invoice_revision_ids"]).to contain_exactly(first.current_revision.id, second.current_revision.id)
-    expect(delivery.payload["folio_invoice_ids"]).to contain_exactly(first.folio_invoice.id, second.folio_invoice.id)
-    expect(delivery.payload["folio_invoice_revision_ids"]).to contain_exactly(
-      first.folio_invoice.current_revision.id,
-      second.folio_invoice.current_revision.id
-    )
     expect(delivery.payload["recipient_email"]).to eq("payer@example.test")
   end
 
@@ -102,22 +97,6 @@ RSpec.describe Notifications::InvoiceDelivery, type: :job do
       .to raise_error(described_class::UnavailableError, /no longer available/)
   end
 
-  it "loads a queued legacy folio-invoice payload during the compatibility release" do
-    booking = booking_for("payer@example.test", 1)
-    invoice = finalized_invoice(booking)
-    delivery = described_class.queue(
-      hotel:,
-      bookings: [ booking ],
-      anchor_booking: booking,
-      source: "automatic_checkout"
-    ).deliveries.sole
-    delivery.update!(payload: delivery.payload.except("invoice_ids", "invoice_revision_ids"))
-
-    loaded = described_class.load!(delivery:)
-
-    expect(loaded.invoices).to eq([ invoice ])
-  end
-
   def booking_for(email, position)
     create(:booking,
       hotel:,
@@ -129,7 +108,7 @@ RSpec.describe Notifications::InvoiceDelivery, type: :job do
 
   def finalized_invoice(booking)
     folio = create(:booking_folio, booking:, hotel:, status: "closed")
-    FolioInvoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+    Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
   end
 
   def finalized_company_invoice(booking)
@@ -142,6 +121,6 @@ RSpec.describe Notifications::InvoiceDelivery, type: :job do
       folio_type: "external",
       payer_type: "company",
       hotel_corporate_account: relationship)
-    FolioInvoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+    Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
   end
 end

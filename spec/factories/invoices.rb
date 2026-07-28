@@ -20,6 +20,20 @@ FactoryBot.define do
       revision_snapshot { {} }
     end
 
+    # Mirrors Invoices::Finalize#ensure_identifier!, which stamps the identifier
+    # onto the folio before the invoice row exists. Direct-bill folios must stay
+    # unstamped — CreateDirectBillArInvoice rejects a folio with an
+    # invoice_number.
+    before(:create) do |invoice|
+      if invoice.kind == "settled"
+        invoice.booking_folio.update_columns(
+          invoice_number: invoice.invoice_number,
+          invoice_year: invoice.invoice_year,
+          invoice_reference: invoice.invoice_reference
+        )
+      end
+    end
+
     after(:create) do |invoice, evaluator|
       if evaluator.create_revision
         create(:invoice_revision,

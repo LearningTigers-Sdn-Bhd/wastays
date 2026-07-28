@@ -115,12 +115,11 @@ module Reports
       attr_reader :booking, :hotel, :folio, :revision, :invoice_document, :receivable
 
       def initialize(folio: nil, invoice: nil, receivable: nil, printed_by: nil, revision_number: nil)
-        @invoice_document = invoice || folio&.invoice || folio&.folio_invoice&.invoice
+        @invoice_document = invoice || folio&.invoice
         @folio = folio || @invoice_document&.booking_folio
         @booking = @folio&.booking
         @hotel = @folio&.hotel
         @receivable = receivable || @invoice_document&.receivable || @folio&.receivable || @folio&.ar_invoice
-        @folio_invoice = @folio&.folio_invoice
         @revision_number = revision_number.presence&.to_i
         @printed_by = printed_by
         @legend = {}

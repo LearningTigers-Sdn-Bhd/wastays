@@ -2,7 +2,7 @@
 
 module Invoices
   class ReconcileLegacyDocuments
-    Result = Data.define(:settled_mapped, :direct_bill_mapped, :errors)
+    Result = Data.define(:direct_bill_mapped, :errors)
 
     def self.call(batch_size: 100)
       new(batch_size:).call
@@ -10,66 +10,18 @@ module Invoices
 
     def initialize(batch_size:)
       @batch_size = batch_size
-      @settled_mapped = 0
       @direct_bill_mapped = 0
       @errors = []
     end
 
     def call
-      reconcile_settled
       reconcile_direct_bill
       reconcile_missing_direct_bill_revisions
       verify_integrity
-      Result.new(settled_mapped: @settled_mapped, direct_bill_mapped: @direct_bill_mapped, errors: @errors)
+      Result.new(direct_bill_mapped: @direct_bill_mapped, errors: @errors)
     end
 
     private
-
-    def reconcile_settled
-      FolioInvoice.where(invoice_id: nil).find_each(batch_size: @batch_size) do |legacy|
-        legacy.with_lock do
-          legacy.reload
-          next if legacy.invoice_id.present?
-
-          invoice = legacy.booking_folio.invoice || create_settled_invoice(legacy)
-          legacy.update_column(:invoice_id, invoice.id)
-          @settled_mapped += 1
-        end
-      rescue StandardError => e
-        @errors << "FolioInvoice #{legacy.id}: #{e.message}"
-      end
-    end
-
-    def create_settled_invoice(legacy)
-      invoice = Invoice.create!(
-        hotel: legacy.hotel,
-        booking_folio: legacy.booking_folio,
-        issued_by: legacy.issued_by,
-        kind: "settled",
-        invoice_number: legacy.invoice_number,
-        invoice_year: legacy.invoice_year,
-        invoice_reference: legacy.invoice_reference,
-        state: legacy.state,
-        current_revision_number: legacy.current_revision_number,
-        issued_on: legacy.issued_at.to_date,
-        issued_at: legacy.issued_at,
-        legacy: legacy.legacy,
-        metadata: legacy.metadata
-      )
-      legacy.revisions.find_each do |revision|
-        invoice.revisions.create!(
-          hotel: revision.hotel,
-          issued_by: revision.issued_by,
-          revision_number: revision.revision_number,
-          document_reference: revision.document_reference,
-          snapshot: revision.snapshot,
-          issued_at: revision.issued_at,
-          created_at: revision.created_at,
-          updated_at: revision.updated_at
-        )
-      end
-      invoice
-    end
 
     def reconcile_direct_bill
       ArInvoice.where(invoice_id: nil).find_each(batch_size: @batch_size) do |receivable|
@@ -89,7 +41,7 @@ module Invoices
     def create_direct_bill_invoice(receivable)
       snapshot = receivable.metadata.to_h["document_snapshot"].presence
       legacy = snapshot.blank?
-      snapshot ||= FolioInvoices::Snapshot.call(folio: receivable.booking_folio)
+      snapshot ||= Invoices::Snapshot.call(folio: receivable.booking_folio)
       snapshot = snapshot.to_h.merge("legacy_generated" => true) if legacy
       issued_at = receivable.created_at
 
@@ -136,7 +88,7 @@ module Invoices
 
         snapshot = receivable.metadata.to_h["document_snapshot"].presence
         legacy = snapshot.blank?
-        snapshot ||= FolioInvoices::Snapshot.call(folio: invoice.booking_folio)
+        snapshot ||= Invoices::Snapshot.call(folio: invoice.booking_folio)
         snapshot = snapshot.to_h.merge("legacy_generated" => true) if legacy
         invoice.revisions.create!(
           hotel: invoice.hotel,
@@ -151,7 +103,6 @@ module Invoices
     end
 
     def verify_integrity
-      @errors << "Legacy folio invoices remain unmapped." if FolioInvoice.where(invoice_id: nil).exists?
       @errors << "Legacy AR invoices remain unmapped." if ArInvoice.where(invoice_id: nil).exists?
       @errors << "Unified invoices are missing revisions." if Invoice.left_joins(:revisions).where(invoice_revisions: { id: nil }).exists?
       @errors << "Direct-bill invoices are missing receivables." if Invoice.kind_direct_bill.left_joins(:receivable).where(ar_invoices: { id: nil }).exists?

@@ -790,7 +790,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
   describe "document sections" do
     it "places actual records in five sections without synthetic or historical rows" do
       folio = create(:booking_folio, booking:, hotel:, status: "closed")
-      FolioInvoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+      Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
 
       documents_presenter = described_class.new(booking, params: { tab: "documents" }, hotel:)
       sections = documents_presenter.document_sections.to_h { |section| [ section.key, section.rows.map(&:type) ] }
@@ -829,7 +829,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
     it "exposes immutable revision history only to audit users when multiple revisions exist" do
       folio = create(:booking_folio, booking:, hotel:, status: "closed")
-      invoice = FolioInvoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+      invoice = Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
       revision = create(:invoice_revision, invoice:, hotel:, revision_number: 2)
       invoice.update!(current_revision_number: revision.revision_number)
       audit_user = instance_double(User)
@@ -849,11 +849,11 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
     it "keeps under-correction and voided invoice records visible without current-document actions" do
       correction_folio = create(:booking_folio, booking:, hotel:, status: "closed")
-      correction_invoice = FolioInvoices::Finalize.call!(folio: correction_folio, issued_by: nil, balance: 0)
+      correction_invoice = Invoices::Finalize.call!(folio: correction_folio, issued_by: nil, balance: 0)
       correction_invoice.update!(state: "under_correction")
       voided_booking = create(:booking, hotel:)
       voided_folio = create(:booking_folio, booking: voided_booking, hotel:, status: "closed")
-      voided_invoice = FolioInvoices::Finalize.call!(folio: voided_folio, issued_by: nil, balance: 0)
+      voided_invoice = Invoices::Finalize.call!(folio: voided_folio, issued_by: nil, balance: 0)
       voided_invoice.update!(state: "voided")
 
       correction_row = described_class.new(booking, params: { tab: "documents" }, hotel:).documents.find { |row| row.type == "Folio invoice" }

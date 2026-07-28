@@ -36,7 +36,7 @@ module HotelPortal
     def invoice
       authorize_invoice_revision! if params[:revision_number].present?
       @folio = current_hotel.booking_folios
-        .includes({ invoice: :revisions }, :folio_invoice, :ar_invoice, :booking_room, { booking: { booking_rooms: :room_type } }, folio_transactions: [ :transaction_code, :user ])
+        .includes({ invoice: :revisions }, :ar_invoice, :booking_room, { booking: { booking_rooms: :room_type } }, folio_transactions: [ :transaction_code, :user ])
         .find(params[:folio_id])
       @booking = @folio.booking
       report = ::Reports::Bookings::GenerateInvoice.new(
@@ -86,8 +86,8 @@ module HotelPortal
     private
 
     def invoice_filename_reference
-      revision = @folio.folio_invoice&.current_revision
-      revision = @folio.folio_invoice&.revisions&.find_by(revision_number: params[:revision_number]) if params[:revision_number].present?
+      revision = @folio.invoice&.current_revision
+      revision = @folio.invoice&.revisions&.find_by(revision_number: params[:revision_number]) if params[:revision_number].present?
       revision&.document_reference.presence || @booking.confirmation_token
     end
 

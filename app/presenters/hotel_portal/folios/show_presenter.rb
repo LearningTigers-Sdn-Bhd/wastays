@@ -506,7 +506,7 @@ module HotelPortal
     end
 
     def booking_invoice_report_available?
-      folio&.closed? && folio.folio_invoice&.finalized?
+      folio&.closed? && folio.invoice&.kind_settled? && folio.invoice.finalized?
     end
 
     def charge_transaction_codes

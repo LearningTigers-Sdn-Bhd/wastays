@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module FolioInvoices
+module Invoices
   class Snapshot
     def self.call(folio:)
       new(folio:).call

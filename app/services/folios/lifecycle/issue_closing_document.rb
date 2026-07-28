@@ -27,7 +27,7 @@ module Folios
 
       def call!
         if @settlement_method == DIRECT_BILL_SETTLEMENT
-          if @folio.invoice.present? || @folio.folio_invoice.present? || @folio.invoice_number.present?
+          if @folio.invoice.present? || @folio.invoice_number.present?
             raise ArgumentError, "Direct Bill folios cannot also have a folio invoice."
           end
 
@@ -35,7 +35,7 @@ module Folios
           return Outcome.new(invoice: receivable.invoice, receivable:)
         end
 
-        invoice = FolioInvoices::Finalize.call!(folio: @folio, issued_by: @user, balance: @balance)
+        invoice = Invoices::Finalize.call!(folio: @folio, issued_by: @user, balance: @balance)
         Outcome.new(invoice:, receivable: nil)
       end
     end

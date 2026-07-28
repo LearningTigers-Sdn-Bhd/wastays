@@ -26,7 +26,7 @@ RSpec.describe SendInvoiceEmailJob, type: :job do
   describe "#perform" do
     it "queues one delivery for an existing booking without sending synchronously" do
       create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 200)
-      create(:folio_invoice, booking_folio: folio)
+      create(:invoice, booking_folio: folio)
 
       expect {
         described_class.new.perform(booking.id)
@@ -36,7 +36,7 @@ RSpec.describe SendInvoiceEmailJob, type: :job do
 
     it "stores the booking guest email for the queued delivery" do
       create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 200)
-      create(:folio_invoice, booking_folio: folio)
+      create(:invoice, booking_folio: folio)
 
       described_class.new.perform(booking.id)
       delivery = NotificationDelivery.order(:id).last

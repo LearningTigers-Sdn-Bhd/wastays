@@ -112,19 +112,8 @@ module Notifications
     def payload_document_identity(payload)
       ids = Array(payload[:invoice_ids]).map(&:to_i)
       revision_ids = Array(payload[:invoice_revision_ids]).map(&:to_i)
-      if ids.any?
-        revisions = InvoiceRevision.where(id: revision_ids).index_by(&:id)
-        return [ ids, revision_ids.map { |id| revisions[id]&.revision_number } ]
-      end
-
-      legacy_ids = Array(payload[:folio_invoice_ids]).map(&:to_i)
-      legacy_revision_ids = Array(payload[:folio_invoice_revision_ids]).map(&:to_i)
-      legacy_invoices = @hotel.folio_invoices.where(id: legacy_ids).index_by(&:id)
-      legacy_revisions = FolioInvoiceRevision.where(id: legacy_revision_ids).index_by(&:id)
-      [
-        legacy_ids.filter_map { |id| legacy_invoices[id]&.invoice_id },
-        legacy_revision_ids.map { |id| legacy_revisions[id]&.revision_number }
-      ]
+      revisions = InvoiceRevision.where(id: revision_ids).index_by(&:id)
+      [ ids, revision_ids.map { |id| revisions[id]&.revision_number } ]
     end
 
     def recipient_for(invoice)
@@ -155,11 +144,6 @@ module Notifications
       invoice_ids = group.invoices.map(&:id).sort
       invoices_by_id = group.invoices.index_by(&:id)
       revision_ids = invoice_ids.map { |id| invoices_by_id.fetch(id).current_revision.id }
-      legacy_invoices = group.invoices.filter_map(&:folio_invoice).index_by(&:invoice_id)
-      legacy_invoice_ids = invoice_ids.filter_map { |id| legacy_invoices[id]&.id }
-      legacy_revision_ids = invoice_ids.filter_map do |id|
-        legacy_invoices[id]&.revisions&.find_by(revision_number: invoices_by_id.fetch(id).current_revision_number)&.id
-      end
       recipient = group.recipient
       skipped = recipient.email.blank?
       delivery = NotificationDelivery.find_or_initialize_by(
@@ -178,8 +162,6 @@ module Notifications
         payload: {
           invoice_ids: invoice_ids,
           invoice_revision_ids: revision_ids,
-          folio_invoice_ids: legacy_invoice_ids,
-          folio_invoice_revision_ids: legacy_revision_ids,
           payer_key: recipient.key,
           payer_kind: recipient.kind,
           payer_name: recipient.name,

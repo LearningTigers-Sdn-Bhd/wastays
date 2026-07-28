@@ -27,19 +27,19 @@ RSpec.describe Folios::Lifecycle::ReopenFolio do
 
     expect(result).to be_success
     expect(issued_folio.reload).to be_open
-    expect(issued_folio.folio_invoice).to be_under_correction
+    expect(issued_folio.invoice).to be_under_correction
   end
 
   it "creates the next immutable revision when the corrected folio closes again" do
     issued_folio = create(:booking_folio, booking: booking, hotel: booking.hotel, status: "open")
     Folios::Lifecycle::CloseFolio.call(folio: issued_folio, user: user, reason: "Settled")
-    base_reference = issued_folio.reload.folio_invoice.invoice_reference
+    base_reference = issued_folio.reload.invoice.invoice_reference
     described_class.call(folio: issued_folio, user: user, reason: "Posting correction")
 
     result = Folios::Lifecycle::CloseFolio.call(folio: issued_folio.reload, user: user, reason: "Correction complete")
 
     expect(result).to be_success
-    invoice = issued_folio.reload.folio_invoice
+    invoice = issued_folio.reload.invoice
     expect(invoice).to be_finalized
     expect(invoice.current_revision_number).to eq(2)
     expect(invoice.current_document_reference).to eq("#{base_reference}-2")
