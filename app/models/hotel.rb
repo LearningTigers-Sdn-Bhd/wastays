@@ -57,6 +57,8 @@ class Hotel < ApplicationRecord
   has_many :booking_folios, dependent: :restrict_with_error
   has_many :ar_invoices, dependent: :restrict_with_error
   has_many :folio_invoices, dependent: :restrict_with_error
+  has_many :invoices, dependent: :restrict_with_error
+  has_many :receivables, class_name: "Receivable", dependent: :restrict_with_error
   has_many :ar_payments, dependent: :restrict_with_error
   has_many :ar_payment_submissions, dependent: :restrict_with_error
   has_many :folio_routing_rules, dependent: :destroy

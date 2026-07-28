@@ -15,6 +15,8 @@ class BookingFolio < ApplicationRecord
   has_many :folio_forecasted_charges, dependent: :destroy
   has_one :ar_invoice, dependent: :restrict_with_error
   has_one :folio_invoice, dependent: :restrict_with_error
+  has_one :invoice, dependent: :restrict_with_error
+  has_one :receivable, class_name: "Receivable", dependent: :restrict_with_error
   has_many :receipts, through: :folio_transactions
   has_many :target_folio_routing_rules, class_name: "FolioRoutingRule", foreign_key: :target_folio_id, dependent: :restrict_with_error
   has_many :deposit_movements, dependent: :restrict_with_error

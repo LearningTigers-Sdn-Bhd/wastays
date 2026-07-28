@@ -26,6 +26,22 @@ FactoryBot.define do
     end
 
     after(:create) do |invoice, evaluator|
+      document = create(:invoice,
+        booking_folio: invoice.booking_folio,
+        hotel: invoice.hotel,
+        issued_by: invoice.issued_by,
+        kind: "settled",
+        invoice_number: invoice.invoice_number,
+        invoice_year: invoice.invoice_year,
+        invoice_reference: invoice.invoice_reference,
+        state: invoice.state,
+        current_revision_number: invoice.current_revision_number,
+        issued_on: invoice.issued_at.to_date,
+        issued_at: invoice.issued_at,
+        legacy: invoice.legacy,
+        create_revision: false)
+      invoice.update_column(:invoice_id, document.id)
+
       if evaluator.create_revision
         create(:folio_invoice_revision,
           hotel: invoice.hotel,

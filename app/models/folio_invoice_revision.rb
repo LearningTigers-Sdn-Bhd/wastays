@@ -14,6 +14,7 @@ class FolioInvoiceRevision < ApplicationRecord
 
   before_update :prevent_update
   before_destroy :prevent_destroy
+  after_create :mirror_to_unified_revision
 
   private
 
@@ -31,5 +32,19 @@ class FolioInvoiceRevision < ApplicationRecord
   def prevent_destroy
     errors.add(:base, "Folio invoice revisions are immutable and cannot be deleted.")
     throw :abort
+  end
+
+  def mirror_to_unified_revision
+    invoice = folio_invoice.invoice
+    return if invoice.blank? || invoice.revisions.exists?(revision_number:)
+
+    invoice.revisions.create!(
+      hotel:,
+      issued_by:,
+      revision_number:,
+      document_reference:,
+      snapshot:,
+      issued_at:
+    )
   end
 end

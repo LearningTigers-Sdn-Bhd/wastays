@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_28_103000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_28_111000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -98,6 +98,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_28_103000) do
     t.date "due_on", null: false
     t.bigint "hotel_corporate_account_id", null: false
     t.bigint "hotel_id", null: false
+    t.bigint "invoice_id"
     t.integer "invoice_number", null: false
     t.string "invoice_reference"
     t.integer "invoice_year", null: false
@@ -114,6 +115,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_28_103000) do
     t.index ["hotel_id", "invoice_year", "invoice_number"], name: "idx_ar_invoices_invoice_year_number", unique: true
     t.index ["hotel_id", "status", "due_on"], name: "index_ar_invoices_on_hotel_id_and_status_and_due_on"
     t.index ["hotel_id"], name: "index_ar_invoices_on_hotel_id"
+    t.index ["invoice_id"], name: "index_ar_invoices_on_invoice_id", unique: true
     t.check_constraint "amount > 0::numeric", name: "ar_invoices_amount_positive"
     t.check_constraint "outstanding_amount >= 0::numeric", name: "ar_invoices_outstanding_amount_nonnegative"
     t.check_constraint "paid_amount >= 0::numeric", name: "ar_invoices_paid_amount_nonnegative"
@@ -893,6 +895,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_28_103000) do
     t.datetime "created_at", null: false
     t.integer "current_revision_number", default: 1, null: false
     t.bigint "hotel_id", null: false
+    t.bigint "invoice_id"
     t.integer "invoice_number", null: false
     t.string "invoice_reference", null: false
     t.integer "invoice_year", null: false
@@ -906,6 +909,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_28_103000) do
     t.index ["hotel_id", "invoice_reference"], name: "idx_folio_invoices_reference", unique: true
     t.index ["hotel_id", "invoice_year", "invoice_number"], name: "idx_folio_invoices_year_number", unique: true
     t.index ["hotel_id"], name: "index_folio_invoices_on_hotel_id"
+    t.index ["invoice_id"], name: "index_folio_invoices_on_invoice_id", unique: true
     t.index ["issued_by_id"], name: "index_folio_invoices_on_issued_by_id"
     t.check_constraint "current_revision_number > 0", name: "folio_invoices_current_revision_positive"
     t.check_constraint "state::text = ANY (ARRAY['finalized'::character varying, 'under_correction'::character varying, 'voided'::character varying]::text[])", name: "folio_invoices_state_allowed"
@@ -1438,6 +1442,50 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_28_103000) do
     t.check_constraint "kind::text <> 'corporate'::text OR metadata ? 'relationship_type'::text AND ((metadata ->> 'relationship_type'::text) = ANY (ARRAY['standard'::text, 'direct_bill'::text]))", name: "invitations_corporate_fields_required"
     t.check_constraint "kind::text <> 'staff'::text OR role_id IS NOT NULL", name: "invitations_staff_role_required"
     t.check_constraint "kind::text = ANY (ARRAY['staff'::character varying, 'corporate'::character varying]::text[])", name: "invitations_kind_allowed"
+  end
+
+  create_table "invoice_revisions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "document_reference", null: false
+    t.bigint "hotel_id", null: false
+    t.bigint "invoice_id", null: false
+    t.datetime "issued_at", null: false
+    t.bigint "issued_by_id"
+    t.integer "revision_number", null: false
+    t.jsonb "snapshot", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "document_reference"], name: "idx_invoice_revisions_reference", unique: true
+    t.index ["hotel_id"], name: "index_invoice_revisions_on_hotel_id"
+    t.index ["invoice_id", "revision_number"], name: "idx_invoice_revisions_number", unique: true
+    t.index ["invoice_id"], name: "index_invoice_revisions_on_invoice_id"
+    t.index ["issued_by_id"], name: "index_invoice_revisions_on_issued_by_id"
+    t.check_constraint "revision_number > 0", name: "invoice_revisions_number_positive"
+  end
+
+  create_table "invoices", force: :cascade do |t|
+    t.bigint "booking_folio_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "current_revision_number", default: 1, null: false
+    t.bigint "hotel_id", null: false
+    t.integer "invoice_number", null: false
+    t.string "invoice_reference", null: false
+    t.integer "invoice_year", null: false
+    t.datetime "issued_at", null: false
+    t.bigint "issued_by_id"
+    t.date "issued_on", null: false
+    t.string "kind", null: false
+    t.boolean "legacy", default: false, null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.string "state", default: "finalized", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_folio_id"], name: "index_invoices_on_booking_folio_id", unique: true
+    t.index ["hotel_id", "invoice_reference"], name: "idx_invoices_reference", unique: true
+    t.index ["hotel_id", "kind", "invoice_year", "invoice_number"], name: "idx_invoices_kind_year_number", unique: true
+    t.index ["hotel_id"], name: "index_invoices_on_hotel_id"
+    t.index ["issued_by_id"], name: "index_invoices_on_issued_by_id"
+    t.check_constraint "current_revision_number > 0", name: "invoices_current_revision_positive"
+    t.check_constraint "kind::text = ANY (ARRAY['settled'::character varying, 'direct_bill'::character varying]::text[])", name: "invoices_kind_allowed"
+    t.check_constraint "state::text = ANY (ARRAY['finalized'::character varying, 'under_correction'::character varying, 'voided'::character varying]::text[])", name: "invoices_state_allowed"
   end
 
   create_table "journal_batch_entries", force: :cascade do |t|
@@ -2151,6 +2199,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_28_103000) do
   add_foreign_key "ar_invoices", "booking_folios"
   add_foreign_key "ar_invoices", "hotel_corporate_accounts"
   add_foreign_key "ar_invoices", "hotels"
+  add_foreign_key "ar_invoices", "invoices"
   add_foreign_key "ar_payment_allocation_reversals", "ar_payment_allocations"
   add_foreign_key "ar_payment_allocation_reversals", "users", column: "reversed_by_id"
   add_foreign_key "ar_payment_allocations", "ar_invoices"
@@ -2248,6 +2297,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_28_103000) do
   add_foreign_key "folio_invoice_revisions", "users", column: "issued_by_id"
   add_foreign_key "folio_invoices", "booking_folios"
   add_foreign_key "folio_invoices", "hotels"
+  add_foreign_key "folio_invoices", "invoices"
   add_foreign_key "folio_invoices", "users", column: "issued_by_id"
   add_foreign_key "folio_operation_logs", "booking_folios", column: "source_folio_id"
   add_foreign_key "folio_operation_logs", "booking_folios", column: "target_folio_id"
@@ -2309,6 +2359,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_28_103000) do
   add_foreign_key "invitations", "hotels"
   add_foreign_key "invitations", "roles"
   add_foreign_key "invitations", "users", column: "invited_by_user_id"
+  add_foreign_key "invoice_revisions", "hotels"
+  add_foreign_key "invoice_revisions", "invoices"
+  add_foreign_key "invoice_revisions", "users", column: "issued_by_id"
+  add_foreign_key "invoices", "booking_folios"
+  add_foreign_key "invoices", "hotels"
+  add_foreign_key "invoices", "users", column: "issued_by_id"
   add_foreign_key "journal_batch_entries", "journal_batches"
   add_foreign_key "journal_batches", "hotels"
   add_foreign_key "legacy_booking_split_lineages", "booking_rooms"
