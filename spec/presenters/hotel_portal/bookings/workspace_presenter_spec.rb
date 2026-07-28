@@ -830,7 +830,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
     it "exposes immutable revision history only to audit users when multiple revisions exist" do
       folio = create(:booking_folio, booking:, hotel:, status: "closed")
       invoice = FolioInvoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
-      revision = create(:folio_invoice_revision, folio_invoice: invoice, hotel:, revision_number: 2)
+      revision = create(:invoice_revision, invoice:, hotel:, revision_number: 2)
       invoice.update!(current_revision_number: revision.revision_number)
       audit_user = instance_double(User)
       allow(audit_user).to receive(:has_permission?) do |slug, hotel:|

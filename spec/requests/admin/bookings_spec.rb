@@ -44,6 +44,7 @@ RSpec.describe 'Admin::Bookings', type: :request do
       category: "accommodation",
       amount: 520,
       description: "Room Charge - Deluxe Room")
+    FolioInvoices::Finalize.call!(folio:, issued_by: superadmin, balance: 0)
     folio
   end
 

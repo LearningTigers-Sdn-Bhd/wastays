@@ -1238,7 +1238,7 @@ module HotelPortal
         .where(booking_id: booking.id)
         .includes(
           :booking_room,
-          { folio_invoice: :revisions },
+          { invoice: :revisions },
           { booking: [ { booking_rooms: :room_type }, { booking_guests: :guest } ] },
           { booking_billing_party: [ { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] },
           { hotel_corporate_account: :corporate_account }
@@ -1297,7 +1297,7 @@ module HotelPortal
           { booking_guests: :guest },
           booking_folios: [
             :booking_room,
-            { folio_invoice: :revisions },
+            { invoice: :revisions },
             { ar_invoice: { hotel_corporate_account: :corporate_account } },
             { booking_billing_party: [ { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] },
             { hotel_corporate_account: :corporate_account }
@@ -1355,8 +1355,8 @@ module HotelPortal
     end
 
     def document_folio_invoice_row(folio)
-      invoice = folio.folio_invoice
-      return unless invoice
+      invoice = folio.invoice
+      return unless invoice&.kind_settled?
 
       revision = invoice.current_revision
       return unless revision
