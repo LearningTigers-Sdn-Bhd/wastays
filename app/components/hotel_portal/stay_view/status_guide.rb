@@ -71,11 +71,11 @@ module HotelPortal
       ].freeze
       FINANCIAL_ENTRIES = [
         {
-          state: :financial_attention, label: "Financial attention", icon: "circle-dollar-sign",
+          state: :financial_attention, label: "Payment needed", icon: "circle-dollar-sign",
           presentation: :badge, variant: :warning
         }.freeze,
         {
-          state: :direct_bill, label: "Direct Bill", icon: "landmark",
+          state: :direct_bill, label: "Company pays", icon: "landmark",
           presentation: :badge, variant: :info
         }.freeze
       ].freeze
@@ -121,7 +121,7 @@ module HotelPortal
       def groups
         visible_groups = GROUPS
         visible_groups = [ *visible_groups, { label: "Guest status", entries: GUEST_STATUS_ENTRIES } ] if @view_booking
-        visible_groups = [ *visible_groups, { label: "Financial", entries: FINANCIAL_ENTRIES } ] if @view_financial_status
+        visible_groups = [ *visible_groups, { label: "Payment", entries: FINANCIAL_ENTRIES } ] if @view_financial_status
 
         visible_groups
       end

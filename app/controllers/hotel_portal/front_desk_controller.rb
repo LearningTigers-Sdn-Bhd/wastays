@@ -24,10 +24,16 @@ module HotelPortal
 
     private
 
+    # Every tab exposes guest and stay records, so every tab needs a permission.
+    # A user who qualifies for none has no business on this page at all.
     def set_allowed_tabs
-      @allowed_tabs = %w[in_house departures checkout]
-      @allowed_tabs.unshift("arrivals") if current_user.has_permission?("manage_guest_arrival", hotel: current_hotel)
-      @allowed_tabs.unshift("bookings") if current_user.has_permission?("view_bookings", hotel: current_hotel)
+      view_bookings = current_user.has_permission?("view_bookings", hotel: current_hotel)
+
+      @allowed_tabs = TABS.select do |tab|
+        tab == "arrivals" ? current_user.has_permission?("manage_guest_arrival", hotel: current_hotel) : view_bookings
+      end
+
+      raise Pundit::NotAuthorizedError if @allowed_tabs.empty?
     end
 
     def set_tab
@@ -38,10 +44,9 @@ module HotelPortal
       @metrics = {}
       @metrics["bookings"] = current_hotel.bookings.count if @allowed_tabs.include?("bookings")
       @metrics["arrivals"] = HotelPortal::FrontDesk::ArrivalsQuery.new(hotel: current_hotel, params: query_params).total_count if @allowed_tabs.include?("arrivals")
-      in_house_query = HotelPortal::InHouseGuestsQuery.new(hotel: current_hotel, params: in_house_params)
-      @metrics["in_house"] = in_house_query.in_house_count
-      @metrics["departures"] = HotelPortal::FrontDesk::DeparturesQuery.new(hotel: current_hotel, params: query_params).total_count
-      @metrics["checkout"] = HotelPortal::FrontDesk::CheckoutQuery.new(hotel: current_hotel, params: query_params).total_count
+      @metrics["in_house"] = HotelPortal::InHouseGuestsQuery.new(hotel: current_hotel, params: in_house_params).in_house_count if @allowed_tabs.include?("in_house")
+      @metrics["departures"] = HotelPortal::FrontDesk::DeparturesQuery.new(hotel: current_hotel, params: query_params).total_count if @allowed_tabs.include?("departures")
+      @metrics["checkout"] = HotelPortal::FrontDesk::CheckoutQuery.new(hotel: current_hotel, params: query_params).total_count if @allowed_tabs.include?("checkout")
     end
 
     def load_bookings

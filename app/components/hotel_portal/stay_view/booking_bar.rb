@@ -52,8 +52,8 @@ module HotelPortal
           popover.with_trigger(**trigger_attributes) do
             safe_join([
               resize_handle(:start),
-              tag.span(@segment.guest_label, class: "stay-view-booking-guest-name min-w-0 flex-1 truncate"),
               booking_source,
+              tag.span(@segment.guest_label, class: "stay-view-booking-guest-name min-w-0 flex-1 truncate"),
               resize_handle(:end)
             ].compact)
           end
@@ -134,18 +134,45 @@ module HotelPortal
         end
       end
 
+      # Source leads the heading as a large badge, with the guest identity stacked
+      # beside it: name, booking type, then the source spelled out.
       def popover_heading
-        tag.div do
+        tag.div(class: "flex items-center gap-2.5") do
           safe_join([
-            tag.div(class: "flex min-w-0 items-center gap-1.5") do
+            popover_source_badge,
+            tag.div(class: "min-w-0 flex-1") do
               safe_join([
-                tag.p(@segment.primary_guest_name, class: "min-w-0 truncate text-sm font-semibold text-foreground"),
-                guest_status_indicators
+                tag.div(class: "flex min-w-0 items-center gap-1.5") do
+                  safe_join([
+                    tag.p(@segment.primary_guest_name, class: "min-w-0 truncate text-sm font-semibold text-foreground"),
+                    guest_status_indicators
+                  ].compact)
+                end,
+                tag.p(@segment.booking_type == :group ? "Group booking" : "Single booking", class: "text-xs text-muted-foreground"),
+                source_line
               ].compact)
-            end,
-            tag.p(@segment.booking_type == :group ? "Group booking" : "Single booking", class: "text-xs text-muted-foreground")
-          ])
+            end
+          ].compact)
         end
+      end
+
+      def popover_source_badge
+        return if @segment.source.blank?
+
+        tag.span(class: "shrink-0", data: { slot: "stay-view-popover-source" }) do
+          render PanelsUI::BookingSourceBadge.new(
+            source: @segment.source,
+            size: :lg,
+            with_tooltip: false,
+            decorative: true
+          )
+        end
+      end
+
+      def source_line
+        return if @segment.source_label.blank?
+
+        tag.p("via #{@segment.source_label}", class: "truncate text-xs text-muted-foreground")
       end
 
       def popover_details
@@ -154,21 +181,9 @@ module HotelPortal
             [ "Status", @segment.status.to_s.humanize ],
             [ "Stay", "#{@segment.check_in.to_fs(:medium)} – #{@segment.check_out.to_fs(:medium)}" ]
           ]
-          rows << [ "Source", source_value ] if @segment.source_label.present?
-          @segment.financial_signals.each { |signal| rows << [ "Financial", signal.label ] }
+          @segment.financial_signals.each { |signal| rows << [ "Payment", signal.label ] }
           rows << [ "Group", [ @segment.group_name, @segment.group_reference ].compact_blank.join(" · ") ] if @segment.group_reference.present?
           safe_join(rows.flat_map { |label, value| [ tag.dt(label, class: "text-muted-foreground"), tag.dd(value, class: "text-foreground") ] })
-        end
-      end
-
-      def source_value
-        return @segment.source_label if @segment.source.blank?
-
-        tag.span(class: "inline-flex items-center gap-1.5") do
-          safe_join([
-            render(PanelsUI::BookingSourceBadge.new(source: @segment.source, size: :sm, with_tooltip: false)),
-            @segment.source_label
-          ])
         end
       end
 
@@ -197,7 +212,7 @@ module HotelPortal
       def booking_source
         return if @segment.source.blank?
 
-        tag.span(class: "ml-auto shrink-0", data: { slot: "stay-view-booking-source" }) do
+        tag.span(class: "shrink-0", data: { slot: "stay-view-booking-source" }) do
           render PanelsUI::BookingSourceBadge.new(
             source: @segment.source,
             size: :sm,

@@ -1,4 +1,4 @@
-<section aria-label="Reservation view" class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+<section aria-label="Reservation view" class="overflow-hidden rounded-lg border border-border bg-card">
   <div class="hidden overflow-x-auto lg:block">
     <table class="min-w-full table-fixed">
       <thead class="border-b border-border bg-muted">
@@ -23,13 +23,13 @@
             </tr>
           <% end %>
         <% else %>
-          <tr><td colspan="7" class="px-4 py-12 text-center text-sm text-muted-foreground">No guests have checked out today.</td></tr>
+          <tr><td colspan="7" class="px-4 py-10 text-center text-sm text-muted-foreground">No guests have checked out today.</td></tr>
         <% end %>
       </tbody>
     </table>
   </div>
 
-  <div class="space-y-3 p-4 lg:hidden">
+  <div class="space-y-3 p-3 lg:hidden">
     <% if @bookings.any? %>
       <% @bookings.each do |booking| %>
         <% rooms_summary = booking.booking_rooms.group_by { |room| room.room_type_snapshot["name"].presence || room.room_type.name }.map { |name, rooms| "#{rooms.size}x #{name}" }.join(", ").presence || "No rooms assigned" %>
@@ -46,9 +46,9 @@
         </article>
       <% end %>
     <% else %>
-      <p class="py-8 text-center text-sm text-muted-foreground">No guests have checked out today.</p>
+      <p class="py-10 text-center text-sm text-muted-foreground">No guests have checked out today.</p>
     <% end %>
   </div>
 
-  <div class="flex justify-center border-t border-border bg-muted p-4"><%= paginate @bookings, param_name: @page_param %></div>
+  <% if @bookings.total_pages > 1 %><div class="flex justify-center border-t border-border p-3"><%= paginate @bookings, param_name: @page_param %></div><% end %>
 </section>

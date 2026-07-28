@@ -34,7 +34,7 @@ module HotelPortal
       journal_batches_active = journal_batch_items.any?(&:active)
 
       front_desk_children = [
-        NavItem.new(label: "Reservations", path: hotel_front_desk_path(current_hotel), search_text: "Reservations Front Desk Arrivals In-House Guests Departures Check-in Check-out", active: controller_name == "front_desk", icon: "calendar-check-2"),
+        NavItem.new(label: "Reservations", path: hotel_front_desk_path(current_hotel), search_text: "Reservations Front Desk Arrivals In-House Guests Departures Check-in Check-out", active: controller_name == "front_desk", icon: "calendar-check-2", permission: [ "view_bookings", "manage_guest_arrival" ]),
         NavItem.new(label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory Front Desk", active: controller_name == "guests", icon: "user", permission: "view_guest_records", plan_feature: "unified_guest_profile"),
         NavItem.new(label: "Stay View", path: hotel_stay_view_path(current_hotel), search_text: "Stay View Timeline Board Room Status Housekeeping Planning Operations Calendar Tape Chart Front Desk", active: controller_path == "hotel_portal/stay_view/board", icon: "table-2", permission: [ "view_bookings", "manage_bookings", "view_room_readiness", "manage_room_status" ]),
         NavItem.new(label: "Housekeeping Tasks", path: hotel_housekeeping_tasks_path(current_hotel), search_text: "Housekeeping Tasks Cleaning Room Status Front Desk", active: controller_name == "housekeeping_tasks", icon: "clipboard-check", permission: "manage_housekeeping_tasks", plan_feature: "task_assignment_minibar_log"),

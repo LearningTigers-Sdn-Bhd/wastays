@@ -365,14 +365,14 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     page.execute_script("document.querySelector('##{segment[:id]}-trigger').focus()")
     expect(page).to have_css(
       "##{segment[:id]}-panel",
-      text: "Guest: Ada Lovelace · Balance due · MYR 240.00",
+      text: "Collect MYR 240.00 · Ada Lovelace",
       visible: :visible
     )
 
     click_link "Rooms"
     expect(page).to have_css(
       "[data-slot='stay-view-financial-signal'][data-variant='warning']",
-      text: "Guest: Ada Lovelace · Balance due · MYR 240.00"
+      text: "Collect MYR 240.00 · Ada Lovelace"
     )
   end
 

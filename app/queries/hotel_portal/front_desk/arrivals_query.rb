@@ -14,7 +14,7 @@ module HotelPortal
       end
 
       def call
-        scope = base_scope.includes(:booking_rooms, :pre_checkin, :booking_guests, :guests, :booking_notes, booking_folios: :folio_transactions)
+        scope = base_scope.includes(:booking_rooms, :pre_checkin, :booking_notes, booking_guests: { guest: :bookings }, booking_folios: [ :folio_transactions, :folio_forecasted_charges ])
         scope = apply_search(scope)
         scope.order(created_at: :asc, id: :asc)
       end

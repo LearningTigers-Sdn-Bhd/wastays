@@ -120,7 +120,7 @@ end %>
   <% end %>
 
   <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border p-2">
-    <%= render HotelPortal::StayView::OperationalCounts.new(counts: board.status_counts) %>
+    <%= render HotelPortal::StayView::OperationalCounts.new(counts: board.status_counts, view_mode: board.view_mode) %>
     <% if board.capabilities.create_booking? %>
       <div class="flex flex-wrap items-center gap-2" data-slot="stay-view-global-actions">
         <%= render PanelsUI::Button.new(

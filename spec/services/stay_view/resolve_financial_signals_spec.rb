@@ -110,13 +110,13 @@ RSpec.describe StayView::ResolveFinancialSignals do
 
     expect(signals.fetch(due_booking.id).sole).to have_attributes(
       state: :balance_due,
-      label: "Guest: Ada Lovelace · Balance due · MYR 115.00"
+      label: "Collect MYR 115.00 · Ada Lovelace"
     )
     expect(signals.fetch(credit_booking.id).sole).to have_attributes(
       state: :credit,
-      label: "Guest: Grace Hopper · Credit · MYR 25.00"
+      label: "Refund MYR 25.00 · Grace Hopper"
     )
-    expect(signals.fetch(settled_booking.id).sole).to have_attributes(state: :settled, label: "Projected settled")
+    expect(signals.fetch(settled_booking.id).sole).to have_attributes(state: :settled, label: "Nothing due")
     expect(signals.values).to all(be_frozen)
   end
 
@@ -147,10 +147,10 @@ RSpec.describe StayView::ResolveFinancialSignals do
     labels = signals_for(booking).fetch(booking.id).map(&:label)
 
     expect(labels).to eq([
-      "Guest: Ada Lovelace · Balance due · MYR 100.00",
-      "Guest: Additional Guest · Balance due · MYR 50.00",
-      "Company: Acme Sdn Bhd · Payment due · MYR 200.00",
-      "Government: Ministry of Tourism · Payment due · MYR 300.00"
+      "Collect MYR 100.00 · Ada Lovelace",
+      "Collect MYR 50.00 · Additional Guest",
+      "Unpaid MYR 200.00 · Acme Sdn Bhd",
+      "Unpaid MYR 300.00 · Ministry of Tourism"
     ])
   end
 
@@ -192,12 +192,12 @@ RSpec.describe StayView::ResolveFinancialSignals do
 
     expect(signals.fetch(planned_booking.id).sole).to have_attributes(
       state: :direct_bill_planned,
-      label: "Direct bill planned: Planned Corp · MYR 240.00",
+      label: "Company pays MYR 240.00 · Planned Corp",
       attention?: false
     )
     expect(signals.fetch(billed_booking.id)).to contain_exactly(
-      have_attributes(state: :direct_billed, label: "Direct billed: Billed Corp · MYR 300.00", attention?: false),
-      have_attributes(state: :direct_bill_planned, label: "Direct bill planned: Billed Corp · MYR 50.00", attention?: false)
+      have_attributes(state: :direct_billed, label: "Invoiced MYR 300.00 · Billed Corp", attention?: false),
+      have_attributes(state: :direct_bill_planned, label: "Company pays MYR 50.00 · Billed Corp", attention?: false)
     )
 
     %w[partially_paid paid overdue].each do |status|
@@ -259,11 +259,11 @@ RSpec.describe StayView::ResolveFinancialSignals do
       suspended_booking, disabled_booking, missing_invoice_booking, open_invoice_booking, void_invoice_booking
     )
 
-    expect(signals.fetch(suspended_booking.id).sole.label).to eq("Direct bill review: Suspended Corp")
-    expect(signals.fetch(disabled_booking.id).sole.label).to eq("Direct bill review: Disabled Corp")
-    expect(signals.fetch(missing_invoice_booking.id).sole.label).to eq("Direct bill review: Missing Invoice Corp")
-    expect(signals.fetch(open_invoice_booking.id).sole.label).to eq("Direct bill review: Open Invoice Corp")
-    expect(signals.fetch(void_invoice_booking.id).sole.label).to eq("Direct bill review: Void Invoice Corp")
+    expect(signals.fetch(suspended_booking.id).sole.label).to eq("Check billing · Suspended Corp")
+    expect(signals.fetch(disabled_booking.id).sole.label).to eq("Check billing · Disabled Corp")
+    expect(signals.fetch(missing_invoice_booking.id).sole.label).to eq("Check billing · Missing Invoice Corp")
+    expect(signals.fetch(open_invoice_booking.id).sole.label).to eq("Check billing · Open Invoice Corp")
+    expect(signals.fetch(void_invoice_booking.id).sole.label).to eq("Check billing · Void Invoice Corp")
     expect(signals.values.flatten.map(&:label).join).not_to include("MYR")
   end
 
@@ -293,7 +293,7 @@ RSpec.describe StayView::ResolveFinancialSignals do
       @signals = signals_for(missing, unlinked, house, other_booking)
     end.not_to change(BookingBillingParty, :count)
 
-    expect(@signals.values.flatten).to all(have_attributes(state: :review, label: "Financial review required"))
+    expect(@signals.values.flatten).to all(have_attributes(state: :review, label: "Check folio"))
     expect(@signals.values.flatten.map(&:label).join).not_to include("987.65", "50.00", "75.00")
   end
 
@@ -320,10 +320,10 @@ RSpec.describe StayView::ResolveFinancialSignals do
 
     signals = signals_for(mixed_booking, separate_booking)
 
-    expect(signals.fetch(mixed_booking.id).sole.label).to eq("Financial review required: Mixed Guest")
+    expect(signals.fetch(mixed_booking.id).sole.label).to eq("Check folio · Mixed Guest")
     expect(signals.fetch(separate_booking.id).map(&:label)).to contain_exactly(
-      "Guest: MYR Guest · Balance due · MYR 10.00",
-      "Company: USD Company · Payment due · USD 5.00"
+      "Collect MYR 10.00 · MYR Guest",
+      "Unpaid USD 5.00 · USD Company"
     )
   end
 
@@ -353,8 +353,8 @@ RSpec.describe StayView::ResolveFinancialSignals do
 
     signals = signals_for(first, second)
 
-    expect(signals.fetch(first.id).sole.label).to start_with("Guest: First Child · Balance due")
-    expect(signals.fetch(second.id).sole.label).to start_with("Guest: Second Child · Credit")
+    expect(signals.fetch(first.id).sole.label).to start_with("Collect MYR 120.00 · First Child")
+    expect(signals.fetch(second.id).sole.label).to start_with("Refund")
   end
 
   it "uses a fixed query count as bookings, parties, and folios grow" do

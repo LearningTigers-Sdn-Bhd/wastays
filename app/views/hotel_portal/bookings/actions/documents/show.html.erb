@@ -1,6 +1,6 @@
 <%= render "hotel_portal/bookings/actions/shared/sheet",
            id: "quick-documents-sheet",
-           title: "Quick Documents",
+           title: "Print/Send",
            description: (@booking.group_booking_id? ? "#{@booking.group_booking.formatted_reservation_number} document shortcuts" : "#{@booking.confirmation_token} document shortcuts"),
            size: :sm do %>
   <div class="space-y-5">

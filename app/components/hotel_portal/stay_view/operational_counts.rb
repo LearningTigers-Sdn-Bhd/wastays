@@ -3,19 +3,24 @@
 module HotelPortal
   module StayView
     class OperationalCounts < PanelsUI::BaseComponent
-      PRESENTATION = {
-        all: { label: "All", variant: :outline },
-        vacant: { label: "Vacant", variant: :success },
-        arrival: { label: "Arrival", variant: :info },
-        occupied: { label: "Occupied", variant: :primary },
-        departure: { label: "Departure", variant: :neutral },
-        turnover: { label: "Turnover", variant: :warning },
-        blocked: { label: "Blocked", variant: :destructive },
-        dirty: { label: "Dirty", variant: :warning }
+      # Metric chips only — status colour lives on the board itself, so every
+      # count reads in the same neutral outline style.
+      LABELS = {
+        all: "All",
+        vacant: "Vacant",
+        arrival: "Arrival",
+        occupied: "Occupied",
+        departure: "Departure",
+        turnover: "Turnover",
+        blocked: "Blocked",
+        dirty: "Dirty"
       }.freeze
+      # Turnover is a single-day room-card state; the timeline never renders it.
+      HIDDEN_STATES = { timeline: %i[turnover].freeze }.freeze
 
-      def initialize(counts:)
+      def initialize(counts:, view_mode: :rooms)
         @counts = counts
+        @view_mode = view_mode.to_sym
       end
 
       def before_render
@@ -24,7 +29,7 @@ module HotelPortal
 
       def call
         tag.div(
-          safe_join(PRESENTATION.map { |state, presentation| badge(state, presentation) }),
+          safe_join(visible_labels.map { |state, label| badge(state, label) }),
           class: "flex flex-wrap gap-1.5",
           aria: { label: "Room summary for #{@counts.reference_date.to_fs(:long)}" },
           data: { slot: "stay-view-operational-counts" }
@@ -33,18 +38,22 @@ module HotelPortal
 
       private
 
-      def badge(state, presentation)
+      def visible_labels
+        LABELS.except(*HIDDEN_STATES.fetch(@view_mode, []))
+      end
+
+      def badge(state, label)
         count = @counts.public_send(state)
         render PanelsUI::Badge.new(
-          variant: presentation.fetch(:variant),
+          variant: :outline,
           size: :sm,
           shape: :rounded,
           class: "gap-1.5",
-          aria: { label: "#{presentation.fetch(:label)}: #{helpers.pluralize(count, "room")}" },
+          aria: { label: "#{label}: #{helpers.pluralize(count, "room")}" },
           data: { slot: "stay-view-operational-count", state: }
         ) do
           safe_join([
-            tag.span(presentation.fetch(:label)),
+            tag.span(label),
             tag.span(count, class: "font-semibold tabular-nums")
           ])
         end

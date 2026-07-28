@@ -43,11 +43,12 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       expect(dialog["data-panels-ui-sheet-side"]).to eq("right")
       expect(dialog["class"]).to include("w-[36rem]")
       expect(dialog.text).to include("Ada Lovelace", "Booking No.", "Stay summary", booking.formatted_reservation_number, "Garden Suite", "MYR 480.00")
-      expect(dialog.text).to include("Actions", "Booking Workspace", "Quick Documents")
+      expect(dialog.text).to include("Manage Booking", "Print/Send")
       expect(dialog.text).not_to include("Guest Registration Card")
       control_labels = dialog.css("a, button").map { |control| control.text.squish }
-      expect(control_labels).to include("Actions")
-      expect(control_labels).not_to include("Check-in", "Cancel booking")
+      expect(control_labels).to include("Manage Booking", "Print/Send")
+      # Nothing is actionable without manage_bookings, so the overflow menu stays hidden.
+      expect(control_labels).not_to include("More Actions", "Check-in", "Cancel booking")
       expect(response.body).not_to include("<!DOCTYPE html>")
     end
 
@@ -127,7 +128,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       expect(response.body).not_to include("Tourism Tax Voucher")
     end
 
-    it "renders a group summary that opens Quick Documents in the secondary sheet" do
+    it "renders a group summary that opens Print/Send in the secondary sheet" do
       group = create(:group_booking, hotel: hotel, name: "Conference Group")
       booking.update!(group_booking: group, group_position: 1)
       sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, guest_name: "Grace Hopper")
@@ -138,7 +139,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
 
       document = Nokogiri::HTML(response.body)
       summary = document.at_css("turbo-frame#booking_action_sheet dialog#booking-summary-sheet")
-      link = summary.css("a").find { |candidate| candidate.text.squish == "Quick Documents" }
+      link = summary.css("a").find { |candidate| candidate.text.squish == "Print/Send" }
       uri = URI.parse(link["href"])
 
       expect(summary.text).to include("Conference Group", "Group reservation", "2 rooms")
@@ -159,7 +160,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
     end
   end
 
-  describe "GET Quick Documents" do
+  describe "GET Print/Send" do
     let(:group) { create(:group_booking, hotel: hotel) }
 
     before { booking.update!(group_booking: group, group_position: 1) }
@@ -171,7 +172,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
       dialog = document.at_css("turbo-frame#booking_action_sheet_secondary dialog#quick-documents-sheet")
-      expect(dialog.text).to include("Quick Documents", "Open the Documents tab", "consolidated statements", "View all documents")
+      expect(dialog.text).to include("Print/Send", "Open the Documents tab", "consolidated statements", "View all documents")
       expect(dialog.text).not_to include("Invoices 0", "Receipts 0", "Registration cards 0")
       expect(dialog.text).not_to include("Room 101")
     end
@@ -182,11 +183,11 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       get hotel_booking_action_group_print_send_path(hotel, standalone)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Quick Documents", "Invoice", "Receipt", "Registration Card", "View all documents")
+      expect(response.body).to include("Print/Send", "Invoice", "Receipt", "Registration Card", "View all documents")
     end
   end
 
-  describe "POST Quick Documents resend" do
+  describe "POST Print/Send resend" do
     before do
       folio = create(:booking_folio, booking:, hotel:, status: "closed")
       Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)

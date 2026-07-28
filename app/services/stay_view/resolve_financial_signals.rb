@@ -225,47 +225,40 @@ module StayView
         forecast_totals.fetch(folio_id, 0).to_d
     end
 
+    # Labels lead with what the front desk should do, then the amount, then who
+    # it concerns — so a glance answers "collect or not?" without folio jargon.
     def balance_due_signal(party, amount, currency)
-      status = party.kind == "guest" ? "Balance due" : "Payment due"
-      FinancialSignal.new(state: :balance_due, label: "#{party_label(party)} · #{status} · #{money(amount, currency)}")
+      action = party.kind == "guest" ? "Collect" : "Unpaid"
+      FinancialSignal.new(state: :balance_due, label: "#{action} #{money(amount, currency)} · #{party.name}")
     end
 
     def credit_signal(party, amount, currency)
-      FinancialSignal.new(state: :credit, label: "#{party_label(party)} · Credit · #{money(amount, currency)}")
+      FinancialSignal.new(state: :credit, label: "Refund #{money(amount, currency)} · #{party.name}")
     end
 
     def direct_bill_planned_signal(party, amount, currency)
-      FinancialSignal.new(state: :direct_bill_planned, label: "Direct bill planned: #{party.name} · #{money(amount, currency)}")
+      FinancialSignal.new(state: :direct_bill_planned, label: "Company pays #{money(amount, currency)} · #{party.name}")
     end
 
     def direct_billed_signal(party, amount, currency)
-      FinancialSignal.new(state: :direct_billed, label: "Direct billed: #{party.name} · #{money(amount, currency)}")
+      FinancialSignal.new(state: :direct_billed, label: "Invoiced #{money(amount, currency)} · #{party.name}")
     end
 
     def direct_bill_review_signal(party)
-      FinancialSignal.new(state: :review, label: "Direct bill review: #{party.name}")
+      FinancialSignal.new(state: :review, label: "Check billing · #{party.name}")
     end
 
     def party_review_signal(party)
-      label = party.name.present? ? "Financial review required: #{party.name}" : "Financial review required"
+      label = party.name.present? ? "Check folio · #{party.name}" : "Check folio"
       FinancialSignal.new(state: :review, label:)
     end
 
     def settled_signal
-      FinancialSignal.new(state: :settled, label: "Projected settled")
+      FinancialSignal.new(state: :settled, label: "Nothing due")
     end
 
     def review_signal
-      FinancialSignal.new(state: :review, label: "Financial review required")
-    end
-
-    def party_label(party)
-      type = if party.kind == "guest"
-        "Guest"
-      else
-        { "government" => "Government", "travel_agent" => "Travel agent" }.fetch(party.account_type, "Company")
-      end
-      "#{type}: #{party.name}"
+      FinancialSignal.new(state: :review, label: "Check folio")
     end
 
     def money(amount, currency)
