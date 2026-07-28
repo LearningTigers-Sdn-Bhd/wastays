@@ -8,14 +8,14 @@ class BookingMailer < ApplicationMailer
       Rails.root.join("app/assets/images/logo/long-logo.png")
     )
 
-    attachments["wastays-receipt-#{booking.confirmation_token}.pdf"] = {
+    attachments["wastays-booking-confirmation-#{booking.confirmation_token}.pdf"] = {
       mime_type: "application/pdf",
       content:   ReceiptPdfService.new(booking).generate
     }
 
     mail(
       to:      booking.guest_email,
-      subject: "Your booking is confirmed — Receipt #{booking.confirmation_token}"
+      subject: "Your booking is confirmed - #{booking.confirmation_token}"
     )
   end
 

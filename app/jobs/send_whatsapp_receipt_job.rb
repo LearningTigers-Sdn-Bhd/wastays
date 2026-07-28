@@ -28,7 +28,7 @@ class SendWhatsappReceiptJob < ApplicationJob
       nights: nights,
       total_amount: format("%.2f", booking.total_amount.to_f),
       currency: booking.currency,
-      receipt_url: Rails.application.routes.url_helpers.receipt_booking_url(
+      receipt_url: Rails.application.routes.url_helpers.confirmation_booking_url(
         booking.confirmation_token,
         host: host_options[:host],
         protocol: host_options[:protocol] || "https"

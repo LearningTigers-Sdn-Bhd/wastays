@@ -117,11 +117,13 @@ Rails.application.routes.draw do
     end
     resources :bookings, only: [ :show ] do
       member do
+        get :confirmation
         get :receipt
         get :invoice
         get :voucher
       end
     end
+    resources :receipts, only: [ :show ]
     resources :pre_checkins, only: [ :show, :update ], param: :token, path: "pre-checkin" do
       post :cancel, on: :member
     end
