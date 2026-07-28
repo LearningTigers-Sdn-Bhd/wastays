@@ -27,7 +27,7 @@ module Folios
 
       def call!
         if @settlement_method == DIRECT_BILL_SETTLEMENT
-          if @folio.invoice.present? || @folio.folio_invoice.present? || @folio.invoice_number.present?
+          if @folio.invoice.present? || @folio.invoice_number.present?
             raise ArgumentError, "Direct Bill folios cannot also have a folio invoice."
           end
 

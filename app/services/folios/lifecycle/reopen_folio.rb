@@ -27,7 +27,7 @@ module Folios
           @folio.reload
           return failure("Only closed folios can be reopened.") unless @folio.closed?
           return failure("A folio with an AR invoice must be corrected through Accounts Receivable.") if @folio.ar_invoice.present?
-          return failure("Reason is required to reopen an invoiced folio.") if @folio.folio_invoice.present? && @reason.blank?
+          return failure("Reason is required to reopen an invoiced folio.") if @folio.invoice.present? && @reason.blank?
 
           @folio.reopening_for_correction do
             @folio.update!(status: "open", closed_at: nil, closed_by: nil)
