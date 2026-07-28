@@ -43,7 +43,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       expect(dialog["data-panels-ui-sheet-side"]).to eq("right")
       expect(dialog["class"]).to include("w-[36rem]")
       expect(dialog.text).to include("Ada Lovelace", "Booking No.", "Stay summary", booking.formatted_reservation_number, "Garden Suite", "MYR 480.00")
-      expect(dialog.text).to include("Actions", "Booking Workspace", "Receipt", "Resend Confirmation")
+      expect(dialog.text).to include("Actions", "Booking Workspace", "Quick Documents")
       expect(dialog.text).not_to include("Guest Registration Card")
       control_labels = dialog.css("a, button").map { |control| control.text.squish }
       expect(control_labels).to include("Actions")
@@ -111,21 +111,23 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       booking.update!(guest_country: "Singapore", tourism_tax_amount: 20, tourism_tax_applied: true,
         tax_lines: [ { "type" => "tourism_tax", "amount" => 20 } ])
 
-      get hotel_booking_action_show_booking_path(hotel, booking)
+      get hotel_booking_action_group_print_send_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet_secondary" }
 
-      expect(response.body).to include("Guest Registration Card", "Issue Tourism Tax Voucher")
+      expect(response.body).to include("Registration Card", "Tourism Tax Voucher")
       expect(response.body).to include(issue_hotel_booking_tourism_tax_voucher_path(hotel, booking))
     end
 
     it "omits the tourism tax voucher when the booking has no tourism tax" do
       role.permissions << manage_bookings
 
-      get hotel_booking_action_show_booking_path(hotel, booking)
+      get hotel_booking_action_group_print_send_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet_secondary" }
 
       expect(response.body).not_to include("Tourism Tax Voucher")
     end
 
-    it "renders a group summary that launches Print / Send into the secondary frame" do
+    it "renders a group summary that opens Quick Documents in the secondary sheet" do
       group = create(:group_booking, hotel: hotel, name: "Conference Group")
       booking.update!(group_booking: group, group_position: 1)
       sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, guest_name: "Grace Hopper")
@@ -136,17 +138,12 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
 
       document = Nokogiri::HTML(response.body)
       summary = document.at_css("turbo-frame#booking_action_sheet dialog#booking-summary-sheet")
-      link = summary.css("a").find { |candidate| candidate.text.squish == "Print / Send" }
+      link = summary.css("a").find { |candidate| candidate.text.squish == "Quick Documents" }
       uri = URI.parse(link["href"])
 
       expect(summary.text).to include("Conference Group", "Group reservation", "2 rooms")
       expect(uri.path).to eq(hotel_booking_action_group_print_send_path(hotel, booking))
-      expect(Rack::Utils.parse_nested_query(uri.query)).to eq("source" => "stay_view", "return_to" => return_to)
-      # Targeting the secondary frame is the knob that makes the documents sheet stack.
       expect(link["data-turbo-frame"]).to eq("booking_action_sheet_secondary")
-
-      # The documents sheet is its own lazy action, not inlined into the summary.
-      expect(document.at_css("dialog#booking-group-documents-sheet")).to be_nil
     end
 
     it "blocks missing permission and bookings from another hotel" do
@@ -162,66 +159,58 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
     end
   end
 
-  describe "GET group Print / Send documents" do
+  describe "GET Quick Documents" do
     let(:group) { create(:group_booking, hotel: hotel) }
 
     before { booking.update!(group_booking: group, group_position: 1) }
 
-    it "renders the documents into the secondary frame so it stacks above the summary" do
-      role.permissions << manage_bookings
-      completed = create(
-        :booking,
-        hotel: hotel,
-        group_booking: group,
-        group_position: 2,
-        status: "completed",
-        confirmation_token: "GROUP-COMPLETE",
-        guest_name: "Grace Hopper"
-      )
-      create(:booking_room, booking: completed, room_type: room_type, room_number: "102")
-
+    it "renders compact group counts in the secondary sheet" do
       get hotel_booking_action_group_print_send_path(hotel, booking),
         headers: { "Turbo-Frame" => "booking_action_sheet_secondary" }
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      dialog = document.at_css("turbo-frame#booking_action_sheet_secondary dialog#booking-group-documents-sheet")
-
-      expect(dialog).to be_present
-      expect(dialog.text).to include("Group documents", "Garden Suite (2)", "101", "102", "Grace Hopper")
-      expect(dialog.text).to include("Group Receipt", "Group Invoice", "Resend Group Confirmation", "Unavailable")
-      expect(dialog.text).to include("Registration card", "Resend confirmation", "Resend pre-check-in")
-      expect(dialog.at_css("a[href='#{receipt_booking_path(completed.confirmation_token)}'][target='_blank'][data-turbo='false']")).to be_present
-      expect(dialog.at_css("a[href='#{invoice_booking_path(completed.confirmation_token)}'][target='_blank'][data-turbo='false']")).to be_present
-      expect(dialog.at_css("a[href='#{invoice_booking_path(booking.confirmation_token)}']")).to be_nil
+      dialog = document.at_css("turbo-frame#booking_action_sheet_secondary dialog#quick-documents-sheet")
+      expect(dialog.text).to include("Quick Documents", "Invoices", "Receipts", "Registration cards", "View all documents")
+      expect(dialog.text).not_to include("Room 101")
     end
 
-    it "opens standalone in the primary frame when launched on its own" do
-      get hotel_booking_action_group_print_send_path(hotel, booking),
-        headers: { "Turbo-Frame" => "booking_action_sheet" }
+    it "renders standalone document shortcuts" do
+      standalone = create(:booking, hotel: hotel)
+
+      get hotel_booking_action_group_print_send_path(hotel, standalone)
 
       expect(response).to have_http_status(:success)
-      document = Nokogiri::HTML(response.body)
-      expect(document.at_css("turbo-frame#booking_action_sheet dialog#booking-group-documents-sheet")).to be_present
+      expect(response.body).to include("Quick Documents", "Invoice", "Receipt", "Registration Card", "View all documents")
+    end
+  end
+
+  describe "POST Quick Documents resend" do
+    before do
+      folio = create(:booking_folio, booking:, hotel:, status: "closed")
+      FolioInvoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
     end
 
-    it "closes through the native sheet stack rather than navigating back" do
-      get hotel_booking_action_group_print_send_path(hotel, booking)
+    it "requires manage_bookings" do
+      post hotel_booking_action_group_print_send_resend_path(hotel, booking)
 
-      document = Nokogiri::HTML(response.body)
-      dialog = document.at_css("dialog#booking-group-documents-sheet")
-      back = dialog.css("button").find { |candidate| candidate.text.squish == "Back to booking summary" }
-      expect(back["data-action"]).to eq("panels-ui--sheet#close")
+      expect(response).to redirect_to(root_path)
+      expect(NotificationDelivery.where(notification_type: "invoice_package")).to be_empty
     end
 
-    it "redirects a standalone (non-group) booking back to its summary" do
-      standalone = create(:booking, hotel: hotel)
-      return_to = hotel_stay_view_path(hotel)
+    it "discovers eligible invoices and queues one payer package" do
+      role.permissions << manage_bookings
 
-      get hotel_booking_action_group_print_send_path(hotel, standalone, source: "stay_view", return_to: return_to)
+      expect do
+        post hotel_booking_action_group_print_send_resend_path(hotel, booking),
+          params: { return_to: hotel_booking_workspace_path(hotel, booking, tab: "documents") }
+      end.to change { NotificationDelivery.where(notification_type: "invoice_package").count }.by(1)
 
-      expect(response).to redirect_to(hotel_booking_action_show_booking_path(hotel, standalone, source: "stay_view", return_to: return_to))
-      expect(flash[:alert]).to eq("Print / Send group view is only available for group bookings.")
+      delivery = NotificationDelivery.where(notification_type: "invoice_package").last
+      expect(delivery.payload["folio_invoice_ids"]).to eq([ booking.booking_folios.first.folio_invoice.id ])
+      expect(delivery.payload["source"]).to eq("manual_resend")
+      expect(delivery.payload["requested_by_id"]).to eq(user.id)
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "documents"))
     end
   end
 end

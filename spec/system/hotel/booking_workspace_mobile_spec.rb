@@ -58,6 +58,34 @@ RSpec.describe "Booking workspace mobile entity selection", :business_day, type:
     expect(page).to have_css("p", text: "Room 202")
   end
 
+  it "renders grouped documents without an entity selector", :mobile, js: true do
+    group = create(:group_booking, hotel: hotel)
+    booking.update!(group_booking: group, group_position: 1)
+    booking.booking_rooms.first.update!(room_number: "101")
+    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+    create(:booking_room, booking: sibling, room_number: "202")
+    create(:booking_folio, booking: sibling, hotel: hotel)
+    page.current_window.resize_to(390, 844)
+    visit hotel_booking_workspace_path(hotel, booking, tab: "documents")
+
+    expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "documents"))
+    expect(page).to have_no_button("Choose Documents")
+    expect(page).to have_no_css("#booking-entity-selector-sheet")
+    expect(page).to have_css("#documents-panel", text: "Invoices")
+    expect(page).to have_css("#documents-panel [data-document-context]", text: booking.formatted_reservation_number)
+    expect(page).to have_css("#documents-panel [data-document-context]", text: sibling.formatted_reservation_number)
+    expect(page.evaluate_script(<<~JS)).to be(true)
+      (() => {
+        const panel = document.querySelector('#documents-panel').getBoundingClientRect()
+        return panel.left >= 0 && panel.right <= window.innerWidth
+      })()
+    JS
+    expect(page.evaluate_script(<<~JS)).to be(true)
+      Array.from(document.querySelectorAll('#documents-panel .panel-table__wrapper'))
+        .some((wrapper) => wrapper.scrollWidth > wrapper.clientWidth)
+    JS
+  end
+
   it "protects dirty guest details while selecting from the mobile Sheet", :mobile, js: true do
     primary = booking.booking_guests.find_by!(is_primary: true)
     additional = create(:booking_guest, booking: booking, guest: create(:guest, name: "Mobile Guest Target"), is_primary: false)

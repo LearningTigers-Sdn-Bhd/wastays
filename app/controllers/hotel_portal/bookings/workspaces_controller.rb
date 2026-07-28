@@ -63,8 +63,22 @@ module HotelPortal
     private
 
     def set_workspace_booking
-      @booking = current_hotel.bookings
-        .includes(
+      scope = current_hotel.bookings
+      scope = if params[:tab].to_s == "documents"
+        scope.includes(
+          :hotel,
+          { booking_rooms: [ :room_type, :rate_plan ] },
+          { booking_guests: :guest },
+          group_booking: {
+            bookings: [
+              :hotel,
+              { booking_rooms: [ :room_type, :rate_plan ] },
+              { booking_guests: :guest }
+            ]
+          }
+        )
+      else
+        scope.includes(
           { booking_rooms: [ :room_type, :rate_plan ] },
           { booking_guests: :guest },
           :hotel,
@@ -83,16 +97,25 @@ module HotelPortal
           folio_routing_rules: [ :transaction_code, :target_folio, :created_by, :updated_by ],
           folio_operation_logs: [ :actor, :source_folio, :target_folio, :source_transaction, :target_transaction ]
         )
-        .find(params[:booking_id])
+      end
+      @booking = scope.find(params[:booking_id])
     end
 
     def prepare_workspace(guest_form: nil, booking_guest_form: nil)
       @booking_presenter = BookingPresenter.new(@booking, current_hotel)
+      if params[:tab].to_s == "documents"
+        @documents = load_documents
+        @invoice_package_preview = FolioInvoicePackages::Preview.call(
+          hotel: current_hotel,
+          bookings: document_context_bookings
+        )
+      end
       @presenter = HotelPortal::Bookings::WorkspacePresenter.new(
         @booking,
         params: params,
         hotel: current_hotel,
         booking_presenter: @booking_presenter,
+        documents: @documents,
         guest_form: guest_form,
         booking_guest_form: booking_guest_form
       )
@@ -104,6 +127,21 @@ module HotelPortal
         active_folio_id: @presenter.selected_folio&.id,
         active_tab: folio_show_tab
       )
+    end
+
+    def load_documents
+      HotelPortal::Bookings::DocumentsQuery.call(
+        booking: @booking,
+        group_booking: @booking.group_booking,
+        hotel: current_hotel,
+        user: current_user
+      )
+    end
+
+    def document_context_bookings
+      return [ @booking ] unless @booking.group_booking_id?
+
+      current_hotel.bookings.where(group_booking_id: @booking.group_booking_id).to_a
     end
 
     def audit_requested?

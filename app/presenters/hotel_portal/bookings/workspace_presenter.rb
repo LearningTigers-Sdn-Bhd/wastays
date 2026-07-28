@@ -14,15 +14,19 @@ module HotelPortal
     RequestColumn = Data.define(:key, :label, :cards)
     BillingPartyRow = Data.define(:id, :kind, :label, :role, :description, :settlement, :folio_count, :folio_labels, :outstanding, :record)
     BillingRailRow = Data.define(:id, :label, :description, :active, :href)
+    DocumentSection = Data.define(:key, :title, :caption, :primary_heading, :type_heading, :party_heading, :amount_heading, :rows, :empty_message) do
+      def single_currency?
+        rows.filter_map { |row| row.currency.presence }.uniq.one?
+      end
+    end
     FolioWindowBillingPartyOption = Data.define(:id, :group, :label, :description, :record)
     SummaryAction = Data.define(:key, :label, :tone, :offcanvas_variant, :icon, :target_booking)
-    DocumentRow = Data.define(:booking, :room_type, :room_number, :guest_name, :invoice_available)
-
     TABS = [
       Tab.new("booking_details", "Overview"),
       Tab.new("folio_operations", "Folios"),
       Tab.new("security_deposits", "Deposits"),
       Tab.new("billing_preferences", "Billing"),
+      Tab.new("documents", "Documents"),
       Tab.new("guest_details", "Guests"),
       Tab.new("room_and_rate", "Room & Rate"),
       Tab.new("housekeeping_requests", "Requests"),
@@ -31,6 +35,18 @@ module HotelPortal
     LEGACY_TABS = [ Tab.new("source_details", "Source Details") ].freeze
     ALERT_ACTIONS = %w[change_rate].freeze
     ENTITY_TABS = %w[folio_operations billing_preferences guest_details room_and_rate].freeze
+    DOCUMENT_SECTION_BY_TYPE = {
+      "Folio invoice" => :invoices,
+      "Invoice revision" => :invoices,
+      "AR invoice" => :invoices,
+      "Folio ledger" => :ledgers,
+      "Payment receipt" => :receipts,
+      "Deposit receipt" => :receipts,
+      "Group deposit receipt" => :receipts,
+      "AR payment receipt" => :receipts,
+      "Registration card" => :utility,
+      "Payer statement" => :utility
+    }.freeze
     GUEST_FORM_ATTRIBUTES = %i[name email phone country gender document_type government_id date_of_birth].freeze
     BADGE_VARIANTS = {
       "slate" => :neutral, "blue" => :info, "amber" => :warning,
@@ -72,14 +88,15 @@ module HotelPortal
 
     attr_reader :booking
 
-    attr_reader :hotel, :booking_presenter, :folio_show
+    attr_reader :hotel, :booking_presenter, :folio_show, :documents
 
-    def initialize(booking, params: {}, hotel: booking.hotel, booking_presenter: nil, folio_show: nil, guest_form: nil, booking_guest_form: nil)
+    def initialize(booking, params: {}, hotel: booking.hotel, booking_presenter: nil, folio_show: nil, documents: nil, guest_form: nil, booking_guest_form: nil)
       @booking = booking
       @params = params
       @hotel = hotel
       @booking_presenter = booking_presenter || BookingPresenter.new(booking, hotel)
       @folio_show = folio_show
+      @documents = documents || []
       @guest_form = guest_form
       @booking_guest_form = booking_guest_form
     end
@@ -203,7 +220,42 @@ module HotelPortal
     end
 
     def header_outstanding_balance
+      return documents_outstanding_balance if active_tab == "documents"
+
       money(group_context_enabled? ? group_total_balance : total_balance)
+    end
+
+    def documents_outstanding_balance
+      balances = documents.select { |document| document.type == "Folio ledger" }
+        .group_by(&:currency)
+        .transform_values { |rows| rows.sum { |row| row.amount.to_d } }
+      return money(0) if balances.empty?
+      return "Multiple currencies" if balances.size > 1
+
+      currency, amount = balances.first
+      format("%<currency>s %<amount>.2f", currency:, amount:)
+    end
+
+    def documents
+      @documents
+    end
+
+    def document_sections
+      grouped = documents.group_by { |document| DOCUMENT_SECTION_BY_TYPE.fetch(document.type) }
+      invoices = grouped.fetch(:invoices, [])
+      ledgers = grouped.fetch(:ledgers, [])
+      receipts = grouped.fetch(:receipts, [])
+      [
+        DocumentSection.new(:invoices, "Invoices", "Booking invoices", "Invoice", "Folio type", "Payer", document_amount_heading("Amount", invoices), invoices, "No invoices are available."),
+        DocumentSection.new(:ledgers, "Folio ledgers", "Folio ledgers", "Folio", "Folio type", "Payer", document_amount_heading("Balance", ledgers), ledgers, "No folio ledgers are available."),
+        DocumentSection.new(:receipts, "Receipts", "Payment and deposit receipts", "Receipt", "Receipt type", "Payer", document_amount_heading("Amount", receipts), receipts, "No receipts have been issued."),
+        DocumentSection.new(:utility, "Utility", "Registration cards and payer statements", "Document", "Document type", "Subject", nil, grouped.fetch(:utility, []), "No utility documents are available.")
+      ]
+    end
+
+    def document_amount_heading(label, rows)
+      currencies = rows.filter_map { |row| row.currency.presence }.uniq
+      currencies.one? ? "#{label} (#{currencies.first})" : label
     end
 
     def group_overview_header_path
@@ -351,7 +403,9 @@ module HotelPortal
 
     def tab_path(tab_key)
       entity_tab = tab_key.to_s.in?(ENTITY_TABS)
-      scope = if !entity_tab && @params[:scope].to_s == "booking"
+      scope = if tab_key.to_s == "documents"
+        nil
+      elsif !entity_tab && @params[:scope].to_s == "booking"
         "booking"
       elsif !entity_tab && group_overview?
         "group"
@@ -512,7 +566,7 @@ module HotelPortal
     end
 
     def selected_child_booking
-      explicit_child = child_bookings.find { |child| child.id.to_s == @params[:child_booking_id].to_s }
+      explicit_child = child_bookings.find { |child| child.id.to_s == @params[:child_booking_id].to_s } unless active_tab == "documents"
       return explicit_child if explicit_child
       return booking unless active_tab.in?(ENTITY_TABS)
 
@@ -932,23 +986,6 @@ module HotelPortal
 
     def group_departure
       child_bookings.map(&:check_out).compact.max
-    end
-
-    def document_rows
-      child_bookings.map do |child|
-        room = child.booking_rooms.first
-        DocumentRow.new(
-          child,
-          room_type_label_for(room),
-          room&.room_number.presence || "Unassigned",
-          document_guest_name(child),
-          child.status == "completed"
-        )
-      end
-    end
-
-    def document_row_groups
-      document_rows.group_by(&:room_type).sort_by { |room_type, _| room_type }
     end
 
     def request_cards_for(child)

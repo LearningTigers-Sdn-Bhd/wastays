@@ -116,6 +116,9 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(child_presenter).not_to be_group_overview
       expect(child_presenter.tab_path("room_and_rate")).not_to include("scope=booking")
       expect(child_presenter.tab_path("folio_operations")).not_to include("scope=booking")
+      expect(default_presenter.tab_path("documents")).to eq(
+        Rails.application.routes.url_helpers.hotel_booking_workspace_path(hotel, booking, tab: "documents")
+      )
     end
 
     it "returns compact status badge metadata for group child bookings" do
@@ -523,7 +526,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
         group: true,
         booking_number: group.formatted_reservation_number,
         confirmation_code: group.confirmation_token,
-        receipt_number: group.formatted_receipt_number,
+        receipt_number: "—",
         invoice_number: "—",
         folio_account: "—",
         guest_registration: "—"
@@ -692,15 +695,17 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       end
     end
 
-    it "uses entity context for folio, billing, guest, and room-rate tabs" do
+    it "uses entity context only for tabs that select a concrete workspace entity" do
       folio_presenter = described_class.new(booking, params: { tab: "folio_operations" })
       billing_presenter = described_class.new(booking, params: { tab: "billing_preferences" })
+      documents_presenter = described_class.new(booking, params: { tab: "documents" })
       guest_presenter = described_class.new(booking, params: { tab: "guest_details" })
       room_presenter = described_class.new(booking, params: { tab: "room_and_rate" })
       audit_presenter = described_class.new(booking, params: { tab: "audit_trails" })
 
       expect(folio_presenter).to have_attributes(left_rail_mode: "folio_tree", layout_mode: "entity", show_left_rail?: true)
       expect(billing_presenter).to have_attributes(left_rail_mode: "billing_tree", layout_mode: "entity", show_left_rail?: true)
+      expect(documents_presenter).to have_attributes(left_rail_mode: nil, layout_mode: "standard", show_left_rail?: false)
       expect(guest_presenter).to have_attributes(left_rail_mode: "guest_tree", layout_mode: "entity", show_left_rail?: true)
       expect(room_presenter).to have_attributes(left_rail_mode: "room_rate_tree", layout_mode: "entity", show_left_rail?: true)
       expect(audit_presenter).to have_attributes(left_rail_mode: nil, layout_mode: "standard", show_left_rail?: false)
@@ -750,6 +755,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
         [ "folio_operations", "Folios" ],
         [ "security_deposits", "Deposits" ],
         [ "billing_preferences", "Billing" ],
+        [ "documents", "Documents" ],
         [ "guest_details", "Guests" ],
         [ "room_and_rate", "Room & Rate" ],
         [ "housekeeping_requests", "Requests" ],
@@ -778,6 +784,40 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(removed_drawer_presenter).to have_attributes(layout_mode: "entity", show_right_drawer?: false)
       expect(drawer_presenter).to have_attributes(layout_mode: "entity", show_right_drawer?: false)
       expect(standard_drawer_presenter).to have_attributes(layout_mode: "standard", show_left_rail?: false, show_right_drawer?: false)
+    end
+  end
+
+  describe "document sections" do
+    it "places every supported document type in its contextual section" do
+      types = HotelPortal::Bookings::DocumentsQuery::TYPE_ORDER.keys
+      documents = types.map do |type|
+        instance_double(HotelPortal::Bookings::DocumentsQuery::Row, type:, booking: booking.formatted_reservation_number, currency: "MYR")
+      end
+      documents_presenter = described_class.new(booking, params: { tab: "documents" }, documents:)
+
+      expect(documents_presenter.document_sections.to_h { |section| [ section.key, section.rows.map(&:type) ] }).to eq(
+        invoices: [ "Folio invoice", "Invoice revision", "AR invoice" ],
+        ledgers: [ "Folio ledger" ],
+        receipts: [ "Payment receipt", "Deposit receipt", "Group deposit receipt", "AR payment receipt" ],
+        utility: [ "Registration card", "Payer statement" ]
+      )
+      expect(documents_presenter.document_sections.map(&:type_heading)).to eq([ "Folio type", "Folio type", "Receipt type", "Document type" ])
+      expect(documents_presenter.document_sections.map(&:amount_heading)).to eq([ "Amount (MYR)", "Balance (MYR)", "Amount (MYR)", nil ])
+    end
+
+    it "keeps the complete catalog when a legacy child booking parameter is present" do
+      documents = [
+        instance_double(HotelPortal::Bookings::DocumentsQuery::Row, type: "Folio invoice", booking: "H05-1", currency: "MYR"),
+        instance_double(HotelPortal::Bookings::DocumentsQuery::Row, type: "Folio ledger", booking: "H05-2", currency: "MYR")
+      ]
+      documents_presenter = described_class.new(
+        booking,
+        params: { tab: "documents", child_booking_id: 999 },
+        documents:
+      )
+
+      expect(documents_presenter.documents).to eq(documents)
+      expect(documents_presenter.selected_child_booking).to eq(booking)
     end
   end
 

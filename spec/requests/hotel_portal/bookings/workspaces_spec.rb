@@ -30,6 +30,93 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
   end
 
   describe "GET /hotel/:hotel_id/bookings/:booking_id/workspace" do
+    it "loads the document catalog only for the Documents tab" do
+      allow(HotelPortal::Bookings::DocumentsQuery).to receive(:call).and_return([])
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
+      expect(HotelPortal::Bookings::DocumentsQuery).not_to have_received(:call)
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "documents")
+
+      expect(response).to have_http_status(:success)
+      expect(HotelPortal::Bookings::DocumentsQuery).to have_received(:call).with(
+        booking: booking,
+        group_booking: nil,
+        hotel: hotel,
+        user: user
+      )
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css('[data-testid="booking-documents"]')).to be_present
+      expect(document.at_css('[data-layout-mode="standard"]')).to be_present
+      expect(document.at_css('[data-testid="workspace-entity-rail"]')).to be_nil
+      expect(document.at_css('#booking-entity-selector-sheet')).to be_nil
+      expect(document.at_css('[data-testid="booking-documents"]').text).to include(
+        "No invoices are available.",
+        "No folio ledgers are available.",
+        "No receipts have been issued.",
+        "No utility documents are available."
+      )
+    end
+
+    it "renders documents across all bookings in a group with unavailable reasons" do
+      group = create(:group_booking, hotel:)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel:, group_booking: group, group_position: 2, guest_name: "Sibling Guest")
+      create(:booking_room, booking:, room_number: "101")
+      create(:booking_room, booking: sibling, room_number: "202")
+      create(:booking_folio, booking:, hotel:)
+      direct_bill_account = create(:hotel_corporate_account, :direct_bill, hotel:)
+      direct_bill_folio = create(:booking_folio, :secondary, booking: sibling, hotel:, status: "closed",
+        hotel_corporate_account: direct_bill_account, payer_type: "company")
+      create(:ar_invoice, booking_folio: direct_bill_folio, hotel:, hotel_corporate_account: direct_bill_account)
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "documents")
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      panel = document.at_css('[data-testid="booking-documents"]')
+      expect(document.at_css('[data-layout-mode="standard"]')).to be_present
+      expect(document.at_css('[data-testid="workspace-entity-rail"]')).to be_nil
+      expect(panel.at_css('[data-testid="document-section-grid"]')["class"]).to include("space-y-6")
+      expect(panel.at_css('[data-testid="document-section-grid"]')["class"]).not_to include("grid-cols-2")
+      expect(panel.css("h2").map { |heading| heading.text.squish }).to eq([ "Invoices", "Folio ledgers", "Receipts", "Utility" ])
+      expect(panel.at_xpath('.//h2[normalize-space()="Documents"]')).to be_nil
+      expect(panel.css('[data-document-section="invoices"] thead th').map { |header| header.text.squish }).to eq([ "Invoice", "Folio type", "Booking / room", "Payer", "Issued", "Amount (MYR)", "Actions" ])
+      expect(panel.css('[data-document-section="ledgers"] thead th').map { |header| header.text.squish }).to eq([ "Folio", "Folio type", "Booking / room", "Payer", "Issued", "Balance (MYR)", "Actions" ])
+      expect(panel.css('[data-document-section="receipts"] thead th').map { |header| header.text.squish }).to eq([ "Receipt", "Receipt type", "Booking / room", "Payer", "Issued", "Amount (MYR)", "Actions" ])
+      expect(panel.css('[data-document-section="utility"] thead th').map { |header| header.text.squish }).to eq([ "Document", "Document type", "Booking / room", "Subject", "Issued", "Actions" ])
+      expect(panel.css("thead th").map { |header| header.text.squish }).not_to include("Status")
+      expect(panel.css("tbody th[scope='row']")).not_to be_empty
+      expect(panel.css("tbody th[scope='row']").map { |cell| cell.text.squish }).to include(a_string_including("Not issued Unavailable Folio still open"))
+      expect(panel.at_css("a[aria-label^='Open Folio ledger']")).to be_present
+      document_context = panel.css("[data-document-context]").map { |context| context.text.squish }.join(" ")
+      expect(document_context).to include(booking.formatted_reservation_number, "Room 101")
+      expect(document_context).to include(sibling.formatted_reservation_number, "Room 202")
+      expect(panel.css('[data-document-section="invoices"] tbody td:nth-child(2)').map { |cell| cell.text.squish }).to include("Guest", "External")
+      expect(panel.css('[data-document-section="ledgers"] tbody td:nth-child(2)').map { |cell| cell.text.squish }).to include("Guest", "External")
+      expect(panel.text).to include("Payment receipt", "Registration card")
+      expect(panel.text).to include("Folio still open", "Direct Bill uses AR invoice", "Permission required")
+      expect(panel.at_css('[data-controller="panels-ui--popover"]')).to be_nil
+      expect(panel.at_css("a[href='#{hotel_folio_ledger_path(hotel, booking.booking_folios.first, format: :pdf)}'][target='_blank'][data-turbo='false']")).to be_present
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "documents", child_booking_id: sibling.id)
+
+      selected_document = Nokogiri::HTML(response.body)
+      selected_panel = selected_document.at_css('[data-testid="booking-documents"]')
+      selected_context = selected_panel.css("[data-document-context]").map { |context| context.text.squish }.join(" ")
+      expect(selected_context).to include(booking.formatted_reservation_number, sibling.formatted_reservation_number)
+      expect(selected_document.at_css('[data-testid="workspace-entity-rail"]')).to be_nil
+
+      foreign_booking = create(:booking, hotel: other_hotel)
+      get hotel_booking_workspace_path(hotel, booking, tab: "documents", child_booking_id: foreign_booking.id)
+
+      isolated_document = Nokogiri::HTML(response.body)
+      expect(isolated_document.at_css('[data-testid="workspace-entity-rail"]')).to be_nil
+      isolated_context = isolated_document.css("[data-document-context]").map { |context| context.text.squish }.join(" ")
+      expect(isolated_context).to include(booking.formatted_reservation_number, sibling.formatted_reservation_number)
+      expect(isolated_document.at_css('[data-testid="booking-documents"]').text).not_to include(foreign_booking.formatted_reservation_number)
+    end
+
     describe "tourism tax voucher entry in folio actions" do
       before do
         role.permissions << manage_bookings

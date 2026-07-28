@@ -60,72 +60,11 @@
 
   <% menu.with_separator %>
   <% menu.with_group(label: "Documents") do |group| %>
-    <% if group_booking %>
-      <% group.with_item(
-           href: hotel_booking_action_group_print_send_path(current_hotel, booking, navigation),
-           data: { turbo_frame: "booking_action_sheet_secondary", action: "click->panels-ui--dropdown-menu#restoreTriggerFocus" }) do %>
-        <%= app_icon "file-text", class: "size-4", aria: { hidden: true } %>
-        <span>Print / Send</span>
-      <% end %>
-    <% else %>
-      <% group.with_item(href: receipt_booking_path(booking.confirmation_token), target: "_blank", data: { turbo: false }) do %>
-        <%= app_icon "receipt", class: "size-4", aria: { hidden: true } %>
-        <span>Receipt</span>
-      <% end %>
-
-      <% if booking.status == "completed" %>
-        <% group.with_item(href: invoice_booking_path(booking.confirmation_token), target: "_blank", data: { turbo: false }) do %>
-          <%= app_icon "file-text", class: "size-4", aria: { hidden: true } %>
-          <span>Invoice</span>
-        <% end %>
-      <% else %>
-        <% group.with_item(disabled: true) do %>
-          <%= app_icon "file-text", class: "size-4", aria: { hidden: true } %>
-          <span class="flex flex-1 items-center justify-between gap-2">
-            <span>Invoice</span>
-            <%= render PanelsUI::Badge.new(label: "After checkout", variant: :neutral, size: :sm) %>
-          </span>
-        <% end %>
-      <% end %>
-
-      <% if can_manage %>
-        <% group.with_item(href: hotel_booking_guest_registration_card_path(current_hotel, booking), target: "_blank", data: { turbo: false }) do %>
-          <%= app_icon "clipboard-list", class: "size-4", aria: { hidden: true } %>
-          <span>Guest Registration Card</span>
-        <% end %>
-
-        <% if booking.tourism_tax? %>
-          <% if booking.tourism_tax_voucher_number? %>
-            <% group.with_item(href: hotel_booking_tourism_tax_voucher_path(current_hotel, booking), target: "_blank", data: { turbo: false }) do %>
-              <%= app_icon "receipt", class: "size-4", aria: { hidden: true } %>
-              <span>Tourism Tax Voucher</span>
-            <% end %>
-          <% else %>
-            <% group.with_item(
-                 href: issue_hotel_booking_tourism_tax_voucher_path(current_hotel, booking),
-                 method: :post,
-                 form: { target: "_blank", data: { turbo: false } }) do %>
-              <%= app_icon "receipt", class: "size-4", aria: { hidden: true } %>
-              <span>Issue Tourism Tax Voucher</span>
-            <% end %>
-          <% end %>
-        <% end %>
-      <% end %>
-
-      <% group.with_item(disabled: true) do %>
-        <%= app_icon "send", class: "size-4", aria: { hidden: true } %>
-        <span class="flex flex-1 items-center justify-between gap-2">
-          <span>Resend Confirmation</span>
-          <%= render PanelsUI::Badge.new(label: "Unavailable", variant: :neutral, size: :sm) %>
-        </span>
-      <% end %>
-      <% group.with_item(disabled: true) do %>
-        <%= app_icon "message-circle", class: "size-4", aria: { hidden: true } %>
-        <span class="flex flex-1 items-center justify-between gap-2">
-          <span>Resend Pre-Check-in</span>
-          <%= render PanelsUI::Badge.new(label: "Unavailable", variant: :neutral, size: :sm) %>
-        </span>
-      <% end %>
+    <% group.with_item(
+         href: hotel_booking_action_group_print_send_path(current_hotel, booking, navigation),
+         data: { turbo_frame: "booking_action_sheet_secondary", action: "click->panels-ui--dropdown-menu#restoreTriggerFocus" }) do %>
+      <%= app_icon "file-text", class: "size-4", aria: { hidden: true } %>
+      <span>Quick Documents</span>
     <% end %>
   <% end %>
 <% end %>

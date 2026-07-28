@@ -450,7 +450,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     expect(page).to have_no_button("Actions for room 101")
   end
 
-  it "opens group documents in the booking summary Sheet and restores launcher focus" do
+  it "opens group documents in the booking workspace" do
     group = create(:group_booking, hotel:, name: "Conference Group")
     booking.update!(group_booking: group, group_position: 1)
     sibling = create(:booking, hotel:, group_booking: group, group_position: 2, guest_name: "Grace Hopper")
@@ -465,17 +465,11 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     # hit-testing is unreliable for controls inside a showModal() top-layer dialog.
     within("#booking-summary-sheet") do
       click_in_overlay "Actions"
-      click_in_overlay "Print / Send"
+      click_in_overlay "Documents"
     end
-    expect(page).to have_css("dialog#booking-group-documents-sheet[open]", text: "Group documents")
-
-    within("#booking-group-documents-sheet") { click_in_overlay "Back to booking summary" }
-    expect(page).to have_css("dialog#booking-summary-sheet[open]", text: "Conference Group")
-    expect(page).to have_css("#booking-summary-actions-trigger:focus")
-    find("dialog#booking-summary-sheet").send_keys(:escape)
-
-    expect(page).to have_no_css("dialog#booking-summary-sheet", wait: 3)
-    expect(page.evaluate_script("document.activeElement.id")).to eq(launcher[:id])
+    expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "documents"))
+    expect(page).to have_css('[data-testid="booking-documents"]', text: "Invoices")
+    expect(page).to have_css('[data-testid="workspace-entity-rail"] nav[aria-label="Booking documents"]', text: "All documents", visible: :visible)
   end
 
   it "moves a Timeline stay through the keyboard-accessible booking Sheets and restores focus" do
