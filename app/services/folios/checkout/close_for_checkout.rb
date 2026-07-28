@@ -71,18 +71,15 @@ module Folios
           guest_exception = folios.find { |folio| guest_folio?(folio) && exception_folio?(folio) }
           return failure("#{guest_exception.display_name}: guest folio must be financially resolved before checkout.", folio: primary_folio, balance: total_balance(balances)) if guest_exception.present?
 
-          invoice_allocation = DocumentIdentifiers::Issuer.issue!(hotel: primary_folio.hotel, type: :invoice)
           closable_folios.each do |folio|
-            attributes = { status: "closed", closed_at: Time.current, closed_by: @user }
-            if folio.id == primary_folio.id
-              attributes.merge!(
-                invoice_number: invoice_allocation.number,
-                invoice_year: invoice_allocation.year,
-                invoice_reference: invoice_allocation.reference
-              )
-            end
-            folio.update!(attributes)
-            ar_invoice = create_direct_bill_ar_invoice!(folio, balances.fetch(folio)) if direct_bill_folio?(folio)
+            folio.update!(status: "closed", closed_at: Time.current, closed_by: @user)
+            document = Folios::Lifecycle::IssueClosingDocument.call!(
+              folio:,
+              settlement_method: ("direct_bill" if direct_bill_folio?(folio)),
+              balance: balances.fetch(folio),
+              user: @user
+            )
+            ar_invoice = document.ar_invoice
             record_financial_audit_event!(folio, balances.fetch(folio))
             record_direct_bill_audit_event!(folio, ar_invoice, balances.fetch(folio)) if ar_invoice.present?
           end
@@ -188,10 +185,6 @@ module Folios
           relationship.active? &&
           relationship.direct_bill_enabled? &&
           folio.ar_invoice.blank?
-      end
-
-      def create_direct_bill_ar_invoice!(folio, balance)
-        Folios::Lifecycle::CreateDirectBillArInvoice.call!(folio: folio, balance: balance)
       end
 
       def authorize_credit_exposure(folio, balance)

@@ -46,6 +46,19 @@ RSpec.describe Folios::Lifecycle::ReopenForCorrection do
     )
   end
 
+  it "marks a canonical folio invoice under correction" do
+    grant_correction_permission
+    folio.update_columns(invoice_number: nil, invoice_year: nil, invoice_reference: nil)
+    folio.update_column(:status, "open")
+    create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "cash", amount: 100)
+    Folios::Lifecycle::CloseFolio.call(folio:, user: create(:user, :superadmin), reason: "Settled")
+
+    result = call_service
+
+    expect(result).to be_success
+    expect(folio.reload.folio_invoice).to be_under_correction
+  end
+
   it "requires a staff user with correction permission" do
     expect(call_service.success?).to be(false)
 

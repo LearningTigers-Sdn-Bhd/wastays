@@ -41,7 +41,13 @@ module Folios
           return failure(validation_error) if validation_error.present?
 
           @folio.update!(status: "closed", closed_at: Time.current, closed_by: @user)
-          ar_invoice = create_ar_invoice!(balance) if direct_bill
+          document = Folios::Lifecycle::IssueClosingDocument.call!(
+            folio: @folio,
+            settlement_method: (DIRECT_BILL_SETTLEMENT if direct_bill),
+            balance:,
+            user: @user
+          )
+          ar_invoice = document.ar_invoice
           FolioOperationLog.create!(
             hotel: @hotel,
             booking: @booking,
@@ -88,10 +94,6 @@ module Folios
         return authorization.error unless authorization.success?
 
         nil
-      end
-
-      def create_ar_invoice!(balance)
-        Folios::Lifecycle::CreateDirectBillArInvoice.call!(folio: @folio, balance: balance)
       end
 
       def close_metadata(ar_invoice)

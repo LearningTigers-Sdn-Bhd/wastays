@@ -11,12 +11,29 @@ RSpec.describe Folios::Lifecycle::CloseFolio do
     expect {
       @result = described_class.call(folio: folio, user: user, reason: "Settled")
     }.to change(FolioOperationLog.where(operation_type: "close_folio"), :count).by(1)
+      .and change(FolioInvoice, :count).by(1)
 
     expect(@result).to be_success
     expect(folio.reload).to be_closed
     expect(folio.closed_at).to be_present
     expect(folio.closed_by).to eq(user)
+    expect(folio.invoice_number).to be_present
+    expect(folio.folio_invoice).to be_finalized
     expect(FolioOperationLog.last).to have_attributes(source_folio: folio, reason: "Settled")
+  end
+
+  it "issues a folio invoice to a corporate payer that settles immediately" do
+    relationship = create(:hotel_corporate_account, hotel: booking.hotel)
+    company_folio = create(:booking_folio, :secondary, booking:, hotel: booking.hotel, hotel_corporate_account: relationship)
+    create(:folio_transaction, booking_folio: company_folio, amount: 125)
+    create(:folio_transaction, booking_folio: company_folio, transaction_type: :payment, category: "cash", amount: 125)
+
+    result = described_class.call(folio: company_folio, user: user, reason: "Paid by bank")
+
+    expect(result).to be_success
+    expect(company_folio.reload.folio_invoice).to be_finalized
+    expect(company_folio.folio_invoice.current_revision.snapshot.dig("payer", "name")).to eq(relationship.corporate_account.name)
+    expect(company_folio.ar_invoice).to be_nil
   end
 
   it "requires permission to manage folio windows" do
@@ -95,6 +112,8 @@ RSpec.describe Folios::Lifecycle::CloseFolio do
 
     expect(@result).to be_success
     expect(company_folio.reload).to be_closed
+    expect(company_folio.invoice_number).to be_nil
+    expect(company_folio.folio_invoice).to be_nil
 
     invoice = company_folio.ar_invoice
     expect(invoice).to have_attributes(
