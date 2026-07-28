@@ -8,7 +8,8 @@ module Notifications
         "post_stay_review_request" => :post_stay_review_request,
         "pre_arrival_notification" => :pre_arrival_notification,
         "check_out_receipt_message" => :check_out_receipt_message,
-        "in_stay_guest_messaging" => :in_stay_guest_messaging
+        "in_stay_guest_messaging" => :in_stay_guest_messaging,
+        "invoice_package" => :invoice_package
       }.freeze
 
       def initialize(delivery:)

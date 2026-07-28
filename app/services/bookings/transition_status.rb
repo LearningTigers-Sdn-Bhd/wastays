@@ -335,7 +335,12 @@ module Bookings
       unless @options[:defer_side_effects]
         Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
         Notifications::Dispatcher.new(event: :booking_completed, booking: @booking).call
-        SendInvoiceEmailJob.perform_later(@booking.id)
+        FolioInvoicePackages::QueueDeliveries.call(
+          hotel: @booking.hotel,
+          bookings: [ @booking ],
+          anchor_booking: @booking,
+          source: "automatic_checkout"
+        )
       end
 
       success

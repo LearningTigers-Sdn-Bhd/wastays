@@ -26,6 +26,7 @@ RSpec.describe SendInvoiceEmailJob, type: :job do
   describe "#perform" do
     it "delivers the invoice email for an existing booking" do
       create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 200)
+      create(:folio_invoice, booking_folio: folio)
 
       expect {
         described_class.new.perform(booking.id)
@@ -34,6 +35,7 @@ RSpec.describe SendInvoiceEmailJob, type: :job do
 
     it "sends to the booking guest email" do
       create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 200)
+      create(:folio_invoice, booking_folio: folio)
 
       described_class.new.perform(booking.id)
       last_email = ActionMailer::Base.deliveries.last

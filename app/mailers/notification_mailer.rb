@@ -60,6 +60,25 @@ class NotificationMailer < ApplicationMailer
     )
   end
 
+  def invoice_package(delivery)
+    assign_delivery(delivery)
+    invoices = FolioInvoicePackages::LoadDeliveryInvoices.call(delivery:)
+    pdf = Reports::Bookings::GenerateInvoicePackage.new(
+      hotel: delivery.hotel,
+      folio_invoice_ids: invoices.map(&:id),
+      printed_by: @payload[:requested_by_name]
+    ).generate
+    attachments["invoice-package-#{@booking.confirmation_token}.pdf"] = {
+      mime_type: "application/pdf",
+      content: pdf
+    }
+
+    mail(
+      to: @payload.fetch(:recipient_email),
+      subject: "Your invoices from #{@payload[:hotel_name]}"
+    )
+  end
+
   private
 
   def load_delivery_context
