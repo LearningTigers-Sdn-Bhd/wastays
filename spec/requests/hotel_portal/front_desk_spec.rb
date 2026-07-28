@@ -8,12 +8,19 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
 
   before do
     UserHotelAccess.create!(user:, hotel:, role:)
+    # Every front desk tab exposes guest and stay records, so view_bookings is the
+    # floor for reaching the page at all. Specs about that gate revoke it explicitly.
+    grant_permission("view_bookings")
     sign_in_as(user)
   end
 
-    def grant_arrival_permission
-    permission = Permission.find_or_create_by!(slug: "manage_guest_arrival") { |record| record.name = "Manage Guest Arrival" }
-    role.permissions << permission
+  def grant_permission(slug)
+    permission = Permission.find_or_create_by!(slug:) { |record| record.name = slug.humanize }
+    role.permissions << permission unless role.permissions.exists?(permission.id)
+  end
+
+  def grant_arrival_permission
+    grant_permission("manage_guest_arrival")
   end
 
   def booking(attributes = {})
@@ -34,10 +41,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
     end
 
     def grant_booking_permission
-      %w[view_bookings manage_bookings].each do |slug|
-        permission = Permission.find_or_create_by!(slug:) { |record| record.name = slug.humanize }
-        role.permissions << permission unless role.permissions.exists?(permission.id)
-      end
+      %w[view_bookings manage_bookings].each { |slug| grant_permission(slug) }
     end
 
     it "logs out suspended accounts" do
@@ -60,26 +64,45 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body).not_to include(other_booking.confirmation_token)
     end
 
-    it "defaults to arrivals, then in-house, then departures" do
-      grant_arrival_permission
-      get hotel_front_desk_path(hotel)
-      expect(response.body).to include("active-tab:arrivals")
-
+    it "denies the page outright without view_bookings or arrival permission" do
+      stay = booking(status: "checked_in", confirmation_token: "HIDDEN-STAY", checked_in_at: Time.current)
       role.permissions.delete_all
-      get hotel_front_desk_path(hotel)
-      expect(response.body).to include("active-tab:in_house")
+
+      get hotel_front_desk_path(hotel), params: { tab: "in_house" }
+
+      expect(response).to have_http_status(:forbidden).or have_http_status(:redirect)
+      expect(response.body).not_to include(stay.confirmation_token)
     end
 
-    it "hides arrivals and falls back to in-house without hotel-scoped arrival permission" do
-      arrival = booking(status: "confirmed", confirmation_token: "RESTRICTED-ARRIVAL", check_in: hotel_today)
-      stay = booking(status: "checked_in", confirmation_token: "VISIBLE-STAY", checked_in_at: Time.current)
+    it "gates in-house, departures and checkout behind view_bookings" do
+      grant_arrival_permission
+      stay = booking(status: "checked_in", confirmation_token: "GATED-STAY", checked_in_at: Time.current)
+      role.permissions.delete(Permission.find_by!(slug: "view_bookings"))
 
+      %w[in_house departures checkout].each do |tab|
+        get hotel_front_desk_path(hotel), params: { tab: }
+
+        expect(response.body).to include("active-tab:arrivals")
+        expect(response.body).not_to include(stay.confirmation_token)
+        expect(response.parsed_body.at_css("#reservation-sections-tab-#{tab}")).to be_nil
+      end
+    end
+
+    it "defaults to bookings, then falls back to arrivals" do
+      grant_arrival_permission
+      get hotel_front_desk_path(hotel)
+      expect(response.body).to include("active-tab:bookings")
+
+      role.permissions.delete(Permission.find_by!(slug: "view_bookings"))
+      get hotel_front_desk_path(hotel)
+      expect(response.body).to include("active-tab:arrivals")
+    end
+
+    it "hides arrivals and falls back to the first allowed tab without hotel-scoped arrival permission" do
       get hotel_front_desk_path(hotel), params: { tab: "arrivals" }
 
-      expect(response.body).to include("active-tab:in_house")
-      expect(response.body).to include(stay.confirmation_token)
-      expect(response.body).not_to include(arrival.confirmation_token)
-      expect(response.body).not_to include("metric:arrivals")
+      expect(response.body).to include("active-tab:bookings")
+      expect(response.parsed_body.at_css("#reservation-sections-tab-arrivals")).to be_nil
     end
 
     it "does not grant arrivals from an account-global permission" do
@@ -87,13 +110,11 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       global_role = create(:role, account: hotel.account)
       global_role.permissions << permission
       user.roles << global_role
-      arrival = booking(status: "confirmed", confirmation_token: "GLOBAL-ONLY-ARRIVAL", check_in: hotel_today)
 
       get hotel_front_desk_path(hotel), params: { tab: "arrivals" }
 
-      expect(response.body).to include("active-tab:in_house")
-      expect(response.body).not_to include("metric:arrivals")
-      expect(response.body).not_to include(arrival.confirmation_token)
+      expect(response.body).to include("active-tab:bookings")
+      expect(response.parsed_body.at_css("#reservation-sections-tab-arrivals")).to be_nil
     end
 
     it "makes in-house and departures available without arrival permission" do
@@ -109,7 +130,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
         in_house_page: "-3", arrival_page: "x", departure_page: "0"
       }
 
-      expect(response.body).to include("active-tab:in_house")
+      expect(response.body).to include("active-tab:bookings")
       expect(response.body).to include("active-view:rooms")
       expect(response.body).to include("page:1")
     end
@@ -149,7 +170,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("active-tab:arrivals")
+      expect(response.body).to include("active-tab:bookings")
       expect(response.body).to include("active-view:rooms")
       expect(response.body).to include("page:1")
     end
@@ -408,7 +429,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
 
       get hotel_front_desk_path(hotel), params: { tab: "in_house", in_house_query: "VIEW-STAY", view: "list" }
       expect(response.body).to include(stay.confirmation_token)
-      expect(response.body).to include("metric:in_house:2")
+      expect(response.parsed_body.at_css("#reservation-sections-tab-in_house").text).to include("2")
 
       get hotel_front_desk_path(hotel), params: { tab: "in_house", in_house_query: "VIEW-STAY", view: "rooms" }
       expect(response.body).to include(stay.confirmation_token)
@@ -450,7 +471,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
         expect(card.at_css("[aria-label='0 Children'] span[aria-hidden='true']")&.text).to eq("0")
         expect(card.text).not_to include(record.guest_email, record.guest_phone)
         expect(card.css("dt").map { |label| label.text.strip }).not_to include("Email", "Phone", "Contact")
-        expect(card.css("dt").map { |label| label.text.strip }).to include("Total", "Paid", "Balance")
+        expect(card.css("dt").map { |label| label.text.strip }).to include("Charges", "Paid", "Balance")
         expect(card.at_css("button[aria-label='Booking actions']")).to be_present
         expect(card.css("header > span > span").map { |line| line.text.strip }).to eq(%w[Unassigned Room])
         guest_name = card.at_xpath(".//p[normalize-space()='AReallyLongGuestNameWithoutSpacesThatMustRemainFullyVisible']")
@@ -530,8 +551,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
 
       document = Nokogiri::HTML(response.body)
       expect(document.at_css("h1")&.text&.strip).to eq("Reservations")
-      expect(document.at_css("[data-front-desk-metrics]")).to be_present
-      expect(document.css("[data-front-desk-metrics] a, [data-front-desk-metrics] button")).to be_empty
+      expect(document.at_css("[data-front-desk-metrics]")).to be_nil
       expect(document.at_css("[aria-label='Reservation sections'] a[aria-current='page']")&.text).to include("Arrivals")
       view_group = document.at_css(".panel-button-group[aria-label='Reservation view']")
       expect(view_group).to be_present
@@ -665,6 +685,68 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       document = Nokogiri::HTML(response.body)
       expect(document.text).to include(stay.confirmation_token, "VIP", "Blacklisted", "Repeat guest")
       expect(document.at_css("#front-desk-results .lg\\:hidden").text).to include("VIP", "Blacklisted", "Repeat guest")
+    end
+
+    it "names identity markers for assistive tech instead of relying on the icon alone", :room_cards do
+      grant_arrival_permission
+      guest = create(:guest, blacklisted: true, created_by_hotel: hotel)
+      arrival = booking(status: "confirmed", confirmation_token: "ICON-ARRIVAL", check_in: hotel_today, vip: true)
+      create(:booking_guest, booking: arrival, guest:, is_primary: true)
+      create(:booking_guest, booking: booking(status: "completed", confirmation_token: "ICON-HISTORY", checked_out_at: 1.day.ago), guest:, is_primary: true)
+
+      get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "rooms", arrival_q: "ICON-ARRIVAL" }
+
+      card = response.parsed_body.at_css("article.front-desk-stay-card")
+      markers = card.css("[aria-label$='guest']")
+      expect(markers.map { |marker| marker["aria-label"] }).to contain_exactly("VIP guest", "Blacklisted guest", "Repeat guest")
+      markers.each do |marker|
+        expect(marker.at_css("svg")).to be_present
+        expect(marker.at_css("svg")["aria-hidden"]).to eq("true")
+        expect(marker["tabindex"]).to eq("0")
+        # Icon only: the name lives on aria-label and in the tooltip, not in visible text.
+        expect(marker.text.strip).to be_empty
+      end
+    end
+
+    it "drops the metric cards and card wrappers that duplicated the tab bar", :room_cards do
+      grant_arrival_permission
+      booking(status: "confirmed", confirmation_token: "PLAIN-ARRIVAL", check_in: hotel_today)
+
+      get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "rooms" }
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("[data-front-desk-metrics]")).to be_nil
+      expect(document.at_css("[aria-label='Reservation sections']").text).to include("Arrivals")
+
+      results_section = document.at_css("#front-desk-results section[aria-label='Reservation view']")
+      expect(results_section["class"]).not_to include("border", "shadow-sm", "bg-muted")
+      expect(document.at_css("section[aria-label='Reservation filters']")["class"]).to be_blank
+      expect(document.at_css("article.front-desk-stay-card")["class"]).to include("border", "bg-card")
+    end
+
+    it "gives every tab's card one consistently spaced body instead of self-spaced blocks", :room_cards do
+      grant_arrival_permission
+      grant_booking_permission
+      booking(status: "confirmed", confirmation_token: "SPACED-ARRIVAL", check_in: hotel_today)
+      booking(status: "checked_in", confirmation_token: "SPACED-STAY", checked_in_at: Time.current)
+      booking(status: "checked_in", confirmation_token: "SPACED-DEPARTURE", check_out: hotel_today)
+      booking(status: "completed", confirmation_token: "SPACED-CHECKOUT", checked_out_at: Time.current)
+
+      %w[bookings arrivals in_house departures checkout].each do |tab|
+        get hotel_front_desk_path(hotel), params: { tab:, view: "rooms" }
+        expect(response).to have_http_status(:success), "#{tab} failed to render"
+
+        card = Nokogiri::HTML5(response.body).at_css("article.front-desk-stay-card")
+        expect(card).to be_present, "#{tab}: no stay card"
+        expect(card.element_children.map(&:name)).to eq(%w[header div]), "#{tab}: card is not header + body"
+
+        body = card.at_css("> div.space-y-3")
+        expect(body["class"]).to include("p-3"), "#{tab}: body padding is off the scale"
+        body.element_children.each do |block|
+          expect(block["class"].to_s).not_to match(/\b(mx-3|mt-3|mb-3|pb-3|pt-3)\b/),
+                                               "#{tab}: <#{block.name}> still carries its own outer spacing"
+        end
+      end
     end
 
     it "renders tab-specific empty states and semantic row headers" do

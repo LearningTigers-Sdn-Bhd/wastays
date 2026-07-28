@@ -15,17 +15,9 @@
     <% end %>
   <% end %>
 
-  <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5" data-front-desk-metrics>
-    <% @allowed_tabs.each do |tab| %>
-      <%= render PanelsUI::MetricCard.new(label: (tab == "in_house" ? "In House" : tab.titleize), value: @metrics.fetch(tab).to_s, data: { metric: tab }) %>
-      <span class="sr-only">metric:<%= tab %>:<%= @metrics.fetch(tab) %></span>
-    <% end %>
-  </section>
-
   <%= render PanelsUI::Tabs.new(id: "reservation-sections", active: @tab, variant: :line, aria_label: "Reservation sections") do |tabs| %>
     <% @allowed_tabs.each do |tab| %>
       <% tabs.with_tab(name: tab, label: (tab == "in_house" ? "In House" : tab.titleize), icon: { "bookings" => "calendar-days", "arrivals" => "user-plus", "in_house" => "users", "departures" => "log-out", "checkout" => "user-check" }.fetch(tab), count: @metrics.fetch(tab), href: hotel_front_desk_path(current_hotel, state.merge(tab:, view: @view))) %>
-      <span class="sr-only">tab:<%= tab %></span>
     <% end %>
   <% end %>
 
