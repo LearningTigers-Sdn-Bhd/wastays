@@ -35,7 +35,7 @@
               <p class="mt-1 text-xs text-muted-foreground">
                 <%= @transaction.transaction_code&.code || @transaction.category.to_s.humanize %> ·
                 <%= @transaction.posting_date.strftime("%d %b %Y") %> ·
-                <%= @transaction.currency %> <%= number_with_precision(@transaction.amount, precision: 2) %>
+                <%= @transaction.currency %> <%= format_number(@transaction.amount, precision: 2) %>
               </p>
               <p class="mt-1 text-xs text-muted-foreground">Source folio: <%= @source_folio.display_option_label %></p>
             </div>
