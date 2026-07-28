@@ -422,7 +422,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
     it "does not expose an invoice report for an open unissued folio" do
       open_booking = create_booking_with_folio(guest_name: "Open Invoice Guest", confirmation_token: "BK-OPEN-INV", folio_number: 613, charges: 100)
       completed_booking = create_booking_with_folio(guest_name: "Completed Invoice Guest", confirmation_token: "BK-DONE-INV", folio_number: 614, charges: 100, status: "closed", booking_status: "completed")
-      create(:folio_invoice, booking_folio: completed_booking.booking_folio)
+      create(:invoice, booking_folio: completed_booking.booking_folio)
 
       get folio_operations_path(open_booking)
 
@@ -541,7 +541,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
   describe "GET /hotel/:hotel_id/folios/:booking_id/invoice" do
     it "returns a PDF for a closed folio" do
       booking = create_booking_with_folio(guest_name: "Invoice Guest", confirmation_token: "BK-PDF", folio_number: 611, charges: 100, status: "closed")
-      create(:folio_invoice, booking_folio: booking.booking_folio)
+      create(:invoice, booking_folio: booking.booking_folio)
 
       get hotel_folio_invoice_path(hotel, booking.booking_folio, format: :pdf)
 
@@ -562,7 +562,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
     it "allows an immutable historical revision while the current invoice is under correction" do
       grant_permission("view_audit_logs")
       booking = create_booking_with_folio(guest_name: "Revision Guest", confirmation_token: "BK-REV", folio_number: 619, charges: 100, status: "closed")
-      invoice = create(:folio_invoice, booking_folio: booking.booking_folio)
+      invoice = create(:invoice, booking_folio: booking.booking_folio)
       invoice.update!(state: "under_correction")
       booking.booking_folio.update_column(:status, "open")
 
@@ -575,7 +575,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
 
     it "requires audit permission for a historical invoice revision" do
       booking = create_booking_with_folio(guest_name: "Restricted Revision", confirmation_token: "BK-REV-LOCK", folio_number: 620, status: "closed")
-      create(:folio_invoice, booking_folio: booking.booking_folio)
+      create(:invoice, booking_folio: booking.booking_folio)
 
       get hotel_folio_invoice_revision_path(hotel, booking.booking_folio, 1, format: :pdf)
 
@@ -585,7 +585,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
     it "does not expose another hotel's current or historical invoice" do
       other_booking = create(:booking, hotel: other_hotel)
       other_folio = create(:booking_folio, booking: other_booking, hotel: other_hotel, status: "closed")
-      create(:folio_invoice, booking_folio: other_folio)
+      create(:invoice, booking_folio: other_folio)
 
       get hotel_folio_invoice_path(hotel, other_folio, format: :pdf)
       expect(response).to have_http_status(:not_found)

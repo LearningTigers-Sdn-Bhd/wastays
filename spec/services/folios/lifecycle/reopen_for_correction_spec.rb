@@ -56,7 +56,7 @@ RSpec.describe Folios::Lifecycle::ReopenForCorrection do
     result = call_service
 
     expect(result).to be_success
-    expect(folio.reload.folio_invoice).to be_under_correction
+    expect(folio.reload.invoice).to be_under_correction
   end
 
   it "requires a staff user with correction permission" do

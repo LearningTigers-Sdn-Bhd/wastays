@@ -91,7 +91,7 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
         refund_request_id: 152
       })
 
-    FolioInvoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+    Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
   end
 
   describe "#generate" do
@@ -170,7 +170,7 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
     end
 
     it "renders a requested historical revision separately from the current revision" do
-      invoice = folio.folio_invoice
+      invoice = folio.invoice
       invoice.update!(state: "under_correction")
       folio.update_column(:status, "open")
       create(:folio_transaction,
@@ -180,7 +180,7 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
         amount: -20,
         description: "Revision two correction")
       folio.update_column(:status, "closed")
-      FolioInvoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+      Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
 
       original_text = pdf_text(described_class.new(folio:, revision_number: 1).generate)
       current_text = pdf_text(described_class.new(folio:).generate)
@@ -193,7 +193,7 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
     it "marks a legacy invoice as a reconstruction" do
       legacy_folio = create(:booking_folio, booking:, hotel:, status: "closed", invoice_number: 98_232, is_primary: false)
       create(:folio_transaction, booking_folio: legacy_folio, amount: 50, description: "Legacy charge")
-      create(:folio_invoice, booking_folio: legacy_folio, legacy: true)
+      create(:invoice, booking_folio: legacy_folio, legacy: true)
 
       text = pdf_text(described_class.new(folio: legacy_folio).generate)
 
@@ -202,8 +202,8 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
     end
 
     it "uses the issuance-time hotel time zone for historical stay timestamps" do
-      expected_arrival = folio.folio_invoice.current_revision.snapshot.dig("booking", "check_in")
-      original_zone = folio.folio_invoice.current_revision.snapshot.dig("hotel", "time_zone")
+      expected_arrival = folio.invoice.current_revision.snapshot.dig("booking", "check_in")
+      original_zone = folio.invoice.current_revision.snapshot.dig("hotel", "time_zone")
       hotel.update!(time_zone: "Pacific Time (US & Canada)")
 
       records = Reports::Bookings::GenerateFolioRecords.new(folio:).call
@@ -243,7 +243,7 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
         hotel_corporate_account: relationship,
         status: "closed"
       )
-      FolioInvoices::Finalize.call!(folio: corporate_folio, issued_by: nil, balance: 0)
+      Invoices::Finalize.call!(folio: corporate_folio, issued_by: nil, balance: 0)
       relationship.corporate_account.update!(name: "Renamed Events")
       terms.update!(purchase_order_reference: "PO-CHANGED", authorization_reference: "AUTH-CHANGED")
 

@@ -189,7 +189,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
   describe "POST Quick Documents resend" do
     before do
       folio = create(:booking_folio, booking:, hotel:, status: "closed")
-      FolioInvoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
+      Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
     end
 
     it "requires manage_bookings" do
@@ -208,7 +208,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       end.to change { NotificationDelivery.where(notification_type: "invoice_package").count }.by(1)
 
       delivery = NotificationDelivery.where(notification_type: "invoice_package").last
-      expect(delivery.payload["folio_invoice_ids"]).to eq([ booking.booking_folios.first.folio_invoice.id ])
+      expect(delivery.payload["invoice_ids"]).to eq([ booking.booking_folios.first.invoice.id ])
       expect(delivery.payload["source"]).to eq("manual_resend")
       expect(delivery.payload["requested_by_id"]).to eq(user.id)
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "documents"))

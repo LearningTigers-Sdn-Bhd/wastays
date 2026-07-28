@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module FolioInvoices
+module Invoices
   class Finalize
     def self.call!(folio:, issued_by:, balance:)
       new(folio:, issued_by:, balance:).call!
@@ -18,9 +18,6 @@ module FolioInvoices
         validate!
 
         invoice = @folio.invoice
-        if invoice&.finalized? && @folio.folio_invoice&.under_correction?
-          invoice.update!(state: "under_correction")
-        end
         return invoice if invoice&.finalized?
 
         invoice ||= create_invoice!
@@ -53,19 +50,17 @@ module FolioInvoices
         issued_on: @folio.hotel.current_business_date,
         issued_at:
       )
-      snapshot = FolioInvoices::Snapshot.call(folio: @folio)
+      snapshot = Invoices::Snapshot.call(folio: @folio)
       create_revision!(invoice, revision_number: 1, issued_at:, snapshot:)
-      create_legacy_invoice!(invoice, issued_at:, snapshot:)
       invoice
     end
 
     def finalize_revision!(invoice)
       revision_number = invoice.current_revision_number + 1
       issued_at = Time.current
-      snapshot = FolioInvoices::Snapshot.call(folio: @folio)
+      snapshot = Invoices::Snapshot.call(folio: @folio)
       create_revision!(invoice, revision_number:, issued_at:, snapshot:)
       invoice.update!(state: "finalized", current_revision_number: revision_number)
-      sync_legacy_revision!(invoice, revision_number:, issued_at:, snapshot:)
     end
 
     def create_revision!(invoice, revision_number:, issued_at:, snapshot:)
@@ -77,44 +72,6 @@ module FolioInvoices
         snapshot:,
         issued_at:
       )
-    end
-
-    def create_legacy_invoice!(invoice, issued_at:, snapshot:)
-      legacy = FolioInvoice.create!(
-        invoice:,
-        hotel: invoice.hotel,
-        booking_folio: @folio,
-        issued_by: @issued_by,
-        invoice_number: invoice.invoice_number,
-        invoice_year: invoice.invoice_year,
-        invoice_reference: invoice.invoice_reference,
-        state: invoice.state,
-        current_revision_number: 1,
-        issued_at:
-      )
-      legacy.revisions.create!(
-        hotel: invoice.hotel,
-        issued_by: @issued_by,
-        revision_number: 1,
-        document_reference: invoice.invoice_reference,
-        snapshot:,
-        issued_at:
-      )
-    end
-
-    def sync_legacy_revision!(invoice, revision_number:, issued_at:, snapshot:)
-      legacy = invoice.folio_invoice || @folio.folio_invoice
-      return if legacy.blank?
-
-      legacy.revisions.create!(
-        hotel: invoice.hotel,
-        issued_by: @issued_by,
-        revision_number:,
-        document_reference: document_reference(invoice, revision_number),
-        snapshot:,
-        issued_at:
-      )
-      legacy.update!(state: "finalized", current_revision_number: revision_number)
     end
 
     def ensure_identifier!

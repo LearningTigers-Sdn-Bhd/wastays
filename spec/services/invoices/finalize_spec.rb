@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FolioInvoices::Finalize do
+RSpec.describe Invoices::Finalize do
   let(:booking) { create(:booking, currency: "MYR") }
   let(:user) { create(:user) }
   let(:folio) { create(:booking_folio, booking:, status: "closed", closed_at: Time.current, closed_by: user) }
@@ -13,8 +13,8 @@ RSpec.describe FolioInvoices::Finalize do
 
     expect {
       @invoice = described_class.call!(folio:, issued_by: user, balance: 0)
-    }.to change(FolioInvoice, :count).by(1)
-      .and change(FolioInvoiceRevision, :count).by(1)
+    }.to change(Invoice, :count).by(1)
+      .and change(InvoiceRevision, :count).by(1)
 
     invoice = @invoice
     expect(invoice).to be_finalized

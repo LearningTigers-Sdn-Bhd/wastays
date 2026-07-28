@@ -37,7 +37,7 @@ RSpec.describe BookingMailer, type: :mailer do
       category: "accommodation",
       amount: 300,
       description: "Room Charge - Deluxe King")
-    create(:folio_invoice, booking_folio: folio)
+    create(:invoice, booking_folio: folio)
   end
 
   subject(:mail) { described_class.invoice(booking) }

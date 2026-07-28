@@ -31,7 +31,7 @@ module Folios
 
           @folio.reopening_for_correction do
             @folio.update!(status: "open", closed_at: nil, closed_by: nil)
-            FolioInvoices::MarkUnderCorrection.call!(folio: @folio)
+            Invoices::MarkUnderCorrection.call!(folio: @folio)
             FolioOperationLog.create!(
               hotel: @hotel,
               booking: @booking,

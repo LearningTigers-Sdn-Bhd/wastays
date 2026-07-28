@@ -246,13 +246,10 @@ module HotelDemoManagement
 
     def delete_invoice_documents(folio_ids)
       invoice_ids = Invoice.where(booking_folio_id: folio_ids).ids
-      legacy_invoice_ids = FolioInvoice.where(booking_folio_id: folio_ids).ids
-      return if invoice_ids.empty? && legacy_invoice_ids.empty?
+      return if invoice_ids.empty?
 
       @logger.puts "Force deleting #{invoice_ids.size} unified invoice documents..."
       with_revision_deletion_enabled do
-        FolioInvoiceRevision.where(folio_invoice_id: legacy_invoice_ids).delete_all
-        FolioInvoice.where(id: legacy_invoice_ids).delete_all
         InvoiceRevision.where(invoice_id: invoice_ids).delete_all
         Invoice.where(id: invoice_ids).delete_all
       end
@@ -260,11 +257,9 @@ module HotelDemoManagement
 
     def with_revision_deletion_enabled
       connection = ActiveRecord::Base.connection
-      connection.execute("ALTER TABLE folio_invoice_revisions DISABLE TRIGGER USER")
       connection.execute("ALTER TABLE invoice_revisions DISABLE TRIGGER USER")
       yield
       connection.execute("ALTER TABLE invoice_revisions ENABLE TRIGGER USER")
-      connection.execute("ALTER TABLE folio_invoice_revisions ENABLE TRIGGER USER")
     end
 
     def delete_deposit_data

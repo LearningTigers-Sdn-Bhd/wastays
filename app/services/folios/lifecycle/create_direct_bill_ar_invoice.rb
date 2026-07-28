@@ -36,7 +36,7 @@ module Folios
       terms_days = @hotel_corporate_account.payment_terms_days.to_i
       allocation = invoice_allocation
       issued_at = Time.current
-      snapshot = FolioInvoices::Snapshot.call(folio: @folio)
+      snapshot = Invoices::Snapshot.call(folio: @folio)
       invoice = Invoice.create!(
         hotel: @hotel,
         booking_folio: @folio,

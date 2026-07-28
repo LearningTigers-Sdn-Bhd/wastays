@@ -35,7 +35,7 @@ module Folios
           return Outcome.new(invoice: receivable.invoice, receivable:)
         end
 
-        invoice = FolioInvoices::Finalize.call!(folio: @folio, issued_by: @user, balance: @balance)
+        invoice = Invoices::Finalize.call!(folio: @folio, issued_by: @user, balance: @balance)
         Outcome.new(invoice:, receivable: nil)
       end
     end

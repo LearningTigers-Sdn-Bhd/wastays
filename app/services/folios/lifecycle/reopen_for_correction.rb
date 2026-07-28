@@ -44,7 +44,7 @@ module Folios
 
             @booking_folio.reopening_for_correction do
               @booking_folio.update!(status: "open")
-              FolioInvoices::MarkUnderCorrection.call!(folio: @booking_folio)
+              Invoices::MarkUnderCorrection.call!(folio: @booking_folio)
               record_financial_audit_event!(invoice_number)
 
               success

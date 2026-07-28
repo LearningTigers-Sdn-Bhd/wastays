@@ -23,7 +23,7 @@ RSpec.describe Folios::Checkout::CloseForCheckout do
     expect(result.folio).to eq(folio)
     expect(result.balance).to eq(0.to_d)
     expect(folio.reload.status).to eq("closed")
-    expect(folio.folio_invoice).to be_finalized
+    expect(folio.invoice).to be_finalized
 
     event = FinancialAuditEvent.last
     expect(event.event_type).to eq("folio_closed_for_checkout")
@@ -44,7 +44,7 @@ RSpec.describe Folios::Checkout::CloseForCheckout do
     )
 
     expect(result).to be_success
-    expect([ guest_folio, company_folio ].map { |record| record.reload.folio_invoice }).to all(be_finalized)
+    expect([ guest_folio, company_folio ].map { |record| record.reload.invoice }).to all(be_finalized)
     expect([ guest_folio, company_folio ].map(&:invoice_number)).to all(be_present)
     expect(guest_folio.invoice_number).not_to eq(company_folio.invoice_number)
   end
@@ -62,7 +62,7 @@ RSpec.describe Folios::Checkout::CloseForCheckout do
 
     expect(result).to be_success
     expect(company_folio.reload.ar_invoice).to be_present
-    expect(company_folio.folio_invoice).to be_nil
+    expect(company_folio.invoice).to be_kind_direct_bill
     expect(company_folio.invoice_number).to be_nil
   end
 

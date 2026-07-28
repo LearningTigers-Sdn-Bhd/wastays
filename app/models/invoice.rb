@@ -13,7 +13,6 @@ class Invoice < ApplicationRecord
     dependent: :restrict_with_error,
     inverse_of: :invoice
   has_one :receivable, dependent: :restrict_with_error, inverse_of: :invoice
-  has_one :folio_invoice, dependent: :restrict_with_error
 
   enum :kind, KINDS.index_by(&:itself), prefix: true, validate: true
   enum :state, STATES.index_by(&:itself), validate: true

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FolioInvoices::Snapshot do
+RSpec.describe Invoices::Snapshot do
   it "freezes folio transactions and issue-time totals" do
     folio = create(:booking_folio, status: "closed", currency: "MYR")
     create(:folio_transaction, booking_folio: folio, transaction_type: "charge", amount: 125)

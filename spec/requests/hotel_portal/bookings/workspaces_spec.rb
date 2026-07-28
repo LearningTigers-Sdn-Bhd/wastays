@@ -60,7 +60,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       create(:booking_room, booking:, room_number: "101")
       create(:booking_room, booking: sibling, room_number: "202")
       guest_folio = create(:booking_folio, booking:, hotel:, status: "closed")
-      FolioInvoices::Finalize.call!(folio: guest_folio, issued_by: nil, balance: 0)
+      Invoices::Finalize.call!(folio: guest_folio, issued_by: nil, balance: 0)
       direct_bill_account = create(:hotel_corporate_account, :direct_bill, hotel:)
       direct_bill_folio = create(:booking_folio, :secondary, booking: sibling, hotel:, status: "closed",
         hotel_corporate_account: direct_bill_account, payer_type: "company")

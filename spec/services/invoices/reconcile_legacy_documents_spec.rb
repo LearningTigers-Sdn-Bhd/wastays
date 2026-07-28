@@ -3,24 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Invoices::ReconcileLegacyDocuments do
-  it "idempotently maps legacy settled and direct-bill documents" do
-    settled_folio = create(:booking_folio, status: "closed", invoice_number: 31)
-    settled = FolioInvoice.create!(
-      hotel: settled_folio.hotel,
-      booking_folio: settled_folio,
-      invoice_number: settled_folio.invoice_number,
-      invoice_year: settled_folio.invoice_year,
-      invoice_reference: settled_folio.invoice_reference,
-      issued_at: Time.current
-    )
-    settled.revisions.create!(
-      hotel: settled.hotel,
-      revision_number: 1,
-      document_reference: settled.invoice_reference,
-      snapshot: FolioInvoices::Snapshot.call(folio: settled_folio),
-      issued_at: settled.issued_at
-    )
-
+  it "idempotently maps unlinked receivables onto direct-bill documents" do
     relationship = create(:hotel_corporate_account, :direct_bill)
     direct_booking = create(:booking, hotel: relationship.hotel)
     direct_folio = create(:booking_folio, :secondary,
@@ -45,11 +28,11 @@ RSpec.describe Invoices::ReconcileLegacyDocuments do
 
     expect do
       @result = described_class.call
-    end.to change(Invoice, :count).by(2)
-      .and change(InvoiceRevision, :count).by(2)
+    end.to change(Invoice, :count).by(1)
+      .and change(InvoiceRevision, :count).by(1)
 
     expect(@result.errors).to be_empty
-    expect(settled.reload.invoice).to be_kind_settled
+    expect(@result.direct_bill_mapped).to eq(1)
     expect(direct.reload.invoice).to be_kind_direct_bill
     expect(direct.invoice.current_revision.snapshot).to include("legacy_generated" => true)
 
