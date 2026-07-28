@@ -3,6 +3,17 @@
 module HotelPortal
   module StayView
     class OperationalStatusBadge < PanelsUI::BaseComponent
+      # Semantic colour for the room-card state. The toolbar counts stay neutral
+      # on purpose; colour only carries meaning on the board itself.
+      PRESENTATION = {
+        vacant: { label: "Vacant", variant: :success },
+        arrival: { label: "Arrival", variant: :info },
+        occupied: { label: "Occupied", variant: :primary },
+        departure: { label: "Departure", variant: :neutral },
+        turnover: { label: "Turnover", variant: :warning },
+        blocked: { label: "Blocked", variant: :destructive }
+      }.freeze
+
       def initialize(room:, status:, reference_date:)
         @room = room
         @status = status.to_sym
@@ -14,7 +25,7 @@ module HotelPortal
       end
 
       def call
-        presentation = OperationalCounts::PRESENTATION.fetch(@status)
+        presentation = PRESENTATION.fetch(@status)
         render PanelsUI::Badge.new(
           label: presentation.fetch(:label),
           variant: presentation.fetch(:variant),

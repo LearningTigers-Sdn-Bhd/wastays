@@ -7,7 +7,8 @@ module PanelsUI
   class BookingSourceBadge < PanelsUI::BaseComponent
     SIZES = {
       sm: { box: "size-5", initial: "text-[9px]", icon: "size-3" },
-      md: { box: "size-6", initial: "text-xs", icon: "size-3.5" }
+      md: { box: "size-6", initial: "text-xs", icon: "size-3.5" },
+      lg: { box: "size-9", initial: "text-sm", icon: "size-5" }
     }.freeze
 
     def initialize(source:, size: :md, with_tooltip: true, decorative: false, id: nil)
@@ -45,7 +46,7 @@ module PanelsUI
       helpers.image_tag(@presenter.logo, **{
         alt: @decorative ? "" : @presenter.label,
         class: tw_merge(
-          "inline-flex #{dimensions.fetch(:box)} shrink-0 rounded-full border border-border object-contain",
+          "inline-flex #{dimensions.fetch(:box)} shrink-0 rounded-sm border border-border object-contain",
           interaction_classes
         ),
         tabindex: @decorative ? nil : "0"
@@ -56,7 +57,7 @@ module PanelsUI
       tag.span(
         @presenter.badge_initial,
         class: tw_merge(
-          "inline-flex #{dimensions.fetch(:box)} shrink-0 items-center justify-center rounded-full font-bold #{dimensions.fetch(:initial)}",
+          "inline-flex #{dimensions.fetch(:box)} shrink-0 items-center justify-center rounded-sm font-bold #{dimensions.fetch(:initial)}",
           interaction_classes
         ),
         style: "background-color: #{@presenter.badge_color}; color: #{@presenter.badge_text_color};",
@@ -69,7 +70,7 @@ module PanelsUI
     def generic_icon
       tag.span(
         class: tw_merge(
-          "inline-flex #{dimensions.fetch(:box)} shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground",
+          "inline-flex #{dimensions.fetch(:box)} shrink-0 items-center justify-center rounded-sm border border-border bg-muted text-muted-foreground",
           interaction_classes
         ),
         tabindex: @decorative ? nil : "0",

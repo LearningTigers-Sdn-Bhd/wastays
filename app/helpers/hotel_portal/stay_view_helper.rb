@@ -11,10 +11,12 @@ module HotelPortal::StayViewHelper
   # timeline reads across days, the rooms view reads a single day's operations.
   BOARD_HEADER_COPY = {
     timeline: {
+      title: "Stay View",
       description: "Plan stays across the coming days and spot turnovers before they happen.",
       caption: "Booking bars run from the middle of check-in day to the middle of checkout day. Hatched bars mark room blocks."
     }.freeze,
     rooms: {
+      title: "Room View",
       description: "Check room readiness and guest movements for a single day.",
       caption: "Each room card shows the selected day's arrivals, departures, and turnovers, alongside housekeeping status."
     }.freeze
@@ -325,6 +327,10 @@ module HotelPortal::StayViewHelper
 
   def stay_view_date_label(date)
     l(date, format: "%a %-d %b")
+  end
+
+  def stay_view_board_title(view_mode)
+    board_header_copy(view_mode).fetch(:title)
   end
 
   def stay_view_board_description(view_mode)
