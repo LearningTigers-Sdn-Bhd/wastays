@@ -2,69 +2,72 @@
 <% lifecycle_actions = can_manage ? presenter.summary_actions.select { |action| action.key.in?([ :check_in, :edit_check_in, :cancel, :mark_no_show, :undo_check_in, :backdated_check_in, :reinstate, :late_checkout, :check_out ]) } : [] %>
 <% can_edit_stay = can_manage && booking.status.in?(HotelPortal::BookingLifecycleTargetPresenter::ELIGIBLE_STATUSES.fetch(:amend_stay)) %>
 
-<%= render PanelsUI::DropdownMenu.new(id: "booking-summary-actions", placement: :bottom_start, class: "w-72") do |menu| %>
-  <% menu.with_trigger(variant: :primary, size: :sm, aria_label: "Booking actions") do %>
-    <%= app_icon "ellipsis", class: "size-4", aria: { hidden: true } %>
-    <span>Actions</span>
-    <%= app_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
+<div class="flex flex-wrap items-center gap-2">
+  <%= render PanelsUI::Button.new(
+        href: hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details"),
+        variant: :primary,
+        size: :sm,
+        data: { turbo: false }) do %>
+    <%= app_icon "external-link", class: "size-4", aria: { hidden: true } %>
+    <span>Manage Booking</span>
   <% end %>
 
-  <% menu.with_group(label: "Booking") do |group| %>
-    <% group.with_item(href: hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details"), data: { turbo: false }) do %>
-      <%= app_icon "external-link", class: "size-4", aria: { hidden: true } %>
-      <span>Booking Workspace</span>
-    <% end %>
-  <% end %>
+  <% if lifecycle_actions.any? || can_edit_stay %>
+    <%= render PanelsUI::DropdownMenu.new(id: "booking-summary-actions", placement: :bottom_start, class: "w-72") do |menu| %>
+      <% menu.with_trigger(variant: :secondary, size: :sm, aria_label: "More booking actions") do %>
+        <%= app_icon "list", class: "size-4", aria: { hidden: true } %>
+        <span>More Actions</span>
+      <% end %>
 
-  <% if lifecycle_actions.any? %>
-    <% menu.with_separator %>
-    <% menu.with_group(label: "Lifecycle") do |group| %>
-      <% lifecycle_actions.each do |action| %>
-        <% target = action.target_booking %>
-        <% href = case action.key
-          when :check_in, :edit_check_in then hotel_booking_action_check_in_path(current_hotel, target, navigation)
-          when :cancel then hotel_booking_action_cancel_booking_path(current_hotel, target, navigation)
-          when :mark_no_show then hotel_booking_action_mark_no_show_path(current_hotel, target, navigation)
-          when :undo_check_in then hotel_booking_action_undo_check_in_path(current_hotel, target, navigation)
-          when :backdated_check_in then hotel_booking_action_review_backdated_check_in_path(current_hotel, target, navigation)
-          when :reinstate then hotel_booking_action_reinstate_no_show_path(current_hotel, target, navigation)
-          when :late_checkout then hotel_booking_action_late_checkout_path(current_hotel, target, navigation)
-          when :check_out then hotel_booking_action_checkout_path(current_hotel, target, navigation)
-          end %>
-        <% group.with_item(
-             href:,
-             variant: action.key.in?([ :cancel, :mark_no_show ]) ? :danger : :default,
-             data: { turbo_frame: "booking_action_sheet_secondary", action: "click->panels-ui--dropdown-menu#restoreTriggerFocus" }) do %>
-          <%= app_icon action.icon, class: "size-4", aria: { hidden: true } %>
-          <span><%= action.key == :cancel ? "Cancel booking" : action.label %></span>
+      <% if lifecycle_actions.any? %>
+        <% menu.with_group(label: "Lifecycle") do |group| %>
+          <% lifecycle_actions.each do |action| %>
+            <% target = action.target_booking %>
+            <% href = case action.key
+              when :check_in, :edit_check_in then hotel_booking_action_check_in_path(current_hotel, target, navigation)
+              when :cancel then hotel_booking_action_cancel_booking_path(current_hotel, target, navigation)
+              when :mark_no_show then hotel_booking_action_mark_no_show_path(current_hotel, target, navigation)
+              when :undo_check_in then hotel_booking_action_undo_check_in_path(current_hotel, target, navigation)
+              when :backdated_check_in then hotel_booking_action_review_backdated_check_in_path(current_hotel, target, navigation)
+              when :reinstate then hotel_booking_action_reinstate_no_show_path(current_hotel, target, navigation)
+              when :late_checkout then hotel_booking_action_late_checkout_path(current_hotel, target, navigation)
+              when :check_out then hotel_booking_action_checkout_path(current_hotel, target, navigation)
+              end %>
+            <% group.with_item(
+                 href:,
+                 variant: action.key.in?([ :cancel, :mark_no_show ]) ? :danger : :default,
+                 data: { turbo_frame: "booking_action_sheet_secondary", action: "click->panels-ui--dropdown-menu#restoreTriggerFocus" }) do %>
+              <%= app_icon action.icon, class: "size-4", aria: { hidden: true } %>
+              <span><%= action.key == :cancel ? "Cancel booking" : action.label %></span>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% if can_edit_stay %>
+        <% menu.with_separator if lifecycle_actions.any? %>
+        <% menu.with_group(label: "Stay") do |group| %>
+          <% [
+               [ "Edit dates", hotel_booking_action_edit_dates_path(current_hotel, booking, navigation), "calendar-range" ],
+               [ "Change room", hotel_booking_action_edit_room_path(current_hotel, booking, navigation), "bed-double" ],
+               [ "Change rate", hotel_booking_action_edit_rate_path(current_hotel, booking, navigation), "tag" ]
+             ].each do |label, href, icon| %>
+            <% group.with_item(href:, data: { turbo_frame: "booking_action_sheet_secondary", action: "click->panels-ui--dropdown-menu#restoreTriggerFocus" }) do %>
+              <%= app_icon icon, class: "size-4", aria: { hidden: true } %>
+              <span><%= label %></span>
+            <% end %>
+          <% end %>
         <% end %>
       <% end %>
     <% end %>
   <% end %>
 
-  <% if can_edit_stay %>
-    <% menu.with_separator %>
-    <% menu.with_group(label: "Stay") do |group| %>
-      <% [
-           [ "Edit dates", hotel_booking_action_edit_dates_path(current_hotel, booking, navigation), "calendar-range" ],
-           [ "Change room", hotel_booking_action_edit_room_path(current_hotel, booking, navigation), "bed-double" ],
-           [ "Change rate", hotel_booking_action_edit_rate_path(current_hotel, booking, navigation), "tag" ]
-         ].each do |label, href, icon| %>
-        <% group.with_item(href:, data: { turbo_frame: "booking_action_sheet_secondary", action: "click->panels-ui--dropdown-menu#restoreTriggerFocus" }) do %>
-          <%= app_icon icon, class: "size-4", aria: { hidden: true } %>
-          <span><%= label %></span>
-        <% end %>
-      <% end %>
-    <% end %>
+  <%= render PanelsUI::Button.new(
+        href: hotel_booking_action_group_print_send_path(current_hotel, booking, navigation),
+        variant: :secondary,
+        size: :sm,
+        data: { turbo_frame: "booking_action_sheet_secondary" }) do %>
+    <%= app_icon "file-text", class: "size-4", aria: { hidden: true } %>
+    <span>Print/Send</span>
   <% end %>
-
-  <% menu.with_separator %>
-  <% menu.with_group(label: "Documents") do |group| %>
-    <% group.with_item(
-         href: hotel_booking_action_group_print_send_path(current_hotel, booking, navigation),
-         data: { turbo_frame: "booking_action_sheet_secondary", action: "click->panels-ui--dropdown-menu#restoreTriggerFocus" }) do %>
-      <%= app_icon "file-text", class: "size-4", aria: { hidden: true } %>
-      <span>Quick Documents</span>
-    <% end %>
-  <% end %>
-<% end %>
+</div>
