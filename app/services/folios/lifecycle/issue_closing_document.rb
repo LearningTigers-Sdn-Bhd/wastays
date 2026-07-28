@@ -4,7 +4,15 @@ module Folios
   module Lifecycle
     class IssueClosingDocument
       DIRECT_BILL_SETTLEMENT = "direct_bill"
-      Outcome = Data.define(:folio_invoice, :ar_invoice)
+      Outcome = Data.define(:invoice, :receivable) do
+        def folio_invoice
+          invoice if invoice&.kind_settled?
+        end
+
+        def ar_invoice
+          receivable
+        end
+      end
 
       def self.call!(folio:, settlement_method:, balance:, user:)
         new(folio:, settlement_method:, balance:, user:).call!
@@ -19,14 +27,16 @@ module Folios
 
       def call!
         if @settlement_method == DIRECT_BILL_SETTLEMENT
-          raise ArgumentError, "Direct Bill folios cannot also have a folio invoice." if @folio.folio_invoice.present? || @folio.invoice_number.present?
+          if @folio.invoice.present? || @folio.folio_invoice.present? || @folio.invoice_number.present?
+            raise ArgumentError, "Direct Bill folios cannot also have a folio invoice."
+          end
 
-          ar_invoice = Folios::Lifecycle::CreateDirectBillArInvoice.call!(folio: @folio, balance: @balance)
-          return Outcome.new(folio_invoice: nil, ar_invoice:)
+          receivable = Folios::Lifecycle::CreateDirectBillArInvoice.call!(folio: @folio, balance: @balance)
+          return Outcome.new(invoice: receivable.invoice, receivable:)
         end
 
-        folio_invoice = FolioInvoices::Finalize.call!(folio: @folio, issued_by: @user, balance: @balance)
-        Outcome.new(folio_invoice:, ar_invoice: nil)
+        invoice = FolioInvoices::Finalize.call!(folio: @folio, issued_by: @user, balance: @balance)
+        Outcome.new(invoice:, receivable: nil)
       end
     end
   end

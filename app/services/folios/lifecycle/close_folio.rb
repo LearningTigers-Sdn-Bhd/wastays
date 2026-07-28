@@ -47,7 +47,7 @@ module Folios
             balance:,
             user: @user
           )
-          ar_invoice = document.ar_invoice
+          ar_invoice = document.receivable
           FolioOperationLog.create!(
             hotel: @hotel,
             booking: @booking,
@@ -67,6 +67,7 @@ module Folios
       rescue ActiveRecord::RecordInvalid => e
         failure(e.record.errors.full_messages.to_sentence)
       rescue StandardError => e
+        Rails.logger.error("#{self.class.name} failed: #{e.full_message(highlight: false, order: :top)}")
         failure(e.message)
       end
 
