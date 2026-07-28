@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Folios::Charges::RepairNightlyChargeReconciliation do
+RSpec.describe Folios::Charges::RepairNightlyChargeReconciliation, :business_day do
   let(:business_date) { Date.current }
   let(:hotel) { create(:hotel) }
   let(:actor) { create(:user, account: hotel.account) }
