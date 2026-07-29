@@ -15,6 +15,7 @@ module HotelOps
       return failure("Start date is required.") if start_date.blank?
       return failure("End date is required.") if end_date.blank?
       return failure("Price is required when applying rates.") if channel_id.blank? && apply_rates? && price.blank? && selection[:single_supplement].blank? && selection[:base_occupancy].blank? && selection[:extra_pax_charge].blank?
+      return failure("Per-pax pricing fields (base occupancy, extra pax charge, single supplement) don't apply to OTA channel rates.") if channel_id.present? && pax_fields_requested?
 
       ActiveRecord::Base.transaction do
         Thread.current[:skip_ari_sync] = true
@@ -86,6 +87,16 @@ module HotelOps
       selection[:channel_rate_plan_id].presence
     end
 
+    def pax_fields_requested?
+      pax_fields = %w[base_occupancy extra_pax_charge single_supplement]
+
+      if selection[:modified_fields].present?
+        (Array(selection[:modified_fields]) & pax_fields).any?
+      else
+        pax_fields.any? { |field| selection.key?(field.to_sym) && selection[field.to_sym].present? }
+      end
+    end
+
     def apply_channel_updates
       room_types.each do |room_type|
         (start_date..end_date).each do |date|
@@ -104,15 +115,6 @@ module HotelOps
 
           if apply_rates?
             crr.price = price if selection.key?(:price) && price.present?
-            if selection[:modified_fields].present?
-              crr.base_occupancy = base_occupancy if selection[:modified_fields].include?("base_occupancy")
-              crr.extra_pax_charge = extra_pax_charge if selection[:modified_fields].include?("extra_pax_charge")
-              crr.single_supplement = single_supplement if selection[:modified_fields].include?("single_supplement")
-            else
-              crr.base_occupancy = base_occupancy if selection.key?(:base_occupancy) && selection[:base_occupancy].present?
-              crr.extra_pax_charge = extra_pax_charge if selection.key?(:extra_pax_charge) && selection[:extra_pax_charge].present?
-              crr.single_supplement = single_supplement if selection.key?(:single_supplement) && selection[:single_supplement].present?
-            end
           end
 
           if apply_restrictions?

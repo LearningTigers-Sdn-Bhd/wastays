@@ -210,9 +210,25 @@ module AiConcierge
             plan_by_date = plan_rates.group_by(&:date)
             next unless stay_dates.all? { |d| plan_by_date.key?(d) }
 
-            total = plan_rates.sum { |r| r.price.to_d } * room_count
+            rate_plan = plan_rates.first&.rate_plan
             currency = plan_rates.first&.currency || "MYR"
-            name = plan_rates.first&.rate_plan&.name || "Standard Rate"
+            name = rate_plan&.name || "Standard Rate"
+
+            # Uses the same per-pax calculator as the real booking engine (adults/children,
+            # age bands, single-occupancy supplement, extra-pax-over-base-occupancy charge)
+            # so this preview never quotes a different price than the final quote/booking.
+            # Works off the already-preloaded RoomRate rows (no extra queries).
+            per_room_total = stay_dates.sum do |date|
+              rate = plan_by_date[date].first
+              Bookings::NightlyPaxPrice.call(
+                base_nightly_rate: rate.price.to_d,
+                rate: rate,
+                rate_plan: rate_plan,
+                adults: adults,
+                children: children
+              )
+            end
+            total = per_room_total * room_count
 
             { "rate_plan_id" => rate_plan_id, "name" => name, "total_price" => total, "currency" => currency }
           end
