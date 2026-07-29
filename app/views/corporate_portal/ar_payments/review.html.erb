@@ -27,7 +27,7 @@
         <tbody class="divide-y divide-border">
           <% @presenter.suggestions.each do |suggestion| %>
             <% due_on = suggestion["due_on"] || suggestion[:due_on] %>
-            <tr><td class="px-6 py-4 font-bold"><%= suggestion["invoice_label"] || suggestion[:invoice_label] || suggestion["invoice_number"] || suggestion[:invoice_number] %></td><td class="px-6 py-4 text-muted-foreground"><%= due_on.present? ? Date.iso8601(due_on).strftime("%d %b %Y") : "—" %></td><td class="px-6 py-4 text-right"><%= @presenter.currency %> <%= number_with_precision(suggestion["outstanding_amount"] || suggestion[:outstanding_amount], precision: 2) %></td><td class="px-6 py-4 text-right font-bold"><%= @presenter.currency %> <%= number_with_precision(suggestion["suggested_amount"] || suggestion[:suggested_amount], precision: 2) %></td></tr>
+            <tr><td class="px-6 py-4 font-bold"><%= suggestion["invoice_label"] || suggestion[:invoice_label] || suggestion["invoice_number"] || suggestion[:invoice_number] %></td><td class="px-6 py-4 text-muted-foreground"><%= due_on.present? ? Date.iso8601(due_on).strftime("%d %b %Y") : "—" %></td><td class="px-6 py-4 text-right"><%= @presenter.currency %> <%= format_number(suggestion["outstanding_amount"] || suggestion[:outstanding_amount], precision: 2) %></td><td class="px-6 py-4 text-right font-bold"><%= @presenter.currency %> <%= format_number(suggestion["suggested_amount"] || suggestion[:suggested_amount], precision: 2) %></td></tr>
           <% end %>
         </tbody>
       </table>

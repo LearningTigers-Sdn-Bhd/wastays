@@ -36,7 +36,7 @@
               <p class="mt-1 text-xs text-muted-foreground">
                 <%= @transaction.transaction_code&.code || @transaction.category.to_s.humanize %> ·
                 <%= @transaction.posting_date.strftime("%d %b %Y") %> ·
-                <%= @transaction.currency %> <%= number_with_precision(@transaction.amount, precision: 2) %>
+                <%= @transaction.currency %> <%= format_number(@transaction.amount, precision: 2) %>
               </p>
               <p class="mt-1 text-xs text-muted-foreground">Source folio: <%= @source_folio.display_option_label %></p>
             </div>
@@ -58,7 +58,7 @@
                       <div>
                         <p class="font-mono text-xs font-semibold text-foreground"><%= tax_transaction.transaction_code&.code || "TAX" %></p>
                         <p class="mt-1 text-xs text-muted-foreground"><%= tax_transaction.description %></p>
-                        <p class="mt-1 text-xs text-muted-foreground"><%= tax_transaction.currency %> <%= number_with_precision(tax_transaction.amount, precision: 2) %></p>
+                        <p class="mt-1 text-xs text-muted-foreground"><%= tax_transaction.currency %> <%= format_number(tax_transaction.amount, precision: 2) %></p>
                       </div>
                       <%= form.fields_for :tax_routes, index: tax_transaction.id do |route| %>
                         <%= route.hidden_field :transaction_id, value: tax_transaction.id %>

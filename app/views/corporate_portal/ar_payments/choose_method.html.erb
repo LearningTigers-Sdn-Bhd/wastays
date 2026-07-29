@@ -11,13 +11,13 @@
       <% @presenter.invoices.each do |invoice| %>
         <div class="flex items-center justify-between px-6 py-3 text-sm">
           <dt class="font-semibold text-slate-700"><%= invoice.formatted_invoice_number %></dt>
-          <dd class="font-bold tabular-nums text-slate-950"><%= invoice.currency %> <%= number_with_precision(invoice.outstanding_amount, precision: 2) %></dd>
+          <dd class="font-bold tabular-nums text-slate-950"><%= invoice.currency %> <%= format_number(invoice.outstanding_amount, precision: 2) %></dd>
         </div>
       <% end %>
     </dl>
     <div class="flex items-center justify-between border-t border-slate-200 bg-slate-50/60 px-6 py-3">
       <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total</p>
-      <p class="text-lg font-black tabular-nums text-slate-950"><%= @presenter.currency %> <%= number_with_precision(@presenter.total_amount, precision: 2) %></p>
+      <p class="text-lg font-black tabular-nums text-slate-950"><%= @presenter.currency %> <%= format_number(@presenter.total_amount, precision: 2) %></p>
     </div>
   </section>
 

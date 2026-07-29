@@ -45,7 +45,7 @@ module HotelPortal
     private
 
     def format_money(amount)
-      number_with_precision(amount, precision: 2)
+      number_with_delimiter(number_with_precision(amount, precision: 2))
     end
   end
 end

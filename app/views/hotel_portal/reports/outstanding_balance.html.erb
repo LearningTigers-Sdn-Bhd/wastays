@@ -24,8 +24,8 @@
   <% end %>
 
   <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
-    { label: "Outstanding bookings", value: @report.totals[:booking_count].to_s, detail: "Selected period" },
-    { label: "Outstanding amount", value: "MYR #{number_with_precision(@report.totals[:outstanding_amount], precision: 2)}", detail: "Balance due", detail_variant: :destructive }
+    { label: "Outstanding bookings", value: format_number(@report.totals[:booking_count]), detail: "Selected period" },
+    { label: "Outstanding amount", value: "MYR #{format_number(@report.totals[:outstanding_amount], precision: 2)}", detail: "Balance due", detail_variant: :destructive }
   ]) %>
 
   <section class="space-y-3" aria-labelledby="outstanding-bookings-heading">
@@ -71,7 +71,7 @@
                   <p class="text-xs text-muted-foreground">Room: <%= row[:room_numbers] %></p>
                 </td>
                 <td><%= row[:payment_status] %></td>
-                <td class="whitespace-nowrap text-right font-semibold tabular-nums text-destructive">MYR <%= number_with_precision(row[:outstanding_amount], precision: 2) %></td>
+                <td class="whitespace-nowrap text-right font-semibold tabular-nums text-destructive">MYR <%= format_number(row[:outstanding_amount], precision: 2) %></td>
                 <td><%= row[:latest_note].presence || "-" %></td>
               </tr>
             <% end %>

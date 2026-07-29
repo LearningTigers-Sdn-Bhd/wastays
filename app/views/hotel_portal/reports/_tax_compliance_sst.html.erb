@@ -1,8 +1,8 @@
 <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
-  { label: "Bookings", value: @report.totals[:booking_count].to_s, detail: "Selected period" },
-  { label: "Taxable amount", value: "MYR #{number_with_precision(@report.totals[:taxable_amount], precision: 2)}", detail: "Selected period" },
-  { label: "SST collected (8%)", value: "MYR #{number_with_precision(@report.totals[:sst_amount], precision: 2)}", detail: "Selected period" },
-  { label: "Grand total", value: "MYR #{number_with_precision(@report.totals[:total_amount], precision: 2)}", detail: "Selected period" }
+  { label: "Bookings", value: format_number(@report.totals[:booking_count]), detail: "Selected period" },
+  { label: "Taxable amount", value: "MYR #{format_number(@report.totals[:taxable_amount], precision: 2)}", detail: "Selected period" },
+  { label: "SST collected (8%)", value: "MYR #{format_number(@report.totals[:sst_amount], precision: 2)}", detail: "Selected period" },
+  { label: "Grand total", value: "MYR #{format_number(@report.totals[:total_amount], precision: 2)}", detail: "Selected period" }
 ]) %>
 
 <section class="space-y-3" aria-labelledby="sst-transactions-heading">
@@ -39,18 +39,18 @@
               <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= row[:invoice_number] %></th>
               <td class="whitespace-nowrap"><%= row[:guest_name] %></td>
               <td class="whitespace-nowrap"><%= row[:stay_dates] %></td>
-              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_precision(row[:taxable_amount], precision: 2) %></td>
-              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_precision(row[:sst_amount], precision: 2) %></td>
-              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:total_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(row[:taxable_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(row[:sst_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= format_number(row[:total_amount], precision: 2) %></td>
             </tr>
           <% end %>
         <% end %>
         <% unless @date_preset == "this_year" %>
           <tr class="bg-muted/55 font-semibold">
-            <th scope="row" colspan="3">Total (<%= @report.totals[:booking_count] %> bookings)</th>
-            <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_precision(@report.totals[:taxable_amount], precision: 2) %></td>
-            <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_precision(@report.totals[:sst_amount], precision: 2) %></td>
-            <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_precision(@report.totals[:total_amount], precision: 2) %></td>
+            <th scope="row" colspan="3">Total (<%= format_number(@report.totals[:booking_count]) %> bookings)</th>
+            <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(@report.totals[:taxable_amount], precision: 2) %></td>
+            <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(@report.totals[:sst_amount], precision: 2) %></td>
+            <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(@report.totals[:total_amount], precision: 2) %></td>
           </tr>
         <% end %>
       <% else %>

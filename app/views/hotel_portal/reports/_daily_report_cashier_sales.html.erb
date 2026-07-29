@@ -1,8 +1,8 @@
 <%= render "daily_report_metric_row", aria_label: "Cashier sales summary", metrics: [
-  { label: "Cash movements", value: @cashier_report.totals[:movement_count].to_s, detail: "Payments and refunds" },
-  { label: "Total collected", value: "MYR #{number_with_precision(@cashier_report.totals[:total_collected], precision: 2)}", detail: "Amount in" },
-  { label: "Total refunded", value: "- MYR #{number_with_precision(@cashier_report.totals[:total_refunded], precision: 2)}", detail: "Amount out", detail_variant: :destructive },
-  { label: "Net cash", value: "MYR #{number_with_precision(@cashier_report.totals[:net_cash], precision: 2)}", detail: "Collected less refunded", detail_variant: :success }
+  { label: "Cash movements", value: format_number(@cashier_report.totals[:movement_count]), detail: "Payments and refunds" },
+  { label: "Total collected", value: "MYR #{format_number(@cashier_report.totals[:total_collected], precision: 2)}", detail: "Amount in" },
+  { label: "Total refunded", value: "- MYR #{format_number(@cashier_report.totals[:total_refunded], precision: 2)}", detail: "Amount out", detail_variant: :destructive },
+  { label: "Net cash", value: "MYR #{format_number(@cashier_report.totals[:net_cash], precision: 2)}", detail: "Collected less refunded", detail_variant: :success }
 ] %>
 
 <% [["Advance", @advance_rows, @advance_transactions], ["Settlement", @settlement_rows, @settlement_transactions]].each do |title, rows, transactions| %>
@@ -47,7 +47,7 @@
               <td><%= row.settlement_mode %></td>
               <td><%= row.received_by %></td>
               <td><%= row.description %></td>
-              <td class="whitespace-nowrap text-right font-semibold"><%= row.currency %> <%= number_with_precision(row.signed_amount, precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold"><%= row.currency %> <%= format_number(row.signed_amount, precision: 2) %></td>
             </tr>
           <% end %>
           <% end %>
@@ -88,17 +88,17 @@
               <td><%= row[:mode] %></td>
               <td><%= row[:currency] %></td>
               <td><%= row[:section] %></td>
-              <td class="text-right"><%= number_with_precision(row[:amount_in], precision: 2) %></td>
-              <td class="text-right"><%= number_with_precision(row[:amount_out], precision: 2) %></td>
-              <td class="text-right"><%= number_with_precision(row[:balance], precision: 2) %></td>
+              <td class="text-right"><%= format_number(row[:amount_in], precision: 2) %></td>
+              <td class="text-right"><%= format_number(row[:amount_out], precision: 2) %></td>
+              <td class="text-right"><%= format_number(row[:balance], precision: 2) %></td>
             </tr>
           <% end %>
           <% total = @cashier_report.mode_totals.find { |item| item[:mode] == mode } %>
           <tr class="bg-muted/40 font-semibold">
             <th scope="row" colspan="3"><%= mode %> total</th>
-            <td class="text-right"><%= number_with_precision(total[:amount_in], precision: 2) %></td>
-            <td class="text-right"><%= number_with_precision(total[:amount_out], precision: 2) %></td>
-            <td class="text-right"><%= number_with_precision(total[:balance], precision: 2) %></td>
+            <td class="text-right"><%= format_number(total[:amount_in], precision: 2) %></td>
+            <td class="text-right"><%= format_number(total[:amount_out], precision: 2) %></td>
+            <td class="text-right"><%= format_number(total[:balance], precision: 2) %></td>
           </tr>
         <% end %>
       <% else %>
@@ -130,16 +130,16 @@
           <tr>
             <td><%= row[:currency] %></td>
             <td><%= row[:section] %></td>
-            <td class="text-right"><%= number_with_precision(row[:amount_in], precision: 2) %></td>
-            <td class="text-right"><%= number_with_precision(row[:amount_out], precision: 2) %></td>
-            <td class="text-right"><%= number_with_precision(row[:balance], precision: 2) %></td>
+            <td class="text-right"><%= format_number(row[:amount_in], precision: 2) %></td>
+            <td class="text-right"><%= format_number(row[:amount_out], precision: 2) %></td>
+            <td class="text-right"><%= format_number(row[:balance], precision: 2) %></td>
           </tr>
         <% end %>
         <tr class="bg-muted/40 font-semibold">
           <th scope="row" colspan="2">Grand total</th>
-          <td class="text-right"><%= number_with_precision(@cashier_report.grand_total[:amount_in], precision: 2) %></td>
-          <td class="text-right"><%= number_with_precision(@cashier_report.grand_total[:amount_out], precision: 2) %></td>
-          <td class="text-right"><%= number_with_precision(@cashier_report.grand_total[:balance], precision: 2) %></td>
+          <td class="text-right"><%= format_number(@cashier_report.grand_total[:amount_in], precision: 2) %></td>
+          <td class="text-right"><%= format_number(@cashier_report.grand_total[:amount_out], precision: 2) %></td>
+          <td class="text-right"><%= format_number(@cashier_report.grand_total[:balance], precision: 2) %></td>
         </tr>
       <% else %>
         <%= render "table_empty_state", colspan: 5, message: "No cashier activity for this selected period." %>

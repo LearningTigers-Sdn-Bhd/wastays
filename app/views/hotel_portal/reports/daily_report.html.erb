@@ -55,20 +55,20 @@
       <% adjustment = daily_report_adjustment_presentation(@revenue_report.totals[:adjustments]) %>
       <h2 id="overview-revenue-heading" class="text-base font-semibold">Revenue (accrual)</h2>
       <%= render "daily_report_metric_row", aria_label: "Revenue summary", metrics: [
-        { label: "Bookings engaged", value: @revenue_report.totals[:booking_count].to_s, detail: "Bookings with posted revenue" },
-        { label: "Total charges", value: "MYR #{number_with_precision(@revenue_report.totals[:total_charges], precision: 2)}", detail: "Before adjustments" },
+        { label: "Bookings engaged", value: format_number(@revenue_report.totals[:booking_count]), detail: "Bookings with posted revenue" },
+        { label: "Total charges", value: "MYR #{format_number(@revenue_report.totals[:total_charges], precision: 2)}", detail: "Before adjustments" },
         { label: "Adjustments", value: adjustment[:value], detail: adjustment[:detail], detail_variant: adjustment[:variant] },
-        { label: "Net revenue", value: "MYR #{number_with_precision(@revenue_report.totals[:net_revenue], precision: 2)}", detail: "After adjustments", detail_variant: :success }
+        { label: "Net revenue", value: "MYR #{format_number(@revenue_report.totals[:net_revenue], precision: 2)}", detail: "After adjustments", detail_variant: :success }
       ] %>
     </section>
 
     <section class="space-y-3" aria-labelledby="overview-cashier-heading">
       <h2 id="overview-cashier-heading" class="text-base font-semibold">Cashier sales (cash flow)</h2>
       <%= render "daily_report_metric_row", aria_label: "Cashier sales summary", metrics: [
-        { label: "Cash movements", value: @cashier_report.totals[:movement_count].to_s, detail: "Payments and refunds" },
-        { label: "Total collected", value: "MYR #{number_with_precision(@cashier_report.totals[:total_collected], precision: 2)}", detail: "Amount in" },
-        { label: "Total refunded", value: "- MYR #{number_with_precision(@cashier_report.totals[:total_refunded], precision: 2)}", detail: "Amount out", detail_variant: :destructive },
-        { label: "Net cash", value: "MYR #{number_with_precision(@cashier_report.totals[:net_cash], precision: 2)}", detail: "Collected less refunded", detail_variant: :success }
+        { label: "Cash movements", value: format_number(@cashier_report.totals[:movement_count]), detail: "Payments and refunds" },
+        { label: "Total collected", value: "MYR #{format_number(@cashier_report.totals[:total_collected], precision: 2)}", detail: "Amount in" },
+        { label: "Total refunded", value: "- MYR #{format_number(@cashier_report.totals[:total_refunded], precision: 2)}", detail: "Amount out", detail_variant: :destructive },
+        { label: "Net cash", value: "MYR #{format_number(@cashier_report.totals[:net_cash], precision: 2)}", detail: "Collected less refunded", detail_variant: :success }
       ] %>
     </section>
   <% end %>

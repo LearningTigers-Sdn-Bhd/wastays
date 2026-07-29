@@ -36,9 +36,9 @@
   <% end %>
 
   <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
-    { label: "Journal batches", value: @journal_summary.batch_count.to_s, detail: "Selected period" },
-    { label: "Total debit", value: "MYR #{number_with_precision(@journal_summary.total_debit, precision: 2)}", detail: "Selected period" },
-    { label: "Total credit", value: "MYR #{number_with_precision(@journal_summary.total_credit, precision: 2)}", detail: "Selected period" }
+    { label: "Journal batches", value: format_number(@journal_summary.batch_count), detail: "Selected period" },
+    { label: "Total debit", value: "MYR #{format_number(@journal_summary.total_debit, precision: 2)}", detail: "Selected period" },
+    { label: "Total credit", value: "MYR #{format_number(@journal_summary.total_credit, precision: 2)}", detail: "Selected period" }
   ], aria_label: "Journal batch summary") %>
 
   <section class="space-y-4" aria-label="Journal batches">
@@ -84,10 +84,10 @@
                   <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= entry.gl_code %></th>
                   <td class="whitespace-nowrap text-muted-foreground"><%= entry.transaction_type.humanize %></td>
                   <td class="whitespace-nowrap text-right tabular-nums <%= entry.debit_amount.positive? ? 'font-semibold text-foreground' : 'text-muted-foreground' %>">
-                    <%= number_with_precision(entry.debit_amount, precision: 2) %>
+                    <%= format_number(entry.debit_amount, precision: 2) %>
                   </td>
                   <td class="whitespace-nowrap text-right tabular-nums <%= entry.credit_amount.positive? ? 'font-semibold text-foreground' : 'text-muted-foreground' %>">
-                    <%= number_with_precision(entry.credit_amount, precision: 2) %>
+                    <%= format_number(entry.credit_amount, precision: 2) %>
                   </td>
                   <td class="text-muted-foreground"><%= entry.description %></td>
                 </tr>
@@ -97,10 +97,10 @@
               <tr class="bg-muted/55">
                 <th scope="row" colspan="2" class="text-xs font-semibold text-foreground">Total</th>
                 <td class="whitespace-nowrap text-right font-semibold tabular-nums text-foreground">
-                  <%= number_with_precision(batch.entries.sum(:debit_amount), precision: 2) %>
+                  <%= format_number(batch.entries.sum(:debit_amount), precision: 2) %>
                 </td>
                 <td class="whitespace-nowrap text-right font-semibold tabular-nums text-foreground">
-                  <%= number_with_precision(batch.entries.sum(:credit_amount), precision: 2) %>
+                  <%= format_number(batch.entries.sum(:credit_amount), precision: 2) %>
                 </td>
                 <td></td>
               </tr>

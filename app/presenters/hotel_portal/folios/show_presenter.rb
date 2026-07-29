@@ -662,11 +662,11 @@ module HotelPortal
     end
 
     def money(amount)
-      "#{currency} #{number_with_precision(amount.to_d, precision: 2)}"
+      "#{currency} #{number_with_delimiter(number_with_precision(amount.to_d, precision: 2))}"
     end
 
     def amount_label(amount)
-      number_with_precision(amount.to_d.abs, precision: 2)
+      number_with_delimiter(number_with_precision(amount.to_d.abs, precision: 2))
     end
 
     private

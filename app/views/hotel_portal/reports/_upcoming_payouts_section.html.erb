@@ -17,14 +17,14 @@
 <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm <%= @processing_batches.any? ? 'md:grid-cols-2' : 'md:grid-cols-1' %>">
   <div class="p-6 md:p-8 <%= @processing_batches.any? ? 'md:border-r md:border-border' : '' %>">
     <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Accumulating (Current Cycle)</p>
-    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= number_with_precision(@upcoming_payout_amount, precision: 2) %></h2>
-    <p class="mt-2 text-sm font-medium text-muted-foreground"><%= pluralize(@upcoming_bookings.count, "stay") %> completed and ready for settlement</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= format_number(@upcoming_payout_amount, precision: 2) %></h2>
+    <p class="mt-2 text-sm font-medium text-muted-foreground"><%= pluralize(format_number(@upcoming_bookings.count), "stay") %> completed and ready for settlement</p>
   </div>
 
   <% if @processing_batches.any? %>
     <div class="bg-amber-50/30 p-6 md:p-8">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-amber-700">Processing Batch</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-amber-900">MYR <%= number_with_precision(@processing_batches.sum(&:amount), precision: 2) %></h2>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-amber-900">MYR <%= format_number(@processing_batches.sum(&:amount), precision: 2) %></h2>
       <p class="mt-2 text-sm font-medium text-amber-700/80">Funds currently being processed by the platform</p>
     </div>
   <% end %>
@@ -52,7 +52,7 @@
               <td class="px-6 py-4 sm:px-8"><span class="font-mono text-sm font-semibold text-foreground">#<%= booking.confirmation_token %></span></td>
               <td class="px-6 py-4 text-sm font-medium text-muted-foreground"><%= booking.checked_out_at&.strftime("%d %b %Y, %I:%M %p") %></td>
               <td class="px-6 py-4"><span class="inline-flex items-center gap-x-1.5 rounded-lg border px-2 py-1 text-xs font-bold <%= payout_status_class(booking.payout_status) %>"><%= booking.payout_status.titleize %></span></td>
-              <td class="whitespace-nowrap px-6 py-4 text-right sm:px-8"><span class="text-sm font-bold text-foreground">RM <%= number_with_precision(booking.net_amount, precision: 2) %></span></td>
+              <td class="whitespace-nowrap px-6 py-4 text-right sm:px-8"><span class="text-sm font-bold text-foreground">RM <%= format_number(booking.net_amount, precision: 2) %></span></td>
             </tr>
           <% end %>
         <% else %>
