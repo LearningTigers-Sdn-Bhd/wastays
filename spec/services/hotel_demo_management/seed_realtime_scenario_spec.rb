@@ -84,9 +84,13 @@ RSpec.describe HotelDemoManagement::SeedRealtimeScenario, :business_day do
       expect(hotel.bookings.count).to eq(25)
       expect(hotel.bookings.where(
         pre_checkin_status: "completed",
-        guarantee_method: "pre_checkin_completed",
-        deposit_status: "not_required"
+        guarantee_method: "pre_checkin_completed"
       ).count).to eq(25)
+      # A deterministic slice of guest-pay bookings collect a refundable security
+      # deposit at check-in (feeds the Deposit Liability report) - those no longer
+      # have deposit_status: "not_required".
+      deposited_count = Deposit.where(hotel: hotel).count
+      expect(hotel.bookings.where(deposit_status: "not_required").count).to eq(25 - deposited_count)
       expect(hotel.bookings.where(payment_status: "captured").count).to eq(18)
       expect(hotel.bookings.where(payment_status: "pending", source: "corporate").count).to eq(7)
       expect(hotel.bookings.where(source: described_class::BOOKING_SOURCES).count).to eq(18)
@@ -160,7 +164,6 @@ RSpec.describe HotelDemoManagement::SeedRealtimeScenario, :business_day do
         expect(booking.booking_folio.outstanding_balance).to be_zero
       end
 
-
       historical_cleaning_requests = CheckOutRequest.joins(:booking)
                                                     .where(bookings: { hotel_id: hotel.id })
                                                     .where("bookings.checked_out_at < ?", Time.current.beginning_of_day)
@@ -168,6 +171,47 @@ RSpec.describe HotelDemoManagement::SeedRealtimeScenario, :business_day do
       expect(historical_cleaning_requests.distinct.pluck(:status)).to eq([ "completed" ])
       expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "checkout_room_cleaning_started").count).to eq(historical_cleaning_requests.count)
       expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "checkout_room_cleaning_completed").count).to eq(historical_cleaning_requests.count)
+    end
+
+    it "fills the SST, tourism tax, extra charge, deposit liability, and outstanding balance reports with real data" do
+      %w[wifi swimming_pool fitness_center spa_wellness_centre laundry].each do |slug|
+        Amenity.find_or_create_by!(slug: slug) do |amenity|
+          amenity.name = slug.titleize
+          amenity.amenity_type = "hotel"
+          amenity.category = "General"
+          amenity.icon = "star"
+        end
+      end
+      allow(HotelDemoManagement::ResetState).to receive(:new).and_call_original
+      allow(Bookings::TransitionStatus).to receive(:new).and_call_original
+      allow(NightAudits::Run).to receive(:new).and_call_original
+
+      result = build_service(booking_count: 40, group_count: 3, history_days: 30, future_days: 2).call
+      expect(result).to be_success
+
+      hotel.reload
+      expect(hotel).to have_attributes(sst_enabled: true, tourism_tax_enabled: true)
+      expect(hotel.tourism_tax_amount).to be_positive
+
+      today = Time.current.in_time_zone(hotel.hotel_time_zone).to_date
+      start_date = today - 30.days
+
+      sst = HotelPortal::Reports::SstReport.new(hotel: hotel, start_date: start_date, end_date: today).call
+      expect(sst.rows).not_to be_empty
+
+      tourism_tax = HotelPortal::Reports::TourismTaxReport.new(hotel: hotel, start_date: start_date, end_date: today).call
+      expect(tourism_tax.rows).not_to be_empty
+
+      extra_charge = HotelPortal::Reports::ExtraChargeReport.new(hotel: hotel, start_date: start_date, end_date: today, tab: "fb").call
+      non_fb_charge = HotelPortal::Reports::ExtraChargeReport.new(hotel: hotel, start_date: start_date, end_date: today, tab: "non_fb").call
+      expect(extra_charge.rows.size + non_fb_charge.rows.size).to be_positive
+
+      outstanding_balance = HotelPortal::Reports::OutstandingBalanceReport.new(hotel: hotel, start_date: start_date, end_date: today).call
+      expect(outstanding_balance.rows).not_to be_empty
+
+      expect(Deposit.where(hotel: hotel).count).to be_positive
+      deposit_liability = HotelPortal::Reports::DepositLiabilityReport.new(hotel: hotel, as_of_date: today).call
+      expect(deposit_liability.rows).not_to be_empty
     end
 
     it "creates successful multi-room group bookings" do

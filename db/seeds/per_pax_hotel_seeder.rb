@@ -24,6 +24,13 @@ hotel.tourism_tax_enabled = true
 hotel.tourism_tax_amount = 10.0
 hotel.allow_pax_pricing = true
 hotel.pax_pricing_only = true
+# Island resort - guests transfer by boat, not car, so front desk needs a boat
+# schedule to assign guests to and the kitchen needs boat times to plan meals around
+# (see BiboReport / MealPrepReport, both driven entirely by BookingGuest#boat_in_at
+# and #boat_out_at).
+hotel.allow_boat_information = true
+hotel.boat_in_times = %w[08:00 11:00 14:00 16:30]
+hotel.boat_out_times = %w[07:30 10:00 13:00 15:30]
 hotel.save!
 puts "Hotel 'Grand Pax Resort' ready."
 
@@ -330,6 +337,12 @@ guests_data.each do |g_data|
 end
 guest_pool = guests.values
 
+# Combines a stay date with an "HH:MM" boat schedule slot into a hotel-timezone Time.
+def boat_datetime(hotel, date, time_str)
+  hour, minute = time_str.split(":").map(&:to_i)
+  date.to_date.in_time_zone(hotel.hotel_time_zone).change(hour: hour, min: minute)
+end
+
 # Shifting helper to backdate/future-date bookings perfectly
 def shift_booking_dates(booking, days)
   return if days.zero?
@@ -350,6 +363,13 @@ def shift_booking_dates(booking, days)
     checked_in_at: booking.checked_in_at ? booking.checked_in_at - days.days : nil,
     checked_out_at: booking.checked_out_at ? booking.checked_out_at - days.days : nil
   )
+
+  booking.booking_guests.each do |bg|
+    updates = {}
+    updates[:boat_in_at] = bg.boat_in_at - days.days if bg.boat_in_at
+    updates[:boat_out_at] = bg.boat_out_at - days.days if bg.boat_out_at
+    bg.update_columns(updates) if updates.any?
+  end
 
   if booking.booking_quote
     booking.booking_quote.update_columns(
@@ -601,6 +621,20 @@ def seed_pax_booking(hotel:, room_type:, rate_plan:, guest:, check_in:, check_ou
 
   booking = confirm_res.booking
   booking.update_columns(source: source, hotel_corporate_account_id: hotel_corporate_account&.id)
+
+  # Boat-in/boat-out times (island resort transfers) - feeds both the BIBO log and
+  # the kitchen's meal-prep counts (breakfast/lunch/dinner derived purely from what
+  # hour the boat lands/leaves). Applies to every booking regardless of status, since
+  # guests book their transfer slot up front - past, current, and upcoming stays alike.
+  primary_guest = booking.booking_guests.first
+  if primary_guest
+    boat_in_time = hotel.boat_in_times.sample(random: RNG)
+    boat_out_time = hotel.boat_out_times.sample(random: RNG)
+    primary_guest.update_columns(
+      boat_in_at: boat_datetime(hotel, effective_check_in, boat_in_time),
+      boat_out_at: boat_datetime(hotel, effective_check_out, boat_out_time)
+    )
+  end
 
   # Check-in requires every room to have a number assigned - auto-pick one if the
   # caller didn't specify it (the volume-generated bookings below don't).

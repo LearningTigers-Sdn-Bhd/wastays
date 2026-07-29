@@ -14,6 +14,14 @@ module HotelDemoManagement
       { key: "northstar", name: "Northstar Holdings Sdn Bhd", payment_terms_days: 30 },
       { key: "strata", name: "Strata Professional Services Sdn Bhd", payment_terms_days: 14 }
     ].freeze
+    EXTRA_CHARGE_OPTIONS = [
+      { category: "fb", description: "Restaurant - Dinner", min: 35, max: 180, probability: 45 },
+      { category: "fb", description: "Room Service - Breakfast", min: 20, max: 60, probability: 30 },
+      { category: "parking", description: "Valet Parking", min: 15, max: 30, probability: 20 },
+      { category: "other", description: "Laundry Service", min: 25, max: 70, probability: 15 },
+      { category: "other", description: "Spa Treatment", min: 80, max: 220, probability: 10 }
+    ].freeze
+    SECURITY_DEPOSIT_AMOUNT = 150.0
 
     def initialize(hotel:, logger: ResetState::NoopLogger.new, embed: false, booking_count: DEFAULT_BOOKING_COUNT,
       group_count: DEFAULT_GROUP_COUNT, history_days: DEFAULT_HISTORY_DAYS, future_days: DEFAULT_FUTURE_DAYS)
@@ -77,6 +85,7 @@ module HotelDemoManagement
       acting_user = @hotel.account.users.first
       system_posting = acting_user.nil?
       @logger.puts "  -> Acting user for simulation: #{acting_user&.name || 'system (no user found)'}"
+      ensure_tax_settings
       ensure_company_relationships
 
       assigned_rooms = Hash.new { |hash, key| hash[key] = [] }
@@ -89,8 +98,37 @@ module HotelDemoManagement
       seed_company_billing(created_bookings, acting_user)
 
       run_day_by_day_simulation(acting_user: acting_user, system_posting: system_posting)
+      ensure_outstanding_balance_demo_data
       sync_group_statuses
       settle_company_invoices(acting_user)
+    end
+
+    # post_incidental_charges only fires for guests currently in house, so whether it
+    # ever produces a lasting outstanding balance depends on how many guests happen to
+    # still be checked in right at the end of the simulation - not reliable at small
+    # scale. Guarantee real data a different, still-realistic way instead: a charge
+    # discovered and billed after checkout (minibar, damage, etc) on an
+    # already-completed guest-pay booking. The Outstanding Balance report's own scope
+    # explicitly includes "completed" bookings with a positive balance, so this is a
+    # scenario it's meant to surface, not a workaround.
+    def ensure_outstanding_balance_demo_data
+      return if @hotel.bookings.where(status: %w[checked_in completed]).any? { |booking| booking.booking_folio&.outstanding_balance.to_d.positive? }
+
+      candidate = @hotel.bookings.where(status: "completed").find { |booking| booking.booking_folios.where(payer_type: "company").none? && booking.booking_folio.present? }
+      return unless candidate
+
+      option = EXTRA_CHARGE_OPTIONS.first
+      candidate.booking_folio.folio_transactions.create!(
+        amount: option[:min],
+        transaction_type: "charge",
+        category: option[:category],
+        description: "#{option[:description]} (billed post-checkout)",
+        currency: candidate.currency,
+        posted_at: current_hotel_date.to_time + 19.hours,
+        posting_date: current_hotel_date,
+        user: nil,
+        metadata: { posting_source: "seed_extra_charge", booking_id: candidate.id }
+      )
     end
 
     def create_simulation_booking(profile, index, scenario, assigned_rooms)
@@ -280,6 +318,33 @@ module HotelDemoManagement
       end
     end
 
+    # SST and tourism tax are both off by default (hotels.sst_enabled/tourism_tax_enabled
+    # default to false), and even with those flags on, BuildFinancialSnapshot only
+    # computes a tax line for room revenue if a TransactionCodeTax rule actually links
+    # the room_revenue transaction code to that tax - normally a one-time setup step
+    # done through the Taxes & Fees settings UI. Without both, no history length
+    # produces any SST/tourism tax data, leaving the SST, Tourism Tax, and
+    # Non-National tax-compliance reports permanently empty.
+    def ensure_tax_settings
+      updates = {}
+      updates[:sst_enabled] = true unless @hotel.sst_enabled?
+      updates[:tourism_tax_enabled] = true unless @hotel.tourism_tax_enabled?
+      updates[:tourism_tax_amount] = 10.0 unless @hotel.tourism_tax_amount.to_d.positive?
+      @hotel.update!(updates) if updates.any?
+      Financials::EnsureDefaultTransactionCodes.call(@hotel)
+
+      room_revenue_code = TransactionCodes::Resolver.for(@hotel).for_key("room_revenue")
+      return if room_revenue_code.nil?
+
+      room_revenue_code.update!(is_taxable: true) unless room_revenue_code.is_taxable?
+
+      %w[sst_tax tourism_tax].each do |key|
+        next if room_revenue_code.transaction_code_taxes.exists?(primary_tax_key: key)
+
+        room_revenue_code.transaction_code_taxes.create!(primary_tax_key: key)
+      end
+    end
+
     def ensure_company_relationships
       @company_relationships = COMPANY_BLUEPRINTS.to_h do |blueprint|
         account = Account.find_or_initialize_by(slug: "demo-hotel-#{@hotel.id}-#{blueprint[:key]}")
@@ -366,6 +431,7 @@ module HotelDemoManagement
       (simulation_start_date..current_hotel_date).each do |date|
         @logger.puts "Simulating hotel operations for business date: #{date}..." if date.day == 1 || date == current_hotel_date
         check_in_bookings(date, acting_user, system_posting)
+        post_incidental_charges(date)
         check_out_bookings(date, acting_user)
         run_night_audit(date, acting_user) if date < current_hotel_date
       end
@@ -387,6 +453,23 @@ module HotelDemoManagement
           }
         ).call
         raise "Failed to check in booking #{booking.id}: #{result.error}" unless result.success?
+
+        collect_security_deposit(booking, check_in_time, acting_user)
+      end
+    end
+
+    # Posts an occasional unsettled extra charge for bookings that are mid-stay (still
+    # checked in, not due to check out today) - a guest who ordered room service and
+    # hasn't paid it off yet. This is what actually gives the Outstanding Balance
+    # report real data: it only scans confirmed/checked_in/completed bookings, and a
+    # checkout enforces a zero balance, so the only status left where a positive
+    # balance can legitimately sit is "checked_in", mid-stay.
+    def post_incidental_charges(date)
+      @hotel.bookings.where(status: "checked_in").where("check_out > ?", date.end_of_day).find_each do |booking|
+        next if booking.booking_folios.where(payer_type: "company").exists?
+        next unless extras_rng.rand(100) < 35
+
+        post_extra_charges_for_booking(booking, date)
       end
     end
 
@@ -396,7 +479,21 @@ module HotelDemoManagement
       end
     end
 
+    # A booking's own folio is always billed the room+tax total, and demo bookings
+    # otherwise always end up exactly settled (guest-pay: paid in full upfront;
+    # direct-bill: rolled into an AR invoice) - so without extra charges the Extra
+    # Charge report has nothing to show no matter how much history exists.
+    # Direct-bill bookings are skipped here - their room charges already route to a
+    # separate company folio, and the guest's own folio is expected to stay at a
+    # zero balance.
     def complete_checkout(booking, date, acting_user)
+      company_billed = booking.booking_folios.where(payer_type: "company").exists?
+
+      unless company_billed
+        post_extra_charges_for_booking(booking, date)
+        settle_outstanding_balance(booking, date)
+      end
+
       check_out_time = completed_operation_time(date, hour: 11)
       company_folio_ids = booking.booking_folios.where(payer_type: "company").ids
       options = { defer_side_effects: true }
@@ -411,6 +508,7 @@ module HotelDemoManagement
       raise "Failed to check out booking #{booking.id}: #{result.error}" unless result.success?
 
       booking.update!(payment_status: "captured") if company_folio_ids.empty?
+      release_security_deposit(booking, check_out_time, acting_user)
       complete_historical_checkout_cleaning(booking) if date < current_hotel_date
     end
 
@@ -475,6 +573,110 @@ module HotelDemoManagement
         allow_unclosable_date: true
       ).call
       raise "Failed to complete night audit for date #{date}: #{result.error}" unless result.success?
+    end
+
+    # Random F&B/parking/laundry/spa charges so stays have more on the folio than
+    # just room + tax - feeds the Extra Charge report. Left unsettled; settled
+    # separately (see settle_outstanding_balance) once a balance actually needs to
+    # be zeroed out for checkout.
+    def post_extra_charges_for_booking(booking, date)
+      folio = booking.booking_folio
+      return 0.to_d unless folio
+
+      stay_dates = (booking.check_in.to_date...booking.check_out.to_date).to_a
+      return 0.to_d if stay_dates.empty?
+
+      extra_total = 0.to_d
+      EXTRA_CHARGE_OPTIONS.each do |option|
+        next unless extras_rng.rand(100) < option[:probability]
+
+        charge_date = stay_dates.sample(random: extras_rng)
+        amount = extras_rng.rand(option[:min]..option[:max]).to_d
+        extra_total += amount
+
+        folio.folio_transactions.create!(
+          amount: amount,
+          transaction_type: "charge",
+          category: option[:category],
+          description: option[:description],
+          currency: booking.currency,
+          posted_at: charge_date.to_time + extras_rng.rand(10..21).hours,
+          posting_date: charge_date,
+          user: nil,
+          metadata: { posting_source: "seed_extra_charge", booking_id: booking.id }
+        )
+      end
+
+      extra_total
+    end
+
+    # Pays off whatever the folio's current balance is (room/tax/incidental charges
+    # minus what's already been paid) so checkout can proceed with a zero balance,
+    # regardless of how many days of incidental charges (see post_incidental_charges)
+    # accumulated beforehand.
+    def settle_outstanding_balance(booking, date)
+      folio = booking.booking_folio
+      return unless folio
+
+      balance = folio.outstanding_balance.to_d
+      return unless balance.positive?
+
+      folio.folio_transactions.create!(
+        amount: balance,
+        transaction_type: "payment",
+        category: "cash",
+        description: "Cash settlement - outstanding balance",
+        currency: booking.currency,
+        posted_at: date.to_time + 21.hours,
+        posting_date: date,
+        user: nil,
+        metadata: { posting_source: "seed_extra_charge_settlement", booking_id: booking.id }
+      )
+    end
+
+    # A deterministic slice of guest-pay bookings collect a refundable security deposit
+    # at check-in - feeds the Deposit Liability report.
+    def collect_security_deposit(booking, check_in_time, acting_user)
+      return unless (booking.id % 4).zero?
+      return if booking.booking_folios.where(payer_type: "company").exists?
+
+      result = Deposits::Record.call(
+        owner: booking,
+        kind: "security",
+        amount: SECURITY_DEPOSIT_AMOUNT,
+        currency: booking.currency,
+        payment_method: %w[cash card].sample(random: extras_rng),
+        actor: acting_user,
+        received_at: check_in_time,
+        metadata: { simulation: true }
+      )
+      raise "Failed to collect security deposit for booking #{booking.id}: #{result.error}" unless result.success?
+    end
+
+    # Release the deposit at checkout for most stays (normal operations), but leave it
+    # held for recently-checked-out bookings roughly half the time, simulating deposits
+    # that haven't been processed yet - real, current liability rather than a
+    # year-old oversight.
+    def release_security_deposit(booking, check_out_time, acting_user)
+      deposit = booking.deposits.find_by(kind: "security", status: %w[held available])
+      return unless deposit
+
+      recently_checked_out = (current_hotel_date - booking.check_out.to_date).to_i <= 14
+      return if recently_checked_out && booking.id.even?
+
+      result = Deposits::Return.call(
+        deposit: deposit,
+        amount: deposit.available_amount,
+        actor: acting_user,
+        payment_method: deposit.payment_method,
+        reason: "No damage reported at checkout",
+        occurred_at: check_out_time
+      )
+      raise "Failed to release security deposit for booking #{booking.id}: #{result.error}" unless result.success?
+    end
+
+    def extras_rng
+      @extras_rng ||= Random.new(20260901)
     end
 
     def guest_profiles
