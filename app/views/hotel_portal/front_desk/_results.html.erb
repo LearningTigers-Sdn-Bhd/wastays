@@ -17,14 +17,27 @@
 <% filtered = @query.present? || (@tab == "bookings" && (@booking_status.present? || @start_date.present? || @end_date.present?)) %>
 <section aria-label="Reservation view" class="space-y-3">
   <% if @bookings.any? %>
+    <%# Partial names are spelled out rather than interpolated from @tab: the
+        render path then never derives from params, and the pairing stays
+        greppable from the partial's own file. %>
     <% if @view == "list" %>
       <div class="hidden overflow-hidden rounded-lg border border-border bg-card lg:block">
-        <%= render "#{@tab}_table" %>
+        <% if @tab == "bookings" %><%= render "bookings_table" %>
+        <% elsif @tab == "arrivals" %><%= render "arrivals_table" %>
+        <% elsif @tab == "in_house" %><%= render "in_house_table" %>
+        <% elsif @tab == "departures" %><%= render "departures_table" %>
+        <% elsif @tab == "checkout" %><%= render "checkout_table" %>
+        <% end %>
       </div>
     <% end %>
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4<%= " lg:hidden" if @view == "list" %>">
       <% @bookings.each do |booking| %>
-        <%= render "#{@tab}_card", booking: %>
+        <% if @tab == "bookings" %><%= render "bookings_card", booking: %>
+        <% elsif @tab == "arrivals" %><%= render "arrivals_card", booking: %>
+        <% elsif @tab == "in_house" %><%= render "in_house_card", booking: %>
+        <% elsif @tab == "departures" %><%= render "departures_card", booking: %>
+        <% elsif @tab == "checkout" %><%= render "checkout_card", booking: %>
+        <% end %>
       <% end %>
     </div>
   <% else %>
