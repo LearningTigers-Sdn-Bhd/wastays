@@ -5,7 +5,6 @@
   <% if presenter.selected_booking_guest && presenter.selected_guest %>
     <% return_to = presenter.guest_details_return_to %>
     <% snapshots = presenter.guest_details_snapshots %>
-    <% boat_range = presenter.guest_details_boat_range %>
     <% country_choices = COUNTRY_OPTIONS.map { |country| [country, country] } %>
 
     <%= form_with model: presenter.selected_guest,
@@ -92,16 +91,19 @@
               <% end %>
             <% end %>
 
-              <% if current_hotel.allow_boat_information? %>
+              <% if presenter.boat_schedule.enabled? %>
                 <%= render PanelsUI::FieldSet.new(
                       legend: "Boat transfer",
-                      description: "Guest boat-in and boat-out timestamps.",
+                      description: "Pick the transfer slots this guest is booked on.",
                       disabled: !presenter.can_manage_bookings?(current_user)) do %>
                   <%= render PanelsUI::FieldGroup.new do %>
                     <%= fields_for :booking_guest, presenter.guest_details_booking_guest_form do |booking_guest_form| %>
-                      <%= render PanelsUI::FormField.new(form: booking_guest_form, attribute: :boat_transfer_range, label: "Boat-in and boat-out", error: presenter.guest_details_boat_range_error) do |field| %>
-                        <% field.with_date_time_picker(range: true, months: 2, value: boat_range) %>
-                      <% end %>
+                      <%= render "hotel_portal/bookings/boat_transfer_fields",
+                            form: booking_guest_form,
+                            schedule: presenter.boat_schedule,
+                            boat_in: presenter.guest_details_boat_in_time,
+                            boat_out: presenter.guest_details_boat_out_time,
+                            error: presenter.guest_details_boat_error %>
                     <% end %>
                   <% end %>
                 <% end %>

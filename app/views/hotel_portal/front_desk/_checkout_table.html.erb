@@ -7,6 +7,7 @@
       <th scope="col">Checked in</th>
       <th scope="col">Checked out</th>
       <th scope="col">Rooms</th>
+      <% if show_boat_times?(current_hotel) %><th scope="col">Boat-out</th><% end %>
       <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
     </tr>
   <% end %>
@@ -27,6 +28,7 @@
         <td><%= booking.checked_in_at&.in_time_zone(current_user.time_zone)&.strftime("%d %b %Y, %I:%M %p") || "—" %></td>
         <td><%= booking.checked_out_at&.in_time_zone(current_user.time_zone)&.strftime("%d %b %Y, %I:%M %p") || "—" %></td>
         <td><%= rooms_summary %></td>
+        <% if show_boat_times?(current_hotel) %><td class="whitespace-nowrap"><%= render "boat_times", booking:, kinds: [ :out ] %></td><% end %>
         <td class="whitespace-nowrap text-right"><%= render "record_actions", booking:, tab: "checkout", split: true %></td>
       </tr>
     <% end %>

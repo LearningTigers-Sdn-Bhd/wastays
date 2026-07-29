@@ -394,26 +394,20 @@ module HotelPortal
         end_date: @report_end_date
       ).call
 
-      if @active_guest_report_tab == "meal_prep"
-        params[:meal_type] = "breakfast" unless %w[breakfast lunch dinner].include?(params[:meal_type])
-        @meal_prep_report = HotelPortal::Reports::MealPrepReport.new(
-          hotel: current_hotel,
-          start_date: @report_start_date,
-          end_date: @report_end_date,
-          meal_type: params[:meal_type]
-        ).call
-
-        full_report = HotelPortal::Reports::MealPrepReport.new(
+      # Built once and reused: the tab strip needs a count on every tab, and the
+      # meal tabs each need one too. Both are derived from this single pass.
+      if current_hotel.allow_boat_information?
+        @meal_prep_full = HotelPortal::Reports::MealPrepReport.new(
           hotel: current_hotel,
           start_date: @report_start_date,
           end_date: @report_end_date
         ).call
+      end
 
-        @meal_prep_counts = {
-          "breakfast" => full_report.records.select { |r| r[:meal_type].downcase.include?("breakfast") }.sum { |r| r[:pax] },
-          "lunch"     => full_report.records.select { |r| r[:meal_type].downcase.include?("lunch") }.sum { |r| r[:pax] },
-          "dinner"    => full_report.records.select { |r| r[:meal_type].downcase.include?("dinner") }.sum { |r| r[:pax] }
-        }
+      if @active_guest_report_tab == "meal_prep"
+        params[:meal_type] = "breakfast" unless %w[breakfast lunch dinner].include?(params[:meal_type])
+        @meal_prep_report = @meal_prep_full.for_meal(params[:meal_type])
+        @meal_prep_counts = %w[breakfast lunch dinner].index_with { |meal| @meal_prep_full.pax_for(meal) }
       end
 
       load_guest_registration_cards(start_date: @report_start_date, end_date: @report_end_date)

@@ -1,0 +1,17 @@
+<%# locals: (booking:) %>
+<%# Mirrors the Arrival / Stay / Departure band above it: same muted panel, same
+    label-over-value columns, same divider. Both slots always show so the band
+    keeps one height whether or not a transfer is booked. %>
+<% boat_in = booking_boat_time(booking, :in, current_hotel) %>
+<% boat_out = booking_boat_time(booking, :out, current_hotel) %>
+<section class="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm" aria-label="Boat transfer">
+  <div class="min-w-0 flex-1">
+    <p class="text-xs font-medium text-muted-foreground">Boat-in</p>
+    <p class="mt-1 truncate"><%= boat_in ? "#{boat_in[:time]} · #{boat_in[:date]}" : "—" %></p>
+  </div>
+  <span class="-my-2 self-stretch border-l border-border" aria-hidden="true"></span>
+  <div class="min-w-0 flex-1 text-right">
+    <p class="text-xs font-medium text-muted-foreground">Boat-out</p>
+    <p class="mt-1 truncate"><%= boat_out ? "#{boat_out[:time]} · #{boat_out[:date]}" : "—" %></p>
+  </div>
+</section>

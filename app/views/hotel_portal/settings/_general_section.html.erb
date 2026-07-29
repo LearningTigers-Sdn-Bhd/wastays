@@ -150,59 +150,6 @@
     </div>
   </section>
 
-  <% if @hotel.allow_boat_information? %>
-    <section id="boat-schedules" aria-labelledby="boat-schedules-heading" class="scroll-mt-6" data-controller="boat-schedules">
-      <div>
-        <h2 id="boat-schedules-heading" class="text-base font-semibold text-foreground">Daily Boat Schedule</h2>
-        <p class="mt-2 text-sm text-muted-foreground">Configure standard Boat-in and Boat-out times. These will be available for selection during guest check-in and transfer management.</p>
-      </div>
-      
-      <div class="mt-4 grid gap-6 md:grid-cols-2">
-        <!-- Boat-in Times -->
-        <div>
-          <h3 class="text-sm font-semibold text-foreground mb-3">Boat Arrival (Boat-in)</h3>
-          <div class="space-y-2" data-boat-schedules-target="inList">
-            <% @presenter.boat_in_times.each do |time| %>
-              <div class="flex items-center gap-2">
-                <input type="time" name="hotel[boat_in_times][]" value="<%= time %>" class="rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground focus:border-border-interactive focus:ring-0 shadow-sm w-36" required>
-                <%= render PanelsUI::Button.new(type: :button, variant: :ghost, size: :sm, class: "text-destructive hover:text-destructive p-2", data: { action: "click->boat-schedules#removeRow" }) do %>
-                  Remove
-                <% end %>
-              </div>
-            <% end %>
-          </div>
-          <div class="mt-3">
-            <%= render PanelsUI::Button.new(type: :button, variant: :outline, size: :sm, data: { action: "click->boat-schedules#addInRow" }) do %>
-              <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %> Add Boat-in Time
-            <% end %>
-          </div>
-          <%= hidden_field_tag "hotel[boat_in_times][]", "" %>
-        </div>
-
-        <!-- Boat-out Times -->
-        <div>
-          <h3 class="text-sm font-semibold text-foreground mb-3">Boat Departure (Boat-out)</h3>
-          <div class="space-y-2" data-boat-schedules-target="outList">
-            <% @presenter.boat_out_times.each do |time| %>
-              <div class="flex items-center gap-2">
-                <input type="time" name="hotel[boat_out_times][]" value="<%= time %>" class="rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground focus:border-border-interactive focus:ring-0 shadow-sm w-36" required>
-                <%= render PanelsUI::Button.new(type: :button, variant: :ghost, size: :sm, class: "text-destructive hover:text-destructive p-2", data: { action: "click->boat-schedules#removeRow" }) do %>
-                  Remove
-                <% end %>
-              </div>
-            <% end %>
-          </div>
-          <div class="mt-3">
-            <%= render PanelsUI::Button.new(type: :button, variant: :outline, size: :sm, data: { action: "click->boat-schedules#addOutRow" }) do %>
-              <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %> Add Boat-out Time
-            <% end %>
-          </div>
-          <%= hidden_field_tag "hotel[boat_out_times][]", "" %>
-        </div>
-      </div>
-    </section>
-  <% end %>
-
   <section aria-labelledby="localization-security-heading">
     <div>
       <h2 id="localization-security-heading" class="text-base font-semibold text-foreground">Localization &amp; Security</h2>

@@ -51,6 +51,28 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response).to redirect_to(login_path)
     end
 
+    it "surfaces both boat slots in the timeline bar popover, and hides them when boats are off" do
+      hotel.update!(allow_boat_information: true)
+      booking = create(:booking, hotel:, guest_name: "Ada Lovelace", check_in: Date.current, check_out: Date.current + 2.days)
+      create(:booking_room, booking:, room_type:, room_number: "101")
+      guest = create(:booking_guest, booking:, guest: create(:guest), is_primary: true)
+      guest.update!(
+        boat_in_at: hotel.hotel_time_zone.parse("#{Date.current} 08:00"),
+        boat_out_at: hotel.hotel_time_zone.parse("#{Date.current + 2.days} 15:30")
+      )
+
+      get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
+
+      popover = Nokogiri::HTML(response.body).css("dl").find { |list| list.text.include?("Boat-in") }
+      expect(popover).to be_present
+      expect(popover.text).to include("Boat-in", "08:00", "Boat-out", "15:30")
+
+      hotel.update!(allow_boat_information: false)
+      get hotel_stay_view_path(hotel, view: "timeline", start_date: Date.current, days: 7)
+
+      expect(response.body).not_to include("Boat-in")
+    end
+
     it "renders the timeline board with canonical frame state" do
       booking = create(:booking, hotel:, guest_name: "Ada Lovelace", check_in: Date.current, check_out: Date.current + 2.days)
       create(:booking_room, booking:, room_type:, room_number: "101")

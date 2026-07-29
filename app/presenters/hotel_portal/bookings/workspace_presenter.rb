@@ -616,23 +616,25 @@ module HotelPortal
       }
     end
 
-    # The range picker carries both boat times in one "start/end" field, while the
-    # record keeps two columns. Returns "" rather than "/" when neither is set, so
-    # the picker shows its placeholder instead of an empty range.
-    def guest_details_boat_range
-      bg = @booking_guest_form || selected_booking_guest
-      return "" unless bg
-
-      tz = hotel.hotel_time_zone.presence || Time.zone.name
-      bounds = [ bg.boat_in_at, bg.boat_out_at ].map { |time| time&.in_time_zone(tz)&.strftime("%Y-%m-%dT%H:%M") }
-      return "" if bounds.none?
-
-      bounds.join("/")
+    def boat_schedule
+      @boat_schedule ||= ::Boats::Schedule.new(hotel)
     end
 
-    # The record validates the two columns, so the combined field has to be told
-    # about their errors or an invalid range would only appear in the summary.
-    def guest_details_boat_range_error
+    # The form works in slots, the record in timestamps. Both selects show the
+    # property's local time-of-day so a stored time reads back as the slot it
+    # was picked from.
+    def guest_details_boat_in_time
+      boat_time_of_day(:boat_in_at)
+    end
+
+    def guest_details_boat_out_time
+      boat_time_of_day(:boat_out_at)
+    end
+
+    # The record validates the two columns against each other, so the boat-out
+    # field has to be told about their errors or an out-of-order pair would only
+    # appear in the summary.
+    def guest_details_boat_error
       record = guest_details_booking_guest_form
       return unless record.respond_to?(:errors)
 
@@ -641,6 +643,13 @@ module HotelPortal
 
     def guest_details_booking_guest_form
       @booking_guest_form || selected_booking_guest
+    end
+
+    def boat_time_of_day(column)
+      record = guest_details_booking_guest_form
+      return unless record
+
+      ::Boats::Schedule.time_of_day(hotel: hotel, timestamp: record.public_send(column))
     end
 
     def guest_details_errors

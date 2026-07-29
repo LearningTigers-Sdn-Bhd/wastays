@@ -258,6 +258,42 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       end
     end
 
+    it "shows the boat column on every arrivals-style tab, checkout included" do
+      hotel.update!(allow_boat_information: true)
+
+      { "arrivals" => "Boat arrival", "in_house" => "Boat departure",
+        "departures" => "Boat departure", "checkout" => "Boat departure" }.each do |tab, heading|
+        get guest_reports_hotel_reports_path(hotel), params: {
+          start_date: start_date.to_s, end_date: end_date.to_s, tab: tab
+        }
+
+        headings = Nokogiri::HTML(response.body).css("table thead th").map(&:text).map(&:strip)
+        expect(headings).to include(heading), "expected a #{heading} column on #{tab}"
+      end
+    end
+
+    it "builds the meal prep report once per page load, not once per badge" do
+      hotel.update!(allow_boat_information: true)
+      allow(HotelPortal::Reports::MealPrepReport).to receive(:new).and_call_original
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "meal_prep"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(HotelPortal::Reports::MealPrepReport).to have_received(:new).once
+    end
+
+    it "keeps the checkout CSV export in step with its on-screen boat column" do
+      hotel.update!(allow_boat_information: true)
+
+      get guest_reports_hotel_reports_path(hotel, format: :csv), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "checkout"
+      }
+
+      expect(response.body.lines.first).to include("Boat-out")
+    end
+
     it "keeps guest table screen widths but removes table and wrapper constraints for print" do
       hotel.update!(allow_boat_information: true)
       screen_widths = {

@@ -53,6 +53,8 @@ module HotelPortal
             :override_night_audit,
             :tourism_tax_collected,
             :collect_security_deposit,
+            :boat_in_time,
+            :boat_out_time,
             security_deposit: [ :amount, :payment_method, :external_reference ]
           ).to_h.deep_symbolize_keys
           details[:room_assignments] = normalize_room_assignments(source[:room_assignments])
@@ -90,6 +92,7 @@ module HotelPortal
           @requires_override = requires_override?
           @form_values = form_values
           @room_options = build_room_options
+          @boat_schedule = ::Boats::Schedule.new(current_hotel)
         end
 
         def form_values
@@ -110,8 +113,19 @@ module HotelPortal
             security_deposit_reference: deposit[:external_reference].to_s,
             tourism_tax_collected:,
             room_assignments: submitted[:room_assignments],
-            requires_override: @requires_override
+            requires_override: @requires_override,
+            boat_in_time: submitted.fetch(:boat_in_time) { stored_boat_time(:boat_in_at) },
+            boat_out_time: submitted.fetch(:boat_out_time) { stored_boat_time(:boat_out_at) }
           }
+        end
+
+        # Falls back to what the guest already has booked, so reopening the sheet
+        # (or a failed submit) shows their slot rather than clearing it.
+        def stored_boat_time(column)
+          primary = @booking.booking_guests.find(&:primary?) || @booking.booking_guests.first
+          return unless primary
+
+          ::Boats::Schedule.time_of_day(hotel: current_hotel, timestamp: primary.public_send(column))
         end
 
         def requires_override?

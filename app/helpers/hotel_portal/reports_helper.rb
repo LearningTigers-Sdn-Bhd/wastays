@@ -42,7 +42,9 @@ module HotelPortal::ReportsHelper
     end
   end
 
-  def guest_report_tabs_data(report, bibo_report, police_report, active_tab, grc_total_count, current_hotel, date_preset)
+  # Every report is passed in already built. Running one here would mean the
+  # tab strip re-querying on every tab just to put a number on a badge.
+  def guest_report_tabs_data(report:, bibo_report:, police_report:, meal_prep_report:, active_tab:, grc_total_count:, current_hotel:, date_preset:)
     tabs = [
       { label: "Arrivals", value: "arrivals", count: report.arrival_count },
       { label: "In-House", value: "in_house", count: report.in_house_count },
@@ -54,13 +56,7 @@ module HotelPortal::ReportsHelper
 
     if current_hotel.allow_boat_information?
       tabs << { label: "Boat Transfers", value: "bibo", count: bibo_report ? (bibo_report.boat_in_count + bibo_report.boat_out_count) : 0 }
-
-      meal_prep_count = HotelPortal::Reports::MealPrepReport.new(
-        hotel: current_hotel,
-        start_date: report.start_date,
-        end_date: report.end_date
-      ).call.records.size
-      tabs << { label: "Meal Prep", value: "meal_prep", count: meal_prep_count }
+      tabs << { label: "Meal Prep", value: "meal_prep", count: meal_prep_report&.records&.size.to_i }
     end
 
     tabs.map do |tab|

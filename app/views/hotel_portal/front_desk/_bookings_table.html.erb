@@ -6,6 +6,7 @@
       <th scope="col">Guest</th>
       <th scope="col">Stay dates</th>
       <th scope="col">Amount</th>
+      <% if show_boat_times?(current_hotel) %><th scope="col">Boat transfer</th><% end %>
       <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
     </tr>
   <% end %>
@@ -30,6 +31,7 @@
           <span class="mt-1 block text-xs text-muted-foreground"><%= presenter.nights_label %></span>
         </td>
         <td class="whitespace-nowrap font-semibold tabular-nums text-foreground"><%= presenter.formatted_currency_total %></td>
+        <% if show_boat_times?(current_hotel) %><td class="whitespace-nowrap"><%= render "boat_times", booking:, kinds: [ :in, :out ] %></td><% end %>
         <td class="whitespace-nowrap text-right"><%= render "record_actions", booking:, tab: "bookings", split: true %></td>
       </tr>
     <% end %>

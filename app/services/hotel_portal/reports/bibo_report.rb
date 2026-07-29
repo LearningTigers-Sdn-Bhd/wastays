@@ -34,16 +34,20 @@ module HotelPortal
 
       def boat_ins
         @boat_ins ||= booking_guests_scope
-          .where(boat_in_at: @start_date.beginning_of_day..@end_date.end_of_day)
+          .where(boat_in_at: window)
           .order("booking_guests.boat_in_at ASC")
-          .map { |bg| row_for_boat_in(bg) }
+          .map { |bg| row_for(bg, bg.boat_in_at) }
       end
 
       def boat_outs
         @boat_outs ||= booking_guests_scope
-          .where(boat_out_at: @start_date.beginning_of_day..@end_date.end_of_day)
+          .where(boat_out_at: window)
           .order("booking_guests.boat_out_at ASC")
-          .map { |bg| row_for_boat_out(bg) }
+          .map { |bg| row_for(bg, bg.boat_out_at) }
+      end
+
+      def window
+        ::Boats::Schedule.day_range(hotel: @hotel, from: @start_date, to: @end_date)
       end
 
       def booking_guests_scope
@@ -52,7 +56,8 @@ module HotelPortal
                     .includes(booking: { booking_rooms: :room_type }, guest: {})
       end
 
-      def row_for_boat_in(bg)
+      # The two directions differ only in which timestamp they carry.
+      def row_for(bg, boat_at)
         booking = bg.booking
         {
           guest_name: bg.name_snapshot || bg.guest.name,
@@ -62,31 +67,15 @@ module HotelPortal
           check_out: booking.check_out,
           stay_dates: "#{booking.check_in.strftime('%d %b %Y')} - #{booking.check_out.strftime('%d %b %Y')}",
           confirmation_token: booking.confirmation_token,
-          boat_time: format_boat_time(bg.boat_in_at),
-          boat_at: bg.boat_in_at
-        }
-      end
-
-      def row_for_boat_out(bg)
-        booking = bg.booking
-        {
-          guest_name: bg.name_snapshot || bg.guest.name,
-          room_type: booking.booking_rooms.map { |br| br.room_type&.name }.compact.uniq.join(", ").presence || "—",
-          room_number: booking.booking_rooms.map(&:room_number).compact.join(", ").presence || "—",
-          check_in: booking.check_in,
-          check_out: booking.check_out,
-          stay_dates: "#{booking.check_in.strftime('%d %b %Y')} - #{booking.check_out.strftime('%d %b %Y')}",
-          confirmation_token: booking.confirmation_token,
-          boat_time: format_boat_time(bg.boat_out_at),
-          boat_at: bg.boat_out_at
+          boat_time: format_boat_time(boat_at),
+          boat_at: boat_at
         }
       end
 
       def format_boat_time(value)
         return "—" if value.blank?
 
-        time_zone = @hotel.hotel_time_zone.presence || Time.zone.name
-        value.in_time_zone(time_zone).strftime("%I:%M %p")
+        value.in_time_zone(@hotel.hotel_time_zone).strftime("%I:%M %p")
       end
     end
   end

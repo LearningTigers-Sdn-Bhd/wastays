@@ -6,6 +6,7 @@
       <th scope="col">Stay dates</th>
       <th scope="col">Checked in</th>
       <th scope="col">Rooms</th>
+      <% if show_boat_times?(current_hotel) %><th scope="col">Boat-out</th><% end %>
       <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
     </tr>
   <% end %>
@@ -25,6 +26,7 @@
         <td><%= presenter.check_in_formatted %> to <%= presenter.check_out_formatted %></td>
         <td><%= presenter.checked_in_at_formatted %></td>
         <td><%= presenter.rooms_summary.join(", ").presence || "No rooms assigned" %></td>
+        <% if show_boat_times?(current_hotel) %><td class="whitespace-nowrap"><%= render "boat_times", booking:, kinds: [ :out ] %></td><% end %>
         <td class="whitespace-nowrap text-right"><%= render "record_actions", booking:, tab: "in_house", split: true %></td>
       </tr>
     <% end %>

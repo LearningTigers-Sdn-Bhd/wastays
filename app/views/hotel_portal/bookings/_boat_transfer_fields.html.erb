@@ -1,0 +1,22 @@
+<%# locals: (form:, schedule:, boat_in: nil, boat_out: nil, error: nil) %>
+<%# Staff pick a slot from the property's timetable; the calendar day comes from
+    the stay itself, so boat-in lands on the check-in date and boat-out leaves
+    on the check-out date. %>
+<div class="grid gap-4 sm:grid-cols-2">
+  <%= render "hotel_portal/bookings/boat_transfer_field",
+        form: form,
+        attribute: :boat_in_time,
+        label: "Boat-in",
+        hint: "Arrives on the check-in date.",
+        choices: schedule.in_choices(current: boat_in),
+        current: boat_in %>
+
+  <%= render "hotel_portal/bookings/boat_transfer_field",
+        form: form,
+        attribute: :boat_out_time,
+        label: "Boat-out",
+        hint: "Departs on the check-out date.",
+        choices: schedule.out_choices(current: boat_out),
+        current: boat_out,
+        error: error %>
+</div>

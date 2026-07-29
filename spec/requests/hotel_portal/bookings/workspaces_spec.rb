@@ -1403,40 +1403,83 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(guest.reload).to have_attributes(name: "Original Guest", email: "original@example.com")
     end
 
-    it "preserves boat-transfer values and field errors" do
+    it "pairs each selected boat slot with the stay date it belongs to" do
       hotel.update!(allow_boat_information: true)
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_out", time: "16:45")
       booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true)
 
       patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
         guest: { name: "Boat Guest", country: "Malaysia", document_type: "passport" },
-        booking_guest: { boat_transfer_range: "2026-08-02T10:00/2026-08-01T10:00" }
+        booking_guest: { boat_in_time: "09:30", boat_out_time: "16:45" }
       }
 
-      expect(response).to have_http_status(:unprocessable_content)
+      booking_guest.reload
+      zone = hotel.hotel_time_zone
+      expect(booking_guest.boat_in_at.in_time_zone(zone).strftime("%Y-%m-%d %H:%M"))
+        .to eq("#{booking.check_in.in_time_zone(zone).strftime('%Y-%m-%d')} 09:30")
+      expect(booking_guest.boat_out_at.in_time_zone(zone).strftime("%Y-%m-%d %H:%M"))
+        .to eq("#{booking.check_out.in_time_zone(zone).strftime('%Y-%m-%d')} 16:45")
+    end
+
+    it "ignores a submitted time that is not on the property's timetable" do
+      hotel.update!(allow_boat_information: true)
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
+      booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Charter Guest"), is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "Charter Guest", country: "Malaysia", document_type: "passport" },
+        booking_guest: { boat_in_time: "custom" }
+      }
+
+      expect(booking_guest.reload.boat_in_at).to be_nil
+    end
+
+    it "builds the timestamp in the property's zone, not the signed-in user's" do
+      hotel.update!(allow_boat_information: true, time_zone: "Kuala Lumpur")
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
+      user.update!(time_zone: "Hawaii")
+      booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "Boat Guest", country: "Malaysia", document_type: "passport" },
+        booking_guest: { boat_in_time: "09:30" }
+      }
+
+      expect(booking_guest.reload.boat_in_at.in_time_zone(hotel.hotel_time_zone).strftime("%H:%M")).to eq("09:30")
+    end
+
+    it "still offers a retired slot to the guest already booked on it" do
+      hotel.update!(allow_boat_information: true)
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
+      retired = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "06:15")
+      booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true)
+      booking_guest.update!(boat_in_at: hotel.hotel_time_zone.parse("#{booking.check_in.to_date} 06:15"))
+      retired.archive!
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
+
       document = Nokogiri::HTML(response.body)
-      invalid_boat_field = document.css('[data-invalid="true"]').find { |field| field.text.include?("Boat-in and boat-out") }
-      expect(document.at_css("[data-guest-details-error-summary]").text).to include("Boat out at must be after boat in time")
-      expect(invalid_boat_field).to be_present
-      expect(invalid_boat_field.text).to include("must be after boat in time")
-      expect(document.at_css("input[name='booking_guest[boat_transfer_range]']")["value"])
-        .to eq("2026-08-02T10:00/2026-08-01T10:00")
-      expect(booking_guest.reload).to have_attributes(boat_in_at: nil, boat_out_at: nil)
+      options = document.css("select[name='booking_guest[boat_in_time]'] option").map { |option| option["value"] }
+      expect(options).to contain_exactly("", "06:15", "09:30")
+      expect(document.at_css("select[name='booking_guest[boat_in_time]'] option[selected]")["value"]).to eq("06:15")
     end
 
-    it "saves both boat times from one range field" do
+    it "clears a stored slot when the select is submitted empty" do
       hotel.update!(allow_boat_information: true)
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
       booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true)
+      booking_guest.update!(boat_in_at: hotel.hotel_time_zone.parse("#{booking.check_in.to_date} 09:30"))
 
       patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
         guest: { name: "Boat Guest", country: "Malaysia", document_type: "passport" },
-        booking_guest: { boat_transfer_range: "2026-08-01T09:30/2026-08-04T16:45" }
+        booking_guest: { boat_in_time: "" }
       }
 
-      expect(booking_guest.reload.boat_in_at.in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")).to eq("2026-08-01T09:30")
-      expect(booking_guest.boat_out_at.in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")).to eq("2026-08-04T16:45")
+      expect(booking_guest.reload.boat_in_at).to be_nil
     end
 
-    it "leaves stored boat times alone when the range field is not submitted" do
+    it "leaves stored boat times alone when the slot fields are not submitted" do
       hotel.update!(allow_boat_information: true)
       booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true)
       booking_guest.update!(boat_in_at: "2026-08-01T09:30", boat_out_at: "2026-08-04T16:45")
@@ -1455,7 +1498,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
         guest: { name: "No Boat Guest", country: "Malaysia", document_type: "passport" },
-        booking_guest: { boat_transfer_range: "2026-08-01T10:00/2026-08-02T10:00" }
+        booking_guest: { boat_in_time: "10:00", boat_out_time: "10:00" }
       }
 
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id))

@@ -33,7 +33,7 @@ module HotelPortal
         return [ "Type", "Guest Name", "Booking Ref", "Room Type", "Room Number", "Stay Dates", "Boat Time" ] if @tab == "bibo"
         return [ "Type", "Guest Name", "Booking Ref", "Pax", "Room Type", "Room Number", "Boat Time" ] if @tab == "meal_prep"
 
-        allow_boat = @report.respond_to?(:allow_boat_information) && @report.allow_boat_information && @tab != "checkout"
+        allow_boat = @report.respond_to?(:allow_boat_information) && @report.allow_boat_information
 
         if @tab == "arrivals"
           if allow_boat
@@ -75,7 +75,7 @@ module HotelPortal
       end
 
       def values_for_active_tab(row)
-        allow_boat = @report.respond_to?(:allow_boat_information) && @report.allow_boat_information && @tab != "checkout"
+        allow_boat = @report.respond_to?(:allow_boat_information) && @report.allow_boat_information
         tz = @report.respond_to?(:hotel_time_zone) ? @report.hotel_time_zone : Time.zone.name
 
         if @tab == "arrivals"

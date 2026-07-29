@@ -1,0 +1,85 @@
+<%# locals: (hotel:, slot:, kind:, new_record: false) %>
+<%# One slot card. The edit form and the retire form are siblings -- nesting
+    them would be invalid HTML -- and the buttons reach their own form through
+    the HTML form attribute, so both can sit in a single button group. %>
+<% form_id = new_record ? "boat-slot-new-#{kind}" : "boat-slot-#{slot.id}" %>
+<li class="rounded-lg border border-border p-3 <%= "opacity-60" if slot.archived? %>"
+    <%= "hidden" if new_record %>
+    data-controller="boat-slot"
+    data-boat-slots-target="<%= "card" if new_record %>"
+    data-action="input->boat-slot#markDirty change->boat-slot#markDirty">
+  <div class="flex flex-wrap items-center gap-3">
+    <%= form_with model: slot,
+                  id: form_id,
+                  url: new_record ? hotel_boat_schedule_slots_path(hotel) : hotel_boat_schedule_slot_path(hotel, slot),
+                  method: new_record ? :post : :patch,
+                  scope: :hotel_boat_schedule,
+                  local: true,
+                  class: "contents" do |f| %>
+      <%= f.hidden_field :kind, value: kind %>
+      <div class="w-32" data-boat-slots-target="<%= "time" if new_record %>">
+        <%= render PanelsUI::FormField.new(form: f, attribute: :time, label: "Time", label_hidden: true) do |field| %>
+          <% field.with_time_picker(value: slot.time_of_day.to_s, minute_step: 5, disabled: slot.archived?) %>
+        <% end %>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <% HotelBoatSchedule::MEALS.each do |meal| %>
+          <%= render PanelsUI::Checkbox.new(
+                form: f,
+                attribute: :"has_#{meal}",
+                label: meal.to_s.titleize,
+                checked: slot.public_send(:"has_#{meal}"),
+                disabled: slot.archived?) %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# Retire and restore each need their own method, so each gets its own
+        form. They carry no fields, only the button that submits them. %>
+    <% unless new_record %>
+      <%= form_with url: slot.archived? ? hotel_boat_schedule_slot_restore_path(hotel, slot) : hotel_boat_schedule_slot_path(hotel, slot),
+                    method: slot.archived? ? :patch : :delete,
+                    id: "#{form_id}-state",
+                    local: true,
+                    class: "hidden" do %><% end %>
+    <% end %>
+
+    <div class="ms-auto">
+      <%= render PanelsUI::ButtonGroup.new(aria: { label: "Slot actions" }) do %>
+        <% if new_record %>
+          <%= render PanelsUI::Button.new(
+                as: :button, type: :submit, form: form_id, variant: :primary, size: :icon_sm,
+                aria_label: "Add slot") do %>
+            <%= app_icon "check", class: "size-4", aria: { hidden: "true" } %>
+          <% end %>
+          <%= render PanelsUI::Button.new(
+                as: :button, type: :button, variant: :outline, size: :icon_sm,
+                aria_label: "Cancel new slot",
+                data: { action: "boat-slots#cancel" }) do %>
+            <%= app_icon "x", class: "size-4", aria: { hidden: "true" } %>
+          <% end %>
+        <% else %>
+          <span data-boat-slot-target="save" hidden>
+            <%= render PanelsUI::Button.new(
+                  as: :button, type: :submit, form: form_id, variant: :primary, size: :icon_sm,
+                  aria_label: "Save slot #{slot.time_of_day}") do %>
+              <%= app_icon "check", class: "size-4", aria: { hidden: "true" } %>
+            <% end %>
+          </span>
+          <%= render PanelsUI::Button.new(
+                as: :button, type: :submit, form: "#{form_id}-state",
+                variant: :outline, size: :icon_sm,
+                aria_label: slot.archived? ? "Restore slot #{slot.time_of_day}" : "Retire slot #{slot.time_of_day}",
+                data: slot.archived? ? {} : { turbo_confirm: "Retire this slot? Guests already booked on it keep it, but it stops being offered." }) do %>
+            <%= app_icon slot.archived? ? "rotate-ccw" : "archive", class: "size-4", aria: { hidden: "true" } %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <% if slot.archived? %>
+    <p class="mt-2 text-xs font-medium text-muted-foreground">Retired — kept so guests booked on it still resolve their meals.</p>
+  <% end %>
+</li>

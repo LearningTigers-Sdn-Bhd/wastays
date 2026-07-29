@@ -2,6 +2,9 @@
 
 module HotelPortal
   module Reports
+    # Meal counts are derived, never recorded: what a guest eats follows from the
+    # slot their boat is on. Each slot carries its own entitlements, set per
+    # property in Settings, so nothing here assumes a service time.
     class MealPrepReport
       Result = Struct.new(
         :start_date,
@@ -10,7 +13,36 @@ module HotelPortal
         :total_pax,
         :meal_type,
         keyword_init: true
-      )
+      ) do
+        # Every row already carries its full meal list, so narrowing to one meal
+        # tab is an in-memory filter. Re-running the query per tab used to make
+        # a single page load hit the database three times.
+        def for_meal(meal)
+          return self if meal.blank?
+
+          filtered = records
+            .select { |row| serves?(row, meal) }
+            .map { |row| row.merge(meal_type: meal.to_s.titleize) }
+
+          Result.new(
+            start_date: start_date,
+            end_date: end_date,
+            records: filtered,
+            total_pax: filtered.sum { |row| row[:pax] },
+            meal_type: meal
+          )
+        end
+
+        def pax_for(meal)
+          records.select { |row| serves?(row, meal) }.sum { |row| row[:pax] }
+        end
+
+        private
+
+        def serves?(row, meal)
+          row[:meals].any? { |served| served.casecmp?(meal.to_s) }
+        end
+      end
 
       def initialize(hotel:, start_date:, end_date:, meal_type: nil)
         @hotel = hotel
@@ -20,53 +52,41 @@ module HotelPortal
       end
 
       def call
-        raw_records = []
-
-        # Boat-ins
-        booking_guests_scope
-          .where(boat_in_at: @start_date.beginning_of_day..@end_date.end_of_day)
-          .each do |bg|
-            meals = meal_types_for(bg.boat_in_at, "Boat-in")
-            next if @meal_type && meals.none? { |m| m.casecmp?(@meal_type) }
-
-            display_meals = if @meal_type
-              meals.select { |m| m.casecmp?(@meal_type) }
-            else
-              meals
-            end
-
-            raw_records << format_row(bg, bg.boat_in_at, "Boat-in", display_meals.join(", "))
-          end
-
-        # Boat-outs
-        booking_guests_scope
-          .where(boat_out_at: @start_date.beginning_of_day..@end_date.end_of_day)
-          .each do |bg|
-            meals = meal_types_for(bg.boat_out_at, "Boat-out")
-            next if @meal_type && meals.none? { |m| m.casecmp?(@meal_type) }
-
-            display_meals = if @meal_type
-              meals.select { |m| m.casecmp?(@meal_type) }
-            else
-              meals
-            end
-
-            raw_records << format_row(bg, bg.boat_out_at, "Boat-out", display_meals.join(", "))
-          end
-
-        # Sort by boat time
-        raw_records.sort_by! { |r| r[:boat_time] }
-
-        Result.new(
-          start_date: @start_date,
-          end_date: @end_date,
-          records: raw_records,
-          total_pax: raw_records.sum { |r| r[:pax] },
-          meal_type: @meal_type
-        )
+        @meal_type ? full_result.for_meal(@meal_type) : full_result
       end
 
       private
+
+      def full_result
+        @full_result ||= begin
+          records = (rows_for(:boat_in_at, "Boat-in") + rows_for(:boat_out_at, "Boat-out"))
+            .sort_by { |row| row[:boat_time] }
+
+          Result.new(
+            start_date: @start_date,
+            end_date: @end_date,
+            records: records,
+            total_pax: records.sum { |row| row[:pax] },
+            meal_type: nil
+          )
+        end
+      end
+
+      def rows_for(column, transfer_type)
+        guests = booking_guests_scope.where(column => window)
+        one_per_booking(guests).map { |bg| build_row(bg, bg.public_send(column), transfer_type) }
+      end
+
+      def window
+        ::Boats::Schedule.day_range(hotel: @hotel, from: @start_date, to: @end_date)
+      end
+
+      # Pax counts the whole booking, so a booking must contribute one row per
+      # transfer. A second guest on the same booking carrying a boat time would
+      # otherwise count everyone twice.
+      def one_per_booking(guests)
+        guests.sort_by { |bg| bg.primary? ? 0 : 1 }.uniq(&:booking_id)
+      end
 
       def booking_guests_scope
         BookingGuest.joins(:booking)
@@ -74,60 +94,31 @@ module HotelPortal
                     .includes(booking: { booking_rooms: :room_type }, guest: {})
       end
 
-      def meal_types_for(time, transfer_type)
-        return [ "—" ] if time.nil?
-
-        hour = time.in_time_zone(@hotel.hotel_time_zone).hour
-        meals = []
-
-        if transfer_type == "Boat-in"
-          # Arrival Day Meals:
-          # Before 12:00 PM: Breakfast, Lunch, Dinner
-          # 12:00 PM - 4:59 PM: Lunch, Dinner
-          # 5:00 PM onwards: Dinner
-          if hour < 12
-            meals << "Breakfast"
-            meals << "Lunch"
-            meals << "Dinner"
-          elsif hour < 17
-            meals << "Lunch"
-            meals << "Dinner"
-          else
-            meals << "Dinner"
-          end
-        else # "Boat-out"
-          # Departure Day Meals:
-          # Before 12:00 PM: Breakfast
-          # 12:00 PM - 4:59 PM: Breakfast, Lunch
-          # 5:00 PM onwards: Breakfast, Lunch, Dinner
-          if hour < 12
-            meals << "Breakfast"
-          elsif hour < 17
-            meals << "Breakfast"
-            meals << "Lunch"
-          else
-            meals << "Breakfast"
-            meals << "Lunch"
-            meals << "Dinner"
-          end
-        end
-
-        meals
+      def schedule
+        @schedule ||= ::Boats::Schedule.new(@hotel)
       end
 
-      def format_row(bg, time, type, meal)
+      # Straight off the slot the guest is booked on -- archived slots resolve
+      # too, so retiring one never rewrites what was already served.
+      def meals_for(time, transfer_type)
+        kind = transfer_type == "Boat-in" ? "boat_in" : "boat_out"
+        schedule.meals_for(time, kind).map { |meal| meal.to_s.titleize }
+      end
+
+      def build_row(bg, time, transfer_type)
         booking = bg.booking
-        pax_count = booking.adults.to_i + booking.children.to_i
+        meals = meals_for(time, transfer_type)
         {
           guest_name: bg.name_snapshot || bg.guest.name,
           confirmation_token: booking.confirmation_token,
-          type: type,
-          pax: pax_count,
+          type: transfer_type,
+          pax: booking.adults.to_i + booking.children.to_i,
           room_type: booking.booking_rooms.map { |br| br.room_type&.name }.compact.uniq.join(", ").presence || "—",
           room_number: booking.booking_rooms.map(&:room_number).compact.join(", ").presence || "—",
           boat_time: time,
           formatted_boat_time: format_boat_time(time),
-          meal_type: meal,
+          meals: meals,
+          meal_type: meals.join(", "),
           total_amount: booking.total_amount,
           currency: booking.currency
         }
@@ -136,8 +127,7 @@ module HotelPortal
       def format_boat_time(value)
         return "—" if value.blank?
 
-        time_zone = @hotel.hotel_time_zone.presence || Time.zone.name
-        value.in_time_zone(time_zone).strftime("%I:%M %p")
+        value.in_time_zone(@hotel.hotel_time_zone).strftime("%I:%M %p")
       end
     end
   end
