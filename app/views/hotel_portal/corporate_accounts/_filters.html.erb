@@ -5,19 +5,19 @@
   <%= form.hidden_field :account_type, value: presenter.selected_account_type if presenter.selected_account_type.present? %>
 
   <div class="flex items-center gap-3">
-    <%# Input and SelectMenu share the :sm size scale so the two controls line up. %>
+    <%# Input, SelectMenu, and Button share the :md size scale so the row lines up. %>
     <div class="relative min-w-0 flex-1">
-      <div class="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-2.5">
+      <div class="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3">
         <%= cached_icon "search", stroke_width: 2, class: "size-4 text-muted-foreground" %>
       </div>
       <%= render PanelsUI::Input.new(
         form: form,
         attribute: :query,
         type: :search,
-        size: :sm,
+        size: :md,
         value: presenter.query,
         placeholder: "Search name, email, code, or phone...",
-        class: "pl-8",
+        class: "pl-9",
         aria: { label: "Search external accounts" },
         data: { action: "input->auto-submit#submit" }) %>
     </div>
@@ -26,7 +26,7 @@
       <%= render PanelsUI::SelectMenu.new(
         form: form,
         attribute: :status,
-        size: :sm,
+        size: :md,
         include_blank: true,
         prompt: "All statuses",
         selected: presenter.selected_status,
@@ -39,7 +39,7 @@
       as: :a,
       href: new_hotel_corporate_account_path(current_hotel),
       variant: :primary,
-      size: :sm,
+      size: :md,
       aria_label: "Invite an external account",
       class: "shrink-0",
       data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }) do %>
