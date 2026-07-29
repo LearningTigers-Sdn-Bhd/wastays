@@ -16,9 +16,15 @@ module ArInvoices
       :warning_message,
       :limit_warning_state,
       :limit_warning_message,
-      :non_comparable_currencies,
+      :non_comparable_totals,
       keyword_init: true
     ) do
+      # Currency codes whose open balance cannot be compared with the credit limit.
+      # Derived from the totals so callers can report the hidden amount, not just the code.
+      def non_comparable_currencies
+        non_comparable_totals.keys.sort
+      end
+
       def warning?
         warning_state != "none"
       end
@@ -32,7 +38,7 @@ module ArInvoices
       end
 
       def currency_mismatch?
-        non_comparable_currencies.any?
+        non_comparable_totals.any?
       end
 
       def requires_override?
@@ -48,10 +54,36 @@ module ArInvoices
       ).call
     end
 
-    def initialize(hotel_corporate_account:, pending_amount: 0, pending_currency: nil)
+    # Batched equivalent of .call for a collection of relationships: one grouped query
+    # for every account instead of one per account. Returns { relationship => Result }.
+    def self.for_relationships(relationships)
+      relationships = Array(relationships)
+      return {} if relationships.empty?
+
+      outstanding = Receivable
+        .with_open_balance
+        .where(hotel_corporate_account_id: relationships.map(&:id))
+        .group(:hotel_corporate_account_id, :currency)
+        .sum(:outstanding_amount)
+        .each_with_object({}) do |((account_id, currency), amount), memo|
+          next if currency.blank?
+
+          (memo[account_id] ||= {})[currency] = amount.to_d
+        end
+
+      relationships.index_with do |relationship|
+        new(
+          hotel_corporate_account: relationship,
+          outstanding_by_currency: outstanding[relationship.id] || {}
+        ).call
+      end
+    end
+
+    def initialize(hotel_corporate_account:, pending_amount: 0, pending_currency: nil, outstanding_by_currency: nil)
       @hotel_corporate_account = hotel_corporate_account
       @pending_amount = pending_amount.to_d
       @pending_currency = pending_currency.presence
+      @outstanding_by_currency = outstanding_by_currency
     end
 
     def call
@@ -67,18 +99,28 @@ module ArInvoices
         warning_message: warning_message,
         limit_warning_state: limit_warning_state,
         limit_warning_message: warning_message_for(limit_warning_state),
-        non_comparable_currencies: non_comparable_currencies
+        non_comparable_totals: non_comparable_totals
       )
     end
 
     private
 
-    def current_outstanding
-      @current_outstanding ||= @hotel_corporate_account.receivables
+    # Every open balance for this account keyed by currency. Injected by .for_relationships;
+    # otherwise resolved with a single grouped query.
+    def outstanding_by_currency
+      @outstanding_by_currency ||= @hotel_corporate_account.receivables
         .with_open_balance
-        .where(currency: credit_currency)
+        .group(:currency)
         .sum(:outstanding_amount)
-        .to_d
+        .each_with_object({}) do |(currency, amount), memo|
+          next if currency.blank?
+
+          memo[currency] = amount.to_d
+        end
+    end
+
+    def current_outstanding
+      @current_outstanding ||= outstanding_by_currency.fetch(credit_currency, 0.to_d)
     end
 
     def projected_exposure
@@ -99,16 +141,22 @@ module ArInvoices
       0.to_d
     end
 
-    def non_comparable_currencies
-      @non_comparable_currencies ||= begin
-        currencies = @hotel_corporate_account.receivables
-          .with_open_balance
-          .where.not(currency: credit_currency)
-          .distinct
-          .pluck(:currency)
-        currencies << @pending_currency if @pending_amount.positive? && @pending_currency.present? && @pending_currency != credit_currency
-        currencies.compact_blank.uniq.sort
+    # Open balances the credit limit cannot be checked against, with their amounts retained
+    # so the UI can state what was left out of the comparable exposure figure.
+    def non_comparable_totals
+      @non_comparable_totals ||= begin
+        totals = outstanding_by_currency.except(credit_currency)
+
+        if @pending_amount.positive? && @pending_currency.present? && @pending_currency != credit_currency
+          totals = totals.merge(@pending_currency => totals.fetch(@pending_currency, 0.to_d) + @pending_amount)
+        end
+
+        totals
       end
+    end
+
+    def non_comparable_currencies
+      non_comparable_totals.keys.sort
     end
 
     def usage_percentage

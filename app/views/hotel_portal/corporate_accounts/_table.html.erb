@@ -1,70 +1,82 @@
-<%= turbo_frame_tag "corporate_accounts_results" do %>
-  <% if presenter.paginated_rows.any? %>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm">
-        <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
-          <tr>
-            <th class="px-6 py-3">Account</th>
-            <th class="px-6 py-3">Contact</th>
-            <th class="px-6 py-3">Terms</th>
-            <th class="px-6 py-3">Credit</th>
-            <th class="px-6 py-3">Status</th>
-            <th class="px-6 py-3">Created</th>
-            <th class="px-6 py-3 text-right">Action</th>
+<div class="overflow-hidden rounded-md border border-border bg-card">
+  <% if presenter.any_rows? %>
+    <%= render PanelsUI::Table.new(caption: "External accounts", hoverable: true, bordered: false) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Account</th>
+          <th scope="col">Code</th>
+          <th scope="col">Type</th>
+          <th scope="col">Terms</th>
+          <th scope="col">Credit</th>
+          <th scope="col">Status</th>
+          <th scope="col">Created</th>
+          <th scope="col" class="text-right"><span class="sr-only">Action</span></th>
+        </tr>
+      <% end %>
+
+      <% table.with_body do %>
+        <%# Invitations are pinned above the paginated body: they are few, urgent, and
+            must not be able to hide on page three. %>
+        <% presenter.pinned_rows.each do |row| %>
+          <tr data-testid="<%= row.dom_id %>">
+            <%= render "hotel_portal/corporate_accounts/row_identity", row: row %>
+            <td class="text-muted-foreground">—</td>
+            <td class="text-muted-foreground"><%= row.account_type_label %></td>
+            <td class="text-muted-foreground"><%= row.terms_label %></td>
+            <td class="text-muted-foreground">
+              <% if row.proposed_credit_limit.present? %>
+                <div class="text-sm tabular-nums"><%= row.proposed_credit_currency %> <%= format_amount(row.proposed_credit_limit) %></div>
+                <div class="mt-0.5 text-xs">Proposed limit</div>
+              <% else %>
+                <div class="text-sm">No limit set</div>
+              <% end %>
+            </td>
+            <td>
+              <%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, indicator: true) %>
+              <div class="mt-1 text-xs text-muted-foreground"><%= row.expiry_label %></div>
+            </td>
+            <td class="text-muted-foreground"><%= row.created_on_label %></td>
+            <td class="text-right"><%= render "hotel_portal/corporate_accounts/invitation_actions", row: row, presenter: presenter %></td>
           </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-          <% presenter.paginated_rows.each do |row| %>
-            <% relationship = row.relationship %>
-            <% credit_exposure = row.credit_exposure %>
-            <tr>
-              <td class="px-6 py-4">
-                <div class="font-bold text-slate-950"><%= row.account_name %></div>
-                <div class="mt-0.5 text-xs text-slate-500">
-                  <%= row.account_type_label %>
-                  <% if row.agent_code.present? %>
-                    · Code <span class="font-mono font-semibold text-slate-700"><%= row.agent_code %></span>
-                  <% end %>
-                </div>
-              </td>
-              <td class="px-6 py-4 text-slate-600">
-                <div><%= row.contact_email %></div>
-                <% if row.contact_phone.present? %>
-                  <div class="mt-0.5 text-xs text-slate-500"><%= row.contact_phone %></div>
-                <% end %>
-              </td>
-              <td class="px-6 py-4 text-slate-600"><%= row.terms_label %></td>
-              <td class="px-6 py-4 text-slate-600">
-                <div class="font-semibold tabular-nums <%= credit_exposure.over_limit? ? "text-red-600" : "text-slate-900" %>"><%= credit_exposure.credit_currency %> <%= format_number(credit_exposure.projected_exposure, precision: 2) %></div>
-                <% if credit_exposure.warning_state == "no_limit" %>
-                  <div class="mt-1 text-xs text-slate-500">No limit set</div>
-                <% elsif credit_exposure.near_limit? %>
-                  <div class="mt-1 max-w-xs rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800"><%= credit_exposure.warning_message %></div>
-                <% elsif credit_exposure.credit_limit.present? %>
-                  <div class="mt-1 text-xs text-slate-500">Limit <%= credit_exposure.credit_currency %> <%= format_number(credit_exposure.credit_limit, precision: 2) %></div>
-                <% elsif !credit_exposure.over_limit? %>
-                  <div class="mt-1 text-xs text-slate-500">No outstanding AR balance</div>
-                <% end %>
-              </td>
-              <td class="px-6 py-4"><%= row.status_label %></td>
-              <td class="px-6 py-4 text-slate-600"><%= row.created_on_label %></td>
-              <td class="px-6 py-4 text-right">
-                <%= link_to "Edit", edit_hotel_corporate_account_path(current_hotel, relationship),
-                  class: "inline-block rounded-lg border border-slate-200 px-3 py-2 font-bold text-slate-700",
-                  data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" } %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% end %>
+
+        <% if presenter.pinned_rows.any? && presenter.paginated_rows.any? %>
+          <tr aria-hidden="true">
+            <td colspan="8" class="!p-0"><div class="h-px bg-border"></div></td>
+          </tr>
+        <% end %>
+
+        <% presenter.paginated_rows.each do |row| %>
+          <tr data-testid="<%= row.dom_id %>">
+            <%= render "hotel_portal/corporate_accounts/row_identity", row: row %>
+            <td class="font-mono text-xs font-semibold text-foreground"><%= row.agent_code.presence || "—" %></td>
+            <td class="text-muted-foreground"><%= row.account_type_label %></td>
+            <td class="text-muted-foreground"><%= row.terms_label %></td>
+            <td><%= render "hotel_portal/corporate_accounts/credit_cell", exposure: row.credit_exposure %></td>
+            <td><%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, indicator: true) %></td>
+            <td class="text-muted-foreground"><%= row.created_on_label %></td>
+            <td class="text-right">
+              <%= render PanelsUI::Button.new(
+                as: :a,
+                href: edit_hotel_corporate_account_path(current_hotel, row.relationship, return_to: request.fullpath),
+                variant: :secondary,
+                size: :sm,
+                data: { testid: "external-account-edit-#{row.id}", turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>
+                <%= cached_icon "square-pen", class: "size-3.5", aria: { hidden: true } %>
+                Edit
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
 
     <% if presenter.pagination.total_pages > 1 %>
-      <div class="border-t border-slate-100 px-6 py-4"><%= paginate presenter.pagination %></div>
+      <div class="border-t border-border px-4 py-3">
+        <%= paginate presenter.pagination, data: { turbo_action: "advance" } %>
+      </div>
     <% end %>
   <% else %>
-    <p class="px-6 py-10 text-center text-sm text-slate-500">
-      <%= presenter.filters_active? ? "No corporate accounts match your search." : "No corporate accounts are linked yet." %>
-    </p>
+    <%= render "hotel_portal/corporate_accounts/empty_state", presenter: presenter %>
   <% end %>
-<% end %>
+</div>

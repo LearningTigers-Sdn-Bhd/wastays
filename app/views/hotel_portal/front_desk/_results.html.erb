@@ -1,0 +1,57 @@
+<%#
+  One results shell for every tab and both views.
+
+  The stay card is the canonical record: the rooms view shows it at all
+  breakpoints, and the list view shows a table only where there is room for
+  one (lg and up), falling back to the same card below that. Before this the
+  list view carried a third, hand-maintained mobile markup path that had
+  already drifted from both the table and the card.
+%>
+<% empty_message = {
+     "bookings" => "No bookings match these filters.",
+     "arrivals" => "No arrivals scheduled for the selected dates.",
+     "in_house" => "No guests are currently checked in.",
+     "departures" => "No departures due for the selected dates.",
+     "checkout" => "No guests checked out on the selected dates."
+   }.fetch(@tab) %>
+<% filtered = @query.present? || (@tab == "bookings" && (@booking_status.present? || @start_date.present? || @end_date.present?)) %>
+<section aria-label="Reservation view" class="space-y-3">
+  <% if @bookings.any? %>
+    <%# Partial names are spelled out rather than interpolated from @tab: the
+        render path then never derives from params, and the pairing stays
+        greppable from the partial's own file. %>
+    <% if @view == "list" %>
+      <div class="hidden overflow-hidden rounded-lg border border-border bg-card lg:block">
+        <% if @tab == "bookings" %><%= render "bookings_table" %>
+        <% elsif @tab == "arrivals" %><%= render "arrivals_table" %>
+        <% elsif @tab == "in_house" %><%= render "in_house_table" %>
+        <% elsif @tab == "departures" %><%= render "departures_table" %>
+        <% elsif @tab == "checkout" %><%= render "checkout_table" %>
+        <% end %>
+      </div>
+    <% end %>
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4<%= " lg:hidden" if @view == "list" %>">
+      <% @bookings.each do |booking| %>
+        <% if @tab == "bookings" %><%= render "bookings_card", booking: %>
+        <% elsif @tab == "arrivals" %><%= render "arrivals_card", booking: %>
+        <% elsif @tab == "in_house" %><%= render "in_house_card", booking: %>
+        <% elsif @tab == "departures" %><%= render "departures_card", booking: %>
+        <% elsif @tab == "checkout" %><%= render "checkout_card", booking: %>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="px-4 py-10 text-center">
+      <p class="text-sm text-muted-foreground"><%= empty_message %></p>
+      <% if filtered %>
+        <%= link_to "Reset filters",
+                    hotel_front_desk_path(current_hotel, tab: @tab, view: @view),
+                    class: "mt-3 inline-flex min-h-9 items-center rounded-lg border border-border-interactive px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted",
+                    aria: { label: @tab == "bookings" ? "Reset booking filters" : "Reset #{@tab.humanize.downcase} filters" } %>
+      <% end %>
+    </div>
+  <% end %>
+  <% if @bookings.total_pages > 1 %>
+    <div class="flex justify-center pt-3"><%= paginate @bookings, param_name: @page_param %></div>
+  <% end %>
+</section>

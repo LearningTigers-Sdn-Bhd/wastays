@@ -20,6 +20,7 @@ class Invitation < ApplicationRecord
 
   scope :unaccepted, -> { where(accepted_at: nil) }
   scope :pending, -> { unaccepted.where("expires_at > ?", Time.current) }
+  scope :expired, -> { unaccepted.where("expires_at <= ?", Time.current) }
 
   def self.digest(token)
     Digest::SHA256.hexdigest(token.to_s)

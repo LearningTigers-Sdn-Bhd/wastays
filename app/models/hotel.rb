@@ -727,7 +727,17 @@ class Hotel < ApplicationRecord
   def reset_pax_pricing_only_if_not_allowed
     unless allow_pax_pricing?
       self.pax_pricing_only = false
-      rate_plans.where(sell_mode: "per_person").update_all(sell_mode: "per_room") if persisted?
+
+      if persisted?
+        affected_ids = rate_plans.where(sell_mode: "per_person").pluck(:id)
+        if affected_ids.any?
+          rate_plans.where(id: affected_ids).update_all(sell_mode: "per_room")
+          Rails.logger.warn(
+            "[Hotel##{id}] allow_pax_pricing disabled: force-flipped #{affected_ids.size} rate plan(s) " \
+            "from per_person to per_room (rate_plan_ids=#{affected_ids})"
+          )
+        end
+      end
     end
   end
 

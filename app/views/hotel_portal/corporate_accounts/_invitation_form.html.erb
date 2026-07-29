@@ -1,0 +1,56 @@
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+    id: "external-account-sheet",
+    side: :right,
+    size: :lg,
+    title: "Invite external account",
+    description: "The recipient chooses their account name when accepting.",
+    body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with scope: :corporate_invitation,
+        url: hotel_corporate_accounts_path(current_hotel),
+        class: "flex h-full min-h-0 flex-col" do |form| %>
+        <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+
+        <div class="min-h-0 flex-1 divide-y divide-border overflow-y-auto p-4 [&>*]:py-5 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+          <% if @corporate_invitation.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "This invitation could not be sent") do |alert| %>
+              <% alert.with_description do %><%= @corporate_invitation.errors.full_messages.to_sentence %><% end %>
+            <% end %>
+          <% end %>
+
+          <section class="space-y-4">
+            <h3 class="text-sm font-semibold text-foreground">Account contact</h3>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :email, label: "Corporate contact email",
+              hint: "Invitations are tied to this address, not a hotel-entered company name.") do |field| %>
+              <% field.with_input(type: :email, value: @corporate_invitation.email, required: true, autocomplete: "email",
+                placeholder: "billing@company.com") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :account_type, label: "Account type") do |field| %>
+              <% field.with_select_menu(
+                HotelCorporateAccount::ACCOUNT_TYPES.map { |type| { label: type.humanize, value: type } },
+                selected: @corporate_invitation.account_type) %>
+            <% end %>
+          </section>
+
+          <%= render "hotel_portal/corporate_accounts/billing_terms_fields",
+            form: form,
+            relationship_type: @corporate_invitation.relationship_type,
+            credit_currency: @corporate_invitation.credit_currency,
+            credit_limit: @corporate_invitation.credit_limit,
+            payment_terms_days: @corporate_invitation.payment_terms_days,
+            hint: "These proposed terms become the relationship when the invitation is accepted." %>
+        </div>
+
+        <div class="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-muted/50 px-4 py-3">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost,
+            data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary,
+            data: { turbo_submits_with: "Sending…" }) do %>Send invitation<% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

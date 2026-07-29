@@ -10,13 +10,13 @@
   <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-4">
     <div class="p-6 md:border-r md:border-border md:p-8">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Total Money Collected <span class="text-[10px] font-medium text-muted-foreground">(This Month)</span></p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">RM <%= number_with_delimiter(number_with_precision(@revenue_this_month, precision: 2)) %></h2>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">RM <%= number_with_delimiter(number_with_precision(@revenue_this_month, precision: 2, delimiter: ",")) %></h2>
       <p class="mt-2 text-sm font-medium text-muted-foreground">Gross value of all bookings</p>
     </div>
 
     <div class="bg-muted/30 p-6 md:border-r md:border-border md:p-8">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Platform Earnings <span class="text-[10px] font-medium text-muted-foreground">(This Month)</span></p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">RM <%= number_with_delimiter(number_with_precision(@margin_this_month, precision: 2)) %></h2>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">RM <%= number_with_delimiter(number_with_precision(@margin_this_month, precision: 2, delimiter: ",")) %></h2>
       <p class="mt-2 text-sm font-medium text-muted-foreground">Net profit from commissions</p>
     </div>
 
@@ -136,7 +136,7 @@
                   <p class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Reference</p>
                   <p class="mt-1 inline-flex rounded-lg border border-border bg-card px-2.5 py-1 font-mono text-sm font-semibold text-foreground">#<%= booking.confirmation_token %></p>
                 </div>
-                <p class="text-base font-semibold tabular-nums text-foreground">RM <%= number_with_precision(booking.total_amount, precision: 2) %></p>
+                <p class="text-base font-semibold tabular-nums text-foreground">RM <%= number_with_precision(booking.total_amount, precision: 2, delimiter: ",") %></p>
               </div>
 
               <dl class="mt-4 space-y-3 text-sm">
@@ -217,7 +217,7 @@
                   </div>
                 </td>
                 <td class="whitespace-nowrap px-8 py-4 text-right">
-                  <span class="text-base font-semibold tabular-nums text-foreground">RM <%= number_with_precision(booking.total_amount, precision: 2) %></span>
+                  <span class="text-base font-semibold tabular-nums text-foreground">RM <%= number_with_precision(booking.total_amount, precision: 2, delimiter: ",") %></span>
                 </td>
                 <td class="px-8 py-4 text-center">
                   <%= link_to admin_booking_path(booking), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition-all group-hover:border-border-interactive hover:bg-primary-hover hover:text-primary-foreground" do %>

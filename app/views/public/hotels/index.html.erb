@@ -175,7 +175,7 @@
                               <% presenter = Public::RoomTypePresenter.new(lowest_room, hotel, @availability_service, self) %>
                               <%= presenter.display_pax_rate(@display_currency) %>
                             <% else %>
-                              RM <%= number_with_precision(@availability_service.calculate_total_price(lowest_room), precision: 2) %>
+                              RM <%= number_with_precision(@availability_service.calculate_total_price(lowest_room), precision: 2, delimiter: ",") %>
                             <% end %>
                           </p>
                           <p class="text-[10px] text-muted-foreground italic">

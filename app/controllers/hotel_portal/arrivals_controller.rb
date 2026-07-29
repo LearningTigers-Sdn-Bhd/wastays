@@ -6,6 +6,6 @@ class HotelPortal::ArrivalsController < HotelPortal::BaseController
   private
 
   def arrivals_params
-    { tab: "arrivals", view: "list", arrival_date: params[:date], arrival_q: params[:q], arrival_page: params[:page] }.compact
+    { tab: "arrivals", view: legacy_view, arrival_date: params[:date], arrival_q: params[:q], arrival_page: params[:page] }.compact
   end
 end

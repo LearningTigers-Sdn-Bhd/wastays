@@ -1,0 +1,94 @@
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+    id: "external-account-sheet",
+    side: :right,
+    size: :lg,
+    title: @relationship.corporate_account.name,
+    description: "Code #{@relationship.agent_code} · this hotel's billing relationship with the account.",
+    body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with model: @relationship,
+        url: hotel_corporate_account_path(current_hotel, @relationship),
+        method: :patch,
+        class: "flex h-full min-h-0 flex-col" do |form| %>
+        <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+
+        <div class="min-h-0 flex-1 divide-y divide-border overflow-y-auto p-4 [&>*]:py-5 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+          <% if @relationship.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "This account could not be saved") do |alert| %>
+              <% alert.with_description do %><%= @relationship.errors.full_messages.to_sentence %><% end %>
+            <% end %>
+          <% end %>
+
+          <section class="space-y-4">
+            <h3 class="text-sm font-semibold text-foreground">Account contact</h3>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :account_type, label: "Account type") do |field| %>
+              <% field.with_select_menu(
+                HotelCorporateAccount::ACCOUNT_TYPES.map { |type| { label: type.humanize, value: type } },
+                selected: @relationship.account_type) %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :contact_email, label: "Contact email") do |field| %>
+              <% field.with_input(type: :email, autocomplete: "email") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :contact_phone, label: "Contact phone") do |field| %>
+              <% field.with_input(type: :tel, autocomplete: "tel") %>
+            <% end %>
+          </section>
+
+          <%= render "hotel_portal/corporate_accounts/billing_terms_fields",
+            form: form,
+            relationship_type: @relationship.relationship_type,
+            credit_currency: @relationship.credit_currency,
+            credit_limit: @relationship.credit_limit,
+            payment_terms_days: @relationship.payment_terms_days,
+            hint: "These terms govern invoicing and credit exposure for this account at this hotel." %>
+
+          <%= render PanelsUI::Switch.new(
+            form: form,
+            attribute: :auto_allocate_payments,
+            label: "Auto-allocate payments",
+            description: "Applies unallocated payments to this account's oldest outstanding invoices first (FIFO) instead of leaving them for manual allocation.") %>
+        </div>
+
+        <div class="flex shrink-0 items-center justify-between gap-2 border-t border-border bg-muted/50 px-4 py-3">
+          <%# Suspend/reactivate post outside this form, so they are links carrying
+              data-turbo-method rather than nested submit buttons. %>
+          <% if @relationship.active? %>
+            <%= render PanelsUI::Button.new(
+              as: :a,
+              href: suspend_hotel_corporate_account_path(current_hotel, @relationship, return_to: @return_to),
+              variant: :destructive,
+              size: :sm,
+              data: {
+                testid: "external-account-suspend-#{@relationship.id}",
+                turbo_method: :patch,
+                turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME,
+                turbo_confirm: "Suspend #{@relationship.corporate_account.name}? Direct bill invoicing pauses until reactivated."
+              }) do %>Suspend account<% end %>
+          <% else %>
+            <%= render PanelsUI::Button.new(
+              as: :a,
+              href: reactivate_hotel_corporate_account_path(current_hotel, @relationship, return_to: @return_to),
+              variant: :success,
+              size: :sm,
+              data: {
+                testid: "external-account-reactivate-#{@relationship.id}",
+                turbo_method: :patch,
+                turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME
+              }) do %>Reactivate account<% end %>
+          <% end %>
+
+          <div class="flex items-center gap-2">
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost,
+              data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary,
+              data: { turbo_submits_with: "Saving…" }) do %>Save changes<% end %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

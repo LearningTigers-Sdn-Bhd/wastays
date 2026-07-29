@@ -28,7 +28,7 @@ RSpec.describe "Hotel AR statements", type: :system, js: true do
   it "opens an account statement and auto-submits the currency selector" do
     visit hotel_ar_statements_path(hotel)
     within("[data-testid='ar-statement-row-#{relationship.id}']") do
-      click_link "View Statement"
+      click_link "View"
     end
 
     expect(page).to have_content("MYR 100.00")

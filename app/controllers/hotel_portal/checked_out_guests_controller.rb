@@ -6,6 +6,6 @@ class HotelPortal::CheckedOutGuestsController < HotelPortal::BaseController
   private
 
   def checkout_params
-    { tab: "checkout", view: "list", checkout_query: params[:query], checkout_page: params[:page] }.compact
+    { tab: "checkout", view: legacy_view, checkout_query: params[:query], checkout_page: params[:page] }.compact
   end
 end

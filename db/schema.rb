@@ -247,6 +247,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_29_100000) do
     t.bigint "user_id"
     t.index ["auditable_type", "auditable_id", "occurred_at"], name: "idx_booking_audit_logs_on_auditable_time"
     t.index ["auditable_type", "auditable_id"], name: "index_booking_audit_logs_on_auditable"
+    t.index ["category", "occurred_at"], name: "idx_booking_audit_logs_on_category_time"
     t.index ["hotel_id", "category", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_category_time"
     t.index ["hotel_id", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_time"
     t.index ["hotel_id"], name: "index_booking_audit_logs_on_hotel_id"

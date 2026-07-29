@@ -150,6 +150,15 @@ module ApplicationHelper
     end
   end
 
+  # Money for display: keeps cents only when there are any, so a round credit limit
+  # reads "1,000,000" instead of "1,000,000.00".
+  def format_amount(number)
+    return "" if number.blank?
+
+    amount = number.to_d
+    format_number(amount, precision: amount.frac.zero? ? 0 : 2)
+  end
+
   def status_badge_classes(tone, active: false)
     return "border-white/20 bg-white/15 text-white" if active
 
@@ -248,6 +257,7 @@ module ApplicationHelper
     return [] unless rate_plan
 
     child_multiplier = rate_plan.child_price_multiplier || 1.to_d
+    child_age_bands = occ["child_age_bands"] || occ[:child_age_bands] || []
 
     # Sum up for the stay
     dates = item.nightly_rate_snapshot.keys.map { |d| Date.parse(d) }
@@ -264,7 +274,11 @@ module ApplicationHelper
       base_price = room_rate&.price || item.room_type.base_price || 0.to_d
 
       total_adults_cost += adults * base_price
-      total_children_cost += children * base_price * child_multiplier
+      total_children_cost += if child_age_bands.any?
+        child_age_bands.sum { |band| age_band_child_price(band, base_price) }
+      else
+        children * base_price * child_multiplier
+      end
 
       if total_pax == 1
         supplement = room_rate&.single_supplement || rate_plan.single_supplement || 0.to_d
@@ -292,9 +306,14 @@ module ApplicationHelper
       avg_child_rate = (total_children_cost / (children * nights_count)).round(2)
       formatted_rate = display_amount(avg_child_rate, quote_currency: quote_curr, display_currency: display_currency, hotel: hotel)
       formatted_total = display_amount(total_children_cost * quantity, quote_currency: quote_curr, display_currency: display_currency, hotel: hotel)
+      child_detail = if child_age_bands.any?
+        "#{nights_count} night(s) @ #{formatted_rate} (age-banded pricing)"
+      else
+        "#{nights_count} night(s) @ #{formatted_rate} (#{(child_multiplier * 100).to_i}%)"
+      end
       lines << {
         label: "#{children * quantity} Child(ren)",
-        detail: "#{nights_count} night(s) @ #{formatted_rate} (#{(child_multiplier * 100).to_i}%)",
+        detail: child_detail,
         amount: formatted_total
       }
     end
@@ -310,4 +329,14 @@ module ApplicationHelper
 
     lines
   end
+
+  # Mirrors RatePlanAgeBand#price_for, but reads the frozen per-child snapshot
+  # taken at quote time instead of the (possibly since-edited) age band record.
+  def age_band_child_price(band, base_price)
+    price_value = (band["price_value"] || band[:price_value]).to_d
+    pricing_mode = band["pricing_mode"] || band[:pricing_mode]
+
+    pricing_mode == "amount" ? price_value : base_price.to_d * (price_value / 100.to_d)
+  end
+  private :age_band_child_price
 end

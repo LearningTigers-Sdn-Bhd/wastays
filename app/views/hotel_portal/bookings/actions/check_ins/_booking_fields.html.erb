@@ -108,7 +108,7 @@
           <h3 id="tourism-tax-heading-<%= booking.id %>" class="text-base font-semibold">Tourism tax</h3>
           <p class="mt-1 text-sm text-muted-foreground">Record whether the mandatory tourism tax has been collected.</p>
         </div>
-        <p class="shrink-0 text-sm font-semibold text-foreground"><%= currency %> <%= number_with_precision(booking.tourism_tax_total, precision: 2) %></p>
+        <p class="shrink-0 text-sm font-semibold text-foreground"><%= currency %> <%= number_with_precision(booking.tourism_tax_total, precision: 2, delimiter: ",") %></p>
       </div>
       <%= render PanelsUI::Switch.new(
             form:,

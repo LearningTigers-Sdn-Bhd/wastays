@@ -1,0 +1,32 @@
+<%= render PanelsUI::Table.new(caption: "Departures", header_style: :sentence, hoverable: true, bordered: true) do |table| %>
+  <% table.with_header do %>
+    <tr>
+      <th scope="col">Guest / Reference</th>
+      <th scope="col">Contact</th>
+      <th scope="col">Stay dates</th>
+      <th scope="col">Status</th>
+      <th scope="col">Rooms</th>
+      <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+    </tr>
+  <% end %>
+  <% table.with_body do %>
+    <% @bookings.each do |booking| %>
+      <% presenter = HotelPortal::BookingPresenter.new(booking, current_hotel) %>
+      <% rooms_summary = booking.booking_rooms.group_by { |room| room.room_type_snapshot["name"].presence || room.room_type.name }.map { |name, rooms| "#{rooms.size}x #{name}" }.join(", ").presence || "No rooms assigned" %>
+      <tr class="align-top <%= "bg-muted" if presenter.blacklisted? %>" data-booking-token="<%= booking.confirmation_token %>">
+        <th scope="row">
+          <div class="flex items-center gap-1.5">
+            <span class="font-semibold text-foreground"><%= booking.guest_name %></span>
+            <%= render "guest_markers", presenter:, labelled: true %>
+          </div>
+          <span class="font-mono text-xs font-normal text-muted-foreground"><%= booking.confirmation_token %></span>
+        </th>
+        <td><%= booking.guest_email %><br><span class="text-xs text-muted-foreground"><%= booking.guest_phone %></span></td>
+        <td><%= booking.check_in.strftime("%d %b %Y") %> to <%= booking.check_out.strftime("%d %b %Y") %></td>
+        <td><span class="inline-flex rounded-md border px-2 py-1 text-xs font-medium <%= presenter.status_variant_class %>"><%= presenter.status_label_humanized %></span></td>
+        <td><%= rooms_summary %></td>
+        <td class="whitespace-nowrap text-right"><%= render "record_actions", booking:, tab: "departures", split: true %></td>
+      </tr>
+    <% end %>
+  <% end %>
+<% end %>

@@ -47,7 +47,7 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
   def legacy_index_params
     {
       tab: "bookings",
-      view: "list",
+      view: legacy_view,
       booking_query: params[:query],
       booking_status: params[:status],
       booking_check_in_date: params[:check_in_date],

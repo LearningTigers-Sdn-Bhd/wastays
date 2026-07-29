@@ -1,0 +1,52 @@
+<%# An expired invitation can only be revived, so it gets a single button; a live one
+    has two and gets a ButtonGroup. These are links carrying data-turbo-method rather
+    than button_to: button_to wraps each action in its own <form>, which would sit
+    between the group and its buttons and break the joined-border selectors. %>
+<% filters = presenter.filter_params %>
+
+<% if row.expired? %>
+  <%= render PanelsUI::Button.new(
+    as: :a,
+    href: resend_hotel_corporate_invitation_path(current_hotel, row.invitation, **filters),
+    variant: :secondary,
+    size: :sm,
+    data: {
+      testid: "external-invitation-resend-#{row.id}",
+      turbo_method: :post,
+      turbo_frame: "corporate_accounts_results"
+    }) do %>
+    <%= cached_icon "send", class: "size-3.5", aria: { hidden: true } %>
+    Resend
+  <% end %>
+<% else %>
+  <%= render PanelsUI::ButtonGroup.new(class: "ml-auto", data: { testid: "external-invitation-actions-#{row.id}" }) do %>
+    <%= render PanelsUI::Button.new(
+      as: :a,
+      href: resend_hotel_corporate_invitation_path(current_hotel, row.invitation, **filters),
+      variant: :secondary,
+      size: :sm,
+      data: {
+        testid: "external-invitation-resend-#{row.id}",
+        turbo_method: :post,
+        turbo_frame: "corporate_accounts_results"
+      }) do %>
+      <%= cached_icon "send", class: "size-3.5", aria: { hidden: true } %>
+      Resend
+    <% end %>
+
+    <%= render PanelsUI::Button.new(
+      as: :a,
+      href: hotel_corporate_invitation_path(current_hotel, row.invitation, **filters),
+      variant: :destructive,
+      size: :sm,
+      data: {
+        testid: "external-invitation-revoke-#{row.id}",
+        turbo_method: :delete,
+        turbo_frame: "corporate_accounts_results",
+        turbo_confirm: "Revoke the invitation to #{row.contact_email}?"
+      }) do %>
+      <%= cached_icon "trash-2", class: "size-3.5", aria: { hidden: true } %>
+      Revoke
+    <% end %>
+  <% end %>
+<% end %>
