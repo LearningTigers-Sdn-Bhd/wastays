@@ -1,0 +1,10 @@
+<%# Account name over its contact email. The email is the identity for an invitation,
+    which has no account name until the recipient accepts. %>
+<th scope="row" class="max-w-xs min-w-0">
+  <div class="truncate font-semibold text-foreground" title="<%= row.account_name %>">
+    <%= row.account_name.presence || "—" %>
+  </div>
+  <div class="truncate text-xs font-normal text-muted-foreground" title="<%= row.contact_email %>">
+    <%= row.contact_email.presence || "—" %>
+  </div>
+</th>

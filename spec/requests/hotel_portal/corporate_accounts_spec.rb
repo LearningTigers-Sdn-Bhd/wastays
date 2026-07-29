@@ -20,12 +20,67 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     hidden = create(:hotel_corporate_account)
 
     get hotel_corporate_accounts_path(hotel)
+    document = Nokogiri::HTML(response.body)
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("External Accounts")
     expect(hotel_corporate_accounts_path(hotel)).to include("/accounts-receivable/corporate-accounts")
+    expect(document.at_css("[data-testid='external-account-row-#{visible.id}']")).to be_present
+    expect(document.at_css("[data-testid='external-account-row-#{hidden.id}']")).to be_nil
     expect(response.body).to include(visible.corporate_account.name)
     expect(response.body).not_to include(hidden.corporate_account.name)
+  end
+
+  it "renders invitations as pinned rows in the same table" do
+    live = create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user, expires_at: 3.days.from_now)
+    lapsed = create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user, expires_at: 2.days.ago)
+
+    get hotel_corporate_accounts_path(hotel)
+    document = Nokogiri::HTML(response.body)
+
+    expect(response).to have_http_status(:success)
+    expect(document.at_css("[data-testid='external-invitation-row-#{live.id}']").text).to include(live.email, "Pending")
+    expect(document.at_css("[data-testid='external-invitation-row-#{lapsed.id}']").text).to include("Expired")
+
+    # A live invitation offers resend + revoke; a lapsed one only resend.
+    expect(document.at_css("[data-testid='external-invitation-actions-#{live.id}']")).to be_present
+    expect(document.at_css("[data-testid='external-invitation-actions-#{lapsed.id}']")).to be_nil
+  end
+
+  it "counts both sources in the account type tabs" do
+    create(:hotel_corporate_account, hotel: hotel, account_type: "company")
+    create(:hotel_corporate_account, hotel: hotel, account_type: "government")
+    create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user, account_type: "company")
+
+    get hotel_corporate_accounts_path(hotel)
+    tabs = Nokogiri::HTML(response.body).css("[data-slot='tabs-trigger']")
+
+    expect(tabs.map { |tab| tab["data-tab-label"] }).to include("All", "Company", "Government", "Travel agent", "Airline")
+    expect(tabs.find { |tab| tab["data-tab-label"] == "All" }.text).to include("3")
+    expect(tabs.find { |tab| tab["data-tab-label"] == "Company" }.text).to include("2")
+  end
+
+  it "filters to lapsed invitations only for the expired status" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    lapsed = create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user, expires_at: 2.days.ago)
+
+    get hotel_corporate_accounts_path(hotel, status: "expired")
+    document = Nokogiri::HTML(response.body)
+
+    expect(document.at_css("[data-testid='external-invitation-row-#{lapsed.id}']")).to be_present
+    expect(document.at_css("[data-testid='external-account-row-#{relationship.id}']")).to be_nil
+  end
+
+  it "reports open AR that the credit limit cannot be compared against" do
+    relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel, credit_limit: 1_000, credit_currency: "MYR")
+    booking = create(:booking, hotel: hotel, currency: "USD")
+    folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, hotel_corporate_account: relationship, currency: "USD")
+    create(:ar_invoice, hotel: hotel, booking_folio: folio, hotel_corporate_account: relationship, amount: 800, outstanding_amount: 800, currency: "USD")
+
+    get hotel_corporate_accounts_path(hotel)
+    row = Nokogiri::HTML(response.body).at_css("[data-testid='external-account-row-#{relationship.id}']").text
+
+    # The comparable figure is MYR 0.00; the USD balance must not vanish with it.
+    expect(row).to include("USD 800.00", "not comparable with the MYR limit")
   end
 
   it "shows warning-only credit exposure for near-limit accounts" do
@@ -46,7 +101,7 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
-    expect(response.body).to include("Invite Corporate Account")
+    expect(response.body).to include("Invite External Account")
     expect(response.body).to include("Corporate contact email")
     expect(response.body).not_to include("Company name")
   end
@@ -120,6 +175,20 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect {
       delete hotel_corporate_invitation_path(hotel, invitation)
     }.to change(CorporateInvitation, :count).by(-1)
+  end
+
+  it "re-renders the results frame with the active filters after revoking" do
+    kept = create(:hotel_corporate_account, hotel: hotel, account_type: "government")
+    filtered_out = create(:hotel_corporate_account, hotel: hotel, account_type: "company")
+    invitation = create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user)
+
+    delete hotel_corporate_invitation_path(hotel, invitation, account_type: "government"),
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include('target="corporate_accounts_results"')
+    expect(response.body).to include("external-account-row-#{kept.id}")
+    expect(response.body).not_to include("external-account-row-#{filtered_out.id}")
   end
 
   it "does not expose the legacy corporate accounts path" do

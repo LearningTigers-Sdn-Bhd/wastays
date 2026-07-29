@@ -1,0 +1,23 @@
+<%# Rendered inside the results frame so the counts follow the active search. %>
+<% all_tab = HotelPortal::AccountsReceivable::CorporateAccountsPresenter::ALL_TAB %>
+<div class="border-b border-border">
+  <%= render PanelsUI::Tabs.new(
+    id: "external-account-types",
+    variant: :line,
+    aria_label: "Filter external accounts by type",
+    active: presenter.selected_account_type || all_tab) do |tabs| %>
+    <% presenter.account_type_tabs.each do |tab| %>
+      <% tabs.with_tab(
+        name: tab[:name],
+        label: tab[:label],
+        count: tab[:count],
+        href: hotel_corporate_accounts_path(
+          current_hotel,
+          query: presenter.query.presence,
+          status: presenter.selected_status,
+          account_type: (tab[:name] unless tab[:name] == all_tab)
+        ),
+        data: { turbo_frame: "corporate_accounts_results", turbo_action: "advance" }) %>
+    <% end %>
+  <% end %>
+</div>

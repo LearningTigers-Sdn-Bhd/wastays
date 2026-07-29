@@ -28,7 +28,7 @@ module HotelPortal
       if result.success?
         offcanvas_transaction_response(
           destination: hotel_corporate_accounts_path(current_hotel),
-          notice: "Corporate invitation sent to #{result.invitation.email}."
+          notice: "Invitation sent to #{result.invitation.email}."
         )
       else
         @corporate_invitation = result.invitation ||

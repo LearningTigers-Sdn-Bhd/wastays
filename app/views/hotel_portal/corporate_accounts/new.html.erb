@@ -3,8 +3,8 @@
     <header class="shrink-0 border-b border-border bg-card">
       <div class="flex items-start justify-between gap-4 px-6 py-5">
         <div>
-          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Corporate Accounts</p>
-          <h2 class="mt-1 text-xl font-bold tracking-tight text-foreground">Invite Corporate Account</h2>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">External Accounts</p>
+          <h2 class="mt-1 text-xl font-bold tracking-tight text-foreground">Invite External Account</h2>
           <p class="mt-1 text-xs font-medium text-muted-foreground">The recipient will choose their account name when accepting.</p>
         </div>
         <button type="button" class="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" data-action="click->offcanvas#close" aria-label="Close invitation form">
@@ -20,7 +20,7 @@
       <div class="min-h-0 flex-1 overflow-y-auto p-6">
         <div class="w-full space-y-6">
           <% if @corporate_invitation.errors.any? %>
-            <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+            <div class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
               <%= @corporate_invitation.errors.full_messages.to_sentence %>
             </div>
           <% end %>

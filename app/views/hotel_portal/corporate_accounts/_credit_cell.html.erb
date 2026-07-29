@@ -1,0 +1,40 @@
+<%# The figure is only comparable within the account's credit currency, so colour it
+    from limit_warning_state — warning_state masks over_limit with currency_mismatch —
+    and always state any balance the comparison had to leave out. %>
+<% over_limit = exposure.limit_warning_state == "over_limit" %>
+<% near_limit = exposure.limit_warning_state == "near_limit" %>
+
+<div class="font-semibold tabular-nums <%= over_limit ? "text-destructive" : "text-foreground" %>">
+  <%= exposure.credit_currency %> <%= format_number(exposure.projected_exposure, precision: 2) %>
+</div>
+
+<div class="mt-0.5 text-xs text-muted-foreground">
+  <% if exposure.credit_limit.present? %>
+    Limit <%= exposure.credit_currency %> <%= format_number(exposure.credit_limit, precision: 2) %>
+  <% else %>
+    No limit set
+  <% end %>
+</div>
+
+<% if over_limit || near_limit %>
+  <%= render PanelsUI::Alert.new(
+    tone: over_limit ? :destructive : :warning,
+    show_icon: false,
+    class: "mt-1.5 max-w-xs px-2 py-1 text-xs") do |alert| %>
+    <% alert.with_description do %><%= exposure.limit_warning_message %><% end %>
+  <% end %>
+<% end %>
+
+<% if exposure.currency_mismatch? %>
+  <%# Open balances outside the credit currency are excluded from the figure above;
+      naming the amount is the only cue that the comparison is incomplete. %>
+  <%= render PanelsUI::Alert.new(
+    tone: :warning,
+    show_icon: false,
+    class: "mt-1.5 max-w-xs px-2 py-1 text-xs") do |alert| %>
+    <% alert.with_description do %>
+      <%= exposure.non_comparable_totals.sort.map { |currency, amount| "#{currency} #{format_number(amount, precision: 2)}" }.to_sentence %>
+      not comparable with the <%= exposure.credit_currency %> limit
+    <% end %>
+  <% end %>
+<% end %>

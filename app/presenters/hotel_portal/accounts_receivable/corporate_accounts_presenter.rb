@@ -80,6 +80,17 @@ module HotelPortal
         end
       end
 
+      # The active filter set, so an action that re-renders the results frame can put
+      # the operator back exactly where they were.
+      def filter_params
+        {
+          query: query.presence,
+          status: selected_status,
+          account_type: selected_account_type,
+          page: params[:page].presence
+        }.compact
+      end
+
       def filters_active?
         query.present? || selected_status.present? || selected_account_type.present?
       end
