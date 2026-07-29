@@ -1,0 +1,37 @@
+<%= render PanelsUI::Table.new(caption: "Bookings", header_style: :sentence, hoverable: true, bordered: true) do |table| %>
+  <% table.with_header do %>
+    <tr>
+      <th scope="col">Reference</th>
+      <th scope="col">Status</th>
+      <th scope="col">Guest</th>
+      <th scope="col">Stay dates</th>
+      <th scope="col">Amount</th>
+      <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+    </tr>
+  <% end %>
+  <% table.with_body do %>
+    <% @bookings.each do |booking| %>
+      <% presenter = HotelPortal::BookingPresenter.new(booking, current_hotel) %>
+      <tr class="align-top <%= "bg-muted" if presenter.blacklisted? %>" data-booking-token="<%= booking.confirmation_token %>">
+        <th scope="row">
+          <span class="block font-semibold text-foreground"><%= presenter.confirmation_token %></span>
+          <span class="text-xs font-normal text-muted-foreground"><%= presenter.created_at_date %></span>
+        </th>
+        <td><span class="inline-flex rounded-md border px-2 py-1 text-xs font-medium <%= presenter.status_variant_class %>"><%= presenter.status_label_humanized %></span></td>
+        <td>
+          <div class="flex items-center gap-1.5">
+            <span class="font-semibold text-foreground"><%= presenter.guest_name %></span>
+            <%= render "guest_markers", presenter: %>
+          </div>
+          <div class="mt-1 text-xs text-muted-foreground"><%= presenter.guest_email_display %> · <span class="font-mono"><%= presenter.guest_phone_display %></span></div>
+        </td>
+        <td>
+          <span class="font-semibold text-foreground"><%= presenter.check_in_short %> — <%= presenter.check_out_date_year %></span>
+          <span class="mt-1 block text-xs text-muted-foreground"><%= presenter.nights_label %></span>
+        </td>
+        <td class="whitespace-nowrap font-semibold tabular-nums text-foreground"><%= presenter.formatted_currency_total %></td>
+        <td class="whitespace-nowrap text-right"><%= render "record_actions", booking:, tab: "bookings", split: true %></td>
+      </tr>
+    <% end %>
+  <% end %>
+<% end %>

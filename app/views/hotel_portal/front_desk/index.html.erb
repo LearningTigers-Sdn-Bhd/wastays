@@ -24,14 +24,6 @@
   <%= render "toolbar", state: %>
   <main id="front-desk-results">
     <span class="sr-only">active-tab:<%= @tab %> active-view:<%= @view %> page:<%= @bookings.current_page %></span>
-    <% if @tab == "bookings" %>
-      <%= render @view == "rooms" ? "bookings_rooms" : "bookings_list", state: %>
-    <% elsif @view == "rooms" %>
-      <% partial = { "arrivals" => "arrivals_rooms", "in_house" => "in_house_rooms", "departures" => "departures_rooms", "checkout" => "checkout_rooms" }.fetch(@tab) %>
-      <%= render partial, state: %>
-    <% else %>
-      <% partial = { "arrivals" => "arrivals_list", "in_house" => "in_house_list", "departures" => "departures_list", "checkout" => "checkout_list" }.fetch(@tab) %>
-      <%= render partial, state: %>
-    <% end %>
+    <%= render "results" %>
   </main>
 </div>

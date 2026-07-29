@@ -1,9 +1,0 @@
-<%= link_to "View", hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details"), class: "inline-flex min-h-9 items-center rounded-lg border border-border-interactive px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" %>
-<% if presenter.status == "confirmed" && current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-  <%= link_to "Check In", hotel_booking_action_check_in_path(current_hotel, booking, return_to: request.fullpath), data: { turbo_frame: "booking_action_sheet" }, class: "ml-2 inline-flex min-h-9 items-center rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" %>
-<% elsif presenter.status == "checked_in" %>
-  <span class="ml-3 text-sm text-success">Checked in</span>
-  <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-    <%= link_to "Edit Time", hotel_booking_action_check_in_path(current_hotel, booking, return_to: request.fullpath), data: { turbo_frame: "booking_action_sheet" }, class: "ml-2 inline-flex min-h-9 items-center rounded-lg border border-border-interactive px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" %>
-  <% end %>
-<% end %>

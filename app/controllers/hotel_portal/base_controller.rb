@@ -14,6 +14,13 @@ module HotelPortal
 
     private
 
+    # The retired arrivals/in-house/checked-out/bookings index pages were tables,
+    # so their bookmarks keep landing on the list view. An explicit ?view= still
+    # wins — a caller that asked for a view should get it, not a reset.
+    def legacy_view
+      HotelPortal::FrontDeskController::VIEWS.include?(params[:view]) ? params[:view] : "list"
+    end
+
     def reject_corporate_user!
       return unless current_user&.corporate?
 

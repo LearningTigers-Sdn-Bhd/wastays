@@ -1,8 +1,0 @@
-<%= link_to "View booking", hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details"), class: "inline-flex min-h-9 items-center rounded-lg border border-border-interactive px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" %>
-<% if presenter.status == "review_due_out" %>
-  <%= link_to "Review late checkout", hotel_booking_action_late_checkout_path(current_hotel, booking, return_to: request.fullpath), data: { turbo_frame: "booking_action_sheet" }, class: "ml-2 inline-flex min-h-9 items-center rounded-lg border border-border-interactive px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" %>
-<% elsif presenter.status == "checkout_required" %>
-  <%= link_to "Complete checkout", hotel_booking_action_checkout_path(current_hotel, booking, return_to: request.fullpath), data: { turbo_frame: "booking_action_sheet" }, class: "ml-2 inline-flex min-h-9 items-center rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" %>
-<% else %>
-  <%= link_to "Check out", hotel_booking_action_checkout_path(current_hotel, booking, return_to: request.fullpath), class: "ml-2 inline-flex min-h-9 items-center rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2", data: { turbo_frame: "booking_action_sheet" } %>
-<% end %>
