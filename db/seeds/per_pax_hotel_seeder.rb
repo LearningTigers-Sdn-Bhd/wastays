@@ -241,7 +241,22 @@ direct_bill_company.assign_attributes(
 )
 direct_bill_company.save!
 find_or_create_corporate_user(account: corporate_account, name: "Borneo Trading Accounts", email: direct_bill_company.contact_email)
-puts "Corporate accounts ready: #{travel_agent_account.name} (travel agent), #{corporate_account.name} (direct-bill)."
+
+corporate_account_2 = find_or_create_corporate_account(name: "Kinabalu Adventures Sdn Bhd", slug: "kinabalu-adventures")
+direct_bill_company_2 = HotelCorporateAccount.find_or_initialize_by(hotel: hotel, corporate_account: corporate_account_2)
+direct_bill_company_2.assign_attributes(
+  account_type: "company",
+  relationship_type: "direct_bill",
+  credit_limit: 12_000,
+  credit_currency: "MYR",
+  payment_terms_days: 14,
+  status: "active",
+  contact_email: "accounts@kinabaluadventures.example"
+)
+direct_bill_company_2.save!
+find_or_create_corporate_user(account: corporate_account_2, name: "Kinabalu Adventures Accounts", email: direct_bill_company_2.contact_email)
+direct_bill_companies = [ direct_bill_company, direct_bill_company_2 ]
+puts "Corporate accounts ready: #{travel_agent_account.name} (travel agent), #{corporate_account.name} + #{corporate_account_2.name} (direct-bill)."
 
 # 4. Inventory, Rates & Room Statuses
 start_date = Date.current - PAST_HORIZON_DAYS.days
@@ -313,9 +328,9 @@ end
 puts "Seeding Guest Profiles..."
 guests_data = [
   { name: "John Doe", email: "john.doe@example.com", phone: "+60120000001", gender: "male", country: "Malaysia", document_type: "ic", government_id: "880808-14-8888" },
-  { name: "Sarah Smith", email: "sarah.smith@example.com", phone: "+60120000002", gender: "female", country: "United Kingdom", document_type: "passport", government_id: "GB990011A" },
-  { name: "Alex Chen", email: "alex.chen@example.com", phone: "+60120000003", gender: "male", country: "Singapore", document_type: "passport", government_id: "SG112233B" },
-  { name: "Maria Garcia", email: "maria.garcia@example.com", phone: "+60120000004", gender: "female", country: "Philippines", document_type: "passport", government_id: "PH445566C" },
+  { name: "Sarah Smith", email: "sarah.smith@example.com", phone: "+60120000002", gender: "female", country: "United Kingdom", document_type: "passport", government_id: "GB990011A", date_of_birth: Date.new(1988, 6, 24) },
+  { name: "Alex Chen", email: "alex.chen@example.com", phone: "+60120000003", gender: "male", country: "Singapore", document_type: "passport", government_id: "SG112233B", date_of_birth: Date.new(1982, 3, 15) },
+  { name: "Maria Garcia", email: "maria.garcia@example.com", phone: "+60120000004", gender: "female", country: "Philippines", document_type: "passport", government_id: "PH445566C", date_of_birth: Date.new(1995, 12, 1) },
   { name: "Kenji Tanaka", email: "kenji.tanaka@example.com", phone: "+60120000005", gender: "male", country: "Japan", document_type: "passport", government_id: "JP778899D", date_of_birth: Date.new(1985, 4, 12) },
   { name: "Priya Nair", email: "priya.nair@example.com", phone: "+60120000006", gender: "female", country: "India", document_type: "passport", government_id: "IN334455E", date_of_birth: Date.new(1990, 9, 3) },
   { name: "Liam O'Brien", email: "liam.obrien@example.com", phone: "+60120000007", gender: "male", country: "Ireland", document_type: "passport", government_id: "IE556677F", date_of_birth: Date.new(1978, 11, 21) },
@@ -908,7 +923,7 @@ while day <= Date.current + FUTURE_HORIZON_DAYS.days
   source = GUEST_SOURCES.sample(random: RNG)
 
   if bucket < 12
-    hotel_corporate_account = direct_bill_company
+    hotel_corporate_account = direct_bill_companies.sample(random: RNG)
     direct_bill = true
     source = "corporate"
     generated[:corporate] += 1
@@ -960,35 +975,52 @@ end
 
 puts "Booking history generated: #{generated.inspect}"
 
-# 8. Settle the direct-bill company's AR invoices: some fully paid, some partially
-# paid, the rest left open so overdue aging shows up too. Guarded by
-# `ar_payment_allocations.none?` so re-running the seeder never double-pays an
-# already-settled (and now-immutable) invoice.
+# 8. Settle each direct-bill company's AR invoices, leaving unpaid ones spread across
+# every aging bucket (current/1-30/31-60/61-90/90+) instead of clustering into "90+"
+# just because a full year of history means most invoices are, by definition, old.
+# A well-run business collects on time most of the time - the odds of staying unpaid
+# rise a little with each aging tier, but genuinely ancient bad debt stays rare.
+# Guarded by `ar_payment_allocations.none?` so re-running the seeder never double-pays
+# an already-settled (and now-immutable) invoice.
 acting_user = pax_user
-open_invoices = direct_bill_company.ar_invoices.select { |invoice| invoice.ar_payment_allocations.none? && invoice.outstanding_amount.to_d.positive? }
 
-open_invoices.each_with_index do |invoice, index|
-  bucket = index % 3
-  next if bucket == 2 # leave roughly a third open/unpaid so aging buckets have data
+def unpaid_probability_for(days_old)
+  return 40 if days_old <= 30
+  return 30 if days_old <= 60
+  return 20 if days_old <= 90
 
-  amount = bucket.zero? ? invoice.outstanding_amount.to_d : (invoice.outstanding_amount.to_d * 0.5).round(2)
-  received_at = [ invoice.issued_on + RNG.rand(2..10).days, Date.current ].min
-
-  result = ArPayments::RecordPayment.call(
-    hotel: hotel,
-    hotel_corporate_account: direct_bill_company,
-    user: acting_user,
-    amount: amount,
-    currency: invoice.currency,
-    reference_number: "BT-PMT-#{invoice.invoice_number}",
-    received_at: received_at,
-    payment_method: %w[bank_transfer cheque].sample(random: RNG),
-    allocations: { invoice.id => amount },
-    metadata: { seeded: true }
-  )
-  puts "  [Error] Failed to record AR payment for invoice #{invoice.invoice_number}: #{result.error}" unless result.success?
+  8
 end
-puts "AR invoices settled for #{corporate_account.name}: #{open_invoices.size} processed."
+
+direct_bill_companies.each do |company|
+  open_invoices = company.ar_invoices.select { |invoice| invoice.ar_payment_allocations.none? && invoice.outstanding_amount.to_d.positive? }
+  settled_count = 0
+
+  open_invoices.each do |invoice|
+    days_old = (Date.current - invoice.issued_on).to_i
+    next if RNG.rand(100) < unpaid_probability_for(days_old)
+
+    partial = RNG.rand(100) < 35
+    amount = partial ? (invoice.outstanding_amount.to_d * 0.5).round(2) : invoice.outstanding_amount.to_d
+    received_at = [ invoice.issued_on + RNG.rand(2..10).days, Date.current ].min
+
+    result = ArPayments::RecordPayment.call(
+      hotel: hotel,
+      hotel_corporate_account: company,
+      user: acting_user,
+      amount: amount,
+      currency: invoice.currency,
+      reference_number: "AR-PMT-#{invoice.invoice_number}",
+      received_at: received_at,
+      payment_method: %w[bank_transfer cheque].sample(random: RNG),
+      allocations: { invoice.id => amount },
+      metadata: { seeded: true }
+    )
+    settled_count += 1 if result.success?
+    puts "  [Error] Failed to record AR payment for invoice #{invoice.invoice_number}: #{result.error}" unless result.success?
+  end
+  puts "AR invoices settled for #{company.corporate_account.name}: #{settled_count}/#{open_invoices.size} processed."
+end
 
 # 9. Agent-submitted payment slips for the corporate portal demo (one pending, one
 # rejected), so the AR payment-submissions review screen has real data to show.
