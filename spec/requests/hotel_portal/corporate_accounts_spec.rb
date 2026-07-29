@@ -79,8 +79,11 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     get hotel_corporate_accounts_path(hotel)
     row = Nokogiri::HTML(response.body).at_css("[data-testid='external-account-row-#{relationship.id}']").text
 
-    # The comparable figure is MYR 0.00; the USD balance must not vanish with it.
-    expect(row).to include("USD 800.00", "not comparable with the MYR limit")
+    # The comparable figure is MYR 0; the USD balance must not vanish with it.
+    expect(row).to include("USD 800", "not comparable with the MYR limit")
+    # Round amounts drop their cents.
+    expect(row).to include("Limit MYR 1,000")
+    expect(row).not_to include("1,000.00")
   end
 
   it "shows warning-only credit exposure for near-limit accounts" do

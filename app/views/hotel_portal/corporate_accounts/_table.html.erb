@@ -24,8 +24,12 @@
             <td class="text-muted-foreground"><%= row.account_type_label %></td>
             <td class="text-muted-foreground"><%= row.terms_label %></td>
             <td class="text-muted-foreground">
-              <div class="text-sm"><%= row.proposed_credit_label %></div>
-              <div class="mt-0.5 text-xs">Proposed</div>
+              <% if row.proposed_credit_limit.present? %>
+                <div class="text-sm tabular-nums"><%= row.proposed_credit_currency %> <%= format_amount(row.proposed_credit_limit) %></div>
+                <div class="mt-0.5 text-xs">Proposed limit</div>
+              <% else %>
+                <div class="text-sm">No limit set</div>
+              <% end %>
             </td>
             <td>
               <%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, indicator: true) %>

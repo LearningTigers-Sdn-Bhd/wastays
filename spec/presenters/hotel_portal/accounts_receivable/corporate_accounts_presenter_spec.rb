@@ -45,7 +45,8 @@ RSpec.describe HotelPortal::AccountsReceivable::CorporateAccountsPresenter do
       expect(row.contact_email).to eq("billing@atlas.test")
       expect(row.account_type_label).to eq("Travel agent")
       expect(row.terms_label).to eq("Direct bill · 30 days")
-      expect(row.proposed_credit_label).to eq("MYR 5000.00")
+      expect(row.proposed_credit_currency).to eq("MYR")
+      expect(row.proposed_credit_limit).to eq(5_000.to_d)
       expect(row.dom_id).to eq("external-invitation-row-#{row.invitation.id}")
     end
   end

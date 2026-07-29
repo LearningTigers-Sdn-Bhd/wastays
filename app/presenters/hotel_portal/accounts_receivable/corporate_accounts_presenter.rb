@@ -297,10 +297,12 @@ module HotelPortal
           "#{invitation.relationship_type.to_s.humanize} · #{invitation.payment_terms_days.present? ? "#{invitation.payment_terms_days} days" : 'No terms'}"
         end
 
-        def proposed_credit_label
-          return "No limit set" if invitation.credit_limit.blank?
+        def proposed_credit_limit
+          invitation.credit_limit
+        end
 
-          "#{invitation.credit_currency} #{format('%.2f', invitation.credit_limit)}"
+        def proposed_credit_currency
+          invitation.credit_currency
         end
 
         def status

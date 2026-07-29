@@ -5,12 +5,12 @@
 <% near_limit = exposure.limit_warning_state == "near_limit" %>
 
 <div class="font-semibold tabular-nums <%= over_limit ? "text-destructive" : "text-foreground" %>">
-  <%= exposure.credit_currency %> <%= format_number(exposure.projected_exposure, precision: 2) %>
+  <%= exposure.credit_currency %> <%= format_amount(exposure.projected_exposure) %>
 </div>
 
 <div class="mt-0.5 text-xs text-muted-foreground">
   <% if exposure.credit_limit.present? %>
-    Limit <%= exposure.credit_currency %> <%= format_number(exposure.credit_limit, precision: 2) %>
+    Limit <%= exposure.credit_currency %> <%= format_amount(exposure.credit_limit) %>
   <% else %>
     No limit set
   <% end %>
@@ -33,7 +33,7 @@
     show_icon: false,
     class: "mt-1.5 max-w-xs px-2 py-1 text-xs") do |alert| %>
     <% alert.with_description do %>
-      <%= exposure.non_comparable_totals.sort.map { |currency, amount| "#{currency} #{format_number(amount, precision: 2)}" }.to_sentence %>
+      <%= exposure.non_comparable_totals.sort.map { |currency, amount| "#{currency} #{format_amount(amount)}" }.to_sentence %>
       not comparable with the <%= exposure.credit_currency %> limit
     <% end %>
   <% end %>
