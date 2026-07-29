@@ -9,10 +9,6 @@ module HotelPortal
 
     def index
       @presenter = HotelPortal::AccountsReceivable::CorporateAccountsPresenter.new(hotel: current_hotel, params: params)
-      @pending_invitations = current_hotel.corporate_invitations
-        .unaccepted
-        .includes(:invited_by_user)
-        .order(created_at: :desc)
     end
 
     def new
