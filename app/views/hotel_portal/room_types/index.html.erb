@@ -106,7 +106,7 @@
                   <td class="tabular-nums"><%= room_type.max_adults %></td>
                   <td class="tabular-nums"><%= room_type.max_children.to_i %></td>
                   <td class="tabular-nums"><%= room_type.quantity %></td>
-                  <td class="whitespace-nowrap font-medium tabular-nums text-foreground">MYR <%= number_with_precision(room_type.base_price, precision: 2) %></td>
+                  <td class="whitespace-nowrap font-medium tabular-nums text-foreground">MYR <%= number_with_precision(room_type.base_price, precision: 2, delimiter: ",") %></td>
                   <td class="text-right">
                     <%= render "hotel_portal/room_types/record_actions",
                                room_type: room_type,
@@ -166,7 +166,7 @@
                   </div>
                   <div>
                     <dt class="text-xs text-muted-foreground">Base Price</dt>
-                    <dd class="mt-1 font-medium tabular-nums text-foreground">MYR <%= number_with_precision(room_type.base_price, precision: 2) %></dd>
+                    <dd class="mt-1 font-medium tabular-nums text-foreground">MYR <%= number_with_precision(room_type.base_price, precision: 2, delimiter: ",") %></dd>
                   </div>
                 </dl>
               <% end %>

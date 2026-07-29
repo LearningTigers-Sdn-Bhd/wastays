@@ -114,7 +114,7 @@ module Reports
           [ booking.formatted_reservation_number.presence || booking.confirmation_token, rooms.to_sentence.presence || "Room unavailable" ].join(" · "),
           @recipient.name,
           records.currency,
-          format("%.2f", records.total_due)
+          ActiveSupport::NumberHelper.number_to_delimited(format("%.2f", records.total_due))
         ]
       end
 
@@ -124,7 +124,7 @@ module Reports
         end
         width = pdf.bounds.width * 0.45
         rows = totals.sort.map do |currency, amount|
-          [ { content: "Total (#{currency})", font_style: :bold }, { content: format("%.2f", amount), align: :right, font_style: :bold } ]
+          [ { content: "Total (#{currency})", font_style: :bold }, { content: ActiveSupport::NumberHelper.number_to_delimited(format("%.2f", amount)), align: :right, font_style: :bold } ]
         end
         pdf.table(rows, width:, position: :right, column_widths: [ width * 0.62, width * 0.38 ]) do
           cells.border_color = BORDER_GRAY

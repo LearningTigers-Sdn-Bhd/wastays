@@ -30,7 +30,7 @@
                 <td class="px-6 py-4 font-bold text-foreground"><%= invoice.formatted_invoice_number %></td>
                 <td class="px-6 py-4 text-muted-foreground"><%= invoice.booking.confirmation_token %> · <%= invoice.booking_folio.folio_reference_display %></td>
                 <td class="px-6 py-4 text-muted-foreground"><%= invoice.due_on.strftime("%d %b %Y") %></td>
-                <td class="px-6 py-4 text-right font-bold tabular-nums text-foreground"><%= invoice.currency %> <%= number_with_precision(readonly ? source_allocations[invoice.id] : invoice.outstanding_amount, precision: 2) %></td>
+                <td class="px-6 py-4 text-right font-bold tabular-nums text-foreground"><%= invoice.currency %> <%= number_with_precision(readonly ? source_allocations[invoice.id] : invoice.outstanding_amount, precision: 2, delimiter: ",") %></td>
                 <% unless readonly %>
                   <td class="px-6 py-4"><%= number_field_tag "allocations[#{invoice.id}]", source_allocations[invoice.id], step: "0.01", min: "0", max: invoice.outstanding_amount, class: "w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground", data: { ar_payment_form_target: "allocation", action: "input->ar-payment-form#recalculate" } %></td>
                 <% end %>

@@ -364,9 +364,9 @@ module Reports
       def format_money(amount, blank_zero: false)
         amount = amount.to_d
         return "-" if blank_zero && amount.zero?
-        return "(#{format('%.2f', amount.abs)})" if amount.negative?
+        return "(#{ActiveSupport::NumberHelper.number_to_delimited(format('%.2f', amount.abs))})" if amount.negative?
 
-        format("%.2f", amount)
+        ActiveSupport::NumberHelper.number_to_delimited(format("%.2f", amount))
       end
 
       def csv_money(amount)

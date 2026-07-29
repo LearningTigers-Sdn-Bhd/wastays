@@ -10,16 +10,16 @@ module HotelPortal::ReportsHelper
   def daily_report_adjustment_presentation(amount)
     amount = amount.to_d
     if amount.positive?
-      { value: "+ MYR #{number_with_precision(amount, precision: 2)}", detail: "Increases revenue", variant: :success }
+      { value: "+ MYR #{number_with_precision(amount, precision: 2, delimiter: ",")}", detail: "Increases revenue", variant: :success }
     elsif amount.negative?
-      { value: "- MYR #{number_with_precision(amount.abs, precision: 2)}", detail: "Reduces revenue", variant: :destructive }
+      { value: "- MYR #{number_with_precision(amount.abs, precision: 2, delimiter: ",")}", detail: "Reduces revenue", variant: :destructive }
     else
       { value: "MYR 0.00", detail: "No revenue adjustment", variant: :neutral }
     end
   end
 
   def report_amount(value)
-    value.to_d.zero? ? "0" : number_with_precision(value, precision: 2)
+    value.to_d.zero? ? "0" : number_with_precision(value, precision: 2, delimiter: ",")
   end
 
   def daily_revenue_cell(value, hotel:, date:, category:, date_preset:, negative: false)

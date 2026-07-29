@@ -28,7 +28,7 @@
   <div data-booking-actions--late-checkout-target="standardSection"
        class="flex items-center justify-between rounded-md border border-border bg-muted/50 px-4 py-3">
     <span class="text-sm text-muted-foreground">Total charge</span>
-    <span class="text-sm font-medium text-foreground"><%= presenter.currency %> <%= number_with_precision(presenter.suggested_late_checkout_amount, precision: 2) %></span>
+    <span class="text-sm font-medium text-foreground"><%= presenter.currency %> <%= number_with_precision(presenter.suggested_late_checkout_amount, precision: 2, delimiter: ",") %></span>
   </div>
 
   <div data-booking-actions--late-checkout-target="customSection"

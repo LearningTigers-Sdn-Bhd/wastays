@@ -32,11 +32,11 @@ module Guests
 
     def formatted_total_amount
       prefix = (currency == "USD" ? "USD" : "RM")
-      "#{prefix} #{helpers.number_with_precision(total_amount, precision: 2)}"
+      "#{prefix} #{helpers.number_with_precision(total_amount, precision: 2, delimiter: ",")}"
     end
 
     def formatted_tourism_tax_amount
-      "Tax RM #{helpers.number_with_precision(tourism_tax_amount, precision: 2)}"
+      "Tax RM #{helpers.number_with_precision(tourism_tax_amount, precision: 2, delimiter: ",")}"
     end
 
     def created_at_time_formatted

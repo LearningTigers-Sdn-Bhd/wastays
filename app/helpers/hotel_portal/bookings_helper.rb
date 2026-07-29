@@ -40,7 +40,7 @@ module HotelPortal::BookingsHelper
 
     sign = signed_amount.negative? ? "-" : "+"
     currency_label = currency ? currency : " MYR"
-    "#{sign}#{currency_label} #{number_with_precision(signed_amount.abs, precision: 2)}"
+    "#{sign}#{currency_label} #{number_with_precision(signed_amount.abs, precision: 2, delimiter: ",")}"
   end
 
   def folio_transaction_amount_class(transaction)

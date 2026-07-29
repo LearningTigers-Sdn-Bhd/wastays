@@ -138,7 +138,7 @@
                               <span>
                                 <span class="block text-sm font-semibold text-foreground"><%= tax_rule[:name] %></span>
                                 <span class="mt-0.5 block text-xs font-medium text-muted-foreground">
-                                  <%= tax_rule[:rate_type] == "percentage" ? "#{number_with_precision(tax_rule[:amount], precision: 2)}%" : "#{currency} #{number_with_precision(tax_rule[:amount], precision: 2)}" %>
+                                  <%= tax_rule[:rate_type] == "percentage" ? "#{number_with_precision(tax_rule[:amount], precision: 2, delimiter: ",")}%" : "#{currency} #{number_with_precision(tax_rule[:amount], precision: 2, delimiter: ",")}" %>
                                   <% unless tax_rule[:enabled] %> · Inactive<% end %>
                                 </span>
                               </span>
@@ -175,7 +175,7 @@
             <div class="flex items-center justify-between gap-3 border-b border-border bg-muted px-3 py-2">
               <div>
                 <h3 class="text-[10px] font-bold uppercase tracking-wider text-foreground">Preview</h3>
-                <p class="mt-0.5 text-[10px] font-medium text-muted-foreground">If staff posts this code at <%= currency %> <%= number_with_precision(preview_amount, precision: 2) %></p>
+                <p class="mt-0.5 text-[10px] font-medium text-muted-foreground">If staff posts this code at <%= currency %> <%= number_with_precision(preview_amount, precision: 2, delimiter: ",") %></p>
               </div>
               <span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sample transaction</span>
             </div>
@@ -185,12 +185,12 @@
                   <p class="truncate font-semibold text-foreground" data-transaction-code-form-target="previewName"><%= transaction_code.name.presence || "Charge" %></p>
                   <p class="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground" data-transaction-code-form-target="previewCategory"><%= transaction_code.kind.to_s.titleize %> · <%= transaction_code.category.to_s.titleize %></p>
                 </div>
-                <p class="font-mono font-bold tabular-nums text-foreground">+<%= currency %> <%= number_with_precision(preview_amount, precision: 2) %></p>
+                <p class="font-mono font-bold tabular-nums text-foreground">+<%= currency %> <%= number_with_precision(preview_amount, precision: 2, delimiter: ",") %></p>
               </div>
               <div data-transaction-code-form-target="previewTaxLines"></div>
               <div class="grid grid-cols-[1fr_auto] items-center gap-4 bg-muted px-3 py-2 text-xs font-bold text-foreground">
                 <span>Total</span>
-                <span class="font-mono tabular-nums"><%= currency %> <span data-transaction-code-form-target="previewTotal"><%= number_with_precision(preview_amount, precision: 2) %></span></span>
+                <span class="font-mono tabular-nums"><%= currency %> <span data-transaction-code-form-target="previewTotal"><%= number_with_precision(preview_amount, precision: 2, delimiter: ",") %></span></span>
               </div>
             </div>
           </section>

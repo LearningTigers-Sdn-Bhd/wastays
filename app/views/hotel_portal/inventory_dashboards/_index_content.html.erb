@@ -230,7 +230,7 @@
                             <span class="truncate text-sm font-semibold text-foreground" data-original-color="text-foreground" data-highlight-color="text-primary-foreground"><%= row.label %></span>
                           </div>
                           <div class="text-[11px] text-muted-foreground mt-0.5" data-original-color="text-muted-foreground" data-highlight-color="text-indigo-200">
-                            <%= pluralize(row.room_type.quantity, "unit") %> · <%= @hotel_base_currency %> <%= number_with_precision(row.room_type.base_price, precision: 2) %>
+                            <%= pluralize(row.room_type.quantity, "unit") %> · <%= @hotel_base_currency %> <%= number_with_precision(row.room_type.base_price, precision: 2, delimiter: ",") %>
                             <% unless @calendar.connected_channels.size > 0 %>
                               · <%= @calendar.connected_channels.size %> channels
                             <% end %>

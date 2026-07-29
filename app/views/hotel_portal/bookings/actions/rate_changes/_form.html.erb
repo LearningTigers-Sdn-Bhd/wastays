@@ -59,7 +59,7 @@
 
             <% if @booking.manual_rate_override.present? %>
               <div class="rounded-md border border-border bg-muted p-4 text-sm">
-                <p class="font-medium text-foreground">Manual rate override: <%= currency %> <%= number_with_precision(@booking.manual_rate_override, precision: 2) %></p>
+                <p class="font-medium text-foreground">Manual rate override: <%= currency %> <%= number_with_precision(@booking.manual_rate_override, precision: 2, delimiter: ",") %></p>
                 <p class="mt-1 text-muted-foreground">It stays in place for date or room changes and is cleared only when you choose a different rate.</p>
               </div>
             <% end %>
@@ -70,9 +70,9 @@
                 <p class="text-xs text-muted-foreground" role="status" aria-live="polite" data-booking-actions--stay-price-target="calculationStatus">Current estimate</p>
               </div>
               <dl class="divide-y divide-border rounded-md border border-border text-sm">
-                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Room</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="roomTotal"><%= number_with_precision(current_room_total, precision: 2) %></span></dd></div>
-                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Taxes & charges</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="taxTotal"><%= number_with_precision(current_tax_total, precision: 2) %></span></dd></div>
-                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="font-medium text-foreground">Estimated total</dt><dd class="font-semibold text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="estimatedTotal"><%= number_with_precision(@booking.total_amount, precision: 2) %></span></dd></div>
+                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Room</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="roomTotal"><%= number_with_precision(current_room_total, precision: 2, delimiter: ",") %></span></dd></div>
+                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Taxes & charges</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="taxTotal"><%= number_with_precision(current_tax_total, precision: 2, delimiter: ",") %></span></dd></div>
+                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="font-medium text-foreground">Estimated total</dt><dd class="font-semibold text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="estimatedTotal"><%= number_with_precision(@booking.total_amount, precision: 2, delimiter: ",") %></span></dd></div>
               </dl>
               <p class="text-xs text-muted-foreground">Future forecasted charges are recalculated. Charges already posted to a folio remain financial records.</p>
             </section>

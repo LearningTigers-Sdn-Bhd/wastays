@@ -717,7 +717,7 @@ module Reports
       end
 
       def format_amount(amount)
-        format("%.2f", amount.to_d)
+        ActiveSupport::NumberHelper.number_to_delimited(format("%.2f", amount.to_d))
       end
 
       def safe_reference(value)

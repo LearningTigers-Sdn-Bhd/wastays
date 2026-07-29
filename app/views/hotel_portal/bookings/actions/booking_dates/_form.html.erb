@@ -60,7 +60,7 @@
                 <div><dt class="text-xs text-muted-foreground">Dates</dt><dd class="mt-1 font-medium text-foreground"><%= l(@booking.check_in.in_time_zone(current_hotel.hotel_time_zone), format: :short) %> – <%= l(@booking.check_out.in_time_zone(current_hotel.hotel_time_zone), format: :short) %></dd></div>
                 <div><dt class="text-xs text-muted-foreground">Room</dt><dd class="mt-1 font-medium text-foreground"><%= @room&.room_type&.name || "Unassigned" %> · <%= @room&.room_number || "Unassigned" %></dd></div>
                 <div><dt class="text-xs text-muted-foreground">Rate</dt><dd class="mt-1 font-medium text-foreground"><%= @room&.rate_plan&.name.presence || "Base rate" %></dd></div>
-                <div><dt class="text-xs text-muted-foreground">Current value</dt><dd class="mt-1 font-medium text-foreground"><%= currency %> <%= number_with_precision(@booking.total_amount, precision: 2) %></dd></div>
+                <div><dt class="text-xs text-muted-foreground">Current value</dt><dd class="mt-1 font-medium text-foreground"><%= currency %> <%= number_with_precision(@booking.total_amount, precision: 2, delimiter: ",") %></dd></div>
               </dl>
             </section>
 
@@ -87,9 +87,9 @@
                 <p class="text-xs text-muted-foreground" role="status" aria-live="polite" data-booking-actions--stay-price-target="calculationStatus">Current estimate</p>
               </div>
               <dl class="divide-y divide-border rounded-md border border-border text-sm">
-                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Room</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="roomTotal"><%= number_with_precision(current_room_total, precision: 2) %></span></dd></div>
-                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Taxes & charges</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="taxTotal"><%= number_with_precision(current_tax_total, precision: 2) %></span></dd></div>
-                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="font-medium text-foreground">Estimated total</dt><dd class="font-semibold text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="estimatedTotal"><%= number_with_precision(@booking.total_amount, precision: 2) %></span></dd></div>
+                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Room</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="roomTotal"><%= number_with_precision(current_room_total, precision: 2, delimiter: ",") %></span></dd></div>
+                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Taxes & charges</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="taxTotal"><%= number_with_precision(current_tax_total, precision: 2, delimiter: ",") %></span></dd></div>
+                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="font-medium text-foreground">Estimated total</dt><dd class="font-semibold text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="estimatedTotal"><%= number_with_precision(@booking.total_amount, precision: 2, delimiter: ",") %></span></dd></div>
               </dl>
               <p class="text-xs text-muted-foreground">Future forecasted charges are recalculated. Charges already posted to a folio remain financial records.</p>
             </section>

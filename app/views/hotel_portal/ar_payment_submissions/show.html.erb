@@ -22,7 +22,7 @@
         </div>
       <% end %>
       <div><dt class="text-slate-500">Reference</dt><dd class="font-bold text-slate-950"><%= @submission.reference_number %></dd></div>
-      <div><dt class="text-slate-500">Amount</dt><dd class="font-bold text-slate-950"><%= @submission.currency %> <%= number_with_precision(@submission.amount, precision: 2) %></dd></div>
+      <div><dt class="text-slate-500">Amount</dt><dd class="font-bold text-slate-950"><%= @submission.currency %> <%= number_with_precision(@submission.amount, precision: 2, delimiter: ",") %></dd></div>
       <div><dt class="text-slate-500">Date paid</dt><dd class="font-bold text-slate-950"><%= l(@submission.received_at, format: :short) %></dd></div>
       <div><dt class="text-slate-500">Method</dt><dd class="font-bold text-slate-950"><%= @submission.payment_method.humanize %></dd></div>
       <% if @submission.notes.present? %>

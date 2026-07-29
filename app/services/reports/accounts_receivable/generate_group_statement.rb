@@ -106,7 +106,7 @@ module Reports
       end
 
       def money(amount)
-        Kernel.format("%.2f", amount.to_d)
+        ActiveSupport::NumberHelper.number_to_delimited(Kernel.format("%.2f", amount.to_d))
       end
     end
   end

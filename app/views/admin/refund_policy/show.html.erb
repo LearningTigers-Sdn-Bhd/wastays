@@ -39,7 +39,7 @@
     <div class="p-6 md:p-8">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Example</p>
       <% if example_refund.present? %>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">RM <%= number_with_precision(example_refund, precision: 2) %></h2>
+        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">RM <%= number_with_precision(example_refund, precision: 2, delimiter: ",") %></h2>
         <p class="mt-2 text-sm font-medium text-muted-foreground">Estimated refund from RM 200.00</p>
       <% else %>
         <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">—</h2>

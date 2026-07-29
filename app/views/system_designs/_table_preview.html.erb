@@ -51,7 +51,7 @@
             <tr>
               <th scope="row" class="font-medium">TXN-<%= 4821 - index %></th>
               <td>Guest <%= index + 1 %></td>
-              <td class="text-right tabular-nums">RM <%= number_with_precision(125 + (index * 37.5), precision: 2) %></td>
+              <td class="text-right tabular-nums">RM <%= number_with_precision(125 + (index * 37.5), precision: 2, delimiter: ",") %></td>
             </tr>
           <% end %>
         <% end %>
