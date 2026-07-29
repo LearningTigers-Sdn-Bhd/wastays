@@ -7,7 +7,7 @@
     <%= "hidden" if new_record %>
     data-controller="boat-slot"
     data-boat-slots-target="<%= "card" if new_record %>"
-    data-action="input->boat-slot#markDirty change->boat-slot#markDirty">
+    data-action="input->boat-slot#sync change->boat-slot#sync">
   <div class="flex flex-wrap items-center gap-3">
     <%= form_with model: slot,
                   id: form_id,
@@ -15,7 +15,8 @@
                   method: new_record ? :post : :patch,
                   scope: :hotel_boat_schedule,
                   local: true,
-                  class: "contents" do |f| %>
+                  class: "contents",
+                  data: { boat_slot_target: "form" } do |f| %>
       <%= f.hidden_field :kind, value: kind %>
       <div class="w-32" data-boat-slots-target="<%= "time" if new_record %>">
         <%= render PanelsUI::FormField.new(form: f, attribute: :time, label: "Time", label_hidden: true) do |field| %>
@@ -54,22 +55,33 @@
             <%= app_icon "check", class: "size-4", aria: { hidden: "true" } %>
           <% end %>
           <%= render PanelsUI::Button.new(
-                as: :button, type: :button, variant: :outline, size: :icon_sm,
+                as: :button, type: :button, variant: :neutral, size: :icon_sm,
                 aria_label: "Cancel new slot",
                 data: { action: "boat-slots#cancel" }) do %>
             <%= app_icon "x", class: "size-4", aria: { hidden: "true" } %>
           <% end %>
         <% else %>
-          <span data-boat-slot-target="save" hidden>
-            <%= render PanelsUI::Button.new(
-                  as: :button, type: :submit, form: form_id, variant: :primary, size: :icon_sm,
-                  aria_label: "Save slot #{slot.time_of_day}") do %>
-              <%= app_icon "check", class: "size-4", aria: { hidden: "true" } %>
-            <% end %>
-          </span>
+          <%# Hidden on the buttons themselves, not on a wrapper: a wrapper is
+              not a group child, so the joined-corner selectors would skip it. %>
+          <%= render PanelsUI::Button.new(
+                as: :button, type: :submit, form: form_id, variant: :primary, size: :icon_sm,
+                hidden: true,
+                aria_label: "Save slot #{slot.time_of_day}",
+                data: { boat_slot_target: "save" }) do %>
+            <%= app_icon "check", class: "size-4", aria: { hidden: "true" } %>
+          <% end %>
+          <%# Reaches its form by id like the others, but resets it rather than
+              submitting -- type: reset would only work from inside the form. %>
+          <%= render PanelsUI::Button.new(
+                as: :button, type: :button, variant: :neutral, size: :icon_sm,
+                hidden: true,
+                aria_label: "Discard changes to slot #{slot.time_of_day}",
+                data: { boat_slot_target: "discard", action: "boat-slot#discard" }) do %>
+            <%= app_icon "x", class: "size-4", aria: { hidden: "true" } %>
+          <% end %>
           <%= render PanelsUI::Button.new(
                 as: :button, type: :submit, form: "#{form_id}-state",
-                variant: :outline, size: :icon_sm,
+                variant: :neutral, size: :icon_sm,
                 aria_label: slot.archived? ? "Restore slot #{slot.time_of_day}" : "Retire slot #{slot.time_of_day}",
                 data: slot.archived? ? {} : { turbo_confirm: "Retire this slot? Guests already booked on it keep it, but it stops being offered." }) do %>
             <%= app_icon slot.archived? ? "rotate-ccw" : "archive", class: "size-4", aria: { hidden: "true" } %>

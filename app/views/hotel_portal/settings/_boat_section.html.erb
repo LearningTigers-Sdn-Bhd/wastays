@@ -39,7 +39,7 @@
           <% end %>
         </div>
       <% end %>
-      <div class="mt-4">
+      <div class="mt-4 flex justify-end">
         <%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Save meal times<% end %>
       </div>
     <% end %>
@@ -55,7 +55,7 @@
           </p>
         </div>
         <%= render PanelsUI::Button.new(
-              as: :button, type: :button, variant: :outline, size: :sm,
+              as: :button, type: :button, variant: :neutral, size: :sm,
               class: "shrink-0",
               data: { boat_slots_target: "trigger", action: "boat-slots#add" }) do %>
           <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %> Add slot

@@ -385,11 +385,20 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       document = Nokogiri::HTML(response.body)
       row = document.at_css("li[data-controller='boat-slot']:not([hidden])")
 
-      # Save is rendered but wrapped in a hidden holder the row's Stimulus
-      # controller reveals on the first change.
-      save_holder = row.at_css("[data-boat-slot-target='save']")
-      expect(save_holder["hidden"]).not_to be_nil
-      expect(save_holder.at_css("button")["form"]).to eq("boat-slot-#{slot.id}")
+      # Save and Discard are hidden on the buttons themselves -- no wrapper, so
+      # they stay direct children of the group -- and the row's Stimulus
+      # controller reveals both once the row differs from what was saved.
+      save = row.at_css("button[data-boat-slot-target='save']")
+      expect(save["hidden"]).not_to be_nil
+      expect(save["form"]).to eq("boat-slot-#{slot.id}")
+
+      # Discard resets the edit form rather than submitting anything, which is
+      # the only way out of a dirty row that is not Save.
+      discard = row.at_css("button[data-boat-slot-target='discard']")
+      expect(discard["hidden"]).not_to be_nil
+      expect(discard["type"]).to eq("button")
+      expect(discard["data-action"]).to eq("boat-slot#discard")
+      expect(row.at_css("form[data-boat-slot-target='form']")["id"]).to eq("boat-slot-#{slot.id}")
 
       # Retire submits its own form, so the two live in one button group
       # without nesting a form inside a form.
@@ -399,10 +408,15 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       state_form = document.at_css("form#boat-slot-#{slot.id}-state")
       expect(state_form.at_css("input[name='_method']")["value"]).to eq("delete")
 
-      # Both buttons are icon-only inside a single group.
+      # All three are icon-only direct children of one group -- a wrapper would
+      # drop out of the selectors that join their corners -- and neither
+      # secondary button falls back to the primary variant that an unknown
+      # variant name silently produces.
       group = row.at_css(".panel-button-group")
-      expect(group.css("button").size).to eq(2)
+      expect(group.css("> button").size).to eq(3)
       expect(group.css("button").map { |button| button.text.squish }).to all(be_empty)
+      expect(retire["data-variant"]).to eq("neutral")
+      expect(discard["data-variant"]).to eq("neutral")
 
       # The Add trigger sits in the section header, and its card starts hidden.
       section = document.at_css("section[data-controller='boat-slots']")
