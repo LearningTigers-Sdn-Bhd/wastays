@@ -205,4 +205,55 @@ RSpec.describe AiConcierge::Tools::Booking::SearchBookingOptionsTool do
       ).call
     end
   end
+
+  describe "pax pricing accuracy" do
+    let(:pax_hotel) { create(:hotel, allow_pax_pricing: true, pax_pricing_only: true) }
+    let(:pax_room_type) { create(:room_type, hotel: pax_hotel, max_adults: 4, max_children: 2, base_price: 500.0) }
+    let(:pax_rate_plan) do
+      create(:rate_plan, :age_banded, hotel: pax_hotel, name: "Family Per-Pax", room_type: pax_room_type, base_occupancy: 2, single_supplement: 30)
+    end
+
+    def real_quote_total(hotel:, room_type:, rate_plan:, adults:, children:, child_ages: [])
+      BookingEngine::CreateQuote.new(
+        hotel_id: hotel.id,
+        allocations: { "0" => { room_type_id: room_type.id, quantity: 1 } },
+        check_in: Date.current, check_out: Date.current + 1,
+        adults: adults, children: children, child_ages: child_ages,
+        rate_plan_id: rate_plan.id,
+        guest_name: "Test Guest", guest_email: "guest@example.com", guest_phone: "0123456789"
+      ).call.quote.total_amount
+    end
+
+    it "matches the real quote engine for a per-person plan when ages are unknown (both fall back to the flat multiplier)" do
+      create(:room_inventory, room_type: pax_room_type, date: Date.current, quantity: 5, status: "open")
+      create(:room_rate, room_type: pax_room_type, rate_plan: pax_rate_plan, date: Date.current, price: 100.0)
+
+      tool = described_class.new(
+        hotel: pax_hotel, target_month: Date.current.month, target_year: Date.current.year, month_segment: nil,
+        check_in: Date.current, check_out: Date.current + 1,
+        adults: 2, children: 2, room_count: 1
+      )
+      preview_total = tool.call.first["options"].first["total_price"]
+
+      expect(preview_total).to eq(real_quote_total(hotel: pax_hotel, room_type: pax_room_type, rate_plan: pax_rate_plan, adults: 2, children: 2))
+    end
+
+    it "applies extra_pax_charge for a per-room plan, matching the real quote engine" do
+      hotel = create(:hotel, allow_pax_pricing: false)
+      room_type = create(:room_type, hotel: hotel, max_adults: 4, max_children: 0, base_price: 150.0)
+      rate_plan = create(:rate_plan, hotel: hotel, name: "Standard", sell_mode: "per_room", room_type: room_type, base_occupancy: 2, extra_pax_charge: 25)
+      create(:room_inventory, room_type: room_type, date: Date.current, quantity: 5, status: "open")
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 150.0)
+
+      tool = described_class.new(
+        hotel: hotel, target_month: Date.current.month, target_year: Date.current.year, month_segment: nil,
+        check_in: Date.current, check_out: Date.current + 1,
+        adults: 3, children: 0, room_count: 1
+      )
+      preview_total = tool.call.first["options"].first["total_price"]
+
+      # 150 base + 1 extra adult over base_occupancy(2) * 25 = 175
+      expect(preview_total).to eq(175.0)
+    end
+  end
 end

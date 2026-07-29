@@ -254,6 +254,29 @@ RSpec.describe Hotel, type: :model do
         expect(hotel).to be_valid
         expect(rate_plan.reload.sell_mode).to eq('per_room')
       end
+
+      it 'logs a warning when disabling allow_pax_pricing force-flips existing per_person rate plans' do
+        hotel.allow_pax_pricing = true
+        hotel.save!
+        rate_plan = create(:rate_plan, hotel: hotel, sell_mode: 'per_person')
+
+        expect(Rails.logger).to receive(:warn).with(
+          a_string_matching(/Hotel##{hotel.id}.*force-flipped 1 rate plan.*rate_plan_ids=\[#{rate_plan.id}\]/)
+        )
+
+        hotel.allow_pax_pricing = false
+        hotel.save!
+      end
+
+      it 'does not log anything when there are no per_person rate plans to flip' do
+        hotel.allow_pax_pricing = true
+        hotel.save!
+
+        expect(Rails.logger).not_to receive(:warn)
+
+        hotel.allow_pax_pricing = false
+        hotel.save!
+      end
     end
   end
 end

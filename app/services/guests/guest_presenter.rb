@@ -91,7 +91,7 @@ module Guests
     return [] if totals.blank?
 
     totals.map do |currency, amount|
-      "#{currency} #{ActionController::Base.helpers.number_with_precision(amount, precision: 2)}"
+      "#{currency} #{ActionController::Base.helpers.number_with_precision(amount, precision: 2, delimiter: ",")}"
     end
   end
 

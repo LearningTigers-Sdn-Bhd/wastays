@@ -24,47 +24,18 @@ module Bookings
         rate = room_rate_for(date)
         base_nightly_rate = tier_price(rate) || derived_or_fallback_rate(rate)
 
-        if @rate_plan&.sell_mode == "per_person"
-          adults_cost = @adults * base_nightly_rate
-          children_cost =
-            if @child_ages.any?
-              @child_ages.sum { |age| per_child_price(base_nightly_rate, age) }
-            else
-              @children * base_nightly_rate * (@rate_plan.child_price_multiplier || 1.to_d)
-            end
-
-          price = adults_cost + children_cost
-
-          if @pax == 1
-            supplement = rate&.single_supplement || @rate_plan.single_supplement || 0.to_d
-            price += supplement
-          end
-          price
-        else
-          price = base_nightly_rate
-
-          base_occ = rate&.base_occupancy || @rate_plan&.base_occupancy || 2
-          extra_charge = rate&.extra_pax_charge || @rate_plan&.extra_pax_charge || 0.to_d
-
-          billable_pax = @adults + @children
-          if billable_pax > base_occ && extra_charge.positive?
-            extra_guests = billable_pax - base_occ
-            price += extra_guests * extra_charge
-          end
-
-          price
-        end
+        Bookings::NightlyPaxPrice.call(
+          base_nightly_rate: base_nightly_rate,
+          rate: rate,
+          rate_plan: @rate_plan,
+          adults: @adults,
+          children: @children,
+          child_ages: @child_ages
+        )
       end
     end
 
     private
-
-    def per_child_price(base_nightly_rate, age)
-      band = @rate_plan.age_banded? ? @rate_plan.band_for_age(age) : nil
-      return band.price_for(base_nightly_rate) if band
-
-      base_nightly_rate * (@rate_plan.child_price_multiplier || 1.to_d)
-    end
 
     def tier_price(rate)
       return nil if rate.blank?

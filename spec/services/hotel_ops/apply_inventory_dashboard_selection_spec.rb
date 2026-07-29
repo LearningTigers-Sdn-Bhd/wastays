@@ -314,6 +314,57 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       expect(override.price.to_f).to eq(150.0)
     end
 
+    it "returns a clear failure instead of raising when pax fields are combined with a channel override" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      rate_plan = room_type.rate_plans.first
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ rate_plan.id ],
+          apply_rates: "1",
+          price: "150.00",
+          base_occupancy: "3",
+          channel_id: "booking_com",
+          channel_rate_plan_id: "b_test_rate_plan",
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result[:success]).to be(false)
+      expect(result[:error]).to match(/don't apply to OTA channel rates/)
+    end
+
+    it "returns a clear failure when modified_fields includes a pax field alongside a channel override" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      rate_plan = room_type.rate_plans.first
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ rate_plan.id ],
+          apply_rates: "1",
+          price: "150.00",
+          modified_fields: [ "extra_pax_charge" ],
+          extra_pax_charge: "20.00",
+          channel_id: "booking_com",
+          channel_rate_plan_id: "b_test_rate_plan",
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result[:success]).to be(false)
+      expect(result[:error]).to match(/don't apply to OTA channel rates/)
+    end
+
     it "creates channel availability overrides when channel_id is present for channel_availability" do
       room_type = create(:room_type, hotel: hotel, base_price: 100)
 

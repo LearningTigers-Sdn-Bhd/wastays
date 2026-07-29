@@ -188,7 +188,7 @@
             </div>
             <% if @hotel.tourism_tax_enabled? %>
               <p class="text-xs text-muted-foreground mt-3">
-                Malaysia tourism tax of RM <%= number_with_precision(@hotel.tourism_tax_amount, precision: 2) %> applies to guests with passports from outside Malaysia. The amount will be included during checkout for clarity.
+                Malaysia tourism tax of RM <%= number_with_precision(@hotel.tourism_tax_amount, precision: 2, delimiter: ",") %> applies to guests with passports from outside Malaysia. The amount will be included during checkout for clarity.
               </p>
             <% end %>
           </div>

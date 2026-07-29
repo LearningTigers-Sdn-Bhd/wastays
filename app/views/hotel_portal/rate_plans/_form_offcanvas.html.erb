@@ -99,7 +99,7 @@
                   <select data-age-band-price-preview-target="roomTypeSelect" class="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0">
                     <% preview_room_types.each do |rt| %>
                       <option value="<%= rt.id %>" data-base-price="<%= rt.base_price %>" <%= "selected" if rt == default_preview_room_type %>>
-                        <%= rt.name %> (Standard Rate: <%= rate_plan.currency %> <%= number_with_precision(rt.base_price, precision: 2) %>)
+                        <%= rt.name %> (Standard Rate: <%= rate_plan.currency %> <%= number_with_precision(rt.base_price, precision: 2, delimiter: ",") %>)
                       </option>
                     <% end %>
                   </select>
@@ -145,7 +145,7 @@
                       <%= hidden_field_tag "rate_plan[room_type_pricing][#{room_type.id}][enabled]", "0" %>
                       <%= check_box_tag "rate_plan[room_type_pricing][#{room_type.id}][enabled]", "1", rate_plan.room_types.include?(room_type), id: "rate_plan_room_type_pricing_#{room_type.id}_enabled", class: "rounded border-slate-300 text-slate-900 focus:ring-slate-900 size-4" %>
                       <span class="font-medium"><%= room_type.name %></span>
-                      <span class="text-xs text-slate-400">(Standard Rate: <%= rate_plan.currency %> <%= number_with_precision(room_type.base_price, precision: 2) %>)</span>
+                      <span class="text-xs text-slate-400">(Standard Rate: <%= rate_plan.currency %> <%= number_with_precision(room_type.base_price, precision: 2, delimiter: ",") %>)</span>
                     </label>
 
                     <div class="ml-auto flex items-center gap-2">
