@@ -1,0 +1,31 @@
+<%= render PanelsUI::Table.new(caption: "Arrivals", header_style: :sentence, hoverable: true, bordered: true) do |table| %>
+  <% table.with_header do %>
+    <tr>
+      <th scope="col">Guest / Reference</th>
+      <th scope="col">Room details</th>
+      <th scope="col">Pre-checkin</th>
+      <th scope="col">Guarantee</th>
+      <th scope="col">Docs / Notes</th>
+      <th scope="col" class="text-right">Action</th>
+    </tr>
+  <% end %>
+  <% table.with_body do %>
+    <% @bookings.each do |booking| %>
+      <% presenter = HotelPortal::ArrivalPresenter.new(booking, current_hotel) %>
+      <tr class="align-top <%= "bg-muted" if presenter.blacklisted? %>" data-booking-token="<%= booking.confirmation_token %>">
+        <th scope="row">
+          <div class="flex items-center gap-1.5">
+            <span class="font-semibold text-foreground"><%= presenter.guest_name %></span>
+            <%= render "guest_markers", presenter:, labelled: true %>
+          </div>
+          <span class="font-mono text-xs font-normal text-muted-foreground"><%= presenter.confirmation_token %></span>
+        </th>
+        <td><%= presenter.rooms_summary.join(", ") %><br><span class="text-xs text-muted-foreground"><%= pluralize(presenter.adults, "adult") %>, <%= pluralize(presenter.children, "child") %></span></td>
+        <td><span class="inline-flex rounded-md border px-2 py-1 text-xs font-semibold <%= presenter.pre_checkin_badge_class %>"><%= presenter.pre_checkin_status_label %></span></td>
+        <td><%= presenter.guarantee_method_display %><br><span class="text-xs text-muted-foreground"><%= presenter.deposit_status_label %></span></td>
+        <td><%= presenter.document_uploaded? ? "Documents uploaded" : "No documents" %><%= "; #{presenter.notes_count_label}" if presenter.has_notes? %></td>
+        <td class="whitespace-nowrap text-right"><%= render "arrival_actions", booking:, presenter: %></td>
+      </tr>
+    <% end %>
+  <% end %>
+<% end %>

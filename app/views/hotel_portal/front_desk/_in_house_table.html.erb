@@ -1,0 +1,32 @@
+<%= render PanelsUI::Table.new(caption: "In-house guests", header_style: :sentence, hoverable: true, bordered: true) do |table| %>
+  <% table.with_header do %>
+    <tr>
+      <th scope="col">Guest / Reference</th>
+      <th scope="col">Contact</th>
+      <th scope="col">Stay dates</th>
+      <th scope="col">Checked in</th>
+      <th scope="col">Rooms</th>
+      <th scope="col" class="text-right">Actions</th>
+    </tr>
+  <% end %>
+  <% table.with_body do %>
+    <% @bookings.each do |booking| %>
+      <% presenter = HotelPortal::InHouseGuestPresenter.new(booking, current_user.time_zone) %>
+      <tr class="align-top <%= "bg-muted" if presenter.blacklisted? %>" data-booking-token="<%= booking.confirmation_token %>">
+        <th scope="row">
+          <div class="flex items-center gap-1.5">
+            <span class="font-semibold text-foreground"><%= presenter.guest_name %></span>
+            <%= render "guest_markers", presenter:, labelled: true %>
+          </div>
+          <span class="font-mono text-xs font-normal text-muted-foreground"><%= presenter.confirmation_token %></span>
+          <span class="<%= presenter.status_badge_class %>"><%= presenter.status_label %></span>
+        </th>
+        <td><%= presenter.guest_email %><br><span class="text-xs text-muted-foreground"><%= presenter.guest_phone %></span></td>
+        <td><%= presenter.check_in_formatted %> to <%= presenter.check_out_formatted %></td>
+        <td><%= presenter.checked_in_at_formatted %></td>
+        <td><%= presenter.rooms_summary.join(", ").presence || "No rooms assigned" %></td>
+        <td class="whitespace-nowrap text-right"><%= render "in_house_actions", booking:, presenter: %></td>
+      </tr>
+    <% end %>
+  <% end %>
+<% end %>
