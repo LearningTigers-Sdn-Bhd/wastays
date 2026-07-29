@@ -58,10 +58,10 @@
             <td class="text-right">
               <%= render PanelsUI::Button.new(
                 as: :a,
-                href: edit_hotel_corporate_account_path(current_hotel, row.relationship),
+                href: edit_hotel_corporate_account_path(current_hotel, row.relationship, return_to: request.fullpath),
                 variant: :secondary,
                 size: :sm,
-                data: { testid: "external-account-edit-#{row.id}", turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }) do %>
+                data: { testid: "external-account-edit-#{row.id}", turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>
                 <%= cached_icon "square-pen", class: "size-3.5", aria: { hidden: true } %>
                 Edit
               <% end %>

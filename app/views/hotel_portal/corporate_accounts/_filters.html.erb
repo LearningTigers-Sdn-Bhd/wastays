@@ -37,12 +37,12 @@
 
     <%= render PanelsUI::Button.new(
       as: :a,
-      href: new_hotel_corporate_account_path(current_hotel),
+      href: new_hotel_corporate_account_path(current_hotel, return_to: request.fullpath),
       variant: :primary,
       size: :md,
       aria_label: "Invite an external account",
       class: "shrink-0",
-      data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "right" }) do %>
+      data: { turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>
       <%= cached_icon "plus", stroke_width: 2.5, class: "size-4" %>
       <span class="hidden sm:inline">Invite</span>
     <% end %>

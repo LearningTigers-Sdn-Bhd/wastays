@@ -99,51 +99,93 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(response.body).to include("Direct Bill is still allowed")
   end
 
-  it "renders the invitation form in the offcanvas frame" do
-    get new_hotel_corporate_account_path(hotel), headers: { "Turbo-Frame" => "offcanvas_drawer" }
+  it "renders the invitation form in the sheet frame" do
+    get new_hotel_corporate_account_path(hotel), headers: { "Turbo-Frame" => "external_account_sheet" }
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
-    expect(response.body).to include("Invite External Account")
+    expect(response.body).to include('turbo-frame id="external_account_sheet"')
+    expect(response.body).to include('dialog id="external-account-sheet"')
+    expect(response.body).to include("Invite external account")
     expect(response.body).to include("Corporate contact email")
     expect(response.body).not_to include("Company name")
+    # DESIGN.md 6: portal forms use SelectMenu, never a native select.
+    expect(Nokogiri::HTML(response.body).css("select:not([data-panels-ui--select-menu-target]):not([data-panels-ui--combobox-target])")).to be_empty
   end
 
-  it "creates a corporate invitation and completes the offcanvas" do
+  it "renders the edit form in the sheet frame" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+
+    get edit_hotel_corporate_account_path(hotel, relationship), headers: { "Turbo-Frame" => "external_account_sheet" }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include('dialog id="external-account-sheet"')
+    expect(response.body).to include(relationship.corporate_account.name)
+    expect(response.body).to include("external-account-suspend-#{relationship.id}")
+  end
+
+  it "creates an invitation and completes the sheet back to the filtered index" do
+    return_to = hotel_corporate_accounts_path(hotel, account_type: "company")
+
     expect {
       post hotel_corporate_accounts_path(hotel), params: {
+        return_to: return_to,
         corporate_invitation: {
           email: "billing@acme.test",
           relationship_type: "standard",
           credit_currency: "MYR"
         }
-      }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "offcanvas_drawer" }
+      }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "external_account_sheet" }
     }.to change(CorporateInvitation, :count).by(1)
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include('action="complete_offcanvas"')
-    expect(response.body).to include(hotel_corporate_accounts_path(hotel))
+    expect(response.body).to include('action="complete_sheet"')
+    expect(response.body).to include('target="external_account_sheet"')
+    # complete_sheet does a hard navigation, so the destination has to carry the filters.
+    expect(response.body).to include(return_to)
     expect(CorporateInvitation.last.metadata).to include(
       "relationship_type" => "standard",
       "credit_currency" => "MYR"
     )
   end
 
-  it "keeps service errors and submitted values inside the offcanvas" do
+  it "keeps service errors and submitted values inside the sheet" do
     create(:user, email: "staff@example.com")
 
     post hotel_corporate_accounts_path(hotel), params: {
-        corporate_invitation: {
-          email: "staff@example.com",
-          relationship_type: "direct_bill",
+      corporate_invitation: {
+        email: "staff@example.com",
+        relationship_type: "direct_bill",
         credit_currency: "MYR"
       }
-    }, headers: { "Turbo-Frame" => "offcanvas_drawer" }
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "external_account_sheet" }
 
+    # The sheet must stay open with the address intact so it can be corrected in
+    # place — closing it on error would discard what was typed.
     expect(response).to have_http_status(:unprocessable_content)
     expect(response.body).to include("hotel staff")
     expect(response.body).to include("staff@example.com")
-    expect(response.body).to include('turbo-frame id="offcanvas_drawer"')
+    expect(response.body).to include('target="external_account_sheet"')
+    expect(response.body).not_to include('action="complete_sheet"')
+  end
+
+  it "completes the sheet after suspending an account" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+
+    patch suspend_hotel_corporate_account_path(hotel, relationship),
+      headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "external_account_sheet" }
+
+    expect(response.body).to include('action="complete_sheet"')
+    expect(relationship.reload).to be_suspended
+  end
+
+  it "ignores a return_to pointing outside the current hotel" do
+    post hotel_corporate_accounts_path(hotel), params: {
+      return_to: "https://evil.test/hotel/other/dashboard",
+      corporate_invitation: { email: "billing@acme.test", relationship_type: "standard", credit_currency: "MYR" }
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "external_account_sheet" }
+
+    expect(response.body).not_to include("evil.test")
+    expect(response.body).to include(hotel_corporate_accounts_path(hotel))
   end
 
   it "cannot suspend another hotel's relationship" do
