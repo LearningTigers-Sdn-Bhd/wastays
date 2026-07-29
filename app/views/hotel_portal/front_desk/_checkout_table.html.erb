@@ -7,7 +7,7 @@
       <th scope="col">Checked in</th>
       <th scope="col">Checked out</th>
       <th scope="col">Rooms</th>
-      <th scope="col" class="text-right">Actions</th>
+      <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
     </tr>
   <% end %>
   <% table.with_body do %>
@@ -27,9 +27,7 @@
         <td><%= booking.checked_in_at&.in_time_zone(current_user.time_zone)&.strftime("%d %b %Y, %I:%M %p") || "—" %></td>
         <td><%= booking.checked_out_at&.in_time_zone(current_user.time_zone)&.strftime("%d %b %Y, %I:%M %p") || "—" %></td>
         <td><%= rooms_summary %></td>
-        <td class="whitespace-nowrap text-right">
-          <%= link_to "View booking", hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details"), class: "inline-flex min-h-9 items-center rounded-lg border border-border-interactive px-3 py-1.5 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" %>
-        </td>
+        <td class="whitespace-nowrap text-right"><%= render "record_actions", booking:, tab: "checkout", split: true %></td>
       </tr>
     <% end %>
   <% end %>

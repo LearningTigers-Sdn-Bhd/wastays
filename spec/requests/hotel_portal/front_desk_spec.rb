@@ -481,7 +481,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
         expect(card.text).not_to include(record.guest_email, record.guest_phone)
         expect(card.css("dt").map { |label| label.text.strip }).not_to include("Email", "Phone", "Contact")
         expect(card.css("dt").map { |label| label.text.strip }).to include("Charges", "Paid", "Balance")
-        expect(card.at_css("button[aria-label='Booking actions']")).to be_present
+        expect(card.at_css("button[aria-label^='Actions for']")).to be_present
         expect(card.css("header > span > span").map { |line| line.text.strip }).to eq(%w[Unassigned Room])
         guest_name = card.at_xpath(".//p[normalize-space()='AReallyLongGuestNameWithoutSpacesThatMustRemainFullyVisible']")
         expect(guest_name["class"]).to include("break-words")
@@ -516,13 +516,12 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
         expect(action).to be_present, "expected Audit trail on #{tab}"
         expect(action["href"]).to eq(hotel_booking_action_audit_trail_path(hotel, record))
         expect(action["data-turbo-frame"]).to eq("booking_action_sheet")
+        # A flat list of items: the trigger names the menu, so there is no
+        # repeated "Actions" heading and no separator under it.
         menu = action.ancestors.find { |ancestor| ancestor["role"] == "menu" }
-        expect(menu.css('[role="separator"]').size).to eq(1)
-        group = action.ancestors.find { |ancestor| ancestor["role"] == "group" }
-        expected_order = [ "label", "separator" ] + Array.new(menu.css('[role="menuitem"]').size, "menuitem")
-        expect(group.element_children.map { |child| child["role"] || ("menuitem" if child.at_css('[role="menuitem"]')) || "label" }).to eq(
-          expected_order
-        )
+        expect(menu.css('[role="separator"]')).to be_empty
+        expect(menu.at_css('[role="group"]')).to be_nil
+        expect(menu.css('[role="menuitem"]').size).to eq(menu.element_children.size)
       end
 
       plan_feature.update!(enabled: false)
@@ -581,7 +580,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(document.css(".panel-form-field").count { |field| field.text.include?("Start date") || field.text.include?("End date") }).to eq(0)
       expect(document.css("th").map(&:text).map(&:strip)).to include("Guest / Reference", "Pre-checkin", "Guarantee", "Docs / Notes")
       expect(response.body).to include("Not Started")
-      expect(response.body).to include("Check In")
+      expect(response.body).to include("Check in")
       expect(response.body).not_to include("Room Status")
     end
 
@@ -661,6 +660,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
     end
 
     it "keeps mobile lifecycle sheet paths and checkout fields" do
+      grant_booking_permission
       late = booking(status: "review_due_out", confirmation_token: "MOBILE-LATE", checked_in_at: Time.current)
       checkout = booking(status: "checkout_required", confirmation_token: "MOBILE-CHECKOUT", checked_in_at: Time.current)
       departed = booking(status: "completed", confirmation_token: "MOBILE-DEPARTED", checked_in_at: Time.current, checked_out_at: Time.current)
@@ -774,6 +774,49 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
         document = Nokogiri::HTML5(response.body)
         expect(document.at_css("#front-desk-results table")).to be_nil, "#{tab}: rooms view rendered a table"
         expect(document.at_css("#front-desk-results section > div.grid")["class"]).not_to include("lg:hidden")
+      end
+    end
+
+    it "offers the same actions in the table row and the stay card", :room_cards do
+      grant_arrival_permission
+      grant_booking_permission
+      booking(status: "confirmed", confirmation_token: "ACT-ARRIVAL", check_in: hotel_today)
+      booking(status: "checked_in", confirmation_token: "ACT-STAY", checked_in_at: Time.current)
+      booking(status: "checkout_required", confirmation_token: "ACT-DUE", check_out: hotel_today, checked_in_at: Time.current)
+      booking(status: "completed", confirmation_token: "ACT-OUT", checked_out_at: Time.current)
+
+      %w[bookings arrivals in_house departures checkout].each do |tab|
+        get hotel_front_desk_path(hotel), params: { tab:, view: "list" }
+        document = Nokogiri::HTML5(response.body)
+
+        row = document.at_css("#front-desk-results table tbody tr[data-booking-token]")
+        card = document.at_css("#front-desk-results article[data-booking-token='#{row["data-booking-token"]}']")
+        expect(card).to be_present, "#{tab}: no card for #{row["data-booking-token"]}"
+
+        labels = ->(scope) { scope.css("a").map { |link| link.text.strip }.reject(&:blank?).sort }
+        expect(labels.call(row)).to eq(labels.call(card)), "#{tab}: table and card actions differ"
+
+        # The table promotes the state-changing action to a button; the card keeps it in the menu.
+        expect(row.at_css("a.panel-button")).to be_present if tab.in?(%w[arrivals in_house departures])
+        expect(card.at_css("a.panel-button")).to be_nil
+      end
+    end
+
+    it "requires manage_bookings for every state change, in both views" do
+      booking(status: "checked_in", confirmation_token: "PERM-STAY", checked_in_at: Time.current)
+
+      %w[list rooms].each do |view|
+        get hotel_front_desk_path(hotel), params: { tab: "in_house", view: }
+
+        expect(response.parsed_body.at_xpath("//a[normalize-space()='Check out']")).to be_nil, "#{view}: checkout offered without manage_bookings"
+      end
+
+      grant_booking_permission
+
+      %w[list rooms].each do |view|
+        get hotel_front_desk_path(hotel), params: { tab: "in_house", view: }
+
+        expect(response.parsed_body.at_xpath("//a[normalize-space()='Check out']")).to be_present, "#{view}: checkout missing with manage_bookings"
       end
     end
 

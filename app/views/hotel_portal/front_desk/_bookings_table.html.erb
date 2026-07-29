@@ -6,7 +6,7 @@
       <th scope="col">Guest</th>
       <th scope="col">Stay dates</th>
       <th scope="col">Amount</th>
-      <th scope="col" class="text-right">Action</th>
+      <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
     </tr>
   <% end %>
   <% table.with_body do %>
@@ -30,9 +30,7 @@
           <span class="mt-1 block text-xs text-muted-foreground"><%= presenter.nights_label %></span>
         </td>
         <td class="whitespace-nowrap font-semibold tabular-nums text-foreground"><%= presenter.formatted_currency_total %></td>
-        <td class="whitespace-nowrap text-right">
-          <%= link_to "Open", hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details"), class: "inline-flex min-h-9 items-center rounded-lg border border-border-interactive bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted", data: { turbo_frame: "_top" } %>
-        </td>
+        <td class="whitespace-nowrap text-right"><%= render "record_actions", booking:, tab: "bookings", split: true %></td>
       </tr>
     <% end %>
   <% end %>
