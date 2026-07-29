@@ -967,7 +967,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(results.at_css(".lg\\:hidden").text).to include("Boat-in", "08:00")
     end
 
-    it "shows boat-out on in-house, departures and checkout" do
+    it "shows boat-out on in-house and departures" do
       hotel.update!(allow_boat_information: true)
       stay = booking(status: "checked_in", check_in: hotel_today - 2, check_out: hotel_today,
                      checked_in_at: 2.days.ago, confirmation_token: "BOAT-OUT-1")
@@ -983,14 +983,30 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       end
     end
 
-    it "shows both slots on the bookings tab and an em dash when none is set" do
+    it "shows an em dash on a stay with no transfer booked" do
       hotel.update!(allow_boat_information: true)
-      booking(confirmation_token: "BOAT-BOTH")
+      booking(status: "checked_in", check_in: hotel_today - 2, check_out: hotel_today + 1,
+              checked_in_at: 2.days.ago, confirmation_token: "BOAT-NONE")
 
-      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list" }
+      get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list" }
 
-      expect(boat_headers).to eq([ "Boat transfer" ])
-      expect(response.parsed_body.at_css("table tbody tr[data-booking-token='BOAT-BOTH']").text).to include("—")
+      expect(response.parsed_body.at_css("table tbody tr[data-booking-token='BOAT-NONE']").text).to include("—")
+    end
+
+    it "leaves the bookings and checkout tabs free of boat times" do
+      hotel.update!(allow_boat_information: true)
+      stay = booking(status: "completed", check_in: hotel_today - 2, check_out: hotel_today,
+                     checked_in_at: 2.days.ago, checked_out_at: 1.hour.ago, confirmation_token: "BOAT-HIDDEN")
+      guest = create(:booking_guest, booking: stay, guest: create(:guest), is_primary: true)
+      guest.update!(boat_in_at: hotel.hotel_time_zone.parse("#{hotel_today} 08:00"),
+                    boat_out_at: hotel.hotel_time_zone.parse("#{hotel_today} 15:30"))
+
+      %w[bookings checkout].each do |tab|
+        get hotel_front_desk_path(hotel), params: { tab:, view: "list" }
+
+        expect(boat_headers).to be_empty, "expected no boat column on #{tab}"
+        expect(response.body).not_to include("Boat-in", "Boat-out", "Boat transfer")
+      end
     end
 
     it "drops the column entirely when the property has boat information off" do

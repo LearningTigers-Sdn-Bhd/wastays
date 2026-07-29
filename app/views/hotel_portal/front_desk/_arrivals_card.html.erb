@@ -21,7 +21,7 @@
       <div class="min-w-0 flex-1 text-right"><p class="text-xs font-medium text-muted-foreground">Departure</p><p class="mt-1 truncate"><%= booking.check_out&.strftime("%d %b") || "—" %></p></div>
     </section>
     <% if show_boat_times?(current_hotel) %>
-      <%= render "boat_band", booking: %>
+      <%= render "boat_band", booking:, kind: :in %>
     <% end %>
     <div class="flex items-center justify-between gap-2">
       <div class="flex min-w-0 items-center gap-1.5">

@@ -1,16 +1,10 @@
-<%# locals: (booking:, kinds:) %>
-<%# Renders the boat slot(s) for one booking. Callers own the wrapper element,
-    so the same markup works inside a table cell and inside a card. %>
-<% shown = Array(kinds).map { |kind| [ kind, booking_boat_time(booking, kind, current_hotel) ] }.select(&:last) %>
-<% if shown.empty? %>
+<%# locals: (booking:, kind:) %>
+<%# Renders one boat slot for a booking. Callers own the wrapper element, so the
+    same markup works inside a table cell and inside a card. %>
+<% parts = booking_boat_time(booking, kind, current_hotel) %>
+<% if parts.nil? %>
   <span class="text-muted-foreground">—</span>
 <% else %>
-  <% shown.each_with_index do |(kind, parts), index| %>
-    <div class="<%= "mt-1" if index.positive? %>">
-      <span class="font-semibold tabular-nums text-foreground">
-        <% if Array(kinds).size > 1 %><span class="font-normal text-muted-foreground"><%= kind == :in ? "In" : "Out" %></span> <% end %><%= parts[:time] %>
-      </span>
-      <span class="block text-xs text-muted-foreground"><%= parts[:date] %></span>
-    </div>
-  <% end %>
+  <span class="font-semibold tabular-nums text-foreground"><%= parts[:time] %></span>
+  <span class="block text-xs text-muted-foreground"><%= parts[:date] %></span>
 <% end %>
