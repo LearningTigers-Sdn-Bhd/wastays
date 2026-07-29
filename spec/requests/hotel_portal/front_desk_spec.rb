@@ -149,6 +149,34 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
 
       expect(response.body).to include("active-view:rooms")
       expect(response.parsed_body.at_css("[aria-label='Reservation view'] a[aria-current='page']")&.text).to include("Rooms")
+
+      get hotel_front_desk_path(hotel), params: { view: "list" }
+      expect(response.body).to include("active-view:list")
+    end
+
+    it "carries the active view through every link except the view switcher" do
+      grant_arrival_permission
+      grant_booking_permission
+      booking(status: "confirmed", confirmation_token: "VIEW-KEEP", check_in: hotel_today)
+
+      %w[rooms list].each do |view|
+        %w[bookings arrivals in_house departures checkout].each do |tab|
+          get hotel_front_desk_path(hotel), params: { tab:, view: }
+          document = Nokogiri::HTML5(response.body)
+
+          links = document.css("#reservation-sections a[href], [aria-label='Reservation filters'] a[href]")
+          # Switching view is that control's job; nothing else may reset it.
+          links = links.reject { |link| link.ancestors.any? { |node| node["aria-label"] == "Reservation view" } }
+          offenders = links.select { |link| link["href"].to_s.include?("front-desk") && !link["href"].to_s.include?("view=#{view}") }
+
+          expect(offenders).to be_empty,
+                               "#{tab}/#{view} reset the view: #{offenders.map { |link| "#{link.text.strip.presence || link["aria-label"]} -> #{link["href"]}" }.inspect}"
+        end
+
+        get hotel_front_desk_path(hotel), params: { tab: "bookings", view: }
+        form = Nokogiri::HTML5(response.body).at_css("[aria-label='Reservation filters'] form")
+        expect(form.at_css("input[name='view']")&.[]("value")).to eq(view), "#{view}: search form drops the view"
+      end
     end
 
     it "hides today reset until arrivals or departures use another date" do
@@ -919,6 +947,23 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
   end
 
   describe "legacy redirects" do
+    it "keeps the legacy list default but honours an explicit view" do
+      get hotel_arrivals_path(hotel)
+      expect(response).to redirect_to(a_string_including("view=list"))
+
+      get hotel_arrivals_path(hotel), params: { view: "rooms" }
+      expect(response).to redirect_to(a_string_including("view=rooms"))
+
+      get hotel_in_house_guests_path(hotel), params: { view: "rooms" }
+      expect(response).to redirect_to(a_string_including("view=rooms"))
+
+      get hotel_checked_out_guests_path(hotel), params: { view: "rooms" }
+      expect(response).to redirect_to(a_string_including("view=rooms"))
+
+      get hotel_arrivals_path(hotel), params: { view: "nonsense" }
+      expect(response).to redirect_to(a_string_including("view=list"))
+    end
+
     it "maps only supported arrivals parameters before authorization" do
       get hotel_arrivals_path(hotel), params: { date: "2026-07-15", q: "Aisha", page: 2, ignored: "x" }
 

@@ -9,7 +9,7 @@ module HotelPortal
     private
 
     def in_house_params
-      { tab: "in_house", view: "list", in_house_query: params[:query], room_assignment: params[:room_assignment], in_house_page: params[:page] }.compact
+      { tab: "in_house", view: legacy_view, in_house_query: params[:query], room_assignment: params[:room_assignment], in_house_page: params[:page] }.compact
     end
   end
 end
