@@ -8,7 +8,7 @@ module HotelDemoManagement
     DEFAULT_GROUP_COUNT = 100
     DEFAULT_HISTORY_DAYS = 365
     DEFAULT_FUTURE_DAYS = 30
-    BOOKING_SOURCES = %w[phone walk_in phone internal walk_in phone walk_in internal phone email].freeze
+    BOOKING_SOURCES = %w[booking agoda expedia traveloka airbnb walk_in internal].freeze
     COMPANY_BLUEPRINTS = [
       { key: "meridian", name: "Meridian Business Solutions Sdn Bhd", payment_terms_days: 30 },
       { key: "northstar", name: "Northstar Holdings Sdn Bhd", payment_terms_days: 30 },
