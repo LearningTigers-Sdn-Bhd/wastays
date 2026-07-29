@@ -26,6 +26,23 @@ RSpec.describe ApplicationHelper, type: :helper do
     end
   end
 
+  describe "#format_amount" do
+    it "drops the cents when there are none" do
+      expect(helper.format_amount(1_000_000)).to eq("1,000,000")
+      expect(helper.format_amount(0)).to eq("0")
+      expect(helper.format_amount(4_838.00)).to eq("4,838")
+    end
+
+    it "keeps the cents when they carry value" do
+      expect(helper.format_amount(4_838.5)).to eq("4,838.50")
+      expect(helper.format_amount(0.05)).to eq("0.05")
+    end
+
+    it "returns an empty string for a blank amount" do
+      expect(helper.format_amount(nil)).to eq("")
+    end
+  end
+
   describe "#toast_flash_messages" do
     it "maps notice and alert flashes to RailsBlocks toast variants" do
       messages = helper.toast_flash_messages(ActionDispatch::Flash::FlashHash.new.tap { |flash| flash[:notice] = "Saved"; flash[:alert] = "Failed" })

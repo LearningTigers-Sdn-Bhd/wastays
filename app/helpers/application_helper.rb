@@ -150,6 +150,15 @@ module ApplicationHelper
     end
   end
 
+  # Money for display: keeps cents only when there are any, so a round credit limit
+  # reads "1,000,000" instead of "1,000,000.00".
+  def format_amount(number)
+    return "" if number.blank?
+
+    amount = number.to_d
+    format_number(amount, precision: amount.frac.zero? ? 0 : 2)
+  end
+
   def status_badge_classes(tone, active: false)
     return "border-white/20 bg-white/15 text-white" if active
 

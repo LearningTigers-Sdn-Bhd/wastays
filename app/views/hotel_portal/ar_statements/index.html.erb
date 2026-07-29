@@ -44,7 +44,7 @@
                   <% row.unapplied_labels.each do |amount| %><div><%= amount %></div><% end %>
                 </td>
                 <td class="px-6 py-4 text-right">
-                  <%= link_to "View Statement", hotel_ar_statement_path(current_hotel, row.relationship), class: "inline-flex items-center rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition hover:bg-primary-hover", data: { turbo_frame: "_top" } %>
+                  <%= link_to "View", hotel_ar_statement_path(current_hotel, row.relationship), class: "inline-flex items-center rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition hover:bg-primary-hover", data: { turbo_frame: "_top" } %>
                 </td>
               </tr>
             <% end %>

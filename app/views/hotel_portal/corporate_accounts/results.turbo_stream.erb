@@ -1,0 +1,18 @@
+<%= turbo_stream.replace "corporate_accounts_results" do %>
+  <%= turbo_frame_tag "corporate_accounts_results" do %>
+    <div class="space-y-3">
+      <%= render "hotel_portal/corporate_accounts/tabs", presenter: @presenter %>
+      <%= render "hotel_portal/corporate_accounts/table", presenter: @presenter %>
+    </div>
+  <% end %>
+<% end %>
+
+<%# The layout renders flash toasts, which a stream response never re-runs. %>
+<% toast_flash_messages(flash).each do |toast| %>
+  <%= turbo_stream.append "toast-viewport" do %>
+    <%= render "shared/feedback/toast_trigger",
+      message: toast[:message],
+      type: toast.dig(:options, :type),
+      description: toast.dig(:options, :description) %>
+  <% end %>
+<% end %>

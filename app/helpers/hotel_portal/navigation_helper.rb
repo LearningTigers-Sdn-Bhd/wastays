@@ -20,10 +20,10 @@ module HotelPortal
       financial_nav_active = financial_nav_items.any?(&:active)
 
       accounts_receivable_nav_items = [
-        NavItem.new(label: "Corporate Accounts", path: hotel_corporate_accounts_path(current_hotel), search_text: "Corporate Accounts Government Direct Bill Credit Terms External Payers Accounts Receivable", active: controller_name.in?(%w[corporate_accounts corporate_invitations]), icon: "building-2", permission: "manage_corporate_accounts"),
-        NavItem.new(label: "AR Invoices", path: hotel_ar_invoices_path(current_hotel), search_text: "AR Invoices Accounts Receivable Direct Bill Aging Finance", active: controller_name == "ar_invoices" && action_name.in?(%w[index show]), icon: "file-text", permission: "view_reports"),
+        NavItem.new(label: "External Accounts", path: hotel_corporate_accounts_path(current_hotel), search_text: "External Accounts Corporate Accounts Government Direct Bill Credit Terms External Payers Accounts Receivable", active: controller_name.in?(%w[corporate_accounts corporate_invitations]), icon: "building-2", permission: "manage_corporate_accounts"),
+        NavItem.new(label: "Invoices", path: hotel_ar_invoices_path(current_hotel), search_text: "Invoices AR Invoices Accounts Receivable Direct Bill Aging Finance", active: controller_name == "ar_invoices" && action_name.in?(%w[index show]), icon: "file-text", permission: "view_reports"),
         NavItem.new(label: "Payment Record", path: hotel_ar_payments_path(current_hotel), search_text: "Payment Record AR Payments Payment Submissions Agent Slip Verification Corporate Payments Accounts Receivable Finance", active: controller_name.in?(%w[ar_payments ar_payment_submissions]), icon: "landmark", permission: "view_reports"),
-        NavItem.new(label: "AR Statements", path: hotel_ar_statements_path(current_hotel), search_text: "AR Statements Corporate Account Statement Ledger Accounts Receivable Finance", active: controller_name == "ar_statements", icon: "file-spreadsheet", permission: "view_reports"),
+        NavItem.new(label: "Statements", path: hotel_ar_statements_path(current_hotel), search_text: "Statements AR Statements Corporate Account Statement Ledger Accounts Receivable Finance", active: controller_name == "ar_statements", icon: "file-spreadsheet", permission: "view_reports"),
         NavItem.new(label: "Aging Report", path: hotel_ar_aging_path(current_hotel), search_text: "AR Aging Aging Report Credit Exposure Agent Summary Travel Agent Airline Accounts Receivable Finance", active: controller_name == "ar_invoices" && action_name == "aging", icon: "chart-bar", permission: "view_reports")
       ]
       accounts_receivable_nav_active = accounts_receivable_nav_items.any?(&:active)
@@ -48,12 +48,6 @@ module HotelPortal
       ]
       reservations_active = reservations_children.any?(&:active)
 
-      billing_children = [
-        NavItem.new(label: "Folios", path: hotel_folios_path(current_hotel), search_text: "Folios Ledger Guest Balances Billing", active: controller_name == "folios" && action_name.in?(%w[index needs_attention]), icon: "book-open", permission: "view_bookings"),
-        NavItem.new(label: "Payouts", path: payouts_hotel_reports_path(current_hotel), search_text: "Payouts Settlements Billing", active: controller_name == "reports" && action_name == "payouts", icon: "credit-card", permission: "view_payouts")
-      ]
-      billing_active = billing_children.any?(&:active)
-
       logs_children = [
         NavItem.new(label: "Operation Logs", path: hotel_audit_logs_path(current_hotel), search_text: "Operation Logs Audit Tracking History Security", icon: "file-text", active: controller_name == "audit_logs", permission: "view_audit_logs", plan_feature: "full_audit_trail"),
         NavItem.new(label: "Notification Logs", path: hotel_notification_logs_path(current_hotel), search_text: "Notification Logs History Sent Alerts Logs", icon: "bell", active: controller_name == "notification_logs", permission: "view_audit_logs")
@@ -67,9 +61,7 @@ module HotelPortal
           NavItem.new(label: "Planning & Inventory", path: hotel_inventory_index_path(current_hotel), search_text: "Planning Inventory Rates Availability", active: reservations_active, icon: "calendar", children: reservations_children)
         ]),
         NavSection.new(label: "Billing", items: [
-          NavItem.new(label: "Folios", path: hotel_folios_path(current_hotel), search_text: "Folios Ledger Guest Balances Billing", active: controller_name == "folios" && action_name.in?(%w[index needs_attention]), icon: "book-open", permission: "view_bookings"),
-          NavItem.new(label: "Accounts Receivable", path: hotel_ar_invoices_path(current_hotel), search_text: "Accounts Receivable Corporate AR Invoices Payments Billing", active: accounts_receivable_nav_active, icon: "file-text", children: accounts_receivable_nav_items, permission: [ "view_reports", "manage_corporate_accounts" ]),
-          NavItem.new(label: "Payouts", path: payouts_hotel_reports_path(current_hotel), search_text: "Payouts Settlements Billing", active: controller_name == "reports" && action_name == "payouts", icon: "credit-card", permission: "view_payouts")
+          NavItem.new(label: "Cashiering", path: hotel_ar_invoices_path(current_hotel), search_text: "Cashiering Accounts Receivable Corporate AR Invoices Payments Billing", active: accounts_receivable_nav_active, icon: "file-text", children: accounts_receivable_nav_items, permission: [ "view_reports", "manage_corporate_accounts" ])
         ]),
         NavSection.new(label: "Reports", items: [
           NavItem.new(label: "Financial", path: hotel_reports_path(current_hotel), search_text: "Reports Financial Summary Manager Flash Daily Report Revenue Cashier Sales Refund Extra Charge Daily Occupancy Outstanding Balance Deposit Liability", active: financial_nav_active, icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),

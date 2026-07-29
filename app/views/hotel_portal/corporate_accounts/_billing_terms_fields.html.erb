@@ -1,0 +1,32 @@
+<%# Shared billing-relationship fields. The invite form proposes them; the edit
+    form sets them directly. %>
+<section class="space-y-4">
+  <div>
+    <h3 class="text-sm font-semibold text-foreground">Billing relationship</h3>
+    <p class="mt-0.5 text-xs text-muted-foreground"><%= hint %></p>
+  </div>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :relationship_type, label: "Relationship",
+    hint: "Standard settles at checkout. Direct bill invoices this account instead, against its credit limit and terms.") do |field| %>
+    <% field.with_select_menu(
+      [ { label: "Standard", value: "standard" }, { label: "Direct bill", value: "direct_bill" } ],
+      selected: relationship_type) %>
+  <% end %>
+
+  <div class="grid gap-3 sm:grid-cols-2">
+    <%= render PanelsUI::FormField.new(form: form, attribute: :credit_currency, label: "Credit currency") do |field| %>
+      <% field.with_combobox(
+        CurrencyCatalog.options.map { |label, code| { label: label, value: code } },
+        selected: credit_currency,
+        prompt: "Select a currency") %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(form: form, attribute: :credit_limit, label: "Credit limit") do |field| %>
+      <% field.with_input(type: :number, value: credit_limit, min: 0, step: "0.01", placeholder: "No limit") %>
+    <% end %>
+  </div>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :payment_terms_days, label: "Payment terms (days)") do |field| %>
+    <% field.with_input(type: :number, value: payment_terms_days, min: 0, placeholder: "No terms") %>
+  <% end %>
+</section>

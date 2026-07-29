@@ -1,18 +1,22 @@
 # frozen_string_literal: true
 
 module HotelPortal
+  # External accounts index plus the Sheet-based invite and edit forms.
+  #
+  # Routes stay REST; only the rendering and completion contract are Sheet-based.
+  # On failure the form is re-rendered into the sheet frame so submitted values
+  # survive — the operator has to be able to correct an address in place.
   class CorporateAccountsController < HotelPortal::BaseController
-    include OffcanvasTransactionCompletion
+    include SheetActionCompletion
+
+    SHEET_FRAME = "external_account_sheet"
 
     before_action :authorize_manage_corporate_accounts!
     before_action :set_relationship, only: %i[edit update suspend reactivate]
+    before_action :set_return_to, except: :index
 
     def index
       @presenter = HotelPortal::AccountsReceivable::CorporateAccountsPresenter.new(hotel: current_hotel, params: params)
-      @pending_invitations = current_hotel.corporate_invitations
-        .unaccepted
-        .includes(:invited_by_user)
-        .order(created_at: :desc)
     end
 
     def new
@@ -20,6 +24,7 @@ module HotelPortal
         relationship_type: "standard",
         credit_currency: current_hotel.default_currency
       )
+      render :new, layout: false
     end
 
     def create
@@ -30,49 +35,64 @@ module HotelPortal
       ).call
 
       if result.success?
-        offcanvas_transaction_response(
-          destination: hotel_corporate_accounts_path(current_hotel),
-          notice: "Corporate invitation sent to #{result.invitation.email}."
-        )
+        complete_action(notice: "Invitation sent to #{result.invitation.email}.")
       else
         @corporate_invitation = result.invitation ||
           current_hotel.corporate_invitations.build(corporate_invitation_params)
         @corporate_invitation.errors.add(:base, result.error)
-        render :new, status: :unprocessable_content
+        render_failure("hotel_portal/corporate_accounts/invitation_form")
       end
     end
 
     def edit
+      render :edit, layout: false
     end
 
     def update
       if @relationship.update(relationship_params)
-        offcanvas_transaction_response(
-          destination: hotel_corporate_accounts_path(current_hotel),
-          notice: "#{@relationship.corporate_account.name} updated."
-        )
+        complete_action(notice: "#{@relationship.corporate_account.name} updated.")
       else
-        render :edit, status: :unprocessable_content
+        render_failure("hotel_portal/corporate_accounts/relationship_form")
       end
     end
 
     def suspend
       @relationship.suspend!
-      offcanvas_transaction_response(
-        destination: hotel_corporate_accounts_path(current_hotel),
-        notice: "#{@relationship.corporate_account.name} suspended."
-      )
+      complete_action(notice: "#{@relationship.corporate_account.name} suspended.")
     end
 
     def reactivate
       @relationship.reactivate!
-      offcanvas_transaction_response(
-        destination: hotel_corporate_accounts_path(current_hotel),
-        notice: "#{@relationship.corporate_account.name} reactivated."
-      )
+      complete_action(notice: "#{@relationship.corporate_account.name} reactivated.")
     end
 
     private
+
+    def complete_action(notice:)
+      complete_sheet_action(destination: @return_to, notice: notice, frame: requesting_sheet_frame)
+    end
+
+    # Re-render the form inside the sheet rather than closing it, so the
+    # operator keeps what they typed and can fix it in place.
+    def render_failure(partial)
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.update(requesting_sheet_frame, partial: partial),
+            status: :unprocessable_content
+        end
+        format.html { render(action_name == "create" ? :new : :edit, layout: false, status: :unprocessable_content) }
+      end
+    end
+
+    # Echo the frame that launched the sheet, so a stacked launcher closes its
+    # own dialog rather than the primary one.
+    def requesting_sheet_frame
+      turbo_frame_request_id.presence || SHEET_FRAME
+    end
+
+    def set_return_to
+      @return_to = sheet_action_return_to(fallback: hotel_corporate_accounts_path(current_hotel))
+    end
 
     def authorize_manage_corporate_accounts!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_corporate_accounts", hotel: current_hotel)
