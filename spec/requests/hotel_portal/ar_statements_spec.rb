@@ -40,7 +40,7 @@ RSpec.describe "HotelPortal::ArStatements", type: :request do
     expect(response).to have_http_status(:success)
     # Anchored on the breadcrumb: a bare include("Statements") also matches the
     # sidebar nav and would pass on any page in the portal.
-    expect(Nokogiri::HTML(response.body).at_css("#hotel-breadcrumb").text.squish).to include("Accounts Receivable", "Statements")
+    expect(Nokogiri::HTML(response.body).at_css("#hotel-breadcrumb").text.squish).to include("Cashiering", "Statements")
     expect(response.body).to include("Atlas Travel", "billing@atlas.test", "MYR 200.00", "MYR 60.00")
     expect(response.body).to include("Empty Corp", hotel_ar_statement_path(hotel, empty_relationship))
     expect(response.body).not_to include(hidden.corporate_account.name)

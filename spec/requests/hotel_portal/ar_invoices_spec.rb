@@ -26,7 +26,7 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       expect(response).to have_http_status(:success)
       # Anchored on the breadcrumb: a bare include("Invoices") also matches the
       # sidebar nav and would pass on any page in the portal.
-      expect(Nokogiri::HTML(response.body).at_css("#hotel-breadcrumb").text.squish).to include("Accounts Receivable", "Invoices")
+      expect(Nokogiri::HTML(response.body).at_css("#hotel-breadcrumb").text.squish).to include("Cashiering", "Invoices")
       expect(response.body).to include(invoice.formatted_invoice_number)
       expect(response.body).to include("BK-AR-1")
       expect(response.body).to include(invoice.corporate_account.name)
