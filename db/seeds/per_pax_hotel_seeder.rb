@@ -20,16 +20,53 @@ hotel.pax_pricing_only = true
 hotel.save!
 puts "Hotel 'Grand Pax Resort' ready."
 
-# Clean up previous bookings of this hotel to allow clean re-runs
-booking_ids = hotel.bookings.pluck(:id)
+# Clean up previous bookings of this hotel to allow clean re-runs. Uses delete_all
+# (raw SQL, no callbacks/validations) for folio/billing/financial records rather
+# than destroy_all, since most of these associations are dependent:
+# :restrict_with_error and would block a normal destroy cascade. Order matters:
+# every table below must be cleared before the tables it holds a foreign key to
+# (leaf records first, then booking_folios/booking_billing_parties, then bookings).
+#
+# Bookings that reached "completed" generate an Invoice at checkout, and
+# invoice_revisions are immutable at the DB level (a trigger rejects any
+# UPDATE/DELETE) - by design, for audit/compliance reasons. Those bookings can
+# never be destroyed, so they're excluded from cleanup entirely and left as-is;
+# seed_pax_booking below skips re-creating any confirmation_token that already
+# exists, making a full re-run idempotent instead of erroring on them.
+all_booking_ids = hotel.bookings.pluck(:id)
+invoiced_booking_ids = Booking.joins(booking_folios: :invoice).where(id: all_booking_ids).distinct.pluck(:id)
+booking_ids = all_booking_ids - invoiced_booking_ids
+
 folio_ids = BookingFolio.where(booking_id: booking_ids).pluck(:id)
-BookingAuditLog.where(hotel_id: hotel.id).delete_all
-FinancialAuditEvent.where(hotel_id: hotel.id).delete_all
+booking_billing_party_ids = BookingBillingParty.where(booking_id: booking_ids).pluck(:id)
+deposit_ids = Deposit.where(booking_id: booking_ids).pluck(:id)
+folio_transaction_ids = FolioTransaction.where(booking_folio_id: folio_ids).pluck(:id)
+
+BookingAuditLog.where(hotel_id: hotel.id, auditable_type: "Booking", auditable_id: booking_ids).delete_all
+FinancialAuditEvent.where(hotel_id: hotel.id, booking_id: booking_ids).delete_all
+
+Receipt.where(folio_transaction_id: folio_transaction_ids).delete_all
+Receipt.where(deposit_id: deposit_ids).delete_all
+DepositMovement.where(deposit_id: deposit_ids).delete_all
+FolioOperationLog.where(booking_id: booking_ids).delete_all
+FolioRoutingRule.where(booking_id: booking_ids).delete_all
+# Receivable and ArInvoice both map to the ar_invoices table, which references
+# invoices - must be cleared before Invoice itself. (booking_ids here already
+# excludes invoiced bookings, so this is a no-op safety net, not a real delete.)
+Receivable.where(booking_folio_id: folio_ids).delete_all
+InvoiceRevision.where(invoice_id: Invoice.where(booking_folio_id: folio_ids).select(:id)).delete_all
+Invoice.where(booking_folio_id: folio_ids).delete_all
 FolioForecastedCharge.where(booking_folio_id: folio_ids).delete_all
-FolioTransaction.where(booking_folio_id: folio_ids).delete_all
+FolioTransaction.where(id: folio_transaction_ids).delete_all
 PaymentTransaction.where(booking_id: booking_ids).destroy_all
-Deposit.where(booking_id: booking_ids).delete_all
-hotel.bookings.destroy_all
+Deposit.where(id: deposit_ids).delete_all
+
+# Now safe: nothing references booking_folios or booking_billing_parties anymore.
+BookingFolio.where(booking_id: booking_ids).delete_all
+BookingBillingTerms.where(booking_billing_party_id: booking_billing_party_ids).delete_all
+BookingBillingParty.where(booking_id: booking_ids).delete_all
+BookingGuest.where(booking_id: booking_ids).delete_all
+Booking.where(id: booking_ids).destroy_all
 puts "Cleaned up previous bookings for Grand Pax Resort."
 
 # Ensure default GL mappings
@@ -346,6 +383,7 @@ def post_nightly_charges_for_dates(booking, date_limit)
       transaction_type: "charge",
       category: fc.charge_kind,
       description: fc.description,
+      currency: booking.currency,
       posted_at: fc.stay_date.to_time + 22.hours,
       posting_date: fc.stay_date,
       user: nil,
@@ -364,6 +402,15 @@ def post_nightly_charges_for_dates(booking, date_limit)
 end
 
 def seed_pax_booking(hotel:, room_type:, rate_plan:, guest:, check_in:, check_out:, adults:, children: 0, room_number: nil, status: "confirmed", payment_status: "captured", confirmation_token: nil, shift_days: 0)
+  # Bookings that already reached "completed" hold an immutable invoice (see cleanup
+  # comment above) and were left untouched by the cleanup pass - skip re-creating them
+  # so re-running this seeder is idempotent instead of hitting a confirmation_token
+  # uniqueness error.
+  if confirmation_token.present? && (existing = Booking.find_by(confirmation_token: confirmation_token))
+    puts "  Booking #{confirmation_token} already exists (id=#{existing.id}), skipping."
+    return existing
+  end
+
   # We perform the creation for future/current dates so it passes availability/closing checks, then we shift it.
   effective_check_in = check_in + shift_days.days
   effective_check_out = check_out + shift_days.days
