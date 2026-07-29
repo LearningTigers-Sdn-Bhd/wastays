@@ -24,7 +24,7 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       get hotel_ar_invoices_path(hotel)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("AR Invoices")
+      expect(response.body).to include("Invoices")
       expect(response.body).to include(invoice.formatted_invoice_number)
       expect(response.body).to include("BK-AR-1")
       expect(response.body).to include(invoice.corporate_account.name)
@@ -42,7 +42,7 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       headings = document.css("thead th").map { |heading| heading.text.squish }
       row = document.at_css("[data-testid='ar-invoice-row-#{invoice.id}']")
 
-      expect(response.body).to include("AR Invoices")
+      expect(response.body).to include("Invoices")
       expect(response.body).not_to include("Accounts Receivable Invoices (AR Invoices)")
       expect(response.body).to include("Record Received Payment")
       expect(response.body).to include("Open AR")

@@ -22,7 +22,7 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     get hotel_corporate_accounts_path(hotel)
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Corporate Accounts")
+    expect(response.body).to include("External Accounts")
     expect(hotel_corporate_accounts_path(hotel)).to include("/accounts-receivable/corporate-accounts")
     expect(response.body).to include(visible.corporate_account.name)
     expect(response.body).not_to include(hidden.corporate_account.name)

@@ -24,8 +24,8 @@ RSpec.xdescribe "Hotel corporate management", type: :system, js: true do
     create(:user, email: "staff@example.com")
     visit hotel_corporate_accounts_path(hotel)
 
-    expect(page).to have_content("Corporate Accounts")
-    expect(page).to have_link("Corporate Accounts")
+    expect(page).to have_content("External Accounts")
+    expect(page).to have_link("External Accounts")
 
     click_link "Invite Corporate Account"
     expect(page).to have_css("turbo-frame#offcanvas_drawer", text: "Invite Corporate Account")
