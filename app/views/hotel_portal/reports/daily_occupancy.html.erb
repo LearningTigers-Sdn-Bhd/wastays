@@ -30,18 +30,18 @@
     <%= render HotelPortal::Reports::MetricStrip.new(
           aria_label: "Occupancy summary",
           metrics: [
-            { label: "Rooms sold", value: @report.totals[:rooms_sold].to_s, detail: "Selected period" },
-            { label: "Rooms available", value: @report.totals[:rooms_available].to_s, detail: "Selected period" },
+            { label: "Rooms sold", value: format_number(@report.totals[:rooms_sold]), detail: "Selected period" },
+            { label: "Rooms available", value: format_number(@report.totals[:rooms_available]), detail: "Selected period" },
             { label: "Occupancy", value: number_to_percentage(@report.totals[:occupancy_rate] * 100, precision: 2), detail: "Rooms sold / available" },
-            { label: "Average daily rate (ADR)", value: "MYR #{number_with_precision(@report.totals[:adr], precision: 2)}", detail: "Room revenue / rooms sold" }
+            { label: "Average daily rate (ADR)", value: "MYR #{format_number(@report.totals[:adr], precision: 2)}", detail: "Room revenue / rooms sold" }
           ]
         ) %>
     <%= render HotelPortal::Reports::MetricStrip.new(
           aria_label: "Revenue summary",
           metrics: [
-            { label: "Revenue per available room (RevPAR)", value: "MYR #{number_with_precision(@report.totals[:revpar], precision: 2)}", detail: "Room revenue / rooms available" },
-            { label: "Tax", value: "MYR #{number_with_precision(@report.totals[:tax_amount], precision: 2)}", detail: "Selected period" },
-            { label: "Total revenue", value: "MYR #{number_with_precision(@report.totals[:total_revenue], precision: 2)}", detail: "Room revenue plus tax" }
+            { label: "Revenue per available room (RevPAR)", value: "MYR #{format_number(@report.totals[:revpar], precision: 2)}", detail: "Room revenue / rooms available" },
+            { label: "Tax", value: "MYR #{format_number(@report.totals[:tax_amount], precision: 2)}", detail: "Selected period" },
+            { label: "Total revenue", value: "MYR #{format_number(@report.totals[:total_revenue], precision: 2)}", detail: "Room revenue plus tax" }
           ]
         ) %>
   </div>
@@ -74,14 +74,14 @@
           <% @report.rows.each do |row| %>
             <tr>
               <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= @date_preset == "this_year" ? row[:date].strftime("%B %Y") : row[:date].strftime("%d %b %Y") %></th>
-              <td class="text-right tabular-nums"><%= row[:rooms_sold] %></td>
-              <td class="text-right tabular-nums"><%= row[:rooms_available] %></td>
+              <td class="text-right tabular-nums"><%= format_number(row[:rooms_sold]) %></td>
+              <td class="text-right tabular-nums"><%= format_number(row[:rooms_available]) %></td>
               <td class="whitespace-nowrap text-right tabular-nums"><%= number_to_percentage(row[:occupancy_rate] * 100, precision: 2) %></td>
-              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_precision(row[:room_revenue], precision: 2) %></td>
-              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_precision(row[:adr], precision: 2) %></td>
-              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_precision(row[:revpar], precision: 2) %></td>
-              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= number_with_precision(row[:tax_amount], precision: 2) %></td>
-              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:total_revenue], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(row[:room_revenue], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(row[:adr], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(row[:revpar], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(row[:tax_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= format_number(row[:total_revenue], precision: 2) %></td>
             </tr>
           <% end %>
         <% else %>

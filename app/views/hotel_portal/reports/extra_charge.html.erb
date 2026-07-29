@@ -35,8 +35,8 @@
   <% end %>
 
   <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
-    { label: "Transactions", value: @report.totals[:transaction_count].to_s, detail: "Selected line" },
-    { label: "Total amount", value: "MYR #{number_with_precision(@report.totals[:total_amount], precision: 2)}", detail: "Selected period" }
+    { label: "Transactions", value: format_number(@report.totals[:transaction_count]), detail: "Selected line" },
+    { label: "Total amount", value: "MYR #{format_number(@report.totals[:total_amount], precision: 2)}", detail: "Selected period" }
   ]) %>
 
   <% if @date_preset == "this_year" %>
@@ -60,8 +60,8 @@
           <% @report.monthly_rows.each do |row| %>
             <tr>
               <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= row[:date].strftime("%b %Y") %></th>
-              <td class="text-right tabular-nums"><%= row[:transaction_count] %></td>
-              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:total_amount], precision: 2) %></td>
+              <td class="text-right tabular-nums"><%= format_number(row[:transaction_count]) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= format_number(row[:total_amount], precision: 2) %></td>
             </tr>
           <% end %>
         <% end %>
@@ -101,7 +101,7 @@
               <td><%= row[:folio_number] %></td>
               <td><%= row[:description] %></td>
               <td class="font-semibold"><%= row[:category].to_s == "fb" ? "F&B" : row[:category].to_s.upcase %></td>
-              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= number_with_precision(row[:amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= format_number(row[:amount], precision: 2) %></td>
             </tr>
           <% end %>
         <% else %>

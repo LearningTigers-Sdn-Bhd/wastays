@@ -24,8 +24,8 @@
   <% end %>
 
   <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
-    { label: "Refund count", value: @report.totals[:refund_count].to_s, detail: "Selected period" },
-    { label: "Total refund", value: "- MYR #{number_with_precision(@report.totals[:total_amount], precision: 2)}", detail: "Amount out", detail_variant: :destructive }
+    { label: "Refund count", value: format_number(@report.totals[:refund_count]), detail: "Selected period" },
+    { label: "Total refund", value: "- MYR #{format_number(@report.totals[:total_amount], precision: 2)}", detail: "Amount out", detail_variant: :destructive }
   ]) %>
 
   <section class="space-y-3" aria-labelledby="refund-records-heading">
@@ -69,7 +69,7 @@
               <td class="whitespace-nowrap"><%= row[:reference] %></td>
               <td class="whitespace-nowrap"><%= row[:status] %></td>
               <td><%= row[:reason] %></td>
-              <td class="whitespace-nowrap text-right font-semibold tabular-nums text-destructive">- MYR <%= number_with_precision(row[:refund_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums text-destructive">- MYR <%= format_number(row[:refund_amount], precision: 2) %></td>
             </tr>
           <% end %>
           <% end %>

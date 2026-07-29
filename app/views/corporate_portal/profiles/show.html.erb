@@ -47,7 +47,7 @@
                 <td class="px-6 py-4 font-bold text-foreground"><%= relationship.hotel.name %></td>
                 <td class="px-6 py-4 text-muted-foreground"><%= relationship.relationship_type.humanize %></td>
                 <td class="px-6 py-4 text-muted-foreground"><%= relationship.direct_bill_enabled? ? "Enabled" : "Disabled" %></td>
-                <td class="px-6 py-4 text-muted-foreground"><%= relationship.credit_limit.present? ? "#{relationship.credit_currency} #{number_with_precision(relationship.credit_limit, precision: 2)}" : "Not set" %></td>
+                <td class="px-6 py-4 text-muted-foreground"><%= relationship.credit_limit.present? ? "#{relationship.credit_currency} #{format_number(relationship.credit_limit, precision: 2)}" : "Not set" %></td>
                 <td class="px-6 py-4"><span class="rounded-md bg-muted px-2 py-1 text-xs font-bold uppercase tracking-wide text-foreground"><%= relationship.status.humanize %></span></td>
               </tr>
             <% end %>

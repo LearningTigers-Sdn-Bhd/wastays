@@ -53,7 +53,7 @@
                     <p class="text-[10px] text-amber-500 uppercase tracking-widest font-bold">Pending</p>
                   </td>
                 <td class="px-6 py-4 text-right font-black text-amber-900 text-[15px]">
-                  + <%= booking.currency.presence || "MYR" %> <%= number_with_precision(line[:amount].to_d, precision: 2) %>
+                  + <%= booking.currency.presence || "MYR" %> <%= format_number(line[:amount].to_d, precision: 2) %>
                 </td>
                 <td class="px-6 py-4 text-right"></td>
               </tr>

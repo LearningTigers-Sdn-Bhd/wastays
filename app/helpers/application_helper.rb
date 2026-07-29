@@ -137,6 +137,19 @@ module ApplicationHelper
     date.to_s
   end
 
+  def format_currency(amount, currency:, symbol: true)
+    CurrencyFormatter.format(amount, currency: currency, symbol: symbol)
+  end
+
+  def format_number(number, precision: nil)
+    return "" if number.blank?
+    if precision
+      number_with_delimiter(number_with_precision(number, precision: precision))
+    else
+      number_with_delimiter(number)
+    end
+  end
+
   def status_badge_classes(tone, active: false)
     return "border-white/20 bg-white/15 text-white" if active
 
