@@ -4,13 +4,14 @@ require "ostruct"
 
 module Rooms
   class StatusResolver
-    def initialize(hotel:, room_type:, room_number:, date:, bookings_scope: nil, blocks_scope: nil)
+    def initialize(hotel:, room_type:, room_number:, date:, bookings_scope: nil, blocks_scope: nil, statuses_scope: nil)
       @hotel = hotel
       @room_type = room_type
       @room_number = room_number.to_s
       @date = date
       @provided_bookings = bookings_scope
       @provided_blocks = blocks_scope
+      @provided_statuses = statuses_scope
     end
 
     def call
@@ -103,7 +104,11 @@ module Rooms
     end
 
     def persisted_status
-      @persisted_status ||= @hotel.room_statuses.find_by(room_type_id: @room_type.id, room_number: @room_number)
+      @persisted_status ||= if @provided_statuses
+        @provided_statuses.first
+      else
+        @hotel.room_statuses.find_by(room_type_id: @room_type.id, room_number: @room_number)
+      end
     end
   end
 end

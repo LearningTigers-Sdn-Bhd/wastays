@@ -125,11 +125,11 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     end
 
     it "exports the filtered housekeeping board as csv, xlsx, and pdf" do
+      selected_date = Date.new(2026, 7, 21)
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      create(:housekeeping_request, booking: booking, room_number: "101", status: "in_progress", request_details: "Need water")
-      create(:housekeeping_request, booking: booking, room_number: "202", status: "in_progress", request_details: "Fresh towels")
-      selected_date = Date.new(2026, 7, 21)
+      create(:housekeeping_request, booking: booking, room_number: "101", status: "in_progress", request_details: "Need water", requested_at: selected_date)
+      create(:housekeeping_request, booking: booking, room_number: "202", status: "in_progress", request_details: "Fresh towels", requested_at: selected_date)
 
       get hotel_housekeeping_tasks_path(hotel, format: :csv), params: { date: selected_date, q: "101" }
       expect(response).to have_http_status(:ok)

@@ -10,17 +10,17 @@ RSpec.describe HousekeepingTasks::BoardBuilder do
   let!(:penthouse) { create(:room_type, hotel:, name: "Executive Penthouse", room_number_mode: "custom", room_numbers: %w[101]) }
   let!(:garden_suite) { create(:room_type, hotel:, name: "Garden Prestige Suite", room_number_mode: "custom", room_numbers: %w[101]) }
 
-  def board
-    described_class.new(hotel:, date: Date.current).call
+  def board(date: Date.current)
+    described_class.new(hotel:, date:).call
   end
 
-  def tasks_for(room_type_name)
-    group = board.find { |entry| entry[:room_type].name == room_type_name }
+  def tasks_for(room_type_name, date: Date.current)
+    group = board(date:).find { |entry| entry[:room_type].name == room_type_name }
     room = group[:rooms].find { |entry| entry[:room_number] == "101" }
     room[:hk_requests].reject { |task| task.status == "no_task" }.map(&:request_details)
   end
 
-  def task_on(room_type, details:, status: "in_progress", archived_at: nil)
+  def task_on(room_type, details:, status: "in_progress", archived_at: nil, requested_at: Time.current)
     booking = create(:booking, hotel:)
     create(:booking_room, booking:, room_type:, room_number: "101")
     create(
@@ -30,6 +30,7 @@ RSpec.describe HousekeepingTasks::BoardBuilder do
       room_number: "101",
       status:,
       archived_at:,
+      requested_at:,
       request_details: details
     )
   end
@@ -78,6 +79,20 @@ RSpec.describe HousekeepingTasks::BoardBuilder do
 
         expect(tasks_for("Executive Penthouse")).to be_empty
       end
+    end
+
+    it "leaves out work that had not been asked for yet on the selected date" do
+      task_on(penthouse, details: "Raised today")
+      task_on(penthouse, details: "Raised last week", requested_at: 7.days.ago)
+
+      expect(tasks_for("Executive Penthouse", date: 3.days.ago.to_date)).to contain_exactly("Raised last week")
+      expect(tasks_for("Executive Penthouse")).to contain_exactly("Raised today", "Raised last week")
+    end
+
+    it "counts a task raised later the same day as open on that day" do
+      task_on(penthouse, details: "Raised this evening", requested_at: Date.current.end_of_day - 1.minute)
+
+      expect(tasks_for("Executive Penthouse")).to contain_exactly("Raised this evening")
     end
 
     it "still shows assigned and in-progress work" do
