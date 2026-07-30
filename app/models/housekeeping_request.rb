@@ -32,6 +32,18 @@ class HousekeepingRequest < ApplicationRecord
     !archived? && !status.in?(CLOSED_STATUSES)
   end
 
+  # The cleaning a checkout asks for, which a CheckOutRequest already stands
+  # for. Records the housekeeping tasks backfill made say so through
+  # checkout_request_id; older ones only say so by their details.
+  def checkout_cleaning?
+    checkout_request_id.present? || request_details.to_s.strip == "Checkout Room Cleaning"
+  end
+
+  # The checkout this cleaning belongs to, when it names one.
+  def checkout_request_id
+    metadata.to_h["checkout_request_id"].presence
+  end
+
   def display_requested_at
     requested_at || created_at
   end

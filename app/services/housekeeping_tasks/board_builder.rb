@@ -142,7 +142,7 @@ module HousekeepingTasks
 
     def add_housekeeping_task_rows(rows)
       housekeeping_requests.each do |request|
-        next if checkout_cleaning_housekeeping_request?(request)
+        next if request.checkout_cleaning?
 
         housekeeping_room_keys(request).each do |key|
           rows[key] << task_row_from_housekeeping_request(request)
@@ -295,10 +295,6 @@ module HousekeepingTasks
         requested_at: request.requested_at,
         source_kind: "checkout"
       )
-    end
-
-    def checkout_cleaning_housekeeping_request?(request)
-      request.metadata&.dig("checkout_request_id").present? || request.request_details.to_s.strip == "Checkout Room Cleaning"
     end
   end
 end

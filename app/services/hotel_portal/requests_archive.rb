@@ -106,17 +106,7 @@ module HotelPortal
       query = params[:q].to_s.strip.downcase
       return true if query.blank?
 
-      # Map query to potential statuses if it matches a group name
-      status_aliases = []
-      if "pending".include?(query)
-        status_aliases += %w[pending in_progress failed]
-      end
-      if "completed".include?(query) || "resolved".include?(query)
-        status_aliases += %w[completed resolved]
-      end
-      if "cancelled".include?(query)
-        status_aliases << "cancelled"
-      end
+      status_aliases = Requests::StatusGroups.aliases_for(query)
 
       searchable_values = [
         row[:guest_name],
@@ -140,19 +130,7 @@ module HotelPortal
     end
 
     def status_match?(row)
-      status = params[:status].to_s
-      return true if status.blank? || status == "all"
-
-      case status
-      when "pending"
-        row[:status].in?(%w[pending in_progress failed])
-      when "completed"
-        row[:status].in?(%w[completed resolved])
-      when "cancelled"
-        row[:status] == "cancelled"
-      else
-        true
-      end
+      Requests::StatusGroups.match?(params[:status], row[:status])
     end
 
     def date_range_match?(row)

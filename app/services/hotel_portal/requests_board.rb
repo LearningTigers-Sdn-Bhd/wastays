@@ -32,8 +32,34 @@ module HotelPortal
 
     private
 
+    # Every checkout already standing on the board, open or just completed.
+    # A housekeeping request for the same cleaning is the same job said twice,
+    # and the checkout is the one that carries the workflow.
+    def checkout_cards
+      @checkout_cards ||= checkout_request_cards + checkout_completed_request_cards
+    end
+
+    def checkout_card_request_ids
+      @checkout_card_request_ids ||= checkout_cards.map { |card| card[:request_id] }.to_set
+    end
+
+    def checkout_card_booking_ids
+      @checkout_card_booking_ids ||= checkout_cards.map { |card| card[:booking_id] }.to_set
+    end
+
+    # A cleaning that names its checkout is redundant when that checkout is on
+    # the board. One that only says so by its details has no id to match, so
+    # the booking is as close as it can be placed -- and a booking with no
+    # checkout card keeps its cleaning rather than losing the work.
+    def covered_by_checkout_card?(request, booking)
+      linked_id = request.checkout_request_id
+      return checkout_card_request_ids.include?(linked_id.to_i) if linked_id.present?
+
+      checkout_card_booking_ids.include?(booking.id)
+    end
+
     def checkout_request_cards
-      hotel.bookings
+      @checkout_request_cards ||= hotel.bookings
            .joins(:check_out_requests)
            .where(check_out_requests: { status: CheckOutRequest::OPEN_STATUSES })
            .includes(:check_out_requests)
@@ -59,7 +85,7 @@ module HotelPortal
     end
 
     def checkout_completed_request_cards
-      hotel.bookings.includes(:check_out_requests, :booking_rooms).flat_map do |booking|
+      @checkout_completed_request_cards ||= hotel.bookings.includes(:check_out_requests, :booking_rooms).flat_map do |booking|
         booking.check_out_requests.select { |request| request.status == "completed" && request.metadata.to_h["archived_at"].blank? }.map do |request|
           {
             kind: "checkout",
@@ -98,15 +124,14 @@ module HotelPortal
 
       hotel.bookings.includes(:housekeeping_requests, :complaint_requests).each do |booking|
         booking.housekeeping_requests.active.each do |request|
-          # Route checkout room cleaning requests to the checkout column instead
-          # of housekeeping. This covers both checkout_request_id-linked records
-          # (created by the housekeeping tasks backfill) and legacy records
-          # identified by request_details.
-          is_checkout_cleaning = request.metadata&.dig("checkout_request_id").present? ||
-                                  request.request_details&.strip == "Checkout Room Cleaning"
+          # Checkout room cleaning belongs in the checkout column rather than in
+          # housekeeping -- unless the checkout it stands for is already there,
+          # in which case showing it as well shows one job as two.
+          checkout_cleaning = request.checkout_cleaning?
+          next if checkout_cleaning && covered_by_checkout_card?(request, booking)
 
           card = build_card(
-            kind: is_checkout_cleaning ? "checkout" : "housekeeping",
+            kind: checkout_cleaning ? "checkout" : "housekeeping",
             request: request,
             booking: booking,
             title: request.request_details
@@ -163,23 +188,11 @@ module HotelPortal
       ]
 
       searchable_values.compact.any? { |value| value.to_s.downcase.include?(query) } ||
-        matching_status_aliases(query).include?(card[:status].to_s)
+        Requests::StatusGroups.aliases_for(query).include?(card[:status].to_s)
     end
 
     def status_match?(card)
-      status = params[:status].to_s
-      return true if status.blank? || status == "all"
-
-      case status
-      when "pending"
-        card[:status].in?(%w[pending in_progress failed])
-      when "completed"
-        card[:status].in?(%w[completed resolved])
-      when "cancelled"
-        card[:status] == "cancelled"
-      else
-        true
-      end
+      Requests::StatusGroups.match?(params[:status], card[:status])
     end
 
     def date_range_match?(card)
@@ -200,24 +213,16 @@ module HotelPortal
     end
 
     def request_bucket(kind, request)
-      return nil if request.status.to_s == "cancelled" || request.status.to_s == "no_task"
+      return nil if request.status.to_s.in?(%w[cancelled no_task])
+      return :completed if completed_recently?(request.completed_at, request.status)
 
       case kind.to_s
-      when "housekeeping"
-        return :completed if completed_recently?(request.completed_at, request.status)
-        return nil if request.completed?
-        :housekeeping
       when "checkout"
-        return :completed if completed_recently?(request.completed_at, request.status)
-        return nil if request.completed?
-        :checkout
+        :checkout unless request.completed?
       when "complaint"
-        return :completed if completed_recently?(request.completed_at, request.status)
-        return :complaint unless request.resolved?
-
-        nil
+        :complaint unless request.resolved?
       else
-        :housekeeping
+        :housekeeping unless request.completed?
       end
     end
 
@@ -226,14 +231,6 @@ module HotelPortal
       return false if completed_at.blank?
 
       completed_at >= 7.days.ago
-    end
-
-    def matching_status_aliases(query)
-      aliases = []
-      aliases += %w[pending in_progress failed] if "pending".include?(query)
-      aliases += %w[completed resolved] if "completed".include?(query) || "resolved".include?(query)
-      aliases << "cancelled" if "cancelled".include?(query)
-      aliases
     end
   end
 end

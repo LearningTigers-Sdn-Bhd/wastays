@@ -2,9 +2,17 @@
 
 module HotelPortal
   class RequestsController < HotelPortal::BaseController
+    include HotelPortal::HousekeepingTaskAuthorization
+
+    # Housekeeping and checkout work is advanced from the housekeeping board as
+    # well, and reaching it from here must not be the way around the line that
+    # board draws. Complaints are nobody's to hold, so they are not guarded.
+    ADVANCE_GUARDED_KINDS = %w[housekeeping checkout].freeze
+
     before_action :authorize_manage_requests!
     before_action -> { require_feature!("task_assignment_minibar_log") }
     before_action :set_breadcrumbs, only: [ :archive ]
+    before_action :authorize_advance_request!, only: [ :update_status ]
 
     rescue_from ActiveRecord::RecordNotFound, with: :handle_record_not_found
 
@@ -133,6 +141,18 @@ module HotelPortal
         format.html { redirect_to redirect_target, alert: "Request not found." }
         format.json { render json: { ok: false }, status: :not_found }
       end
+    end
+
+    def authorize_advance_request!
+      return unless ADVANCE_GUARDED_KINDS.include?(params[:kind].to_s)
+
+      authorize_advance!(
+        ::HotelPortal::Requests::Finder.new(
+          hotel: current_hotel,
+          kind: params[:kind],
+          request_id: params[:request_id]
+        ).call
+      )
     end
 
     def authorize_manage_requests!

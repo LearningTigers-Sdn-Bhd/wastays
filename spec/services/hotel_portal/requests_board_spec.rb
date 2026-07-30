@@ -70,6 +70,24 @@ RSpec.describe HotelPortal::RequestsBoard do
         total_cards = board.board_columns.values.flatten.size
         expect(total_cards).to eq(1)
       end
+
+      # A guest's request arrives as "pending" and reads "new" once a dispatcher
+      # takes it. Both are still outstanding, so the filter has to find both.
+      it 'keeps dispatched work in the pending status group' do
+        dispatched = create(:housekeeping_request, booking: booking, status: 'new', request_details: 'Extra pillows', archived_at: nil)
+
+        board = described_class.new(hotel, { status: 'pending' })
+
+        expect(board.board_columns[:housekeeping].map { |c| c[:request_id] }).to include(dispatched.id)
+      end
+
+      it 'finds dispatched work when searching for pending' do
+        dispatched = create(:housekeeping_request, booking: booking, status: 'assigned', request_details: 'Extra blanket', archived_at: nil)
+
+        board = described_class.new(hotel, { q: 'pending' })
+
+        expect(board.board_columns[:housekeeping].map { |c| c[:request_id] }).to include(dispatched.id)
+      end
     end
 
     context 'checkout room cleaning tasks' do
@@ -82,6 +100,42 @@ RSpec.describe HotelPortal::RequestsBoard do
         columns = board.board_columns
         expect(columns[:checkout].map { |c| c[:request_id] }).to include(checkout_cleaning.id)
         expect(columns[:housekeeping].map { |c| c[:request_id] }).not_to include(checkout_cleaning.id)
+      end
+
+      it 'shows one card when the cleaning names the checkout already on the board' do
+        checkout_request = create(:check_out_request, booking: booking, status: 'pending')
+        checkout_cleaning.update!(metadata: { 'checkout_request_id' => checkout_request.id })
+
+        columns = described_class.new(hotel).board_columns
+
+        expect(columns[:checkout].map { |c| c[:request_id] }).to contain_exactly(checkout_request.id)
+        expect(columns.values.flatten.map { |c| c[:request_id] }).not_to include(checkout_cleaning.id)
+      end
+
+      it 'shows one card when a legacy cleaning shares its booking with a checkout on the board' do
+        checkout_request = create(:check_out_request, booking: booking, status: 'pending')
+
+        columns = described_class.new(hotel).board_columns
+
+        expect(columns[:checkout].map { |c| c[:request_id] }).to contain_exactly(checkout_request.id)
+      end
+
+      it 'keeps a legacy cleaning when the checkout on the board belongs to another booking' do
+        other_booking = create(:booking, hotel: hotel)
+        checkout_request = create(:check_out_request, booking: other_booking, status: 'pending')
+
+        columns = described_class.new(hotel).board_columns
+
+        expect(columns[:checkout].map { |c| c[:request_id] }).to contain_exactly(checkout_request.id, checkout_cleaning.id)
+      end
+
+      it 'keeps a cleaning whose named checkout is not on the board' do
+        checkout_request = create(:check_out_request, booking: booking, status: 'completed', metadata: { 'archived_at' => Time.current.iso8601 })
+        checkout_cleaning.update!(metadata: { 'checkout_request_id' => checkout_request.id })
+
+        columns = described_class.new(hotel).board_columns
+
+        expect(columns[:checkout].map { |c| c[:request_id] }).to contain_exactly(checkout_cleaning.id)
       end
     end
 

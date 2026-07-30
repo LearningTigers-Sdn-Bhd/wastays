@@ -63,7 +63,7 @@
           </div>
           <div class="flex items-center gap-2">
             <span class="inline-flex size-7 items-center justify-center rounded-full <%= @presenter.column_count_badge_class(column) %> text-xs font-black">
-              <%= @presenter.board_columns[bucket_key].size %>
+              <%= @presenter.board_counts[bucket_key] %>
             </span>
           </div>
           <% if column[:draggable] %>
