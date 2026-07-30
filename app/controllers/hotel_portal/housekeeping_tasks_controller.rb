@@ -79,12 +79,16 @@ module HotelPortal
       ).call
     end
 
-    # Only the page needs presenters; the exports read the board itself.
+    # Only the page needs presenters; the exports read the board itself. One view
+    # context is built here and handed down, rather than each presenter reaching
+    # for Rails to format a date or name a path.
     def presented(room_groups)
+      context = view_context
+
       room_groups.map do |group|
         {
           room_type: group[:room_type],
-          rooms: group[:rooms].map { |room| HousekeepingTaskRoomPresenter.new(room, current_hotel) }
+          rooms: group[:rooms].map { |room| HousekeepingTaskRoomPresenter.new(room, hotel: current_hotel, view_context: context) }
         }
       end
     end

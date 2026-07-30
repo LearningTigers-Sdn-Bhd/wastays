@@ -2,14 +2,18 @@
 
 module HotelPortal
   class HousekeepingTaskRoomPresenter
-    attr_reader :room_number, :resolved_status, :active_booking, :room_type, :hotel
+    attr_reader :room_number, :resolved_status, :active_booking, :room_type, :hotel, :view_context
 
-    def initialize(room_data, hotel)
+    # The view context formats the dates and builds the paths. It is handed in
+    # rather than fetched from Rails, so what this presenter needs from the
+    # outside is visible in its signature -- and stubbable in a spec.
+    def initialize(room_data, hotel:, view_context:)
       @room_number = room_data[:room_number]
       @resolved_status = room_data[:resolved_status]
       @active_booking = room_data[:active_booking]
       @room_type = room_data[:room_type]
       @hotel = hotel
+      @view_context = view_context
       @raw_requests = room_data[:hk_requests]
     end
 
@@ -40,9 +44,9 @@ module HotelPortal
       return "-" unless active_booking
 
       if active_booking.checked_in_at
-        helpers.display_housekeeping_datetime(active_booking.checked_in_at)
+        view_context.display_housekeeping_datetime(active_booking.checked_in_at)
       else
-        helpers.display_housekeeping_date(active_booking.check_in)
+        view_context.display_housekeeping_date(active_booking.check_in)
       end
     end
 
@@ -50,9 +54,9 @@ module HotelPortal
       return "-" unless active_booking
 
       if active_booking.checked_out_at
-        helpers.display_housekeeping_datetime(active_booking.checked_out_at)
+        view_context.display_housekeeping_datetime(active_booking.checked_out_at)
       else
-        helpers.display_housekeeping_date(active_booking.check_out)
+        view_context.display_housekeeping_date(active_booking.check_out)
       end
     end
 
@@ -73,7 +77,7 @@ module HotelPortal
     # -- Task Requests --
 
     def task_requests
-      @task_requests ||= @raw_requests.map { |req| TaskRequestPresenter.new(req, hotel) }
+      @task_requests ||= @raw_requests.map { |task| TaskRequestPresenter.new(task, hotel: hotel, view_context: view_context) }
     end
 
     def first_task_request
@@ -97,21 +101,18 @@ module HotelPortal
 
     private
 
-    def helpers
-      ApplicationController.helpers
-    end
-
     # Wraps one HousekeepingTasks::TaskRow to expose clean view methods for URL
     # routing, status resolution, and assignment logic.
     class TaskRequestPresenter
-      attr_reader :request, :hotel
+      attr_reader :request, :hotel, :view_context
 
       delegate :id, :request_details, :status, :metadata, :created_at,
                :checkout_request?, :assigned_to_name, :display_status, to: :request
 
-      def initialize(request, hotel)
+      def initialize(request, hotel:, view_context:)
         @request = request
         @hotel = hotel
+        @view_context = view_context
       end
 
       # The board's stand-in row for a room with nothing to do carries no id, so
@@ -125,9 +126,9 @@ module HotelPortal
         return unless assignable?
 
         if checkout_request?
-          url_helpers.hotel_assign_checkout_request_path(hotel, request.id)
+          view_context.hotel_assign_checkout_request_path(hotel, request.id)
         else
-          url_helpers.assign_hotel_housekeeping_task_path(hotel, request.id)
+          view_context.assign_hotel_housekeeping_task_path(hotel, request.id)
         end
       end
 
@@ -135,9 +136,9 @@ module HotelPortal
         return unless assignable?
 
         if checkout_request?
-          url_helpers.hotel_checkout_request_status_path(hotel, request.id)
+          view_context.hotel_checkout_request_status_path(hotel, request.id)
         else
-          url_helpers.status_hotel_housekeeping_task_path(hotel, request.id)
+          view_context.status_hotel_housekeeping_task_path(hotel, request.id)
         end
       end
 
@@ -209,12 +210,6 @@ module HotelPortal
 
       def long_details?
         has_details? && request_details.to_s.length > CLAMPED_LENGTH
-      end
-
-      private
-
-      def url_helpers
-        Rails.application.routes.url_helpers
       end
     end
   end
