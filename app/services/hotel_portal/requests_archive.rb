@@ -24,7 +24,7 @@ module HotelPortal
     private
 
     def filtered_rows
-      rows = build_rows.select { |row| row[:archived_at].present? }
+      rows = build_rows
       rows = rows.select { |row| search_match?(row) }
       rows = rows.select { |row| kind_match?(row) }
       rows = rows.select { |row| status_match?(row) }
@@ -32,53 +32,89 @@ module HotelPortal
       rows.sort_by { |row| row[:requested_at] || Time.zone.at(0) }.reverse
     end
 
+    # The archive is only ever the archived, so only the archived is asked for.
+    # A request reaches its booking rather than the other way around, which keeps
+    # a hotel's whole history of requests out of a page showing a page of them.
     def build_rows
       rows = []
 
-      hotel.bookings.includes(:housekeeping_requests, :complaint_requests, :check_out_requests).find_each do |booking|
-        booking.housekeeping_requests.each do |request|
-          rows << build_row(
-            kind: "housekeeping",
-            request: request,
-            booking: booking,
-            title: request.request_details
-          )
-        end
+      archived_housekeeping_requests.each do |request|
+        rows << build_row(
+          kind: "housekeeping",
+          request: request,
+          booking: request.booking,
+          title: request.request_details
+        )
+      end
 
-        booking.complaint_requests.each do |request|
-          rows << build_row(
-            kind: "complaint",
-            request: request,
-            booking: booking,
-            title: request.complaint_details
-          )
-        end
+      archived_complaint_requests.each do |request|
+        rows << build_row(
+          kind: "complaint",
+          request: request,
+          booking: request.booking,
+          title: request.complaint_details
+        )
+      end
 
-        booking.check_out_requests.each do |request|
-          archived_at = request.metadata.to_h["archived_at"]
-          next unless request.status == "cancelled" || (request.status == "completed" && archived_at.present?)
-          rows << {
-            kind: "checkout",
-            request_id: request.id,
-            booking_id: booking.id,
-            booking_token: booking.confirmation_token,
-            guest_name: booking.guest_name,
-            title: request.guest_notes.presence || "Checkout requested",
-            requested_at: request.requested_at,
-            completed_at: request.acknowledged_at || request.updated_at,
-            status: request.status,
-            internal_notes: [],
-            archived_at: archived_at.presence || request.updated_at,
-            status_class: request.status == "completed" ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border border-red-100",
-            kind_class: "bg-amber-50 text-amber-600 border-amber-100",
-            archive_url: hotel_unarchive_request_path(hotel, kind: "checkout", request_id: request.id),
-            archive_action: "Unarchive",
-            booking_url: hotel_booking_path(hotel, booking, tab: "requests")
-          }
-        end
+      archived_checkout_requests.each do |request|
+        booking = request.booking
+        archived_at = request.metadata.to_h["archived_at"]
+
+        rows << {
+          kind: "checkout",
+          request_id: request.id,
+          booking_id: booking.id,
+          booking_token: booking.confirmation_token,
+          guest_name: booking.guest_name,
+          title: request.guest_notes.presence || "Checkout requested",
+          requested_at: request.requested_at,
+          completed_at: request.acknowledged_at || request.updated_at,
+          status: request.status,
+          internal_notes: [],
+          archived_at: archived_at.presence || request.updated_at,
+          status_class: status_class_for("checkout", request.status),
+          kind_class: kind_class_for("checkout"),
+          archive_url: hotel_unarchive_request_path(hotel, kind: "checkout", request_id: request.id),
+          archive_action: "Unarchive",
+          booking_url: hotel_booking_path(hotel, booking, tab: "requests")
+        }
       end
 
       rows
+    end
+
+    def hotel_booking_ids
+      @hotel_booking_ids ||= hotel.bookings.select(:id)
+    end
+
+    def archived_housekeeping_requests
+      HousekeepingRequest
+        .in_hotel(hotel)
+        .archived
+        .where.not(booking_id: nil)
+        .includes(:booking)
+        .order(requested_at: :desc)
+    end
+
+    def archived_complaint_requests
+      ComplaintRequest
+        .where(booking_id: hotel_booking_ids)
+        .archived
+        .includes(:booking)
+        .order(requested_at: :desc)
+    end
+
+    # A checkout carries no archived_at column: cancelling is an ending of its
+    # own, and completing is archived by a note in its metadata.
+    def archived_checkout_requests
+      CheckOutRequest
+        .where(booking_id: hotel_booking_ids)
+        .where(
+          "check_out_requests.status = 'cancelled' OR " \
+          "(check_out_requests.status = 'completed' AND COALESCE(check_out_requests.metadata->>'archived_at', '') <> '')"
+        )
+        .includes(:booking)
+        .order(requested_at: :desc)
     end
 
     def build_row(kind:, request:, booking:, title:)

@@ -20,6 +20,70 @@ RSpec.describe HotelPortal::RequestsBoard do
     create(:housekeeping_request, booking: booking, status: 'pending', archived_at: Time.current)
   end
 
+  # The board shows outstanding work and what finished recently. What it costs
+  # should follow how busy the hotel is now, not how long it has been open.
+  describe 'what it loads' do
+    def finished_history(hotel, bookings:)
+      bookings.times do
+        old_booking = create(:booking, hotel: hotel)
+        create(:housekeeping_request, booking: old_booking, status: 'completed',
+               requested_at: 200.days.ago, completed_at: 200.days.ago, archived_at: 200.days.ago)
+        create(:complaint_request, booking: old_booking, status: 'resolved',
+               requested_at: 200.days.ago, completed_at: 200.days.ago, archived_at: 200.days.ago)
+        create(:check_out_request, booking: old_booking, status: 'completed',
+               requested_at: 200.days.ago, metadata: { 'archived_at' => 200.days.ago.iso8601 })
+      end
+    end
+
+    def queries_for(hotel)
+      count = 0
+      subscriber = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, payload|
+        count += 1 unless payload[:name].to_s.in?([ 'SCHEMA', 'TRANSACTION' ])
+      end
+      described_class.new(hotel).board_columns
+      count
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
+
+    def hotel_with_live_work
+      live_hotel = create(:hotel)
+      live_booking = create(:booking, hotel: live_hotel)
+      create(:housekeeping_request, booking: live_booking, status: 'pending')
+      create(:complaint_request, booking: live_booking, status: 'pending')
+      create(:check_out_request, booking: live_booking, status: 'pending')
+      live_hotel
+    end
+
+    it 'asks no more of a hotel with years behind it than of one without' do
+      busy = hotel_with_live_work
+      quiet = hotel_with_live_work
+      finished_history(busy, bookings: 20)
+
+      expect(queries_for(busy)).to eq(queries_for(quiet))
+    end
+
+    it 'leaves work finished long ago to the archive' do
+      old_booking = create(:booking, hotel: hotel)
+      long_done = create(:housekeeping_request, booking: old_booking, status: 'completed',
+                         request_details: 'Ancient towels', requested_at: 200.days.ago,
+                         completed_at: 200.days.ago, archived_at: nil)
+
+      card_ids = described_class.new(hotel).board_columns.values.flatten.map { |card| card[:request_id] }
+
+      expect(card_ids).not_to include(long_done.id)
+    end
+
+    it 'still shows work finished within the week' do
+      recent = create(:housekeeping_request, booking: booking, status: 'completed',
+                      request_details: 'Recent towels', completed_at: 2.days.ago, archived_at: nil)
+
+      card_ids = described_class.new(hotel).board_columns[:completed].map { |card| card[:request_id] }
+
+      expect(card_ids).to include(recent.id)
+    end
+  end
+
   describe '#board_columns' do
     it 'only returns active (unarchived) requests' do
       board = described_class.new(hotel)
