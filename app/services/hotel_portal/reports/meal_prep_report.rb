@@ -6,6 +6,8 @@ module HotelPortal
     # slot their boat is on. Each slot carries its own entitlements, set per
     # property in Settings, so nothing here assumes a service time.
     class MealPrepReport
+      MEALS = %w[breakfast lunch dinner].freeze
+
       Result = Struct.new(
         :start_date,
         :end_date,
@@ -34,7 +36,21 @@ module HotelPortal
         end
 
         def pax_for(meal)
-          records.select { |row| serves?(row, meal) }.sum { |row| row[:pax] }
+          rows_for(meal).sum { |row| row[:pax] }
+        end
+
+        # One section per meal being served: the "all" tab shows three, a single
+        # meal tab shows its own. Every surface (screen, sheets, PDF pages) lays
+        # itself out from these.
+        def sections
+          (meal_type.presence ? [ meal_type ] : MEALS).map do |meal|
+            rows = rows_for(meal)
+            { title: meal.to_s.titleize, meal: meal.to_s, rows: rows, total_pax: rows.sum { |row| row[:pax] } }
+          end
+        end
+
+        def rows_for(meal)
+          records.select { |row| serves?(row, meal) }
         end
 
         private
@@ -116,6 +132,7 @@ module HotelPortal
           room_type: booking.booking_rooms.map { |br| br.room_type&.name }.compact.uniq.join(", ").presence || "—",
           room_number: booking.booking_rooms.map(&:room_number).compact.join(", ").presence || "—",
           boat_time: time,
+          transfer_date: format_transfer_date(time),
           formatted_boat_time: format_boat_time(time),
           meals: meals,
           meal_type: meals.join(", "),
@@ -128,6 +145,12 @@ module HotelPortal
         return "—" if value.blank?
 
         value.in_time_zone(@hotel.hotel_time_zone).strftime("%I:%M %p")
+      end
+
+      def format_transfer_date(value)
+        return "—" if value.blank?
+
+        value.in_time_zone(@hotel.hotel_time_zone).strftime("%d %b %Y")
       end
     end
   end

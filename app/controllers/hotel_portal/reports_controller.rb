@@ -10,6 +10,7 @@ module HotelPortal
 
     PAYOUT_TABS = %w[upcoming paid].freeze
     GUEST_REPORT_TABS = %w[arrivals in_house departures checkout police_report registration_cards bibo meal_prep].freeze
+    MEAL_PREP_ALL = "all"
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
     DAILY_REPORT_TABS = %w[overview revenue cashier].freeze
     TAX_COMPLIANCE_TABS = %w[tourism_tax sst non_national].freeze
@@ -405,9 +406,12 @@ module HotelPortal
       end
 
       if @active_guest_report_tab == "meal_prep"
-        params[:meal_type] = "breakfast" unless %w[breakfast lunch dinner].include?(params[:meal_type])
-        @meal_prep_report = @meal_prep_full.for_meal(params[:meal_type])
-        @meal_prep_counts = %w[breakfast lunch dinner].index_with { |meal| @meal_prep_full.pax_for(meal) }
+        meals = HotelPortal::Reports::MealPrepReport::MEALS
+        params[:meal_type] = MEAL_PREP_ALL unless meals.include?(params[:meal_type])
+        # "All" keeps every meal in one report; each meal becomes its own section.
+        @meal_prep_report = @meal_prep_full.for_meal(params[:meal_type] == MEAL_PREP_ALL ? nil : params[:meal_type])
+        @meal_prep_counts = meals.index_with { |meal| @meal_prep_full.pax_for(meal) }
+          .merge(MEAL_PREP_ALL => @meal_prep_full.total_pax)
       end
 
       load_guest_registration_cards(start_date: @report_start_date, end_date: @report_end_date)

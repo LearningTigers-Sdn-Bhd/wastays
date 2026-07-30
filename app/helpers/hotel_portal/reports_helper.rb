@@ -133,6 +133,16 @@ module HotelPortal::ReportsHelper
     end
   end
 
+  # Which way the guest is travelling, so the badge can lead with a direction.
+  TRANSFER_BADGES = {
+    "Boat-in" => { icon: "arrow-down-to-line", variant: :info },
+    "Boat-out" => { icon: "arrow-up-from-line", variant: :warning }
+  }.freeze
+
+  def transfer_badge(type)
+    TRANSFER_BADGES.fetch(type.to_s, { icon: "ship", variant: :neutral })
+  end
+
   def bibo_sections(report)
     HotelPortal::Reports::BiboReport::LEGS.map do |leg|
       leg.merge(rows: report.public_send(leg[:rows_key]))

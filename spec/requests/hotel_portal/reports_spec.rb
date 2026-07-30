@@ -236,7 +236,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         "checkout" => { tables: 1, metrics: 4 },
         "registration_cards" => { tables: 1, metrics: 3 },
         "bibo" => { tables: 2, metrics: 0 },
-        "meal_prep" => { tables: 1, metrics: 0 }
+        # The meal tab lands on "All": one table per meal.
+        "meal_prep" => { tables: 3, metrics: 0 }
       }.each do |tab, expected|
         get guest_reports_hotel_reports_path(hotel), params: {
           start_date: start_date.to_s,
@@ -323,6 +324,64 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(panel).to have_text("Stay dates")
       # The time column is plain text now, no badge.
       expect(page.first("table.panel-table tbody td:last-child", visible: :all)).to have_no_css(".panel-badge")
+    end
+
+    it "gives the meal prep All tab one section per meal, paginated at 15" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      # Meals come off the slot a guest is booked on, so the timetable comes first.
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "07:00",
+                                   has_breakfast: true, has_lunch: true, has_dinner: true)
+      18.times do |index|
+        booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date, adults: 1, children: 0)
+        create(:booking_room, booking: booking, room_number: "10#{index}")
+        create(
+          :booking_guest,
+          booking: booking, guest: create(:guest, name: "Guest #{index}"), is_primary: true,
+          boat_in_at: start_date.beginning_of_day + 7.hours
+        )
+      end
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "meal_prep"
+      }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css("#meal-type-tabs a", text: "All")
+      expect(page.all("section[aria-labelledby$='-heading'] h2").map(&:text)).to include("Breakfast", "Lunch", "Dinner")
+
+      breakfast = page.find("section[aria-labelledby='meal-prep-breakfast-heading']")
+      expect(breakfast.all("table tbody tr").size).to eq(15)
+      expect(breakfast.find("[data-slot='report-pagination'] a", text: "2", match: :first)[:href]).to include("breakfast_page=2")
+      # Each section pages on its own param, so one section moving leaves the others put.
+      expect(breakfast).to have_text("Total pax 18")
+
+      transfer_badge = breakfast.first("table tbody tr td .panel-badge")
+      expect(transfer_badge).to have_text("Boat-in")
+      expect(transfer_badge).to have_css("svg")
+    end
+
+    it "keeps a meal prep section on page one while another section is paged" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      # Meals come off the slot a guest is booked on, so the timetable comes first.
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "07:00",
+                                   has_breakfast: true, has_lunch: true, has_dinner: true)
+      18.times do |index|
+        booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date, adults: 1, children: 0)
+        create(:booking_room, booking: booking, room_number: "10#{index}")
+        create(
+          :booking_guest,
+          booking: booking, guest: create(:guest, name: "Guest #{index}"), is_primary: true,
+          boat_in_at: start_date.beginning_of_day + 7.hours
+        )
+      end
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "meal_prep", breakfast_page: 2
+      }
+
+      page = Capybara.string(response.body)
+      expect(page.find("section[aria-labelledby='meal-prep-breakfast-heading']").all("table tbody tr").size).to eq(3)
+      expect(page.find("section[aria-labelledby='meal-prep-lunch-heading']").all("table tbody tr").size).to eq(15)
     end
 
     it "builds the meal prep report once per page load, not once per badge" do

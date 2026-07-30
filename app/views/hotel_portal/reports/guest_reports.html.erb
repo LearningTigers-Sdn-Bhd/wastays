@@ -128,7 +128,7 @@
               variant: :line,
               aria_label: "Meal types"
             ) do |tabs| %>
-          <% %w[breakfast lunch dinner].each do |m_type| %>
+          <% ([ HotelPortal::ReportsController::MEAL_PREP_ALL ] + HotelPortal::Reports::MealPrepReport::MEALS).each do |m_type| %>
             <% tabs.with_tab(
                  name: m_type,
                  label: m_type.titleize,

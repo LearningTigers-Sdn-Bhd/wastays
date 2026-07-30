@@ -81,6 +81,38 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesPdfExportService do
       expect(pdf.bytesize).to be > 500
     end
 
+    it "prints each meal prep section on its own page with a pax total" do
+      hotel = instance_double(Hotel, name: "Sample Hotel", allow_boat_information?: true)
+      row = {
+        guest_name: "Meal Guest", confirmation_token: "MP-1", pax: 2, room_type: "Deluxe", room_number: "101",
+        type: "Boat-in", transfer_date: "07 May 2026", formatted_boat_time: "07:00 AM", meals: %w[Breakfast]
+      }
+      report = double(
+        "report",
+        start_date: Date.new(2026, 5, 7), end_date: Date.new(2026, 5, 7), records: [ row ], total_pax: 2,
+        sections: [
+          { title: "Breakfast", meal: "breakfast", rows: [ row ], total_pax: 2 },
+          { title: "Lunch", meal: "lunch", rows: [], total_pax: 0 },
+          { title: "Dinner", meal: "dinner", rows: [], total_pax: 0 }
+        ]
+      )
+
+      sections = []
+      page_breaks = 0
+      allow_any_instance_of(HotelPortal::Reports::Exports::PdfReportBuilder).to receive(:add_table) { |_b, **kwargs| sections << kwargs }
+      allow_any_instance_of(HotelPortal::Reports::Exports::PdfReportBuilder).to receive(:start_new_page) { page_breaks += 1 }
+
+      pdf = described_class.new(hotel: hotel, report: report, tab: "meal_prep").generate
+
+      expect(pdf).to start_with("%PDF")
+      expect(sections.map { |section| section[:section_title] }).to eq(%w[Breakfast Lunch Dinner])
+      expect(page_breaks).to eq(2)
+      expect(sections.first[:headers]).to eq([ "Guest Name", "Pax", "Room Number", "Transfer", "Transfer Date", "Transfer Time" ])
+      expect(sections.first[:rows]).to eq([ [ "Meal Guest", "2", "101", "Boat-in", "07 May 2026", "07:00 AM" ] ])
+      expect(sections.first[:total_row]).to eq([ "Total Pax", "2", nil, nil, nil, nil ])
+      expect(sections.first[:numeric_columns]).to eq([ 1 ])
+    end
+
     it "prints boat transfers as separate boat-in and boat-out tables" do
       hotel = instance_double(Hotel, name: "Sample Hotel", allow_boat_information?: true)
       report = double(

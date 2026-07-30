@@ -84,6 +84,36 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesCsvExportService do
       expect(csv).not_to include("Arrival")
     end
 
+    it "names each meal prep row's entitlements in a column and totals pax under Pax" do
+      report = double(
+        "report",
+        total_pax: 5,
+        records: [
+          {
+            guest_name: "Meal Guest", confirmation_token: "MP-1", pax: 3, room_type: "Deluxe", room_number: "101",
+            type: "Boat-in", transfer_date: "07 May 2026", formatted_boat_time: "07:00 AM", meals: %w[Breakfast Lunch Dinner]
+          },
+          {
+            guest_name: "Late Guest", confirmation_token: "MP-2", pax: 2, room_type: "Suite", room_number: "205",
+            type: "Boat-out", transfer_date: "08 May 2026", formatted_boat_time: "01:00 PM", meals: %w[Breakfast]
+          }
+        ]
+      )
+
+      csv = described_class.new(report: report, tab: "meal_prep").generate
+      table = CSV.parse(csv.delete_prefix("﻿"), headers: true)
+
+      expect(table.headers).to eq([ "Guest Name", "Pax", "Room Number", "Transfer", "Transfer Date", "Transfer Time", "Meal Preps" ])
+      expect(table[0].fields).to eq([ "Meal Guest", "3", "101", "Boat-in", "07 May 2026", "07:00 AM", "Breakfast, Lunch, Dinner" ])
+      expect(table[1].fields).to eq([ "Late Guest", "2", "205", "Boat-out", "08 May 2026", "01:00 PM", "Breakfast" ])
+
+      # The total lands under Pax, not wherever the column count happens to put it.
+      total = table[2]
+      expect(total["Guest Name"]).to eq("Total Pax")
+      expect(total["Pax"]).to eq("5")
+      expect(total["Transfer Time"]).to be_nil
+    end
+
     it "pairs both boat legs of a guest onto one row for the bibo tab" do
       report = double(
         "report",

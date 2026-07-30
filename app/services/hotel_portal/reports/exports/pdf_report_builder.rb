@@ -20,6 +20,9 @@ module HotelPortal
         # Lets callers size columns against the usable page width.
         def content_width = @pdf.bounds.width
 
+        # For reports whose sections each deserve their own sheet of paper.
+        def start_new_page = @pdf.start_new_page
+
         def add_header
           top = @pdf.cursor
           @pdf.fill_color PdfTheme::COLORS[:primary]
