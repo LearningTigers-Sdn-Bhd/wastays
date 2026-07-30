@@ -18,9 +18,11 @@ export default class extends Controller {
 
   connect() {
     this.onTurboLoad = () => { this.syncActiveLinks(); this.restoreScroll() }
+    this.onTurboClick = (event) => { this.lastClickWasSidebarLink = this.element.contains(event.target) }
     this.onBeforeVisit = (event) => this.beforeVisit(event)
     this.onCollapsibleChange = (event) => this.persistGroupState(event)
     document.addEventListener("turbo:load", this.onTurboLoad)
+    document.addEventListener("turbo:click", this.onTurboClick)
     document.addEventListener("turbo:before-visit", this.onBeforeVisit)
     this.element.addEventListener("panels-ui--collapsible:change", this.onCollapsibleChange)
 
@@ -35,6 +37,7 @@ export default class extends Controller {
 
   disconnect() {
     document.removeEventListener("turbo:load", this.onTurboLoad)
+    document.removeEventListener("turbo:click", this.onTurboClick)
     document.removeEventListener("turbo:before-visit", this.onBeforeVisit)
     this.element.removeEventListener("panels-ui--collapsible:change", this.onCollapsibleChange)
     this.sheet?.removeEventListener("panels-ui:sheet-open", this.onSheetOpen)
@@ -47,9 +50,15 @@ export default class extends Controller {
   beforeVisit(event) {
     this.persistScroll()
 
+    const wasSidebarLink = this.lastClickWasSidebarLink
+    this.lastClickWasSidebarLink = false
+
     // Desktop and mobile presentations are connected at the same time. Let one
     // controller own visit cancellation while both persist their own scroll state.
-    if (this.surfaceValue !== "desktop" || !event.detail?.url) return
+    // Only cancel visits actually triggered by clicking a link in this sidebar —
+    // form submissions (e.g. toggling a flag) that redirect back to the current
+    // URL must still be rendered so the page reflects the change.
+    if (this.surfaceValue !== "desktop" || !wasSidebarLink || !event.detail?.url) return
 
     try {
       const destination = new URL(event.detail.url, window.location.href)

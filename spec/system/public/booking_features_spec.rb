@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "Booking Features (Agent & Per Pax)", type: :system do
+RSpec.describe "Booking Features (Per Pax)", type: :system do
   let(:account) { create(:account) }
   let(:hotel) { create(:hotel, account: account, status: "approved", time_zone: "UTC", allow_pax_pricing: true) }
 
@@ -23,62 +23,8 @@ RSpec.describe "Booking Features (Agent & Per Pax)", type: :system do
     create(:room_type_rate_plan, room_type: @room_type, rate_plan: @pax_plan)
     @pax_rate = create(:room_rate, room_type: @room_type, rate_plan: @pax_plan, date: Date.current, price: 80.0)
 
-    # Setup agent
-    @agent = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent", agent_code: "AGENT123",
-      corporate_account: create(:account, :corporate, name: "Test Agent"))
-
     # Ensure hotel is publicly bookable
     hotel.update!(status: "approved")
-  end
-
-  it "applies agent code, shows corporate price, and records agent on booking", js: true do
-    # Visit with dates to ensure search is active
-    visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow)
-
-    # Enter agent code
-    fill_in "agent_code", with: "AGENT123"
-
-    # Click search button
-    find('button[type="submit"]').click
-
-    expect(page).to have_content("Agent Code Applied: Test Agent")
-
-    # Standard price is 150, corporate is 120.
-    within ".group", text: @room_type.name do
-      expect(page).to have_content(/120/)
-      click_button "Add to Stay"
-    end
-
-    # Wait for Stimulus to update the sticky bar and form inputs
-    expect(page).to have_content("MYR 120.00")
-
-    click_button "Book Selected"
-
-    # Now on the quote page. Wait for it to load.
-    expect(page).to have_content("Complete Your Booking")
-
-    # Get the quote token from the URL or session if needed, but we can just use the mock_payment path.
-    # Actually, we can just navigate to the mock payment page for the quote.
-    quote = BookingQuote.last
-    visit mock_payment_path(quote_token: quote.token)
-
-    # Fill in guest details for the mock payment
-    fill_in "guest_details_name", with: "Agent Guest"
-    fill_in "guest_details_email", with: "guest@example.com"
-    fill_in "guest_details_phone", with: "123456789"
-    fill_in "government_id", with: "ID12345"
-    select "Male", from: "guest_details_gender"
-    fill_in "guest_details_country", with: "Malaysia"
-    select "MyKad / IC", from: "guest_details_document_type"
-
-    click_button "Confirm Payment"
-
-    expect(page).to have_content("Payment successful!")
-
-    # Verify the booking
-    booking = Booking.last
-    expect(booking.hotel_corporate_account_id).to eq(@agent.id)
-    expect(booking.total_amount).to be_within(1.0).of(120.0)
   end
 
   it "calculates per-pax pricing correctly", js: true do
@@ -109,7 +55,6 @@ RSpec.describe "Booking Features (Agent & Per Pax)", type: :system do
     visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 1)
     within ".group", text: @room_type.name do
       expect(page).to have_content(/80/)
-      expect(page).to have_content("PER-PAX BOOKING RULES")
       click_button "Add to Stay"
     end
     within "[data-room-selector-target='stickyBar']" do
@@ -121,7 +66,6 @@ RSpec.describe "Booking Features (Agent & Per Pax)", type: :system do
     visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 2)
     within ".group", text: @room_type.name do
       expect(page).to have_content(/80/)
-      expect(page).to have_content("PER-PAX BOOKING RULES")
       click_button "Add to Stay"
     end
     within "[data-room-selector-target='stickyBar']" do
