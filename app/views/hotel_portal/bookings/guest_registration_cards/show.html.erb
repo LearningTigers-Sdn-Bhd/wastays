@@ -145,6 +145,22 @@
               </div>
             </dl>
           </div>
+
+          <% if @presenter.boat_transfer? %>
+            <div class="border-t border-border p-5">
+              <h2 class="mb-4 text-sm font-bold uppercase font-semibold text-foreground">Boat Transfer</h2>
+              <dl class="grid gap-x-12 sm:grid-cols-2">
+                <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
+                  <dt class="text-muted-foreground">Boat-in</dt>
+                  <dd class="text-foreground">: <%= @presenter.boat_in_display %></dd>
+                </div>
+                <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
+                  <dt class="text-muted-foreground">Boat-out</dt>
+                  <dd class="text-foreground">: <%= @presenter.boat_out_display %></dd>
+                </div>
+              </dl>
+            </div>
+          <% end %>
         </div>
       </section>
 
@@ -294,8 +310,18 @@
           <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Due amount</dt><dd class="font-semibold text-rose-600">: <%= @presenter.format_money(@presenter.due_amount) %></dd></div>
         </dl>
       </div>
+
+      <% if @presenter.boat_transfer? %>
+        <div class="border-t border-border-interactive p-2.5">
+          <p class="text-xs font-bold uppercase font-semibold text-foreground">Boat transfer</p>
+          <dl class="grid grid-cols-2 gap-x-6">
+            <div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Boat-in</dt><dd class="text-foreground">: <%= @presenter.boat_in_display %></dd></div>
+            <div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Boat-out</dt><dd class="text-foreground">: <%= @presenter.boat_out_display %></dd></div>
+          </dl>
+        </div>
+      <% end %>
     </section>
- 
+
     <section>
       <% if @presenter.terms.present? %>
         <div class="grid gap-2 text-xs sm:grid-cols-2">

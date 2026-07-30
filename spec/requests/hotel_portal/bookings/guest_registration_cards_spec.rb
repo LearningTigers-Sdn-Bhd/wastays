@@ -84,6 +84,33 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response.body).not_to include("Profile Name", "profile@example.com", "Singapore")
     end
 
+    it "hides the boat transfer section when the guest has no boat data" do
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response.body).not_to include("Boat-in")
+      expect(response.body).not_to include("Boat-out")
+    end
+
+    it "shows the primary guest's boat transfer times on screen and print card" do
+      hotel.update!(time_zone: "Asia/Kuala_Lumpur")
+      create(
+        :booking_guest,
+        booking: booking,
+        is_primary: true,
+        boat_in_at: ActiveSupport::TimeZone["Asia/Kuala_Lumpur"].parse("2026-08-01 08:00"),
+        boat_out_at: ActiveSupport::TimeZone["Asia/Kuala_Lumpur"].parse("2026-08-05 15:30")
+      )
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      document = Nokogiri::HTML(response.body)
+      [ document.at_css("section.grc-no-print"), document.at_css("article.grc-print") ].each do |card|
+        text = card.text
+        expect(text).to include("Boat-in", "01 Aug 2026, 08:00 AM")
+        expect(text).to include("Boat-out", "05 Aug 2026, 03:30 PM")
+      end
+    end
+
     it "shows room type by default on screen and print card" do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe King")
       create(:booking_room, booking: booking, room_type: room_type)

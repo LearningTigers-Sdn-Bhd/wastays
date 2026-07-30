@@ -99,5 +99,25 @@ module HotelPortal
     def hotel_address_display
       [ hotel.city, hotel.country ].compact_blank.join(", ")
     end
+
+    def boat_transfer?
+      primary_booking_guest&.boat_in? || primary_booking_guest&.boat_out?
+    end
+
+    def boat_in_display
+      format_boat_time(primary_booking_guest&.boat_in_at)
+    end
+
+    def boat_out_display
+      format_boat_time(primary_booking_guest&.boat_out_at)
+    end
+
+    private
+
+    def format_boat_time(time)
+      return "-" if time.blank?
+
+      time.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y, %I:%M %p")
+    end
   end
 end
