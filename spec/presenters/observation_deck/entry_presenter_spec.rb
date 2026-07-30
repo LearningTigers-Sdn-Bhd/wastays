@@ -40,5 +40,19 @@ RSpec.describe ObservationDeck::EntryPresenter do
       expect(preview).to include("Hello")
       expect(preview).not_to include("https://tracker.example")
     end
+
+    it "escapes quotes so the sanitized HTML can't break out of the srcdoc attribute" do
+      entry = build(
+        :observation_entry,
+        entry_type: "mail",
+        payload: { "html_body" => '<a href="https://example.com" title="Say &quot;hi&quot;">Click</a>' }
+      )
+
+      srcdoc = described_class.new(entry).mail_srcdoc
+
+      expect(srcdoc).to be_html_safe
+      expect(srcdoc).not_to include('"')
+      expect(srcdoc).to include("&quot;https://example.com&quot;")
+    end
   end
 end

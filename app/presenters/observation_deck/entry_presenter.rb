@@ -138,6 +138,11 @@ module ObservationDeck
     end
     def mail_text = payload["text_body"].to_s
 
+    # sanitize returns an html_safe string, so plain ERB interpolation won't
+    # escape the quotes it still contains — fatal when embedding into the
+    # srcdoc attribute, since the first quote closes the attribute early.
+    def mail_srcdoc = CGI.escapeHTML(mail_html).html_safe
+
     private
 
     def tags = Array(entry.tags)
