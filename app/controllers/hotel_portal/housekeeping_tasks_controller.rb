@@ -67,12 +67,26 @@ module HotelPortal
       ).call
 
       respond_to do |format|
-        format.html { redirect_to hotel_housekeeping_tasks_path(current_hotel), notice: "Task assigned successfully." }
+        format.html { redirect_to hotel_housekeeping_tasks_path(current_hotel, returned_filters), notice: "Task assigned successfully." }
         format.json { render json: { ok: true } }
       end
     end
 
     private
+
+    # The board's own filter state, as submitted by the filter form.
+    FILTER_KEYS = %i[q date assigned_to room_status].freeze
+
+    # Carried through an assignment under its own key, because assigned_to
+    # already means "the person being assigned" on that form.
+    def board_filters
+      params.permit(*FILTER_KEYS).to_h.compact_blank
+    end
+    helper_method :board_filters
+
+    def returned_filters
+      params.fetch(:filters, {}).permit(*FILTER_KEYS).to_h.compact_blank
+    end
 
     # The board itself is readable by anyone who works housekeeping. Who may
     # assign whom is enforced further in, by HousekeepingTasks::AssignStaff.

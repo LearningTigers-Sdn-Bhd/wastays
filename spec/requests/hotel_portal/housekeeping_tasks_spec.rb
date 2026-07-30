@@ -41,18 +41,20 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       expect(response.body).to include("101")
     end
 
-    it "only shows in_progress requests and excludes other statuses" do
+    it "shows open requests, including the pending ones nobody has triaged" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
       create(:housekeeping_request, booking: booking, request_details: "Need water", status: "in_progress", room_number: "101")
       create(:housekeeping_request, booking: booking, request_details: "Need broom", status: "pending", room_number: "101")
       create(:housekeeping_request, booking: booking, request_details: "Need soap", status: "completed", room_number: "101")
+      create(:housekeeping_request, booking: booking, request_details: "Need mop", status: "in_progress", room_number: "101", archived_at: Time.current)
 
       get hotel_housekeeping_tasks_path(hotel)
 
       expect(response.body).to include("Need water")
-      expect(response.body).not_to include("Need broom")
+      expect(response.body).to include("Need broom")
       expect(response.body).not_to include("Need soap")
+      expect(response.body).not_to include("Need mop")
     end
 
     it "filters requests by room number via query parameter" do
@@ -210,6 +212,52 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       expect(req.reload.metadata["assigned_to"]).to eq(staff.id)
       expect(req.reload.metadata["assigned_to_name"]).to eq(staff.name)
       expect(req.reload.metadata["assignment_history"]).to be_present
+    end
+
+    it "returns to the board the user was actually looking at" do
+      booking = create(:booking, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
+      staff = create(:user, account: account)
+      hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
+      UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
+
+      patch assign_hotel_housekeeping_task_path(hotel, req), params: {
+        assigned_to: staff.id,
+        filters: { q: "101", date: "2026-07-30", room_status: "dirty", assigned_to: staff.id.to_s }
+      }
+
+      expect(response).to redirect_to(
+        hotel_housekeeping_tasks_path(hotel, q: "101", date: "2026-07-30", room_status: "dirty", assigned_to: staff.id.to_s)
+      )
+    end
+
+    it "ignores anything outside the board's own filters" do
+      booking = create(:booking, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
+      staff = create(:user, account: account)
+      hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
+      UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
+
+      patch assign_hotel_housekeeping_task_path(hotel, req), params: {
+        assigned_to: staff.id,
+        filters: { q: "101", host: "evil.example.com", script: "<script>" }
+      }
+
+      expect(response).to redirect_to(hotel_housekeeping_tasks_path(hotel, q: "101"))
+    end
+
+    it "leaves the assignment history intact" do
+      booking = create(:booking, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
+      staff = create(:user, account: account)
+      hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
+      UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
+      UserRole.create!(user: staff, role: hk_role)
+
+      patch assign_hotel_housekeeping_task_path(hotel, req), params: { assigned_to: staff.id }
 
       history_entry = req.reload.metadata["assignment_history"].last
       expect(history_entry["assigned_to_id"]).to eq(staff.id)

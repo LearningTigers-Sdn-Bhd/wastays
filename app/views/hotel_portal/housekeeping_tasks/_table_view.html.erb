@@ -107,6 +107,9 @@
                         <% first_req = room.first_task_request %>
                         <% if first_req&.assignable? %>
                           <%= form_with url: first_req.assign_url, method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
+                            <% board_filters.each do |key, value| %>
+                              <%= hidden_field_tag "filters[#{key}]", value, id: nil %>
+                            <% end %>
                             <%= select_tag :assigned_to, options_for_select([["Unassigned", ""]] + @staff_members.map { |s| [s.name, s.id] }, first_req.assigned_to_value), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
                           <% end %>
                         <% else %>
