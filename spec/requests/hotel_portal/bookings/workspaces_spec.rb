@@ -272,6 +272,39 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(document.at_xpath('//main//h2[normalize-space()="Overview"]')).to be_nil
     end
 
+    it "lists the stored boat slots in an Overview Boat Transportation table" do
+      hotel.update!(allow_boat_information: true)
+      guest = create(:guest, name: "Boat Guest")
+      zone = hotel.hotel_time_zone
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true,
+        boat_in_at: booking.check_in.in_time_zone(zone).change(hour: 9, min: 30),
+        boat_out_at: booking.check_out.in_time_zone(zone).change(hour: 16, min: 45))
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
+
+      document = Nokogiri::HTML(response.body)
+      section = document.at_xpath('//main//h3[normalize-space()="Boat Transportation"]/..')
+      expect(section).to be_present
+      expect(section.css("thead th").map { |cell| cell.text.squish })
+        .to eq([ "Booking No.", "Primary guest", "Boat-in", "Boat-out" ])
+      row = section.css("tbody tr").first.css("td").map { |cell| cell.text.squish }
+      expect(row).to eq([
+        booking.formatted_reservation_number,
+        "Boat Guest",
+        "#{booking.check_in.in_time_zone(zone).strftime('%d %b %Y')} 09:30",
+        "#{booking.check_out.in_time_zone(zone).strftime('%d %b %Y')} 16:45"
+      ])
+    end
+
+    it "hides the Boat Transportation table when the property runs no transfers" do
+      hotel.update!(allow_boat_information: false)
+      create(:booking_guest, booking: booking, guest: create(:guest, name: "Road Guest"), is_primary: true)
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
+
+      expect(response.body).not_to include("Boat Transportation")
+    end
+
     it "keeps Change Billing Routes in the standalone Billing heading" do
       role.permissions << manage_folio_movements
       create(:booking_room, booking: booking, room_number: "208")
@@ -1401,6 +1434,24 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(document.at_css("input[name='guest[name]']")["aria-invalid"]).to eq("true")
       expect(booking_guest.reload.name_snapshot).to eq("Original Guest")
       expect(guest.reload).to have_attributes(name: "Original Guest", email: "original@example.com")
+    end
+
+    it "shows the stay date read-only beside each boat slot" do
+      hotel.update!(allow_boat_information: true)
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_out", time: "16:45")
+      booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true)
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
+
+      document = Nokogiri::HTML(response.body)
+      zone = hotel.hotel_time_zone
+      boat_in = document.at_css("input[name='booking_guest[boat_in_date]']")
+      boat_out = document.at_css("input[name='booking_guest[boat_out_date]']")
+      expect(boat_in["readonly"]).to be_present
+      expect(boat_in["value"]).to eq(booking.check_in.in_time_zone(zone).strftime("%d %b %Y"))
+      expect(boat_out["readonly"]).to be_present
+      expect(boat_out["value"]).to eq(booking.check_out.in_time_zone(zone).strftime("%d %b %Y"))
     end
 
     it "pairs each selected boat slot with the stay date it belongs to" do

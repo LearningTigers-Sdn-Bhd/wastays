@@ -1,6 +1,10 @@
 <section aria-label="Booking overview" class="space-y-8 px-5 py-6" data-testid="booking-overview">
   <%= render "hotel_portal/bookings/workspaces/booking_details/stay_table", booking: booking, presenter: workspace_presenter %>
 
+  <% if workspace_presenter.boat_transfers? %>
+    <%= render "hotel_portal/bookings/workspaces/booking_details/boat_table", presenter: workspace_presenter %>
+  <% end %>
+
   <%= render "hotel_portal/bookings/workspaces/booking_details/financial_table", presenter: workspace_presenter %>
 
   <%= render "hotel_portal/bookings/workspaces/booking_details/references_table", presenter: workspace_presenter %>

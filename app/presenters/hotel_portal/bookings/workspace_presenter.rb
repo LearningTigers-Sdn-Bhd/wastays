@@ -870,6 +870,28 @@ module HotelPortal
       money(group_context_enabled? ? group_total_balance : total_balance)
     end
 
+    # Reading stored slots does not need a timetable, unlike picking one, so this
+    # follows the property switch rather than Schedule#enabled?.
+    def boat_transfers?
+      hotel.allow_boat_information?
+    end
+
+    # One row per booking for the Overview boat table, matching the stay table above
+    # it. Boat slots are stored on the primary guest, so that is the guest the row
+    # reads its two times from.
+    def boat_transfer_rows
+      child_bookings.map do |child|
+        booking_guest = child.booking_guests.find(&:primary?) || child.booking_guests.first
+        {
+          booking: child,
+          booking_number: child_booking_number(child),
+          guest: booking_guest&.name_snapshot.presence || booking_guest&.guest&.name.presence || child.guest_name,
+          boat_in: time_label(booking_guest&.boat_in_at),
+          boat_out: time_label(booking_guest&.boat_out_at)
+        }
+      end
+    end
+
     # One row per billing identity, not per folio and not per booking. Folios are resolved to
     # an identity (see billing_identity_for) and merged across the group, so a group billed
     # entirely to one company reads as a single row carrying the whole amount.
