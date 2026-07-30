@@ -2,7 +2,7 @@
 
 module HotelPortal
   class HousekeepingTasksController < BaseController
-    before_action :authorize_manage_housekeeping_tasks!
+    before_action :authorize_housekeeping_board!
     before_action -> { require_feature!("task_assignment_minibar_log") }
 
     def index
@@ -74,8 +74,12 @@ module HotelPortal
 
     private
 
-    def authorize_manage_housekeeping_tasks!
-      raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_housekeeping_tasks", hotel: current_hotel)
+    # The board itself is readable by anyone who works housekeeping. Who may
+    # assign whom is enforced further in, by HousekeepingTasks::AssignStaff.
+    def authorize_housekeeping_board!
+      allowed = current_user.has_permission?("perform_housekeeping_tasks", hotel: current_hotel) ||
+                current_user.has_permission?("dispatch_housekeeping_tasks", hotel: current_hotel)
+      raise Pundit::NotAuthorizedError unless allowed
     end
   end
 end

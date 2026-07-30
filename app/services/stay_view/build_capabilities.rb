@@ -42,7 +42,8 @@ module StayView
         view_financial_status:,
         view_room_readiness: view_readiness,
         manage_room_status: manage_room_status,
-        manage_housekeeping: housekeeping_enabled && permission_slugs.include?("manage_housekeeping_tasks"),
+        manage_housekeeping: housekeeping_enabled && permission_slugs.include?("dispatch_housekeeping_tasks"),
+        take_housekeeping_task: housekeeping_enabled && permission_slugs.include?("perform_housekeeping_tasks"),
         update_housekeeping_status: housekeeping_enabled && permission_slugs.include?("manage_requests"),
         manage_room_blocks: manage_room_status
       )

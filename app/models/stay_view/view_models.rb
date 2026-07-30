@@ -242,7 +242,8 @@ module StayView
   Capabilities = Data.define(
     :view_board, :view_booking, :manage_bookings, :create_booking, :move_booking, :change_dates, :reassign_room,
     :check_in, :check_out, :view_rates, :view_financial_status, :view_room_readiness,
-    :manage_room_status, :manage_housekeeping, :update_housekeeping_status, :manage_room_blocks
+    :manage_room_status, :manage_housekeeping, :take_housekeeping_task, :update_housekeeping_status,
+    :manage_room_blocks
   ) do
     members.each { |name| alias_method "#{name}?", name }
   end

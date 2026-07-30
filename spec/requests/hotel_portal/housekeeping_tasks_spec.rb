@@ -8,7 +8,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
   let(:hotel) { create(:hotel, account: account, status: "live", plan: plan) }
   let(:user) { create(:user, account: account, role: "admin") }
   let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
-  let(:permission) { Permission.find_or_create_by!(slug: "manage_housekeeping_tasks") { |record| record.name = "Manage Housekeeping Tasks" } }
+  let(:permission) { Permission.find_or_create_by!(slug: "dispatch_housekeeping_tasks") { |record| record.name = "Dispatch Housekeeping Tasks" } }
   let(:requests_permission) { Permission.find_or_create_by!(slug: "manage_requests") { |record| record.name = "Manage Requests" } }
   let!(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "101", "202", "303" ]) }
 
@@ -156,6 +156,41 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       get hotel_housekeeping_tasks_path(hotel, format: :xls)
 
       expect(response).to have_http_status(:not_acceptable)
+    end
+  end
+
+  describe "board access under the split housekeeping permissions" do
+    def regrant(*slugs)
+      role.role_permissions.destroy_all
+      slugs.each do |slug|
+        permission = Permission.find_or_create_by!(slug:) { |record| record.name = slug.humanize }
+        RolePermission.create!(role: role, permission: permission)
+      end
+    end
+
+    it "admits a perform-only user, who is the housekeeper doing the work" do
+      regrant("perform_housekeeping_tasks")
+
+      get hotel_housekeeping_tasks_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "admits a dispatch-only user, who assigns the work" do
+      regrant("dispatch_housekeeping_tasks")
+
+      get hotel_housekeeping_tasks_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "turns away a user holding neither half" do
+      regrant("manage_requests")
+
+      get hotel_housekeeping_tasks_path(hotel)
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("You are not authorized to perform this action.")
     end
   end
 

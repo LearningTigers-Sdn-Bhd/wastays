@@ -75,7 +75,8 @@ module HotelPortal
 
     def authorize_manage_checkout_requests!
       allowed = current_user.has_permission?("manage_requests", hotel: current_hotel) ||
-                current_user.has_permission?("manage_housekeeping_tasks", hotel: current_hotel)
+                current_user.has_permission?("perform_housekeeping_tasks", hotel: current_hotel) ||
+                current_user.has_permission?("dispatch_housekeeping_tasks", hotel: current_hotel)
       raise Pundit::NotAuthorizedError unless allowed
     end
   end

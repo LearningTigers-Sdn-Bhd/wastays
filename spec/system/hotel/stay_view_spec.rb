@@ -381,7 +381,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     hotel.update!(plan:)
     feature = create(:feature, slug: "task_assignment_minibar_log")
     create(:plan_feature, plan:, feature:, enabled: true)
-    %w[manage_housekeeping_tasks manage_requests].each do |slug|
+    %w[dispatch_housekeeping_tasks manage_requests].each do |slug|
       permission = Permission.find_or_create_by!(slug:) { |record| record.name = slug.humanize }
       RolePermission.find_or_create_by!(role:, permission:)
     end

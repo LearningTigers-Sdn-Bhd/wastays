@@ -1158,7 +1158,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
     before do
       enable_housekeeping_feature
-      grant("manage_housekeeping_tasks")
+      grant("dispatch_housekeeping_tasks")
       grant("manage_requests")
     end
 
@@ -1196,7 +1196,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).to include(assign_path)
       expect(response.body).not_to include(status_path)
 
-      manage_housekeeping = Permission.find_by!(slug: "manage_housekeeping_tasks")
+      manage_housekeeping = Permission.find_by!(slug: "dispatch_housekeeping_tasks")
       role.role_permissions.find_by!(permission: manage_housekeeping).destroy!
       create(:role_permission, role:, permission: manage_requests)
 
