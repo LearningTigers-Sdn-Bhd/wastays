@@ -8,7 +8,7 @@ module HotelPortal
     before_action :set_checkout_request
 
     def assign
-      ::CheckoutRequests::AssignStaff.new(
+      ::HousekeepingTasks::AssignStaff.new(
         hotel: current_hotel,
         checkout_request: @checkout_request,
         assigned_to_id: params[:assigned_to],

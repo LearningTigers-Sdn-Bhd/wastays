@@ -265,6 +265,17 @@ RSpec.describe HousekeepingTasks::AssignStaff do
       end
     end
 
+    it "rejects an assignee who is not a housekeeper here, leaving the holder in place" do
+      sam = housekeeper("Sam Lee")
+      request = checkout_on(penthouse, status: "assigned")
+      request.update!(metadata: request.metadata.merge("assigned_to" => sam.id, "assigned_to_name" => sam.name))
+
+      service = described_class.new(hotel:, checkout_request: request, assigned_to_id: -1, current_user: dispatcher)
+
+      expect { service.call }.to raise_error(ActiveRecord::RecordNotFound, "Housekeeper not found")
+      expect(request.reload.metadata).to include("assigned_to" => sam.id)
+    end
+
     it "refuses a request belonging to another hotel" do
       other_hotel = create(:hotel, account:)
       other_room = create(:room_type, hotel: other_hotel, room_number_mode: "custom", room_numbers: %w[101])

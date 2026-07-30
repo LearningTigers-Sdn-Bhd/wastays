@@ -11,13 +11,8 @@ module HousekeepingTasks
     end
 
     def call
-      @request ||= HousekeepingRequest.left_joins(:booking)
-                                      .where(
-                                        "housekeeping_requests.hotel_id = :hotel_id OR (housekeeping_requests.hotel_id IS NULL AND bookings.hotel_id = :hotel_id)",
-                                        hotel_id: @hotel.id
-                                      )
-                                      .find(@request_id)
-      raise ActiveRecord::RecordNotFound if @request.is_a?(CheckOutRequest) && @request.booking.hotel_id != @hotel.id
+      @request ||= housekeeping_request_in_this_hotel
+      raise ActiveRecord::RecordNotFound unless belongs_to_hotel?(@request)
 
       room_number = request_room_number(@request)
       room_type_id = room_type_id_for(@request, room_number)
@@ -27,38 +22,48 @@ module HousekeepingTasks
       authorize_target!(staff)
 
       ActiveRecord::Base.transaction do
-        active_requests = active_housekeeping_requests(room_number) + active_checkout_requests(room_number)
-        # A room is a room type plus a number -- numbers repeat across types --
-        # so tasks for 101 in another room type are a different room entirely.
-        active_requests.select! { |request| room_type_id_for(request, room_number) == room_type_id }
-        active_requests = [ @request.lock! ] if active_requests.empty?
+        assignments = room_assignments(room_number, room_type_id)
+        authorize_scope!(assignments)
 
-        real_active = active_requests.reject { |request| request.is_a?(HousekeepingRequest) && request.status == "no_task" }
-        active_requests = real_active if real_active.any?
-
-        authorize_scope!(active_requests)
-        changed_requests = []
-
-        active_requests.each do |request|
-          metadata = request.metadata.to_h
-          status = request.status
-          old_assignment = metadata["assigned_to"]
-
-          if staff
-            metadata, status = assign_metadata(request, metadata, status, staff)
-          else
-            metadata, status = unassign_metadata(request, metadata, status)
-          end
-
-          request.update!(metadata: metadata, status: status)
-          changed_requests << request if old_assignment != metadata["assigned_to"]
-        end
-
-        record_audit_log(room_number, changed_requests, staff) if changed_requests.any?
+        changed = assignments.select { |assignment| assignment.hand_over(staff, by: @current_user) }
+        record_audit_log(room_number, changed, staff) if changed.any?
       end
     end
 
     private
+
+    def housekeeping_request_in_this_hotel
+      HousekeepingRequest.left_joins(:booking)
+                         .where(
+                           "housekeeping_requests.hotel_id = :hotel_id OR (housekeeping_requests.hotel_id IS NULL AND bookings.hotel_id = :hotel_id)",
+                           hotel_id: @hotel.id
+                         )
+                         .find(@request_id)
+    end
+
+    # A record handed straight in has not been through the finder above, so its
+    # hotel is still to be checked -- by its own column when it has one, and
+    # otherwise by the booking it hangs off.
+    def belongs_to_hotel?(record)
+      owner_id = record.try(:hotel_id) || record.booking&.hotel_id
+
+      owner_id == @hotel.id
+    end
+
+    # Everything open on the one room this task belongs to, so that taking a room
+    # takes all of its work at once. A room is a room type plus a number --
+    # numbers repeat across types -- so tasks for 101 in another room type are a
+    # different room entirely. Placeholder records come along only when the room
+    # has nothing else, since they stand for the absence of the work.
+    def room_assignments(room_number, room_type_id)
+      tasks = active_housekeeping_requests(room_number) + active_checkout_requests(room_number)
+      tasks.select! { |task| room_type_id_for(task, room_number) == room_type_id }
+      return TaskAssignment.wrap([ @request.lock! ]) if tasks.empty?
+
+      assignments = TaskAssignment.wrap(tasks)
+      real_work = assignments.reject(&:placeholder?)
+      real_work.any? ? real_work : assignments
+    end
 
     # Dispatching is handing work to somebody; performing is doing it. A
     # performer may take unassigned work for themselves and release what is
@@ -70,13 +75,10 @@ module HousekeepingTasks
       raise Pundit::NotAuthorizedError if staff && staff.id != @current_user.id
     end
 
-    def authorize_scope!(requests)
+    def authorize_scope!(assignments)
       return if dispatcher?
 
-      moves_another_persons_work = requests.any? do |request|
-        assignee = request.metadata.to_h["assigned_to"]
-        assignee.present? && assignee != @current_user.id
-      end
+      moves_another_persons_work = assignments.any? { |assignment| assignment.held_by_somebody_else?(@current_user) }
       raise Pundit::NotAuthorizedError if moves_another_persons_work
     end
 
@@ -149,50 +151,14 @@ module HousekeepingTasks
       CheckOutRequest.where(id: request_ids).includes(booking: :booking_rooms).lock.to_a
     end
 
-    def assign_metadata(request, metadata, status, staff)
-      if metadata["assigned_to"] != staff.id
-        history = Array(metadata["assignment_history"])
-        history << history_entry(assigned_to_id: staff.id, assigned_to_name: staff.name)
-        metadata["assignment_history"] = history
-      end
-      metadata["assigned_to"] = staff.id
-      metadata["assigned_to_name"] = staff.name
-      metadata["workflow_status"] = "assigned" if request.is_a?(CheckOutRequest)
-      status = "assigned" if status.in?(request.is_a?(CheckOutRequest) ? %w[new pending acknowledged] : %w[new no_task pending])
-      [ metadata, status ]
-    end
-
-    def unassign_metadata(request, metadata, status)
-      if metadata["assigned_to"].present?
-        history = Array(metadata["assignment_history"])
-        history << history_entry(assigned_to_name: "Unassigned")
-        metadata["assignment_history"] = history
-      end
-      metadata.delete("assigned_to")
-      metadata.delete("assigned_to_name")
-      metadata["workflow_status"] = "new" if request.is_a?(CheckOutRequest)
-      status = "new" if status.in?(request.is_a?(CheckOutRequest) ? %w[assigned in_progress acknowledged] : %w[assigned])
-      [ metadata, status ]
-    end
-
-    def history_entry(assigned_to_name:, assigned_to_id: nil)
-      {
-        "assigned_to_id" => assigned_to_id,
-        "assigned_to_name" => assigned_to_name,
-        "assigned_by_id" => @current_user.id,
-        "assigned_by_name" => @current_user.name,
-        "timestamp" => Time.current.iso8601
-      }.compact
-    end
-
-    def record_audit_log(room_number, requests, staff)
-      reference = requests.first
+    def record_audit_log(room_number, assignments, staff)
+      reference = assignments.first.record
       booking = reference.booking
       room = booking&.booking_rooms&.find { |booking_room| booking_room.room_number.to_s == room_number.to_s }
 
       RoomOperationalAuditLog.create!(
         hotel: @hotel,
-        room_type: (reference.room_type if reference.respond_to?(:room_type)) || room&.room_type,
+        room_type: reference.try(:room_type) || room&.room_type,
         booking: booking,
         user: @current_user,
         room_number: room_number,
@@ -201,7 +167,7 @@ module HousekeepingTasks
         metadata: {
           "assigned_to_id" => staff&.id,
           "assigned_to_name" => staff&.name,
-          "tasks" => requests.map { |request| { "type" => request.class.name, "id" => request.id } }
+          "tasks" => assignments.map(&:audit_entry)
         }.compact
       )
     end
