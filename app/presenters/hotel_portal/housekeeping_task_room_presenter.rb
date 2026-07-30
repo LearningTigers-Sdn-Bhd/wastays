@@ -23,22 +23,37 @@ module HotelPortal
       ::Rooms::StatusPresentation.badge_variant(resolved_status)
     end
 
+    # A task may only be completed once the room is actually being cleaned.
+    def cleaning?
+      resolved_status == "cleaning"
+    end
+
     # -- Booking Display --
 
     def guest_name
       active_booking&.guest_name
     end
 
-    def arrival_time
-      active_booking&.checked_in_at&.strftime("%I:%M %p") || "-"
+    # Date and time in one column. The timestamp is the real one when the guest
+    # has actually arrived or left; otherwise the booked date is all there is.
+    def arrival
+      return "-" unless active_booking
+
+      if active_booking.checked_in_at
+        helpers.display_housekeeping_datetime(active_booking.checked_in_at)
+      else
+        helpers.display_housekeeping_date(active_booking.check_in)
+      end
     end
 
-    def arrival_date
-      active_booking ? helpers.display_housekeeping_date(active_booking.check_in) : "-"
-    end
+    def departure
+      return "-" unless active_booking
 
-    def departure_date
-      active_booking ? helpers.display_housekeeping_date(active_booking.check_out) : "-"
+      if active_booking.checked_out_at
+        helpers.display_housekeeping_datetime(active_booking.checked_out_at)
+      else
+        helpers.display_housekeeping_date(active_booking.check_out)
+      end
     end
 
     def nights
@@ -63,6 +78,21 @@ module HotelPortal
 
     def first_task_request
       task_requests.first
+    end
+
+    # Room numbers repeat across room types, so this is only unique within a
+    # group -- which is how it is used, under the group's own key.
+    def dom_key
+      room_number.to_s.parameterize
+    end
+
+    # How many rows this room occupies -- the room columns rowspan across them.
+    def row_span
+      [ task_requests.size, 1 ].max
+    end
+
+    def label
+      room_type ? "#{room_type.name} #{room_number}" : "Room #{room_number}"
     end
 
     private
@@ -119,6 +149,42 @@ module HotelPortal
         end
       end
 
+      def assigned_to_name
+        request.respond_to?(:assigned_to_name) ? request.assigned_to_name : "Unassigned"
+      end
+
+      def unassigned?
+        assigned_to_value.blank?
+      end
+
+      def assigned?
+        assigned_to_value.present?
+      end
+
+      def in_progress?
+        display_status_value.to_s == "in_progress"
+      end
+
+      def held_by?(user)
+        user.present? && assigned_to_value.present? && assigned_to_value == user.id
+      end
+
+      # What a performer may do to this task with a single button: claim it when
+      # nobody holds it, hand it back when they hold it, nothing otherwise.
+      # AssignStaff refuses the rest; this keeps the UI from offering it.
+      def take_release_action(user)
+        return unless assignable?
+        return :take if unassigned?
+        return :release if held_by?(user)
+
+        nil
+      end
+
+      # Unique per task across the whole board, so ids and labels never collide.
+      def dom_key
+        "#{checkout_request? ? 'checkout' : 'housekeeping'}-#{id}"
+      end
+
       def selected_status_value
         checkout_request? ? display_status_value : request.status
       end
@@ -137,6 +203,15 @@ module HotelPortal
 
       def has_details?
         request&.request_details.present? && request.request_details != "-"
+      end
+
+      # Roughly what fits the two clamped lines of the task column. Past that the
+      # text is cut off on screen, so it gets a tooltip carrying the whole note;
+      # shorter notes are fully visible and a tooltip would only add hover noise.
+      CLAMPED_LENGTH = 80
+
+      def long_details?
+        has_details? && request_details.to_s.length > CLAMPED_LENGTH
       end
 
       private

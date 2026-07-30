@@ -14,20 +14,8 @@ module HotelPortal
       [ "Late Checkout Detected", "late_checkout_detected" ]
     ].freeze
 
-    TASK_STATUS_OPTIONS = [
-      [ "No Task", "no_task" ],
-      [ "New", "new" ],
-      [ "Assigned", "assigned" ],
-      [ "In Progress", "in_progress" ],
-      [ "Completed", "completed" ]
-    ].freeze
-
     def room_status_filter_options
       ROOM_STATUS_OPTIONS
-    end
-
-    def task_status_options
-      TASK_STATUS_OPTIONS
     end
   end
 end

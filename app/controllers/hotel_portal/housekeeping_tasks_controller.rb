@@ -95,5 +95,15 @@ module HotelPortal
                 current_user.has_permission?("dispatch_housekeeping_tasks", hotel: current_hotel)
       raise Pundit::NotAuthorizedError unless allowed
     end
+
+    # Dispatchers hand work to anyone, so they get the staff menu; performers can
+    # only take and release their own, so they get a single Take/Release button.
+    # AssignStaff enforces this regardless -- this only picks the affordance.
+    def dispatch_housekeeping?
+      return @dispatch_housekeeping if defined?(@dispatch_housekeeping)
+
+      @dispatch_housekeeping = current_user.has_permission?("dispatch_housekeeping_tasks", hotel: current_hotel)
+    end
+    helper_method :dispatch_housekeeping?
   end
 end

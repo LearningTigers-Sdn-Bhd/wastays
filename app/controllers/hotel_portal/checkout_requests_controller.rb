@@ -46,7 +46,7 @@ module HotelPortal
         status: params[:status]
       )
 
-      redirect_target = params[:redirect_to].presence || hotel_housekeeping_tasks_path(current_hotel)
+      redirect_target = safe_redirect_target(hotel_housekeeping_tasks_path(current_hotel))
       if (request = updater.call)
         respond_to do |format|
           format.html { redirect_to redirect_target, notice: "Checkout request updated successfully." }
