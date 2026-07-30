@@ -110,15 +110,28 @@ module HotelPortal
         if @guest.metadata["blacklisted_hotel_ids"].is_a?(Array)
           @guest.metadata["blacklisted_hotel_ids"].delete(hotel_id)
         end
+        @guest.metadata["blacklist_details"]&.delete(hotel_id.to_s)
         if @guest.metadata["blacklisted_hotel_ids"].blank?
           @guest.blacklisted = false
         else
           @guest.blacklisted = @guest.metadata["blacklisted_hotel_ids"].any?
         end
       else
+        reason = params[:blacklist_reason].to_s.strip
+        if reason.blank?
+          return redirect_to hotel_guest_path(current_hotel, @guest), alert: "Please provide a reason to blacklist this guest."
+        end
+
         @guest.metadata["blacklisted_hotel_ids"] ||= []
         @guest.metadata["blacklisted_hotel_ids"] << hotel_id
         @guest.metadata["blacklisted_hotel_ids"].uniq!
+        @guest.metadata["blacklist_details"] ||= {}
+        @guest.metadata["blacklist_details"][hotel_id.to_s] = {
+          "reason" => reason,
+          "blacklisted_by_id" => current_user.id,
+          "blacklisted_by_name" => current_user.name,
+          "blacklisted_at" => Time.current.iso8601
+        }
         @guest.blacklisted = true
       end
       @guest.save!

@@ -17,20 +17,22 @@
         <% end %>
       <% end %>
 
-      <%= button_to toggle_blacklist_hotel_guest_path(current_hotel, @guest), method: :patch, class: "inline-flex items-center gap-x-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted w-fit" do %>
-        <% if @guest.blacklisted_at?(current_hotel) %>
+      <% if @guest.blacklisted_at?(current_hotel) %>
+        <%= button_to toggle_blacklist_hotel_guest_path(current_hotel, @guest), method: :patch, class: "inline-flex items-center gap-x-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted w-fit" do %>
           <div class="relative size-4 flex items-center justify-center shrink-0">
             <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-rose-600" %>
             <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-rose-600" %>
           </div>
           Remove Blacklist
-        <% else %>
+        <% end %>
+      <% else %>
+        <button type="button" command="show-modal" commandfor="guest-blacklist-dialog" class="inline-flex items-center gap-x-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted w-fit">
           <div class="relative size-4 flex items-center justify-center shrink-0">
             <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-muted-foreground" %>
             <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-muted-foreground" %>
           </div>
           Blacklist Guest
-        <% end %>
+        </button>
       <% end %>
 
       <%= link_to edit_hotel_guest_path(current_hotel, @guest), class: "inline-flex items-center gap-x-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover w-fit" do %>
@@ -41,7 +43,7 @@
 
     <%# Mobile Actions (Three-lines dropdown) %>
     <div class="md:hidden relative inline-block text-left self-end" data-controller="dropdown" data-dropdown-align="right">
-      <button data-action="click->dropdown#toggle click@window->dropdown#hide" type="button" class="inline-flex items-center justify-center size-10 rounded-xl border border-border bg-card text-foreground shadow-sm hover:bg-muted active:scale-95 transition-all" aria-label="Guest Actions">
+      <button data-action="click->dropdown#toggle" type="button" class="inline-flex items-center justify-center size-10 rounded-xl border border-border bg-card text-foreground shadow-sm hover:bg-muted active:scale-95 transition-all" aria-label="Guest Actions">
         <%= cached_icon "menu", class: "size-5" %>
       </button>
 
@@ -61,24 +63,40 @@
           <% end %>
         <% end %>
 
-        <%= button_to toggle_blacklist_hotel_guest_path(current_hotel, @guest), method: :patch, class: "flex w-full items-center gap-x-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted transition" do %>
-          <% if @guest.blacklisted_at?(current_hotel) %>
+        <% if @guest.blacklisted_at?(current_hotel) %>
+          <%= button_to toggle_blacklist_hotel_guest_path(current_hotel, @guest), method: :patch, class: "flex w-full items-center gap-x-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted transition" do %>
             <div class="relative size-4 flex items-center justify-center shrink-0">
               <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-rose-600" %>
               <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-rose-600" %>
             </div>
             Remove Blacklist
-          <% else %>
+          <% end %>
+        <% else %>
+          <button type="button" command="show-modal" commandfor="guest-blacklist-dialog" class="flex w-full items-center gap-x-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted transition">
             <div class="relative size-4 flex items-center justify-center shrink-0">
               <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-muted-foreground" %>
               <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-muted-foreground" %>
             </div>
             Blacklist Guest
-          <% end %>
+          </button>
         <% end %>
       </div>
     </div>
   </div>
+
+  <%= form_with url: toggle_blacklist_hotel_guest_path(current_hotel, @guest), method: :patch do |f| %>
+    <%= render PanelsUI::Dialog.new(id: "guest-blacklist-dialog", title: "Blacklist guest", description: "#{@presenter.name} will be flagged as blacklisted for #{current_hotel.name}.", size: :md) do |dialog| %>
+      <% dialog.with_body do %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :blacklist_reason, label: "Reason", required: true) do |field| %>
+          <% field.with_text_area(rows: 4, placeholder: "Explain why this guest is being blacklisted.") %>
+        <% end %>
+      <% end %>
+      <% dialog.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "panels-ui--dialog#close" }) do %>Cancel<% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, size: :sm) do %>Blacklist guest<% end %>
+      <% end %>
+    <% end %>
+  <% end %>
 
   <div class="legacy-card <%= @guest.blacklisted_at?(current_hotel) ? 'border-rose-200 bg-rose-50/20' : '' %>">
     <div class="p-4 border-b border-border <%= @guest.blacklisted_at?(current_hotel) ? 'bg-rose-50/30 border-rose-200' : '' %>">
@@ -86,7 +104,11 @@
         <div class="flex items-center gap-x-2">
           <h1 class="text-xl font-bold text-foreground"><%= @presenter.name %></h1>
           <% if @guest.vip? %>
-            <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-5 text-amber-500 fill-amber-500 shrink-0" %>
+            <%= render PanelsUI::Tooltip.new(text: "VIP guest", delay: 150) do %>
+              <span class="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="VIP guest">
+                <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-5 text-amber-500 fill-amber-500 shrink-0", aria: { hidden: "true" }, focusable: "false" %>
+              </span>
+            <% end %>
           <% end %>
           <% if @guest.blacklisted_at?(current_hotel) %>
             <div class="relative size-5 flex items-center justify-center shrink-0">
@@ -95,10 +117,19 @@
             </div>
           <% end %>
           <% if @guest.repeat? %>
-            <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-5 text-blue-500 shrink-0" %>
+            <%= render PanelsUI::Tooltip.new(text: "Repeat guest", delay: 150) do %>
+              <span class="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="Repeat guest">
+                <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-5 text-blue-500 shrink-0", aria: { hidden: "true" }, focusable: "false" %>
+              </span>
+            <% end %>
           <% end %>
         </div>
-        <p class="text-xs uppercase tracking-widest text-muted-foreground">Guest Profile</p>
+        <% if (detail = @guest.blacklist_detail(current_hotel)).present? %>
+          <p class="mt-1 text-xs text-rose-700">
+            Blacklisted by <span class="font-semibold"><%= detail["blacklisted_by_name"] %></span>
+            <% if detail["reason"].present? %> &middot; <%= detail["reason"] %><% end %>
+          </p>
+        <% end %>
       </div>
     </div>
     <div class="p-4 space-y-3 grid gap-3 md:grid-cols-2">

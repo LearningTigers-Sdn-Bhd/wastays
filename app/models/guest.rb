@@ -113,6 +113,12 @@ class Guest < ApplicationRecord
     end
   end
 
+  def blacklist_detail(hotel)
+    return nil unless hotel
+    hotel_id = hotel.is_a?(ActiveRecord::Base) ? hotel.id : hotel.to_i
+    metadata&.dig("blacklist_details", hotel_id.to_s)
+  end
+
   def repeat?
     if bookings.loaded?
       bookings.any? { |b| b.status == "completed" } && bookings.size > 1
