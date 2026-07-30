@@ -20,15 +20,23 @@ module HousekeepingTasks
       raise ActiveRecord::RecordNotFound if @request.is_a?(CheckOutRequest) && @request.booking.hotel_id != @hotel.id
 
       room_number = request_room_number(@request)
+      room_type_id = room_type_id_for(@request, room_number)
       staff = find_housekeeper if @assigned_to_id
       raise ActiveRecord::RecordNotFound, "Housekeeper not found" if @assigned_to_id && staff.nil?
 
+      authorize_target!(staff)
+
       ActiveRecord::Base.transaction do
         active_requests = active_housekeeping_requests(room_number) + active_checkout_requests(room_number)
+        # A room is a room type plus a number -- numbers repeat across types --
+        # so tasks for 101 in another room type are a different room entirely.
+        active_requests.select! { |request| room_type_id_for(request, room_number) == room_type_id }
         active_requests = [ @request.lock! ] if active_requests.empty?
 
         real_active = active_requests.reject { |request| request.is_a?(HousekeepingRequest) && request.status == "no_task" }
         active_requests = real_active if real_active.any?
+
+        authorize_scope!(active_requests)
         changed_requests = []
 
         active_requests.each do |request|
@@ -51,6 +59,45 @@ module HousekeepingTasks
     end
 
     private
+
+    # Dispatching is handing work to somebody; performing is doing it. A
+    # performer may take unassigned work for themselves and release what is
+    # already theirs, and nothing else. Enforced here rather than in a
+    # controller because the housekeeping board and Stay View both land here.
+    def authorize_target!(staff)
+      return if dispatcher?
+      raise Pundit::NotAuthorizedError unless performer?
+      raise Pundit::NotAuthorizedError if staff && staff.id != @current_user.id
+    end
+
+    def authorize_scope!(requests)
+      return if dispatcher?
+
+      moves_another_persons_work = requests.any? do |request|
+        assignee = request.metadata.to_h["assigned_to"]
+        assignee.present? && assignee != @current_user.id
+      end
+      raise Pundit::NotAuthorizedError if moves_another_persons_work
+    end
+
+    def dispatcher?
+      return @dispatcher if defined?(@dispatcher)
+
+      @dispatcher = @current_user.has_permission?("dispatch_housekeeping_tasks", hotel: @hotel)
+    end
+
+    def performer?
+      @current_user.has_permission?("perform_housekeeping_tasks", hotel: @hotel)
+    end
+
+    # room_type_id is nullable and rarely populated, so fall back to the
+    # booking room that carries this number. Equal-and-nil counts as a match:
+    # two rooms we cannot identify are no more distinguishable than one.
+    def room_type_id_for(request, room_number)
+      return request.room_type_id if request.respond_to?(:room_type_id) && request.room_type_id.present?
+
+      request.booking&.booking_rooms&.find { |booking_room| booking_room.room_number.to_s == room_number.to_s }&.room_type_id
+    end
 
     def find_housekeeper
       HotelPortal::ActiveHousekeepersQuery.new(hotel: @hotel).call.find_by(id: @assigned_to_id)
