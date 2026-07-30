@@ -892,6 +892,17 @@ module HotelPortal
       end
     end
 
+    # The action sheet lists the two boat slots beside arrival and departure, so they
+    # share that pair's format. A group collapses to the earliest boat-in and the
+    # latest boat-out across its rooms, the way its arrival and departure already do.
+    def summary_boat_in
+      format_summary_time(primary_guest_boat_times(:boat_in_at).min)
+    end
+
+    def summary_boat_out
+      format_summary_time(primary_guest_boat_times(:boat_out_at).max)
+    end
+
     # One row per billing identity, not per folio and not per booking. Folios are resolved to
     # an identity (see billing_identity_for) and merged across the group, so a group billed
     # entirely to one company reads as a single row carrying the whole amount.
@@ -1737,6 +1748,15 @@ module HotelPortal
 
     def primary_booking_guest
       booking.booking_guests.find(&:is_primary?)
+    end
+
+    # Falls back to the first guest the same way boat_transfer_rows does, so a booking
+    # whose primary flag was never set still reports its slots.
+    def primary_guest_boat_times(column)
+      child_bookings.filter_map do |child|
+        booking_guest = child.booking_guests.find(&:primary?) || child.booking_guests.first
+        booking_guest&.public_send(column)
+      end
     end
 
     def group_summary_action(key, label, tone, offcanvas_variant, icon, eligible_statuses)
