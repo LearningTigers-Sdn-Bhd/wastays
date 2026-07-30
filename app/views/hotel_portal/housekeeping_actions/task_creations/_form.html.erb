@@ -1,0 +1,55 @@
+<% staff_choices = @staff_members.map { |staff| [ staff.name, staff.id ] } %>
+
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "housekeeping-task-sheet",
+        side: :right,
+        size: :md,
+        title: "Add housekeeping task",
+        description: "#{@room_type.name} #{@room_number}",
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with url: hotel_housekeeping_action_new_task_path(current_hotel, room_type_id: @room_type.id, room_number: @room_number),
+            method: :post, class: "flex h-full min-h-0 flex-col" do |form| %>
+        <%= hidden_field_tag :return_to, @return_to, id: nil %>
+
+        <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
+          <% if @error.present? %>
+            <div class="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert">
+              <%= @error %>
+            </div>
+          <% end %>
+
+          <p class="text-sm text-muted-foreground">
+            This room is dirty and has nothing asked of it yet. Name the work, and hand it to
+            somebody now or leave it for the floor to pick up.
+          </p>
+
+          <%= render PanelsUI::FormField.new(form: form, attribute: :request_details, label: "Task", required: true) do |field| %>
+            <% field.with_input(value: params[:request_details], autocomplete: "off", autofocus: true,
+                                placeholder: "Full clean, linen change, minibar restock…") %>
+          <% end %>
+
+          <%# Blank is a real answer here -- the work can wait for the floor -- so %>
+          <%# the combobox keeps its empty option pickable rather than treating it %>
+          <%# as a placeholder. %>
+          <%= render PanelsUI::FormField.new(form: form, attribute: :assigned_to, label: "Assign to") do |field| %>
+            <% field.with_combobox(
+                 [ [ "Assign later", "" ] ] + staff_choices,
+                 selected: params[:assigned_to].to_s,
+                 allow_empty_option: true,
+                 placeholder: "Assign later",
+                 empty_text: "No staff found") %>
+          <% end %>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost,
+                data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit,
+                data: { turbo_submits_with: "Adding…" }) do %>Add task<% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

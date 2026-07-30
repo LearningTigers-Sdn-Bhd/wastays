@@ -32,6 +32,14 @@ module HotelPortal
       resolved_status == "cleaning"
     end
 
+    # A room needing work with nothing asked of it yet, which is where a
+    # dispatcher can name a task. CreateTask decides this again on the way in;
+    # this only decides whether to offer it.
+    def awaiting_task?
+      resolved_status.in?(::HousekeepingTasks::CreateTask::ELIGIBLE_STATUSES) &&
+        task_requests.none?(&:assignable?)
+    end
+
     # -- Booking Display --
 
     def guest_name

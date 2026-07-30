@@ -152,6 +152,23 @@
                         <% end %>
                       <% elsif task.has_details? %>
                         <p class="text-sm text-foreground"><%= task.request_details %></p>
+                      <% elsif dispatch_housekeeping? && room.awaiting_task? %>
+                        <%# The room needs work and nobody has said what. Naming it %>
+                        <%# is the dispatcher's job, so the empty cell offers it %>
+                        <%# rather than only reporting the emptiness. %>
+                        <%= render PanelsUI::Button.new(
+                              href: hotel_housekeeping_action_new_task_path(
+                                current_hotel,
+                                room_type_id: room.room_type&.id,
+                                room_number: room.room_number,
+                                return_to: board_return_url),
+                              variant: :ghost,
+                              size: :sm,
+                              data: { turbo_frame: "housekeeping_action_sheet" },
+                              aria_label: "Add a task for #{room.label}") do %>
+                          <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+                          Add task
+                        <% end %>
                       <% else %>
                         <span class="text-sm text-muted-foreground">No task</span>
                       <% end %>
