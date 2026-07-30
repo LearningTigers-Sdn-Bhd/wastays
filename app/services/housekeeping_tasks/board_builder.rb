@@ -53,7 +53,7 @@ module HousekeepingTasks
         statuses_scope: room_statuses_by_room.fetch(key, EMPTY)
       ).call
 
-      active_booking = resolved.booking_details&.dig(:active)&.first || resolved.booking_details&.dig(:completed)&.first
+      active_booking = resolved.active_booking
 
       {
         room_number: room_number,
@@ -287,7 +287,10 @@ module HousekeepingTasks
         room_number: room_number,
         request_details: request.guest_notes.presence || "Checkout Room Cleaning",
         status: request.status,
-        metadata: request.metadata.to_h.merge("workflow_status" => request.metadata.to_h["workflow_status"].presence || HousekeepingTasks.checkout_workflow_status_for(request.status)),
+        # The row is handed the metadata as it stands; reading a checkout
+        # request's status as a workflow status is TaskRow#display_status's job,
+        # and it does it whether or not the metadata carries one.
+        metadata: request.metadata.to_h,
         created_at: request.created_at,
         requested_at: request.requested_at,
         source_kind: "checkout"
