@@ -1,6 +1,8 @@
 <div class="space-y-5">
   <% bibo_sections(report).each do |section| %>
     <% heading_id = "#{section[:title].parameterize}-heading" %>
+    <% page_param = "#{section[:rows_key]}_page" %>
+    <% paged_rows = paginate_report_section(section[:rows], page_param) %>
     <section class="space-y-3 print:space-y-3 print:break-inside-avoid" aria-labelledby="<%= heading_id %>">
       <h2 id="<%= heading_id %>" class="text-base font-semibold text-foreground"><%= section[:title] %></h2>
 
@@ -22,8 +24,8 @@
           </tr>
         <% end %>
         <% table.with_body do %>
-          <% if section[:rows].any? %>
-            <% report_rows_grouped_by_month(section[:rows], date_preset: @date_preset) { |row| row[:boat_at] }.each do |month, rows| %>
+          <% if paged_rows.any? %>
+            <% report_rows_grouped_by_month(paged_rows, date_preset: @date_preset) { |row| row[:boat_at] }.each do |month, rows| %>
               <% if month %>
                 <tr class="bg-muted/55" data-slot="report-month-group">
                   <th scope="rowgroup" colspan="4" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
@@ -68,6 +70,8 @@
           <% end %>
         <% end %>
       <% end %>
+
+      <%= render "table_pagination", collection: paged_rows, param_name: page_param %>
     </section>
   <% end %>
 </div>

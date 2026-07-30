@@ -2,7 +2,7 @@
   <% report.sections.each do |section| %>
     <% heading_id = "meal-prep-#{section[:meal]}-heading" %>
     <% page_param = "#{section[:meal]}_page" %>
-    <% paged_rows = Kaminari.paginate_array(section[:rows]).page(params[page_param]).per(15) %>
+    <% paged_rows = paginate_report_section(section[:rows], page_param) %>
     <section class="space-y-3 print:space-y-3 print:break-inside-avoid" aria-labelledby="<%= heading_id %>">
       <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 id="<%= heading_id %>" class="text-base font-semibold text-foreground"><%= section[:title] %></h2>

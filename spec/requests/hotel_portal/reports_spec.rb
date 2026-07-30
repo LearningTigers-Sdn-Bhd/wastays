@@ -279,6 +279,38 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       end
     end
 
+    it "paginates each boat transfer section at 15 on its own param" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      18.times do |index|
+        booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)
+        create(:booking_room, booking: booking, room_number: "10#{index}")
+        create(
+          :booking_guest,
+          booking: booking, guest: create(:guest, name: "Guest #{index}"), is_primary: true,
+          boat_in_at: start_date.beginning_of_day + 7.hours,
+          boat_out_at: end_date.beginning_of_day + 13.hours
+        )
+      end
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo"
+      }
+
+      page = Capybara.string(response.body)
+      boat_ins = page.find("section[aria-labelledby='boat-ins-heading']")
+      expect(boat_ins.all("table tbody tr").size).to eq(15)
+      expect(boat_ins.find("[data-slot='report-pagination'] a", text: "2", match: :first)[:href]).to include("boat_ins_page=2")
+
+      # Paging one leg leaves the other on page one, same as meal prep.
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo", boat_ins_page: 2
+      }
+
+      page = Capybara.string(response.body)
+      expect(page.find("section[aria-labelledby='boat-ins-heading']").all("table tbody tr").size).to eq(3)
+      expect(page.find("section[aria-labelledby='boat-outs-heading']").all("table tbody tr").size).to eq(15)
+    end
+
     it "shows each boat leg on screen with the same columns its export carries" do
       hotel.update!(allow_boat_information: true, time_zone: "UTC")
       booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)
