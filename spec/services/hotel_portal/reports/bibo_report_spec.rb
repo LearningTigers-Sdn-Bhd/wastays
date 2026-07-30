@@ -45,4 +45,39 @@ RSpec.describe HotelPortal::Reports::BiboReport, type: :service do
       expect(result.boat_ins.first[:boat_time]).to eq("06:00 PM")
     end
   end
+
+  describe "#for_leg" do
+    let(:result) do
+      booking = create(:booking, hotel: hotel, check_in: start_date, check_out: start_date + 2.days)
+      create(:booking_guest, booking: booking, guest: create(:guest, name: "John Doe"), is_primary: true,
+                             boat_in_at: start_date.beginning_of_day + 10.hours)
+
+      other = create(:booking, hotel: hotel, check_in: start_date - 2.days, check_out: start_date)
+      create(:booking_guest, booking: other, guest: create(:guest, name: "Jane Smith"), is_primary: true,
+                             boat_out_at: start_date.beginning_of_day + 15.hours)
+
+      service.call
+    end
+
+    it "keeps both legs when no leg is selected" do
+      expect(result.for_leg(nil)).to eq(result)
+      expect(result.sections.map { |section| section[:rows_key] }).to eq(%i[boat_ins boat_outs])
+      expect(result.total_count).to eq(2)
+    end
+
+    it "narrows to the selected leg and drops the other one" do
+      boat_ins = result.for_leg("boat_ins")
+
+      expect(boat_ins.boat_ins.map { |row| row[:guest_name] }).to eq([ "John Doe" ])
+      expect(boat_ins.boat_outs).to be_empty
+      expect(boat_ins.boat_in_count).to eq(1)
+      expect(boat_ins.boat_out_count).to eq(0)
+      expect(boat_ins.sections.map { |section| section[:title] }).to eq([ "Boat-ins" ])
+    end
+
+    it "counts each leg off the unfiltered result" do
+      expect(result.count_for("boat_ins")).to eq(1)
+      expect(result.count_for("boat_outs")).to eq(1)
+    end
+  end
 end

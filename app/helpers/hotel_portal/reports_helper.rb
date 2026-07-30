@@ -55,7 +55,7 @@ module HotelPortal::ReportsHelper
     ]
 
     if current_hotel.allow_boat_information?
-      tabs << { label: "Boat Transfers", value: "bibo", count: bibo_report ? (bibo_report.boat_in_count + bibo_report.boat_out_count) : 0 }
+      tabs << { label: "Boat Transfers", value: "bibo", count: bibo_report ? bibo_report.total_count : 0 }
       tabs << { label: "Meal Prep", value: "meal_prep", count: meal_prep_report&.records&.size.to_i }
     end
 
@@ -151,11 +151,11 @@ module HotelPortal::ReportsHelper
     TRANSFER_BADGES.fetch(type.to_s, { icon: "ship", variant: :neutral })
   end
 
-  def bibo_sections(report)
-    HotelPortal::Reports::BiboReport::LEGS.map do |leg|
-      leg.merge(rows: report.public_send(leg[:rows_key]))
-    end
-  end
+  def bibo_sections(report) = report.sections
+
+  BIBO_LEG_LABELS = { "all" => "All", "boat_ins" => "Boat-ins", "boat_outs" => "Boat-outs" }.freeze
+
+  def bibo_leg_label(leg) = BIBO_LEG_LABELS.fetch(leg.to_s, leg.to_s.titleize)
 
   def bibo_row_class(index)
     base = "align-top transition-colors print:bg-white"

@@ -11,6 +11,7 @@ module HotelPortal
     PAYOUT_TABS = %w[upcoming paid].freeze
     GUEST_REPORT_TABS = %w[arrivals in_house departures checkout police_report registration_cards bibo meal_prep].freeze
     MEAL_PREP_ALL = "all"
+    BIBO_ALL = "all"
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
     DAILY_REPORT_TABS = %w[overview revenue cashier].freeze
     TAX_COMPLIANCE_TABS = %w[tourism_tax sst non_national].freeze
@@ -383,11 +384,15 @@ module HotelPortal
         end_date: @report_end_date
       ).call
 
-      @bibo_report = HotelPortal::Reports::BiboReport.new(
+      # Built once: the tab strip counts every leg, the table shows the selected
+      # one. Both come off this single pass.
+      @bibo_full = HotelPortal::Reports::BiboReport.new(
         hotel: current_hotel,
         start_date: @report_start_date,
         end_date: @report_end_date
       ).call
+
+      @bibo_report = @bibo_full
 
       @police_report = HotelPortal::Reports::PoliceReport.new(
         hotel: current_hotel,
@@ -403,6 +408,15 @@ module HotelPortal
           start_date: @report_start_date,
           end_date: @report_end_date
         ).call
+      end
+
+      if @active_guest_report_tab == "bibo"
+        legs = HotelPortal::Reports::BiboReport::LEG_KEYS
+        params[:leg] = BIBO_ALL unless legs.include?(params[:leg])
+        # "All" keeps both directions in one report; each leg becomes its own section.
+        @bibo_report = @bibo_full.for_leg(params[:leg] == BIBO_ALL ? nil : params[:leg])
+        @bibo_counts = legs.index_with { |leg| @bibo_full.count_for(leg) }
+          .merge(BIBO_ALL => @bibo_full.total_count)
       end
 
       if @active_guest_report_tab == "meal_prep"
@@ -428,6 +442,8 @@ module HotelPortal
 
       filename_suffix = if @active_guest_report_tab == "meal_prep"
         "meal-prep-#{params[:meal_type]}"
+      elsif @active_guest_report_tab == "bibo"
+        "bibo-#{params[:leg].tr('_', '-')}"
       else
         @active_guest_report_tab.tr("_", "-")
       end

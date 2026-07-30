@@ -75,12 +75,12 @@ module HotelPortal
         headers.map { |header| fixed.fetch(header, builder.content_width - fixed.values.sum) }
       end
 
-      # Boat transfers print as two tables so the page mirrors the on-screen split.
+      # One table per direction shown, so the page mirrors the on-screen split.
       def add_bibo_tables(builder)
         widths = bibo_column_widths(builder)
 
-        BiboReport::LEGS.each do |leg|
-          rows = @report.public_send(leg[:rows_key])
+        @report.sections.each do |leg|
+          rows = leg[:rows]
           builder.add_table(
             section_title: leg[:title],
             headers: [ "Guest Name", "Room Number", leg[:date_header], leg[:time_header] ],

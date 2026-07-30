@@ -115,12 +115,16 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesPdfExportService do
 
     it "prints boat transfers as separate boat-in and boat-out tables" do
       hotel = instance_double(Hotel, name: "Sample Hotel", allow_boat_information?: true)
-      report = double(
-        "report",
+      boat_ins = [ { booking_guest_id: 1, guest_name: "Boat Guest", room_number: "103", arrival_date: "27 Jul 2026", departure_date: "28 Jul 2026", boat_time: "07:00 AM" } ]
+      boat_outs = [ { booking_guest_id: 1, guest_name: "Boat Guest", room_number: "103", arrival_date: "27 Jul 2026", departure_date: "28 Jul 2026", boat_time: "01:00 PM" } ]
+      report = HotelPortal::Reports::BiboReport::Result.new(
         start_date: Date.new(2026, 7, 27),
         end_date: Date.new(2026, 7, 28),
-        boat_ins: [ { booking_guest_id: 1, guest_name: "Boat Guest", room_number: "103", arrival_date: "27 Jul 2026", departure_date: "28 Jul 2026", boat_time: "07:00 AM" } ],
-        boat_outs: [ { booking_guest_id: 1, guest_name: "Boat Guest", room_number: "103", arrival_date: "27 Jul 2026", departure_date: "28 Jul 2026", boat_time: "01:00 PM" } ]
+        boat_ins: boat_ins,
+        boat_outs: boat_outs,
+        boat_in_count: boat_ins.size,
+        boat_out_count: boat_outs.size,
+        leg: nil
       )
 
       sections = []

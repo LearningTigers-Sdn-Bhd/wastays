@@ -136,5 +136,20 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesCsvExportService do
       expect(rows[1].fields).to eq([ "In Only", "104", "28 Jul 2026", "30 Jul 2026", "08:00 AM", "—" ])
       expect(rows[2].fields).to eq([ "Out Only", "105", "25 Jul 2026", "27 Jul 2026", "—", "02:30 PM" ])
     end
+
+    it "carries only the selected leg's own columns when the bibo tab is narrowed" do
+      boat_outs = [ { booking_guest_id: 1, guest_name: "Out Only", room_number: "105", arrival_date: "25 Jul 2026", departure_date: "27 Jul 2026", boat_time: "02:30 PM" } ]
+      report = HotelPortal::Reports::BiboReport::Result.new(
+        start_date: Date.new(2026, 7, 25), end_date: Date.new(2026, 7, 27),
+        boat_ins: [], boat_outs: boat_outs, boat_in_count: 0, boat_out_count: 1, leg: "boat_outs"
+      )
+
+      csv = described_class.new(report: report, tab: "bibo").generate
+      rows = CSV.parse(csv.delete_prefix("﻿"), headers: true)
+
+      expect(rows.headers).to eq([ "Guest Name", "Room Number", "Departure Date", "Departure Time" ])
+      expect(rows.count).to eq(1)
+      expect(rows[0].fields).to eq([ "Out Only", "105", "27 Jul 2026", "02:30 PM" ])
+    end
   end
 end

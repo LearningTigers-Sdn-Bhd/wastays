@@ -334,6 +334,82 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(bibo_row_cells(tables.last)).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "01:00 PM" ])
     end
 
+    it "gives boat transfers All, Boat-ins and Boat-outs tabs that narrow the sections" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)
+      create(:booking_room, booking: booking, room_number: "103")
+      create(
+        :booking_guest,
+        booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true,
+        boat_in_at: start_date.beginning_of_day + 7.hours, boat_out_at: end_date.beginning_of_day + 13.hours
+      )
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo"
+      }
+
+      page = Capybara.string(response.body)
+      expect(page.all("#bibo-leg-tabs a").map(&:text).map(&:strip)).to eq([ "All2", "Boat-ins1", "Boat-outs1" ])
+      expect(page.all("section[aria-labelledby$='-heading'] h2").map(&:text)).to eq([ "Boat-ins", "Boat-outs" ])
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo", leg: "boat_outs"
+      }
+
+      page = Capybara.string(response.body)
+      expect(page.all("section[aria-labelledby$='-heading'] h2").map(&:text)).to eq([ "Boat-outs" ])
+      # Counts stay off the unfiltered report, so switching legs never rewrites the tabs.
+      expect(page.all("#bibo-leg-tabs a").map(&:text).map(&:strip)).to eq([ "All2", "Boat-ins1", "Boat-outs1" ])
+    end
+
+    it "carries the selected sub-tab into the exports and the date range form" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "07:00", has_dinner: true)
+      booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)
+      create(:booking_room, booking: booking, room_number: "103")
+      create(
+        :booking_guest,
+        booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true,
+        boat_in_at: start_date.beginning_of_day + 7.hours, boat_out_at: end_date.beginning_of_day + 13.hours
+      )
+
+      { "bibo" => { leg: "boat_outs" }, "meal_prep" => { meal_type: "dinner" } }.each do |tab, sub_tab|
+        get guest_reports_hotel_reports_path(hotel), params: {
+          start_date: start_date.to_s, end_date: end_date.to_s, tab: tab, **sub_tab
+        }
+
+        page = Capybara.string(response.body)
+        param, value = sub_tab.first
+        exports = page.all("#guest-reports-export a", visible: :all)
+        expect(exports.map(&:text).map(&:strip)).to eq([ "Export PDF", "Export Excel", "Export CSV" ])
+        exports.each do |item|
+          expect(item[:href]).to include("#{param}=#{value}")
+        end
+        expect(page.find("#arrivals-date-range-form input[name='#{param}']", visible: :all).value).to eq(value)
+      end
+    end
+
+    it "exports only the selected leg, with that leg's own columns" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)
+      create(:booking_room, booking: booking, room_number: "103")
+      create(
+        :booking_guest,
+        booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true,
+        boat_in_at: start_date.beginning_of_day + 7.hours, boat_out_at: end_date.beginning_of_day + 13.hours
+      )
+
+      get guest_reports_hotel_reports_path(hotel, format: :csv), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo", leg: "boat_outs"
+      }
+
+      expect(response.headers["Content-Disposition"]).to include("guest-reports-bibo-boat-outs")
+      rows = CSV.parse(response.body.delete_prefix("\xEF\xBB\xBF"), headers: true)
+      expect(rows.headers).to eq([ "Guest Name", "Room Number", "Departure Date", "Departure Time" ])
+      expect(rows.count).to eq(1)
+      expect(rows[0].fields).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "01:00 PM" ])
+    end
+
     it "keeps the booking a guest belongs to behind a hover popover, not in a column" do
       hotel.update!(allow_boat_information: true, time_zone: "UTC")
       booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)

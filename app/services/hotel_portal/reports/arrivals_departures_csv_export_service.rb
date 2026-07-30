@@ -27,6 +27,7 @@ module HotelPortal
       def export_headers = headers_for_active_tab
 
       def export_rows
+        return bibo_leg_rows if bibo_leg
         return bibo_rows if @tab == "bibo"
         return @report.records.map { |row| meal_prep_row(row) + [ row[:meals].join(", ") ] } if @tab == "meal_prep"
 
@@ -46,7 +47,21 @@ module HotelPortal
         [ row[:guest_name], row[:pax], row[:room_number], row[:type], row[:transfer_date], row[:formatted_boat_time] ]
       end
 
+      # A single-leg export is about that leg, so it carries only its own date and
+      # time rather than a paired row with the other half struck out.
+      def bibo_leg
+        return nil unless @tab == "bibo" && @report.respond_to?(:leg) && @report.leg.present?
+
+        @bibo_leg ||= @report.sections.first
+      end
+
+      def bibo_leg_headers = [ "Guest Name", "Room Number", bibo_leg[:date_header], bibo_leg[:time_header] ]
+
       private
+
+      def bibo_leg_rows
+        bibo_leg[:rows].map { |row| [ row[:guest_name], row[:room_number], row[bibo_leg[:date_key]], row[:boat_time] ] }
+      end
 
       # The report lists each direction on its own; the flat exports pair the two
       # legs of a guest back onto a single row so both times sit side by side.
@@ -72,6 +87,7 @@ module HotelPortal
       def bibo_row_stem(row) = [ row[:guest_name], row[:room_number], row[:arrival_date], row[:departure_date] ]
 
       def headers_for_active_tab
+        return bibo_leg_headers if bibo_leg
         return BIBO_HEADERS if @tab == "bibo"
         return MEAL_PREP_HEADERS if @tab == "meal_prep"
 

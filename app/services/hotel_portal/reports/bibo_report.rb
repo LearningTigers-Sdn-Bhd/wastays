@@ -12,6 +12,8 @@ module HotelPortal
           time_header: "Departure Time", empty_message: "No boat-out records found for this selected period." }
       ].freeze
 
+      LEG_KEYS = LEGS.map { |leg| leg[:rows_key].to_s }.freeze
+
       Result = Struct.new(
         :start_date,
         :end_date,
@@ -19,27 +21,67 @@ module HotelPortal
         :boat_outs,
         :boat_in_count,
         :boat_out_count,
+        :leg,
         keyword_init: true
-      )
+      ) do
+        # Both directions are already loaded, so narrowing to one leg tab is an
+        # in-memory filter rather than another pass at the database.
+        def for_leg(leg)
+          return self if leg.blank?
 
-      def initialize(hotel:, start_date:, end_date:)
+          key = leg.to_s
+          ins = key == "boat_ins" ? boat_ins : []
+          outs = key == "boat_outs" ? boat_outs : []
+
+          Result.new(
+            start_date: start_date,
+            end_date: end_date,
+            boat_ins: ins,
+            boat_outs: outs,
+            boat_in_count: ins.size,
+            boat_out_count: outs.size,
+            leg: key
+          )
+        end
+
+        def count_for(leg)
+          leg.to_s == "boat_ins" ? boat_in_count : boat_out_count
+        end
+
+        def total_count = boat_in_count + boat_out_count
+
+        # One section per direction being shown: the "all" tab shows both, a leg
+        # tab shows its own. Screen tables and PDF pages lay out from these.
+        def sections
+          LEGS.select { |section| leg.blank? || section[:rows_key].to_s == leg }
+              .map { |section| section.merge(rows: public_send(section[:rows_key])) }
+        end
+      end
+
+      def initialize(hotel:, start_date:, end_date:, leg: nil)
         @hotel = hotel
         @start_date = start_date.to_date
         @end_date = end_date.to_date
+        @leg = leg.presence
       end
 
       def call
-        Result.new(
+        @leg ? full_result.for_leg(@leg) : full_result
+      end
+
+      private
+
+      def full_result
+        @full_result ||= Result.new(
           start_date: @start_date,
           end_date: @end_date,
           boat_ins: boat_ins,
           boat_outs: boat_outs,
           boat_in_count: boat_ins.size,
-          boat_out_count: boat_outs.size
+          boat_out_count: boat_outs.size,
+          leg: nil
         )
       end
-
-      private
 
       def boat_ins
         @boat_ins ||= booking_guests_scope

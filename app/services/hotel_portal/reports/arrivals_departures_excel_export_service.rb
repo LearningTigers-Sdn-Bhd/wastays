@@ -66,6 +66,7 @@ module HotelPortal
 
       # Meal prep never lands here; it names its sheets after its meals.
       def sheet_name
+        return @report.sections.first[:title] if @tab == "bibo" && @report.leg.present?
         return "Boat Transfers" if @tab == "bibo"
 
         @tab.titleize
