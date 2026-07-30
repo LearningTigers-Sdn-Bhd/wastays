@@ -23,20 +23,13 @@ module HotelPortal
 
       private
 
-      def find_request
-        case kind
-        when "housekeeping"
-          record = HousekeepingRequest.includes(:booking).find(request_id)
-        when "complaint"
-          record = ComplaintRequest.includes(:booking).find(request_id)
-        else
-          raise ActiveRecord::RecordNotFound
-        end
+      # Cancelling records why on the request itself, so it reaches only the two
+      # kinds that keep internal notes. A checkout is released through the
+      # housekeeping board instead.
+      CANCELLABLE_KINDS = %w[housekeeping complaint].freeze
 
-        record_hotel_id = record.respond_to?(:hotel_id) ? record.hotel_id : nil
-        record_hotel_id ||= record.booking&.hotel_id
-        raise ActiveRecord::RecordNotFound unless record_hotel_id == hotel.id
-        record
+      def find_request
+        Finder.new(hotel: hotel, kind: kind, request_id: request_id, kinds: CANCELLABLE_KINDS).call
       end
 
       def cancel_request(record)

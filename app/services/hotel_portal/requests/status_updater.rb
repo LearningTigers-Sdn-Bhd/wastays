@@ -66,21 +66,7 @@ module HotelPortal
       end
 
       def find_request
-        case kind
-        when "housekeeping"
-          record = HousekeepingRequest.includes(:booking).find(request_id)
-        when "complaint"
-          record = ComplaintRequest.includes(:booking).find(request_id)
-        when "checkout"
-          record = CheckOutRequest.includes(:booking).find(request_id)
-        else
-          raise ActiveRecord::RecordNotFound
-        end
-
-        record_hotel_id = record.respond_to?(:hotel_id) ? record.hotel_id : nil
-        record_hotel_id ||= record.booking&.hotel_id
-        raise ActiveRecord::RecordNotFound unless record_hotel_id == hotel.id
-        record
+        Finder.new(hotel: hotel, kind: kind, request_id: request_id).call
       end
 
       def normalize_status
