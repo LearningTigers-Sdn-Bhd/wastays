@@ -151,7 +151,9 @@ platform_permissions = [
   { name: 'Manage Users', slug: 'manage_users' },
   { name: 'Manage Corporate Accounts', slug: 'manage_corporate_accounts' },
   { name: 'Manage AR Payments', slug: 'manage_ar_payments' },
+  { name: 'View Room Readiness', slug: 'view_room_readiness' },
   { name: 'Manage Room Status', slug: 'manage_room_status' },
+  { name: 'Override Room Status Assignment', slug: 'override_room_status_assignment' },
   { name: 'Post Charges', slug: 'post_charges' },
   { name: 'Post Folio Charges', slug: 'post_folio_charges' },
   { name: 'Post Folio Payments', slug: 'post_folio_payments' },
@@ -161,6 +163,7 @@ platform_permissions = [
   { name: 'Post Folio Write-Offs', slug: 'post_folio_write_offs' },
   { name: 'Manage Folio Windows', slug: 'manage_folio_windows' },
   { name: 'Manage Folio Movements', slug: 'manage_folio_movements' },
+  { name: 'Override Financial Date Lock', slug: 'override_financial_date_lock' },
   { name: 'Manage GL Mappings', slug: 'manage_general_ledger_maps' },
   { name: 'View Reports', slug: 'view_reports' },
   { name: 'View Payouts', slug: 'view_payouts' },
@@ -168,13 +171,6 @@ platform_permissions = [
   { name: 'Manage Concierge', slug: 'manage_concierge' },
   { name: 'Perform Housekeeping Tasks', slug: 'perform_housekeeping_tasks' },
   { name: 'Dispatch Housekeeping Tasks', slug: 'dispatch_housekeeping_tasks' }
-]
-
-role_templates = [
-  { name: 'Hotel Owner', slug: 'hotel_owner', permissions: platform_permissions.map { |p| p[:slug] } },
-  { name: 'General Manager', slug: 'general_manager', permissions: platform_permissions.map { |p| p[:slug] }.reject { |s| s == 'manage_account' } },
-  { name: 'Front Desk', slug: 'front_desk', permissions: %w[view_bookings view_financial_status manage_bookings manage_guest_arrival manage_night_audit manage_room_status post_charges post_folio_charges post_folio_payments manage_requests manage_concierge perform_housekeeping_tasks dispatch_housekeeping_tasks] },
-  { name: 'Housekeeper', slug: 'housekeeper', permissions: %w[manage_room_status manage_requests perform_housekeeping_tasks] }
 ]
 
 cancellation_templates = [
@@ -282,7 +278,10 @@ if Rails.env.development?
     end
     account.update!(name: blueprint[:account][:name], status: blueprint[:account][:status])
 
-    role_lookup = role_templates.index_with { |template| SeedData.ensure_role(account, template) }
+    # Roles come from HotelOps::SeedAccountRoles so a seeded account looks
+    # exactly like one created through the app. Read after the permissions
+    # above exist, since the owner and manager templates derive from them.
+    role_lookup = HotelOps::SeedAccountRoles.role_templates.index_with { |template| SeedData.ensure_role(account, template) }
 
     BankingDetail.find_or_create_by!(account: account) do |banking_detail|
       banking_detail.account_holder_name = blueprint[:banking][:account_holder_name]
