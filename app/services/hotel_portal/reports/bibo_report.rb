@@ -3,6 +3,15 @@
 module HotelPortal
   module Reports
     class BiboReport
+      # Each direction is one section, carrying only the date and time of its own
+      # leg. Shared by the on-screen tables and the PDF export so both match.
+      LEGS = [
+        { title: "Boat-ins", rows_key: :boat_ins, date_header: "Arrival Date", date_key: :arrival_date,
+          time_header: "Arrival Time", empty_message: "No boat-in records found for this selected period." },
+        { title: "Boat-outs", rows_key: :boat_outs, date_header: "Departure Date", date_key: :departure_date,
+          time_header: "Departure Time", empty_message: "No boat-out records found for this selected period." }
+      ].freeze
+
       Result = Struct.new(
         :start_date,
         :end_date,
@@ -60,11 +69,14 @@ module HotelPortal
       def row_for(bg, boat_at)
         booking = bg.booking
         {
+          booking_guest_id: bg.id,
           guest_name: bg.name_snapshot || bg.guest.name,
           room_type: booking.booking_rooms.map { |br| br.room_type&.name }.compact.uniq.join(", ").presence || "—",
           room_number: booking.booking_rooms.map(&:room_number).compact.join(", ").presence || "—",
           check_in: booking.check_in,
           check_out: booking.check_out,
+          arrival_date: booking.check_in.strftime("%d %b %Y"),
+          departure_date: booking.check_out.strftime("%d %b %Y"),
           stay_dates: "#{booking.check_in.strftime('%d %b %Y')} - #{booking.check_out.strftime('%d %b %Y')}",
           confirmation_token: booking.confirmation_token,
           boat_time: format_boat_time(boat_at),

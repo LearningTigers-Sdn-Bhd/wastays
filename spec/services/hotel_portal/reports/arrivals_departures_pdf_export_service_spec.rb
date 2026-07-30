@@ -80,5 +80,35 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesPdfExportService do
       expect(pdf).to start_with("%PDF")
       expect(pdf.bytesize).to be > 500
     end
+
+    it "prints boat transfers as separate boat-in and boat-out tables" do
+      hotel = instance_double(Hotel, name: "Sample Hotel", allow_boat_information?: true)
+      report = double(
+        "report",
+        start_date: Date.new(2026, 7, 27),
+        end_date: Date.new(2026, 7, 28),
+        boat_ins: [ { booking_guest_id: 1, guest_name: "Boat Guest", room_number: "103", arrival_date: "27 Jul 2026", departure_date: "28 Jul 2026", boat_time: "07:00 AM" } ],
+        boat_outs: [ { booking_guest_id: 1, guest_name: "Boat Guest", room_number: "103", arrival_date: "27 Jul 2026", departure_date: "28 Jul 2026", boat_time: "01:00 PM" } ]
+      )
+
+      sections = []
+      allow_any_instance_of(HotelPortal::Reports::Exports::PdfReportBuilder).to receive(:add_table) do |_builder, **kwargs|
+        sections << kwargs
+      end
+
+      pdf = described_class.new(hotel: hotel, report: report, tab: "bibo").generate
+
+      expect(pdf).to start_with("%PDF")
+      expect(sections.map { |section| section[:section_title] }).to eq([ "Boat-ins", "Boat-outs" ])
+      expect(sections.first[:headers]).to eq([ "Guest Name", "Room Number", "Arrival Date", "Arrival Time" ])
+      expect(sections.last[:headers]).to eq([ "Guest Name", "Room Number", "Departure Date", "Departure Time" ])
+      expect(sections.first[:rows]).to eq([ [ "Boat Guest", "103", "27 Jul 2026", "07:00 AM" ] ])
+      expect(sections.last[:rows]).to eq([ [ "Boat Guest", "103", "28 Jul 2026", "01:00 PM" ] ])
+
+      # Both tables line up, and the guest name keeps the leftover page width.
+      expect(sections.first[:column_widths]).to eq(sections.last[:column_widths])
+      expect(sections.first[:column_widths].drop(1)).to all(eq(150))
+      expect(sections.first[:column_widths].first).to be > 150
+    end
   end
 end

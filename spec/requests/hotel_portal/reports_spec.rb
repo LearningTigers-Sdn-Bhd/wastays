@@ -16,6 +16,12 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: slug), enabled: true)
   end
 
+  # The guest cell also holds a hover popover, so read its name from its own slot.
+  def bibo_row_cells(table)
+    row = table.css("tbody tr").first
+    [ row.at_css("[data-slot='bibo-guest-name']").text.strip ] + row.css("td").map { |cell| cell.text.strip }
+  end
+
   def create_grouped_room_bookings(count:, hotel:, booking_attributes:, room_attributes:)
     group = create(:group_booking, hotel: hotel)
 
@@ -270,6 +276,53 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         headings = Nokogiri::HTML(response.body).css("table thead th").map(&:text).map(&:strip)
         expect(headings).to include(heading), "expected a #{heading} column on #{tab}"
       end
+    end
+
+    it "shows each boat leg on screen with the same columns its export carries" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)
+      create(:booking_room, booking: booking, room_number: "103")
+      create(
+        :booking_guest,
+        booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true,
+        boat_in_at: start_date.beginning_of_day + 7.hours, boat_out_at: end_date.beginning_of_day + 13.hours
+      )
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo"
+      }
+
+      tables = Nokogiri::HTML(response.body).css("table.panel-table")
+      expect(tables.map { |table| table.css("thead th").map { |th| th.text.strip } }).to eq([
+        [ "Guest name", "Room number", "Arrival Date", "Arrival Time" ],
+        [ "Guest name", "Room number", "Departure Date", "Departure Time" ]
+      ])
+      expect(bibo_row_cells(tables.first)).to eq([ "Boat Guest", "103", start_date.strftime("%d %b %Y"), "07:00 AM" ])
+      expect(bibo_row_cells(tables.last)).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "01:00 PM" ])
+    end
+
+    it "keeps the booking a guest belongs to behind a hover popover, not in a column" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)
+      create(:booking_room, booking: booking, room_number: "103")
+      create(
+        :booking_guest,
+        booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true,
+        boat_in_at: start_date.beginning_of_day + 7.hours
+      )
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo"
+      }
+
+      page = Capybara.string(response.body)
+      trigger = page.find("[aria-label='Booking details for Boat Guest']", visible: :all)
+      panel = page.find("##{trigger['aria-controls']}", visible: :all)
+
+      expect(panel).to have_text(booking.confirmation_token)
+      expect(panel).to have_text("Stay dates")
+      # The time column is plain text now, no badge.
+      expect(page.first("table.panel-table tbody td:last-child", visible: :all)).to have_no_css(".panel-badge")
     end
 
     it "builds the meal prep report once per page load, not once per badge" do

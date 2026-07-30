@@ -14,7 +14,7 @@ module HotelPortal
         headers = @table.export_headers
         rows = @table.export_rows
         Exports::ExcelReportBuilder.new(hotel: @hotel, title: "Guest Reports", period_label: period_label).generate do |builder|
-          sheet = builder.add_sheet(name: sheet_name, widths: Array.new(headers.size, 20), orientation: :landscape)
+          sheet = builder.add_sheet(name: sheet_name, widths: column_widths(headers), orientation: :landscape)
           builder.add_header(sheet: sheet, subtitle: sheet_name)
           builder.add_summary(sheet: sheet, metrics: [ [ "Records", data_record_count, nil ] ])
           builder.add_table(
@@ -27,9 +27,13 @@ module HotelPortal
 
       private
 
+      # Guest names need the room; every other column holds a short date or time.
+      def column_widths(headers)
+        headers.map { |header| header == "Guest Name" ? 34 : 20 }
+      end
+
       def data_record_count
         return @report.records.size if @tab == "meal_prep"
-        return @report.boat_ins.size + @report.boat_outs.size if @tab == "bibo"
 
         @table.export_rows.size
       end

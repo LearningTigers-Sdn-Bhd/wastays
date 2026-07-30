@@ -134,10 +134,9 @@ module HotelPortal::ReportsHelper
   end
 
   def bibo_sections(report)
-    [
-      { title: "Boat-ins", rows: report.boat_ins, empty_message: "No boat-in records found or expected for this selected period." },
-      { title: "Boat-outs", rows: report.boat_outs, empty_message: "No boat-out records found or expected for this selected period." }
-    ]
+    HotelPortal::Reports::BiboReport::LEGS.map do |leg|
+      leg.merge(rows: report.public_send(leg[:rows_key]))
+    end
   end
 
   def bibo_row_class(index)

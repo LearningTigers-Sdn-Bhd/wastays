@@ -3,6 +3,8 @@
 module HotelPortal
   module Reports
     class ArrivalsDeparturesCsvExportService
+      BIBO_HEADERS = [ "Guest Name", "Room Number", "Arrival Date", "Departure Date", "Arrival Time", "Departure Time" ].freeze
+
       def initialize(report:, tab: "arrivals")
         @report = report
         @tab = tab.to_s
@@ -19,8 +21,7 @@ module HotelPortal
       def export_headers = headers_for_active_tab
 
       def export_rows
-        return @report.boat_ins.map { |row| [ "Boat-in", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ] } +
-          @report.boat_outs.map { |row| [ "Boat-out", row[:guest_name], row[:confirmation_token], row[:room_type], row[:room_number], row[:stay_dates], row[:boat_time] ] } if @tab == "bibo"
+        return bibo_rows if @tab == "bibo"
         return @report.records.map { |row| [ row[:type], row[:guest_name], row[:confirmation_token], row[:pax], row[:room_type], row[:room_number], row[:formatted_boat_time] ] } +
           [ [], [ "", "", "", "", "", "Total Pax", @report.total_pax ] ] if @tab == "meal_prep"
 
@@ -29,8 +30,31 @@ module HotelPortal
 
       private
 
+      # The report lists each direction on its own; the flat exports pair the two
+      # legs of a guest back onto a single row so both times sit side by side.
+      def bibo_rows
+        paired = {}
+
+        @report.boat_ins.each do |row|
+          paired[row[:booking_guest_id]] = bibo_row_stem(row) + [ row[:boat_time], "—" ]
+        end
+
+        @report.boat_outs.each do |row|
+          existing = paired[row[:booking_guest_id]]
+          if existing
+            existing[BIBO_HEADERS.index("Departure Time")] = row[:boat_time]
+          else
+            paired[row[:booking_guest_id]] = bibo_row_stem(row) + [ "—", row[:boat_time] ]
+          end
+        end
+
+        paired.values
+      end
+
+      def bibo_row_stem(row) = [ row[:guest_name], row[:room_number], row[:arrival_date], row[:departure_date] ]
+
       def headers_for_active_tab
-        return [ "Type", "Guest Name", "Booking Ref", "Room Type", "Room Number", "Stay Dates", "Boat Time" ] if @tab == "bibo"
+        return BIBO_HEADERS if @tab == "bibo"
         return [ "Type", "Guest Name", "Booking Ref", "Pax", "Room Type", "Room Number", "Boat Time" ] if @tab == "meal_prep"
 
         allow_boat = @report.respond_to?(:allow_boat_information) && @report.allow_boat_information
