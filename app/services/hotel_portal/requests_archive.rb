@@ -11,6 +11,16 @@ module HotelPortal
       @params = params || {}
     end
 
+    # The archive is read by when a request was put away, which is the only date
+    # a row here has that a reader is looking for.
+    def date_window
+      @date_window ||= Requests::DateWindow.new(
+        hotel: hotel,
+        anchor_date: params[:date],
+        days: params[:days]
+      )
+    end
+
     def rows
       @rows ||= filtered_rows
     end
@@ -28,7 +38,6 @@ module HotelPortal
       rows = rows.select { |row| search_match?(row) }
       rows = rows.select { |row| kind_match?(row) }
       rows = rows.select { |row| status_match?(row) }
-      rows = rows.select { |row| date_range_match?(row) }
       rows.sort_by { |row| row[:requested_at] || Time.zone.at(0) }.reverse
     end
 
@@ -87,11 +96,16 @@ module HotelPortal
       @hotel_booking_ids ||= hotel.bookings.select(:id)
     end
 
+    def window_range
+      @window_range ||= date_window.range
+    end
+
     def archived_housekeeping_requests
       HousekeepingRequest
         .in_hotel(hotel)
         .archived
         .where.not(booking_id: nil)
+        .where(archived_at: window_range)
         .includes(:booking)
         .order(requested_at: :desc)
     end
@@ -100,12 +114,15 @@ module HotelPortal
       ComplaintRequest
         .where(booking_id: hotel_booking_ids)
         .archived
+        .where(archived_at: window_range)
         .includes(:booking)
         .order(requested_at: :desc)
     end
 
     # A checkout carries no archived_at column: cancelling is an ending of its
-    # own, and completing is archived by a note in its metadata.
+    # own, and completing is archived by a note in its metadata. Neither is a
+    # column the window can be read against, so when the record was last written
+    # stands in for when it was put away -- which is what putting it away did.
     def archived_checkout_requests
       CheckOutRequest
         .where(booking_id: hotel_booking_ids)
@@ -113,6 +130,7 @@ module HotelPortal
           "check_out_requests.status = 'cancelled' OR " \
           "(check_out_requests.status = 'completed' AND COALESCE(check_out_requests.metadata->>'archived_at', '') <> '')"
         )
+        .where(updated_at: window_range)
         .includes(:booking)
         .order(requested_at: :desc)
     end
@@ -167,23 +185,6 @@ module HotelPortal
 
     def status_match?(row)
       Requests::StatusGroups.match?(params[:status], row[:status])
-    end
-
-    def date_range_match?(row)
-      date = params[:date].presence || params[:requested_on].presence
-      return true if date.blank?
-
-      requested_at = row[:requested_at]
-      return false if requested_at.blank?
-
-      selected_date = begin
-        Date.parse(date.to_s)
-      rescue ArgumentError, TypeError
-        nil
-      end
-      return true if selected_date.blank?
-
-      requested_at.to_date == selected_date
     end
 
     def status_class_for(kind, status)

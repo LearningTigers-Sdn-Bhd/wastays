@@ -20,6 +20,42 @@ RSpec.describe HotelPortal::RequestsArchive do
     create(:housekeeping_request, booking: booking, status: 'pending', archived_at: nil)
   end
 
+  describe 'the date window' do
+    it 'defaults to the past week' do
+      expect(described_class.new(hotel).date_window.days).to eq(7)
+    end
+
+    # The archive is read by when something was put away, not by when it was
+    # asked for -- an old request archived yesterday is yesterday's news.
+    it 'reads by when a request was archived, not when it was requested' do
+      long_ago_but_filed_recently = create(:housekeeping_request, booking: booking, status: 'completed',
+                                           request_details: 'Old job, filed yesterday',
+                                           requested_at: 90.days.ago, archived_at: 1.day.ago)
+
+      row_ids = described_class.new(hotel).rows.map { |row| row[:request_id] }
+
+      expect(row_ids).to include(long_ago_but_filed_recently.id)
+    end
+
+    it 'leaves out what was archived before the window' do
+      filed_long_ago = create(:housekeeping_request, booking: booking, status: 'completed',
+                              request_details: 'Filed long ago', archived_at: 20.days.ago)
+
+      row_ids = described_class.new(hotel).rows.map { |row| row[:request_id] }
+
+      expect(row_ids).not_to include(filed_long_ago.id)
+    end
+
+    it 'takes it in once the range is widened past it' do
+      filed_long_ago = create(:housekeeping_request, booking: booking, status: 'completed',
+                              request_details: 'Filed long ago', archived_at: 20.days.ago)
+
+      row_ids = described_class.new(hotel, { days: '30' }).rows.map { |row| row[:request_id] }
+
+      expect(row_ids).to include(filed_long_ago.id)
+    end
+  end
+
   describe '#rows' do
     it 'only returns archived requests' do
       archive = described_class.new(hotel)

@@ -4,11 +4,6 @@ module HotelPortal
   class RequestsBoard
     include Rails.application.routes.url_helpers
 
-    # How long a finished request stays worth looking at. Anything older belongs
-    # to the archive, so the board never loads it: what the board costs follows
-    # how busy the hotel is now rather than how long it has been open.
-    RECENTLY_COMPLETED_WINDOW = 7.days
-
     # The statuses that still owe work, per kind. Subtracted from the full list
     # so that a status added to a model has to be excluded here deliberately
     # rather than quietly dropping off the board.
@@ -20,6 +15,18 @@ module HotelPortal
     def initialize(hotel, params = {})
       @hotel = hotel
       @params = params || {}
+    end
+
+    # The stretch of time every column is read through. Outstanding work is
+    # placed by when it was asked for and finished work by when it was finished,
+    # so a request raised before the window and finished inside it is still
+    # something that happened in the window.
+    def date_window
+      @date_window ||= Requests::DateWindow.new(
+        hotel: hotel,
+        anchor_date: params[:date],
+        days: params[:days]
+      )
     end
 
     def board_columns
@@ -39,6 +46,27 @@ module HotelPortal
 
     def board_counts
       board_columns.transform_values(&:count)
+    end
+
+    # Outstanding work asked for before the window starts, per open column.
+    #
+    # The window bounds every column, so narrowing it hides work that still
+    # needs doing. Saying how much is being left out keeps that a choice the
+    # board shows rather than one it makes quietly.
+    def older_open_counts
+      @older_open_counts ||= {
+        housekeeping: open_housekeeping_scope
+          .where(status: HOUSEKEEPING_OPEN_STATUSES)
+          .where(requested_at: ...window_range.begin)
+          .count,
+        complaint: open_complaint_scope
+          .where(status: COMPLAINT_OPEN_STATUSES)
+          .where(requested_at: ...window_range.begin)
+          .count,
+        checkout: open_checkout_scope
+          .where(requested_at: ...window_range.begin)
+          .count
+      }
     end
 
     private
@@ -120,25 +148,20 @@ module HotelPortal
     # actually shows. Nothing walks the hotel's bookings: a request reaches its
     # booking, not the other way around, so a hotel's history stays out of it.
 
-    def completed_since
-      @completed_since ||= RECENTLY_COMPLETED_WINDOW.ago
-    end
-
     def hotel_booking_ids
       @hotel_booking_ids ||= hotel.bookings.select(:id)
     end
 
+    def window_range
+      @window_range ||= date_window.range
+    end
+
     def housekeeping_requests
-      @housekeeping_requests ||= HousekeepingRequest
-        .in_hotel(hotel)
-        .active
-        # Every card names a guest, so a task raised against a room and no
-        # booking has never belonged on this board.
-        .where.not(booking_id: nil)
+      @housekeeping_requests ||= open_housekeeping_scope
         .where(
-          "housekeeping_requests.status IN (:open) OR " \
-          "(housekeeping_requests.status = 'completed' AND housekeeping_requests.completed_at >= :since)",
-          open: HOUSEKEEPING_OPEN_STATUSES, since: completed_since
+          "(housekeeping_requests.status IN (:open) AND housekeeping_requests.requested_at >= :from AND housekeeping_requests.requested_at < :to) OR " \
+          "(housekeeping_requests.status = 'completed' AND housekeeping_requests.completed_at >= :from AND housekeeping_requests.completed_at < :to)",
+          open: HOUSEKEEPING_OPEN_STATUSES, from: window_range.begin, to: window_range.end
         )
         .includes(booking: :booking_rooms)
         .order(requested_at: :desc)
@@ -146,13 +169,11 @@ module HotelPortal
     end
 
     def complaint_requests
-      @complaint_requests ||= ComplaintRequest
-        .where(booking_id: hotel_booking_ids)
-        .active
+      @complaint_requests ||= open_complaint_scope
         .where(
-          "complaint_requests.status IN (:open) OR " \
-          "(complaint_requests.status = 'resolved' AND complaint_requests.completed_at >= :since)",
-          open: COMPLAINT_OPEN_STATUSES, since: completed_since
+          "(complaint_requests.status IN (:open) AND complaint_requests.requested_at >= :from AND complaint_requests.requested_at < :to) OR " \
+          "(complaint_requests.status = 'resolved' AND complaint_requests.completed_at >= :from AND complaint_requests.completed_at < :to)",
+          open: COMPLAINT_OPEN_STATUSES, from: window_range.begin, to: window_range.end
         )
         .includes(booking: :booking_rooms)
         .order(requested_at: :desc)
@@ -160,37 +181,58 @@ module HotelPortal
     end
 
     def open_checkout_requests
-      @open_checkout_requests ||= CheckOutRequest
-        .where(booking_id: hotel_booking_ids)
-        .open_tasks
+      @open_checkout_requests ||= open_checkout_scope
+        .where(requested_at: window_range)
         .includes(booking: :booking_rooms)
         .order(requested_at: :desc)
         .to_a
     end
 
-    # A checkout keeps no completed_at, so how recently it finished can only be
-    # read from when it was last written.
+    # A checkout keeps no completed_at, so when it finished can only be read
+    # from when it was last written.
     def completed_checkout_requests
       @completed_checkout_requests ||= CheckOutRequest
         .where(booking_id: hotel_booking_ids)
         .where(status: "completed")
-        .where(updated_at: completed_since..)
+        .where(updated_at: window_range)
         .where("COALESCE(check_out_requests.metadata->>'archived_at', '') = ''")
         .includes(booking: :booking_rooms)
         .order(updated_at: :desc)
         .to_a
     end
 
+    # -- The work each open column is drawn from, before the window ----------
+    #
+    # Kept apart from the window so that the same scope can answer how much
+    # outstanding work the window is leaving out.
+
+    def open_housekeeping_scope
+      HousekeepingRequest
+        .in_hotel(hotel)
+        .active
+        # Every card names a guest, so a task raised against a room and no
+        # booking has never belonged on this board.
+        .where.not(booking_id: nil)
+    end
+
+    def open_complaint_scope
+      ComplaintRequest.where(booking_id: hotel_booking_ids).active
+    end
+
+    def open_checkout_scope
+      CheckOutRequest.where(booking_id: hotel_booking_ids).open_tasks
+    end
+
     def request_cards
       @request_cards ||= build_request_cards
     end
 
+    # The window is already settled in SQL; what is left is what only the card
+    # knows about itself.
     def filtered_request_cards
       cards = request_cards
       cards = cards.select { |card| search_match?(card) }
-      cards = cards.select { |card| status_match?(card) }
-      cards = cards.select { |card| date_range_match?(card) }
-      cards
+      cards.select { |card| status_match?(card) }
     end
 
     def build_request_cards
@@ -236,7 +278,6 @@ module HotelPortal
         room_number: request.respond_to?(:room_number) ? request.room_number : booking.booking_rooms.first&.room_number,
         title: title,
         requested_at: request.display_requested_at,
-        requested_at_raw: request.display_requested_at,
         status: request.status,
         completed_at: request.completed_at,
         source: request.metadata&.dig("source"),
@@ -267,26 +308,9 @@ module HotelPortal
       Requests::StatusGroups.match?(params[:status], card[:status])
     end
 
-    def date_range_match?(card)
-      date = params[:date].presence || params[:requested_on].presence
-      return true if date.blank?
-
-      requested_at = card[:requested_at_raw]
-      return false if requested_at.blank?
-
-      selected_date = begin
-        Date.parse(date.to_s)
-      rescue ArgumentError, TypeError
-        nil
-      end
-      return true if selected_date.blank?
-
-      requested_at.to_date == selected_date
-    end
-
     def request_bucket(kind, request)
       return nil if request.status.to_s.in?(%w[cancelled no_task])
-      return :completed if completed_recently?(request.completed_at, request.status)
+      return :completed if finished?(request)
 
       case kind.to_s
       when "checkout"
@@ -298,11 +322,11 @@ module HotelPortal
       end
     end
 
-    def completed_recently?(completed_at, status)
-      return false unless status.to_s.in?(%w[completed resolved])
-      return false if completed_at.blank?
-
-      completed_at >= 7.days.ago
+    # Whether the request belongs to the completed column. When it finished is
+    # already the window's business -- a finished request the query returned
+    # finished inside it.
+    def finished?(request)
+      request.status.to_s.in?(%w[completed resolved]) && request.completed_at.present?
     end
   end
 end

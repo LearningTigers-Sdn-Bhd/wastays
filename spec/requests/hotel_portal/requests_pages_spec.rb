@@ -77,6 +77,70 @@ RSpec.describe "Hotel portal request pages", type: :request do
     expect(checkout.reload.metadata["archived_at"]).to be_present
   end
 
+  describe "the date range toolbar" do
+    let(:booking) { create(:booking, hotel: hotel, guest_name: "Aisyah") }
+
+    # Query separators arrive in the markup escaped.
+    def link_to_path(path)
+      ERB::Util.html_escape(path)
+    end
+
+    # The window reckons in the hotel's zone, which need not be the app's.
+    def hotel_today
+      Time.current.in_time_zone(hotel.hotel_time_zone).to_date
+    end
+
+    it "offers every range and marks the one in use" do
+      get hotel_requests_path(hotel, days: 14)
+
+      expect(response).to have_http_status(:ok)
+      HotelPortal::Requests::DateWindow::ALLOWED_DAYS.each do |days|
+        expect(response.body).to include("Past #{days} days")
+      end
+    end
+
+    it "carries the search through a step of the range" do
+      get hotel_requests_path(hotel, q: "Aisyah", days: 7)
+
+      expect(response.body).to include(link_to_path(hotel_requests_path(hotel, q: "Aisyah", date: (hotel_today - 7).iso8601, days: 7)))
+    end
+
+    it "carries the range through the archive's own filters" do
+      get hotel_request_archive_path(hotel, kind: "housekeeping", days: 14)
+
+      expect(response.body).to include(link_to_path(hotel_request_archive_path(hotel, kind: "housekeeping", date: (hotel_today - 14).iso8601, days: 14)))
+    end
+
+    it "offers a way back to today only when it is looking elsewhere" do
+      today_window = link_to_path(hotel_requests_path(hotel, date: hotel_today.iso8601, days: 7))
+
+      get hotel_requests_path(hotel, date: 20.days.ago.to_date.iso8601)
+      expect(response.body).to include(today_window)
+
+      get hotel_requests_path(hotel)
+      expect(response.body).not_to include(today_window)
+    end
+
+    it "says how much outstanding work the range is leaving out" do
+      create(:housekeeping_request, booking: booking, status: "pending",
+             request_details: "Stale towels", requested_at: 20.days.ago)
+
+      get hotel_requests_path(hotel)
+
+      expect(response.body).to include("1 older request outside this range")
+      expect(response.body).to include(link_to_path(hotel_requests_path(hotel, date: hotel_today.iso8601, days: 30)))
+    end
+
+    it "says nothing about older work when the range already reaches it" do
+      create(:housekeeping_request, booking: booking, status: "pending",
+             request_details: "Stale towels", requested_at: 20.days.ago)
+
+      get hotel_requests_path(hotel, days: 30)
+
+      expect(response.body).not_to include("outside this range")
+    end
+  end
+
   # The housekeeping board only lets a performer advance work they hold. This
   # board reaches the same records, so it must not be the way around that.
   describe "advancing work held by somebody else" do

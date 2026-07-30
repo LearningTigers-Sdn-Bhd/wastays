@@ -2,15 +2,33 @@
 
 module HotelPortal
   class RequestsArchivePresenter
-    attr_reader :archive_rows, :archive_counts
+    attr_reader :archive_rows, :archive_counts, :date_window
 
-    def initialize(archive_rows:, archive_counts:)
+    def initialize(archive_rows:, archive_counts:, date_window:, view_context:)
       @archive_rows = archive_rows
       @archive_counts = archive_counts
+      @date_window = date_window
+      @view_context = view_context
     end
 
     def rows?
       archive_rows.any?
+    end
+
+    def window_label
+      @view_context.request_window_label(date_window)
+    end
+
+    def previous_window_path
+      @view_context.request_archive_path_for(date_window.previous)
+    end
+
+    def next_window_path
+      @view_context.request_archive_path_for(date_window.next)
+    end
+
+    def today_window_path
+      @view_context.request_archive_path_for(date_window.at_today)
     end
 
     def formatted_requested_at(row)

@@ -30,7 +30,9 @@ module HotelPortal
         board_columns: @board_columns,
         board_counts: @board_counts,
         current_hotel: current_hotel,
-        view_context: view_context
+        view_context: view_context,
+        date_window: @board.date_window,
+        older_open_counts: @board.older_open_counts
       )
     end
 
@@ -40,7 +42,9 @@ module HotelPortal
 
       @presenter = ::HotelPortal::RequestsArchivePresenter.new(
         archive_rows: archive_rows,
-        archive_counts: archive.summary_counts
+        archive_counts: archive.summary_counts,
+        date_window: archive.date_window,
+        view_context: view_context
       )
     end
 

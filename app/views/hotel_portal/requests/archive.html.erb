@@ -10,30 +10,38 @@
   </div>
 
   <div class="rounded-2xl border border-border bg-card p-4 shadow-sm">
-    <%= form_with url: hotel_request_archive_path(current_hotel), method: :get, data: { controller: "auto-submit", turbo_frame: "request_archive_results" }, class: "grid gap-4 md:grid-cols-4" do |f| %>
-      <div>
+    <%= form_with url: hotel_request_archive_path(current_hotel), method: :get, data: { controller: "auto-submit", turbo_frame: "request_archive_results" }, class: "flex flex-wrap items-end gap-3" do |f| %>
+      <div class="min-w-56 flex-1">
         <label class="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Search</label>
-        <%= text_field_tag :q, params[:q], autocomplete: "off", class: "w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500", placeholder: "Guest, booking, request...", data: { action: "input->auto-submit#submit" } %>
+        <%= text_field_tag :q, params[:q], autocomplete: "off", class: "w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-border-interactive focus:outline-none focus:ring-0", placeholder: "Guest, booking, request...", data: { action: "input->auto-submit#submit" } %>
       </div>
-      <div>
-        <label class="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Type</label>
-        <%= select_tag :kind, options_for_select([["All", "all"], ["Housekeeping", "housekeeping"], ["Complaint", "complaint"], ["Checkout", "checkout"]], params[:kind].presence || "all"), class: "w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" %>
-      </div>
-      <div>
-        <label class="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Status</label>
-        <%= select_tag :status, options_for_select([["All", "all"], ["Pending", "pending"], ["Completed", "completed"], ["Cancelled", "cancelled"]], params[:status].presence || "all"), class: "w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" %>
-      </div>
-      <div>
-        <label class="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Date</label>
-        <%= date_field_tag :date, params[:date], class: "w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500" %>
-      </div>
-      <div class="md:col-span-4 flex justify-end">
-        <div class="flex items-center gap-2">
-          <%= f.submit "Apply Filters", class: "inline-flex items-center gap-x-2 rounded-lg border border-transparent bg-blue-600 px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-blue-700" %>
-          <%= link_to "Clear", hotel_request_archive_path(current_hotel), class: "inline-flex items-center gap-x-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm hover:bg-muted", data: { turbo_frame: "_top" } %>
-        </div>
-      </div>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :kind, label: "Type", size: :sm, class: "w-44 shrink-0") do |field| %>
+        <% field.with_select_menu(
+             [ { label: "All", value: "all" }, { label: "Housekeeping", value: "housekeeping" }, { label: "Complaint", value: "complaint" }, { label: "Checkout", value: "checkout" } ],
+             selected: params[:kind].presence || "all",
+             data: { action: "change->auto-submit#submitNow" }) %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :status, label: "Status", size: :sm, class: "w-44 shrink-0") do |field| %>
+        <% field.with_select_menu(
+             [ { label: "All", value: "all" }, { label: "Pending", value: "pending" }, { label: "Completed", value: "completed" }, { label: "Cancelled", value: "cancelled" } ],
+             selected: params[:status].presence || "all",
+             data: { action: "change->auto-submit#submitNow" }) %>
+      <% end %>
+
+      <%= render "hotel_portal/requests/date_window",
+            form: f,
+            date_window: @presenter.date_window,
+            previous_path: @presenter.previous_window_path,
+            next_path: @presenter.next_window_path,
+            today_path: @presenter.today_window_path %>
+
+      <%= link_to "Clear", hotel_request_archive_path(current_hotel), class: "inline-flex items-center gap-x-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm hover:bg-muted", data: { turbo_frame: "_top" } %>
     <% end %>
+    <p class="mt-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+      Archived <%= @presenter.window_label %>
+    </p>
   </div>
 
   <%= turbo_frame_tag "request_archive_results" do %>

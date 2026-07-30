@@ -2,13 +2,49 @@
 
 module HotelPortal
   class RequestsBoardPresenter
-    attr_reader :board_columns, :board_counts, :current_hotel
+    attr_reader :board_columns, :board_counts, :current_hotel, :date_window
 
-    def initialize(board_columns:, board_counts:, current_hotel:, view_context:)
+    def initialize(board_columns:, board_counts:, current_hotel:, view_context:, date_window:, older_open_counts: {})
       @board_columns = board_columns
       @board_counts = board_counts
       @current_hotel = current_hotel
       @view_context = view_context
+      @date_window = date_window
+      @older_open_counts = older_open_counts
+    end
+
+    # Outstanding work the date range is leaving out. The completed column has
+    # none by definition: what it shows has already been finished.
+    def older_open_count(bucket_key)
+      @older_open_counts[bucket_key].to_i
+    end
+
+    def older_open?(bucket_key)
+      older_open_count(bucket_key).positive?
+    end
+
+    def widenable?
+      !date_window.widest?
+    end
+
+    def widen_path
+      @view_context.requests_board_path_for(date_window.widest)
+    end
+
+    def window_label
+      @view_context.request_window_label(date_window)
+    end
+
+    def previous_window_path
+      @view_context.requests_board_path_for(date_window.previous)
+    end
+
+    def next_window_path
+      @view_context.requests_board_path_for(date_window.next)
+    end
+
+    def today_window_path
+      @view_context.requests_board_path_for(date_window.at_today)
     end
 
     def columns
