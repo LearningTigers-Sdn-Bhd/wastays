@@ -2,40 +2,40 @@
 
 <div class="space-y-6">
   <!-- Search and Filters Form -->
-  <div class="mx-4 md:mx-0">
+  <div>
     <%= form_with url: form_url, method: :get, id: "hk-filters-form", data: { controller: "auto-submit export-sync", turbo_frame: "housekeeping_tasks_results", action: "input->export-sync#sync change->export-sync#sync" }, class: "grid gap-4 sm:grid-cols-2 lg:grid-cols-5" do |f| %>
 
       <!-- Text Search -->
       <div class="relative lg:col-span-2">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
           <%= cached_icon "search", class: "size-4" %>
         </div>
-        <%= text_field_tag :q, params[:q], autocomplete: "off", class: "w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", placeholder: "Search guest, booking or request...", data: { action: "input->auto-submit#submit" } %>
+        <%= text_field_tag :q, params[:q], autocomplete: "off", class: "panel-input pl-10", placeholder: "Search guest, booking or request...", data: { action: "input->auto-submit#submit" } %>
       </div>
 
       <!-- Assigned To Filter -->
       <div>
-        <%= select_tag :assigned_to, options_for_select([["All Staff", ""]] + @staff_members.map { |s| [s.name, s.id] }, params[:assigned_to]), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
+        <%= select_tag :assigned_to, options_for_select([["All Staff", ""]] + @staff_members.map { |s| [s.name, s.id] }, params[:assigned_to]), class: "panel-native-select", data: { action: "change->auto-submit#submit" } %>
       </div>
 
       <!-- Room Status Filter -->
       <div>
-        <%= select_tag :room_status, options_for_select(room_status_filter_options, params[:room_status]), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
+        <%= select_tag :room_status, options_for_select(room_status_filter_options, params[:room_status]), class: "panel-native-select", data: { action: "change->auto-submit#submit" } %>
       </div>
 
       <!-- Date Filter -->
       <div>
-        <%= date_field_tag :date, (params[:date].presence || @selected_date.to_s), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", placeholder: "Date", data: { action: "change->auto-submit#submit" } %>
+        <%= date_field_tag :date, (params[:date].presence || @selected_date.to_s), class: "panel-native-select", placeholder: "Date", data: { action: "change->auto-submit#submit" } %>
       </div>
     <% end %>
   </div>
 
   <!-- Results Frame -->
   <%= turbo_frame_tag "housekeeping_tasks_results" do %>
-    <div class="mx-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:mx-0">
+    <div class="overflow-hidden rounded-lg border border-border bg-card">
       <% if @room_groups.any? %>
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-slate-200 table-fixed">
+          <table class="min-w-full divide-y divide-border table-fixed">
             <colgroup>
               <col class="w-[12%]"> <!-- Room -->
               <col class="w-[13%]"> <!-- Assign To -->
@@ -47,39 +47,39 @@
               <col class="w-[22%]"> <!-- Task Details -->
               <col class="w-[10%]"> <!-- Task Status -->
             </colgroup>
-            <thead class="bg-slate-50">
+            <thead class="bg-muted">
               <tr>
-                <th scope="col" class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap border-r border-slate-200">Room</th>
-                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Assign To</th>
-                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Room Status</th>
-                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Arrival Time</th>
-                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Arrival Date</th>
-                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Departure</th>
-                <th scope="col" class="px-3 py-4 text-center text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Nights</th>
-                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Task Details</th>
-                <th scope="col" class="py-4 pl-3 pr-6 text-right text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Task Status</th>
+                <th scope="col" class="px-6 py-4 text-left text-xs font-medium text-muted-foreground whitespace-nowrap border-r border-border">Room</th>
+                <th scope="col" class="px-3 py-4 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Assign To</th>
+                <th scope="col" class="px-3 py-4 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Room Status</th>
+                <th scope="col" class="px-3 py-4 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Arrival Time</th>
+                <th scope="col" class="px-3 py-4 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Arrival Date</th>
+                <th scope="col" class="px-3 py-4 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Departure</th>
+                <th scope="col" class="px-3 py-4 text-center text-xs font-medium text-muted-foreground whitespace-nowrap">Nights</th>
+                <th scope="col" class="px-3 py-4 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Task Details</th>
+                <th scope="col" class="py-4 pl-3 pr-6 text-right text-xs font-medium text-muted-foreground whitespace-nowrap">Task Status</th>
               </tr>
             </thead>
             <% @room_groups.each do |group| %>
-              <tbody class="divide-y divide-slate-200" data-controller="table-group">
+              <tbody class="divide-y divide-border" data-controller="table-group">
                 <!-- Room Type Heading Row -->
-                <tr class="bg-slate-100/80 font-bold cursor-pointer select-none border-b border-slate-200" data-action="click->table-group#toggle">
-                  <td colspan="9" class="px-6 py-3 text-xs font-black text-slate-800 uppercase tracking-wider">
+                <tr class="bg-muted cursor-pointer select-none border-b border-border" data-action="click->table-group#toggle">
+                  <td colspan="9" class="px-6 py-3 text-sm font-semibold text-foreground">
                     <div class="flex items-center gap-2">
                       <span><%= group[:room_type].name %></span>
-                      <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-4 shrink-0 text-slate-500 transition-transform duration-150 rotate-90", data: { table_group_target: "icon" } %>
+                      <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-4 shrink-0 text-muted-foreground transition-transform duration-150 rotate-90", data: { table_group_target: "icon" } %>
                     </div>
                   </td>
                 </tr>
 
                 <!-- Room Rows -->
                 <% group[:rooms].each do |room| %>
-                  <tr class="group hover:bg-slate-50/70 transition-colors duration-150 align-middle" data-table-group-target="row">
+                  <tr class="group hover:bg-muted/50 transition-colors duration-150 align-middle" data-table-group-target="row">
                     <!-- Room -->
-                    <td class="px-6 py-4 whitespace-nowrap align-middle border-r border-slate-200 pr-6">
+                    <td class="px-6 py-4 whitespace-nowrap align-middle border-r border-border pr-6">
                       <div class="flex items-center justify-between gap-2 w-full">
                         <div class="min-w-0">
-                          <span class="block text-sm font-bold text-slate-950"><%= room.room_number %></span>
+                          <span class="block text-sm font-medium text-foreground"><%= room.room_number %></span>
                         </div>
                         <% if room.room_type %>
                           <div class="flex items-center gap-1.5 shrink-0">
@@ -87,8 +87,7 @@
                                        allowed: room.smoking_allowed?,
                                        icon_name: "cigarette",
                                        allowed_label: "Smoking Allowed",
-                                       disallowed_label: "No Smoking",
-                                       extra_class: "translate-y-[1px]" %>
+                                       disallowed_label: "No Smoking" %>
 
                             <%= render "shared/room_attribute_icon",
                                        allowed: room.pets_allowed?,
@@ -102,46 +101,44 @@
                     </td>
 
                     <!-- Assign To -->
-                    <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
-                      <div class="py-1 min-h-[38px] flex items-center">
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-foreground">
+                      <div class="flex min-h-9 items-center py-1">
                         <% first_req = room.first_task_request %>
                         <% if first_req&.assignable? %>
                           <%= form_with url: first_req.assign_url, method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
                             <% board_filters.each do |key, value| %>
                               <%= hidden_field_tag "filters[#{key}]", value, id: nil %>
                             <% end %>
-                            <%= select_tag :assigned_to, options_for_select([["Unassigned", ""]] + @staff_members.map { |s| [s.name, s.id] }, first_req.assigned_to_value), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
+                            <%= select_tag :assigned_to, options_for_select([["Unassigned", ""]] + @staff_members.map { |s| [s.name, s.id] }, first_req.assigned_to_value), class: "panel-native-select", data: { action: "change->auto-submit#submit" } %>
                           <% end %>
                         <% else %>
-                          <span class="text-xs font-bold text-slate-400">-</span>
+                          <span class="text-sm text-muted-foreground">-</span>
                         <% end %>
                       </div>
                     </td>
 
                     <!-- Room Status -->
                     <td class="px-3 py-4 whitespace-nowrap">
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border <%= room.status_badge_class %>">
-                        <%= room.display_status %>
-                      </span>
+                      <%= render PanelsUI::Badge.new(label: room.display_status, variant: room.status_badge_variant, size: :sm) %>
                     </td>
 
                     <!-- Arrival Time -->
-                    <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-foreground">
                       <%= room.arrival_time %>
                     </td>
 
                     <!-- Arrival Date -->
-                    <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-foreground">
                       <%= room.arrival_date %>
                     </td>
 
                     <!-- Departure -->
-                    <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-foreground">
                       <%= room.departure_date %>
                     </td>
 
                     <!-- Nights -->
-                    <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900 text-center">
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-foreground text-center">
                       <%= room.nights %>
                     </td>
 
@@ -149,13 +146,13 @@
                     <td class="px-3 py-4">
                       <div class="flex flex-col gap-2">
                         <% room.task_requests.each do |req| %>
-                          <div class="py-1 min-h-[38px] flex items-center">
+                          <div class="flex min-h-9 items-center py-1">
                             <% if req.has_details? %>
-                              <p class="text-sm font-medium text-slate-700 line-clamp-2" title="<%= req.request_details %>">
+                              <p class="text-sm text-foreground line-clamp-2" title="<%= req.request_details %>">
                                 <%= req.request_details %>
                               </p>
                             <% else %>
-                              <span class="text-xs font-bold text-slate-400">-</span>
+                              <span class="text-sm text-muted-foreground">-</span>
                             <% end %>
                           </div>
                         <% end %>
@@ -163,19 +160,17 @@
                     </td>
 
                     <!-- Task Status -->
-                    <td class="py-4 pl-3 pr-6 text-right whitespace-nowrap text-xs font-bold text-slate-900">
+                    <td class="py-4 pl-3 pr-6 text-right whitespace-nowrap text-sm text-foreground">
                       <div class="flex flex-col gap-2 items-end">
                         <% room.task_requests.each do |req| %>
-                          <div class="py-1 min-h-[38px] flex items-center">
+                          <div class="flex min-h-9 items-center py-1">
                             <% if req.assignable? %>
                               <%= form_with url: req.status_url, method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
                                 <%= hidden_field_tag :redirect_to, request.original_url %>
-                                <%= select_tag :status, options_for_select(task_status_options, req.selected_status_value), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
+                                <%= select_tag :status, options_for_select(task_status_options, req.selected_status_value), class: "panel-native-select", data: { action: "change->auto-submit#submit" } %>
                               <% end %>
                             <% else %>
-                              <span class="inline-flex items-center rounded-xl border border-amber-100 bg-amber-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-amber-700">
-                                <%= req.fallback_status_label %>
-                              </span>
+                              <%= render PanelsUI::Badge.new(label: req.fallback_status_label, variant: :warning, size: :sm) %>
                             <% end %>
                           </div>
                         <% end %>
@@ -188,13 +183,13 @@
           </table>
         </div>
       <% else %>
-        <div class="px-6 py-20 text-center sm:px-8 space-y-3">
-          <div class="inline-flex size-14 items-center justify-center rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 shadow-inner">
+        <div class="px-6 py-16 text-center sm:px-8 space-y-3">
+          <div class="inline-flex size-12 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground">
             <%= cached_icon "clipboard-check", class: "size-6" %>
           </div>
           <div>
-            <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider">No rooms found</h3>
-            <p class="mt-1 text-sm font-medium text-slate-500">Try adjusting your filters or searching for a different room.</p>
+            <h3 class="text-base font-semibold text-foreground">No rooms found</h3>
+            <p class="mt-1 text-sm text-muted-foreground">Try adjusting your filters or searching for a different room.</p>
           </div>
         </div>
       <% end %>
