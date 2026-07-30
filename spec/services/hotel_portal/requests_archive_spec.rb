@@ -80,6 +80,23 @@ RSpec.describe HotelPortal::RequestsArchive do
     end
 
     context 'searching' do
+      # The archive is where notes are read, so it is where they are searched.
+      it 'searches the body of an internal note' do
+        noted = create(:housekeeping_request, booking: booking, status: 'completed',
+                       request_details: 'Nothing matching here', archived_at: Time.current,
+                       internal_notes: [ { 'body' => 'Guest was apologetic' } ])
+
+        archive = described_class.new(hotel, { q: 'apologetic' })
+
+        expect(archive.rows.map { |row| row[:request_id] }).to include(noted.id)
+      end
+
+      it 'keeps a kind out of the results when the filter rules it out' do
+        archive = described_class.new(hotel, { kind: 'complaint' })
+
+        expect(archive.rows.map { |row| row[:kind] }.uniq).to eq([ 'complaint' ])
+      end
+
       it 'searches by guest name' do
         archive = described_class.new(hotel, { q: 'John' })
         expect(archive.rows.size).to eq(3)

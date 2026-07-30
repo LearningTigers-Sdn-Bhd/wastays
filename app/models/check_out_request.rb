@@ -17,6 +17,19 @@ class CheckOutRequest < ApplicationRecord
   scope :open_tasks, -> { where(status: OPEN_STATUSES) }
   scope :recent_first, -> { order(created_at: :desc) }
 
+  # Spelled the way HousekeepingRequest and ComplaintRequest spell theirs, so a
+  # board searching across all three can ask each of them the same thing.
+  scope :search, ->(query) {
+    next all if query.blank?
+
+    q = "%#{ActiveRecord::Base.sanitize_sql_like(query.to_s.downcase)}%"
+    joins(:booking).where(
+      "check_out_requests.guest_notes ILIKE :q OR bookings.confirmation_token ILIKE :q OR " \
+      "bookings.guest_name ILIKE :q OR bookings.guest_email ILIKE :q OR bookings.guest_phone ILIKE :q",
+      q: q
+    )
+  }
+
   def open_task?
     status.in?(OPEN_STATUSES)
   end

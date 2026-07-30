@@ -3,6 +3,7 @@
 module HotelPortal
   class RequestsBoard
     include Rails.application.routes.url_helpers
+    include Requests::Narrowing
 
     # The statuses that still owe work, per kind. Subtracted from the full list
     # so that a status added to a model has to be excluded here deliberately
@@ -157,7 +158,7 @@ module HotelPortal
     end
 
     def housekeeping_requests
-      @housekeeping_requests ||= open_housekeeping_scope
+      @housekeeping_requests ||= narrow(open_housekeeping_scope, kind: "housekeeping")
         .where(
           "(housekeeping_requests.status IN (:open) AND housekeeping_requests.requested_at >= :from AND housekeeping_requests.requested_at < :to) OR " \
           "(housekeeping_requests.status = 'completed' AND housekeeping_requests.completed_at >= :from AND housekeeping_requests.completed_at < :to)",
@@ -169,7 +170,7 @@ module HotelPortal
     end
 
     def complaint_requests
-      @complaint_requests ||= open_complaint_scope
+      @complaint_requests ||= narrow(open_complaint_scope, kind: "complaint")
         .where(
           "(complaint_requests.status IN (:open) AND complaint_requests.requested_at >= :from AND complaint_requests.requested_at < :to) OR " \
           "(complaint_requests.status = 'resolved' AND complaint_requests.completed_at >= :from AND complaint_requests.completed_at < :to)",
@@ -181,7 +182,7 @@ module HotelPortal
     end
 
     def open_checkout_requests
-      @open_checkout_requests ||= open_checkout_scope
+      @open_checkout_requests ||= narrow(open_checkout_scope, kind: "checkout")
         .where(requested_at: window_range)
         .includes(booking: :booking_rooms)
         .order(requested_at: :desc)
@@ -191,8 +192,7 @@ module HotelPortal
     # A checkout keeps no completed_at, so when it finished can only be read
     # from when it was last written.
     def completed_checkout_requests
-      @completed_checkout_requests ||= CheckOutRequest
-        .where(booking_id: hotel_booking_ids)
+      @completed_checkout_requests ||= narrow(CheckOutRequest.where(booking_id: hotel_booking_ids), kind: "checkout")
         .where(status: "completed")
         .where(updated_at: window_range)
         .where("COALESCE(check_out_requests.metadata->>'archived_at', '') = ''")
@@ -227,12 +227,8 @@ module HotelPortal
       @request_cards ||= build_request_cards
     end
 
-    # The window is already settled in SQL; what is left is what only the card
-    # knows about itself.
     def filtered_request_cards
-      cards = request_cards
-      cards = cards.select { |card| search_match?(card) }
-      cards.select { |card| status_match?(card) }
+      request_cards
     end
 
     def build_request_cards
@@ -286,26 +282,6 @@ module HotelPortal
         update_url: hotel_request_status_path(hotel, kind: kind, request_id: request.id),
         booking_url: hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests")
       }
-    end
-
-    def search_match?(card)
-      query = params[:q].to_s.strip.downcase
-      return true if query.blank?
-
-      searchable_values = [
-        card[:guest_name],
-        card[:booking_token],
-        card[:title],
-        card[:status],
-        card[:kind]
-      ]
-
-      searchable_values.compact.any? { |value| value.to_s.downcase.include?(query) } ||
-        Requests::StatusGroups.aliases_for(query).include?(card[:status].to_s)
-    end
-
-    def status_match?(card)
-      Requests::StatusGroups.match?(params[:status], card[:status])
     end
 
     def request_bucket(kind, request)

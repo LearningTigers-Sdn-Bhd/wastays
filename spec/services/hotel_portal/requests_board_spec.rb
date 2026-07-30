@@ -183,6 +183,32 @@ RSpec.describe HotelPortal::RequestsBoard do
         expect(board.board_columns[:housekeeping].first[:title]).to eq('2x Towels')
       end
 
+      it 'keeps everything of a kind when the term names the kind' do
+        board = described_class.new(hotel, { q: 'complaint' })
+
+        expect(board.board_columns[:complaint].map { |c| c[:request_id] }).to include(complaint_pending.id)
+        expect(board.board_columns[:housekeeping]).to be_empty
+      end
+
+      it 'searches by room number' do
+        in_room = create(:housekeeping_request, booking: booking, status: 'pending',
+                         request_details: 'Mini bar restock', room_number: '412', archived_at: nil)
+
+        board = described_class.new(hotel, { q: '412' })
+
+        expect(board.board_columns[:housekeeping].map { |c| c[:request_id] }).to eq([ in_room.id ])
+      end
+
+      it 'does not search the body of an internal note' do
+        create(:housekeeping_request, booking: booking, status: 'pending',
+               request_details: 'Nothing matching here', archived_at: nil,
+               internal_notes: [ { 'body' => 'Guest was apologetic' } ])
+
+        board = described_class.new(hotel, { q: 'apologetic' })
+
+        expect(board.board_columns.values.flatten).to be_empty
+      end
+
       it 'searches by status group name "pending"' do
         board = described_class.new(hotel, { q: 'pending' })
         total_cards = board.board_columns.values.flatten.size

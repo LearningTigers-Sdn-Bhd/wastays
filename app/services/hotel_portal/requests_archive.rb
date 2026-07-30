@@ -3,6 +3,7 @@
 module HotelPortal
   class RequestsArchive
     include Rails.application.routes.url_helpers
+    include Requests::Narrowing
 
     attr_reader :hotel, :params
 
@@ -34,11 +35,7 @@ module HotelPortal
     private
 
     def filtered_rows
-      rows = build_rows
-      rows = rows.select { |row| search_match?(row) }
-      rows = rows.select { |row| kind_match?(row) }
-      rows = rows.select { |row| status_match?(row) }
-      rows.sort_by { |row| row[:requested_at] || Time.zone.at(0) }.reverse
+      build_rows.sort_by { |row| row[:requested_at] || Time.zone.at(0) }.reverse
     end
 
     # The archive is only ever the archived, so only the archived is asked for.
@@ -100,10 +97,16 @@ module HotelPortal
       @window_range ||= date_window.range
     end
 
+    # A kind the filter bar ruled out is a query not worth making.
+    def wanted_kind?(kind)
+      wanted = params[:kind].to_s
+      wanted.blank? || wanted == "all" || wanted == kind
+    end
+
     def archived_housekeeping_requests
-      HousekeepingRequest
-        .in_hotel(hotel)
-        .archived
+      return HousekeepingRequest.none unless wanted_kind?("housekeeping")
+
+      narrow(HousekeepingRequest.in_hotel(hotel).archived, kind: "housekeeping")
         .where.not(booking_id: nil)
         .where(archived_at: window_range)
         .includes(:booking)
@@ -111,9 +114,9 @@ module HotelPortal
     end
 
     def archived_complaint_requests
-      ComplaintRequest
-        .where(booking_id: hotel_booking_ids)
-        .archived
+      return ComplaintRequest.none unless wanted_kind?("complaint")
+
+      narrow(ComplaintRequest.where(booking_id: hotel_booking_ids).archived, kind: "complaint")
         .where(archived_at: window_range)
         .includes(:booking)
         .order(requested_at: :desc)
@@ -124,8 +127,9 @@ module HotelPortal
     # column the window can be read against, so when the record was last written
     # stands in for when it was put away -- which is what putting it away did.
     def archived_checkout_requests
-      CheckOutRequest
-        .where(booking_id: hotel_booking_ids)
+      return CheckOutRequest.none unless wanted_kind?("checkout")
+
+      narrow(CheckOutRequest.where(booking_id: hotel_booking_ids), kind: "checkout")
         .where(
           "check_out_requests.status = 'cancelled' OR " \
           "(check_out_requests.status = 'completed' AND COALESCE(check_out_requests.metadata->>'archived_at', '') <> '')"
@@ -156,35 +160,9 @@ module HotelPortal
       }
     end
 
-    def search_match?(row)
-      query = params[:q].to_s.strip.downcase
-      return true if query.blank?
-
-      status_aliases = Requests::StatusGroups.aliases_for(query)
-
-      searchable_values = [
-        row[:guest_name],
-        row[:booking_token],
-        row[:title],
-        row[:status],
-        row[:kind]
-      ]
-
-      # Check if query matches any searchable value OR if the row status matches a status alias
-      searchable_values.compact.any? { |value| value.to_s.downcase.include?(query) } ||
-        status_aliases.include?(row[:status].to_s) ||
-        row[:internal_notes].any? { |n| n["body"].to_s.downcase.include?(query) }
-    end
-
-    def kind_match?(row)
-      kind = params[:kind].to_s
-      return true if kind.blank? || kind == "all"
-
-      row[:kind] == kind
-    end
-
-    def status_match?(row)
-      Requests::StatusGroups.match?(params[:status], row[:status])
+    # The archive is where notes are read, so it is where they are searched.
+    def search_internal_notes?
+      true
     end
 
     def status_class_for(kind, status)

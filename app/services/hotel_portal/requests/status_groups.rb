@@ -17,6 +17,25 @@ module HotelPortal
         "cancelled" => %w[cancelled].freeze
       }.freeze
 
+      # A checkout reports the workflow status the board reads rather than the
+      # one in its own column, so its statuses are grouped by what they mean:
+      # everything still owed is outstanding, whatever it happens to be called.
+      CHECKOUT_GROUPS = {
+        "pending" => CheckOutRequest::OPEN_STATUSES,
+        "completed" => %w[completed].freeze,
+        "cancelled" => %w[cancelled].freeze
+      }.freeze
+
+      # The statuses a kind stores for a group, or nil when the group narrows
+      # nothing. Asked of the database, where match? is asked of a card.
+      def self.statuses_for(kind:, group:)
+        group = group.to_s
+        return if group.blank? || group == "all"
+
+        table = kind.to_s == "checkout" ? CHECKOUT_GROUPS : GROUPS
+        table[group]
+      end
+
       # An unknown group narrows nothing, which is how "all" and a blank filter
       # already behave.
       def self.match?(group, status)
