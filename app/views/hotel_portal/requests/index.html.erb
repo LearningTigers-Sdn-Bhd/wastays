@@ -101,9 +101,6 @@
           <% if @presenter.board_columns[bucket_key].any? %>
             <% @presenter.board_columns[bucket_key].each do |card| %>
               <% if @presenter.card_actionable?(card) %>
-                <%# The card and its dialog share one controller element: a target
-                    outside it is a target Stimulus cannot find. %>
-                <div data-controller="request-dialog">
                 <article
                   draggable="true"
                   data-requests-board-target="card"
@@ -126,9 +123,9 @@
                     </span>
                   </div>
 
-                  <button type="button" class="block w-full text-left" data-action="request-dialog#open">
+                  <%= link_to @presenter.detail_path(card), class: "block w-full text-left", data: { turbo_frame: "requests_action_sheet" } do %>
                     <p class="line-clamp-2 text-sm font-bold leading-snug text-foreground transition-colors group-hover:text-blue-600"><%= card[:title] %></p>
-                  </button>
+                  <% end %>
 
                   <div class="mt-4 flex items-center justify-between border-t border-border pt-3">
                     <div class="flex flex-col">
@@ -146,77 +143,6 @@
                   </div>
                 </article>
 
-                <%# Detail Dialog %>
-                <dialog data-request-dialog-target="dialog" data-action="click->request-dialog#closeOnBackdrop" class="fixed inset-0 m-auto w-[min(94vw,44rem)] rounded-3xl p-0 shadow-2xl backdrop:bg-foreground/60">
-                  <div class="flex flex-col overflow-hidden bg-card">
-                    <div class="flex items-center justify-between border-b border-border px-8 py-6">
-                      <div class="flex items-center gap-4">
-                        <span class="rounded-lg border px-3 py-1 text-[11px] font-black uppercase tracking-widest <%= @presenter.kind_badge_class(card) %>"><%= card[:kind] %></span>
-                        <h3 class="text-xl font-black text-foreground"><%= card[:booking_token] %></h3>
-                      </div>
-                      <button type="button" class="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground transition hover:bg-muted hover:text-foreground" data-action="request-dialog#close">
-                        <%= cached_icon "x", stroke_width: 3, class: "size-5" %>
-                      </button>
-                    </div>
-
-                    <div class="grid divide-y divide-border md:grid-cols-2 md:divide-x md:divide-y-0">
-                      <div class="space-y-6 p-8">
-                        <div>
-                          <label class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Guest Details</label>
-                          <p class="mt-1 text-lg font-bold text-foreground"><%= card[:guest_name] %></p>
-                        </div>
-                        <div>
-                          <label class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current Status</label>
-                          <div class="mt-2 flex items-center gap-2">
-                            <span class="rounded-lg border border-border bg-muted px-3 py-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground"><%= card[:status] %></span>
-                          </div>
-                        </div>
-                        <div>
-                          <label class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Timeline</label>
-                          <div class="mt-3 space-y-2">
-                            <div class="flex items-center gap-3 text-sm">
-                              <span class="w-12 text-[10px] font-bold uppercase text-muted-foreground">Entry:</span>
-                              <span class="font-bold text-foreground"><%= @presenter.formatted_requested_at(card) %></span>
-                            </div>
-                            <% if @presenter.completed_at?(card) %>
-                              <div class="flex items-center gap-3 text-sm">
-                                <span class="w-12 text-[10px] font-bold uppercase text-emerald-500">Exit:</span>
-                                <span class="font-bold text-foreground"><%= @presenter.formatted_completed_at(card) %></span>
-                              </div>
-                            <% end %>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="space-y-6 bg-muted/40 p-8">
-                        <div>
-                          <label class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Request Body</label>
-                          <p class="mt-2 rounded-xl border border-border bg-card p-4 text-sm font-bold leading-relaxed text-foreground shadow-sm"><%= card[:title] %></p>
-                        </div>
-                        <div>
-                          <label class="mb-3 block text-[10px] font-black uppercase tracking-widest text-muted-foreground">Internal Staff Notes</label>
-                          <% if @presenter.internal_notes?(card) %>
-                            <div class="space-y-3">
-                              <% @presenter.internal_notes_for(card).each do |note| %>
-                                <div class="rounded-xl border border-border bg-card p-4 shadow-sm">
-                                  <p class="whitespace-pre-wrap text-sm font-medium text-foreground"><%= note["body"] %></p>
-                                </div>
-                              <% end %>
-                            </div>
-                          <% else %>
-                            <p class="text-xs font-bold uppercase tracking-widest italic text-muted-foreground">No notes recorded</p>
-                          <% end %>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="flex justify-end gap-3 border-t border-border bg-muted px-8 py-6">
-                      <button type="button" class="px-6 py-2.5 text-sm font-black uppercase tracking-widest text-muted-foreground transition hover:text-foreground" data-action="request-dialog#close">Close</button>
-                      <%= link_to "Full Booking Details", hotel_booking_workspace_path(current_hotel, card[:booking_id], tab: "housekeeping_requests"), class: "rounded-xl bg-primary px-6 py-2.5 text-sm font-black uppercase tracking-widest text-primary-foreground shadow-lg transition hover:bg-primary-hover", data: { turbo: false } %>
-                    </div>
-                  </div>
-                </dialog>
-                </div>
 
               <% else %>
                 <%# Non-actionable card (e.g. checkout without update_url) %>
@@ -231,7 +157,10 @@
                     <span class="rounded border border-border bg-muted px-2 py-0.5 text-[9px] font-black uppercase text-muted-foreground"><%= card[:status] %></span>
                   </div>
 
-                  <p class="text-sm font-bold leading-snug text-foreground mb-4"><%= card[:title] %></p>
+                  <%# Openable like any other card: one sheet serves them all. %>
+                  <%= link_to @presenter.detail_path(card), class: "mb-4 block w-full text-left", data: { turbo_frame: "requests_action_sheet" } do %>
+                    <p class="text-sm font-bold leading-snug text-foreground"><%= card[:title] %></p>
+                  <% end %>
 
                   <div class="flex items-center justify-between border-t border-border pt-3">
                     <div class="flex flex-col">

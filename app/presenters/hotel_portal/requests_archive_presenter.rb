@@ -19,6 +19,15 @@ module HotelPortal
       @view_context.request_window_label(date_window)
     end
 
+    # Where a row opens its detail sheet -- the same sheet the board opens.
+    def detail_path(row)
+      @view_context.hotel_request_action_show_request_path(
+        @view_context.current_hotel,
+        kind: row[:kind],
+        request_id: row[:request_id]
+      )
+    end
+
     def previous_window_path
       @view_context.request_archive_path_for(date_window.previous)
     end

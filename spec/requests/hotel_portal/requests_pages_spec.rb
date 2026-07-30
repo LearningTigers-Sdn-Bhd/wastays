@@ -17,7 +17,7 @@ RSpec.describe "Hotel portal request pages", type: :request do
     sign_in_as(user)
   end
 
-  it "renders the requests board with stimulus dialog hooks" do
+  it "renders the requests board" do
     booking = create(:booking, hotel: hotel, guest_name: "Aisyah", confirmation_token: "WS-REQ123")
     create(
       :housekeeping_request,
@@ -30,55 +30,8 @@ RSpec.describe "Hotel portal request pages", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Requests Board")
-    expect(response.body).to include("data-controller=\"request-dialog\"")
     expect(response.body).to include("Fresh towels")
     expect(response.body).not_to include("onclick=")
-  end
-
-  # Stimulus only finds a target inside its controller's own element, so a
-  # dialog next to the card rather than within it never opens.
-  describe "the detail dialog" do
-    def dialog_scopes_in(body)
-      document = Nokogiri::HTML(body)
-      [ document.css('[data-controller~="request-dialog"]'), document.css('[data-request-dialog-target="dialog"]') ]
-    end
-
-    it "keeps every board dialog inside the controller that opens it" do
-      booking = create(:booking, hotel: hotel, guest_name: "Aisyah")
-      create(:housekeeping_request, booking: booking, request_details: "Fresh towels", status: "pending")
-
-      get hotel_requests_path(hotel)
-      scopes, dialogs = dialog_scopes_in(response.body)
-
-      expect(scopes).to be_present
-      expect(dialogs.size).to eq(scopes.size)
-      scopes.each { |scope| expect(scope.css('[data-request-dialog-target="dialog"]').size).to eq(1) }
-    end
-
-    it "keeps every archive dialog inside the controller that opens it" do
-      booking = create(:booking, hotel: hotel, guest_name: "Daniel")
-      create(:complaint_request, booking: booking, complaint_details: "Noisy", status: "resolved",
-             completed_at: Time.current, archived_at: Time.current)
-
-      get hotel_request_archive_path(hotel)
-      scopes, dialogs = dialog_scopes_in(response.body)
-
-      expect(scopes).to be_present
-      expect(dialogs.size).to eq(scopes.size)
-      scopes.each { |scope| expect(scope.css('[data-request-dialog-target="dialog"]').size).to eq(1) }
-    end
-
-    it "gives the card a button that opens it" do
-      booking = create(:booking, hotel: hotel, guest_name: "Aisyah")
-      create(:housekeeping_request, booking: booking, request_details: "Fresh towels", status: "pending")
-
-      get hotel_requests_path(hotel)
-      scopes, = dialog_scopes_in(response.body)
-
-      scopes.each do |scope|
-        expect(scope.css('[data-action~="request-dialog#open"]')).to be_present
-      end
-    end
   end
 
   it "renders the archive page with archived requests and no inline handlers" do
@@ -98,8 +51,9 @@ RSpec.describe "Hotel portal request pages", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Request Archive")
     expect(response.body).to include("Air conditioner noisy")
-    expect(response.body).to include("Maintenance informed")
     expect(response.body).not_to include("onclick=")
+    # Internal notes belong to the detail sheet now, not to every row of the table.
+    expect(response.body).not_to include("Maintenance informed")
   end
 
   it "renders completed checkout requests on the board with an archive button" do

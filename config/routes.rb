@@ -416,6 +416,12 @@ Rails.application.routes.draw do
       match "new-task", to: "task_creations#show", via: [ :get, :post ], as: :new_task
     end
 
+    scope "request-actions", as: :request_action, module: "requests/actions" do
+      # A request is one of three tables, so it travels as its kind and its id
+      # the way it does everywhere else on the board.
+      get "show-request/:kind/:request_id", to: "details#show", as: :show_request
+    end
+
     scope "folio-actions", as: :folio_action, module: "folios/actions" do
       match "post-transaction/:booking_id", to: "transactions#show", via: [ :get, :post ], as: :post_transaction
       match "move-transaction/:booking_id/:transaction_id", to: "transaction_moves#show", via: [ :get, :post ], as: :move_transaction
