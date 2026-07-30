@@ -2040,7 +2040,8 @@ module HotelPortal
         "company" => "Company",
         "government" => "Government",
         "travel_agent" => "Travel agency",
-        "airline" => "Airline"
+        "airline" => "Airline",
+        "salesperson" => "Salesperson"
       }.fetch(account_type, "Corporate Account")
     end
 

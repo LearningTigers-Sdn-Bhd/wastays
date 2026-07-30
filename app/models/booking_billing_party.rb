@@ -2,7 +2,7 @@
 
 class BookingBillingParty < ApplicationRecord
   PARTY_KINDS = %w[guest company].freeze
-  ACCOUNT_TYPES = %w[company government travel_agent airline].freeze
+  ACCOUNT_TYPES = %w[company government travel_agent airline salesperson].freeze
   UNAVAILABLE_ACCOUNT_TYPES = [].freeze
 
   belongs_to :hotel

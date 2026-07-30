@@ -12,7 +12,7 @@ class HotelCorporateAccount < ApplicationRecord
   has_many :bookings, dependent: :nullify
   has_many :booking_quotes, dependent: :nullify
 
-  ACCOUNT_TYPES = %w[company government travel_agent airline].freeze
+  ACCOUNT_TYPES = %w[company government travel_agent airline salesperson].freeze
   UNAVAILABLE_ACCOUNT_TYPES = [].freeze
 
   enum :relationship_type, { standard: "standard", direct_bill: "direct_bill" }, prefix: true, validate: true
