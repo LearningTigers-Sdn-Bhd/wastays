@@ -27,7 +27,7 @@ RSpec.describe StayView::BuildCapabilities do
     enable_housekeeping
     grant(
       "view_bookings", "manage_bookings", "manage_guest_arrival", "manage_rates",
-      "view_financial_status", "manage_room_status", "manage_housekeeping_tasks", "manage_requests"
+      "view_financial_status", "manage_room_status", "perform_housekeeping_tasks", "dispatch_housekeeping_tasks", "manage_requests"
     )
 
     capabilities = described_class.call(user:, hotel:)
@@ -45,9 +45,30 @@ RSpec.describe StayView::BuildCapabilities do
     expect(capabilities).to be_view_room_readiness
     expect(capabilities).to be_manage_room_status
     expect(capabilities).to be_manage_housekeeping
+    expect(capabilities).to be_take_housekeeping_task
     expect(capabilities).to be_update_housekeeping_status
     expect(capabilities).to be_manage_room_blocks
     expect(capabilities).to be_view_financial_status
+  end
+
+  it "separates performing a housekeeping task from dispatching one" do
+    enable_housekeeping
+    grant("perform_housekeeping_tasks")
+
+    capabilities = described_class.call(user:, hotel:)
+
+    expect(capabilities).to be_take_housekeeping_task
+    expect(capabilities).not_to be_manage_housekeeping
+  end
+
+  it "grants dispatch without implying the holder performs the work" do
+    enable_housekeeping
+    grant("dispatch_housekeeping_tasks")
+
+    capabilities = described_class.call(user:, hotel:)
+
+    expect(capabilities).to be_manage_housekeeping
+    expect(capabilities).not_to be_take_housekeeping_task
   end
 
   it "requires booking visibility in addition to the financial permission" do
@@ -80,11 +101,12 @@ RSpec.describe StayView::BuildCapabilities do
 
 
   it "keeps housekeeping mutations disabled when the plan feature is unavailable" do
-    grant("view_room_readiness", "manage_housekeeping_tasks", "manage_requests")
+    grant("view_room_readiness", "perform_housekeeping_tasks", "dispatch_housekeeping_tasks", "manage_requests")
 
     capabilities = described_class.call(user:, hotel:)
 
     expect(capabilities).not_to be_manage_housekeeping
+    expect(capabilities).not_to be_take_housekeeping_task
     expect(capabilities).not_to be_update_housekeeping_status
   end
 

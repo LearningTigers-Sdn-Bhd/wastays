@@ -3,7 +3,7 @@ import TomSelect from "tom-select"
 
 export default class extends Controller {
   static targets = ["native"]
-  static values = { placeholder: String, maxOptions: Number, emptyText: String }
+  static values = { placeholder: String, maxOptions: Number, emptyText: String, allowEmptyOption: Boolean }
 
   connect() {
     this.onFormReset = this.onFormReset.bind(this)
@@ -49,7 +49,9 @@ export default class extends Controller {
       openOnFocus: true,
       closeAfterSelect: true,
       selectOnTab: false,
-      allowEmptyOption: false,
+      // A blank-valued option is the placeholder by default; when the caller says
+      // blank is a real choice ("Unassigned"), keep it in the menu instead.
+      allowEmptyOption: this.allowEmptyOptionValue,
       placeholder: this.placeholderValue,
       render: {
         no_results: () => {

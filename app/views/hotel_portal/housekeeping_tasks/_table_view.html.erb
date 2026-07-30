@@ -1,200 +1,316 @@
 <% form_url = hotel_housekeeping_tasks_path(current_hotel) %>
+<% board_return_url = hotel_housekeeping_tasks_path(current_hotel, board_filters) %>
+<% staff_choices = @staff_members.map { |staff| [ staff.name, staff.id ] } %>
 
 <div class="space-y-6">
-  <!-- Search and Filters Form -->
-  <div class="mx-4 md:mx-0">
-    <%= form_with url: form_url, method: :get, id: "hk-filters-form", data: { controller: "auto-submit export-sync", turbo_frame: "housekeeping_tasks_results", action: "input->export-sync#sync change->export-sync#sync" }, class: "grid gap-4 sm:grid-cols-2 lg:grid-cols-5" do |f| %>
+  <section class="space-y-3" aria-labelledby="hk-filters-heading">
+    <h2 id="hk-filters-heading" class="sr-only">Filter housekeeping tasks</h2>
 
-      <!-- Text Search -->
-      <div class="relative lg:col-span-2">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-          <%= cached_icon "search", class: "size-4" %>
-        </div>
-        <%= text_field_tag :q, params[:q], autocomplete: "off", class: "w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", placeholder: "Search guest, booking or request...", data: { action: "input->auto-submit#submit" } %>
-      </div>
+    <%= form_with url: form_url, method: :get, id: "hk-filters-form",
+          data: {
+            controller: "export-sync",
+            action: "change->export-sync#sync input->export-sync#sync",
+            turbo_frame: "housekeeping_tasks_results"
+          },
+          class: "grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-5" do |form| %>
 
-      <!-- Assigned To Filter -->
-      <div>
-        <%= select_tag :assigned_to, options_for_select([["All Staff", ""]] + @staff_members.map { |s| [s.name, s.id] }, params[:assigned_to]), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
-      </div>
+      <%= render PanelsUI::FormField.new(form: form, attribute: :q, label: "Search", class: "lg:col-span-2") do |field| %>
+        <% field.with_addon(align: :inline_start, variant: :bare) do %>
+          <%= app_icon "search", class: "size-4 text-muted-foreground" %>
+        <% end %>
+        <% field.with_input(type: :search, value: params[:q], autocomplete: "off",
+                            placeholder: "Guest, booking or request") %>
+      <% end %>
 
-      <!-- Room Status Filter -->
-      <div>
-        <%= select_tag :room_status, options_for_select(room_status_filter_options, params[:room_status]), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
-      </div>
+      <%= render PanelsUI::FormField.new(form: form, attribute: :assigned_to, label: "Assigned to") do |field| %>
+        <% field.with_select_menu([ [ "All staff", "" ] ] + staff_choices, selected: params[:assigned_to].to_s) %>
+      <% end %>
 
-      <!-- Date Filter -->
-      <div>
-        <%= date_field_tag :date, (params[:date].presence || @selected_date.to_s), class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", placeholder: "Date", data: { action: "change->auto-submit#submit" } %>
+      <%= render PanelsUI::FormField.new(form: form, attribute: :room_status, label: "Room status") do |field| %>
+        <% field.with_select_menu(room_status_filter_options, selected: params[:room_status].to_s) %>
+      <% end %>
+
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <%= render PanelsUI::FormField.new(form: form, attribute: :date, label: "As of date", class: "flex-1") do |field| %>
+          <% field.with_date_picker(value: @selected_date.iso8601, placeholder: "As of date") %>
+        <% end %>
+        <%= render PanelsUI::Button.new(label: "Apply", variant: :secondary, type: "submit") %>
       </div>
     <% end %>
-  </div>
+  </section>
 
-  <!-- Results Frame -->
-  <%= turbo_frame_tag "housekeeping_tasks_results" do %>
-    <div class="mx-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:mx-0">
+  <section class="space-y-3" aria-labelledby="hk-board-heading" data-controller="results-announcer">
+    <h2 id="hk-board-heading" class="sr-only">Housekeeping task board</h2>
+    <p class="sr-only" role="status" aria-live="polite" aria-atomic="true"
+       data-results-announcer-target="status"></p>
+
+    <%= turbo_frame_tag "housekeeping_tasks_results" do %>
+      <p hidden data-board-summary>
+        <%= pluralize(@room_groups.sum { |group| group[:rooms].size }, "room") %>
+        matching the current filters.
+      </p>
+
       <% if @room_groups.any? %>
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-slate-200 table-fixed">
-            <colgroup>
-              <col class="w-[12%]"> <!-- Room -->
-              <col class="w-[13%]"> <!-- Assign To -->
-              <col class="w-[11%]"> <!-- Room Status -->
-              <col class="w-[9%]">  <!-- Arrival Time -->
-              <col class="w-[9%]">  <!-- Arrival Date -->
-              <col class="w-[9%]">  <!-- Departure -->
-              <col class="w-[5%]">  <!-- Nights -->
-              <col class="w-[22%]"> <!-- Task Details -->
-              <col class="w-[10%]"> <!-- Task Status -->
-            </colgroup>
-            <thead class="bg-slate-50">
-              <tr>
-                <th scope="col" class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap border-r border-slate-200">Room</th>
-                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Assign To</th>
-                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Room Status</th>
-                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Arrival Time</th>
-                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Arrival Date</th>
-                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Departure</th>
-                <th scope="col" class="px-3 py-4 text-center text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Nights</th>
-                <th scope="col" class="px-3 py-4 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Task Details</th>
-                <th scope="col" class="py-4 pl-3 pr-6 text-right text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap">Task Status</th>
+        <%= render PanelsUI::Table.new(
+              caption: "Housekeeping tasks by room type",
+              density: :compact,
+              header_style: :sentence,
+              hoverable: true,
+              sticky_header: true,
+              # The board is long: it scrolls in its own box, so the filter bar and the
+              # column headers stay put rather than the whole page moving. overscroll-none
+              # stops the trackpad's rubber-band bounce at either end, and stops the
+              # leftover momentum from chaining out into the page behind it.
+              wrapper_class: "max-h-[75dvh] overflow-y-auto overscroll-none rounded-lg border border-border bg-card",
+              data: { controller: "table-group" }
+            ) do |table| %>
+          <% table.with_header do %>
+            <tr>
+              <th scope="col">Room</th>
+              <th scope="col" class="text-end">Arrival</th>
+              <th scope="col" class="text-end">Departure</th>
+              <th scope="col" class="text-center">Nights</th>
+              <th scope="col">Task</th>
+              <th scope="col">Assign to</th>
+              <th scope="col" class="text-center">Room status</th>
+              <th scope="col" class="text-end">Task status</th>
+            </tr>
+          <% end %>
+
+          <% table.with_body do %>
+            <% @room_groups.each_with_index do |group, group_index| %>
+              <% group_key = "hk-group-#{group[:room_type]&.id || group_index}" %>
+              <% row_ids = group[:rooms].flat_map { |room| Array.new(room.row_span) { |i| "#{group_key}-#{room.dom_key}-#{i}" } } %>
+
+              <tr class="bg-muted/55" data-slot="room-type-group">
+                <th scope="rowgroup" colspan="9">
+                  <button type="button"
+                          class="flex w-full items-center gap-2 text-left text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive"
+                          aria-expanded="true"
+                          aria-controls="<%= row_ids.join(" ") %>"
+                          data-action="click->table-group#toggle"
+                          data-table-group-group-param="<%= group_key %>">
+                    <%= app_icon "chevron-right",
+                          class: "size-4 shrink-0 rotate-90 text-muted-foreground transition-transform duration-150",
+                          aria: { hidden: true },
+                          data: { table_group_target: "icon" } %>
+                    <span><%= group[:room_type]&.name || "Unassigned room type" %></span>
+                    <span class="text-xs font-normal text-muted-foreground">
+                      (<%= pluralize(group[:rooms].size, "room") %>)
+                    </span>
+                  </button>
+                </th>
               </tr>
-            </thead>
-            <% @room_groups.each do |group| %>
-              <tbody class="divide-y divide-slate-200" data-controller="table-group">
-                <!-- Room Type Heading Row -->
-                <tr class="bg-slate-100/80 font-bold cursor-pointer select-none border-b border-slate-200" data-action="click->table-group#toggle">
-                  <td colspan="9" class="px-6 py-3 text-xs font-black text-slate-800 uppercase tracking-wider">
-                    <div class="flex items-center gap-2">
-                      <span><%= group[:room_type].name %></span>
-                      <%= cached_icon "chevron-right", stroke_width: 2.5, class: "size-4 shrink-0 text-slate-500 transition-transform duration-150 rotate-90", data: { table_group_target: "icon" } %>
-                    </div>
-                  </td>
-                </tr>
 
-                <!-- Room Rows -->
-                <% group[:rooms].each do |room| %>
-                  <tr class="group hover:bg-slate-50/70 transition-colors duration-150 align-middle" data-table-group-target="row">
-                    <!-- Room -->
-                    <td class="px-6 py-4 whitespace-nowrap align-middle border-r border-slate-200 pr-6">
-                      <div class="flex items-center justify-between gap-2 w-full">
-                        <div class="min-w-0">
-                          <span class="block text-sm font-bold text-slate-950"><%= room.room_number %></span>
+              <% group[:rooms].each do |room| %>
+                <% tasks = room.task_requests %>
+                <% tasks.each_with_index do |task, task_index| %>
+                  <tr id="<%= "#{group_key}-#{room.dom_key}-#{task_index}" %>"
+                      class="align-top"
+                      data-group="<%= group_key %>">
+
+                    <% if task_index.zero? %>
+                      <th scope="row" rowspan="<%= room.row_span %>" class="whitespace-nowrap">
+                        <div class="flex items-center justify-between gap-2">
+                          <span class="font-medium text-foreground"><%= room.room_number %></span>
+                          <% if room.room_type %>
+                            <span class="flex shrink-0 items-center gap-1.5">
+                              <%= render "shared/room_attribute_icon",
+                                    allowed: room.smoking_allowed?,
+                                    icon_name: "cigarette",
+                                    allowed_label: "Smoking Allowed",
+                                    disallowed_label: "No Smoking" %>
+                              <%= render "shared/room_attribute_icon",
+                                    allowed: room.pets_allowed?,
+                                    icon_name: "paw-print",
+                                    allowed_label: "Pets Allowed",
+                                    disallowed_label: "No Pets",
+                                    disallowed_icon_size: "size-3" %>
+                            </span>
+                          <% end %>
                         </div>
-                        <% if room.room_type %>
-                          <div class="flex items-center gap-1.5 shrink-0">
-                            <%= render "shared/room_attribute_icon",
-                                       allowed: room.smoking_allowed?,
-                                       icon_name: "cigarette",
-                                       allowed_label: "Smoking Allowed",
-                                       disallowed_label: "No Smoking",
-                                       extra_class: "translate-y-[1px]" %>
+                      </th>
 
-                            <%= render "shared/room_attribute_icon",
-                                       allowed: room.pets_allowed?,
-                                       icon_name: "paw-print",
-                                       allowed_label: "Pets Allowed",
-                                       disallowed_label: "No Pets",
-                                       disallowed_icon_size: "size-3" %>
-                          </div>
+                      <td rowspan="<%= room.row_span %>" class="whitespace-nowrap text-end"><%= room.arrival %></td>
+                      <td rowspan="<%= room.row_span %>" class="whitespace-nowrap text-end"><%= room.departure %></td>
+                      <td rowspan="<%= room.row_span %>" class="text-center tabular-nums"><%= room.nights %></td>
+                    <% end %>
+
+                    <td class="max-w-xs">
+                      <% if task.long_details? %>
+                        <%# The clamped note is the trigger, so the full text is one hover %>
+                        <%# or one Tab away rather than mouse-only. %>
+                        <%= render PanelsUI::Popover.new(
+                              id: "hk-note-#{task.dom_key}",
+                              placement: :top_start,
+                              trigger_on: :hover,
+                              class: "max-w-xs whitespace-normal text-left") do |popover| %>
+                          <% popover.with_trigger(unstyled: true, class: "block w-full text-left", aria_label: "Full task note") do %>
+                            <span class="line-clamp-2 text-sm text-foreground"><%= task.request_details %></span>
+                          <% end %>
+                          <p class="text-sm text-card-foreground"><%= task.request_details %></p>
                         <% end %>
-                      </div>
+                      <% elsif task.has_details? %>
+                        <p class="text-sm text-foreground"><%= task.request_details %></p>
+                      <% elsif dispatch_housekeeping? && room.awaiting_task? %>
+                        <%# The room needs work and nobody has said what. Naming it %>
+                        <%# is the dispatcher's job, so the empty cell offers it %>
+                        <%# rather than only reporting the emptiness. %>
+                        <%= render PanelsUI::Button.new(
+                              href: hotel_housekeeping_action_new_task_path(
+                                current_hotel,
+                                room_type_id: room.room_type&.id,
+                                room_number: room.room_number,
+                                return_to: board_return_url),
+                              variant: :ghost,
+                              size: :sm,
+                              data: { turbo_frame: "housekeeping_action_sheet" },
+                              aria_label: "Add a task for #{room.label}") do %>
+                          <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+                          Add task
+                        <% end %>
+                      <% else %>
+                        <span class="text-sm text-muted-foreground">No task</span>
+                      <% end %>
                     </td>
 
-                    <!-- Assign To -->
-                    <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
-                      <div class="py-1 min-h-[38px] flex items-center">
-                        <% first_req = room.first_task_request %>
-                        <% if first_req&.assignable? %>
-                          <%= form_with url: first_req.assign_url, method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
-                            <%= select_tag :assigned_to, options_for_select([["Unassigned", ""]] + @staff_members.map { |s| [s.name, s.id] }, first_req.assigned_to_value), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
+                    <td class="whitespace-nowrap">
+                      <% if !task.assignable? %>
+                        <span class="text-sm text-muted-foreground">-</span>
+                      <% elsif dispatch_housekeeping? %>
+                        <%# The combobox is rendered directly rather than through a %>
+                        <%# FormField because the field repeats down the column: only an %>
+                        <%# explicit per-task id keeps the ids unique, and the column %>
+                        <%# header carries the label, so the row's own label is sr-only. %>
+                        <% assign_id = "hk-assign-#{task.dom_key}" %>
+                        <%= form_with url: task.assign_url, method: :patch, class: "contents",
+                              data: { controller: "auto-submit", action: "change->auto-submit#submitNow" } do |form| %>
+                          <% board_filters.each do |key, value| %>
+                            <%= hidden_field_tag "filters[#{key}]", value, id: nil %>
+                          <% end %>
+                          <%= label_tag assign_id, "Assign task for #{room.label}", class: "sr-only" %>
+                          <%= render PanelsUI::Combobox.new(
+                                form: form,
+                                attribute: :assigned_to,
+                                id: assign_id,
+                                size: :sm,
+                                class: "w-44",
+                                choices: [ [ "Unassigned", "" ] ] + staff_choices,
+                                selected: task.assigned_to_value.to_s,
+                                allow_empty_option: true,
+                                placeholder: "Unassigned",
+                                empty_text: "No staff found") %>
+                        <% end %>
+                      <% else %>
+                        <% case task.take_release_action(current_user) %>
+                        <% when :take %>
+                          <%= button_to task.assign_url, method: :patch,
+                                params: { assigned_to: current_user.id, filters: board_filters },
+                                class: "panel-button", form: { class: "contents" },
+                                data: { variant: :secondary, size: :sm },
+                                aria: { label: "Take task for #{room.label}" } do %>
+                            Take
+                          <% end %>
+                        <% when :release %>
+                          <%= button_to task.assign_url, method: :patch,
+                                params: { assigned_to: "", filters: board_filters },
+                                class: "panel-button", form: { class: "contents" },
+                                data: { variant: :ghost, size: :sm },
+                                aria: { label: "Release task for #{room.label}" } do %>
+                            Release
                           <% end %>
                         <% else %>
-                          <span class="text-xs font-bold text-slate-400">-</span>
+                          <span class="text-sm text-muted-foreground"><%= task.assigned_to_name %></span>
                         <% end %>
-                      </div>
+                      <% end %>
                     </td>
 
-                    <!-- Room Status -->
-                    <td class="px-3 py-4 whitespace-nowrap">
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border <%= room.status_badge_class %>">
-                        <%= room.display_status %>
-                      </span>
-                    </td>
+                    <% if task_index.zero? %>
+                      <td rowspan="<%= room.row_span %>" class="w-28 text-center">
+                        <%= render PanelsUI::Badge.new(
+                              label: room.display_status,
+                              variant: room.status_badge_variant,
+                              size: :sm,
+                              class: "w-full justify-center") %>
+                      </td>
+                    <% end %>
 
-                    <!-- Arrival Time -->
-                    <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
-                      <%= room.arrival_time %>
-                    </td>
+                    <% status_action = task.next_status_action %>
+                    <td class="whitespace-nowrap text-end">
+                      <% if status_action %>
+                        <%# One button, carrying the one step that is actually next for %>
+                        <%# this task: start it, then complete it. %>
+                        <% complete = status_action == :complete %>
+                        <% status_label = complete ? "Complete" : "In progress" %>
+                        <% status_aria_label = complete ? "Complete #{room.label}" : "Start cleaning #{room.label}" %>
 
-                    <!-- Arrival Date -->
-                    <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
-                      <%= room.arrival_date %>
-                    </td>
-
-                    <!-- Departure -->
-                    <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
-                      <%= room.departure_date %>
-                    </td>
-
-                    <!-- Nights -->
-                    <td class="px-3 py-4 whitespace-nowrap text-xs font-bold text-slate-900 text-center">
-                      <%= room.nights %>
-                    </td>
-
-                    <!-- Task Details -->
-                    <td class="px-3 py-4">
-                      <div class="flex flex-col gap-2">
-                        <% room.task_requests.each do |req| %>
-                          <div class="py-1 min-h-[38px] flex items-center">
-                            <% if req.has_details? %>
-                              <p class="text-sm font-medium text-slate-700 line-clamp-2" title="<%= req.request_details %>">
-                                <%= req.request_details %>
-                              </p>
-                            <% else %>
-                              <span class="text-xs font-bold text-slate-400">-</span>
+                        <% if task.unassigned? %>
+                          <%# Nobody can work a task nobody holds. The dead button is itself %>
+                          <%# the popover trigger, so the reason is one hover or one Tab away %>
+                          <%# without a separate help icon beside it -- which needs %>
+                          <%# aria-disabled rather than disabled, since a disabled button %>
+                          <%# takes neither hover nor focus. %>
+                          <%# whitespace-normal on the panel because the cell is nowrap %>
+                          <%# and white-space inherits into it. %>
+                          <%= render PanelsUI::Popover.new(
+                                id: "hk-status-help-#{task.dom_key}",
+                                placement: :top_end,
+                                trigger_on: :hover,
+                                class: "max-w-xs whitespace-normal text-left") do |popover| %>
+                            <% popover.with_trigger(
+                                 variant: :neutral,
+                                 size: :sm,
+                                 aria_label: status_aria_label,
+                                 aria: { disabled: true }) do %>
+                              <%= status_label %>
                             <% end %>
-                          </div>
+                            <p class="text-sm text-card-foreground">
+                              Assign a housekeeper in the Assign to column first. A task can only be
+                              started or completed once someone holds it.
+                            </p>
+                          <% end %>
+                        <% elsif !dispatch_housekeeping? && !task.held_by?(current_user) %>
+                          <%# A performer works their own tasks. A colleague's reads as its %>
+                          <%# status rather than offering a button the server would refuse. %>
+                          <span class="text-sm text-muted-foreground"><%= task.fallback_status_label %></span>
+                        <% else %>
+                          <%# A room is only completed once it has actually been cleaned, so %>
+                          <%# the button stays visible and goes disabled rather than %>
+                          <%# vanishing under the pointer. %>
+                          <%= form_with url: task.status_url, method: :patch, class: "inline-flex" do %>
+                            <%= hidden_field_tag :redirect_to, board_return_url, id: nil %>
+                            <%= render PanelsUI::Button.new(
+                                  label: status_label,
+                                  variant: :neutral,
+                                  size: :sm,
+                                  type: "submit",
+                                  name: "status",
+                                  value: complete ? "completed" : "in_progress",
+                                  disabled: complete && !room.cleaning?,
+                                  aria_label: status_aria_label) %>
+                          <% end %>
                         <% end %>
-                      </div>
-                    </td>
-
-                    <!-- Task Status -->
-                    <td class="py-4 pl-3 pr-6 text-right whitespace-nowrap text-xs font-bold text-slate-900">
-                      <div class="flex flex-col gap-2 items-end">
-                        <% room.task_requests.each do |req| %>
-                          <div class="py-1 min-h-[38px] flex items-center">
-                            <% if req.assignable? %>
-                              <%= form_with url: req.status_url, method: :patch, data: { controller: "auto-submit" }, class: "inline-block" do |f| %>
-                                <%= hidden_field_tag :redirect_to, request.original_url %>
-                                <%= select_tag :status, options_for_select(task_status_options, req.selected_status_value), class: "rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm cursor-pointer", data: { action: "change->auto-submit#submit" } %>
-                              <% end %>
-                            <% else %>
-                              <span class="inline-flex items-center rounded-xl border border-amber-100 bg-amber-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-amber-700">
-                                <%= req.fallback_status_label %>
-                              </span>
-                            <% end %>
-                          </div>
-                        <% end %>
-                      </div>
+                      <% else %>
+                        <span class="text-sm text-muted-foreground"><%= task.fallback_status_label %></span>
+                      <% end %>
                     </td>
                   </tr>
                 <% end %>
-              </tbody>
+              <% end %>
             <% end %>
-          </table>
-        </div>
+          <% end %>
+        <% end %>
       <% else %>
-        <div class="px-6 py-20 text-center sm:px-8 space-y-3">
-          <div class="inline-flex size-14 items-center justify-center rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 shadow-inner">
-            <%= cached_icon "clipboard-check", class: "size-6" %>
-          </div>
+        <div class="space-y-3 rounded-lg border border-border bg-card px-6 py-16 text-center sm:px-8">
+          <span class="inline-flex size-12 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground">
+            <%= app_icon "clipboard-check", class: "size-6", aria: { hidden: true } %>
+          </span>
           <div>
-            <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider">No rooms found</h3>
-            <p class="mt-1 text-sm font-medium text-slate-500">Try adjusting your filters or searching for a different room.</p>
+            <h3 class="text-base font-semibold text-foreground">No rooms found</h3>
+            <p class="mt-1 text-sm text-muted-foreground">Try adjusting your filters or searching for a different room.</p>
           </div>
         </div>
       <% end %>
-    </div>
-  <% end %>
+    <% end %>
+  </section>
 </div>

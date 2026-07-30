@@ -7,6 +7,11 @@ class HousekeepingRequest < ApplicationRecord
 
   STATUSES = %w[new assigned in_progress completed failed cancelled no_task pending].freeze
 
+  # Statuses that take a request off the housekeeping board for good. Note
+  # that "pending" is not among them: it is where a request lands before
+  # anyone triages it, which is precisely when it needs to be visible.
+  CLOSED_STATUSES = %w[completed failed cancelled].freeze
+
   enum :status, STATUSES.index_by(&:itself), scopes: false
 
   validates :status, presence: true
@@ -16,6 +21,16 @@ class HousekeepingRequest < ApplicationRecord
   scope :search, ->(query) { HotelPortal::HousekeepingRequestsSearchQuery.new(self, query: query).call }
   scope :active, -> { where(archived_at: nil) }
   scope :archived, -> { where.not(archived_at: nil) }
+  scope :open_tasks, -> { active.where.not(status: CLOSED_STATUSES) }
+
+  # A request belongs to a hotel by its own column when it has one, and
+  # otherwise by the booking it hangs off. Written as a subquery rather than a
+  # join so it composes with callers that join for their own reasons.
+  scope :in_hotel, ->(hotel) { where(hotel_id: hotel.id).or(where(hotel_id: nil, booking_id: hotel.bookings.select(:id))) }
+
+  def open_task?
+    !archived? && !status.in?(CLOSED_STATUSES)
+  end
 
   def display_requested_at
     requested_at || created_at

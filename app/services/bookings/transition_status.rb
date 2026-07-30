@@ -481,7 +481,7 @@ module Bookings
 
       # Auto-create one checkout request for the booking.
       # Checkout room cleaning stays in CheckOutRequest and is rendered in the housekeeping task view.
-      return if @booking.check_out_requests.where(status: %w[new assigned in_progress pending acknowledged]).exists?
+      return if @booking.check_out_requests.open_tasks.exists?
 
       checkout_room_number = @booking.booking_rooms.where.not(room_number: [ nil, "" ]).first&.room_number
       @booking.check_out_requests.create!(

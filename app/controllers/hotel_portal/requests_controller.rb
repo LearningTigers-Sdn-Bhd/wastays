@@ -45,13 +45,13 @@ module HotelPortal
       )
 
       if (request = updater.call)
-        redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
+        redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
         respond_to do |format|
           format.html { redirect_to redirect_target, notice: "Request cancelled successfully." }
           format.json { render json: { ok: true, status: request.status, archived_at: request.archived_at } }
         end
       else
-        redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
+        redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
         respond_to do |format|
           format.html { redirect_to redirect_target, alert: "Cancellation note is required." }
           format.json { render json: { ok: false }, status: :unprocessable_entity }
@@ -67,7 +67,7 @@ module HotelPortal
         status: params[:status]
       )
 
-      redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
+      redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
       if (request = updater.call)
         respond_to do |format|
           format.html { redirect_to redirect_target, notice: "Request updated successfully." }
@@ -88,7 +88,7 @@ module HotelPortal
         request_id: params[:request_id]
       )
 
-      redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
+      redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
       if (request = updater.archive)
         respond_to do |format|
           format.html { redirect_to redirect_target, notice: "Request archived successfully." }
@@ -109,7 +109,7 @@ module HotelPortal
         request_id: params[:request_id]
       )
 
-      redirect_target = params[:redirect_to].presence || hotel_request_archive_path(current_hotel)
+      redirect_target = safe_redirect_target(hotel_request_archive_path(current_hotel))
       if (request = updater.unarchive)
         respond_to do |format|
           format.html { redirect_to redirect_target, notice: "Request restored successfully." }
@@ -126,8 +126,9 @@ module HotelPortal
     private
 
     def handle_record_not_found
-      redirect_target = params[:redirect_to].presence ||
-                        (action_name == "unarchive_request" ? hotel_request_archive_path(current_hotel) : hotel_requests_path(current_hotel))
+      redirect_target = safe_redirect_target(
+        action_name == "unarchive_request" ? hotel_request_archive_path(current_hotel) : hotel_requests_path(current_hotel)
+      )
       respond_to do |format|
         format.html { redirect_to redirect_target, alert: "Request not found." }
         format.json { render json: { ok: false }, status: :not_found }

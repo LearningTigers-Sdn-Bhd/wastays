@@ -27,10 +27,13 @@ module Reports
 
     private
 
+    # This is a report of tasks, down to its counts and its "no tasks found"
+    # message, so the board's placeholder rows for rooms with nothing to do are
+    # left out rather than printed as work and counted as work.
     def build_rows(room_groups)
       room_groups.flat_map do |group|
         group[:rooms].flat_map do |room|
-          room[:hk_requests].map { |request| row_for(group, room, request) }
+          room[:hk_requests].reject(&:placeholder?).map { |request| row_for(group, room, request) }
         end
       end
     end
@@ -40,14 +43,16 @@ module Reports
       [
         room[:room_number].to_s,
         group[:room_type].name.to_s,
-        request.metadata&.dig("assigned_to_name").presence || "Unassigned",
-        room[:resolved_status].to_s.humanize.titleize,
+        request.assigned_to_name,
+        ::Rooms::StatusPresentation.label(room[:resolved_status]),
         booking&.checked_in_at&.strftime("%I:%M %p") || "-",
         booking&.check_in&.to_date,
         booking&.check_out&.to_date,
         booking&.duration_in_nights,
         request.request_details.to_s,
-        request.status.to_s.humanize.titleize,
+        # The same status the board shows: a checkout request carries its own
+        # lifecycle, and the report must not name it something else.
+        request.display_status.to_s.humanize.titleize,
         ""
       ]
     end

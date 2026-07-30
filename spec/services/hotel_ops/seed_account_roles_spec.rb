@@ -35,4 +35,20 @@ RSpec.describe HotelOps::SeedAccountRoles do
     expect(front_desk.permissions.pluck(:slug)).to include("post_folio_charges", "post_folio_payments", "view_financial_status")
     expect(front_desk.permissions.pluck(:slug)).not_to include("execute_folio_refunds", "post_folio_write_offs", "post_folio_corrections", "manage_folio_windows", "manage_folio_movements")
   end
+
+  it "hands the owner the whole permission registry, so a new permission cannot be missed" do
+    Permission.find_or_create_by!(slug: "a_brand_new_permission") { |record| record.name = "A Brand New Permission" }
+
+    described_class.call(account)
+
+    owner = Role.find_by!(account: account, slug: "hotel_owner")
+    expect(owner.permissions.pluck(:slug)).to match_array(Permission.pluck(:slug))
+  end
+
+  it "withholds account administration from the general manager" do
+    described_class.call(account)
+
+    general_manager = Role.find_by!(account: account, slug: "general_manager")
+    expect(general_manager.permissions.pluck(:slug)).to match_array(Permission.pluck(:slug) - [ "manage_account" ])
+  end
 end

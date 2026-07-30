@@ -61,6 +61,10 @@ module HotelPortal
         raise Pundit::NotAuthorizedError unless capabilities.public_send("#{name}?")
       end
 
+      def require_any_capability!(*names)
+        raise Pundit::NotAuthorizedError unless names.any? { |name| capabilities.public_send("#{name}?") }
+      end
+
       def respond_with_board(message, affected_room_keys: [])
         respond_to do |format|
           format.turbo_stream do

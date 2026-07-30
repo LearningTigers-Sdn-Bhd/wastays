@@ -12,7 +12,8 @@ module PanelsUI
 
     def initialize(form:, attribute:, choices:, id: nil, described_by: nil, invalid: false,
                    required: false, disabled: false, size: :md, include_blank: false, prompt: nil,
-                   selected: nil, placeholder: nil, max_options: nil, empty_text: nil, class: nil, **attributes)
+                   selected: nil, placeholder: nil, max_options: nil, empty_text: nil,
+                   allow_empty_option: false, class: nil, **attributes)
       raise ArgumentError, "Comboboxes require choices" if choices.blank?
 
       @form = form
@@ -30,6 +31,7 @@ module PanelsUI
       @placeholder = placeholder
       @max_options = max_options
       @empty_text = empty_text
+      @allow_empty_option = allow_empty_option
       @class = binding.local_variable_get(:class)
       @attributes = attributes
     end
@@ -88,6 +90,10 @@ module PanelsUI
             "#{stimulus_identifier}-max-options-value" => @max_options,
             # Overrides the "No results found" text when the filter matches nothing.
             "#{stimulus_identifier}-empty-text-value" => @empty_text,
+            # Tom Select otherwise turns a blank-valued option into the placeholder,
+            # which makes it unpickable. Opt in where blank is a real answer ("None",
+            # "Unassigned") rather than merely the absence of one.
+            "#{stimulus_identifier}-allow-empty-option-value" => (@allow_empty_option.presence && "true"),
             size: @size,
             invalid: @invalid.to_s,
             disabled: @disabled.to_s

@@ -409,6 +409,12 @@ Rails.application.routes.draw do
       match "internal-notes/:booking_id/:note_id/delete", to: "internal_notes#delete", via: [ :get, :delete ], as: :delete_internal_note
     end
 
+    scope "housekeeping-actions", as: :housekeeping_action, module: "housekeeping_actions" do
+      # A room is a room type plus a number rather than a record, so it travels
+      # as both. GET renders the sheet, POST adds the task.
+      match "new-task", to: "task_creations#show", via: [ :get, :post ], as: :new_task
+    end
+
     scope "folio-actions", as: :folio_action, module: "folios/actions" do
       match "post-transaction/:booking_id", to: "transactions#show", via: [ :get, :post ], as: :post_transaction
       match "move-transaction/:booking_id/:transaction_id", to: "transaction_moves#show", via: [ :get, :post ], as: :move_transaction
@@ -436,6 +442,7 @@ Rails.application.routes.draw do
     resources :housekeeping_tasks, only: [ :index ] do
       member do
         patch :assign
+        patch "status", to: "housekeeping_tasks#update_status", as: :status
       end
     end
     patch "requests/:kind/:request_id", to: "requests#update_status", as: :request_status

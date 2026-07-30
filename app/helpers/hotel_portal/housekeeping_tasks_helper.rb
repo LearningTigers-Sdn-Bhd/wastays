@@ -2,32 +2,11 @@
 
 module HotelPortal
   module HousekeepingTasksHelper
-    ROOM_STATUS_OPTIONS = [
-      [ "All Room Statuses", "" ],
-      [ "Ready", "ready" ],
-      [ "Dirty", "dirty" ],
-      [ "Cleaning", "cleaning" ],
-      [ "Occupied", "occupied" ],
-      [ "Awaiting Inspection", "awaiting_inspection" ],
-      [ "Inspection Failed", "inspection_failed" ],
-      [ "Out of Service", "out_of_service" ],
-      [ "Late Checkout Detected", "late_checkout_detected" ]
-    ].freeze
-
-    TASK_STATUS_OPTIONS = [
-      [ "No Task", "no_task" ],
-      [ "New", "new" ],
-      [ "Assigned", "assigned" ],
-      [ "In Progress", "in_progress" ],
-      [ "Completed", "completed" ]
-    ].freeze
-
+    # Built from the one list of statuses the board can actually show, so a new
+    # room status cannot be filterable on one page and invisible on another.
     def room_status_filter_options
-      ROOM_STATUS_OPTIONS
-    end
-
-    def task_status_options
-      TASK_STATUS_OPTIONS
+      [ [ "All Room Statuses", "" ] ] +
+        ::Rooms::StatusPresentation::RESOLVED_STATUSES.map { |status| [ ::Rooms::StatusPresentation.label(status), status ] }
     end
   end
 end

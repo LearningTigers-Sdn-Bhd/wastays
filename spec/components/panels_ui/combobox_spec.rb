@@ -85,6 +85,23 @@ RSpec.describe PanelsUI::Combobox, type: :component do
     expect(page).to have_css("select[required][disabled][aria-invalid='true'][aria-describedby='destination-error']")
   end
 
+  it "keeps a blank-valued choice pickable only when asked" do
+    render_inline(described_class.new(
+      form: form_for,
+      attribute: :destination,
+      choices: [ [ "Anywhere", "" ] ] + choices
+    ))
+    expect(page.find(".panel-combobox")["data-panels-ui--combobox-allow-empty-option-value"]).to be_nil
+
+    render_inline(described_class.new(
+      form: form_for,
+      attribute: :destination,
+      choices: [ [ "Anywhere", "" ] ] + choices,
+      allow_empty_option: true
+    ))
+    expect(page.find(".panel-combobox")["data-panels-ui--combobox-allow-empty-option-value"]).to eq("true")
+  end
+
   it "is available through FormField#with_combobox" do
     render_inline(PanelsUI::FormField.new(
       form: form_for,

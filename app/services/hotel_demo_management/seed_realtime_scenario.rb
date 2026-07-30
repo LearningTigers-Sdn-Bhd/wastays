@@ -513,7 +513,7 @@ module HotelDemoManagement
     end
 
     def complete_historical_checkout_cleaning(booking)
-      requests = booking.check_out_requests.where(status: %w[new assigned in_progress pending acknowledged]).order(:id)
+      requests = booking.check_out_requests.open_tasks.order(:id)
 
       ActiveRecord::Base.transaction do
         requests.each do |request|

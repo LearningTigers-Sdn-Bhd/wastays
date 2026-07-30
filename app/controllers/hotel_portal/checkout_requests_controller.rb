@@ -2,11 +2,14 @@
 
 module HotelPortal
   class CheckoutRequestsController < HotelPortal::BaseController
+    include HousekeepingBoardFilters
+    include HousekeepingTaskAuthorization
+
     before_action :authorize_manage_checkout_requests!
     before_action :set_checkout_request
 
     def assign
-      ::CheckoutRequests::AssignStaff.new(
+      ::HousekeepingTasks::AssignStaff.new(
         hotel: current_hotel,
         checkout_request: @checkout_request,
         assigned_to_id: params[:assigned_to],
@@ -14,7 +17,7 @@ module HotelPortal
       ).call
 
       respond_to do |format|
-        format.html { redirect_to hotel_housekeeping_tasks_path(current_hotel), notice: "Checkout request assigned successfully." }
+        format.html { redirect_to board_return_path, notice: "Checkout request assigned successfully." }
         format.json { render json: { ok: true, status: @checkout_request.status } }
       end
     end
@@ -39,6 +42,8 @@ module HotelPortal
     end
 
     def update_status
+      authorize_advance!(@checkout_request)
+
       updater = ::HotelPortal::Requests::StatusUpdater.new(
         hotel: current_hotel,
         kind: :checkout,
@@ -46,7 +51,7 @@ module HotelPortal
         status: params[:status]
       )
 
-      redirect_target = params[:redirect_to].presence || hotel_housekeeping_tasks_path(current_hotel)
+      redirect_target = safe_redirect_target(board_return_path)
       if (request = updater.call)
         respond_to do |format|
           format.html { redirect_to redirect_target, notice: "Checkout request updated successfully." }
@@ -75,7 +80,8 @@ module HotelPortal
 
     def authorize_manage_checkout_requests!
       allowed = current_user.has_permission?("manage_requests", hotel: current_hotel) ||
-                current_user.has_permission?("manage_housekeeping_tasks", hotel: current_hotel)
+                current_user.has_permission?("perform_housekeeping_tasks", hotel: current_hotel) ||
+                current_user.has_permission?("dispatch_housekeeping_tasks", hotel: current_hotel)
       raise Pundit::NotAuthorizedError unless allowed
     end
   end

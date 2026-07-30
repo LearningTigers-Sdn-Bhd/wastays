@@ -21,6 +21,18 @@ module HotelPortal
       HotelPortal::FrontDeskController::VIEWS.include?(params[:view]) ? params[:view] : "list"
     end
 
+    # Pages that hand a request off to another controller carry where to come
+    # back to in ?redirect_to. Rails already refuses to follow that off-host, but
+    # it does so by raising -- a 500 for what is really a bad parameter. Accept
+    # only a path within this app, and fall back rather than fail.
+    def safe_redirect_target(fallback)
+      candidate = params[:redirect_to].to_s
+      return fallback unless candidate.start_with?("/")
+      return fallback if candidate.start_with?("//") # protocol-relative: another host
+
+      candidate
+    end
+
     def reject_corporate_user!
       return unless current_user&.corporate?
 

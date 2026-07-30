@@ -8,7 +8,7 @@ module CheckoutRequests
     end
 
     def call
-      return false unless @checkout_request.status.in?(%w[new assigned in_progress pending acknowledged])
+      return false unless @checkout_request.open_task?
 
       ActiveRecord::Base.transaction do
         request = ::HotelPortal::Requests::StatusUpdater.new(

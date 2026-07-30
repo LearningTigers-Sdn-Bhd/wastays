@@ -1,22 +1,31 @@
 # frozen_string_literal: true
 
-require "ostruct"
-
 module Rooms
   class StatusResolver
-    def initialize(hotel:, room_type:, room_number:, date:, bookings_scope: nil, blocks_scope: nil)
+    # What resolving a room on a date answers. A named type rather than an
+    # OpenStruct, so a caller asking for something it does not have fails loudly
+    # instead of quietly reading nil.
+    Resolution = Data.define(:status, :assignable, :room_status, :booking_state, :booking_details) do
+      # The stay the room is shown against: whoever is in it, or last was.
+      def active_booking
+        booking_details[:active]&.first || booking_details[:completed]&.first
+      end
+    end
+
+    def initialize(hotel:, room_type:, room_number:, date:, bookings_scope: nil, blocks_scope: nil, statuses_scope: nil)
       @hotel = hotel
       @room_type = room_type
       @room_number = room_number.to_s
       @date = date
       @provided_bookings = bookings_scope
       @provided_blocks = blocks_scope
+      @provided_statuses = statuses_scope
     end
 
     def call
       booking_info = resolve_booking_info
 
-      OpenStruct.new(
+      Resolution.new(
         status: physical_status,
         assignable: physical_status == "ready",
         room_status: persisted_status,
@@ -103,7 +112,11 @@ module Rooms
     end
 
     def persisted_status
-      @persisted_status ||= @hotel.room_statuses.find_by(room_type_id: @room_type.id, room_number: @room_number)
+      @persisted_status ||= if @provided_statuses
+        @provided_statuses.first
+      else
+        @hotel.room_statuses.find_by(room_type_id: @room_type.id, room_number: @room_number)
+      end
     end
   end
 end
