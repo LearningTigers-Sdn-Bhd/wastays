@@ -122,7 +122,7 @@ module HousekeepingTasks
                                          "housekeeping_requests.room_number = :room_number OR (housekeeping_requests.room_number IS NULL AND booking_rooms.room_number = :room_number)",
                                          room_number: room_number
                                        )
-                                       .where.not(status: %w[pending completed failed cancelled])
+                                       .open_tasks
                                        .distinct
                                        .ids
 
@@ -158,7 +158,7 @@ module HousekeepingTasks
       metadata["assigned_to"] = staff.id
       metadata["assigned_to_name"] = staff.name
       metadata["workflow_status"] = "assigned" if request.is_a?(CheckOutRequest)
-      status = "assigned" if status.in?(request.is_a?(CheckOutRequest) ? %w[new pending acknowledged] : %w[new no_task])
+      status = "assigned" if status.in?(request.is_a?(CheckOutRequest) ? %w[new pending acknowledged] : %w[new no_task pending])
       [ metadata, status ]
     end
 

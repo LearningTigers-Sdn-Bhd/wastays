@@ -2,7 +2,7 @@
 
 module HousekeepingTasks
   class BoardBuilder
-    HOUSEKEEPING_REQUEST_EXCLUDED_STATUSES = %w[pending completed failed cancelled].freeze
+    CHECKOUT_REQUEST_OPEN_STATUSES = %w[new assigned in_progress pending acknowledged].freeze
 
     def initialize(hotel:, date:, params: {})
       @hotel = hotel
@@ -29,7 +29,7 @@ module HousekeepingTasks
 
           active_booking = resolved.booking_details&.dig(:active)&.first || resolved.booking_details&.dig(:completed)&.first
 
-          hk_requests = housekeeping_requests_for_room(room_number)
+          hk_requests = housekeeping_requests_for_room(room_type, room_number)
 
           real_requests = hk_requests.reject { |r| r.status == "no_task" }
           if real_requests.any?
@@ -101,34 +101,38 @@ module HousekeepingTasks
       room_groups
     end
 
-    def housekeeping_requests_for_room(room_number)
+    def housekeeping_requests_for_room(room_type, room_number)
       room_number = room_number.to_s
       requests = []
 
-      HousekeepingRequest.where(hotel_id: @hotel.id, room_number: room_number).find_each do |request|
-        next if request.status.in?(HOUSEKEEPING_REQUEST_EXCLUDED_STATUSES)
+      HousekeepingRequest.open_tasks.where(hotel_id: @hotel.id, room_number: room_number).find_each do |request|
         next if checkout_cleaning_housekeeping_request?(request)
+        next unless belongs_to_room?(request, room_type, room_number)
 
         requests << task_row_from_housekeeping_request(request)
       end
 
       hotel_bookings_with_requests.each do |booking|
-        room_matches = booking.booking_rooms.any? { |booking_room| booking_room.room_number.to_s == room_number }
+        room_matches = booking.booking_rooms.any? do |booking_room|
+          booking_room.room_number.to_s == room_number && booking_room.room_type_id == room_type.id
+        end
         next unless room_matches
 
         booking.housekeeping_requests.each do |request|
           next if request.room_number.present? && request.room_number.to_s != room_number
-          next if request.status.in?(HOUSEKEEPING_REQUEST_EXCLUDED_STATUSES)
+          next unless request.open_task?
           next if checkout_cleaning_housekeeping_request?(request)
+          next unless belongs_to_room?(request, room_type, room_number)
 
           requests << task_row_from_housekeeping_request(request)
         end
 
         booking.check_out_requests.each do |request|
-          next unless request.status.in?(%w[new assigned in_progress pending acknowledged])
+          next unless request.status.in?(CHECKOUT_REQUEST_OPEN_STATUSES)
 
           checkout_room_number = request.metadata&.dig("room_number").presence || booking.booking_rooms.first&.room_number
           next unless checkout_room_number.to_s == room_number
+          next unless belongs_to_room?(request, room_type, checkout_room_number)
 
           requests << task_row_from_checkout_request(request, booking, checkout_room_number)
         end
@@ -136,6 +140,21 @@ module HousekeepingTasks
 
       requests.uniq { |request| [ request.respond_to?(:source_kind) ? request.source_kind : "housekeeping", request.id ] }
               .sort_by { |request| [ request.status == "no_task" ? 1 : 0, -request.created_at.to_i ] }
+    end
+
+    # A room is a room type plus a number, because numbers repeat across
+    # types. When a request carries neither a room type nor a booking room to
+    # resolve one, there is no way to tell which of them it belongs to -- show
+    # it under each candidate rather than hiding the work entirely.
+    def belongs_to_room?(request, room_type, room_number)
+      resolved = resolved_room_type_id(request, room_number)
+      resolved.nil? || resolved == room_type.id
+    end
+
+    def resolved_room_type_id(request, room_number)
+      return request.room_type_id if request.respond_to?(:room_type_id) && request.room_type_id.present?
+
+      request.booking&.booking_rooms&.find { |booking_room| booking_room.room_number.to_s == room_number.to_s }&.room_type_id
     end
 
     def hotel_bookings_with_requests
