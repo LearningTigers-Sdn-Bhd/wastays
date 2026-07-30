@@ -183,7 +183,7 @@ module HotelPortal
                                                  .where(status: %w[new assigned in_progress])
                                                  .exists?
         active_checkout = CheckOutRequest.where(booking_id: record.booking_id)
-                                         .where(status: %w[new assigned in_progress pending acknowledged])
+                                         .open_tasks
                                          .where.not(id: record.id)
                                          .includes(booking: :booking_rooms)
                                          .any? { |request| checkout_room(request)&.room_number.to_s == room.room_number.to_s }

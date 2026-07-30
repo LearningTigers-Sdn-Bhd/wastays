@@ -35,11 +35,11 @@ module HotelPortal
     def checkout_request_cards
       hotel.bookings
            .joins(:check_out_requests)
-           .where(check_out_requests: { status: %w[new assigned in_progress pending acknowledged] })
+           .where(check_out_requests: { status: CheckOutRequest::OPEN_STATUSES })
            .includes(:check_out_requests)
            .order("check_out_requests.requested_at DESC")
            .flat_map do |booking|
-             booking.check_out_requests.select { |r| r.status.in?(%w[new assigned in_progress pending acknowledged]) }.map do |req|
+             booking.check_out_requests.select(&:open_task?).map do |req|
                {
                  kind: "checkout",
                  bucket: :checkout,

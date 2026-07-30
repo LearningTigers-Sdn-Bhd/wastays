@@ -44,7 +44,7 @@ module Reports
         room[:room_number].to_s,
         group[:room_type].name.to_s,
         request.assigned_to_name,
-        room[:resolved_status].to_s.humanize.titleize,
+        ::Rooms::StatusPresentation.label(room[:resolved_status]),
         booking&.checked_in_at&.strftime("%I:%M %p") || "-",
         booking&.check_in&.to_date,
         booking&.check_out&.to_date,

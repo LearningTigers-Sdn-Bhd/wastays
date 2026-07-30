@@ -134,7 +134,7 @@ module HousekeepingTasks
 
       request_ids = CheckOutRequest.joins(booking: :booking_rooms)
                                    .where(bookings: { hotel_id: @hotel.id })
-                                   .where(status: %w[new assigned in_progress pending acknowledged])
+                                   .open_tasks
                                    .where(
                                      "check_out_requests.metadata ->> 'room_number' = :room_number OR " \
                                      "(COALESCE(check_out_requests.metadata ->> 'room_number', '') = '' " \

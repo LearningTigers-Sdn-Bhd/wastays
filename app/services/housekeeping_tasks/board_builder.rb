@@ -2,8 +2,6 @@
 
 module HousekeepingTasks
   class BoardBuilder
-    CHECKOUT_REQUEST_OPEN_STATUSES = %w[new assigned in_progress pending acknowledged].freeze
-
     # The statuses Rooms::StatusResolver reasons about. Anything else cannot
     # make a room look occupied, so it never needs loading.
     OCCUPYING_BOOKING_STATUSES = %w[confirmed review_no_show checked_in review_due_out checkout_required completed].freeze
@@ -176,9 +174,9 @@ module HousekeepingTasks
 
     def checkout_requests
       @checkout_requests ||= begin
-        ids = CheckOutRequest.joins(:booking)
+        ids = CheckOutRequest.open_tasks
+                             .joins(:booking)
                              .where(bookings: { hotel_id: @hotel.id })
-                             .where(status: CHECKOUT_REQUEST_OPEN_STATUSES)
                              .where(requested_at: ..as_of)
                              .ids
 

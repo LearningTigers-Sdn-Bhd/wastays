@@ -16,7 +16,7 @@ module HotelPortal
     # -- Room Status Presentation --
 
     def display_status
-      resolved_status.humanize.titleize
+      ::Rooms::StatusPresentation.label(resolved_status)
     end
 
     def status_badge_variant
