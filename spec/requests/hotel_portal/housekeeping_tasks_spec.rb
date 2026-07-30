@@ -152,6 +152,32 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       expect(pdf_text).not_to include("Fresh towels")
     end
 
+    it "points every export link at the filters the board was asked for" do
+      get hotel_housekeeping_tasks_path(hotel), params: { q: "101", room_status: "dirty", date: "2026-07-21" }
+
+      %w[export-pdf-link export-excel-link export-csv-link].each do |link_id|
+        href = CGI.unescapeHTML(response.body[/id="#{link_id}" href="([^"]*)"/, 1])
+        expect(href).to include("q=101", "room_status=dirty", "date=2026-07-21")
+      end
+    end
+
+    # The export is a list of tasks, headed by a count of them, so a room with
+    # nothing to do is not a line in it -- and a checkout task is named there the
+    # way the board names it rather than by its own raw status.
+    it "exports the tasks only, under the same status the board shows" do
+      booking = create(:booking, hotel: hotel, status: "checkout_required")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      create(:check_out_request, booking: booking, status: "pending", guest_notes: "Checkout Room Cleaning",
+             requested_at: Time.current, metadata: { "room_number" => "101" })
+
+      get hotel_housekeeping_tasks_path(hotel, format: :csv)
+
+      expect(response.body).to include("Checkout Room Cleaning,New")
+      expect(response.body).not_to include("Pending")
+      expect(response.body).not_to include("No Task")
+      expect(response.body.lines.size).to eq(2) # the header, and the one real task
+    end
+
     it "does not expose the removed legacy xls format" do
       expect(Mime::Type.lookup_by_extension(:xls)).to be_nil
 
@@ -225,7 +251,16 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
 
       selects = response.body.scan(/<select[^>]*>/)
       expect(selects).to be_present
-      expect(selects).to all(include("panel-select-menu__native"))
+      expect(selects).to all(match(/panel-select-menu__native|panel-combobox__native/))
+    end
+
+    it "scrolls the board in its own box, under a header that stays put" do
+      board_with_task
+
+      get hotel_housekeeping_tasks_path(hotel)
+
+      expect(response.body).to include("max-h-[75dvh] overflow-y-auto overscroll-none")
+      expect(response.body).to include('data-sticky-header="true"')
     end
 
     it "gives the board's own controls unique ids" do
@@ -259,32 +294,39 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       expect(response.body).to include("data-table-group-group-param")
     end
 
-    it "disables both status buttons while nobody holds the task" do
-      board_with_task(status: "pending")
-
-      get hotel_housekeeping_tasks_path(hotel)
-
-      start_button = response.body[/<button[^>]*aria-label="Start cleaning[^>]*>/]
-      complete_button = response.body[/<button[^>]*aria-label="Complete [^>]*>/]
-      expect(start_button).to include("disabled")
-      expect(complete_button).to include("disabled")
-    end
-
-    it "explains the dead buttons with a help popover while the task is unheld" do
-      board_with_task(status: "pending")
-
-      get hotel_housekeeping_tasks_path(hotel)
-
-      expect(response.body).to include("Why this task cannot be started")
-      expect(response.body).to include("Assign a housekeeper in the Assign to column first")
-    end
-
-    it "drops the help popover once the task is held" do
+    it "offers one status button, carrying the task's next step only" do
       board_with_task(status: "pending", metadata: { "assigned_to" => user.id, "assigned_to_name" => user.name })
 
       get hotel_housekeeping_tasks_path(hotel)
 
+      expect(response.body).to include("Start cleaning #{room_type.name} 101")
+      expect(response.body).not_to include("Complete #{room_type.name} 101")
+    end
+
+    it "makes the status button itself explain why it is dead while nobody holds the task" do
+      board_with_task(status: "pending")
+
+      get hotel_housekeeping_tasks_path(hotel)
+
+      button = response.body[/<button[^>]*aria-label="Start cleaning[^>]*>/]
+      # aria-disabled, not disabled: a disabled button takes neither hover nor focus,
+      # so it could never open its own explanation.
+      expect(button).to include('aria-disabled="true"')
+      expect(button).to include("popover__trigger")
+      expect(response.body).to include("Assign a housekeeper in the Assign to column first")
+      # No separate help icon beside the button.
       expect(response.body).not_to include("Why this task cannot be started")
+    end
+
+    it "drops the explanation and lets the button submit once the task is held" do
+      board_with_task(status: "pending", metadata: { "assigned_to" => user.id, "assigned_to_name" => user.name })
+
+      get hotel_housekeeping_tasks_path(hotel)
+
+      button = response.body[/<button[^>]*aria-label="Start cleaning[^>]*>/]
+      expect(button).to include('type="submit"')
+      expect(button).not_to include("popover__trigger")
+      expect(response.body).not_to include("Assign a housekeeper in the Assign to column first")
     end
 
     it "opens the start button once the task has an assignee" do
@@ -295,12 +337,13 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       expect(response.body[/<button[^>]*aria-label="Start cleaning[^>]*>/]).not_to include("disabled")
     end
 
-    it "closes the start button again once the task is already under way" do
+    it "swaps the start button for Complete once the task is under way" do
       board_with_task(status: "in_progress", metadata: { "assigned_to" => user.id, "assigned_to_name" => user.name })
 
       get hotel_housekeeping_tasks_path(hotel)
 
-      expect(response.body[/<button[^>]*aria-label="Start cleaning[^>]*>/]).to include("disabled")
+      expect(response.body).to include("Complete #{room_type.name} 101")
+      expect(response.body).not_to include("Start cleaning")
     end
 
     it "holds the complete button shut until the room is being cleaned" do
@@ -350,8 +393,8 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
 
       get hotel_housekeeping_tasks_path(hotel)
 
-      expect(response.body).to include("<th scope=\"col\">Arrival</th>")
-      expect(response.body).to include("<th scope=\"col\">Departure</th>")
+      expect(response.body).to include("<th scope=\"col\" class=\"text-end\">Arrival</th>")
+      expect(response.body).to include("<th scope=\"col\" class=\"text-end\">Departure</th>")
       expect(response.body).not_to include("Arrival time")
     end
 
@@ -365,14 +408,31 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       expect(header.index("Room status")).to be < header.index("Task status")
     end
 
-    it "offers a dispatcher a staff menu on the task" do
+    it "offers a dispatcher a searchable staff combobox on the task" do
       regrant("dispatch_housekeeping_tasks", "manage_requests")
+      staff = create(:user, account: account, name: "Siti Aminah")
+      hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
+      UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
       board_with_task
 
       get hotel_housekeeping_tasks_path(hotel)
 
       expect(response.body).to include("Assign task for #{room_type.name} 101")
+      expect(response.body).to include("panel-combobox")
+      expect(response.body).to include("Siti Aminah")
       expect(response.body).not_to include("Take task for")
+    end
+
+    it "keeps Unassigned pickable in the combobox and commits the pick straight away" do
+      regrant("dispatch_housekeeping_tasks", "manage_requests")
+      board_with_task
+
+      get hotel_housekeeping_tasks_path(hotel)
+
+      assign_cell = response.body[/<form[^>]*#{Regexp.escape(assign_hotel_housekeeping_task_path(hotel, HousekeepingRequest.last))}.*?<\/form>/m]
+      expect(assign_cell).to include("data-panels-ui--combobox-allow-empty-option-value=\"true\"")
+      expect(assign_cell).to include(">Unassigned</option>")
+      expect(assign_cell).to include("change-&gt;auto-submit#submitNow")
     end
 
     it "offers a housekeeper a take button on unclaimed work" do
@@ -484,15 +544,15 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     it "shows checkout requests with their own assign and status routes" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      create(:check_out_request, booking: booking, status: "pending", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" })
+      create(:check_out_request, booking: booking, status: "assigned", guest_notes: "Checkout Room Cleaning",
+             metadata: { "room_number" => "101", "assigned_to" => user.id, "assigned_to_name" => user.name })
 
       get hotel_housekeeping_tasks_path(hotel)
 
       expect(response.body).to include("Checkout Room Cleaning")
       expect(response.body).to include(hotel_assign_checkout_request_path(hotel, booking.check_out_requests.first))
       expect(response.body).to include(hotel_checkout_request_status_path(hotel, booking.check_out_requests.first))
-      expect(response.body).to include("In progress")
-      expect(response.body).to include("Complete")
+      expect(response.body).to include("Start cleaning #{room_type.name} 101")
     end
 
     it "assigns checkout requests and advances the workflow status" do
@@ -535,6 +595,25 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       )
     end
 
+    it "returns to the board the user was looking at, exactly as a housekeeping assignment does" do
+      booking = create(:booking, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      request = create(:check_out_request, booking: booking, status: "pending", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" })
+      staff = create(:user, account: account)
+      hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
+      UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
+      UserRole.create!(user: staff, role: hk_role)
+
+      patch hotel_assign_checkout_request_path(hotel, request), params: {
+        assigned_to: staff.id,
+        filters: { q: "101", date: "2026-07-30", room_status: "dirty", host: "evil.example.com" }
+      }
+
+      expect(response).to redirect_to(
+        hotel_housekeeping_tasks_path(hotel, q: "101", date: "2026-07-30", room_status: "dirty")
+      )
+    end
+
     it "updates checkout requests through the checkout status route" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
@@ -548,7 +627,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     end
   end
 
-  describe "PATCH /hotel/:hotel_id/requests/housekeeping/:request_id" do
+  describe "PATCH /hotel/:hotel_id/housekeeping_tasks/:id/status" do
     it "completes the housekeeping request, causing it to disappear and fallback to No Task" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
@@ -559,9 +638,9 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       expect(response.body).to include("Clean the window")
 
       # Update status to completed
-      patch hotel_request_status_path(hotel, kind: "housekeeping", request_id: req.id), params: { status: "completed" }
+      patch status_hotel_housekeeping_task_path(hotel, req), params: { status: "completed" }
 
-      expect(response).to redirect_to(hotel_requests_path(hotel))
+      expect(response).to redirect_to(hotel_housekeeping_tasks_path(hotel))
       expect(req.reload.status).to eq("completed")
 
       # Loading the tasks page again should not show the request, and should display No Task
@@ -576,7 +655,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
       board = hotel_housekeeping_tasks_path(hotel, q: "101")
 
-      patch hotel_request_status_path(hotel, kind: "housekeeping", request_id: req.id),
+      patch status_hotel_housekeeping_task_path(hotel, req),
             params: { status: "completed", redirect_to: board }
 
       expect(response).to redirect_to(board)
@@ -588,11 +667,32 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
 
       [ "https://evil.example.com/steal", "//evil.example.com", "javascript:alert(1)" ].each do |crafted|
-        patch hotel_request_status_path(hotel, kind: "housekeeping", request_id: req.id),
+        patch status_hotel_housekeeping_task_path(hotel, req),
               params: { status: "completed", redirect_to: crafted }
 
-        expect(response).to redirect_to(hotel_requests_path(hotel))
+        expect(response).to redirect_to(hotel_housekeeping_tasks_path(hotel))
       end
+    end
+
+    # The board admits a perform-only housekeeper, so the button it hands them
+    # has to be a button they may actually press. It used to post to the
+    # Requests page's route, which asks for managing requests instead.
+    it "is open to the perform-only housekeeper the board is built for" do
+      role.role_permissions.destroy_all
+      perform = Permission.find_or_create_by!(slug: "perform_housekeeping_tasks") { |record| record.name = "Perform Housekeeping Tasks" }
+      RolePermission.create!(role: role, permission: perform)
+      booking = create(:booking, hotel: hotel, status: "checked_in")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      req = create(:housekeeping_request, booking: booking, status: "assigned", room_number: "101",
+                                          metadata: { "assigned_to" => user.id, "assigned_to_name" => user.name })
+
+      get hotel_housekeeping_tasks_path(hotel)
+      expect(response.body).to include(status_hotel_housekeeping_task_path(hotel, req))
+
+      patch status_hotel_housekeeping_task_path(hotel, req), params: { status: "in_progress" }
+
+      expect(response).to redirect_to(hotel_housekeeping_tasks_path(hotel))
+      expect(req.reload.status).to eq("in_progress")
     end
   end
 end

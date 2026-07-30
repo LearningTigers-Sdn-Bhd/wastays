@@ -2,6 +2,8 @@
 
 module HotelPortal
   class CheckoutRequestsController < HotelPortal::BaseController
+    include HousekeepingBoardFilters
+
     before_action :authorize_manage_checkout_requests!
     before_action :set_checkout_request
 
@@ -14,7 +16,7 @@ module HotelPortal
       ).call
 
       respond_to do |format|
-        format.html { redirect_to hotel_housekeeping_tasks_path(current_hotel), notice: "Checkout request assigned successfully." }
+        format.html { redirect_to board_return_path, notice: "Checkout request assigned successfully." }
         format.json { render json: { ok: true, status: @checkout_request.status } }
       end
     end
@@ -46,7 +48,7 @@ module HotelPortal
         status: params[:status]
       )
 
-      redirect_target = safe_redirect_target(hotel_housekeeping_tasks_path(current_hotel))
+      redirect_target = safe_redirect_target(board_return_path)
       if (request = updater.call)
         respond_to do |format|
           format.html { redirect_to redirect_target, notice: "Checkout request updated successfully." }

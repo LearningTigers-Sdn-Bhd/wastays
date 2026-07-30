@@ -56,19 +56,24 @@
               density: :compact,
               header_style: :sentence,
               hoverable: true,
-              wrapper_class: "rounded-lg border border-border bg-card",
+              sticky_header: true,
+              # The board is long: it scrolls in its own box, so the filter bar and the
+              # column headers stay put rather than the whole page moving. overscroll-none
+              # stops the trackpad's rubber-band bounce at either end, and stops the
+              # leftover momentum from chaining out into the page behind it.
+              wrapper_class: "max-h-[75dvh] overflow-y-auto overscroll-none rounded-lg border border-border bg-card",
               data: { controller: "table-group" }
             ) do |table| %>
           <% table.with_header do %>
             <tr>
               <th scope="col">Room</th>
-              <th scope="col">Arrival</th>
-              <th scope="col">Departure</th>
+              <th scope="col" class="text-end">Arrival</th>
+              <th scope="col" class="text-end">Departure</th>
               <th scope="col" class="text-center">Nights</th>
               <th scope="col">Task</th>
               <th scope="col">Assign to</th>
-              <th scope="col">Room status</th>
-              <th scope="col">Task status</th>
+              <th scope="col" class="text-center">Room status</th>
+              <th scope="col" class="text-end">Task status</th>
             </tr>
           <% end %>
 
@@ -126,8 +131,8 @@
                         </div>
                       </th>
 
-                      <td rowspan="<%= room.row_span %>" class="whitespace-nowrap"><%= room.arrival %></td>
-                      <td rowspan="<%= room.row_span %>" class="whitespace-nowrap"><%= room.departure %></td>
+                      <td rowspan="<%= room.row_span %>" class="whitespace-nowrap text-end"><%= room.arrival %></td>
+                      <td rowspan="<%= room.row_span %>" class="whitespace-nowrap text-end"><%= room.departure %></td>
                       <td rowspan="<%= room.row_span %>" class="text-center tabular-nums"><%= room.nights %></td>
                     <% end %>
 
@@ -156,21 +161,28 @@
                       <% if !task.assignable? %>
                         <span class="text-sm text-muted-foreground">-</span>
                       <% elsif dispatch_housekeeping? %>
-                        <%= render PanelsUI::DropdownMenu.new(id: "hk-assign-#{task.dom_key}", placement: :bottom_end, class: "w-56") do |menu| %>
-                          <% menu.with_trigger(variant: :neutral, size: :sm,
-                                               aria_label: "Assign task for #{room.label}") do %>
-                            <%= task.assigned_to_name %>
+                        <%# The combobox is rendered directly rather than through a %>
+                        <%# FormField because the field repeats down the column: only an %>
+                        <%# explicit per-task id keeps the ids unique, and the column %>
+                        <%# header carries the label, so the row's own label is sr-only. %>
+                        <% assign_id = "hk-assign-#{task.dom_key}" %>
+                        <%= form_with url: task.assign_url, method: :patch, class: "contents",
+                              data: { controller: "auto-submit", action: "change->auto-submit#submitNow" } do |form| %>
+                          <% board_filters.each do |key, value| %>
+                            <%= hidden_field_tag "filters[#{key}]", value, id: nil %>
                           <% end %>
-                          <% menu.with_item(href: task.assign_url, method: :patch,
-                                            params: { assigned_to: "", filters: board_filters }) do %>
-                            Unassigned
-                          <% end %>
-                          <% @staff_members.each do |staff| %>
-                            <% menu.with_item(href: task.assign_url, method: :patch,
-                                              params: { assigned_to: staff.id, filters: board_filters }) do %>
-                              <%= staff.name %>
-                            <% end %>
-                          <% end %>
+                          <%= label_tag assign_id, "Assign task for #{room.label}", class: "sr-only" %>
+                          <%= render PanelsUI::Combobox.new(
+                                form: form,
+                                attribute: :assigned_to,
+                                id: assign_id,
+                                size: :sm,
+                                class: "w-44",
+                                choices: [ [ "Unassigned", "" ] ] + staff_choices,
+                                selected: task.assigned_to_value.to_s,
+                                allow_empty_option: true,
+                                placeholder: "Unassigned",
+                                empty_text: "No staff found") %>
                         <% end %>
                       <% else %>
                         <% case task.take_release_action(current_user) %>
@@ -197,7 +209,7 @@
                     </td>
 
                     <% if task_index.zero? %>
-                      <td rowspan="<%= room.row_span %>" class="w-28">
+                      <td rowspan="<%= room.row_span %>" class="w-28 text-center">
                         <%= render PanelsUI::Badge.new(
                               label: room.display_status,
                               variant: room.status_badge_variant,
@@ -206,42 +218,21 @@
                       </td>
                     <% end %>
 
-                    <td class="whitespace-nowrap">
-                      <% if task.assignable? %>
-                        <%# Nobody can work a task nobody holds, and a room is only %>
-                        <%# completed once it has actually been cleaned -- so both %>
-                        <%# buttons stay visible and go disabled rather than vanish. %>
-                        <%# One form with two submit values, rather than a button_to %>
-                        <%# each: the group's joining rules are direct-child selectors, %>
-                        <%# so a <form> around each button would unjoin them. %>
-                        <div class="flex items-center gap-2">
-                        <%= form_with url: task.status_url, method: :patch, class: "inline-flex" do %>
-                          <%= hidden_field_tag :redirect_to, board_return_url, id: nil %>
-                          <%= render PanelsUI::ButtonGroup.new do %>
-                            <%= render PanelsUI::Button.new(
-                                  label: "In progress",
-                                  variant: :neutral,
-                                  size: :sm,
-                                  type: "submit",
-                                  name: "status",
-                                  value: "in_progress",
-                                  disabled: task.unassigned? || task.in_progress?,
-                                  aria_label: "Start cleaning #{room.label}") %>
-                            <%= render PanelsUI::Button.new(
-                                  label: "Complete",
-                                  variant: :neutral,
-                                  size: :sm,
-                                  type: "submit",
-                                  name: "status",
-                                  value: "completed",
-                                  disabled: task.unassigned? || !room.cleaning?,
-                                  aria_label: "Complete #{room.label}") %>
-                          <% end %>
-                        <% end %>
+                    <% status_action = task.next_status_action %>
+                    <td class="whitespace-nowrap text-end">
+                      <% if status_action %>
+                        <%# One button, carrying the one step that is actually next for %>
+                        <%# this task: start it, then complete it. %>
+                        <% complete = status_action == :complete %>
+                        <% status_label = complete ? "Complete" : "In progress" %>
+                        <% status_aria_label = complete ? "Complete #{room.label}" : "Start cleaning #{room.label}" %>
 
-                        <%# Both buttons are dead until somebody holds the task, which %>
-                        <%# is not self-evident -- say so instead of leaving it a puzzle. %>
                         <% if task.unassigned? %>
+                          <%# Nobody can work a task nobody holds. The dead button is itself %>
+                          <%# the popover trigger, so the reason is one hover or one Tab away %>
+                          <%# without a separate help icon beside it -- which needs %>
+                          <%# aria-disabled rather than disabled, since a disabled button %>
+                          <%# takes neither hover nor focus. %>
                           <%# whitespace-normal on the panel because the cell is nowrap %>
                           <%# and white-space inherits into it. %>
                           <%= render PanelsUI::Popover.new(
@@ -250,18 +241,34 @@
                                 trigger_on: :hover,
                                 class: "max-w-xs whitespace-normal text-left") do |popover| %>
                             <% popover.with_trigger(
-                                 unstyled: true,
-                                 aria_label: "Why this task cannot be started",
-                                 class: "inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive") do %>
-                              <%= app_icon "circle-question-mark", class: "size-4", aria: { hidden: true } %>
+                                 variant: :neutral,
+                                 size: :sm,
+                                 aria_label: status_aria_label,
+                                 aria: { disabled: true }) do %>
+                              <%= status_label %>
                             <% end %>
                             <p class="text-sm text-card-foreground">
                               Assign a housekeeper in the Assign to column first. A task can only be
                               started or completed once someone holds it.
                             </p>
                           <% end %>
+                        <% else %>
+                          <%# A room is only completed once it has actually been cleaned, so %>
+                          <%# the button stays visible and goes disabled rather than %>
+                          <%# vanishing under the pointer. %>
+                          <%= form_with url: task.status_url, method: :patch, class: "inline-flex" do %>
+                            <%= hidden_field_tag :redirect_to, board_return_url, id: nil %>
+                            <%= render PanelsUI::Button.new(
+                                  label: status_label,
+                                  variant: :neutral,
+                                  size: :sm,
+                                  type: "submit",
+                                  name: "status",
+                                  value: complete ? "completed" : "in_progress",
+                                  disabled: complete && !room.cleaning?,
+                                  aria_label: status_aria_label) %>
+                          <% end %>
                         <% end %>
-                        </div>
                       <% else %>
                         <span class="text-sm text-muted-foreground"><%= task.fallback_status_label %></span>
                       <% end %>

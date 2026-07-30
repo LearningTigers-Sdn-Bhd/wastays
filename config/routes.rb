@@ -436,6 +436,7 @@ Rails.application.routes.draw do
     resources :housekeeping_tasks, only: [ :index ] do
       member do
         patch :assign
+        patch "status", to: "housekeeping_tasks#update_status", as: :status
       end
     end
     patch "requests/:kind/:request_id", to: "requests#update_status", as: :request_status

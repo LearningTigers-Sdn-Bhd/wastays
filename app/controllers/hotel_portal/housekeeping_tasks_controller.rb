@@ -2,6 +2,8 @@
 
 module HotelPortal
   class HousekeepingTasksController < BaseController
+    include HousekeepingBoardFilters
+
     before_action :authorize_housekeeping_board!
     before_action -> { require_feature!("task_assignment_minibar_log") }
 
@@ -67,26 +69,38 @@ module HotelPortal
       ).call
 
       respond_to do |format|
-        format.html { redirect_to hotel_housekeeping_tasks_path(current_hotel, returned_filters), notice: "Task assigned successfully." }
+        format.html { redirect_to board_return_path, notice: "Task assigned successfully." }
         format.json { render json: { ok: true } }
       end
     end
 
+    # Starting and completing a task is the housekeeper's own job, so it is gated
+    # on the board's permissions and answered here. The Requests page has its own
+    # route onto the same updater, gated on managing requests, which is a
+    # different job done by different people.
+    def update_status
+      updater = ::HotelPortal::Requests::StatusUpdater.new(
+        hotel: current_hotel,
+        kind: :housekeeping,
+        request_id: params[:id],
+        status: params[:status]
+      )
+
+      redirect_target = safe_redirect_target(board_return_path)
+      if (request = updater.call)
+        respond_to do |format|
+          format.html { redirect_to redirect_target, notice: "Task updated successfully." }
+          format.json { render json: { ok: true, status: request.status } }
+        end
+      else
+        respond_to do |format|
+          format.html { redirect_to redirect_target, alert: "Failed to update task." }
+          format.json { render json: { ok: false }, status: :unprocessable_entity }
+        end
+      end
+    end
+
     private
-
-    # The board's own filter state, as submitted by the filter form.
-    FILTER_KEYS = %i[q date assigned_to room_status].freeze
-
-    # Carried through an assignment under its own key, because assigned_to
-    # already means "the person being assigned" on that form.
-    def board_filters
-      params.permit(*FILTER_KEYS).to_h.compact_blank
-    end
-    helper_method :board_filters
-
-    def returned_filters
-      params.fetch(:filters, {}).permit(*FILTER_KEYS).to_h.compact_blank
-    end
 
     # The board itself is readable by anyone who works housekeeping. Who may
     # assign whom is enforced further in, by HousekeepingTasks::AssignStaff.

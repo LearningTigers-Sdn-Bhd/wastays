@@ -16,7 +16,7 @@ module HotelPortal
     # -- Room Status Presentation --
 
     def display_status
-      resolved_status == "dirty" ? "Dirty" : resolved_status.humanize.titleize
+      resolved_status.humanize.titleize
     end
 
     def status_badge_variant
@@ -101,24 +101,24 @@ module HotelPortal
       ApplicationController.helpers
     end
 
-    # Wraps a single TASK_ROW to expose clean view methods for URL
+    # Wraps one HousekeepingTasks::TaskRow to expose clean view methods for URL
     # routing, status resolution, and assignment logic.
     class TaskRequestPresenter
       attr_reader :request, :hotel
 
-      delegate :id, :request_details, :status, :metadata, :created_at, to: :request
+      delegate :id, :request_details, :status, :metadata, :created_at,
+               :checkout_request?, :assigned_to_name, :display_status, to: :request
 
       def initialize(request, hotel)
         @request = request
         @hotel = hotel
       end
 
+      # The board's stand-in row for a room with nothing to do carries no id, so
+      # there is no record to assign or advance. A real record whose status says
+      # "no_task" is still a record, and AssignStaff still takes it.
       def assignable?
-        request&.id.present?
-      end
-
-      def checkout_request?
-        request.respond_to?(:checkout_request?) && request.checkout_request?
+        id.present?
       end
 
       def assign_url
@@ -137,20 +137,12 @@ module HotelPortal
         if checkout_request?
           url_helpers.hotel_checkout_request_status_path(hotel, request.id)
         else
-          url_helpers.hotel_request_status_path(hotel, kind: "housekeeping", request_id: request.id)
+          url_helpers.status_hotel_housekeeping_task_path(hotel, request.id)
         end
       end
 
       def assigned_to_value
-        if request.respond_to?(:assigned_to_id)
-          request.assigned_to_id.to_s.presence&.to_i
-        else
-          request.metadata&.dig("assigned_to").to_s.presence&.to_i
-        end
-      end
-
-      def assigned_to_name
-        request.respond_to?(:assigned_to_name) ? request.assigned_to_name : "Unassigned"
+        request.assigned_to_id.to_s.presence&.to_i
       end
 
       def unassigned?
@@ -162,7 +154,23 @@ module HotelPortal
       end
 
       def in_progress?
-        display_status_value.to_s == "in_progress"
+        display_status == "in_progress"
+      end
+
+      def completed?
+        display_status == "completed"
+      end
+
+      # The board offers one button, and it is whatever comes next: start the
+      # task, then complete it. A finished task has no next step, so it reads as
+      # text instead. The precondition for the step it names (somebody holds the
+      # task; the room is being cleaned) is the view's business -- the button
+      # stays visible and goes disabled rather than vanishing.
+      def next_status_action
+        return unless assignable?
+        return if completed?
+
+        in_progress? ? :complete : :start
       end
 
       def held_by?(user)
@@ -185,24 +193,13 @@ module HotelPortal
         "#{checkout_request? ? 'checkout' : 'housekeeping'}-#{id}"
       end
 
-      def selected_status_value
-        checkout_request? ? display_status_value : request.status
-      end
-
-      def display_status_value
-        request.respond_to?(:display_status) ? request.display_status : request.status
-      end
-
+      # What the task status column reads when there is no next step to offer.
       def fallback_status_label
-        if request.respond_to?(:display_status)
-          request.display_status.to_s.humanize.titleize
-        else
-          request&.status.to_s.humanize.titleize.presence || "No Task"
-        end
+        display_status.to_s.humanize.titleize.presence || "No Task"
       end
 
       def has_details?
-        request&.request_details.present? && request.request_details != "-"
+        request_details.present? && request_details != "-"
       end
 
       # Roughly what fits the two clamped lines of the task column. Past that the

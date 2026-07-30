@@ -63,7 +63,7 @@ module HousekeepingTasks
 
     def task_rows_for(key, active_booking, room_number)
       rows = task_rows_by_room.fetch(key, EMPTY)
-      real_rows = rows.reject { |row| row.status == "no_task" }
+      real_rows = rows.reject(&:placeholder?)
 
       return real_rows if real_rows.any?
       return rows if rows.any?
@@ -130,7 +130,7 @@ module HousekeepingTasks
 
         rows.each_value do |list|
           list.uniq! { |row| [ row.source_kind, row.id ] }
-          list.sort_by! { |row| [ row.status == "no_task" ? 1 : 0, -row.created_at.to_i ] }
+          list.sort_by! { |row| [ row.placeholder? ? 1 : 0, -row.created_at.to_i ] }
         end
 
         rows

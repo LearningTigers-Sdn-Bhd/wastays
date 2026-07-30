@@ -17,6 +17,12 @@ module HousekeepingTasks
       source_kind == "checkout"
     end
 
+    # A room with nothing to do still occupies a line on the board, and that line
+    # is this row. It stands for the absence of a task rather than a task.
+    def placeholder?
+      status == "no_task"
+    end
+
     def assigned_to_id
       metadata.to_h["assigned_to"]
     end
