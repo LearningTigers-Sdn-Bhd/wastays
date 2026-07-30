@@ -17,6 +17,12 @@ module HotelPortal
           PdfTheme.configure_font(@pdf)
         end
 
+        # Lets callers size columns against the usable page width.
+        def content_width = @pdf.bounds.width
+
+        # For reports whose sections each deserve their own sheet of paper.
+        def start_new_page = @pdf.start_new_page
+
         def add_header
           top = @pdf.cursor
           @pdf.fill_color PdfTheme::COLORS[:primary]
@@ -67,6 +73,7 @@ module HotelPortal
             @pdf.fill_color PdfTheme::COLORS[:ink]
             @pdf.move_down 10
             draw_total(total_row, headers.size, numeric_columns, column_widths) if total_row
+            @pdf.move_down 6
             return
           end
 
@@ -98,6 +105,7 @@ module HotelPortal
             )
           end
           table.draw
+          @pdf.move_down 16
         end
 
         def render

@@ -1,6 +1,8 @@
 <div class="space-y-5">
   <% bibo_sections(report).each do |section| %>
     <% heading_id = "#{section[:title].parameterize}-heading" %>
+    <% page_param = "#{section[:rows_key]}_page" %>
+    <% paged_rows = paginate_report_section(section[:rows], page_param) %>
     <section class="space-y-3 print:space-y-3 print:break-inside-avoid" aria-labelledby="<%= heading_id %>">
       <h2 id="<%= heading_id %>" class="text-base font-semibold text-foreground"><%= section[:title] %></h2>
 
@@ -8,49 +10,68 @@
             caption: section[:title],
             density: :compact,
             header_style: :sentence,
+            striped: true,
             hoverable: true,
             class: "min-w-[720px] print:min-w-0 print:w-auto",
             wrapper_class: "rounded-lg border border-border bg-card print:overflow-visible"
           ) do |table| %>
         <% table.with_header do %>
           <tr>
-            <th scope="col">Guest</th>
-            <th scope="col">Room type</th>
-            <th scope="col">Room</th>
-            <th scope="col">Stay dates</th>
-            <th scope="col">Boat time</th>
+            <th scope="col">Guest name</th>
+            <th scope="col" class="w-[170px]">Room number</th>
+            <th scope="col" class="w-[170px]"><%= section[:date_header] %></th>
+            <th scope="col" class="w-[170px]"><%= section[:time_header] %></th>
           </tr>
         <% end %>
         <% table.with_body do %>
-          <% if section[:rows].any? %>
-            <% report_rows_grouped_by_month(section[:rows], date_preset: @date_preset) { |row| row[:boat_at] }.each do |month, rows| %>
+          <% if paged_rows.any? %>
+            <% report_rows_grouped_by_month(paged_rows, date_preset: @date_preset) { |row| row[:boat_at] }.each do |month, rows| %>
               <% if month %>
                 <tr class="bg-muted/55" data-slot="report-month-group">
-                  <th scope="rowgroup" colspan="5" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
+                  <th scope="rowgroup" colspan="4" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
                 </tr>
               <% end %>
             <% rows.each do |row| %>
               <tr>
                 <th scope="row">
-                  <div class="min-w-0">
-                    <p class="font-semibold text-foreground"><%= row[:guest_name] %></p>
-                    <p class="mt-1 font-mono text-xs text-muted-foreground"><%= row[:confirmation_token] %></p>
+                  <div class="flex items-center gap-1.5">
+                    <p class="font-semibold text-foreground" data-slot="bibo-guest-name"><%= row[:guest_name] %></p>
+                    <%= render PanelsUI::Popover.new(
+                          id: "bibo-#{section[:rows_key]}-#{row[:booking_guest_id]}-booking",
+                          trigger_on: :hover,
+                          placement: :top_start,
+                          arrow: true,
+                          root_class: "print:hidden") do |popover| %>
+                      <% popover.with_trigger(
+                           unstyled: true,
+                           aria_label: "Booking details for #{row[:guest_name]}",
+                           class: "inline-flex shrink-0 rounded text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring") do %>
+                        <%= app_icon "info", class: "size-3.5", aria: { hidden: true } %>
+                      <% end %>
+                      <dl class="grid w-56 grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-left text-xs font-normal">
+                        <dt class="font-medium text-muted-foreground">Booking ref</dt>
+                        <dd class="font-mono text-foreground"><%= row[:confirmation_token] %></dd>
+                        <dt class="font-medium text-muted-foreground">Room type</dt>
+                        <dd class="text-foreground"><%= row[:room_type] %></dd>
+                        <dt class="font-medium text-muted-foreground">Stay dates</dt>
+                        <dd class="text-foreground"><%= row[:stay_dates] %></dd>
+                      </dl>
+                    <% end %>
                   </div>
                 </th>
-                <td><%= row[:room_type] %></td>
-                <td><%= row[:room_number] %></td>
-                <td><%= row[:stay_dates] %></td>
-                <td>
-                  <%= render PanelsUI::Badge.new(label: row[:boat_time], variant: :neutral, size: :lg, shape: :rounded) %>
-                </td>
+                <td class="whitespace-nowrap"><%= row[:room_number] %></td>
+                <td class="whitespace-nowrap"><%= row[section[:date_key]] %></td>
+                <td class="whitespace-nowrap tabular-nums text-foreground"><%= row[:boat_time] %></td>
               </tr>
             <% end %>
             <% end %>
           <% else %>
-            <%= render "table_empty_state", colspan: 5, message: section[:empty_message] %>
+            <%= render "table_empty_state", colspan: 4, message: section[:empty_message] %>
           <% end %>
         <% end %>
       <% end %>
+
+      <%= render "table_pagination", collection: paged_rows, param_name: page_param %>
     </section>
   <% end %>
 </div>

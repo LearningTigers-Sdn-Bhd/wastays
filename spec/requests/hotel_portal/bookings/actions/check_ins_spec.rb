@@ -69,6 +69,22 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", :business_day, type: 
       expect(response.body).not_to include("offcanvas")
     end
 
+    it "offers the property's boat timetable, and hides the section when boats are off" do
+      hotel.update!(allow_boat_information: true)
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "08:00")
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_out", time: "15:30")
+
+      get hotel_booking_action_check_in_path(hotel, booking), headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      options = Nokogiri::HTML(response.body).css("select[name='check_in[boat_in_time]'] option").map { |option| option["value"] }
+      expect(options).to eq([ "", "08:00" ])
+
+      hotel.update!(allow_boat_information: false)
+      get hotel_booking_action_check_in_path(hotel, booking), headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response.body).not_to include("check_in[boat_in_time]")
+    end
+
     it "renders edit mode in the secondary frame" do
       booking.update_columns(status: "checked_in", checked_in_at: 1.hour.ago)
 
@@ -116,6 +132,36 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", :business_day, type: 
       expect(response.body).to include('action="complete_sheet"', 'target="booking_action_sheet"')
       expect(booking.reload.status).to eq("checked_in")
       expect(flash[:notice]).to eq("Guest checked in successfully.")
+    end
+
+    it "records the boat slots picked at check-in against the stay dates" do
+      hotel.update!(allow_boat_information: true)
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "08:00")
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_out", time: "15:30")
+      guest = create(:booking_guest, booking: booking, guest: create(:guest), is_primary: true)
+
+      post hotel_booking_action_check_in_path(hotel, booking),
+        params: valid_params.deep_merge(check_in: { boat_in_time: "08:00", boat_out_time: "15:30" }),
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+      guest.reload
+      zone = hotel.hotel_time_zone
+      expect(guest.boat_in_at.in_time_zone(zone).strftime("%Y-%m-%d %H:%M"))
+        .to eq("#{booking.check_in.in_time_zone(zone).strftime('%Y-%m-%d')} 08:00")
+      expect(guest.boat_out_at.in_time_zone(zone).strftime("%Y-%m-%d %H:%M"))
+        .to eq("#{booking.check_out.in_time_zone(zone).strftime('%Y-%m-%d')} 15:30")
+    end
+
+    it "ignores forged boat slots when the hotel disables boat information" do
+      hotel.update!(allow_boat_information: false)
+      guest = create(:booking_guest, booking: booking, guest: create(:guest), is_primary: true)
+
+      post hotel_booking_action_check_in_path(hotel, booking),
+        params: valid_params.deep_merge(check_in: { boat_in_time: "08:00" }),
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(booking.reload.status).to eq("checked_in")
+      expect(guest.reload.boat_in_at).to be_nil
     end
 
     it "completes a committed check-in and releases its room lock when notification dispatch fails" do

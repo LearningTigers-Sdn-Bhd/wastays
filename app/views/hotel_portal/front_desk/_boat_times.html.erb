@@ -1,0 +1,10 @@
+<%# locals: (booking:, kind:) %>
+<%# Renders one boat slot for a booking. Callers own the wrapper element, so the
+    same markup works inside a table cell and inside a card. %>
+<% parts = booking_boat_time(booking, kind, current_hotel) %>
+<% if parts.nil? %>
+  <span class="text-muted-foreground">—</span>
+<% else %>
+  <span class="font-semibold tabular-nums text-foreground"><%= parts[:time] %></span>
+  <span class="block text-xs text-muted-foreground"><%= parts[:date] %></span>
+<% end %>

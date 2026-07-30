@@ -2,7 +2,7 @@
 
 module HotelPortal
   class SettingsController < HotelPortal::SettingsBaseController
-    SETTINGS_PAGES = %w[general rates ai notifications banking].freeze
+    SETTINGS_PAGES = %w[general boat rates ai notifications banking].freeze
 
     before_action :set_account
     before_action :set_hotel
@@ -129,6 +129,7 @@ module HotelPortal
     def settings_page_for_form
       case params[:form_id].to_s
       when "hotel_settings" then "general"
+      when "boat_settings" then "boat"
       when "ai_configuration" then "ai"
       when "notification_settings" then "notifications"
       else "general"
@@ -137,6 +138,7 @@ module HotelPortal
 
     def settings_page_path(page)
       case page
+      when "boat" then hotel_boat_settings_path(@hotel)
       when "rates" then hotel_rates_settings_path(@hotel)
       when "ai" then hotel_ai_concierge_settings_path(@hotel)
       when "notifications" then hotel_notification_settings_path(@hotel)

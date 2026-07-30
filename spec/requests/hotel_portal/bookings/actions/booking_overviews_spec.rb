@@ -52,6 +52,32 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       expect(response.body).not_to include("<!DOCTYPE html>")
     end
 
+    it "lists the primary guest's boat slots beside arrival and departure" do
+      boat_in = booking.check_in + 2.hours
+      boat_out = booking.check_out + 3.hours
+      create(:booking_guest, booking: booking, is_primary: true, boat_in_at: boat_in, boat_out_at: boat_out)
+
+      get hotel_booking_action_show_booking_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-summary-sheet")
+      expect(dialog.text).to include("Boat-in", "Boat-out")
+      expect(dialog.text).to include(
+        boat_in.in_time_zone(hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M"),
+        boat_out.in_time_zone(hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M")
+      )
+    end
+
+    it "omits the boat slots when the property does not run transfers" do
+      hotel.update!(allow_boat_information: false)
+
+      get hotel_booking_action_show_booking_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-summary-sheet")
+      expect(dialog.text).not_to include("Boat-in", "Boat-out")
+    end
+
     it "launches Cancel into the secondary frame so it stacks over the summary" do
       role.permissions << manage_bookings
 

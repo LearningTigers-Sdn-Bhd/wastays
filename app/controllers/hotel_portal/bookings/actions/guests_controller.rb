@@ -86,21 +86,21 @@ module HotelPortal
           render_guest_failure
         end
 
+        # Boat slots are picked in the guest details panel and the check-in
+        # flows, never in this sheet, so nothing here touches them.
         def update
           result = if @booking_guest
             ::BookingGuests::UpdateSnapshot.call(
               booking_guest: @booking_guest,
               attributes: guest_params,
               actor: current_user,
-              update_profile: save_scope == "snapshot_and_profile",
-              bibo_attributes: booking_guest_bibo_params
+              update_profile: save_scope == "snapshot_and_profile"
             )
           else
             ::BookingGuests::UpdatePrimary.call(
               booking: @booking,
               attributes: guest_params,
-              actor: current_user,
-              bibo_attributes: booking_guest_bibo_params
+              actor: current_user
             )
           end
 
@@ -160,10 +160,6 @@ module HotelPortal
 
           id = value.to_s.delete_prefix("booking:")
           @booking.group_booking.bookings.where(hotel_id: current_hotel.id).find(id)
-        end
-
-        def booking_guest_bibo_params
-          params.fetch(:booking_guest, ActionController::Parameters.new).permit(:boat_in_at, :boat_out_at)
         end
       end
     end

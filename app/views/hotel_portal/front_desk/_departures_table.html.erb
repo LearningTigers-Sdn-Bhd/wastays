@@ -6,6 +6,7 @@
       <th scope="col">Stay dates</th>
       <th scope="col">Status</th>
       <th scope="col">Rooms</th>
+      <% if show_boat_times?(current_hotel) %><th scope="col">Boat-out</th><% end %>
       <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
     </tr>
   <% end %>
@@ -25,6 +26,7 @@
         <td><%= booking.check_in.strftime("%d %b %Y") %> to <%= booking.check_out.strftime("%d %b %Y") %></td>
         <td><span class="inline-flex rounded-md border px-2 py-1 text-xs font-medium <%= presenter.status_variant_class %>"><%= presenter.status_label_humanized %></span></td>
         <td><%= rooms_summary %></td>
+        <% if show_boat_times?(current_hotel) %><td class="whitespace-nowrap"><%= render "boat_times", booking:, kind: :out %></td><% end %>
         <td class="whitespace-nowrap text-right"><%= render "record_actions", booking:, tab: "departures", split: true %></td>
       </tr>
     <% end %>

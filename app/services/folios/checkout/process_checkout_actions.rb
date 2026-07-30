@@ -9,6 +9,8 @@ module Folios
       PAYMENT_ACTION = "pay_now"
       DIRECT_BILL_ACTION = "direct_bill"
       CLOSE_ACTION = "close"
+      CLOSED_ACTION = "closed"
+      VOIDED_ACTION = "voided"
       BLOCKING_ACTIONS = %w[refund_credit_handling voided].freeze
       EXCEPTION_ACTIONS = %w[keep_open manager_review write_off_approval].freeze
 
@@ -72,13 +74,15 @@ module Folios
 
         pending_direct_bill_amounts = Hash.new(0.to_d)
         folios.each do |folio|
-          params = params_for(folio)
           action = action_for(folio)
           balance = folio.projected_outstanding_balance.to_d
           allowed_actions = allowed_actions_for(folio, balance)
 
           return "#{folio.display_name}: checkout action is required." if action.blank?
           return "#{folio.display_name}: #{action.humanize} is not allowed." unless allowed_actions.include?(action)
+
+          # Already-closed folios are settled history — nothing left to resolve.
+          next if action == CLOSED_ACTION
           return "#{folio.display_name}: refund / credit handling must be completed before checkout." if action == "refund_credit_handling"
           return "#{folio.display_name}: cannot check out while folio is voided." if action == "voided"
 
@@ -172,8 +176,8 @@ module Folios
       end
 
       def allowed_actions_for(folio, balance)
-        return [ "closed" ] if folio.closed?
-        return [ "voided" ] if folio.voided?
+        return [ CLOSED_ACTION ] if folio.closed?
+        return [ VOIDED_ACTION ] if folio.voided?
 
         if guest_folio?(folio)
           return [ PAYMENT_ACTION ] if balance.positive?
@@ -201,6 +205,9 @@ module Folios
       end
 
       def action_for(folio)
+        return CLOSED_ACTION if folio.closed?
+        return VOIDED_ACTION if folio.voided?
+
         if guest_folio?(folio)
           balance = folio.projected_outstanding_balance.to_d
           if balance.positive?

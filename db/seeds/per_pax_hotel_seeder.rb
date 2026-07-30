@@ -29,9 +29,26 @@ hotel.pax_pricing_only = true
 # (see BiboReport / MealPrepReport, both driven entirely by BookingGuest#boat_in_at
 # and #boat_out_at).
 hotel.allow_boat_information = true
-hotel.boat_in_times = %w[08:00 11:00 14:00 16:30]
-hotel.boat_out_times = %w[07:30 10:00 13:00 15:30]
 hotel.save!
+
+# The timetable is rows now, each carrying the meals that slot is entitled to -
+# the kitchen's meal-prep counts read these flags, nothing is derived from the
+# hour any more.
+hotel.hotel_boat_setting || hotel.create_hotel_boat_setting!(breakfast_time: "08:00", lunch_time: "12:00", dinner_time: "19:00")
+{
+  "boat_in" => { "08:00" => %i[breakfast lunch dinner], "11:00" => %i[lunch dinner],
+                 "14:00" => %i[dinner], "16:30" => %i[dinner] },
+  "boat_out" => { "07:30" => %i[breakfast], "10:00" => %i[breakfast],
+                  "13:00" => %i[breakfast lunch], "15:30" => %i[breakfast lunch] }
+}.each do |kind, slots|
+  slots.each do |time, meals|
+    hotel.hotel_boat_schedules.find_or_create_by!(kind: kind, time: time) do |slot|
+      slot.has_breakfast = meals.include?(:breakfast)
+      slot.has_lunch = meals.include?(:lunch)
+      slot.has_dinner = meals.include?(:dinner)
+    end
+  end
+end
 puts "Hotel 'Grand Pax Resort' ready."
 
 # Clean up previous bookings of this hotel to allow clean re-runs. Uses delete_all
@@ -643,8 +660,8 @@ def seed_pax_booking(hotel:, room_type:, rate_plan:, guest:, check_in:, check_ou
   # guests book their transfer slot up front - past, current, and upcoming stays alike.
   primary_guest = booking.booking_guests.first
   if primary_guest
-    boat_in_time = hotel.boat_in_times.sample(random: RNG)
-    boat_out_time = hotel.boat_out_times.sample(random: RNG)
+    boat_in_time = hotel.hotel_boat_schedules.boat_in.active.map(&:time_of_day).sample(random: RNG)
+    boat_out_time = hotel.hotel_boat_schedules.boat_out.active.map(&:time_of_day).sample(random: RNG)
     primary_guest.update_columns(
       boat_in_at: boat_datetime(hotel, effective_check_in, boat_in_time),
       boat_out_at: boat_datetime(hotel, effective_check_out, boat_out_time)

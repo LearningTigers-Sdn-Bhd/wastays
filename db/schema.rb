@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_29_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_29_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -247,7 +247,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_29_100000) do
     t.bigint "user_id"
     t.index ["auditable_type", "auditable_id", "occurred_at"], name: "idx_booking_audit_logs_on_auditable_time"
     t.index ["auditable_type", "auditable_id"], name: "index_booking_audit_logs_on_auditable"
-    t.index ["category", "occurred_at"], name: "idx_booking_audit_logs_on_category_time"
     t.index ["hotel_id", "category", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_category_time"
     t.index ["hotel_id", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_time"
     t.index ["hotel_id"], name: "index_booking_audit_logs_on_hotel_id"
@@ -1077,6 +1076,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_29_100000) do
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
   end
 
+  create_table "hotel_boat_schedules", force: :cascade do |t|
+    t.datetime "archived_at"
+    t.datetime "created_at", null: false
+    t.boolean "has_breakfast", default: false, null: false
+    t.boolean "has_dinner", default: false, null: false
+    t.boolean "has_lunch", default: false, null: false
+    t.bigint "hotel_id", null: false
+    t.string "kind", null: false
+    t.time "time", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "kind", "archived_at"], name: "idx_on_hotel_id_kind_archived_at_a5098ea8b5"
+    t.index ["hotel_id", "kind", "time"], name: "index_hotel_boat_schedules_on_hotel_id_and_kind_and_time", unique: true
+    t.index ["hotel_id"], name: "index_hotel_boat_schedules_on_hotel_id"
+    t.check_constraint "kind::text = ANY (ARRAY['boat_in'::character varying, 'boat_out'::character varying]::text[])", name: "hotel_boat_schedules_kind_check"
+  end
+
+  create_table "hotel_boat_settings", force: :cascade do |t|
+    t.time "breakfast_time"
+    t.datetime "created_at", null: false
+    t.time "dinner_time"
+    t.bigint "hotel_id", null: false
+    t.time "lunch_time"
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_hotel_boat_settings_on_hotel_id", unique: true
+  end
+
   create_table "hotel_business_dates", force: :cascade do |t|
     t.datetime "audit_started_at"
     t.datetime "blocked_at"
@@ -1290,8 +1315,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_29_100000) do
     t.boolean "allow_pax_pricing", default: false, null: false
     t.jsonb "amenities", default: [], null: false
     t.integer "arrival_grace_period", default: 7200, null: false
-    t.jsonb "boat_in_times", default: [], null: false
-    t.jsonb "boat_out_times", default: [], null: false
     t.time "business_ends_at", default: "2000-01-01 02:00:00", null: false
     t.time "business_starts_at", default: "2000-01-01 08:00:00", null: false
     t.string "city"
@@ -2280,6 +2303,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_29_100000) do
   add_foreign_key "guest_registration_cards", "bookings"
   add_foreign_key "guest_registration_cards", "hotels"
   add_foreign_key "guest_registration_note_templates", "hotels"
+  add_foreign_key "hotel_boat_schedules", "hotels"
+  add_foreign_key "hotel_boat_settings", "hotels"
   add_foreign_key "hotel_business_dates", "hotels"
   add_foreign_key "hotel_business_dates", "users", column: "force_closed_by_id", on_delete: :nullify
   add_foreign_key "hotel_corporate_accounts", "accounts", column: "corporate_account_id"

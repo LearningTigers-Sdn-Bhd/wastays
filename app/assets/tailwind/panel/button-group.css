@@ -108,6 +108,23 @@
     border-end-end-radius: 0;
   }
 
+  /* A control hidden with [hidden] still counts for :first-child/:last-child,
+     so without this its neighbour keeps a squared edge joined to nothing --
+     which is what a group holding toggled buttons looks like at rest. Covers a
+     run of up to two hidden controls at the leading edge and one at the
+     trailing edge; deeper runs want a different layout, not more selectors. */
+  .panel-button-group[data-orientation="horizontal"] > [hidden]:first-child + :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text),
+  .panel-button-group[data-orientation="horizontal"] > [hidden]:first-child + [hidden] + :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text) {
+    border-start-start-radius: var(--radius-md);
+    border-end-start-radius: var(--radius-md);
+    margin-inline-start: 0;
+  }
+
+  .panel-button-group[data-orientation="horizontal"] > :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text):has(+ [hidden]:last-child) {
+    border-start-end-radius: var(--radius-md);
+    border-end-end-radius: var(--radius-md);
+  }
+
   /* Vertical groups collapse their shared top edge and preserve the outer radius. */
   .panel-button-group[data-orientation="vertical"] > :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text):not(:first-child),
   .panel-button-group[data-orientation="vertical"] > :is(.panel-select-menu, .dropdown-menu-root, .popover-root):not(:first-child) > :is(.panel-native-select, .panel-select-menu__trigger, .panel-button) {
@@ -123,6 +140,18 @@
   .panel-button-group[data-orientation="vertical"] > :is(.panel-select-menu, .dropdown-menu-root, .popover-root):not(:last-child) > :is(.panel-native-select, .panel-select-menu__trigger, .panel-button) {
     border-end-start-radius: 0;
     border-end-end-radius: 0;
+  }
+
+  .panel-button-group[data-orientation="vertical"] > [hidden]:first-child + :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text),
+  .panel-button-group[data-orientation="vertical"] > [hidden]:first-child + [hidden] + :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text) {
+    border-start-start-radius: var(--radius-md);
+    border-start-end-radius: var(--radius-md);
+    margin-block-start: 0;
+  }
+
+  .panel-button-group[data-orientation="vertical"] > :is(.panel-button, .panel-input, .panel-native-select, .panel-button-group__text):has(+ [hidden]:last-child) {
+    border-end-start-radius: var(--radius-md);
+    border-end-end-radius: var(--radius-md);
   }
 
   .panel-button-group[data-orientation="vertical"] > :is(.panel-select-menu, .dropdown-menu-root, .popover-root),

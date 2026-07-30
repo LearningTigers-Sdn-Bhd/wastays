@@ -40,6 +40,21 @@
   <% end %>
 </section>
 
+<% if boat_schedule.enabled? %>
+  <section aria-labelledby="boat-transfer-heading-<%= booking.id %>" class="space-y-4">
+    <div>
+      <h3 id="boat-transfer-heading-<%= booking.id %>" class="text-base font-semibold">Boat transfer</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Pick the transfer slots this guest is booked on.</p>
+    </div>
+
+    <%= render "hotel_portal/bookings/boat_transfer_fields",
+          form: form,
+          schedule: boat_schedule,
+          boat_in: values[:boat_in_time],
+          boat_out: values[:boat_out_time] %>
+  </section>
+<% end %>
+
 <section aria-labelledby="room-assignments-heading-<%= booking.id %>" class="space-y-4">
   <div>
     <h3 id="room-assignments-heading-<%= booking.id %>" class="text-base font-semibold">Room assignments</h3>

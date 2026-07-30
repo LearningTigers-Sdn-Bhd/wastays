@@ -36,21 +36,12 @@ module HotelPortal
         :ai_provider_enabled, :ai_concierge_tone, :ai_provider_name, :ai_provider_key,
         :business_starts_at, :business_ends_at, :arrival_grace_period_hours, :pax_pricing_only,
         guest_registration_card_fields: [],
-        boat_in_times: [],
-        boat_out_times: [],
+        hotel_boat_setting_attributes: [ :id, :breakfast_time, :lunch_time, :dinner_time ],
         property_policy_attributes: [ :id, :check_in_time, :check_out_time ]
       )
 
       if permitted.key?(:guest_registration_card_fields)
         permitted[:guest_registration_card_fields] = permitted[:guest_registration_card_fields].reject(&:blank?) & GuestRegistrationCard::DISPLAY_FIELDS.keys
-      end
-
-      if permitted.key?(:boat_in_times)
-        permitted[:boat_in_times] = Array(permitted[:boat_in_times]).reject(&:blank?)
-      end
-
-      if permitted.key?(:boat_out_times)
-        permitted[:boat_out_times] = Array(permitted[:boat_out_times]).reject(&:blank?)
       end
 
       permitted

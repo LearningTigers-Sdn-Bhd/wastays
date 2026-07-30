@@ -6,6 +6,11 @@
     border-color: color-mix(in oklab, currentColor 12%, transparent);
   }
 
+  /* The component's own display would otherwise beat the UA [hidden] rule. */
+  .panel-button[hidden] {
+    display: none;
+  }
+
   .panel-button:focus-visible {
     @apply ring-2 ring-ring ring-offset-2;
     --tw-ring-offset-color: var(--background);

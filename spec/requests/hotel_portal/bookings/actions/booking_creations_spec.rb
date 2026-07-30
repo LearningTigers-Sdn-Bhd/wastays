@@ -174,6 +174,22 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
       expect(dialog.text).to include("Walk-in Check-in")
       expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Select room")
     end
+
+    it "offers the property's boat timetable, and hides the section when boats are off" do
+      hotel.update!(allow_boat_information: true)
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "08:00")
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_out", time: "15:30")
+
+      get hotel_booking_action_walk_in_check_in_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      options = Nokogiri::HTML(response.body).css('select[name="booking[boat_out_time]"] option').map { |option| option["value"] }
+      expect(options).to eq([ "", "15:30" ])
+
+      hotel.update!(allow_boat_information: false)
+      get hotel_booking_action_walk_in_check_in_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response.body).not_to include("booking[boat_out_time]")
+    end
   end
 
   describe "POST creation" do
@@ -209,6 +225,29 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", :business_day,
       expect(Booking.last).to be_checked_in
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, Booking.last))
       expect(flash[:notice]).to eq("Walk-in guest checked in successfully.")
+    end
+
+    it "records the boat slots picked while creating a walk-in" do
+      hotel.update!(allow_boat_information: true)
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "08:00")
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_out", time: "15:30")
+
+      post hotel_booking_action_walk_in_check_in_path(hotel),
+        params: { booking: booking_params.merge(boat_in_time: "08:00", boat_out_time: "15:30") }
+
+      guest = Booking.last.booking_guests.find(&:primary?)
+      zone = hotel.hotel_time_zone
+      expect(guest.boat_in_at.in_time_zone(zone).strftime("%Y-%m-%d %H:%M")).to eq("#{Date.current} 08:00")
+      expect(guest.boat_out_at.in_time_zone(zone).strftime("%Y-%m-%d %H:%M")).to eq("#{Date.current + 1.day} 15:30")
+    end
+
+    it "ignores forged boat slots when the hotel disables boat information" do
+      hotel.update!(allow_boat_information: false)
+
+      post hotel_booking_action_walk_in_check_in_path(hotel),
+        params: { booking: booking_params.merge(boat_in_time: "08:00") }
+
+      expect(Booking.last.booking_guests.find(&:primary?).boat_in_at).to be_nil
     end
 
     it "completes the sheet on a Turbo submission" do

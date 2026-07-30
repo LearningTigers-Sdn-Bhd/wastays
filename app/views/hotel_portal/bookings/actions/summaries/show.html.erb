@@ -55,6 +55,10 @@
           <div><dt class="text-xs text-muted-foreground">Group status</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_status_counts.map { |status, count| "#{count} #{HotelPortal::Bookings::WorkspacePresenter::STATUS_LABELS.fetch(status, status.humanize)}" }.to_sentence %></dd></div>
           <div><dt class="text-xs text-muted-foreground">Arrival</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_earliest_arrival %></dd></div>
           <div><dt class="text-xs text-muted-foreground">Departure</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_latest_departure %></dd></div>
+          <% if presenter.boat_transfers? %>
+            <div><dt class="text-xs text-muted-foreground">Boat-in</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.summary_boat_in %></dd></div>
+            <div><dt class="text-xs text-muted-foreground">Boat-out</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.summary_boat_out %></dd></div>
+          <% end %>
           <div><dt class="text-xs text-muted-foreground">Rooms</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= pluralize(presenter.child_bookings.size, "room") %></dd></div>
           <div><dt class="text-xs text-muted-foreground">Guests</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.child_bookings.sum { |child| child.adults.to_i } %> adults, <%= presenter.child_bookings.sum { |child| child.children.to_i } %> children</dd></div>
         </dl>
@@ -70,6 +74,10 @@
           <div><dt class="text-xs text-muted-foreground">Booking date</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= booking.created_at.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M") %></dd></div>
           <div><dt class="text-xs text-muted-foreground">Arrival</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M") %></dd></div>
           <div><dt class="text-xs text-muted-foreground">Departure</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= booking.check_out.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M") %></dd></div>
+          <% if presenter.boat_transfers? %>
+            <div><dt class="text-xs text-muted-foreground">Boat-in</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.summary_boat_in %></dd></div>
+            <div><dt class="text-xs text-muted-foreground">Boat-out</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.summary_boat_out %></dd></div>
+          <% end %>
           <div><dt class="text-xs text-muted-foreground">Room / room type</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.room_summary %></dd></div>
           <div><dt class="text-xs text-muted-foreground">Rate plan</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= booking.booking_rooms.first&.rate_plan&.name.presence || "Standard" %></dd></div>
           <div><dt class="text-xs text-muted-foreground">Guests</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= booking.adults.to_i %> adults, <%= booking.children.to_i %> children</dd></div>
