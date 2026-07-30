@@ -216,10 +216,10 @@ module HotelPortal
         name: "checkout",
         relation: narrow(CheckOutRequest.where(booking_id: hotel_booking_ids), kind: "checkout")
           .where(status: "completed")
-          .where(updated_at: window_range)
+          .where(completed_at: window_range)
           .where("COALESCE(check_out_requests.metadata->>'archived_at', '') = ''")
           .includes(booking: :booking_rooms),
-        sort_column: :updated_at,
+        sort_column: :completed_at,
         builder: ->(request) { completed_checkout_card(request) }
       )
     end
@@ -267,7 +267,7 @@ module HotelPortal
         base = CheckOutRequest.where(booking_id: hotel_booking_ids)
         open_rows = base.open_tasks.where(requested_at: window_range).pluck(:id, :booking_id)
         finished_rows = base.where(status: "completed")
-                            .where(updated_at: window_range)
+                            .where(completed_at: window_range)
                             .where("COALESCE(check_out_requests.metadata->>'archived_at', '') = ''")
                             .pluck(:id, :booking_id)
         open_rows + finished_rows
@@ -392,12 +392,11 @@ module HotelPortal
         title: request.guest_notes.presence || "Checkout requested",
         requested_at: request.requested_at,
         status: request.status,
-        # A checkout has no completed_at of its own to read.
-        completed_at: request.updated_at,
+        completed_at: request.completed_at,
         internal_notes: [],
         archive_url: hotel_archive_request_path(hotel, kind: "checkout", request_id: request.id),
         booking_url: hotel_booking_path(hotel, booking),
-        sort_at: request.updated_at
+        sort_at: request.completed_at
       }
     end
   end

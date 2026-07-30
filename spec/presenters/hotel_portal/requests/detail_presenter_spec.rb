@@ -29,10 +29,11 @@ RSpec.describe HotelPortal::Requests::DetailPresenter do
   end
 
   describe "the columns a checkout does not have" do
-    it "stands in when it was last written for when it finished" do
-      record = create(:check_out_request, booking: booking, status: "completed")
+    it "reads when a checkout finished from its own column" do
+      finished_at = 2.days.ago
+      record = create(:check_out_request, booking: booking, status: "completed", completed_at: finished_at)
 
-      expect(presenter_for(record, "checkout").completed_at).to eq(record.updated_at)
+      expect(presenter_for(record, "checkout").completed_at).to be_within(1.second).of(finished_at)
     end
 
     it "reports no finish for a checkout still open" do

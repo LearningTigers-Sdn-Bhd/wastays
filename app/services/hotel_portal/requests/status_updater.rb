@@ -122,6 +122,9 @@ module HotelPortal
           end
 
           attrs = { status: target_status, metadata: metadata }
+          # Kept the way the other two kinds keep theirs: set when it finishes,
+          # cleared when it is moved back, and never moved once set.
+          attrs[:completed_at] = target_status == "completed" ? (record.completed_at || Time.current) : nil
           attrs[:acknowledged_at] =
             case target_status
             when "assigned", "in_progress"

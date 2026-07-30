@@ -6,8 +6,8 @@ module HotelPortal
     #
     # The sheet serves the board and the archive from the same record, and the
     # three tables behind a request answer the same questions differently: a
-    # checkout keeps no completed_at, no internal notes and no archived_at
-    # column, and only a housekeeping request carries a room number of its own.
+    # checkout keeps no internal notes and no archived_at column, and only a
+    # housekeeping request carries a room number of its own.
     # Answering that here is what lets one sheet replace the two dialogs that
     # described the same request in different words.
     class DetailPresenter
@@ -62,12 +62,8 @@ module HotelPortal
         request.respond_to?(:display_requested_at) ? request.display_requested_at : request.requested_at
       end
 
-      # A checkout has no completed_at of its own; when it was last written is
-      # the closest thing to when it was finished.
       def completed_at
-        return request.completed_at if request.respond_to?(:completed_at)
-
-        request.updated_at if status.to_s == "completed"
+        request.completed_at
       end
 
       def archived_at

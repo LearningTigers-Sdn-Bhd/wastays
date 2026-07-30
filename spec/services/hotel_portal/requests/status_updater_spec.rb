@@ -83,4 +83,34 @@ RSpec.describe HotelPortal::Requests::StatusUpdater do
 
     expect(RoomStatus.find_by(hotel: hotel, room_type: room_type, room_number: "101").status).to eq("cleaning")
   end
+  # A checkout used to keep no record of when it finished, so the board stood
+  # updated_at in for it -- and updated_at moves on any write.
+  describe "recording when a checkout finished" do
+    let(:checkout) { create(:check_out_request, booking: booking, status: "new", completed_at: nil) }
+
+    it "sets completed_at when it completes" do
+      freeze_time do
+        described_class.new(hotel: hotel, kind: :checkout, request_id: checkout.id, status: "completed").call
+
+        expect(checkout.reload.completed_at).to eq(Time.current)
+      end
+    end
+
+    it "leaves an already recorded finish where it is" do
+      finished_at = 3.days.ago.change(usec: 0)
+      checkout.update!(status: "completed", completed_at: finished_at)
+
+      described_class.new(hotel: hotel, kind: :checkout, request_id: checkout.id, status: "completed").call
+
+      expect(checkout.reload.completed_at).to eq(finished_at)
+    end
+
+    it "clears it when the checkout is moved back to open work" do
+      checkout.update!(status: "completed", completed_at: 1.day.ago)
+
+      described_class.new(hotel: hotel, kind: :checkout, request_id: checkout.id, status: "new").call
+
+      expect(checkout.reload.completed_at).to be_nil
+    end
+  end
 end

@@ -74,7 +74,7 @@ module HotelPortal
           guest_name: booking.guest_name,
           title: request.guest_notes.presence || "Checkout requested",
           requested_at: request.requested_at,
-          completed_at: request.acknowledged_at || request.updated_at,
+          completed_at: request.completed_at,
           status: request.status,
           internal_notes: [],
           archived_at: archived_at.presence || request.updated_at,
