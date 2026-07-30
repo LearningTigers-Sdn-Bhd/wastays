@@ -2,15 +2,40 @@
 
 module HotelPortal
   class RequestsBoardPresenter
-    attr_reader :board_columns, :board_counts, :current_hotel, :date_window
+    attr_reader :board_counts, :current_hotel, :date_window, :pages
 
-    def initialize(board_columns:, board_counts:, current_hotel:, view_context:, date_window:, older_open_counts: {})
-      @board_columns = board_columns
+    def initialize(pages:, board_counts:, current_hotel:, view_context:, date_window:, older_open_counts: {})
+      @pages = pages
       @board_counts = board_counts
       @current_hotel = current_hotel
       @view_context = view_context
       @date_window = date_window
       @older_open_counts = older_open_counts
+    end
+
+    def page_for(bucket_key)
+      pages.fetch(bucket_key)
+    end
+
+    def board_columns
+      @board_columns ||= pages.transform_values(&:cards)
+    end
+
+    # A frame is named for the cursor it was asked for, so the page that arrives
+    # replaces the placeholder that asked for it. The first page has no cursor.
+    def column_frame_id(bucket_key, cursor)
+      suffix = cursor ? Digest::SHA256.hexdigest(cursor.to_param).first(12) : "start"
+
+      "requests_column_#{bucket_key}_#{suffix}"
+    end
+
+    # The rest of a column, carrying the filters the column was read under.
+    def column_page_path(bucket_key, cursor)
+      @view_context.hotel_requests_column_path(
+        current_hotel,
+        bucket_key,
+        @view_context.preserved_request_filters.merge(date_window.query_params).merge(cursor: cursor.to_param)
+      )
     end
 
     # Outstanding work the date range is leaving out. The completed column has
@@ -69,8 +94,14 @@ module HotelPortal
       column[:key] == :checkout ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"
     end
 
+    # What a column counts. The completed column counts work that is finished,
+    # so calling those "active" was telling the reader the opposite.
     def column_request_label(column)
-      column[:key] == :checkout ? "pending request" : "active request"
+      case column[:key]
+      when :checkout then "pending request"
+      when :completed then "completed request"
+      else "active request"
+      end
     end
 
     def kind_badge_class(card)
@@ -83,14 +114,6 @@ module HotelPortal
 
     def target_status(card)
       card[:kind] == "housekeeping" ? "completed" : "resolved"
-    end
-
-    def pagination_param_name(bucket_key)
-      :"#{bucket_key}_page"
-    end
-
-    def page_params
-      @view_context.request.query_parameters.except(:housekeeping_page, :complaint_page, :completed_page, :checkout_page)
     end
 
     def card_actionable?(card)

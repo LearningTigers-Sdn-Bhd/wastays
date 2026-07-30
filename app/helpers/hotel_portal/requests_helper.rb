@@ -23,8 +23,8 @@ module HotelPortal
       "#{first.strftime(format)} – #{last.strftime('%-d %b %Y')}"
     end
 
-    private
-
+    # The filters a link has to carry so that moving the window, or reading the
+    # rest of a column, does not quietly drop what else was asked for.
     def preserved_request_filters
       params.permit(*PRESERVED_FILTER_KEYS).to_h.compact_blank.symbolize_keys
     end

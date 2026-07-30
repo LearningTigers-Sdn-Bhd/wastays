@@ -1,0 +1,82 @@
+<%#
+  One card on the board, shared by the first page and every page scrolled after
+  it.
+
+  Locals: card, bucket_key, presenter
+%>
+<% if presenter.card_actionable?(card) %>
+  <article
+    draggable="true"
+    data-requests-board-target="card"
+    data-request-kind="<%= card[:kind] %>"
+    data-request-id="<%= card[:request_id] %>"
+    data-update-url="<%= card[:update_url] %>"
+    data-current-status="<%= card[:status] %>"
+    data-action="dragstart->requests-board#dragStart dragend->requests-board#dragEnd"
+    class="group cursor-grab rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-border-interactive hover:shadow-md active:cursor-grabbing"
+  >
+    <div class="mb-3 flex items-center justify-between">
+      <div class="flex min-w-0 items-center gap-2">
+        <span class="shrink-0 rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= presenter.kind_badge_class(card) %>">
+          <%= card[:kind] %>
+        </span>
+        <span class="truncate font-mono text-[10px] font-bold tracking-tight text-muted-foreground"><%= presenter.card_token_label(card) %></span>
+      </div>
+      <span class="shrink-0 rounded border border-border bg-muted px-2 py-0.5 text-[9px] font-black uppercase text-muted-foreground">
+        <%= card[:status] %>
+      </span>
+    </div>
+
+    <%= link_to presenter.detail_path(card), class: "block w-full text-left", data: { turbo_frame: "requests_action_sheet" } do %>
+      <p class="line-clamp-2 text-sm font-bold leading-snug text-foreground transition-colors group-hover:text-blue-600"><%= card[:title] %></p>
+    <% end %>
+
+    <div class="mt-4 flex items-center justify-between gap-2 border-t border-border pt-3">
+      <div class="flex min-w-0 flex-col">
+        <span class="max-w-[140px] truncate text-xs font-bold text-foreground"><%= card[:guest_name] %></span>
+        <span class="text-[10px] font-medium uppercase tracking-tight text-muted-foreground"><%= presenter.formatted_requested_at(card) %></span>
+      </div>
+      <% if (action = presenter.card_action(card, bucket_key)) %>
+        <div class="flex shrink-0 items-center gap-2">
+          <%= button_to action[:url], params: action[:params], method: :patch, class: action[:css], title: action[:title] do %>
+            <%= cached_icon action[:icon], **(action[:icon_opts] || {}), class: "size-3.5" %>
+            <%= action[:label] %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </article>
+<% else %>
+  <%# Non-actionable card (e.g. checkout without update_url) %>
+  <article class="rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-amber-300 hover:shadow-md">
+    <div class="mb-3 flex items-center justify-between">
+      <div class="flex min-w-0 items-center gap-2">
+        <span class="shrink-0 rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= presenter.kind_badge_class(card) %>">
+          <%= card[:kind] %>
+        </span>
+        <span class="truncate font-mono text-[10px] font-bold tracking-tight text-muted-foreground"><%= presenter.card_token_label(card) %></span>
+      </div>
+      <span class="shrink-0 rounded border border-border bg-muted px-2 py-0.5 text-[9px] font-black uppercase text-muted-foreground"><%= card[:status] %></span>
+    </div>
+
+    <%# Openable like any other card: one sheet serves them all. %>
+    <%= link_to presenter.detail_path(card), class: "mb-4 block w-full text-left", data: { turbo_frame: "requests_action_sheet" } do %>
+      <p class="text-sm font-bold leading-snug text-foreground"><%= card[:title] %></p>
+    <% end %>
+
+    <div class="flex items-center justify-between gap-2 border-t border-border pt-3">
+      <div class="flex min-w-0 flex-col">
+        <span class="max-w-[140px] truncate text-xs font-bold text-foreground"><%= card[:guest_name] %></span>
+        <span class="text-[10px] font-medium uppercase tracking-tight text-muted-foreground"><%= presenter.formatted_requested_at(card) %></span>
+      </div>
+      <% if card[:complete_url].present? %>
+        <div class="flex shrink-0 items-center gap-2">
+          <%= button_to card[:complete_url], method: :patch, class: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all hover:border-emerald-500 hover:bg-emerald-500 hover:text-primary-foreground" do %>
+            <%= cached_icon "check", stroke_width: 3, class: "size-3.5" %>
+            Complete
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </article>
+<% end %>

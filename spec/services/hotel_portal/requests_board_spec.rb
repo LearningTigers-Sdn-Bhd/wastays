@@ -84,6 +84,80 @@ RSpec.describe HotelPortal::RequestsBoard do
     end
   end
 
+  describe 'reading a column a page at a time' do
+    def walk(column, limit:)
+      collected = []
+      cursor = nil
+
+      loop do
+        page = described_class.new(hotel).page(column, cursor: cursor, limit: limit)
+        collected.concat(page.cards.map { |card| [ card[:kind], card[:request_id] ] })
+        cursor = page.next_cursor
+        break if cursor.nil?
+        raise 'paging did not terminate' if collected.size > 500
+      end
+
+      collected
+    end
+
+    it 'stops asking for more once the column is exhausted' do
+      page = described_class.new(hotel).page(:complaint, limit: 25)
+
+      expect(page.cards.size).to eq(1)
+      expect(page).not_to be_more
+      expect(page.next_cursor).to be_nil
+    end
+
+    it 'offers more while there is more' do
+      12.times { create(:complaint_request, booking: booking, status: 'pending', archived_at: nil) }
+
+      page = described_class.new(hotel).page(:complaint, limit: 5)
+
+      expect(page.cards.size).to eq(5)
+      expect(page).to be_more
+    end
+
+    it 'hands out every card exactly once' do
+      12.times { |i| create(:complaint_request, booking: booking, status: 'pending', complaint_details: "Issue #{i}", archived_at: nil) }
+      expected = ComplaintRequest.where(booking: booking).pluck(:id).sort
+
+      collected = walk(:complaint, limit: 5)
+
+      expect(collected.size).to eq(expected.size)
+      expect(collected.uniq.size).to eq(collected.size)
+      expect(collected.map(&:last).sort).to eq(expected)
+    end
+
+    # Three tables feed the completed column. Ids repeat across them, so rows
+    # sharing an instant are exactly where a page boundary loses or repeats one.
+    it 'hands out every card exactly once when three tables share an instant' do
+      finished_at = 2.days.ago.change(usec: 0)
+      6.times { create(:housekeeping_request, booking: booking, status: 'completed', completed_at: finished_at, archived_at: nil) }
+      6.times { create(:complaint_request, booking: booking, status: 'resolved', completed_at: finished_at, archived_at: nil) }
+      6.times { create(:check_out_request, booking: booking, status: 'completed', updated_at: finished_at) }
+
+      collected = walk(:completed, limit: 4)
+
+      expect(collected.uniq.size).to eq(collected.size)
+      expect(collected.size).to eq(described_class.new(hotel).board_counts[:completed])
+    end
+
+    it 'counts the whole column, not the page of it' do
+      12.times { create(:complaint_request, booking: booking, status: 'pending', archived_at: nil) }
+
+      board = described_class.new(hotel)
+
+      expect(board.page(:complaint, limit: 5).cards.size).to eq(5)
+      expect(board.board_counts[:complaint]).to eq(13)
+    end
+
+    it 'starts at the beginning when handed a cursor it cannot read' do
+      first = described_class.new(hotel).page(:complaint, limit: 5)
+
+      expect(described_class.new(hotel).page(:complaint, cursor: nil, limit: 5).cards).to eq(first.cards)
+    end
+  end
+
   describe 'the date window' do
     it 'defaults to the past week' do
       expect(described_class.new(hotel).date_window.days).to eq(7)

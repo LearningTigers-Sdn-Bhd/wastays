@@ -445,6 +445,8 @@ Rails.application.routes.draw do
     get "folio-documents/:folio_id/ledger", to: "folios#ledger", as: :folio_ledger
 
     get "requests", to: "requests#index", as: :requests
+    # The rest of one column, read from a cursor rather than a page number.
+    get "requests/columns/:column", to: "requests#column", as: :requests_column
     get "requests/archive", to: "requests#archive", as: :request_archive
     resources :housekeeping_tasks, only: [ :index ] do
       member do

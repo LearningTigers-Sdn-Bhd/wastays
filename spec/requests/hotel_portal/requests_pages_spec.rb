@@ -77,6 +77,71 @@ RSpec.describe "Hotel portal request pages", type: :request do
     expect(checkout.reload.metadata["archived_at"]).to be_present
   end
 
+  # A column reads itself as somebody scrolls it, so the placeholder that asks
+  # for the next page has to be laid out like the page that replaces it: Turbo
+  # swaps a frame's children and leaves its attributes where they are.
+  describe "reading a column past its first page" do
+    let(:booking) { create(:booking, hotel: hotel, guest_name: "Aisyah") }
+
+    before do
+      (HotelPortal::RequestsBoard::PAGE_SIZE + 3).times do |index|
+        create(:complaint_request, booking: booking, status: "pending", complaint_details: "Issue #{index}")
+      end
+    end
+
+    it "leaves a lazy placeholder asking for the rest" do
+      get hotel_requests_path(hotel)
+      document = Nokogiri::HTML(response.body)
+
+      placeholder = document.css('turbo-frame[loading="lazy"][id^="requests_column_complaint_"]').first
+
+      expect(placeholder).to be_present
+      expect(placeholder["src"]).to be_present
+      expect(placeholder["class"]).to include("gap-3")
+    end
+
+    it "answers the placeholder with the rest of the column, spaced the same way" do
+      get hotel_requests_path(hotel)
+      placeholder = Nokogiri::HTML(response.body).css('turbo-frame[loading="lazy"][id^="requests_column_complaint_"]').first
+
+      get placeholder["src"], headers: { "Turbo-Frame" => placeholder["id"] }
+      document = Nokogiri::HTML(response.body)
+
+      expect(response).to have_http_status(:ok)
+      expect(document.css("turbo-frame##{placeholder['id']}")).to be_present
+      expect(document.css("article").size).to eq(3)
+      # Nothing left to ask for, so no further placeholder.
+      expect(document.css('turbo-frame[loading="lazy"]')).to be_empty
+    end
+
+    it "shows each request once across the two pages" do
+      get hotel_requests_path(hotel)
+      first_page = Nokogiri::HTML(response.body)
+      first_ids = first_page.css('article[data-request-kind="complaint"]').map { |node| node["data-request-id"] }
+      placeholder = first_page.css('turbo-frame[loading="lazy"][id^="requests_column_complaint_"]').first
+
+      get placeholder["src"], headers: { "Turbo-Frame" => placeholder["id"] }
+      second_ids = Nokogiri::HTML(response.body).css("article").map { |node| node["data-request-id"] }
+
+      expect(first_ids.size).to eq(HotelPortal::RequestsBoard::PAGE_SIZE)
+      expect(first_ids & second_ids).to be_empty
+      expect((first_ids + second_ids).uniq.size).to eq(HotelPortal::RequestsBoard::PAGE_SIZE + 3)
+    end
+
+    it "carries the search into the rest of the column" do
+      get hotel_requests_path(hotel, q: "Aisyah")
+      placeholder = Nokogiri::HTML(response.body).css('turbo-frame[loading="lazy"][id^="requests_column_complaint_"]').first
+
+      expect(placeholder["src"]).to include("q=Aisyah")
+    end
+
+    it "refuses a column it does not have" do
+      get hotel_requests_column_path(hotel, "minibar")
+
+      expect(response).to redirect_to(hotel_requests_path(hotel))
+    end
+  end
+
   describe "the date range toolbar" do
     let(:booking) { create(:booking, hotel: hotel, guest_name: "Aisyah") }
 

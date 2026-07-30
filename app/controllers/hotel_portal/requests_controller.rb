@@ -18,22 +18,22 @@ module HotelPortal
 
     def index
       @board = ::HotelPortal::RequestsBoard.new(current_hotel, params)
-      @board_columns = @board.board_columns
-      @board_counts = @board.board_counts
-      @board_columns = {
-        housekeeping: Kaminari.paginate_array(@board_columns[:housekeeping]).page(params[:housekeeping_page]).per(25),
-        complaint: Kaminari.paginate_array(@board_columns[:complaint]).page(params[:complaint_page]).per(25),
-        completed: Kaminari.paginate_array(@board_columns[:completed]).page(params[:completed_page]).per(25),
-        checkout: Kaminari.paginate_array(@board_columns[:checkout]).page(params[:checkout_page]).per(25)
-      }
-      @presenter = ::HotelPortal::RequestsBoardPresenter.new(
-        board_columns: @board_columns,
-        board_counts: @board_counts,
-        current_hotel: current_hotel,
-        view_context: view_context,
-        date_window: @board.date_window,
-        older_open_counts: @board.older_open_counts
-      )
+      @presenter = board_presenter(@board, pages: @board.pages)
+    end
+
+    # The rest of one column, from where it got to. Rendered into the lazy frame
+    # that asked for it rather than as a page of its own.
+    def column
+      column_key = params[:column].to_s.to_sym
+      raise ActiveRecord::RecordNotFound unless ::HotelPortal::RequestsBoard::COLUMNS.include?(column_key)
+
+      @board = ::HotelPortal::RequestsBoard.new(current_hotel, params)
+      @column_key = column_key
+      @cursor = ::HotelPortal::Requests::Cursor.parse(params[:cursor])
+      @page = @board.page(column_key, cursor: @cursor)
+      @presenter = board_presenter(@board, pages: { column_key => @page })
+
+      render :column, layout: false
     end
 
     def archive
@@ -136,6 +136,17 @@ module HotelPortal
     end
 
     private
+
+    def board_presenter(board, pages:)
+      ::HotelPortal::RequestsBoardPresenter.new(
+        pages: pages,
+        board_counts: board.board_counts,
+        current_hotel: current_hotel,
+        view_context: view_context,
+        date_window: board.date_window,
+        older_open_counts: board.older_open_counts
+      )
+    end
 
     def handle_record_not_found
       redirect_target = safe_redirect_target(

@@ -61,10 +61,12 @@
         <% if column[:draggable] %>
           data-action="dragover->requests-board#dragOver dragleave->requests-board#dragLeave drop->requests-board#drop"
         <% end %>
-        class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-muted/40 border-t-4 <%= column[:accent_class] %>"
+        <%# min-w-0: a grid item sizes to its content unless told it may shrink,
+            and one long card title would widen the whole board past the page. %>
+        class="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-muted/40 border-t-4 <%= column[:accent_class] %>"
       >
         <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4 bg-card">
-          <div>
+          <div class="min-w-0">
             <h2 class="text-sm font-bold uppercase tracking-wider text-foreground"><%= column[:label] %></h2>
             <p class="text-[11px] font-medium text-muted-foreground"><%= pluralize(@presenter.board_counts[bucket_key], @presenter.column_request_label(column)) %></p>
             <%# Outstanding work the range leaves out, so narrowing it never hides work silently. %>
@@ -80,7 +82,7 @@
               <% end %>
             <% end %>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex shrink-0 items-center gap-2">
             <span class="inline-flex size-7 items-center justify-center rounded-full <%= @presenter.column_count_badge_class(column) %> text-xs font-black">
               <%= @presenter.board_counts[bucket_key] %>
             </span>
@@ -90,104 +92,25 @@
               type="button"
               draggable="true"
               data-action="dragstart->requests-board#columnDragStart dragend->requests-board#columnDragEnd"
-              class="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-grab"
+              class="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-grab"
             >
               <%= cached_icon "grip-vertical", stroke_width: 3, class: "size-4" %>
             </button>
           <% end %>
         </div>
 
-        <div class="flex-1 min-h-0 space-y-3 overflow-y-auto p-3 custom-scrollbar">
+        <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 custom-scrollbar">
           <% if @presenter.board_columns[bucket_key].any? %>
-            <% @presenter.board_columns[bucket_key].each do |card| %>
-              <% if @presenter.card_actionable?(card) %>
-                <article
-                  draggable="true"
-                  data-requests-board-target="card"
-                  data-request-kind="<%= card[:kind] %>"
-                  data-request-id="<%= card[:request_id] %>"
-                  data-update-url="<%= card[:update_url] %>"
-                  data-current-status="<%= card[:status] %>"
-                  data-action="dragstart->requests-board#dragStart dragend->requests-board#dragEnd"
-                  class="group cursor-grab rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-border-interactive hover:shadow-md active:cursor-grabbing"
-                >
-                  <div class="mb-3 flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= @presenter.kind_badge_class(card) %>">
-                        <%= card[:kind] %>
-                      </span>
-                      <span class="font-mono text-[10px] font-bold tracking-tight text-muted-foreground"><%= @presenter.card_token_label(card) %></span>
-                    </div>
-                    <span class="rounded border border-border bg-muted px-2 py-0.5 text-[9px] font-black uppercase text-muted-foreground">
-                      <%= card[:status] %>
-                    </span>
-                  </div>
-
-                  <%= link_to @presenter.detail_path(card), class: "block w-full text-left", data: { turbo_frame: "requests_action_sheet" } do %>
-                    <p class="line-clamp-2 text-sm font-bold leading-snug text-foreground transition-colors group-hover:text-blue-600"><%= card[:title] %></p>
-                  <% end %>
-
-                  <div class="mt-4 flex items-center justify-between border-t border-border pt-3">
-                    <div class="flex flex-col">
-                      <span class="max-w-[140px] truncate text-xs font-bold text-foreground"><%= card[:guest_name] %></span>
-                      <span class="text-[10px] font-medium uppercase tracking-tight text-muted-foreground"><%= @presenter.formatted_requested_at(card) %></span>
-                    </div>
-                    <% if (action = @presenter.card_action(card, bucket_key)) %>
-                      <div class="flex items-center gap-2">
-                        <%= button_to action[:url], params: action[:params], method: :patch, class: action[:css], title: action[:title] do %>
-                          <%= cached_icon action[:icon], **(action[:icon_opts] || {}), class: "size-3.5" %>
-                          <%= action[:label] %>
-                        <% end %>
-                      </div>
-                    <% end %>
-                  </div>
-                </article>
-
-
-              <% else %>
-                <%# Non-actionable card (e.g. checkout without update_url) %>
-                <article class="rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-amber-300 hover:shadow-md">
-                  <div class="mb-3 flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase <%= @presenter.kind_badge_class(card) %>">
-                        <%= card[:kind] %>
-                      </span>
-                      <span class="font-mono text-[10px] font-bold tracking-tight text-muted-foreground"><%= @presenter.card_token_label(card) %></span>
-                    </div>
-                    <span class="rounded border border-border bg-muted px-2 py-0.5 text-[9px] font-black uppercase text-muted-foreground"><%= card[:status] %></span>
-                  </div>
-
-                  <%# Openable like any other card: one sheet serves them all. %>
-                  <%= link_to @presenter.detail_path(card), class: "mb-4 block w-full text-left", data: { turbo_frame: "requests_action_sheet" } do %>
-                    <p class="text-sm font-bold leading-snug text-foreground"><%= card[:title] %></p>
-                  <% end %>
-
-                  <div class="flex items-center justify-between border-t border-border pt-3">
-                    <div class="flex flex-col">
-                      <span class="max-w-[140px] truncate text-xs font-bold text-foreground"><%= card[:guest_name] %></span>
-                      <span class="text-[10px] font-medium uppercase tracking-tight text-muted-foreground"><%= @presenter.formatted_requested_at(card) %></span>
-                    </div>
-                    <% if card[:complete_url].present? %>
-                      <div class="flex items-center gap-2">
-                        <%= button_to card[:complete_url], method: :patch, class: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all hover:border-emerald-500 hover:bg-emerald-500 hover:text-primary-foreground" do %>
-                          <%= cached_icon "check", stroke_width: 3, class: "size-3.5" %>
-                          Complete
-                        <% end %>
-                      </div>
-                    <% end %>
-                  </div>
-                </article>
-              <% end %>
-            <% end %>
+            <%= render "hotel_portal/requests/column_page",
+                  page: @presenter.page_for(bucket_key),
+                  bucket_key: bucket_key,
+                  presenter: @presenter,
+                  frame_id: @presenter.column_frame_id(bucket_key, nil) %>
           <% else %>
             <div class="flex flex-col items-center justify-center h-40 rounded-2xl border-2 border-dashed border-border bg-card/50">
-              <p class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">No active requests</p>
+              <p class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">No <%= @presenter.column_request_label(column).pluralize %></p>
             </div>
           <% end %>
-        </div>
-
-        <div class="border-t border-border bg-card px-4 py-4 flex justify-center">
-          <%= paginate @presenter.board_columns[bucket_key], param_name: @presenter.pagination_param_name(bucket_key), params: @presenter.page_params %>
         </div>
       </section>
     <% end %>
