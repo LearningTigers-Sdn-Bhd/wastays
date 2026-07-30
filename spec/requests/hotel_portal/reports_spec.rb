@@ -16,6 +16,12 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: slug), enabled: true)
   end
 
+  # The guest cell also holds a hover popover, so read its name from its own slot.
+  def bibo_row_cells(table)
+    row = table.css("tbody tr").first
+    [ row.at_css("[data-slot='bibo-guest-name']").text.strip ] + row.css("td").map { |cell| cell.text.strip }
+  end
+
   def create_grouped_room_bookings(count:, hotel:, booking_attributes:, room_attributes:)
     group = create(:group_booking, hotel: hotel)
 
@@ -230,7 +236,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         "checkout" => { tables: 1, metrics: 4 },
         "registration_cards" => { tables: 1, metrics: 3 },
         "bibo" => { tables: 2, metrics: 0 },
-        "meal_prep" => { tables: 1, metrics: 0 }
+        # The meal tab lands on "All": one table per meal.
+        "meal_prep" => { tables: 3, metrics: 0 }
       }.each do |tab, expected|
         get guest_reports_hotel_reports_path(hotel), params: {
           start_date: start_date.to_s,
@@ -256,6 +263,255 @@ RSpec.describe "HotelPortal::Reports", type: :request do
           )
         end
       end
+    end
+
+    it "shows the boat column on every arrivals-style tab, checkout included" do
+      hotel.update!(allow_boat_information: true)
+
+      { "arrivals" => "Boat arrival", "in_house" => "Boat departure",
+        "departures" => "Boat departure", "checkout" => "Boat departure" }.each do |tab, heading|
+        get guest_reports_hotel_reports_path(hotel), params: {
+          start_date: start_date.to_s, end_date: end_date.to_s, tab: tab
+        }
+
+        headings = Nokogiri::HTML(response.body).css("table thead th").map(&:text).map(&:strip)
+        expect(headings).to include(heading), "expected a #{heading} column on #{tab}"
+      end
+    end
+
+    it "paginates each boat transfer section at 15 on its own param" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      18.times do |index|
+        booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)
+        create(:booking_room, booking: booking, room_number: "10#{index}")
+        create(
+          :booking_guest,
+          booking: booking, guest: create(:guest, name: "Guest #{index}"), is_primary: true,
+          boat_in_at: start_date.beginning_of_day + 7.hours,
+          boat_out_at: end_date.beginning_of_day + 13.hours
+        )
+      end
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo"
+      }
+
+      page = Capybara.string(response.body)
+      boat_ins = page.find("section[aria-labelledby='boat-ins-heading']")
+      expect(boat_ins.all("table tbody tr").size).to eq(15)
+      expect(boat_ins.find("[data-slot='report-pagination'] a", text: "2", match: :first)[:href]).to include("boat_ins_page=2")
+
+      # Paging one leg leaves the other on page one, same as meal prep.
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo", boat_ins_page: 2
+      }
+
+      page = Capybara.string(response.body)
+      expect(page.find("section[aria-labelledby='boat-ins-heading']").all("table tbody tr").size).to eq(3)
+      expect(page.find("section[aria-labelledby='boat-outs-heading']").all("table tbody tr").size).to eq(15)
+    end
+
+    it "shows each boat leg on screen with the same columns its export carries" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)
+      create(:booking_room, booking: booking, room_number: "103")
+      create(
+        :booking_guest,
+        booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true,
+        boat_in_at: start_date.beginning_of_day + 7.hours, boat_out_at: end_date.beginning_of_day + 13.hours
+      )
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo"
+      }
+
+      tables = Nokogiri::HTML(response.body).css("table.panel-table")
+      expect(tables.map { |table| table.css("thead th").map { |th| th.text.strip } }).to eq([
+        [ "Guest name", "Room number", "Arrival Date", "Arrival Time" ],
+        [ "Guest name", "Room number", "Departure Date", "Departure Time" ]
+      ])
+      expect(bibo_row_cells(tables.first)).to eq([ "Boat Guest", "103", start_date.strftime("%d %b %Y"), "07:00 AM" ])
+      expect(bibo_row_cells(tables.last)).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "01:00 PM" ])
+    end
+
+    it "gives boat transfers All, Boat-ins and Boat-outs tabs that narrow the sections" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)
+      create(:booking_room, booking: booking, room_number: "103")
+      create(
+        :booking_guest,
+        booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true,
+        boat_in_at: start_date.beginning_of_day + 7.hours, boat_out_at: end_date.beginning_of_day + 13.hours
+      )
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo"
+      }
+
+      page = Capybara.string(response.body)
+      expect(page.all("#bibo-leg-tabs a").map(&:text).map(&:strip)).to eq([ "All2", "Boat-ins1", "Boat-outs1" ])
+      expect(page.all("section[aria-labelledby$='-heading'] h2").map(&:text)).to eq([ "Boat-ins", "Boat-outs" ])
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo", leg: "boat_outs"
+      }
+
+      page = Capybara.string(response.body)
+      expect(page.all("section[aria-labelledby$='-heading'] h2").map(&:text)).to eq([ "Boat-outs" ])
+      # Counts stay off the unfiltered report, so switching legs never rewrites the tabs.
+      expect(page.all("#bibo-leg-tabs a").map(&:text).map(&:strip)).to eq([ "All2", "Boat-ins1", "Boat-outs1" ])
+    end
+
+    it "carries the selected sub-tab into the exports and the date range form" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "07:00", has_dinner: true)
+      booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)
+      create(:booking_room, booking: booking, room_number: "103")
+      create(
+        :booking_guest,
+        booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true,
+        boat_in_at: start_date.beginning_of_day + 7.hours, boat_out_at: end_date.beginning_of_day + 13.hours
+      )
+
+      { "bibo" => { leg: "boat_outs" }, "meal_prep" => { meal_type: "dinner" } }.each do |tab, sub_tab|
+        get guest_reports_hotel_reports_path(hotel), params: {
+          start_date: start_date.to_s, end_date: end_date.to_s, tab: tab, **sub_tab
+        }
+
+        page = Capybara.string(response.body)
+        param, value = sub_tab.first
+        exports = page.all("#guest-reports-export a", visible: :all)
+        expect(exports.map(&:text).map(&:strip)).to eq([ "Export PDF", "Export Excel", "Export CSV" ])
+        exports.each do |item|
+          expect(item[:href]).to include("#{param}=#{value}")
+        end
+        expect(page.find("#arrivals-date-range-form input[name='#{param}']", visible: :all).value).to eq(value)
+      end
+    end
+
+    it "exports only the selected leg, with that leg's own columns" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)
+      create(:booking_room, booking: booking, room_number: "103")
+      create(
+        :booking_guest,
+        booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true,
+        boat_in_at: start_date.beginning_of_day + 7.hours, boat_out_at: end_date.beginning_of_day + 13.hours
+      )
+
+      get guest_reports_hotel_reports_path(hotel, format: :csv), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo", leg: "boat_outs"
+      }
+
+      expect(response.headers["Content-Disposition"]).to include("guest-reports-bibo-boat-outs")
+      rows = CSV.parse(response.body.delete_prefix("\xEF\xBB\xBF"), headers: true)
+      expect(rows.headers).to eq([ "Guest Name", "Room Number", "Departure Date", "Departure Time" ])
+      expect(rows.count).to eq(1)
+      expect(rows[0].fields).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "01:00 PM" ])
+    end
+
+    it "keeps the booking a guest belongs to behind a hover popover, not in a column" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date)
+      create(:booking_room, booking: booking, room_number: "103")
+      create(
+        :booking_guest,
+        booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true,
+        boat_in_at: start_date.beginning_of_day + 7.hours
+      )
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo"
+      }
+
+      page = Capybara.string(response.body)
+      trigger = page.find("[aria-label='Booking details for Boat Guest']", visible: :all)
+      panel = page.find("##{trigger['aria-controls']}", visible: :all)
+
+      expect(panel).to have_text(booking.confirmation_token)
+      expect(panel).to have_text("Stay dates")
+      # The time column is plain text now, no badge.
+      expect(page.first("table.panel-table tbody td:last-child", visible: :all)).to have_no_css(".panel-badge")
+    end
+
+    it "gives the meal prep All tab one section per meal, paginated at 15" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      # Meals come off the slot a guest is booked on, so the timetable comes first.
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "07:00",
+                                   has_breakfast: true, has_lunch: true, has_dinner: true)
+      18.times do |index|
+        booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date, adults: 1, children: 0)
+        create(:booking_room, booking: booking, room_number: "10#{index}")
+        create(
+          :booking_guest,
+          booking: booking, guest: create(:guest, name: "Guest #{index}"), is_primary: true,
+          boat_in_at: start_date.beginning_of_day + 7.hours
+        )
+      end
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "meal_prep"
+      }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css("#meal-type-tabs a", text: "All")
+      expect(page.all("section[aria-labelledby$='-heading'] h2").map(&:text)).to include("Breakfast", "Lunch", "Dinner")
+
+      breakfast = page.find("section[aria-labelledby='meal-prep-breakfast-heading']")
+      expect(breakfast.all("table tbody tr").size).to eq(15)
+      expect(breakfast.find("[data-slot='report-pagination'] a", text: "2", match: :first)[:href]).to include("breakfast_page=2")
+      # Each section pages on its own param, so one section moving leaves the others put.
+      expect(breakfast).to have_text("Total pax 18")
+
+      transfer_badge = breakfast.first("table tbody tr td .panel-badge")
+      expect(transfer_badge).to have_text("Boat-in")
+      expect(transfer_badge).to have_css("svg")
+    end
+
+    it "keeps a meal prep section on page one while another section is paged" do
+      hotel.update!(allow_boat_information: true, time_zone: "UTC")
+      # Meals come off the slot a guest is booked on, so the timetable comes first.
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "07:00",
+                                   has_breakfast: true, has_lunch: true, has_dinner: true)
+      18.times do |index|
+        booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date, adults: 1, children: 0)
+        create(:booking_room, booking: booking, room_number: "10#{index}")
+        create(
+          :booking_guest,
+          booking: booking, guest: create(:guest, name: "Guest #{index}"), is_primary: true,
+          boat_in_at: start_date.beginning_of_day + 7.hours
+        )
+      end
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "meal_prep", breakfast_page: 2
+      }
+
+      page = Capybara.string(response.body)
+      expect(page.find("section[aria-labelledby='meal-prep-breakfast-heading']").all("table tbody tr").size).to eq(3)
+      expect(page.find("section[aria-labelledby='meal-prep-lunch-heading']").all("table tbody tr").size).to eq(15)
+    end
+
+    it "builds the meal prep report once per page load, not once per badge" do
+      hotel.update!(allow_boat_information: true)
+      allow(HotelPortal::Reports::MealPrepReport).to receive(:new).and_call_original
+
+      get guest_reports_hotel_reports_path(hotel), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "meal_prep"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(HotelPortal::Reports::MealPrepReport).to have_received(:new).once
+    end
+
+    it "keeps the checkout CSV export in step with its on-screen boat column" do
+      hotel.update!(allow_boat_information: true)
+
+      get guest_reports_hotel_reports_path(hotel, format: :csv), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "checkout"
+      }
+
+      expect(response.body.lines.first).to include("Boat-out")
     end
 
     it "keeps guest table screen widths but removes table and wrapper constraints for print" do

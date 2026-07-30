@@ -54,40 +54,22 @@ module HotelPortal::BookingsHelper
     "#{check_in.strftime('%b %-d')} → #{check_out.strftime('%b %-d')}"
   end
 
-  def room_card_boat_time_details(booking, user = nil)
-    primary_bg = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
-    return nil if primary_bg.nil?
+  # Boat slots are stored on the primary guest. Which one a list cares about
+  # depends on where the guest is in their stay: arrivals want the boat landing,
+  # everyone from check-in onward the one leaving.
+  # The hotel is passed in rather than read off the booking: these render one
+  # row per booking, and booking.hotel is not eager-loaded by the list queries.
+  def booking_boat_time(booking, kind, hotel)
+    primary = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
+    time = kind == :in ? primary&.boat_in_at : primary&.boat_out_at
+    return if time.blank?
 
-    timezone = user&.time_zone || booking.hotel.hotel_time_zone
-    checked_in_states = %w[checked_in review_due_out checkout_required completed]
-
-    if checked_in_states.include?(booking.status)
-      if primary_bg.boat_out_at.present?
-        {
-          type: :departure,
-          label: "Boat-out",
-          time_str: primary_bg.boat_out_at.in_time_zone(timezone).strftime("%H:%M"),
-          class: "text-purple-600",
-          title: "Boat-out Time"
-        }
-      end
-    else
-      if primary_bg.boat_in_at.present?
-        {
-          type: :arrival,
-          label: "Boat-in",
-          time_str: primary_bg.boat_in_at.in_time_zone(timezone).strftime("%H:%M"),
-          class: "text-blue-600",
-          title: "Boat-in Time"
-        }
-      end
-    end
+    local = time.in_time_zone(hotel.hotel_time_zone)
+    { time: local.strftime("%H:%M"), date: local.strftime("%d %b") }
   end
 
-  def format_booking_guest_boat_time(time, timezone)
-    return "—" if time.blank?
-
-    time.in_time_zone(timezone).strftime("%d %b %Y, %I:%M %p")
+  def show_boat_times?(hotel)
+    hotel.allow_boat_information?
   end
 
   def guest_display_field(val, default = "—")

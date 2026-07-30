@@ -1,0 +1,11 @@
+<%# locals: (booking:, kind:) %>
+<%# Mirrors the Arrival / Stay / Departure band above it: same muted panel, same
+    label-over-value column. The slot always shows so the band keeps one height
+    whether or not a transfer is booked. %>
+<% parts = booking_boat_time(booking, kind, current_hotel) %>
+<section class="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm" aria-label="Boat transfer">
+  <div class="min-w-0 flex-1">
+    <p class="text-xs font-medium text-muted-foreground"><%= kind == :in ? "Boat-in" : "Boat-out" %></p>
+    <p class="mt-1 truncate"><%= parts ? "#{parts[:time]} · #{parts[:date]}" : "—" %></p>
+  </div>
+</section>

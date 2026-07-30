@@ -5,6 +5,7 @@ module HotelPortal
     PAGE_HEADINGS = {
       "general" => [ "General Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
       "rates" => [ "General Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
+      "boat" => [ "Boat Settings", "Configure the daily boat timetable and the meals each transfer slot carries." ],
       "ai" => [ "AI Concierge", "Configure AI concierge behavior and provider settings." ],
       "notifications" => [ "General Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
       "banking" => [ "Banking Details", "Manage the bank account used for hotel payouts." ]
@@ -157,12 +158,16 @@ module HotelPortal
       hotel.guest_registration_card_fields.presence || GuestRegistrationCard::DISPLAY_FIELDS.keys
     end
 
-    def boat_in_times
-      hotel.boat_in_times || []
+    def boat_setting
+      hotel.hotel_boat_setting || hotel.build_hotel_boat_setting
     end
 
-    def boat_out_times
-      hotel.boat_out_times || []
+    def boat_slots(kind)
+      hotel.hotel_boat_schedules.where(kind: kind).in_service_order
+    end
+
+    def boat_slots_present?
+      hotel.hotel_boat_schedules.active.any?
     end
 
     def default_currency_select_class

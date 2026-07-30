@@ -1,63 +1,93 @@
-<% meal_title = params[:meal_type].present? ? "Meal prep — #{params[:meal_type].titleize}" : "Meal prep" %>
-<section class="space-y-3 print:space-y-3 print:break-inside-avoid" aria-labelledby="meal-prep-heading">
-  <h2 id="meal-prep-heading" class="text-base font-semibold text-foreground">
-    <%= meal_title %>
-  </h2>
+<div class="space-y-5">
+  <% report.sections.each do |section| %>
+    <% heading_id = "meal-prep-#{section[:meal]}-heading" %>
+    <% page_param = "#{section[:meal]}_page" %>
+    <% paged_rows = paginate_report_section(section[:rows], page_param) %>
+    <section class="space-y-3 print:space-y-3 print:break-inside-avoid" aria-labelledby="<%= heading_id %>">
+      <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h2 id="<%= heading_id %>" class="text-base font-semibold text-foreground"><%= section[:title] %></h2>
+        <p class="text-xs font-medium text-muted-foreground">
+          Total pax <span class="tabular-nums text-foreground"><%= section[:total_pax] %></span>
+        </p>
+      </div>
 
-  <%= render PanelsUI::Table.new(
-        caption: meal_title,
-        density: :compact,
-        header_style: :sentence,
-        hoverable: true,
-        class: "min-w-[760px] print:min-w-0 print:w-auto",
-        wrapper_class: "rounded-lg border border-border bg-card print:overflow-visible"
-      ) do |table| %>
-    <% table.with_header do %>
-      <tr>
-        <th scope="col">Guest</th>
-        <th scope="col">Pax</th>
-        <th scope="col">Room type</th>
-        <th scope="col">Room</th>
-        <th scope="col">Transfer</th>
-        <th scope="col">Boat time</th>
-      </tr>
-    <% end %>
-    <% table.with_body do %>
-      <% if report.records.any? %>
-        <% report_rows_grouped_by_month(report.records, date_preset: @date_preset) { |row| row[:boat_time] }.each do |month, rows| %>
-          <% if month %>
-            <tr class="bg-muted/55" data-slot="report-month-group">
-              <th scope="rowgroup" colspan="6" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
-            </tr>
-          <% end %>
-        <% rows.each do |row| %>
+      <%= render PanelsUI::Table.new(
+            caption: "Meal prep — #{section[:title]}",
+            density: :compact,
+            header_style: :sentence,
+            striped: true,
+            hoverable: true,
+            class: "min-w-[760px] print:min-w-0 print:w-auto",
+            wrapper_class: "rounded-lg border border-border bg-card print:overflow-visible"
+          ) do |table| %>
+        <% table.with_header do %>
           <tr>
-            <th scope="row">
-              <div class="min-w-0">
-                <p class="font-semibold text-foreground"><%= row[:guest_name] %></p>
-                <p class="mt-1 font-mono text-xs text-muted-foreground"><%= row[:confirmation_token] %></p>
-              </div>
-            </th>
-            <td class="tabular-nums"><%= row[:pax] %></td>
-            <td><%= row[:room_type] %></td>
-            <td><%= row[:room_number] %></td>
-            <td>
-              <%= render PanelsUI::Badge.new(
-                    label: row[:type],
-                    variant: row[:type] == "Boat-in" ? :info : :warning,
-                    size: :lg,
-                    shape: :rounded
-                  ) %>
-            </td>
-            <td>
-              <%= render PanelsUI::Badge.new(label: row[:formatted_boat_time], variant: :neutral, size: :lg, shape: :rounded) %>
-            </td>
+            <th scope="col">Guest name</th>
+            <th scope="col" class="w-[80px]">Pax</th>
+            <th scope="col" class="w-[140px]">Room number</th>
+            <th scope="col" class="w-[140px]">Transfer</th>
+            <th scope="col" class="w-[150px]">Transfer date</th>
+            <th scope="col" class="w-[140px]">Transfer time</th>
           </tr>
         <% end %>
+        <% table.with_body do %>
+          <% if paged_rows.any? %>
+            <% report_rows_grouped_by_month(paged_rows, date_preset: @date_preset) { |row| row[:boat_time] }.each do |month, rows| %>
+              <% if month %>
+                <tr class="bg-muted/55" data-slot="report-month-group">
+                  <th scope="rowgroup" colspan="6" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
+                </tr>
+              <% end %>
+            <% rows.each do |row| %>
+              <tr>
+                <th scope="row">
+                  <div class="flex items-center gap-1.5">
+                    <p class="font-semibold text-foreground" data-slot="meal-prep-guest-name"><%= row[:guest_name] %></p>
+                    <%= render PanelsUI::Popover.new(
+                          id: "meal-prep-#{section[:meal]}-#{row[:confirmation_token]}-#{row[:type].parameterize}-booking",
+                          trigger_on: :hover,
+                          placement: :top_start,
+                          arrow: true,
+                          root_class: "print:hidden") do |popover| %>
+                      <% popover.with_trigger(
+                           unstyled: true,
+                           aria_label: "Booking details for #{row[:guest_name]}",
+                           class: "inline-flex shrink-0 rounded text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring") do %>
+                        <%= app_icon "info", class: "size-3.5", aria: { hidden: true } %>
+                      <% end %>
+                      <dl class="grid w-56 grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-left text-xs font-normal">
+                        <dt class="font-medium text-muted-foreground">Booking ref</dt>
+                        <dd class="font-mono text-foreground"><%= row[:confirmation_token] %></dd>
+                        <dt class="font-medium text-muted-foreground">Room type</dt>
+                        <dd class="text-foreground"><%= row[:room_type] %></dd>
+                        <dt class="font-medium text-muted-foreground">Meal preps</dt>
+                        <dd class="text-foreground"><%= row[:meals].join(", ").presence || "—" %></dd>
+                      </dl>
+                    <% end %>
+                  </div>
+                </th>
+                <td class="tabular-nums"><%= row[:pax] %></td>
+                <td class="whitespace-nowrap"><%= row[:room_number] %></td>
+                <% transfer = transfer_badge(row[:type]) %>
+                <td>
+                  <%# Fixed width so both directions read as one column, not ragged pills. %>
+                  <%= render PanelsUI::Badge.new(variant: transfer[:variant], size: :md, class: "w-24 justify-start") do %>
+                    <%= app_icon transfer[:icon], class: "size-3.5", aria: { hidden: true } %>
+                    <%= row[:type] %>
+                  <% end %>
+                </td>
+                <td class="whitespace-nowrap"><%= row[:transfer_date] %></td>
+                <td class="whitespace-nowrap tabular-nums text-foreground"><%= row[:formatted_boat_time] %></td>
+              </tr>
+            <% end %>
+            <% end %>
+          <% else %>
+            <%= render "table_empty_state", colspan: 6, message: "No boat transfers or meal records found for the selected period." %>
+          <% end %>
         <% end %>
-      <% else %>
-        <%= render "table_empty_state", colspan: 6, message: "No boat transfers or meal records found for the selected period." %>
       <% end %>
-    <% end %>
+
+      <%= render "table_pagination", collection: paged_rows, param_name: page_param %>
+    </section>
   <% end %>
-</section>
+</div>

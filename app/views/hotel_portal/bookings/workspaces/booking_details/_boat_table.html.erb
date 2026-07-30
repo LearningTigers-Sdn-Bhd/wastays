@@ -1,0 +1,42 @@
+<%# locals: (presenter:) %>
+<%# Only properties that run their own boat see this: the slots come from the
+    property timetable, and a hotel with transfers switched off has none. %>
+<% rows = presenter.boat_transfer_rows %>
+<div>
+  <h3 class="text-base font-semibold text-foreground">Boat Transportation</h3>
+
+  <div class="mt-3">
+    <%= render PanelsUI::Table.new(
+          caption: "Boat Transportation",
+          density: :compact,
+          hoverable: true,
+          bordered: true,
+          wrapper_class: "rounded-md border border-border",
+          class: "min-w-[720px]") do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Booking No.</th>
+          <th scope="col">Primary guest</th>
+          <th scope="col">Boat-in</th>
+          <th scope="col">Boat-out</th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% rows.each do |row| %>
+          <tr>
+            <td>
+              <% if presenter.group_context_enabled? %>
+                <%= link_to row[:booking_number], hotel_booking_workspace_path(current_hotel, row[:booking], tab: "booking_details", scope: "booking"), class: "font-medium tabular-nums underline-offset-4 hover:underline" %>
+              <% else %>
+                <span class="font-medium tabular-nums"><%= row[:booking_number] %></span>
+              <% end %>
+            </td>
+            <td><%= row[:guest] %></td>
+            <td class="whitespace-nowrap tabular-nums"><%= row[:boat_in] %></td>
+            <td class="whitespace-nowrap tabular-nums"><%= row[:boat_out] %></td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+</div>

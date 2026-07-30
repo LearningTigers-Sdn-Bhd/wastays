@@ -1,0 +1,10 @@
+<%# locals: (form:, attribute:, label:, hint:, choices:, current: nil, error: nil) %>
+<%# One boat slot, chosen from the property's timetable. There is no free-form
+    entry: every boat time is a schedule row, so the meals it carries are always
+    known.
+
+    The select is given an explicit value -- this is a virtual field no model
+    declares, so letting it fall back to reading the form object would raise. %>
+<%= render PanelsUI::FormField.new(form:, attribute:, label:, hint:, error:) do |field| %>
+  <% field.with_select_menu(choices, selected: current.to_s) %>
+<% end %>

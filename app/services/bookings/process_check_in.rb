@@ -31,6 +31,7 @@ module Bookings
         @bookings.each do |booking|
           result = transition(booking)
           raise CheckInError, booking_error(booking, result.error) unless result.success?
+          apply_boat_times!(booking)
         end
       end
       committed = true
@@ -157,6 +158,12 @@ module Bookings
         user: @user,
         options: options
       ).call
+    end
+
+    def apply_boat_times!(booking)
+      Boats::AssignTimes.call(booking: booking, params: details_for(booking))
+    rescue ActiveRecord::RecordInvalid => e
+      raise CheckInError, booking_error(booking, e.record.errors.full_messages.to_sentence)
     end
 
     def booking_attributes(booking)

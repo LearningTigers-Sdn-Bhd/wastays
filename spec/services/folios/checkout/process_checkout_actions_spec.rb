@@ -245,4 +245,27 @@ RSpec.describe Folios::Checkout::ProcessCheckoutActions do
     )
     expect(FolioOperationLog.last.metadata["checkout_action"]).to eq("keep_open")
   end
+
+  it "lets checkout proceed when a folio is already closed" do
+    company_folio.update!(status: "closed", closed_at: Time.current)
+
+    result = call_service({
+      guest_folio.id.to_s => { action: "close" },
+      company_folio.id.to_s => { action: "closed" }
+    })
+
+    expect(result).to be_success
+    expect(result.exception_folio_ids).to be_empty
+  end
+
+  it "lets checkout proceed when an already closed folio is a guest folio" do
+    guest_folio.update!(status: "closed", closed_at: Time.current)
+
+    result = call_service({
+      guest_folio.id.to_s => { action: "closed" },
+      company_folio.id.to_s => { action: "close" }
+    })
+
+    expect(result).to be_success
+  end
 end

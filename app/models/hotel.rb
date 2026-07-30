@@ -66,6 +66,9 @@ class Hotel < ApplicationRecord
   has_many :hotel_taxes, dependent: :destroy
   has_many :transaction_codes, dependent: :destroy
   has_one :hotel_transaction_configuration, dependent: :destroy
+  has_one :hotel_boat_setting, dependent: :destroy
+  accepts_nested_attributes_for :hotel_boat_setting
+  has_many :hotel_boat_schedules, dependent: :destroy
   has_many :hotel_counters, dependent: :destroy
   has_many :prospects, dependent: :destroy
   has_many :night_audits, dependent: :destroy

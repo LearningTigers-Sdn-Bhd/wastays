@@ -186,6 +186,20 @@ end %>
                   </div>
                 </section>
 
+                <% if @boat_schedule&.enabled? %>
+                  <section class="space-y-4">
+                    <div>
+                      <h3 class="text-base font-semibold text-foreground">Boat transfer</h3>
+                      <p class="mt-1 text-sm text-muted-foreground">Pick the transfer slots this guest is booked on.</p>
+                    </div>
+                    <%= render "hotel_portal/bookings/boat_transfer_fields",
+                          form: f,
+                          schedule: @boat_schedule,
+                          boat_in: params.dig(:booking, :boat_in_time),
+                          boat_out: params.dig(:booking, :boat_out_time) %>
+                  </section>
+                <% end %>
+
                 <% if quick %>
                   <section>
                     <%= render "hotel_portal/bookings/actions/booking_creations/partials/billing_summary" %>

@@ -42,7 +42,9 @@ module HotelPortal::ReportsHelper
     end
   end
 
-  def guest_report_tabs_data(report, bibo_report, police_report, active_tab, grc_total_count, current_hotel, date_preset)
+  # Every report is passed in already built. Running one here would mean the
+  # tab strip re-querying on every tab just to put a number on a badge.
+  def guest_report_tabs_data(report:, bibo_report:, police_report:, meal_prep_report:, active_tab:, grc_total_count:, current_hotel:, date_preset:)
     tabs = [
       { label: "Arrivals", value: "arrivals", count: report.arrival_count },
       { label: "In-House", value: "in_house", count: report.in_house_count },
@@ -53,14 +55,8 @@ module HotelPortal::ReportsHelper
     ]
 
     if current_hotel.allow_boat_information?
-      tabs << { label: "Boat Transfers", value: "bibo", count: bibo_report ? (bibo_report.boat_in_count + bibo_report.boat_out_count) : 0 }
-
-      meal_prep_count = HotelPortal::Reports::MealPrepReport.new(
-        hotel: current_hotel,
-        start_date: report.start_date,
-        end_date: report.end_date
-      ).call.records.size
-      tabs << { label: "Meal Prep", value: "meal_prep", count: meal_prep_count }
+      tabs << { label: "Boat Transfers", value: "bibo", count: bibo_report ? bibo_report.total_count : 0 }
+      tabs << { label: "Meal Prep", value: "meal_prep", count: meal_prep_report&.records&.size.to_i }
     end
 
     tabs.map do |tab|
@@ -137,12 +133,29 @@ module HotelPortal::ReportsHelper
     end
   end
 
-  def bibo_sections(report)
-    [
-      { title: "Boat-ins", rows: report.boat_ins, empty_message: "No boat-in records found or expected for this selected period." },
-      { title: "Boat-outs", rows: report.boat_outs, empty_message: "No boat-out records found or expected for this selected period." }
-    ]
+  # Sectioned report tables each page on their own param, so paging one section
+  # leaves the others where they were.
+  REPORT_SECTION_PAGE_SIZE = 15
+
+  def paginate_report_section(rows, page_param)
+    Kaminari.paginate_array(rows).page(params[page_param]).per(REPORT_SECTION_PAGE_SIZE)
   end
+
+  # Which way the guest is travelling, so the badge can lead with a direction.
+  TRANSFER_BADGES = {
+    "Boat-in" => { icon: "arrow-down-to-line", variant: :info },
+    "Boat-out" => { icon: "arrow-up-from-line", variant: :warning }
+  }.freeze
+
+  def transfer_badge(type)
+    TRANSFER_BADGES.fetch(type.to_s, { icon: "ship", variant: :neutral })
+  end
+
+  def bibo_sections(report) = report.sections
+
+  BIBO_LEG_LABELS = { "all" => "All", "boat_ins" => "Boat-ins", "boat_outs" => "Boat-outs" }.freeze
+
+  def bibo_leg_label(leg) = BIBO_LEG_LABELS.fetch(leg.to_s, leg.to_s.titleize)
 
   def bibo_row_class(index)
     base = "align-top transition-colors print:bg-white"

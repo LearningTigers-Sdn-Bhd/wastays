@@ -38,7 +38,7 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
       expect(page).to have_link("Notifications", href: hotel_notification_settings_path(hotel))
       expect(page).to have_css("a[aria-current='page']", text: "Notifications")
       expect(page).to have_no_css("[data-controller='panels-ui--tabs']")
-      expect(all("a").map { |link| link.text.squish }).to eq([ "General", "Rate Settings", "Notifications", "Plan & Billing" ])
+      expect(all("a").map { |link| link.text.squish }).to eq([ "General", "Boat Settings", "Rate Settings", "Notifications", "Plan & Billing" ])
     end
 
     visit hotel_ai_concierge_settings_path(hotel)

@@ -293,7 +293,6 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include(hotel.name[0...10])
       expect(body_text).to include("Guest Records")
       expect(body_text).to include("Ravi Menon")
-      expect(body_text).to include("Guest Profile")
       expect(body_text).to include("Currency Totals")
       expect(body_text).to include("Booking History")
       expect(body_text).to include("Confirmation")

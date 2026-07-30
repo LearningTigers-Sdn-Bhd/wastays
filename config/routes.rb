@@ -545,6 +545,12 @@ Rails.application.routes.draw do
     scope "settings" do
       get "general", to: "settings#index", as: :general_settings, defaults: { settings_page: "general" }
       patch "general", to: "settings#update", defaults: { settings_page: "general" }
+      get "general/boat", to: "settings#index", as: :boat_settings, defaults: { settings_page: "boat" }
+      patch "general/boat", to: "settings#update", defaults: { settings_page: "boat" }
+      post "general/boat/slots", to: "boat_schedules#create", as: :boat_schedule_slots
+      patch "general/boat/slots/:id", to: "boat_schedules#update", as: :boat_schedule_slot
+      delete "general/boat/slots/:id", to: "boat_schedules#destroy"
+      patch "general/boat/slots/:id/restore", to: "boat_schedules#restore", as: :boat_schedule_slot_restore
       get "general/rates", to: "settings#index", as: :rates_settings, defaults: { settings_page: "rates" }
       patch "general/rates", to: "settings#update", defaults: { settings_page: "rates" }
       get "general/notifications", to: "settings#index", as: :notification_settings, defaults: { settings_page: "notifications" }

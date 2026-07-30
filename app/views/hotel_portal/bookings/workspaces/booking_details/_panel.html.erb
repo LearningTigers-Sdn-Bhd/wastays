@@ -7,6 +7,9 @@
     <% end %>
 
     <%= render "hotel_portal/bookings/workspaces/booking_details/stay_table", booking: booking, presenter: presenter %>
+    <% if presenter.boat_transfers? %>
+      <%= render "hotel_portal/bookings/workspaces/booking_details/boat_table", presenter: presenter %>
+    <% end %>
     <%= render "hotel_portal/bookings/workspaces/booking_details/financial_table", presenter: presenter %>
     <%= render "hotel_portal/bookings/workspaces/booking_details/references_table", presenter: presenter %>
   </section>

@@ -1,0 +1,78 @@
+<%# The meal-times form and each slot form are siblings, never nested: a form
+    inside a form is invalid HTML and the inner one silently never submits. %>
+<div class="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2">
+  <% if @presenter.settings_errors.any? && params[:form_id] == "boat_settings" %>
+    <div class="lg:col-span-2">
+      <%= render PanelsUI::Alert.new(
+            tone: :destructive,
+            title: pluralize(@presenter.settings_errors.count, "error") + " prevented these settings from being saved",
+            role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 ps-5">
+            <% @presenter.settings_errors.each do |message| %><li><%= message %></li><% end %>
+          </ul>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <section aria-labelledby="meal-times-heading" class="lg:col-span-2">
+    <div>
+      <h2 id="meal-times-heading" class="text-base font-semibold text-foreground">Meal Service Times</h2>
+      <p class="mt-2 text-sm text-muted-foreground">
+        Used to pre-tick the meals on a new boat slot. Each slot keeps its own meals once saved, so changing these never alters existing slots or past reports.
+      </p>
+    </div>
+
+    <%= form_with model: @hotel,
+                  url: hotel_boat_settings_path(@hotel),
+                  method: :patch,
+                  local: true,
+                  class: "mt-4" do |f| %>
+      <%= hidden_field_tag :form_id, "boat_settings" %>
+      <%= f.fields_for :hotel_boat_setting, @presenter.boat_setting do |boat_form| %>
+        <div class="grid items-start gap-4 sm:grid-cols-3">
+          <% { breakfast_time: "Breakfast", lunch_time: "Lunch", dinner_time: "Dinner" }.each do |attribute, label| %>
+            <%= render PanelsUI::FormField.new(form: boat_form, attribute: attribute, label: label) do |field| %>
+              <% field.with_time_picker(value: @presenter.boat_setting.public_send(attribute)&.strftime("%H:%M").to_s, minute_step: 5) %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+      <div class="mt-4 flex justify-end">
+        <%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Save meal times<% end %>
+      </div>
+    <% end %>
+  </section>
+
+  <% { "boat_in" => "Boat Arrival (Boat-in)", "boat_out" => "Boat Departure (Boat-out)" }.each do |kind, heading| %>
+    <section aria-labelledby="<%= kind %>-heading" data-controller="boat-slots">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 id="<%= kind %>-heading" class="text-base font-semibold text-foreground"><%= heading %></h2>
+          <p class="mt-2 text-sm text-muted-foreground">
+            <%= kind == "boat_in" ? "Slots offered when recording a guest's arrival transfer." : "Slots offered when recording a guest's departure transfer." %>
+          </p>
+        </div>
+        <%= render PanelsUI::Button.new(
+              as: :button, type: :button, variant: :neutral, size: :sm,
+              class: "shrink-0",
+              data: { boat_slots_target: "trigger", action: "boat-slots#add" }) do %>
+          <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %> Add slot
+        <% end %>
+      </div>
+
+      <ul class="mt-4 space-y-2">
+        <%= render "hotel_portal/settings/boat_slot",
+              hotel: @hotel, slot: HotelBoatSchedule.new(kind: kind), kind: kind, new_record: true %>
+        <% @presenter.boat_slots(kind).each do |slot| %>
+          <%= render "hotel_portal/settings/boat_slot", hotel: @hotel, slot: slot, kind: kind %>
+        <% end %>
+      </ul>
+
+      <% if @presenter.boat_slots(kind).none? %>
+        <p class="mt-3 text-sm text-muted-foreground">No slots yet. Guests cannot be given a <%= kind == "boat_in" ? "boat-in" : "boat-out" %> until one is added.</p>
+      <% end %>
+    </section>
+  <% end %>
+</div>

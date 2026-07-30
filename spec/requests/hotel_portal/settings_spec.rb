@@ -360,19 +360,121 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(hotel.reload.guest_registration_card_fields).to eq(%w[phone room_type check_in])
     end
 
-    it "updates daily boat schedules" do
+    it "renders the Boat Settings tab with its slots and meal times" do
       hotel.update!(allow_boat_information: true)
-      patch hotel_general_settings_path(hotel), params: {
-        form_id: "hotel_settings",
-        hotel: {
-          boat_in_times: [ "09:30", "12:00", "" ],
-          boat_out_times: [ "11:00", "15:30", "" ]
-        }
+      create(:hotel_boat_setting, hotel: hotel)
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30", has_lunch: true)
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_out", time: "16:45", has_breakfast: true)
+
+      get hotel_boat_settings_path(hotel)
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("h1, h2").text).to include("Boat Settings")
+      expect(document.text).to include("Meal Service Times", "Boat Arrival (Boat-in)", "Boat Departure (Boat-out)")
+      expect(document.at_css("[data-testid='settings-tabs']").text).to include("Boat Settings")
+      expect(response.body).to include("09:30", "16:45")
+    end
+
+    it "hides Save until a slot changes, keeps the new-slot card collapsed, and wires each button to its own form" do
+      hotel.update!(allow_boat_information: true)
+      slot = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
+
+      get hotel_boat_settings_path(hotel)
+
+      document = Nokogiri::HTML(response.body)
+      row = document.at_css("li[data-controller='boat-slot']:not([hidden])")
+
+      # Save and Discard are hidden on the buttons themselves -- no wrapper, so
+      # they stay direct children of the group -- and the row's Stimulus
+      # controller reveals both once the row differs from what was saved.
+      save = row.at_css("button[data-boat-slot-target='save']")
+      expect(save["hidden"]).not_to be_nil
+      expect(save["form"]).to eq("boat-slot-#{slot.id}")
+
+      # Discard resets the edit form rather than submitting anything, which is
+      # the only way out of a dirty row that is not Save.
+      discard = row.at_css("button[data-boat-slot-target='discard']")
+      expect(discard["hidden"]).not_to be_nil
+      expect(discard["type"]).to eq("button")
+      expect(discard["data-action"]).to eq("boat-slot#discard")
+      expect(row.at_css("form[data-boat-slot-target='form']")["id"]).to eq("boat-slot-#{slot.id}")
+
+      # Retire submits its own form, so the two live in one button group
+      # without nesting a form inside a form.
+      retire = row.at_css("button[form='boat-slot-#{slot.id}-state']")
+      expect(retire).to be_present
+      expect(retire["aria-label"]).to eq("Retire slot 09:30")
+      state_form = document.at_css("form#boat-slot-#{slot.id}-state")
+      expect(state_form.at_css("input[name='_method']")["value"]).to eq("delete")
+
+      # All three are icon-only direct children of one group -- a wrapper would
+      # drop out of the selectors that join their corners -- and neither
+      # secondary button falls back to the primary variant that an unknown
+      # variant name silently produces.
+      group = row.at_css(".panel-button-group")
+      expect(group.css("> button").size).to eq(3)
+      expect(group.css("button").map { |button| button.text.squish }).to all(be_empty)
+      expect(retire["data-variant"]).to eq("neutral")
+      expect(discard["data-variant"]).to eq("neutral")
+
+      # The Add trigger sits in the section header, and its card starts hidden.
+      section = document.at_css("section[data-controller='boat-slots']")
+      expect(section.at_css("[data-boat-slots-target='trigger']").text).to include("Add slot")
+      expect(section.at_css("li[data-boat-slots-target='card']")["hidden"]).not_to be_nil
+    end
+
+    it "saves meal service times on the Boat Settings tab" do
+      hotel.update!(allow_boat_information: true)
+
+      patch hotel_boat_settings_path(hotel), params: {
+        form_id: "boat_settings",
+        hotel: { hotel_boat_setting_attributes: { breakfast_time: "08:00", lunch_time: "12:00", dinner_time: "19:00" } }
       }
 
-      expect(response).to redirect_to(hotel_general_settings_path(hotel))
-      expect(hotel.reload.boat_in_times).to eq([ "09:30", "12:00" ])
-      expect(hotel.boat_out_times).to eq([ "11:00", "15:30" ])
+      expect(response).to redirect_to(hotel_boat_settings_path(hotel))
+      expect(hotel.reload.hotel_boat_setting.breakfast_time.strftime("%H:%M")).to eq("08:00")
+      expect(hotel.hotel_boat_setting.dinner_time.strftime("%H:%M")).to eq("19:00")
+    end
+
+    it "adds a slot, pre-ticking its meals from the property's service times" do
+      hotel.update!(allow_boat_information: true)
+      create(:hotel_boat_setting, hotel: hotel, breakfast_time: "08:00", lunch_time: "12:00", dinner_time: "19:00")
+
+      post hotel_boat_schedule_slots_path(hotel), params: {
+        hotel_boat_schedule: { kind: "boat_in", time: "09:30" }
+      }
+
+      slot = hotel.hotel_boat_schedules.find_by(kind: "boat_in", time: "09:30")
+      # 09:30 lands after breakfast is served but before lunch and dinner.
+      expect(slot.meals).to eq(%i[lunch dinner])
+    end
+
+    it "retires a slot rather than destroying it, so booked guests keep it" do
+      hotel.update!(allow_boat_information: true)
+      slot = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
+
+      delete hotel_boat_schedule_slot_path(hotel, slot)
+
+      expect(hotel.hotel_boat_schedules.count).to eq(1)
+      expect(slot.reload).to be_archived
+      expect(Boats::Schedule.new(hotel.reload).in_times).to be_empty
+
+      patch hotel_boat_schedule_slot_restore_path(hotel, slot)
+      expect(slot.reload).not_to be_archived
+    end
+
+    it "rejects a duplicate slot at the same time and kind" do
+      hotel.update!(allow_boat_information: true)
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
+
+      expect {
+        post hotel_boat_schedule_slots_path(hotel), params: {
+          hotel_boat_schedule: { kind: "boat_in", time: "09:30" }
+        }
+      }.not_to change(HotelBoatSchedule, :count)
+
+      expect(flash[:alert]).to include("already has a slot at this time")
     end
 
     it "discards unknown guest registration card fields and allows none" do

@@ -616,23 +616,25 @@ module HotelPortal
       }
     end
 
-    # The range picker carries both boat times in one "start/end" field, while the
-    # record keeps two columns. Returns "" rather than "/" when neither is set, so
-    # the picker shows its placeholder instead of an empty range.
-    def guest_details_boat_range
-      bg = @booking_guest_form || selected_booking_guest
-      return "" unless bg
-
-      tz = hotel.hotel_time_zone.presence || Time.zone.name
-      bounds = [ bg.boat_in_at, bg.boat_out_at ].map { |time| time&.in_time_zone(tz)&.strftime("%Y-%m-%dT%H:%M") }
-      return "" if bounds.none?
-
-      bounds.join("/")
+    def boat_schedule
+      @boat_schedule ||= ::Boats::Schedule.new(hotel)
     end
 
-    # The record validates the two columns, so the combined field has to be told
-    # about their errors or an invalid range would only appear in the summary.
-    def guest_details_boat_range_error
+    # The form works in slots, the record in timestamps. Both selects show the
+    # property's local time-of-day so a stored time reads back as the slot it
+    # was picked from.
+    def guest_details_boat_in_time
+      boat_time_of_day(:boat_in_at)
+    end
+
+    def guest_details_boat_out_time
+      boat_time_of_day(:boat_out_at)
+    end
+
+    # The record validates the two columns against each other, so the boat-out
+    # field has to be told about their errors or an out-of-order pair would only
+    # appear in the summary.
+    def guest_details_boat_error
       record = guest_details_booking_guest_form
       return unless record.respond_to?(:errors)
 
@@ -641,6 +643,13 @@ module HotelPortal
 
     def guest_details_booking_guest_form
       @booking_guest_form || selected_booking_guest
+    end
+
+    def boat_time_of_day(column)
+      record = guest_details_booking_guest_form
+      return unless record
+
+      ::Boats::Schedule.time_of_day(hotel: hotel, timestamp: record.public_send(column))
     end
 
     def guest_details_errors
@@ -859,6 +868,39 @@ module HotelPortal
 
     def stay_rows_total_balance
       money(group_context_enabled? ? group_total_balance : total_balance)
+    end
+
+    # Reading stored slots does not need a timetable, unlike picking one, so this
+    # follows the property switch rather than Schedule#enabled?.
+    def boat_transfers?
+      hotel.allow_boat_information?
+    end
+
+    # One row per booking for the Overview boat table, matching the stay table above
+    # it. Boat slots are stored on the primary guest, so that is the guest the row
+    # reads its two times from.
+    def boat_transfer_rows
+      child_bookings.map do |child|
+        booking_guest = child.booking_guests.find(&:primary?) || child.booking_guests.first
+        {
+          booking: child,
+          booking_number: child_booking_number(child),
+          guest: booking_guest&.name_snapshot.presence || booking_guest&.guest&.name.presence || child.guest_name,
+          boat_in: time_label(booking_guest&.boat_in_at),
+          boat_out: time_label(booking_guest&.boat_out_at)
+        }
+      end
+    end
+
+    # The action sheet lists the two boat slots beside arrival and departure, so they
+    # share that pair's format. A group collapses to the earliest boat-in and the
+    # latest boat-out across its rooms, the way its arrival and departure already do.
+    def summary_boat_in
+      format_summary_time(primary_guest_boat_times(:boat_in_at).min)
+    end
+
+    def summary_boat_out
+      format_summary_time(primary_guest_boat_times(:boat_out_at).max)
     end
 
     # One row per billing identity, not per folio and not per booking. Folios are resolved to
@@ -1708,6 +1750,15 @@ module HotelPortal
       booking.booking_guests.find(&:is_primary?)
     end
 
+    # Falls back to the first guest the same way boat_transfer_rows does, so a booking
+    # whose primary flag was never set still reports its slots.
+    def primary_guest_boat_times(column)
+      child_bookings.filter_map do |child|
+        booking_guest = child.booking_guests.find(&:primary?) || child.booking_guests.first
+        booking_guest&.public_send(column)
+      end
+    end
+
     def group_summary_action(key, label, tone, offcanvas_variant, icon, eligible_statuses)
       target = child_bookings.find { |child| child.status.in?(eligible_statuses) }
       return unless target
@@ -1989,7 +2040,8 @@ module HotelPortal
         "company" => "Company",
         "government" => "Government",
         "travel_agent" => "Travel agency",
-        "airline" => "Airline"
+        "airline" => "Airline",
+        "salesperson" => "Salesperson"
       }.fetch(account_type, "Corporate Account")
     end
 

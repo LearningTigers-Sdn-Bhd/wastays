@@ -43,13 +43,6 @@
 
   <%# Gallery Section (Primary Visuals) %>
   <div id="hotel-gallery-top" class="max-w-[85rem] mx-auto px-4 py-6 sm:px-6 lg:px-8">
-    <% if @hotel.pax_pricing_only? %>
-      <div class="flex flex-wrap items-center gap-3 mb-2">
-        <span class="inline-flex items-center gap-x-1.5 py-1 px-3 rounded-full text-[10px] font-black bg-indigo-50 border border-indigo-100 text-indigo-700 shadow-sm uppercase tracking-wider">
-          Per Pax Pricing Only
-        </span>
-      </div>
-    <% end %>
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[420px]">
       <div class="md:col-span-2 md:row-span-2 aspect-[2/1] md:aspect-auto rounded-2xl overflow-hidden shadow-lg group cursor-pointer" 
            data-action="click->gallery-toggle#show">
