@@ -9,54 +9,14 @@ module HotelPortal
 
     def index
       @staff_members = HotelPortal::ActiveHousekeepersQuery.new(hotel: current_hotel).call
-
-      @selected_date = Date.current
-      if params[:date].present?
-        begin
-          @selected_date = Date.parse(params[:date].to_s)
-        rescue ArgumentError, TypeError
-          # fallback to Date.current
-        end
-      end
-
-      @room_groups = HousekeepingTasks::BoardBuilder.new(
-        hotel: current_hotel,
-        date: @selected_date,
-        params: params
-      ).call
+      @selected_date = selected_date
+      @room_groups = board
 
       respond_to do |format|
-        format.html do
-          @room_groups = @room_groups.map do |group|
-            {
-              room_type: group[:room_type],
-              rooms: group[:rooms].map { |room| HousekeepingTaskRoomPresenter.new(room, current_hotel) }
-            }
-          end
-        end
-        format.pdf do
-          send_data ::Reports::HousekeepingTasksPdfGenerator.new(
-            hotel: current_hotel,
-            room_groups: @room_groups,
-            selected_date: @selected_date
-          ).call,
-          filename: "housekeeping-tasks-#{@selected_date}.pdf",
-          type: "application/pdf"
-        end
-        format.xlsx do
-          send_data ::Reports::HousekeepingTasksExcelGenerator.new(
-            hotel: current_hotel,
-            room_groups: @room_groups,
-            selected_date: @selected_date
-          ).call,
-          filename: "housekeeping-tasks-#{@selected_date}.xlsx",
-          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        end
-        format.csv do
-          send_data ::Reports::HousekeepingTasksCsvGenerator.new(room_groups: @room_groups).call,
-            filename: "housekeeping-tasks-#{@selected_date}.csv",
-            type: "text/csv; charset=utf-8"
-        end
+        format.html { @room_groups = presented(@room_groups) }
+        format.pdf { send_pdf }
+        format.xlsx { send_excel }
+        format.csv { send_csv }
       end
     end
 
@@ -101,6 +61,55 @@ module HotelPortal
     end
 
     private
+
+    # A board is always for some date, and a date nobody can read is today.
+    def selected_date
+      Date.parse(params[:date].to_s)
+    rescue ArgumentError, TypeError
+      Date.current
+    end
+
+    def board
+      HousekeepingTasks::BoardBuilder.new(
+        hotel: current_hotel,
+        date: @selected_date,
+        query: params[:q],
+        assigned_to: params[:assigned_to],
+        room_status: params[:room_status]
+      ).call
+    end
+
+    # Only the page needs presenters; the exports read the board itself.
+    def presented(room_groups)
+      room_groups.map do |group|
+        {
+          room_type: group[:room_type],
+          rooms: group[:rooms].map { |room| HousekeepingTaskRoomPresenter.new(room, current_hotel) }
+        }
+      end
+    end
+
+    def send_pdf
+      send_data ::Reports::HousekeepingTasksPdfGenerator.new(
+        hotel: current_hotel, room_groups: @room_groups, selected_date: @selected_date
+      ).call, filename: export_filename("pdf"), type: "application/pdf"
+    end
+
+    def send_excel
+      send_data ::Reports::HousekeepingTasksExcelGenerator.new(
+        hotel: current_hotel, room_groups: @room_groups, selected_date: @selected_date
+      ).call, filename: export_filename("xlsx"),
+              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    end
+
+    def send_csv
+      send_data ::Reports::HousekeepingTasksCsvGenerator.new(room_groups: @room_groups).call,
+        filename: export_filename("csv"), type: "text/csv; charset=utf-8"
+    end
+
+    def export_filename(extension)
+      "housekeeping-tasks-#{@selected_date}.#{extension}"
+    end
 
     # The board itself is readable by anyone who works housekeeping. Who may
     # assign whom is enforced further in, by HousekeepingTasks::AssignStaff.

@@ -8,10 +8,15 @@ module HousekeepingTasks
 
     EMPTY = [].freeze
 
-    def initialize(hotel:, date:, params: {})
+    # The board is a hotel's rooms on one date, narrowed by what the filter bar
+    # asked for. Those are values, not a request: the caller reads them off the
+    # params, this builds a board out of them.
+    def initialize(hotel:, date:, query: nil, assigned_to: nil, room_status: nil)
       @hotel = hotel
       @date = date
-      @params = params
+      @query = query.presence&.to_s&.downcase
+      @assigned_to_id = assigned_to.presence&.to_i
+      @room_status = room_status.presence&.to_s
     end
 
     def call
@@ -215,41 +220,48 @@ module HousekeepingTasks
 
     # -- Filtering -----------------------------------------------------------
 
-    # Rooms are entries in RoomType#room_numbers, not rows in a table, so
-    # there is nothing to filter in SQL here.
+    # Rooms are entries in RoomType#room_numbers, not rows in a table, so there
+    # is nothing to filter in SQL here. Every filter answers the same question of
+    # one room -- keep it or not -- so they are asked together, once, and a room
+    # type drops out when nothing of it is left. A new filter is a new predicate.
     def filter_room_groups(room_groups)
-      if @params[:assigned_to].present?
-        assigned_to_id = @params[:assigned_to].to_i
-        room_groups.each do |group|
-          group[:rooms].select! do |r|
-            r[:hk_requests].any? { |req| req.metadata&.dig("assigned_to") == assigned_to_id }
-          end
-        end
-        room_groups.select! { |group| group[:rooms].any? }
-      end
+      predicates = [ assigned_to_predicate, room_status_predicate, query_predicate ].compact
+      return room_groups if predicates.empty?
 
-      if @params[:room_status].present?
-        status_val = @params[:room_status].to_s
-        room_groups.each do |group|
-          group[:rooms].select! { |r| r[:resolved_status] == status_val }
-        end
-        room_groups.select! { |group| group[:rooms].any? }
+      room_groups.filter_map do |group|
+        rooms = group[:rooms].select { |room| predicates.all? { |predicate| predicate.call(group, room) } }
+        { room_type: group[:room_type], rooms: rooms } if rooms.any?
       end
+    end
 
-      if @params[:q].present?
-        q = @params[:q].downcase
-        room_groups.each do |group|
-          group[:rooms].select! do |r|
-            r[:room_number].to_s.downcase.include?(q) ||
-              group[:room_type].name.downcase.include?(q) ||
-              (r[:active_booking] && (r[:active_booking].guest_name.to_s.downcase.include?(q) || r[:active_booking].confirmation_token.to_s.downcase.include?(q))) ||
-              (r[:hk_requests] && r[:hk_requests].any? { |hk| hk.request_details.to_s.downcase.include?(q) })
-          end
-        end
-        room_groups.select! { |group| group[:rooms].any? }
+    def assigned_to_predicate
+      return if @assigned_to_id.nil?
+
+      ->(_group, room) { room[:hk_requests].any? { |task| task.assigned_to_id == @assigned_to_id } }
+    end
+
+    def room_status_predicate
+      return if @room_status.nil?
+
+      ->(_group, room) { room[:resolved_status] == @room_status }
+    end
+
+    # Anything on the row a person might recognise the room by.
+    def query_predicate
+      return if @query.nil?
+
+      lambda do |group, room|
+        booking = room[:active_booking]
+
+        matches?(room[:room_number]) ||
+          matches?(group[:room_type]&.name) ||
+          (booking && (matches?(booking.guest_name) || matches?(booking.confirmation_token))) ||
+          room[:hk_requests].any? { |task| matches?(task.request_details) }
       end
+    end
 
-      room_groups
+    def matches?(value)
+      value.to_s.downcase.include?(@query)
     end
 
     # -- Row construction ----------------------------------------------------

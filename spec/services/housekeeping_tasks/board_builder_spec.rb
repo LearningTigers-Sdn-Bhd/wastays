@@ -102,4 +102,62 @@ RSpec.describe HousekeepingTasks::BoardBuilder do
       expect(tasks_for("Executive Penthouse")).to contain_exactly("Towels", "Minibar")
     end
   end
+
+  describe "narrowing the board" do
+    def room_types_on(**filters)
+      described_class.new(hotel:, date: Date.current, **filters).call.map { |group| group[:room_type].name }
+    end
+
+    it "keeps every room type when nothing was asked for" do
+      expect(room_types_on).to contain_exactly("Executive Penthouse", "Garden Prestige Suite")
+    end
+
+    it "keeps only the rooms holding the named housekeeper's work" do
+      staff = create(:user, account:)
+      request = task_on(penthouse, details: "Towels")
+      request.update!(metadata: { "assigned_to" => staff.id, "assigned_to_name" => staff.name })
+      task_on(garden_suite, details: "Somebody else's towels")
+
+      expect(room_types_on(assigned_to: staff.id.to_s)).to contain_exactly("Executive Penthouse")
+    end
+
+    it "keeps only the rooms in the named condition" do
+      create(:room_status, hotel:, room_type: penthouse, room_number: "101", status: "dirty")
+
+      expect(room_types_on(room_status: "dirty")).to contain_exactly("Executive Penthouse")
+      expect(room_types_on(room_status: "cleaning")).to be_empty
+    end
+
+    it "searches the room type, the task note and the guest, case-insensitively" do
+      booking = create(:booking, hotel:, guest_name: "Ada Lovelace", confirmation_token: "WS-ADA1", status: "checked_in")
+      create(:booking_room, booking:, room_type: penthouse, room_number: "101")
+      create(:housekeeping_request, booking:, hotel:, room_number: "101", status: "new", request_details: "Extra pillows", requested_at: Time.current)
+
+      expect(room_types_on(query: "penthouse")).to contain_exactly("Executive Penthouse")
+      expect(room_types_on(query: "PILLOWS")).to contain_exactly("Executive Penthouse")
+      expect(room_types_on(query: "ada lovelace")).to contain_exactly("Executive Penthouse")
+      expect(room_types_on(query: "ws-ada1")).to contain_exactly("Executive Penthouse")
+      expect(room_types_on(query: "101")).to contain_exactly("Executive Penthouse", "Garden Prestige Suite")
+      expect(room_types_on(query: "nothing here")).to be_empty
+    end
+
+    it "asks every filter of the same room, not each of a different one" do
+      staff = create(:user, account:)
+      request = task_on(penthouse, details: "Towels")
+      request.update!(metadata: { "assigned_to" => staff.id })
+      create(:room_status, hotel:, room_type: garden_suite, room_number: "101", status: "dirty")
+
+      # The penthouse holds their work but is not dirty; the garden suite is
+      # dirty but holds nobody's work. Neither room answers both.
+      expect(room_types_on(assigned_to: staff.id.to_s, room_status: "dirty")).to be_empty
+    end
+
+    it "treats a blank filter as no filter at all" do
+      task_on(penthouse, details: "Towels")
+
+      expect(room_types_on(query: "", assigned_to: "", room_status: "")).to contain_exactly(
+        "Executive Penthouse", "Garden Prestige Suite"
+      )
+    end
+  end
 end
