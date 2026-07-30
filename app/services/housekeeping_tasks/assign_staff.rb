@@ -33,12 +33,7 @@ module HousekeepingTasks
     private
 
     def housekeeping_request_in_this_hotel
-      HousekeepingRequest.left_joins(:booking)
-                         .where(
-                           "housekeeping_requests.hotel_id = :hotel_id OR (housekeeping_requests.hotel_id IS NULL AND bookings.hotel_id = :hotel_id)",
-                           hotel_id: @hotel.id
-                         )
-                         .find(@request_id)
+      HousekeepingRequest.in_hotel(@hotel).find(@request_id)
     end
 
     # A record handed straight in has not been through the finder above, so its
@@ -115,11 +110,8 @@ module HousekeepingTasks
     def active_housekeeping_requests(room_number)
       return [] if room_number.blank?
 
-      request_ids = HousekeepingRequest.left_joins(booking: :booking_rooms)
-                                       .where(
-                                         "housekeeping_requests.hotel_id = :hotel_id OR (housekeeping_requests.hotel_id IS NULL AND bookings.hotel_id = :hotel_id)",
-                                         hotel_id: @hotel.id
-                                       )
+      request_ids = HousekeepingRequest.in_hotel(@hotel)
+                                       .left_joins(booking: :booking_rooms)
                                        .where(
                                          "housekeeping_requests.room_number = :room_number OR (housekeeping_requests.room_number IS NULL AND booking_rooms.room_number = :room_number)",
                                          room_number: room_number

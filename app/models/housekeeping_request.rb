@@ -23,6 +23,11 @@ class HousekeepingRequest < ApplicationRecord
   scope :archived, -> { where.not(archived_at: nil) }
   scope :open_tasks, -> { active.where.not(status: CLOSED_STATUSES) }
 
+  # A request belongs to a hotel by its own column when it has one, and
+  # otherwise by the booking it hangs off. Written as a subquery rather than a
+  # join so it composes with callers that join for their own reasons.
+  scope :in_hotel, ->(hotel) { where(hotel_id: hotel.id).or(where(hotel_id: nil, booking_id: hotel.bookings.select(:id))) }
+
   def open_task?
     !archived? && !status.in?(CLOSED_STATUSES)
   end

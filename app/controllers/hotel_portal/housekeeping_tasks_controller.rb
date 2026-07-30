@@ -3,6 +3,7 @@
 module HotelPortal
   class HousekeepingTasksController < BaseController
     include HousekeepingBoardFilters
+    include HousekeepingTaskAuthorization
 
     before_action :authorize_housekeeping_board!
     before_action -> { require_feature!("task_assignment_minibar_log") }
@@ -39,6 +40,8 @@ module HotelPortal
     # route onto the same updater, gated on managing requests, which is a
     # different job done by different people.
     def update_status
+      authorize_advance!(HousekeepingRequest.in_hotel(current_hotel).find(params[:id]))
+
       updater = ::HotelPortal::Requests::StatusUpdater.new(
         hotel: current_hotel,
         kind: :housekeeping,
@@ -122,15 +125,5 @@ module HotelPortal
                 current_user.has_permission?("dispatch_housekeeping_tasks", hotel: current_hotel)
       raise Pundit::NotAuthorizedError unless allowed
     end
-
-    # Dispatchers hand work to anyone, so they get the staff menu; performers can
-    # only take and release their own, so they get a single Take/Release button.
-    # AssignStaff enforces this regardless -- this only picks the affordance.
-    def dispatch_housekeeping?
-      return @dispatch_housekeeping if defined?(@dispatch_housekeeping)
-
-      @dispatch_housekeeping = current_user.has_permission?("dispatch_housekeeping_tasks", hotel: current_hotel)
-    end
-    helper_method :dispatch_housekeeping?
   end
 end

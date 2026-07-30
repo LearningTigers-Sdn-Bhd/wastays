@@ -695,4 +695,75 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       expect(req.reload.status).to eq("in_progress")
     end
   end
+
+  # A performer does the work; a dispatcher runs the floor. So a housekeeper may
+  # move their own task along and nobody else's, which is the line AssignStaff
+  # already draws around taking and releasing.
+  describe "who may move a task along" do
+    def perform_only!
+      role.role_permissions.destroy_all
+      permission = Permission.find_or_create_by!(slug: "perform_housekeeping_tasks") { |record| record.name = "Perform Housekeeping Tasks" }
+      RolePermission.create!(role: role, permission: permission)
+    end
+
+    def task_held_by(holder)
+      booking = create(:booking, hotel: hotel, status: "checked_in")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      create(:housekeeping_request, booking: booking, hotel: hotel, room_number: "101", status: "assigned",
+                                    request_details: "Clean it",
+                                    metadata: { "assigned_to" => holder.id, "assigned_to_name" => holder.name })
+    end
+
+    let(:colleague) { create(:user, account: account, name: "Alex Tan") }
+
+    it "refuses a housekeeper the work a colleague holds, and does not offer it either" do
+      perform_only!
+      req = task_held_by(colleague)
+
+      get hotel_housekeeping_tasks_path(hotel)
+      expect(response.body).not_to include(status_hotel_housekeeping_task_path(hotel, req))
+      expect(response.body).to include("Assigned") # the task's status, as plain text
+
+      patch status_hotel_housekeeping_task_path(hotel, req), params: { status: "in_progress" }
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+      expect(req.reload.status).to eq("assigned")
+    end
+
+    it "lets a dispatcher move anybody's task along" do
+      req = task_held_by(colleague)
+
+      patch status_hotel_housekeeping_task_path(hotel, req), params: { status: "in_progress" }
+
+      expect(response).to redirect_to(hotel_housekeeping_tasks_path(hotel))
+      expect(req.reload.status).to eq("in_progress")
+    end
+
+    it "holds a housekeeper to the same line on a checkout cleaning" do
+      perform_only!
+      booking = create(:booking, hotel: hotel, status: "checkout_required")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      request = create(:check_out_request, booking: booking, status: "assigned", requested_at: Time.current,
+                                           metadata: { "room_number" => "101", "assigned_to" => colleague.id,
+                                                       "assigned_to_name" => colleague.name })
+
+      patch hotel_checkout_request_status_path(hotel, request), params: { status: "in_progress" }
+
+      expect(response).to redirect_to(root_path)
+      expect(request.reload.status).to eq("assigned")
+    end
+
+    it "still lets a housekeeper move work nobody holds, which is how they take it on" do
+      perform_only!
+      booking = create(:booking, hotel: hotel, status: "checked_in")
+      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
+      req = create(:housekeeping_request, booking: booking, hotel: hotel, room_number: "101", status: "new")
+
+      patch status_hotel_housekeeping_task_path(hotel, req), params: { status: "in_progress" }
+
+      expect(response).to redirect_to(hotel_housekeeping_tasks_path(hotel))
+      expect(req.reload.status).to eq("in_progress")
+    end
+  end
 end

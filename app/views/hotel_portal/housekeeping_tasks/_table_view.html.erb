@@ -252,6 +252,10 @@
                               started or completed once someone holds it.
                             </p>
                           <% end %>
+                        <% elsif !dispatch_housekeeping? && !task.held_by?(current_user) %>
+                          <%# A performer works their own tasks. A colleague's reads as its %>
+                          <%# status rather than offering a button the server would refuse. %>
+                          <span class="text-sm text-muted-foreground"><%= task.fallback_status_label %></span>
                         <% else %>
                           <%# A room is only completed once it has actually been cleaned, so %>
                           <%# the button stays visible and goes disabled rather than %>

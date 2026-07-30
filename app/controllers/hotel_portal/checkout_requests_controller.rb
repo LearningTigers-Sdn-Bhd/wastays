@@ -3,6 +3,7 @@
 module HotelPortal
   class CheckoutRequestsController < HotelPortal::BaseController
     include HousekeepingBoardFilters
+    include HousekeepingTaskAuthorization
 
     before_action :authorize_manage_checkout_requests!
     before_action :set_checkout_request
@@ -41,6 +42,8 @@ module HotelPortal
     end
 
     def update_status
+      authorize_advance!(@checkout_request)
+
       updater = ::HotelPortal::Requests::StatusUpdater.new(
         hotel: current_hotel,
         kind: :checkout,
