@@ -101,8 +101,10 @@
           <% if @presenter.board_columns[bucket_key].any? %>
             <% @presenter.board_columns[bucket_key].each do |card| %>
               <% if @presenter.card_actionable?(card) %>
+                <%# The card and its dialog share one controller element: a target
+                    outside it is a target Stimulus cannot find. %>
+                <div data-controller="request-dialog">
                 <article
-                  data-controller="request-dialog"
                   draggable="true"
                   data-requests-board-target="card"
                   data-request-kind="<%= card[:kind] %>"
@@ -214,6 +216,7 @@
                     </div>
                   </div>
                 </dialog>
+                </div>
 
               <% else %>
                 <%# Non-actionable card (e.g. checkout without update_url) %>
