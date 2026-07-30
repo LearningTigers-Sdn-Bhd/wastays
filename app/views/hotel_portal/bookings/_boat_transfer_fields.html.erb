@@ -1,21 +1,39 @@
-<%# locals: (form:, schedule:, boat_in: nil, boat_out: nil, error: nil) %>
+<%# locals: (form:, schedule:, boat_in: nil, boat_out: nil, boat_in_date: nil, boat_out_date: nil, error: nil) %>
 <%# Staff pick a slot from the property's timetable; the calendar day comes from
     the stay itself, so boat-in lands on the check-in date and boat-out leaves
-    on the check-out date. %>
+    on the check-out date.
+
+    Where the stay dates are already known they are shown read-only beside each
+    slot -- one row per leg -- so staff read the day and the time together. Forms
+    that do not have the dates yet (booking creation) pass none and fall back to
+    the hint text. %>
+<% dated = boat_in_date.present? || boat_out_date.present? %>
 <div class="grid gap-4 sm:grid-cols-2">
+  <% if dated %>
+    <%= render PanelsUI::FormField.new(form:, attribute: :boat_in_date, label: "Boat-in date", readonly: true) do |field| %>
+      <% field.with_input(value: boat_in_date) %>
+    <% end %>
+  <% end %>
+
   <%= render "hotel_portal/bookings/boat_transfer_field",
         form: form,
         attribute: :boat_in_time,
         label: "Boat-in",
-        hint: "Arrives on the check-in date.",
+        hint: (dated ? nil : "Arrives on the check-in date."),
         choices: schedule.in_choices(current: boat_in),
         current: boat_in %>
+
+  <% if dated %>
+    <%= render PanelsUI::FormField.new(form:, attribute: :boat_out_date, label: "Boat-out date", readonly: true) do |field| %>
+      <% field.with_input(value: boat_out_date) %>
+    <% end %>
+  <% end %>
 
   <%= render "hotel_portal/bookings/boat_transfer_field",
         form: form,
         attribute: :boat_out_time,
         label: "Boat-out",
-        hint: "Departs on the check-out date.",
+        hint: (dated ? nil : "Departs on the check-out date."),
         choices: schedule.out_choices(current: boat_out),
         current: boat_out,
         error: error %>
