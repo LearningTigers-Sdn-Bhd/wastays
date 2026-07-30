@@ -100,6 +100,7 @@ RSpec.describe HotelPortal::AccountsReceivable::CorporateAccountsPresenter do
       expect(tabs["government"][:count]).to eq(1)
       expect(tabs["travel_agent"][:count]).to eq(1)
       expect(tabs["airline"][:count]).to eq(0)
+      expect(tabs["salesperson"][:count]).to eq(0)
     end
 
     it "narrows counts by the active search but not by the selected tab" do

@@ -967,7 +967,8 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
         "company" => "Company",
         "government" => "Government",
         "travel_agent" => "Travel agency",
-        "airline" => "Airline"
+        "airline" => "Airline",
+        "salesperson" => "Salesperson"
       }
 
       expected_labels.each do |account_type, label|
@@ -1121,7 +1122,8 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
         "company" => "Company",
         "government" => "Government",
         "travel_agent" => "Travel agency",
-        "airline" => "Airline"
+        "airline" => "Airline",
+        "salesperson" => "Salesperson"
       }
 
       parties = expected_labels.map do |account_type, _label|
