@@ -104,7 +104,11 @@
         <div class="flex items-center gap-x-2">
           <h1 class="text-xl font-bold text-foreground"><%= @presenter.name %></h1>
           <% if @guest.vip? %>
-            <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-5 text-amber-500 fill-amber-500 shrink-0" %>
+            <%= render PanelsUI::Tooltip.new(text: "VIP guest", delay: 150) do %>
+              <span class="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="VIP guest">
+                <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-5 text-amber-500 fill-amber-500 shrink-0", aria: { hidden: "true" }, focusable: "false" %>
+              </span>
+            <% end %>
           <% end %>
           <% if @guest.blacklisted_at?(current_hotel) %>
             <div class="relative size-5 flex items-center justify-center shrink-0">
@@ -113,10 +117,13 @@
             </div>
           <% end %>
           <% if @guest.repeat? %>
-            <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-5 text-blue-500 shrink-0" %>
+            <%= render PanelsUI::Tooltip.new(text: "Repeat guest", delay: 150) do %>
+              <span class="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="Repeat guest">
+                <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-5 text-blue-500 shrink-0", aria: { hidden: "true" }, focusable: "false" %>
+              </span>
+            <% end %>
           <% end %>
         </div>
-        <p class="text-xs uppercase tracking-widest text-muted-foreground">Guest Profile</p>
         <% if (detail = @guest.blacklist_detail(current_hotel)).present? %>
           <p class="mt-1 text-xs text-rose-700">
             Blacklisted by <span class="font-semibold"><%= detail["blacklisted_by_name"] %></span>
