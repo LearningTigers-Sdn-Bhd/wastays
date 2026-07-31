@@ -354,6 +354,7 @@ Rails.application.routes.draw do
 
       resources :refund_requests, only: [ :new, :create ]
       resource :guest_registration_card, only: [ :show, :update, :destroy ], module: :bookings
+      resource :guest_registration_card_pdf, only: [ :show ], module: :bookings
       resources :guest_registration_note_templates, only: [ :index, :new, :create, :edit, :update, :destroy ], module: :bookings
       resource :reservation_voucher, only: [ :show ], module: :bookings
       resource :tourism_tax_voucher, only: [ :show ], module: :bookings do
