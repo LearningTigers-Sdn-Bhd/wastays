@@ -155,7 +155,11 @@ module HotelPortal
     # sent back are the ones the operator is actually looking at rather than an
     # unfiltered board.
     def board_filters
-      params.permit(*::HotelPortal::RequestsHelper::PRESERVED_FILTER_KEYS, :date, :days).to_h.symbolize_keys
+      params.permit(
+        *::HotelPortal::RequestsHelper::PRESERVED_FILTER_KEYS,
+        :date, :days,
+        **::HotelPortal::RequestsHelper::PRESERVED_ARRAY_FILTER_KEYS
+      ).to_h.symbolize_keys
     end
 
     def board_path_with_filters
@@ -169,7 +173,7 @@ module HotelPortal
         current_hotel: current_hotel,
         view_context: view_context,
         date_window: board.date_window,
-        older_open_counts: board.older_open_counts
+        selected_lanes: Array(params[:lanes])
       )
     end
 

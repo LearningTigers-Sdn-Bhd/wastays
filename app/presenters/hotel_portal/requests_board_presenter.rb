@@ -4,13 +4,17 @@ module HotelPortal
   class RequestsBoardPresenter
     attr_reader :board_counts, :current_hotel, :date_window, :pages
 
-    def initialize(pages:, board_counts:, current_hotel:, view_context:, date_window:, older_open_counts: {})
+    def initialize(pages:, board_counts:, current_hotel:, view_context:, date_window:, selected_lanes: [])
       @pages = pages
       @board_counts = board_counts
       @current_hotel = current_hotel
       @view_context = view_context
       @date_window = date_window
-      @older_open_counts = older_open_counts
+      # Only lanes that exist. These reach the toolbar's toggle group, which
+      # refuses a selected value it has no item for -- so a hand-edited `lanes`
+      # in the query string would otherwise take the page down rather than being
+      # ignored the way the board already ignores it.
+      @selected_lanes = Array(selected_lanes).map(&:to_s) & Requests::Column.keys.map(&:to_s)
     end
 
     def page_for(bucket_key)
@@ -38,24 +42,6 @@ module HotelPortal
       )
     end
 
-    # Outstanding work the date range is leaving out. The completed column has
-    # none by definition: what it shows has already been finished.
-    def older_open_count(bucket_key)
-      @older_open_counts[bucket_key].to_i
-    end
-
-    def older_open?(bucket_key)
-      older_open_count(bucket_key).positive?
-    end
-
-    def widenable?
-      !date_window.widest?
-    end
-
-    def widen_path
-      @view_context.requests_board_path_for(date_window.widest)
-    end
-
     def window_label
       @view_context.request_window_label(date_window)
     end
@@ -81,7 +67,26 @@ module HotelPortal
       @view_context.requests_board_path_for(date_window.at_today)
     end
 
-    def columns = Requests::Column.all
+    # The lanes drawn on the board: the ones switched on, or all of them.
+    def columns
+      @columns ||= Requests::Column.all.select { |column| pages.key?(column.key) }
+    end
+
+    # Every lane, for the control that switches them. It names them all whichever
+    # ones are showing, or a lane switched off could never be switched back on.
+    def lane_options = Requests::Column.all
+
+    def selected_lanes = @selected_lanes
+
+    def lane_selected?(column) = @selected_lanes.include?(column.key.to_s)
+
+    def lane_count(column)
+      board_counts[column.key].to_i
+    end
+
+    def lane_count_label(column)
+      @view_context.abbreviated_count(lane_count(column))
+    end
 
     # Where a card is dropped, and what the board calls that column.
     def move_path(column)

@@ -41,7 +41,7 @@ RSpec.describe HotelPortal::Requests::DateWindow do
     end
 
     it "refuses a range it does not offer" do
-      expect(window(days: 3).days).to eq(described_class::DEFAULT_DAYS)
+      expect(window(days: 14).days).to eq(described_class::DEFAULT_DAYS)
       expect(window(days: "everything").days).to eq(described_class::DEFAULT_DAYS)
     end
 
@@ -80,26 +80,18 @@ RSpec.describe HotelPortal::Requests::DateWindow do
     end
 
     it "steps forward by its own range" do
-      subject = window(anchor_date: "2026-07-31", days: 14).next
+      subject = window(anchor_date: "2026-07-31", days: 5).next
 
-      expect(subject.anchor_date).to eq(Date.new(2026, 8, 14))
-      expect(subject.days).to eq(14)
+      expect(subject.anchor_date).to eq(Date.new(2026, 8, 5))
+      expect(subject.days).to eq(5)
     end
 
     it "returns to where it started" do
-      subject = window(anchor_date: "2026-07-31", days: 21)
+      subject = window(anchor_date: "2026-07-31", days: 3)
 
       expect(subject.previous.next.anchor_date).to eq(subject.anchor_date)
     end
 
-    it "widens without moving the anchor" do
-      subject = window(anchor_date: "2026-07-31", days: 7)
-
-      expect(subject).not_to be_widest
-      expect(subject.widest.days).to eq(30)
-      expect(subject.widest.anchor_date).to eq(subject.anchor_date)
-      expect(subject.widest).to be_widest
-    end
 
     it "leaves the window it stepped from alone" do
       subject = window(anchor_date: "2026-07-31", days: 7)
@@ -139,8 +131,8 @@ RSpec.describe HotelPortal::Requests::DateWindow do
   end
 
   it "travels in a link as its anchor and its range" do
-    subject = window(anchor_date: "2026-07-31", days: 14)
+    subject = window(anchor_date: "2026-07-31", days: 5)
 
-    expect(subject.query_params).to eq(date: "2026-07-31", days: 14)
+    expect(subject.query_params).to eq(date: "2026-07-31", days: 5)
   end
 end

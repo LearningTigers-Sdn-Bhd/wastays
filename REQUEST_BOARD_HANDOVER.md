@@ -1,6 +1,7 @@
 # Requests board — handover
 
-Branch: `refactor/frontdesk`, `a0de0b9a`..`HEAD`.
+Branch: `refactor/frontdesk`, `a0de0b9a` through `a81082cf`, plus the current
+working-tree changes.
 Scope: the hotel portal Requests board (`/hotel/:id/requests`), its archive, and
 the sheet they share.
 
@@ -26,8 +27,10 @@ Five lanes over **three unrelated tables**, joined at runtime by a `kind` string
 
 Lanes, in the order the board opens with: **Housekeeping**, **Complaints**,
 **Checkout Requests**, **Recently Completed**, **Archived**. That order is
-declared once, by `Requests::Column`; `RequestsBoard::COLUMNS` and the header
-count pills both read from it rather than repeating it.
+declared once, by `Requests::Column`; `RequestsBoard::COLUMNS` and the toolbar
+toggles both read from it rather than repeating it. Each lane can be switched
+off. A lane switched off is not paged or rendered, but its count is still read
+so the toolbar can say what will reappear if it is switched back on.
 
 The archive is a lane, and only a lane. It had a page of its own
 (`/hotel/:id/requests/archive`) until that page was retired: both were bounded by
@@ -83,7 +86,7 @@ what a lane will accept; `Card#record_kind` is the table. Anything reaching the
 record — a URL, `Finder`, `Move`, the `dom_id` — takes `record_kind`. Building a
 URL from the badge sends a housekeeping id to `check_out_requests`, which is
 exactly how every action on a cleaning card came to raise `RecordNotFound`.
-`card_reachability_spec.rb` pins this per lane; three of its examples fail if
+`card_reachability_spec.rb` pins this per lane; five of its examples fail if
 `record_kind` falls back to `kind`.
 
 **Scope a housekeeping request through `HousekeepingRequest.in_hotel`, never
@@ -117,13 +120,17 @@ lazy placeholder in `_column_page.html.erb` therefore carries the layout classes
 scroll inside themselves, and the lazy placeholder then only comes into view on a
 scroll a phone user has no reason to make. This has already regressed once.
 
-**The date window anchors on the wall clock, not the business date.** It looks
-*backward*, so anchoring on a business date waiting on a night audit would end
-the window before the requests arriving now.
+**The date window governs only Recently Completed and Archived.** Open work is
+unbounded: staff clear it by acting on it, and bounding it by time made old work
+unreachable. The offered ranges are **1, 3, 5 and 7 days**. It anchors on the
+wall clock, not the business date, and looks *backward*, so anchoring on a
+business date waiting on a night audit would end the window before work finished
+or archived now.
 
-**The window compares timestamps in the hotel's zone.** `requested_at` and
-`completed_at` are `datetime`; comparing against a bare `Date` compares against
-midnight UTC and moves the boundary for every non-UTC hotel.
+**The window compares timestamps in the hotel's zone.** `completed_at` and
+`archived_at` are `datetime`; comparing them against a bare `Date` compares
+against midnight UTC and moves the boundary for every non-UTC hotel. Archived
+checkouts use `updated_at` instead, because that table has no `archived_at`.
 
 **A completed checkout must have `completed_at`.** Otherwise it cannot be placed
 in the window and does not appear at all.
@@ -159,6 +166,10 @@ two things reading it.
 | housekeeping / complaint / checkout | `requested_at` |
 | completed | `completed_at` |
 | archived | `archived_at` (checkouts: `updated_at`, they have no such column) |
+
+The first three timestamps order open work; they are not date-window filters.
+Open work remains reachable however old it is. The 1/3/5/7-day window filters
+only Completed and Archived, by the timestamps shown in the final two rows.
 
 ### Lazy loading
 
@@ -226,52 +237,27 @@ three kinds so one view serves every lane.
 
 ## 4. Deliberately unfinished
 
-**The board costs far more than it used to.** Measured on a seeded hotel:
-`board_columns` alone is **36 queries** against the 8 it was at four columns, and
-a full render — columns, counts, older-open counts — is **~60**. An *empty*
-hotel still costs ~44. The guarantee that survived is the one the spec asserts:
-a hotel with years of history asks no more than a quiet one, so the slope is
-still flat. The constant grew about sixfold, from a fifth lane with three
-sources of its own plus a `COUNT` per source per lane. **This is the strongest
-argument for the lane toggles below**, which should skip a hidden lane's read
-*and* its count — `wanted_kind?` returning `.none` in `RequestsArchive` is the
-pattern.
-
-**Lane visibility toggles are not built.** `show_[lane]` as a
-`PanelsUI::ToggleGroup(type: :multiple)`, which already dispatches native
-`change` and so works with the existing `auto-submit` controller. Two traps
-found while scoping: `form_with url:` has no object, so `value:` must be passed
-explicitly; and `auto-submit#cleanupEmptyInputs` disables empty-valued inputs on
-GET, so an all-off state would vanish entirely and read as a fresh load — it
-needs a non-empty sentinel. Whatever key it uses must join
-`RequestsHelper::PRESERVED_FILTER_KEYS` or lazy frames will drop it.
-
-**The date range is 7/14/21/30 and bounds every lane.** Narrowing it was raised
-and deliberately not done yet: the window bounds the *open* lanes too, so a short
-range turns an inbox into a keyhole, and the "N older requests outside this
-range" counter can only reach as far as the widest option. The proposal on the
-table is to re-scope rather than shrink — let the window govern Completed and
-Archived, and leave the open lanes unbounded, since open work is self-limiting.
-Then 1/3/5/7 is right for the lanes that grow without end, and no open work
-becomes unreachable.
-
-**Open work older than 30 days is unreachable** from the board. The counter says
-it exists; the widest range cannot reach it and open work is never archived.
-Resolved by the re-scope above, if it happens.
+**The board still costs a lot, and the floor is the counts.** Measured on a
+seeded hotel: all five lanes is **54 queries**, two lanes **32**, one lane
+**26**. Switching a lane off skips its read, which is where the money is, but
+its `COUNT` is still asked — the toolbar names every lane with how much is in
+it, and a control you switch a lane back on with cannot describe only the lanes
+already showing. So ~26 is the floor however few lanes are drawn. Cutting it
+further means either counting lazily, or accepting a toolbar that does not say
+what it is hiding. The flat-slope guarantee is unchanged: a hotel with years of
+history asks no more than a quiet one.
 
 **A checkout has no `archived_at` column**, so `updated_at` stands in for it —
 both in the archive lane and in its ordering. Any write to an archived checkout
 therefore pulls it back to the top of the archive. A real column would settle it;
 it is a migration, not a patch.
 
-**DESIGN.md**: the board still uses raw palette utilities throughout
-(`bg-blue-50`, `text-amber-700`), `font-black`, and decorative uppercase — §2 and
-§3. `Column` now holds those class strings, which at least means one place to fix
-rather than five, but they are still the wrong tokens.
-
-**`RequestsBoard` and `RequestsArchive` still `include url_helpers`** and build
-URLs into cards. That is a view concern in a service. `Card` is the right place
-to have stopped, and the URLs should move to the presenter.
+**DESIGN.md**: the toolbar and the lane headers are on tokens now, but the cards
+are not. `_card.html.erb` and the class strings in `Column` still carry raw
+palette utilities (`bg-blue-50`, `text-amber-700`), `font-black` and decorative
+uppercase — §2 and §3. `Column` holds them in one place, so it is one fix rather
+than five, but they are still the wrong tokens. The action-button styles in
+`RequestsBoardPresenter` are the same problem in Ruby.
 
 **`RequestActionCompletion` is wired but unused.** `DetailsController` includes
 it; nothing calls `complete_request_action`. Card actions still live on the
@@ -302,7 +288,7 @@ before deploying `20260731090100`.
 
 ## 6. Tests
 
-700 examples across the requests specs, from 34 at the start.
+705 examples across the requests specs, from 34 at the start.
 
 ```bash
 bin/test spec/services/hotel_portal \
@@ -323,9 +309,9 @@ The ones worth not breaking:
   lane where **three tables share one timestamp**
 - `requests_board_spec.rb` — a busy hotel asks no more questions than a quiet one
 - `date_window_spec.rb` — the non-UTC boundary, and a lagging business date
-- `requests_pages_spec.rb` — the lane order, that every lane can receive a
-  dragged lane, that Checkout receives no cards, the lazy placeholder's layout
-  classes, and the move endpoint's streams
+- `requests_pages_spec.rb` — the lane order, that every lane itself can be
+  reordered, that Checkout receives no cards, the lazy placeholder's layout
+  classes, lane visibility and count controls, and the move endpoint's streams
 
 Note `bin/test all` flakes on a different one or two system specs each run;
 verify with targeted runs. The `front_desk_spec.rb:808` failure the previous

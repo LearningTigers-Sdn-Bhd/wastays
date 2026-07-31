@@ -21,12 +21,20 @@
     <% end %>
   <% end %>
 
-  <%# Both counts, and the empty state either lane may have just gained or lost. %>
+  <%# Both counts, and the empty state either lane may have just gained or lost.
+      The toolbar names every lane with its count whether or not that lane is on
+      screen, so its number is refreshed too -- otherwise moving a card into a
+      hidden lane would leave the control that reveals it saying the old total.
+
+      A lane the filter is hiding has no card list here and no elements to
+      update; Turbo drops a stream whose target is absent, so these are written
+      for every lane either way. %>
   <% [ from, to ].uniq.each do |column| %>
     <%= turbo_stream.update "requests_count_#{column.key}", @presenter.board_counts[column.key] %>
     <%= turbo_stream.update "requests_count_label_#{column.key}",
           pluralize(@presenter.board_counts[column.key], column.request_label) %>
-    <% if @presenter.board_columns[column.key].any? %>
+    <%= turbo_stream.update "requests_lane_count_#{column.key}", @presenter.lane_count_label(column) %>
+    <% if @presenter.board_columns[column.key]&.any? %>
       <%= turbo_stream.remove "requests_empty_#{column.key}" %>
     <% end %>
   <% end %>

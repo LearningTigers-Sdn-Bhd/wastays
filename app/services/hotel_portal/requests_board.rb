@@ -39,8 +39,28 @@ module HotelPortal
       paged(sources_for(column), cursor: cursor, limit: limit)
     end
 
+    # The lanes on screen. A lane switched off is not paged at all, which is
+    # where the board's cost actually sits -- reading the lanes is most of what a
+    # render spends, and a hidden lane spends none of it.
+    #
+    # Counts are still asked for every lane, because the toolbar names them all
+    # with how much is in each: that is the control the lanes are switched on
+    # *with*, so it cannot only describe the ones already showing.
+    #
+    # Nothing switched on means all of them. An empty selection arrives as no
+    # parameter at all -- the form drops empty inputs on a GET -- so a board
+    # showing nothing would be indistinguishable from a board just opened, and
+    # the emptier of the two readings is the one nobody wants.
+    def visible_columns
+      @visible_columns ||= begin
+        wanted = Array(params[:lanes]).map(&:to_s)
+        chosen = COLUMNS.select { |column| wanted.include?(column.to_s) }
+        chosen.presence || COLUMNS
+      end
+    end
+
     def pages
-      @pages ||= COLUMNS.index_with { |column| page(column) }
+      @pages ||= visible_columns.index_with { |column| page(column) }
     end
 
     def board_columns
@@ -56,27 +76,6 @@ module HotelPortal
     # because the page no longer knows how long the column is.
     def board_counts
       @board_counts ||= COLUMNS.index_with { |column| sources_for(column).sum { |source| source.relation.count } }
-    end
-
-    # Outstanding work asked for before the window starts, per open column.
-    #
-    # The window bounds every column, so narrowing it hides work that still
-    # needs doing. Saying how much is being left out keeps that a choice the
-    # board shows rather than one it makes quietly.
-    def older_open_counts
-      @older_open_counts ||= {
-        housekeeping: open_housekeeping_scope
-          .where(status: HOUSEKEEPING_OPEN_STATUSES)
-          .where(requested_at: ...window_range.begin)
-          .count,
-        complaint: open_complaint_scope
-          .where(status: COMPLAINT_OPEN_STATUSES)
-          .where(requested_at: ...window_range.begin)
-          .count,
-        checkout: open_checkout_scope
-          .where(requested_at: ...window_range.begin)
-          .count
-      }
     end
 
     private
@@ -108,7 +107,6 @@ module HotelPortal
         # not the checkout it stands for is there to hold it.
         relation: narrow(open_housekeeping_scope, kind: "housekeeping")
           .where(status: HOUSEKEEPING_OPEN_STATUSES)
-          .where(requested_at: window_range)
           .where.not(id: cleaning_ids)
           .includes(booking: :booking_rooms),
         sort_column: :requested_at,
@@ -121,7 +119,6 @@ module HotelPortal
         name: "complaint",
         relation: narrow(open_complaint_scope, kind: "complaint")
           .where(status: COMPLAINT_OPEN_STATUSES)
-          .where(requested_at: window_range)
           .includes(booking: :booking_rooms),
         sort_column: :requested_at,
         builder: ->(request) { complaint_card(request, bucket: :complaint) }
@@ -132,7 +129,6 @@ module HotelPortal
       Source.new(
         name: "checkout",
         relation: narrow(open_checkout_scope, kind: "checkout")
-          .where(requested_at: window_range)
           .includes(booking: :booking_rooms),
         sort_column: :requested_at,
         builder: ->(request) { open_checkout_card(request) }
@@ -147,7 +143,6 @@ module HotelPortal
         name: "cleaning",
         relation: narrow(open_housekeeping_scope, kind: "housekeeping")
           .where(status: HOUSEKEEPING_OPEN_STATUSES)
-          .where(requested_at: window_range)
           .where(id: uncovered_cleaning_ids)
           .includes(booking: :booking_rooms),
         sort_column: :requested_at,
@@ -195,10 +190,7 @@ module HotelPortal
       )
     end
 
-    # -- The work each column is drawn from, before the window ----------------
-    #
-    # Kept apart from the window so that the same scope can answer how much
-    # outstanding work the window is leaving out.
+    # -- The work each column is drawn from ------------------------------------
 
     def open_housekeeping_scope
       HousekeepingRequest
@@ -227,16 +219,22 @@ module HotelPortal
 
     # -- Telling one job from two ---------------------------------------------
     #
-    # Read once for the whole window rather than per page: whether a checkout is
-    # on the board is a fact about the window, and a cleaning must not appear or
+    # Read once for the whole board rather than per page: whether a checkout is
+    # on the board is not a fact about a page, and a cleaning must not appear or
     # disappear depending on how far somebody has scrolled. Read unnarrowed for
     # the same reason -- a search that hides a checkout must not surface the
     # cleaning standing for it.
+    #
+    # "On the board" is what each lane's own scope is: open work is unbounded and
+    # finished work is inside the window. Asking the window of both halves, as
+    # this did when the window bounded every lane, would leave an old open
+    # checkout off this list while its lane still showed it -- and the cleaning
+    # standing for it would then be drawn twice.
 
-    def checkout_rows_in_window
-      @checkout_rows_in_window ||= begin
+    def checkout_rows_on_board
+      @checkout_rows_on_board ||= begin
         base = CheckOutRequest.where(booking_id: hotel_booking_ids)
-        open_rows = base.open_tasks.where(requested_at: window_range).pluck(:id, :booking_id)
+        open_rows = base.open_tasks.pluck(:id, :booking_id)
         finished_rows = base.where(status: "completed")
                             .where(completed_at: window_range)
                             .where("COALESCE(check_out_requests.metadata->>'archived_at', '') = ''")
@@ -245,12 +243,12 @@ module HotelPortal
       end
     end
 
-    def checkout_ids_in_window
-      @checkout_ids_in_window ||= checkout_rows_in_window.map(&:first).to_set
+    def checkout_ids_on_board
+      @checkout_ids_on_board ||= checkout_rows_on_board.map(&:first).to_set
     end
 
-    def checkout_booking_ids_in_window
-      @checkout_booking_ids_in_window ||= checkout_rows_in_window.map(&:last).to_set
+    def checkout_booking_ids_on_board
+      @checkout_booking_ids_on_board ||= checkout_rows_on_board.map(&:last).to_set
     end
 
     # Records the housekeeping tasks backfill made say they are a cleaning
@@ -264,9 +262,9 @@ module HotelPortal
       @cleaning_rows ||= open_housekeeping_scope
         .where(CLEANING_CONDITION)
         .where(
-          "(housekeeping_requests.requested_at >= :from AND housekeeping_requests.requested_at < :to) OR " \
+          "housekeeping_requests.status IN (:open) OR " \
           "(housekeeping_requests.completed_at >= :from AND housekeeping_requests.completed_at < :to)",
-          from: window_range.begin, to: window_range.end
+          open: HOUSEKEEPING_OPEN_STATUSES, from: window_range.begin, to: window_range.end
         )
         .pluck(:id, :booking_id, Arel.sql("housekeeping_requests.metadata->>'checkout_request_id'"))
     end
@@ -278,9 +276,9 @@ module HotelPortal
     def covered_cleaning_ids
       @covered_cleaning_ids ||= cleaning_rows.filter_map do |id, booking_id, linked_checkout_id|
         covered = if linked_checkout_id.present?
-          checkout_ids_in_window.include?(linked_checkout_id.to_i)
+          checkout_ids_on_board.include?(linked_checkout_id.to_i)
         else
-          checkout_booking_ids_in_window.include?(booking_id)
+          checkout_booking_ids_on_board.include?(booking_id)
         end
 
         id if covered

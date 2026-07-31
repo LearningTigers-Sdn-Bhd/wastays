@@ -13,8 +13,15 @@ module HotelPortal
     # times in the hotel's own zone. Comparing a datetime column against a bare
     # date compares it against midnight UTC, which moves the boundary for every
     # hotel that does not happen to keep UTC hours.
+    #
+    # It governs the lanes that grow without end -- Completed and Archived -- and
+    # not the open ones. It used to bound every lane, which meant a short range
+    # turned an inbox into a keyhole: open work older than the widest range could
+    # not be reached at all, and the board could only say how much of it there
+    # was. Open work is self-limiting because staff clear it, so it needs no
+    # range; finished work needs one, and can now have a short one.
     class DateWindow
-      ALLOWED_DAYS = [ 7, 14, 21, 30 ].freeze
+      ALLOWED_DAYS = [ 1, 3, 5, 7 ].freeze
       DEFAULT_DAYS = 7
 
       attr_reader :today, :anchor_date, :start_date, :end_date, :days, :time_zone_name
@@ -71,15 +78,6 @@ module HotelPortal
       # The same range, ending today.
       def at_today
         shifted(today)
-      end
-
-      # Whether there is a wider range left to ask for.
-      def widest?
-        days >= ALLOWED_DAYS.max
-      end
-
-      def widest
-        shifted(anchor_date, days: ALLOWED_DAYS.max)
       end
 
       # How the window travels in a link.

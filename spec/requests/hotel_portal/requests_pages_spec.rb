@@ -34,7 +34,7 @@ RSpec.describe "Hotel portal request pages", type: :request do
     get hotel_requests_path(hotel)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Requests Board")
+    expect(response.body).to include("Housekeeping")
     expect(response.body).to include("Fresh towels")
     expect(response.body).not_to include("onclick=")
   end
@@ -127,6 +127,98 @@ RSpec.describe "Hotel portal request pages", type: :request do
       expect(scroller).to be_present
       expect(scroller["data-orientation"]).to eq("horizontal")
       expect(scroller.css('[data-board-column]').size).to eq(HotelPortal::RequestsBoard::COLUMNS.size)
+    end
+  end
+
+  # Which lanes are on the board is the operator's to say, and a lane switched
+  # off is a lane the board does not read at all.
+  describe "choosing which lanes to show" do
+    let(:booking) { create(:booking, hotel: hotel, guest_name: "Aisyah") }
+
+    before do
+      create(:housekeeping_request, booking: booking, status: "pending", request_details: "Fresh towels")
+      create(:complaint_request, booking: booking, status: "pending", complaint_details: "AC noisy")
+    end
+
+    it "shows every lane when none is asked for" do
+      get hotel_requests_path(hotel)
+
+      order = Nokogiri::HTML(response.body).css("[data-board-column]").map { |lane| lane["data-board-column"] }
+
+      expect(order).to eq(%w[housekeeping complaint checkout completed archived])
+    end
+
+    it "draws only the lanes asked for" do
+      get hotel_requests_path(hotel, lanes: %w[housekeeping])
+
+      document = Nokogiri::HTML(response.body)
+      order = document.css("[data-board-column]").map { |lane| lane["data-board-column"] }
+
+      expect(order).to eq(%w[housekeeping])
+      expect(document.text).to include("Fresh towels")
+      expect(document.text).not_to include("AC noisy")
+    end
+
+    it "draws several when several are asked for, in the board's own order" do
+      get hotel_requests_path(hotel, lanes: %w[complaint housekeeping])
+
+      order = Nokogiri::HTML(response.body).css("[data-board-column]").map { |lane| lane["data-board-column"] }
+
+      expect(order).to eq(%w[housekeeping complaint])
+    end
+
+    # The control that switches a lane back on has to name it, and say how much
+    # is waiting in it, whether or not it is being drawn.
+    it "still names every lane, with its count, when one is showing" do
+      get hotel_requests_path(hotel, lanes: %w[housekeeping])
+
+      document = Nokogiri::HTML(response.body)
+      toggles = document.css('[data-slot="toggle-group-item"]')
+
+      expect(toggles.map { |item| item["data-value"] }).to eq(%w[housekeeping complaint checkout completed archived])
+      expect(document.at_css("#requests_lane_count_complaint").text.strip).to eq("1")
+    end
+
+    it "marks the lanes that are on" do
+      get hotel_requests_path(hotel, lanes: %w[housekeeping])
+
+      toggles = Nokogiri::HTML(response.body).css('[data-slot="toggle-group-item"]')
+      on = toggles.select { |item| item["data-state"] == "on" }.map { |item| item["data-value"] }
+
+      expect(on).to eq(%w[housekeeping])
+    end
+
+    # An empty selection reaches the server as no parameter at all, so it cannot
+    # be told apart from a board just opened.
+    it "falls back to every lane when the selection is empty" do
+      get hotel_requests_path(hotel, lanes: [])
+
+      order = Nokogiri::HTML(response.body).css("[data-board-column]").map { |lane| lane["data-board-column"] }
+
+      expect(order).to eq(%w[housekeeping complaint checkout completed archived])
+    end
+
+    it "ignores a lane it does not have" do
+      get hotel_requests_path(hotel, lanes: %w[housekeeping nonsense])
+
+      order = Nokogiri::HTML(response.body).css("[data-board-column]").map { |lane| lane["data-board-column"] }
+
+      expect(order).to eq(%w[housekeeping])
+    end
+
+    # A lazy frame that dropped the selection would ask for a lane the board is
+    # no longer reading.
+    it "carries the selection into the rest of a lane" do
+      (HotelPortal::Requests::Paging::PAGE_SIZE + 1).times do |index|
+        create(:housekeeping_request, booking: booking, status: "pending", request_details: "Towels #{index}")
+      end
+
+      get hotel_requests_path(hotel, lanes: %w[housekeeping])
+
+      frame = Nokogiri::HTML(response.body).css("turbo-frame[loading='lazy']").first
+
+      expect(frame).to be_present
+      expect(frame["src"]).to include("lanes")
     end
   end
 
@@ -312,9 +404,9 @@ RSpec.describe "Hotel portal request pages", type: :request do
     end
 
     it "carries a kind filter through a step of the range" do
-      get hotel_requests_path(hotel, kind: "housekeeping", days: 14)
+      get hotel_requests_path(hotel, kind: "housekeeping", days: 5)
 
-      expect(response.body).to include(link_to_path(hotel_requests_path(hotel, kind: "housekeeping", date: (hotel_today - 14).iso8601, days: 14)))
+      expect(response.body).to include(link_to_path(hotel_requests_path(hotel, kind: "housekeeping", date: (hotel_today - 5).iso8601, days: 5)))
     end
 
     it "offers a way back to today only when it is looking elsewhere" do
@@ -327,22 +419,15 @@ RSpec.describe "Hotel portal request pages", type: :request do
       expect(response.body).not_to include(today_window)
     end
 
-    it "says how much outstanding work the range is leaving out" do
+    # The range governs what has been finished. Outstanding work is not reachable
+    # by widening a range, so it is never behind one.
+    it "shows outstanding work the range does not reach, on the narrowest range" do
       create(:housekeeping_request, booking: booking, status: "pending",
              request_details: "Stale towels", requested_at: 20.days.ago)
 
-      get hotel_requests_path(hotel)
+      get hotel_requests_path(hotel, days: 1)
 
-      expect(response.body).to include("1 older request outside this range")
-      expect(response.body).to include(link_to_path(hotel_requests_path(hotel, date: hotel_today.iso8601, days: 30)))
-    end
-
-    it "says nothing about older work when the range already reaches it" do
-      create(:housekeeping_request, booking: booking, status: "pending",
-             request_details: "Stale towels", requested_at: 20.days.ago)
-
-      get hotel_requests_path(hotel, days: 30)
-
+      expect(response.body).to include("Stale towels")
       expect(response.body).not_to include("outside this range")
     end
   end

@@ -47,17 +47,17 @@ RSpec.describe HotelPortal::RequestsArchive do
     end
 
     it 'leaves out what was archived before the window' do
-      filed_long_ago = create(:housekeeping_request, booking: booking, status: 'completed',
-                              request_details: 'Filed long ago', archived_at: 20.days.ago)
+      filed_earlier = create(:housekeeping_request, booking: booking, status: 'completed',
+                             request_details: 'Filed earlier', archived_at: 5.days.ago)
 
-      expect(rows_for.map { |row| row[:request_id] }).not_to include(filed_long_ago.id)
+      expect(rows_for({ days: '1' }).map { |row| row[:request_id] }).not_to include(filed_earlier.id)
     end
 
     it 'takes it in once the range is widened past it' do
-      filed_long_ago = create(:housekeeping_request, booking: booking, status: 'completed',
-                              request_details: 'Filed long ago', archived_at: 20.days.ago)
+      filed_earlier = create(:housekeeping_request, booking: booking, status: 'completed',
+                             request_details: 'Filed earlier', archived_at: 5.days.ago)
 
-      expect(rows_for({ days: '30' }).map { |row| row[:request_id] }).to include(filed_long_ago.id)
+      expect(rows_for({ days: '7' }).map { |row| row[:request_id] }).to include(filed_earlier.id)
     end
   end
 
