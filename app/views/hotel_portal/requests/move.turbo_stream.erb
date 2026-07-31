@@ -10,12 +10,12 @@
   <% to = @result.to_column %>
 
   <%# Gone from where it was. %>
-  <%= turbo_stream.remove ::HotelPortal::Requests::Card.new(kind: params[:kind], request_id: params[:request_id].to_i).dom_id %>
+  <%= turbo_stream.remove ::HotelPortal::Requests::Card.new(record_kind: params[:kind], request_id: params[:request_id].to_i).dom_id %>
 
   <%# Arrived at the top of where it went. Prepending is the right place and not
       a convenience: a lane is ordered by the timestamp the move just set, so the
       card genuinely is the newest thing in it. %>
-  <% if (card = @presenter.board_columns[to.key]&.find { |c| c.request_id == @result.request.id && c.kind == params[:kind] }) %>
+  <% if (card = @presenter.board_columns[to.key]&.find { |c| c.request_id == @result.request.id && c.record_kind == params[:kind] }) %>
     <%= turbo_stream.prepend @presenter.column_frame_id(to.key, nil) do %>
       <%= render "hotel_portal/requests/card", card: card, column: to, presenter: @presenter %>
     <% end %>

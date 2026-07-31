@@ -64,7 +64,7 @@ module HotelPortal
     def detail_path(card)
       @view_context.hotel_request_action_show_request_path(
         current_hotel,
-        kind: card.kind,
+        kind: card.record_kind,
         request_id: card.request_id
       )
     end
@@ -100,12 +100,12 @@ module HotelPortal
       card.update_url.present? || card.complete_url.present? || card.archive_url.present?
     end
 
-    # Dragging a card is how its status is changed, so a card with no status to
-    # change is not one to drag. Without this an archived card -- and a completed
-    # checkout, which has never had an update_url -- is draggable at an empty
-    # URL, and the drop fails silently.
+    # A card can be dragged when some other lane would take it. Asked of the
+    # lanes, because they are what decides: gating this on the card having an
+    # update_url instead made a completed checkout undraggable, since completing
+    # a checkout has an endpoint of its own and no status URL to show for it.
     def card_draggable?(card, column)
-      column.archives? || card.update_url.present?
+      Requests::Column.all.any? { |other| other.key != column.key && other.accepts?(card.kind) }
     end
 
     def card_shows_room_number?(card)
@@ -190,7 +190,7 @@ module HotelPortal
     end
 
     def move_params(card)
-      { kind: card.kind, request_id: card.request_id }
+      { kind: card.record_kind, display_kind: card.kind, request_id: card.request_id }
     end
 
     # Where restoring puts a card back: the lane it would have been in had it

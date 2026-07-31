@@ -146,7 +146,8 @@ export default class extends Controller {
     if (column.dataset.boardColumn === card.dataset.cardColumn) return
 
     const body = new FormData()
-    body.append("kind", card.dataset.requestKind)
+    body.append("kind", card.dataset.recordKind)
+    body.append("display_kind", card.dataset.requestKind)
     body.append("request_id", card.dataset.requestId)
 
     const response = await fetch(moveUrl, {

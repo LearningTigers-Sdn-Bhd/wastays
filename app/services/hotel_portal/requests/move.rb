@@ -19,11 +19,17 @@ module HotelPortal
         def ok? = error.nil?
       end
 
-      attr_reader :hotel, :kind, :request_id, :to
+      attr_reader :hotel, :kind, :display_kind, :request_id, :to
 
-      def initialize(hotel:, kind:, request_id:, to:)
+      # `kind` is the table the request is in and `display_kind` is the lane it
+      # was shown as -- the same for everything except a checkout's room
+      # cleaning, which is a housekeeping row wearing a checkout badge. What a
+      # lane accepts is answered for what the operator saw; the record is
+      # reached by what it is.
+      def initialize(hotel:, kind:, request_id:, to:, display_kind: nil)
         @hotel = hotel
         @kind = kind.to_s
+        @display_kind = display_kind.presence&.to_s || @kind
         @request_id = request_id
         @to = to
       end
@@ -36,8 +42,8 @@ module HotelPortal
 
         return failure("That request is already there.") if from.key == target.key
 
-        transition = target.transition_for(kind)
-        return failure("A #{kind} request cannot go there.") if transition.nil?
+        transition = target.transition_for(display_kind)
+        return failure("A #{display_kind} request cannot go there.") if transition.nil?
 
         apply(request, from, transition)
       end
@@ -67,7 +73,7 @@ module HotelPortal
       end
 
       def column_for(request)
-        Column.for_record(kind: kind, status: request.status, archived: archived?(request))
+        Column.for_record(kind: display_kind, status: request.status, archived: archived?(request))
       end
 
       # A checkout keeps no archived_at column; a note in its metadata is what

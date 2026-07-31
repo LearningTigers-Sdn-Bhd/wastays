@@ -43,6 +43,7 @@ module HotelPortal
       result = ::HotelPortal::Requests::Move.new(
         hotel: current_hotel,
         kind: params[:kind],
+        display_kind: params[:display_kind],
         request_id: params[:request_id],
         to: params[:to]
       ).call

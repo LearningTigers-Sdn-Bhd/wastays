@@ -12,15 +12,22 @@ module HotelPortal
     # It answers to [] as well as to its readers, because the cursor sorts on
     # rows without caring what built them.
     Card = Struct.new(
-      :kind, :request_id, :booking_id, :booking_token, :guest_name, :title,
+      :kind, :record_kind, :request_id, :booking_id, :booking_token, :guest_name, :title,
       :room_number, :status, :requested_at, :completed_at, :archived_at, :source,
       :internal_notes, :archive_url, :update_url, :complete_url, :booking_url,
       :sort_at, :sort_source,
       keyword_init: true
     ) do
+      # What the card says it is, and what it actually is, are not always the
+      # same: a checkout's room cleaning is a housekeeping row shown as a
+      # checkout. `kind` is the badge; `record_kind` is the table. Anything that
+      # has to reach the record -- a URL, a lookup, an id -- wants this one, and
+      # sending the badge instead looks the id up in the wrong table.
+      def record_kind = self[:record_kind].presence || kind
+
       # Stable across every render, so a stream can name one card on a board it
       # did not draw. Ids repeat across the three tables, hence the kind.
-      def dom_id = "request_#{kind}_#{request_id}"
+      def dom_id = "request_#{record_kind}_#{request_id}"
 
       def internal_notes_list = Array(internal_notes)
 

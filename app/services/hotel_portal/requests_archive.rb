@@ -127,6 +127,7 @@ module HotelPortal
 
       Requests::Card.new(
         kind: kind,
+        record_kind: kind,
         request_id: request.id,
         booking_id: booking.id,
         booking_token: booking.confirmation_token,
@@ -148,6 +149,7 @@ module HotelPortal
 
       Requests::Card.new(
         kind: "checkout",
+        record_kind: "checkout",
         request_id: request.id,
         booking_id: booking.id,
         booking_token: booking.confirmation_token,
