@@ -73,7 +73,9 @@ module HotelPortal
     end
 
     def guest_count_display
-      "#{booking.adults.to_i} adult(s), #{booking.children.to_i} child(ren)"
+      adults = booking.adults.to_i
+      children = booking.children.to_i
+      "#{adults} #{"adult".pluralize(adults)}, #{children} #{"child".pluralize(children)}"
     end
 
     def room_price
@@ -98,6 +100,49 @@ module HotelPortal
 
     def hotel_address_display
       [ hotel.city, hotel.country ].compact_blank.join(", ")
+    end
+
+    def boat_transfer?
+      primary_booking_guest&.boat_in? || primary_booking_guest&.boat_out?
+    end
+
+    def boat_in_display
+      format_boat_time(primary_booking_guest&.boat_in_at)
+    end
+
+    def boat_out_display
+      format_boat_time(primary_booking_guest&.boat_out_at)
+    end
+
+    def check_in_display
+      format_stay_datetime(booking.check_in.to_date, terms&.dig("check_in_time"))
+    end
+
+    def check_out_display
+      format_stay_datetime(booking.check_out.to_date, terms&.dig("check_out_time"))
+    end
+
+    private
+
+    def format_boat_time(time)
+      return "-" if time.blank?
+
+      time.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y, %I:%M %p")
+    end
+
+    def format_stay_datetime(date, time)
+      formatted_date = date.strftime("%d %b %Y")
+      formatted_time = format_time_of_day(time)
+      formatted_time.present? ? "#{formatted_date}, #{formatted_time}" : formatted_date
+    end
+
+    TWENTY_FOUR_HOUR_TIME = /\A(?:[01]\d|2[0-3]):[0-5]\d\z/
+
+    def format_time_of_day(time)
+      return nil if time.blank?
+      return time unless TWENTY_FOUR_HOUR_TIME.match?(time)
+
+      Time.strptime(time, "%H:%M").strftime("%I:%M %p")
     end
   end
 end
