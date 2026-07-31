@@ -4,6 +4,8 @@ require "ostruct"
 
 module Bookings
   class ProcessLateCheckout
+    RESOLUTIONS = %w[charge waive reject].freeze
+
     def self.call(booking:, user:, params: {}, options: {})
       new(booking: booking, user: user, params: params, options: options).call
     end
@@ -27,6 +29,11 @@ module Bookings
 
           unless @booking.status == "due_out_detected"
             result = failure("Booking does not have a detected due-out.")
+            raise ActiveRecord::Rollback
+          end
+
+          unless RESOLUTIONS.include?(@params[:resolution])
+            result = failure("Choose how to resolve this late checkout.")
             raise ActiveRecord::Rollback
           end
 
@@ -114,11 +121,11 @@ module Bookings
     end
 
     def charge_requested?
-      @params[:charge_type] != "none"
+      @params[:resolution] == "charge"
     end
 
     def reject_late_checkout?
-      @params[:charge_type] == "none"
+      @params[:resolution] == "reject"
     end
 
     def success

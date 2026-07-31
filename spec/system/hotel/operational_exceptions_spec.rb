@@ -22,7 +22,7 @@ RSpec.describe "Operational Exceptions", type: :system do
   end
 
   describe "Late Checkout" do
-    it "allows front desk to review and apply a late checkout charge" do
+    it "allows front desk to resolve and apply a late checkout charge" do
       # Set business date to today
       travel_to Time.zone.local(2026, 5, 21, 10, 0, 0)
 
@@ -52,7 +52,7 @@ RSpec.describe "Operational Exceptions", type: :system do
 
       expect(page).to have_content("MYR 174.99")
 
-      click_button "Process late checkout"
+      click_button "Approve and apply charges"
 
       expect(page).to have_current_path(
         hotel_booking_workspace_path(hotel, booking, tab: "booking_details")

@@ -31,7 +31,7 @@ module HotelPortal::StayViewHelper
     review: :warning
   }.freeze
   # Translate authoritative lifecycle events into user-facing workflows. Undo
-  # also anchors Edit Check-In, while the late-checkout drawer owns both review outcomes.
+  # also anchors Edit Check-In, while the late-checkout drawer owns both resolution outcomes.
   LIFECYCLE_ACTIONS = {
     "check_in" => [
       { key: :check_in, label: "Check-in", icon: "log-in" }.freeze

@@ -46,9 +46,20 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", :business_day, t
 
       expect(dialog).to be_present
       expect(dialog["data-panels-ui-sheet-side"]).to eq("right")
-      expect(dialog.text).to include("Review late checkout", "Ada Lovelace", "Charge calculation")
-      expect(dialog.at_css("[data-controller='booking-actions--late-checkout']")).to be_present
-      expect(dialog.at_css("input[type='radio'][name='charge_type']")).to be_present
+      expect(dialog.text).to include(
+        "Resolve late checkout",
+        "Ada Lovelace",
+        "Choose how to resolve this late checkout.",
+        "Approve and apply charges",
+        "Approve without charge",
+        "Reject late checkout",
+        "Extend the scheduled checkout and post the calculated late-checkout charge.",
+        "Extend the scheduled checkout without adding a late-checkout charge.",
+        "Keep the scheduled checkout unchanged and require the guest to check out.",
+        "Charge calculation"
+      )
+      expect(dialog.at_css("[data-controller~='booking-actions--late-checkout']")).to be_present
+      expect(dialog.at_css("fieldset[data-variant='card'] input[type='radio'][name='resolution']")).to be_present
       expect(dialog.at_css("input[name='check_out']")).to be_present
       expect(response.body).not_to include("<!DOCTYPE html>")
       expect(response.body).not_to include("offcanvas")
@@ -77,10 +88,10 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", :business_day, t
     end
   end
 
-  describe "POST the late-checkout review" do
+  describe "POST the late-checkout resolution" do
     it "applies the charge and completes the sheet on a Turbo submission" do
       post hotel_booking_action_late_checkout_path(hotel, booking),
-        params: { charge_type: "charge", charge_calculation: "standard", amount: "50.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") },
+        params: { resolution: "charge", charge_calculation: "standard", amount: "50.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") },
         headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:success)
@@ -90,9 +101,23 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", :business_day, t
       expect(flash[:notice]).to eq("Late checkout charge applied.")
     end
 
+    it "approves late checkout without posting a charge" do
+      new_check_out = booking.check_out + 2.hours
+
+      post hotel_booking_action_late_checkout_path(hotel, booking),
+        params: { resolution: "waive", check_out: new_check_out.in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M") },
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response).to have_http_status(:success)
+      expect(booking.reload.status).to eq("checked_in")
+      expect(booking.check_out).to be_within(1.second).of(new_check_out)
+      expect(booking.booking_folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
+      expect(flash[:notice]).to eq("Late checkout resolved without charge.")
+    end
+
     it "rejects late checkout and moves the booking to checkout_required" do
       post hotel_booking_action_late_checkout_path(hotel, booking),
-        params: { charge_type: "none" },
+        params: { resolution: "reject" },
         headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:success)
@@ -103,7 +128,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", :business_day, t
 
     it "redirects to the control panel on a direct request" do
       post hotel_booking_action_late_checkout_path(hotel, booking),
-        params: { charge_type: "charge", charge_calculation: "standard", amount: "50.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") }
+        params: { resolution: "charge", charge_calculation: "standard", amount: "50.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") }
 
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(flash[:notice]).to eq("Late checkout charge applied.")
@@ -112,7 +137,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", :business_day, t
 
     it "completes into the secondary frame when submitted stacked" do
       post hotel_booking_action_late_checkout_path(hotel, booking),
-        params: { charge_type: "none" },
+        params: { resolution: "reject" },
         headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet_secondary" }
 
       expect(response).to have_http_status(:success)
@@ -123,7 +148,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", :business_day, t
       allow(Bookings::ProcessLateCheckout).to receive(:call).and_return(OpenStruct.new(success?: false, error: "Late checkout could not be processed."))
 
       post hotel_booking_action_late_checkout_path(hotel, booking),
-        params: { charge_type: "charge", amount: "50.00" },
+        params: { resolution: "charge", amount: "50.00" },
         headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:success)
@@ -137,7 +162,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", :business_day, t
       sibling = create_group_child(group, position: 2, room_number: "102", guest_name: "Grace Hopper")
 
       post hotel_booking_action_late_checkout_path(hotel, booking),
-        params: { target_scope: "individual", booking_ids: [ booking.id, sibling.id ], charge_type: "charge", charge_calculation: "standard", amount: "50.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") },
+        params: { target_scope: "individual", booking_ids: [ booking.id, sibling.id ], resolution: "charge", charge_calculation: "standard", amount: "50.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") },
         headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:success)
@@ -151,7 +176,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", :business_day, t
       role.role_permissions.destroy_all
 
       post hotel_booking_action_late_checkout_path(hotel, booking),
-        params: { charge_type: "none" }
+        params: { resolution: "reject" }
 
       expect(response).to have_http_status(:redirect)
       expect(booking.reload.status).to eq("due_out_detected")
@@ -161,7 +186,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", :business_day, t
       other_booking = create(:booking, hotel: other_hotel, status: "due_out_detected")
 
       post hotel_booking_action_late_checkout_path(hotel, other_booking),
-        params: { charge_type: "none" }
+        params: { resolution: "reject" }
 
       expect(response).to have_http_status(:not_found)
     end
