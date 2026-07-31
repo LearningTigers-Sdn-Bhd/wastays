@@ -38,7 +38,8 @@ RSpec.describe Bookings::AssignRoom do
   end
 
   it "allows manager override with permission and reason" do
-    permission = create(:permission, slug: "override_room_status_assignment", name: "Override Room Status Assignment")
+    permission = Permission.find_by(slug: "override_room_status_assignment") ||
+      create(:permission, slug: "override_room_status_assignment", name: "Override Room Status Assignment")
     role = create(:role, account: hotel.account)
     create(:role_permission, role: role, permission: permission)
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
