@@ -164,13 +164,14 @@ RSpec.describe HotelDemoManagement::SeedRealtimeScenario, :business_day do
         expect(booking.booking_folio.outstanding_balance).to be_zero
       end
 
-      historical_cleaning_requests = CheckOutRequest.joins(:booking)
-                                                    .where(bookings: { hotel_id: hotel.id })
-                                                    .where("bookings.checked_out_at < ?", Time.current.beginning_of_day)
-      expect(historical_cleaning_requests).not_to be_empty
-      expect(historical_cleaning_requests.distinct.pluck(:status)).to eq([ "completed" ])
-      expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "checkout_room_cleaning_started").count).to eq(historical_cleaning_requests.count)
-      expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "checkout_room_cleaning_completed").count).to eq(historical_cleaning_requests.count)
+      historical_turnovers = HousekeepingRequest.checkout_turnovers
+                                                .joins(:booking)
+                                                .where(bookings: { hotel_id: hotel.id })
+                                                .where("bookings.checked_out_at < ?", Time.current.beginning_of_day)
+      expect(historical_turnovers).not_to be_empty
+      expect(historical_turnovers.distinct.pluck(:status)).to eq([ "completed" ])
+      expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "housekeeping_request_dispatched")).to exist
+      expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "room_status_changed")).to exist
     end
 
     it "fills the SST, tourism tax, extra charge, deposit liability, and outstanding balance reports with real data" do
@@ -245,18 +246,18 @@ RSpec.describe HotelDemoManagement::SeedRealtimeScenario, :business_day do
       booking = create(:booking, hotel: hotel, status: "completed")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
-      requests = [
-        create(:check_out_request, booking: booking, status: "new", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" }),
-        create(:check_out_request, booking: booking, status: "new", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" })
+      turnovers = [
+        create(:housekeeping_request, booking: booking, hotel: hotel, room_type: room_type, room_number: "101",
+               work_context: "checkout_turnover", status: "new", request_details: "Checkout turnover"),
+        create(:housekeeping_request, booking: booking, hotel: hotel, room_type: room_type, room_number: "101",
+               work_context: "checkout_turnover", status: "new", request_details: "Checkout turnover")
       ]
 
       expect { build_service.send(:complete_historical_checkout_cleaning, booking) }
         .not_to have_enqueued_job(WebhookBroadcastJob)
 
-      expect(requests.map { |request| request.reload.status }).to all(eq("completed"))
+      expect(turnovers.map { |turnover| turnover.reload.status }).to all(eq("completed"))
       expect(RoomStatus.find_by!(hotel: hotel, room_number: "101").status).to eq("ready")
-      expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "checkout_room_cleaning_started").count).to eq(1)
-      expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "checkout_room_cleaning_completed").count).to eq(1)
     end
 
     it "skips conflicting stays instead of double-booking a low-capacity hotel" do

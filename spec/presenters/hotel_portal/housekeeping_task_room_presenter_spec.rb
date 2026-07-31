@@ -11,8 +11,6 @@ RSpec.describe HotelPortal::HousekeepingTaskRoomPresenter do
     allow(context).to receive(:display_housekeeping_date) { |value| "on #{value.to_date}" }
     allow(context).to receive(:assign_hotel_housekeeping_task_path) { |_hotel, id| "/assign/housekeeping/#{id}" }
     allow(context).to receive(:status_hotel_housekeeping_task_path) { |_hotel, id| "/status/housekeeping/#{id}" }
-    allow(context).to receive(:hotel_assign_checkout_request_path) { |_hotel, id| "/assign/checkout/#{id}" }
-    allow(context).to receive(:hotel_checkout_request_status_path) { |_hotel, id| "/status/checkout/#{id}" }
     context
   end
 
@@ -77,11 +75,11 @@ RSpec.describe HotelPortal::HousekeepingTaskRoomPresenter do
       expect(presented.status_url).to eq("/status/housekeeping/1")
     end
 
-    it "routes a checkout cleaning to the checkout endpoints" do
+    it "routes a checkout turnover task to the housekeeping endpoints" do
       presented = present(tasks: [ task(id: 7, source_kind: "checkout") ]).first_task_request
 
-      expect(presented.assign_url).to eq("/assign/checkout/7")
-      expect(presented.status_url).to eq("/status/checkout/7")
+      expect(presented.assign_url).to eq("/assign/housekeeping/7")
+      expect(presented.status_url).to eq("/status/housekeeping/7")
     end
 
     it "offers no route at all for the stand-in row of a room with nothing to do" do
@@ -122,12 +120,12 @@ RSpec.describe HotelPortal::HousekeepingTaskRoomPresenter do
       expect(long).to be_long_details
     end
 
-    it "keeps its dom key unique across the two kinds of task" do
-      housekeeping = present(tasks: [ task(id: 5) ]).first_task_request
-      checkout = present(tasks: [ task(id: 5, source_kind: "checkout") ]).first_task_request
-
-      expect(housekeeping.dom_key).to eq("housekeeping-5")
-      expect(checkout.dom_key).to eq("checkout-5")
+    # Every row on this board is a housekeeping request now -- turnover work is a
+    # housekeeping task linked to its checkout, not a checkout row of its own --
+    # so the id alone is what has to stay unique.
+    it "keys its dom id off the task it stands for" do
+      expect(present(tasks: [ task(id: 5) ]).first_task_request.dom_key).to eq("housekeeping-5")
+      expect(present(tasks: [ task(id: 6) ]).first_task_request.dom_key).to eq("housekeeping-6")
     end
   end
 end

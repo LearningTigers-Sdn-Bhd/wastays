@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_31_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -247,7 +247,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
     t.bigint "user_id"
     t.index ["auditable_type", "auditable_id", "occurred_at"], name: "idx_booking_audit_logs_on_auditable_time"
     t.index ["auditable_type", "auditable_id"], name: "index_booking_audit_logs_on_auditable"
-    t.index ["category", "occurred_at"], name: "idx_booking_audit_logs_on_category_time"
     t.index ["hotel_id", "category", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_category_time"
     t.index ["hotel_id", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_time"
     t.index ["hotel_id"], name: "index_booking_audit_logs_on_hotel_id"
@@ -655,6 +654,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
     t.datetime "acknowledged_at"
     t.bigint "acknowledged_by_user_id"
     t.bigint "booking_id", null: false
+    t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.text "guest_notes"
     t.jsonb "metadata", default: {}, null: false
@@ -662,6 +662,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
     t.index ["acknowledged_by_user_id"], name: "index_check_out_requests_on_acknowledged_by_user_id"
+    t.index ["booking_id", "completed_at"], name: "index_check_out_requests_on_booking_id_and_completed_at"
     t.index ["booking_id", "requested_at"], name: "index_check_out_requests_on_booking_id_and_requested_at"
     t.index ["booking_id", "status"], name: "index_check_out_requests_on_booking_id_and_status"
     t.index ["booking_id"], name: "index_check_out_requests_on_booking_id"
@@ -1372,15 +1373,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
     t.bigint "room_type_id"
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
+    t.string "work_context", default: "guest_request", null: false
     t.index ["booking_id", "archived_at"], name: "index_housekeeping_requests_on_booking_id_and_archived_at"
+    t.index ["booking_id", "completed_at"], name: "index_housekeeping_requests_on_booking_id_and_completed_at"
     t.index ["booking_id", "requested_at"], name: "index_housekeeping_requests_on_booking_id_and_requested_at"
     t.index ["booking_id", "status"], name: "index_housekeeping_requests_on_booking_id_and_status"
     t.index ["booking_id"], name: "index_housekeeping_requests_on_booking_id"
     t.index ["external_id"], name: "index_housekeeping_requests_on_external_id", unique: true
+    t.index ["hotel_id", "completed_at"], name: "index_housekeeping_requests_on_hotel_id_and_completed_at"
+    t.index ["hotel_id", "requested_at"], name: "index_housekeeping_requests_on_hotel_id_and_requested_at"
     t.index ["hotel_id", "room_number"], name: "index_housekeeping_requests_on_hotel_id_and_room_number"
     t.index ["hotel_id", "status"], name: "index_housekeeping_requests_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_housekeeping_requests_on_hotel_id"
     t.index ["room_type_id"], name: "index_housekeeping_requests_on_room_type_id"
+    t.index ["work_context", "status", "requested_at"], name: "idx_housekeeping_requests_context_status_requested"
+    t.index ["work_context"], name: "index_housekeeping_requests_on_work_context"
   end
 
   create_table "inventory_audit_logs", force: :cascade do |t|

@@ -512,17 +512,22 @@ module HotelDemoManagement
       complete_historical_checkout_cleaning(booking) if date < current_hotel_date
     end
 
+    # Checking the booking out raised the turnover; a departure old enough to be
+    # history has been cleaned up after by now.
     def complete_historical_checkout_cleaning(booking)
-      requests = booking.check_out_requests.open_tasks.order(:id)
+      tasks = HousekeepingRequest.checkout_turnovers.open_tasks.where(booking_id: booking.id).order(:id).to_a
 
       ActiveRecord::Base.transaction do
-        requests.each do |request|
+        tasks.each do |task|
+          # Walked rather than jumped, so the room's own history reads the way a
+          # real turnover would: dirty, then cleaning, then ready.
           %w[in_progress completed].each do |status|
             result = HotelPortal::Requests::StatusUpdater.new(
               hotel: @hotel,
-              kind: :checkout,
-              request_id: request.id,
+              kind: :housekeeping,
+              request_id: task.id,
               status: status,
+              work_contexts: HousekeepingRequest::OPERATIONAL_CONTEXTS,
               trigger_webhook: false
             ).call
             raise "Failed to mark checkout cleaning #{status} for booking #{booking.id}" unless result

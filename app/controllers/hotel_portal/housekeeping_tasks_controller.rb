@@ -40,13 +40,15 @@ module HotelPortal
     # route onto the same updater, gated on managing requests, which is a
     # different job done by different people.
     def update_status
-      authorize_advance!(HousekeepingRequest.in_hotel(current_hotel).find(params[:id]))
+      task = HousekeepingRequest.in_hotel(current_hotel).operational_tasks.find(params[:id])
+      authorize_advance!(task)
 
       updater = ::HotelPortal::Requests::StatusUpdater.new(
         hotel: current_hotel,
         kind: :housekeeping,
         request_id: params[:id],
-        status: params[:status]
+        status: params[:status],
+        work_contexts: HousekeepingRequest::OPERATIONAL_CONTEXTS
       )
 
       redirect_target = safe_redirect_target(board_return_path)

@@ -62,6 +62,7 @@ RSpec.describe "Adding a task to a room from the housekeeping board", type: :req
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
       create(:housekeeping_request, booking: booking, hotel: hotel, room_number: "101", status: "new",
+                                    work_context: "vacant_room_task",
                                     request_details: "Towels", requested_at: Time.current)
 
       get hotel_housekeeping_tasks_path(hotel)

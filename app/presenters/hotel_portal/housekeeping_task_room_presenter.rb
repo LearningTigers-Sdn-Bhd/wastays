@@ -34,9 +34,11 @@ module HotelPortal
 
     # A room needing work with nothing asked of it yet, which is where a
     # dispatcher can name a task. CreateTask decides this again on the way in;
-    # this only decides whether to offer it.
+    # this only decides whether to offer it, and has to answer the same way --
+    # an offer the service refuses is a button that exists to fail.
     def awaiting_task?
       resolved_status.in?(::HousekeepingTasks::CreateTask::ELIGIBLE_STATUSES) &&
+        active_booking.nil? &&
         task_requests.none?(&:assignable?)
     end
 
@@ -115,7 +117,7 @@ module HotelPortal
       attr_reader :request, :hotel, :view_context
 
       delegate :id, :request_details, :status, :metadata, :created_at,
-               :checkout_request?, :assigned_to_name, :display_status, to: :request
+               :assigned_to_name, :display_status, to: :request
 
       def initialize(request, hotel:, view_context:)
         @request = request
@@ -133,21 +135,13 @@ module HotelPortal
       def assign_url
         return unless assignable?
 
-        if checkout_request?
-          view_context.hotel_assign_checkout_request_path(hotel, request.id)
-        else
-          view_context.assign_hotel_housekeeping_task_path(hotel, request.id)
-        end
+        view_context.assign_hotel_housekeeping_task_path(hotel, request.id)
       end
 
       def status_url
         return unless assignable?
 
-        if checkout_request?
-          view_context.hotel_checkout_request_status_path(hotel, request.id)
-        else
-          view_context.status_hotel_housekeeping_task_path(hotel, request.id)
-        end
+        view_context.status_hotel_housekeeping_task_path(hotel, request.id)
       end
 
       def assigned_to_value
@@ -199,7 +193,7 @@ module HotelPortal
 
       # Unique per task across the whole board, so ids and labels never collide.
       def dom_key
-        "#{checkout_request? ? 'checkout' : 'housekeeping'}-#{id}"
+        "housekeeping-#{id}"
       end
 
       # What the task status column reads when there is no next step to offer.

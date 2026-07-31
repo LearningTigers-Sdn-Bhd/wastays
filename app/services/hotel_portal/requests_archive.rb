@@ -2,7 +2,8 @@
 
 module HotelPortal
   class RequestsArchive
-    include Rails.application.routes.url_helpers
+    include Requests::Narrowing
+    include Requests::Paging
 
     attr_reader :hotel, :params
 
@@ -11,79 +12,107 @@ module HotelPortal
       @params = params || {}
     end
 
-    def rows
-      @rows ||= filtered_rows
+    # The archive is read by when a request was put away, which is the only date
+    # a row here has that a reader is looking for.
+    def date_window
+      @date_window ||= Requests::DateWindow.new(
+        hotel: hotel,
+        anchor_date: params[:date],
+        days: params[:days]
+      )
     end
 
-    def summary_counts
-      {
-        archived: rows.count { |row| row[:archived_at].present? }
-      }
+    # A kind the filter bar ruled out is a query not worth making, so its source
+    # is left out rather than narrowed down to nothing.
+    #
+    # Public because this is the whole of what the archive is: the board's
+    # Archived lane reads these the way it reads its own sources. The archive
+    # had a page of its own once, and this outlived it.
+    def sources
+      @sources ||= [
+        (housekeeping_source if wanted_kind?("housekeeping")),
+        (complaint_source if wanted_kind?("complaint")),
+        (checkout_source if wanted_kind?("checkout"))
+      ].compact
     end
 
     private
 
-    def filtered_rows
-      rows = build_rows.select { |row| row[:archived_at].present? }
-      rows = rows.select { |row| search_match?(row) }
-      rows = rows.select { |row| kind_match?(row) }
-      rows = rows.select { |row| status_match?(row) }
-      rows = rows.select { |row| date_range_match?(row) }
-      rows.sort_by { |row| row[:requested_at] || Time.zone.at(0) }.reverse
+    # The archive is only ever the archived, so only the archived is asked for.
+    # A request reaches its booking rather than the other way around, which keeps
+    # a hotel's whole history of requests out of a page showing a page of them.
+    #
+    # None of these carry an order of their own: the page applies the one the
+    # cursor understands, and an order set here would sort ahead of it.
+    def housekeeping_source
+      Source.new(
+        name: "housekeeping",
+        relation: narrow(HousekeepingRequest.in_hotel(hotel).archived.guest_requests, kind: "housekeeping")
+          .where.not(booking_id: nil)
+          .where(archived_at: window_range)
+          .includes(:booking),
+        sort_column: :archived_at,
+        builder: ->(request) { row_for(kind: "housekeeping", request: request, title: request.request_details) }
+      )
     end
 
-    def build_rows
-      rows = []
-
-      hotel.bookings.includes(:housekeeping_requests, :complaint_requests, :check_out_requests).find_each do |booking|
-        booking.housekeeping_requests.each do |request|
-          rows << build_row(
-            kind: "housekeeping",
-            request: request,
-            booking: booking,
-            title: request.request_details
-          )
-        end
-
-        booking.complaint_requests.each do |request|
-          rows << build_row(
-            kind: "complaint",
-            request: request,
-            booking: booking,
-            title: request.complaint_details
-          )
-        end
-
-        booking.check_out_requests.each do |request|
-          archived_at = request.metadata.to_h["archived_at"]
-          next unless request.status == "cancelled" || (request.status == "completed" && archived_at.present?)
-          rows << {
-            kind: "checkout",
-            request_id: request.id,
-            booking_id: booking.id,
-            booking_token: booking.confirmation_token,
-            guest_name: booking.guest_name,
-            title: request.guest_notes.presence || "Checkout requested",
-            requested_at: request.requested_at,
-            completed_at: request.acknowledged_at || request.updated_at,
-            status: request.status,
-            internal_notes: [],
-            archived_at: archived_at.presence || request.updated_at,
-            status_class: request.status == "completed" ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border border-red-100",
-            kind_class: "bg-amber-50 text-amber-600 border-amber-100",
-            archive_url: hotel_unarchive_request_path(hotel, kind: "checkout", request_id: request.id),
-            archive_action: "Unarchive",
-            booking_url: hotel_booking_path(hotel, booking, tab: "requests")
-          }
-        end
-      end
-
-      rows
+    def complaint_source
+      Source.new(
+        name: "complaint",
+        relation: narrow(ComplaintRequest.where(booking_id: hotel_booking_ids).archived, kind: "complaint")
+          .where(archived_at: window_range)
+          .includes(:booking),
+        sort_column: :archived_at,
+        builder: ->(request) { row_for(kind: "complaint", request: request, title: request.complaint_details) }
+      )
     end
 
-    def build_row(kind:, request:, booking:, title:)
-      {
+    # A checkout carries no archived_at column: cancelling is an ending of its
+    # own, and completing is archived by a note in its metadata. Neither is a
+    # column the window can be read against or the page ordered by, so when the
+    # record was last written stands in for when it was put away -- which is what
+    # putting it away did.
+    def checkout_source
+      Source.new(
+        name: "checkout",
+        relation: narrow(CheckOutRequest.where(booking_id: hotel_booking_ids), kind: "checkout")
+          .where(
+            "check_out_requests.status = 'cancelled' OR " \
+            "(check_out_requests.status = 'completed' AND COALESCE(check_out_requests.metadata->>'archived_at', '') <> '')"
+          )
+          .where(updated_at: window_range)
+          .includes(:booking),
+        sort_column: :updated_at,
+        builder: ->(request) { checkout_row(request) }
+      )
+    end
+
+    def hotel_booking_ids
+      @hotel_booking_ids ||= hotel.bookings.select(:id)
+    end
+
+    def window_range
+      @window_range ||= date_window.range
+    end
+
+    def wanted_kind?(kind)
+      wanted = params[:kind].to_s
+      wanted.blank? || wanted == "all" || wanted == kind
+    end
+
+    # -- Rows -----------------------------------------------------------------
+    #
+    # `sort_at` is the value of the source's sort column and nothing else. The
+    # cursor names the last row by it, so a row that reports one time and is
+    # ordered by another puts the page boundary in a place the next query cannot
+    # find.
+
+    def row_for(kind:, request:, title:)
+      booking = request.booking
+
+      Requests::Card.new(
         kind: kind,
+        record_kind: kind,
         request_id: request.id,
         booking_id: booking.id,
         booking_token: booking.confirmation_token,
@@ -94,112 +123,35 @@ module HotelPortal
         status: request.status,
         internal_notes: request.internal_notes_list,
         archived_at: request.archived_at,
-        status_class: status_class_for(kind, request.status),
-        kind_class: kind_class_for(kind),
-        archive_url: request.archived? ? hotel_unarchive_request_path(hotel, kind: kind, request_id: request.id) : hotel_archive_request_path(hotel, kind: kind, request_id: request.id),
-        archive_action: request.archived? ? "Unarchive" : "Archive",
-        booking_url: hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests")
-      }
+        sort_at: request.archived_at
+      )
     end
 
-    def search_match?(row)
-      query = params[:q].to_s.strip.downcase
-      return true if query.blank?
+    def checkout_row(request)
+      booking = request.booking
 
-      # Map query to potential statuses if it matches a group name
-      status_aliases = []
-      if "pending".include?(query)
-        status_aliases += %w[pending in_progress failed]
-      end
-      if "completed".include?(query) || "resolved".include?(query)
-        status_aliases += %w[completed resolved]
-      end
-      if "cancelled".include?(query)
-        status_aliases << "cancelled"
-      end
-
-      searchable_values = [
-        row[:guest_name],
-        row[:booking_token],
-        row[:title],
-        row[:status],
-        row[:kind]
-      ]
-
-      # Check if query matches any searchable value OR if the row status matches a status alias
-      searchable_values.compact.any? { |value| value.to_s.downcase.include?(query) } ||
-        status_aliases.include?(row[:status].to_s) ||
-        row[:internal_notes].any? { |n| n["body"].to_s.downcase.include?(query) }
+      Requests::Card.new(
+        kind: "checkout",
+        record_kind: "checkout",
+        request_id: request.id,
+        booking_id: booking.id,
+        booking_token: booking.confirmation_token,
+        guest_name: booking.guest_name,
+        title: request.guest_notes.presence || "Checkout requested",
+        requested_at: request.requested_at,
+        completed_at: request.completed_at,
+        status: request.status,
+        internal_notes: [],
+        # What the note says it was, for a reader; the row is still ordered by the
+        # column the query could reach.
+        archived_at: request.metadata.to_h["archived_at"].presence || request.updated_at,
+        sort_at: request.updated_at
+      )
     end
 
-    def kind_match?(row)
-      kind = params[:kind].to_s
-      return true if kind.blank? || kind == "all"
-
-      row[:kind] == kind
-    end
-
-    def status_match?(row)
-      status = params[:status].to_s
-      return true if status.blank? || status == "all"
-
-      case status
-      when "pending"
-        row[:status].in?(%w[pending in_progress failed])
-      when "completed"
-        row[:status].in?(%w[completed resolved])
-      when "cancelled"
-        row[:status] == "cancelled"
-      else
-        true
-      end
-    end
-
-    def date_range_match?(row)
-      date = params[:date].presence || params[:requested_on].presence
-      return true if date.blank?
-
-      requested_at = row[:requested_at]
-      return false if requested_at.blank?
-
-      selected_date = begin
-        Date.parse(date.to_s)
-      rescue ArgumentError, TypeError
-        nil
-      end
-      return true if selected_date.blank?
-
-      requested_at.to_date == selected_date
-    end
-
-    def status_class_for(kind, status)
-      case kind.to_s
-      when "housekeeping", "checkout"
-        case status.to_s
-        when "completed", "resolved" then "bg-green-50 text-green-700 border border-green-100"
-        when "cancel", "rejected", "cancelled" then "bg-red-50 text-red-700 border border-red-100"
-        when "pending", "requested" then "bg-yellow-50 text-yellow-700 border border-yellow-100"
-        else "bg-muted text-foreground border border-border"
-        end
-      else
-        case status.to_s
-        when "resolved", "completed" then "bg-green-50 text-green-700 border border-green-100"
-        when "in_progress" then "bg-blue-50 text-blue-700 border border-blue-100"
-        when "failed", "cancelled" then "bg-red-50 text-red-700 border border-red-100"
-        when "pending" then "bg-yellow-50 text-yellow-700 border border-yellow-100"
-        else "bg-muted text-foreground border border-border"
-        end
-      end
-    end
-
-    def kind_class_for(kind)
-      if kind == "housekeeping"
-        "bg-blue-50 text-blue-600 border-blue-100"
-      elsif kind == "checkout"
-        "bg-amber-50 text-amber-600 border-amber-100"
-      else
-        "bg-rose-50 text-rose-600 border-rose-100"
-      end
+    # The archive is where notes are read, so it is where they are searched.
+    def search_internal_notes?
+      true
     end
   end
 end

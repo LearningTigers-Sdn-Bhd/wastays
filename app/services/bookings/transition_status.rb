@@ -479,17 +479,7 @@ module Bookings
         ).call
       end
 
-      # Auto-create one checkout request for the booking.
-      # Checkout room cleaning stays in CheckOutRequest and is rendered in the housekeeping task view.
-      return if @booking.check_out_requests.open_tasks.exists?
-
-      checkout_room_number = @booking.booking_rooms.where.not(room_number: [ nil, "" ]).first&.room_number
-      @booking.check_out_requests.create!(
-        status: "new",
-        requested_at: Time.current,
-        guest_notes: "Checkout Room Cleaning",
-        metadata: { "source" => "auto_checkout", "room_number" => checkout_room_number }
-      )
+      HousekeepingTasks::CreateTurnover.new(booking: @booking, timestamp: @timestamp).call
     end
 
     def release_review_rooms_to_ready

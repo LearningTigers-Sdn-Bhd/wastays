@@ -15,6 +15,7 @@ module Housekeeping
 
     def call
       return OpenStruct.new(success?: false, message: "Booking not found") unless @booking
+      return OpenStruct.new(success?: false, message: "Housekeeping requests require an active booking") unless Bookings::Occupancy.accepts_guest_requests?(@booking)
 
       request = nil
       ActiveRecord::Base.transaction do
@@ -24,6 +25,7 @@ module Housekeeping
           requested_at: @requested_at || request.requested_at || Time.current,
           request_details: request_details,
           status: resolved_status(request),
+          work_context: "guest_request",
           metadata: merged_metadata(request),
           external_id: @external_id.presence || request.external_id
         )
@@ -47,9 +49,9 @@ module Housekeeping
 
     def find_or_build_request
       if @external_id.present?
-        @booking.housekeeping_requests.find_or_initialize_by(external_id: @external_id)
+        @booking.housekeeping_requests.guest_requests.find_or_initialize_by(external_id: @external_id)
       else
-        @booking.housekeeping_requests.order(created_at: :desc).first || @booking.housekeeping_requests.build
+        @booking.housekeeping_requests.guest_requests.order(created_at: :desc).first || @booking.housekeeping_requests.build
       end
     end
 

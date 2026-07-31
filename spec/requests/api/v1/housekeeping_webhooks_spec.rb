@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Api::V1::HousekeepingWebhooks", type: :request do
-  let(:booking) { create(:booking) }
+  let(:booking) { create(:booking, status: "checked_in") }
 
   describe "POST /create" do
     it "creates a pending housekeeping request and later marks it completed" do
@@ -17,6 +17,7 @@ RSpec.describe "Api::V1::HousekeepingWebhooks", type: :request do
       request = booking.housekeeping_requests.first
       expect(request.status).to eq("pending")
       expect(request.request_details).to include("Change towels")
+      expect(request.work_context).to eq("guest_request")
 
       post "/api/v1/housekeeping_webhooks", params: {
         booking_token: booking.confirmation_token,

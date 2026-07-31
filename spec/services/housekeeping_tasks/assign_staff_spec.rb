@@ -53,6 +53,7 @@ RSpec.describe HousekeepingTasks::AssignStaff do
       room_number: "101",
       status: assigned_to ? "assigned" : "in_progress",
       request_details: details,
+      work_context: "vacant_room_task",
       metadata: assigned_to ? { "assigned_to" => assigned_to.id, "assigned_to_name" => assigned_to.name } : {}
     )
   end
@@ -83,7 +84,8 @@ RSpec.describe HousekeepingTasks::AssignStaff do
         hotel:,
         room_number: "101",
         status: "in_progress",
-        request_details: "Penthouse minibar"
+        request_details: "Penthouse minibar",
+        work_context: "vacant_room_task"
       )
       sam = housekeeper("Sam Lee")
 
@@ -171,7 +173,8 @@ RSpec.describe HousekeepingTasks::AssignStaff do
   describe "what assigning does to a housekeeping request" do
     %w[new no_task pending].each do |status|
       it "moves a #{status} task to assigned" do
-        task = create(:housekeeping_request, booking: booking_on(penthouse), hotel:, room_number: "101", status:)
+        task = create(:housekeeping_request, booking: booking_on(penthouse), hotel:, room_number: "101", status:,
+                      work_context: "vacant_room_task")
         sam = housekeeper("Sam Lee")
 
         assign(task, to: sam, as: dispatcher)
@@ -219,92 +222,24 @@ RSpec.describe HousekeepingTasks::AssignStaff do
     end
   end
 
-  describe "what assigning does to a checkout request" do
-    def assign_checkout(request, to:, as:)
-      described_class.new(hotel:, checkout_request: request, assigned_to_id: to&.id, current_user: as).call
-    end
-
-    def checkout_on(room_type, status: "pending")
-      booking = booking_on(room_type)
-      create(:check_out_request, booking:, status:, requested_at: Time.current, metadata: { "room_number" => "101" })
-    end
-
-    %w[new pending acknowledged].each do |status|
-      it "moves a #{status} request to assigned, and mirrors it in the workflow status" do
-        request = checkout_on(penthouse, status:)
-        sam = housekeeper("Sam Lee")
-
-        assign_checkout(request, to: sam, as: dispatcher)
-
-        expect(request.reload.status).to eq("assigned")
-        expect(request.metadata).to include("workflow_status" => "assigned", "assigned_to" => sam.id)
-      end
-    end
-
-    it "leaves a request already under way under way, but still names the new holder" do
-      request = checkout_on(penthouse, status: "in_progress")
-      sam = housekeeper("Sam Lee")
-
-      assign_checkout(request, to: sam, as: dispatcher)
-
-      expect(request.reload.status).to eq("in_progress")
-      expect(request.metadata).to include("workflow_status" => "assigned", "assigned_to" => sam.id)
-    end
-
-    %w[assigned in_progress acknowledged].each do |status|
-      it "puts a released #{status} request back to new" do
-        sam = housekeeper("Sam Lee")
-        request = checkout_on(penthouse, status:)
-        request.update!(metadata: request.metadata.merge("assigned_to" => sam.id, "assigned_to_name" => sam.name))
-
-        assign_checkout(request, to: nil, as: dispatcher)
-
-        expect(request.reload.status).to eq("new")
-        expect(request.metadata).to include("workflow_status" => "new")
-        expect(request.metadata).not_to include("assigned_to")
-      end
-    end
-
-    it "rejects an assignee who is not a housekeeper here, leaving the holder in place" do
-      sam = housekeeper("Sam Lee")
-      request = checkout_on(penthouse, status: "assigned")
-      request.update!(metadata: request.metadata.merge("assigned_to" => sam.id, "assigned_to_name" => sam.name))
-
-      service = described_class.new(hotel:, checkout_request: request, assigned_to_id: -1, current_user: dispatcher)
-
-      expect { service.call }.to raise_error(ActiveRecord::RecordNotFound, "Housekeeper not found")
-      expect(request.reload.metadata).to include("assigned_to" => sam.id)
-    end
-
-    it "refuses a request belonging to another hotel" do
-      other_hotel = create(:hotel, account:)
-      other_room = create(:room_type, hotel: other_hotel, room_number_mode: "custom", room_numbers: %w[101])
-      booking = create(:booking, hotel: other_hotel)
-      create(:booking_room, booking:, room_type: other_room, room_number: "101")
-      request = create(:check_out_request, booking:, status: "pending", requested_at: Time.current)
-
-      expect { assign_checkout(request, to: housekeeper("Sam Lee"), as: dispatcher) }
-        .to raise_error(ActiveRecord::RecordNotFound)
-    end
-  end
-
   describe "one room, one assignment" do
-    it "hands a room's checkout cleaning and its housekeeping work to the same person at once" do
+    it "hands a room's turnover and housekeeping work to the same person at once" do
       housekeeping = task_on(penthouse, details: "Towels")
-      checkout = create(:check_out_request, booking: housekeeping.booking, status: "pending",
-                                            requested_at: Time.current, metadata: { "room_number" => "101" })
+      turnover = create(:housekeeping_request, booking: housekeeping.booking, hotel:, room_type: penthouse,
+                        room_number: "101", work_context: "checkout_turnover",
+                        status: "new", request_details: "Checkout turnover")
       sam = housekeeper("Sam Lee")
 
       assign(housekeeping, to: sam, as: dispatcher)
 
       expect(housekeeping.reload.metadata["assigned_to"]).to eq(sam.id)
-      expect(checkout.reload.metadata["assigned_to"]).to eq(sam.id)
+      expect(turnover.reload.metadata["assigned_to"]).to eq(sam.id)
     end
 
     it "leaves a placeholder record alone while the room has real work" do
       real = task_on(penthouse, details: "Towels")
       placeholder = create(:housekeeping_request, booking: real.booking, hotel:, room_number: "101",
-                                                  status: "no_task", request_details: "-")
+                           status: "no_task", request_details: "-", work_context: "vacant_room_task")
       sam = housekeeper("Sam Lee")
 
       assign(real, to: sam, as: dispatcher)
@@ -316,7 +251,7 @@ RSpec.describe HousekeepingTasks::AssignStaff do
 
     it "takes the placeholder itself when that is all the room has" do
       placeholder = create(:housekeeping_request, booking: booking_on(penthouse), hotel:, room_number: "101",
-                                                  status: "no_task", request_details: "-")
+                           status: "no_task", request_details: "-", work_context: "vacant_room_task")
       sam = housekeeper("Sam Lee")
 
       assign(placeholder, to: sam, as: dispatcher)
@@ -354,8 +289,9 @@ RSpec.describe HousekeepingTasks::AssignStaff do
 
     it "writes one audit event naming every task it moved" do
       housekeeping = task_on(penthouse, details: "Towels")
-      checkout = create(:check_out_request, booking: housekeeping.booking, status: "pending",
-                                            requested_at: Time.current, metadata: { "room_number" => "101" })
+      turnover = create(:housekeeping_request, booking: housekeeping.booking, hotel:, room_type: penthouse,
+                        room_number: "101", work_context: "checkout_turnover",
+                        status: "new", request_details: "Checkout turnover")
       sam = housekeeper("Sam Lee")
 
       assign(housekeeping, to: sam, as: dispatcher)
@@ -365,7 +301,7 @@ RSpec.describe HousekeepingTasks::AssignStaff do
       expect(audit.reason).to eq("Assigned room cleaning tasks to Sam Lee")
       expect(audit.metadata["tasks"]).to contain_exactly(
         { "type" => "HousekeepingRequest", "id" => housekeeping.id },
-        { "type" => "CheckOutRequest", "id" => checkout.id }
+        { "type" => "HousekeepingRequest", "id" => turnover.id }
       )
     end
 

@@ -1,0 +1,24 @@
+<%= turbo_frame_tag(turbo_frame_request_id.presence || "requests_action_sheet") do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "request-detail-sheet",
+          side: :right,
+          size: :md,
+          title: "#{@presenter.kind_label} request",
+          description: [ @presenter.booking_token, (@presenter.room_number.presence && "Room #{@presenter.room_number}") ].compact.join(" · "),
+          body_class: "p-0") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= render "hotel_portal/requests/actions/details/detail", presenter: @presenter %>
+      <% end %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              href: hotel_booking_workspace_path(current_hotel, @presenter.booking_id, tab: "housekeeping_requests"),
+              variant: :primary,
+              size: :md,
+              data: { turbo_frame: "_top" }) do %>
+          Full booking details
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

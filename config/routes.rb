@@ -416,6 +416,12 @@ Rails.application.routes.draw do
       match "new-task", to: "task_creations#show", via: [ :get, :post ], as: :new_task
     end
 
+    scope "request-actions", as: :request_action, module: "requests/actions" do
+      # A request is one of three tables, so it travels as its kind and its id
+      # the way it does everywhere else on the board.
+      get "show-request/:kind/:request_id", to: "details#show", as: :show_request
+    end
+
     scope "folio-actions", as: :folio_action, module: "folios/actions" do
       match "post-transaction/:booking_id", to: "transactions#show", via: [ :get, :post ], as: :post_transaction
       match "move-transaction/:booking_id/:transaction_id", to: "transaction_moves#show", via: [ :get, :post ], as: :move_transaction
@@ -439,7 +445,11 @@ Rails.application.routes.draw do
     get "folio-documents/:folio_id/ledger", to: "folios#ledger", as: :folio_ledger
 
     get "requests", to: "requests#index", as: :requests
-    get "requests/archive", to: "requests#archive", as: :request_archive
+    # The rest of one column, read from a cursor rather than a page number.
+    get "requests/columns/:column", to: "requests#column", as: :requests_column
+    # Putting a request in a lane -- dragged there, or asked for by the button on
+    # the card. One endpoint, so the two gestures cannot mean different things.
+    patch "requests/move", to: "requests#move", as: :requests_move
     resources :housekeeping_tasks, only: [ :index ] do
       member do
         patch :assign
@@ -451,8 +461,6 @@ Rails.application.routes.draw do
     patch "requests/:kind/:request_id/archive", to: "requests#archive_request", as: :archive_request
     patch "requests/:kind/:request_id/unarchive", to: "requests#unarchive_request", as: :unarchive_request
 
-    patch "checkout-requests/:id/assign", to: "checkout_requests#assign", as: :assign_checkout_request
-    patch "checkout-requests/:id/status", to: "checkout_requests#update_status", as: :checkout_request_status
     patch "checkout-requests/:id/complete", to: "checkout_requests#complete", as: :complete_checkout_request
 
     resources :room_locks, only: [ :create ] do
