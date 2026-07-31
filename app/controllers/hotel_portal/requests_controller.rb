@@ -38,13 +38,14 @@ module HotelPortal
 
     def archive
       archive = ::HotelPortal::RequestsArchive.new(current_hotel, params)
-      archive_rows = Kaminari.paginate_array(archive.rows).page(params[:page]).per(25)
+      cursor = ::HotelPortal::Requests::Cursor.parse(params[:cursor])
 
       @presenter = ::HotelPortal::RequestsArchivePresenter.new(
-        archive_rows: archive_rows,
-        archive_counts: archive.summary_counts,
+        page: archive.page(cursor: cursor),
+        total_count: archive.total_count,
         date_window: archive.date_window,
-        view_context: view_context
+        view_context: view_context,
+        cursor: cursor
       )
     end
 

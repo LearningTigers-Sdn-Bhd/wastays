@@ -65,10 +65,10 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-border bg-card">
-              <% @presenter.archive_rows.each do |row| %>
+              <% @presenter.rows.each do |row| %>
                 <tr>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= row[:kind_class] %>">
+                    <span class="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= @presenter.kind_badge_class(row) %>">
                       <%= row[:kind].titleize %>
                     </span>
                   </td>
@@ -84,7 +84,7 @@
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-foreground"><%= row[:guest_name] %></td>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= row[:status_class] %>">
+                    <span class="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider <%= @presenter.status_badge_class(row) %>">
                       <%= row[:status].titleize %>
                     </span>
                   </td>
@@ -111,8 +111,28 @@
         <div class="p-8 text-sm text-muted-foreground">No requests match your filters.</div>
       <% end %>
 
-      <div class="flex justify-center border-t border-border bg-muted/50 px-6 py-5">
-        <%= paginate @presenter.archive_rows %>
+      <%# Not numbered pages: the archive is live -- staff archive and restore
+          things while somebody reads it -- and OFFSET counts rows that have since
+          moved, so it skips and repeats them. The cursor names the last row read
+          instead, which means the archive travels one way and back to the start. %>
+      <div class="flex items-center justify-between gap-3 border-t border-border bg-muted/50 px-6 py-5">
+        <p class="text-xs text-muted-foreground">
+          <%= pluralize(@presenter.total_count, "archived request") %> in this range
+        </p>
+        <div class="flex items-center gap-2">
+          <% if @presenter.paged? %>
+            <%= render PanelsUI::Button.new(as: :a, href: @presenter.newest_page_path, variant: :ghost, size: :sm) do %>
+              <%= cached_icon "chevron-left", class: "size-4" %>
+              Newest
+            <% end %>
+          <% end %>
+          <% if @presenter.more? %>
+            <%= render PanelsUI::Button.new(as: :a, href: @presenter.next_page_path, variant: :secondary, size: :sm) do %>
+              Older
+              <%= cached_icon "chevron-right", class: "size-4" %>
+            <% end %>
+          <% end %>
+        </div>
       </div>
     </div>
   <% end %>

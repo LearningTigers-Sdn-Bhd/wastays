@@ -2,17 +2,43 @@
 
 module HotelPortal
   class RequestsArchivePresenter
-    attr_reader :archive_rows, :archive_counts, :date_window
+    attr_reader :page, :total_count, :date_window
 
-    def initialize(archive_rows:, archive_counts:, date_window:, view_context:)
-      @archive_rows = archive_rows
-      @archive_counts = archive_counts
+    def initialize(page:, total_count:, date_window:, view_context:, cursor: nil)
+      @page = page
+      @total_count = total_count
       @date_window = date_window
       @view_context = view_context
+      @cursor = cursor
+    end
+
+    def rows
+      page.cards
     end
 
     def rows?
-      archive_rows.any?
+      rows.any?
+    end
+
+    # Whether there is more archive behind this page.
+    def more?
+      page.more?
+    end
+
+    # Whether this is a page reached from an earlier one, rather than the newest.
+    def paged?
+      @cursor.present?
+    end
+
+    def next_page_path
+      return if page.next_cursor.nil?
+
+      @view_context.request_archive_path_for(date_window, cursor: page.next_cursor.to_param)
+    end
+
+    # Back to the newest page, dropping the cursor and keeping the filters.
+    def newest_page_path
+      @view_context.request_archive_path_for(date_window)
     end
 
     def window_label
@@ -62,6 +88,27 @@ module HotelPortal
 
     def note_body(note)
       note["body"]
+    end
+
+    # How a row is dressed. This lived in RequestsArchive, which meant a service
+    # deciding what a badge looks like; the classes it hands out are the view's
+    # business and the query's is the query.
+    def kind_badge_class(row)
+      case row[:kind]
+      when "housekeeping" then "bg-blue-50 text-blue-600 border-blue-100"
+      when "checkout" then "bg-amber-50 text-amber-600 border-amber-100"
+      else "bg-rose-50 text-rose-600 border-rose-100"
+      end
+    end
+
+    def status_badge_class(row)
+      case row[:status]
+      when "completed", "resolved" then "bg-green-50 text-green-700 border border-green-100"
+      when "cancel", "rejected", "cancelled", "failed" then "bg-red-50 text-red-700 border border-red-100"
+      when "in_progress" then "bg-blue-50 text-blue-700 border border-blue-100"
+      when "pending", "requested" then "bg-yellow-50 text-yellow-700 border border-yellow-100"
+      else "bg-muted text-foreground border border-border"
+      end
     end
 
     private

@@ -4,8 +4,7 @@ module HotelPortal
   class RequestsBoard
     include Rails.application.routes.url_helpers
     include Requests::Narrowing
-
-    PAGE_SIZE = 25
+    include Requests::Paging
 
     COLUMNS = %i[housekeeping complaint completed checkout].freeze
 
@@ -14,15 +13,6 @@ module HotelPortal
     # rather than quietly dropping off the board.
     HOUSEKEEPING_OPEN_STATUSES = (HousekeepingRequest::STATUSES - %w[completed cancelled no_task]).freeze
     COMPLAINT_OPEN_STATUSES = (ComplaintRequest::STATUSES - %w[resolved cancelled]).freeze
-
-    # One column, as far as it has been read.
-    Page = Struct.new(:cards, :next_cursor, keyword_init: true) do
-      def more? = next_cursor.present?
-    end
-
-    # Where a column's rows come from. A column can have more than one, and they
-    # are merged in the order the cursor understands.
-    Source = Struct.new(:name, :relation, :sort_column, :builder, keyword_init: true)
 
     attr_reader :hotel, :params
 
@@ -43,15 +33,9 @@ module HotelPortal
       )
     end
 
-    # One column, from the cursor onwards. Each source is asked for one more row
-    # than the page needs, which is how the column knows whether there is
-    # another page without counting the rest of it.
+    # One column, from the cursor onwards.
     def page(column, cursor: nil, limit: PAGE_SIZE)
-      fetched = sources_for(column).flat_map { |source| read(source, cursor: cursor, limit: limit) }
-      ordered = Requests::Cursor.sort(fetched)
-      cards = ordered.first(limit)
-
-      Page.new(cards: cards, next_cursor: (cursor_after(cards) if ordered.size > limit))
+      paged(sources_for(column), cursor: cursor, limit: limit)
     end
 
     def pages
@@ -95,28 +79,6 @@ module HotelPortal
     end
 
     private
-
-    def read(source, cursor:, limit:)
-      scope = source.relation.order(source.sort_column => :desc, id: :desc).limit(limit + 1)
-
-      if cursor
-        condition, binds = cursor.predicate_for(
-          table: source.relation.table_name,
-          column: source.sort_column,
-          source: source.name
-        )
-        scope = scope.where(condition, binds)
-      end
-
-      scope.map { |record| source.builder.call(record).merge(sort_source: source.name) }
-    end
-
-    def cursor_after(cards)
-      last = cards.last
-      return if last.nil?
-
-      Requests::Cursor.new(at: last[:sort_at], source: last[:sort_source], id: last[:request_id])
-    end
 
     # -- What each column is drawn from --------------------------------------
 

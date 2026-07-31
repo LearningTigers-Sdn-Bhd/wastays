@@ -142,6 +142,81 @@ RSpec.describe "Hotel portal request pages", type: :request do
     end
   end
 
+  # The archive is read a page at a time by naming the last row read, not by
+  # counting rows that staff are still archiving and restoring underneath it.
+  describe "reading the archive past its first page" do
+    let(:booking) { create(:booking, hotel: hotel, guest_name: "Aisyah") }
+
+    before do
+      (HotelPortal::Requests::Paging::PAGE_SIZE + 3).times do |index|
+        create(:complaint_request, booking: booking, status: "resolved",
+               complaint_details: "Filed #{index}", archived_at: (index + 1).minutes.ago)
+      end
+    end
+
+    def archive_row_ids
+      Nokogiri::HTML(response.body).css("tbody tr").map do |row|
+        row.at_css("a[data-turbo-frame='requests_action_sheet']")["href"][/\d+\z/]
+      end
+    end
+
+    it "says how much archive there is and offers the rest of it" do
+      get hotel_request_archive_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("#{HotelPortal::Requests::Paging::PAGE_SIZE + 3} archived requests in this range")
+      expect(response.body).to include("Older")
+      # Nothing behind the newest page to go back to.
+      expect(response.body).not_to include("Newest")
+    end
+
+    it "shows each archived request once across the two pages" do
+      get hotel_request_archive_path(hotel)
+      first_ids = archive_row_ids
+      older = Nokogiri::HTML(response.body).css("a").find { |link| link.text.include?("Older") }
+
+      get older["href"]
+      second_ids = archive_row_ids
+
+      expect(response).to have_http_status(:ok)
+      expect(first_ids.size).to eq(HotelPortal::Requests::Paging::PAGE_SIZE)
+      expect(second_ids.size).to eq(3)
+      expect(first_ids & second_ids).to be_empty
+    end
+
+    it "offers a way back to the newest page, and nothing older beyond the last" do
+      get hotel_request_archive_path(hotel)
+      older = Nokogiri::HTML(response.body).css("a").find { |link| link.text.include?("Older") }
+
+      get older["href"]
+
+      expect(response.body).to include("Newest")
+      expect(response.body).not_to include(">Older")
+    end
+
+    it "carries the filters into the rest of the archive" do
+      get hotel_request_archive_path(hotel, kind: "complaint")
+      older = Nokogiri::HTML(response.body).css("a").find { |link| link.text.include?("Older") }
+
+      expect(older["href"]).to include("kind=complaint")
+      expect(older["href"]).to include("cursor=")
+    end
+
+    # A cursor from one window is not a place another one has, so moving the
+    # range starts the archive again rather than carrying where it got to.
+    it "starts the archive again when the range moves" do
+      hotel_today = Time.current.in_time_zone(hotel.hotel_time_zone).to_date
+
+      get hotel_request_archive_path(hotel)
+      older = Nokogiri::HTML(response.body).css("a").find { |link| link.text.include?("Older") }
+
+      get older["href"]
+
+      step_back = hotel_request_archive_path(hotel, date: (hotel_today - 7).iso8601, days: 7)
+      expect(response.body).to include(ERB::Util.html_escape(step_back))
+    end
+  end
+
   describe "the date range toolbar" do
     let(:booking) { create(:booking, hotel: hotel, guest_name: "Aisyah") }
 
