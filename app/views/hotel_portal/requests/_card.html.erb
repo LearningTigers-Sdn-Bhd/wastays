@@ -5,15 +5,18 @@
   Locals: card, bucket_key, presenter
 %>
 <% if presenter.card_actionable?(card) %>
+  <% draggable = presenter.card_draggable?(card, bucket_key) %>
   <article
-    draggable="true"
+    draggable="<%= draggable %>"
     data-requests-board-target="card"
     data-request-kind="<%= card[:kind] %>"
     data-request-id="<%= card[:request_id] %>"
     data-update-url="<%= card[:update_url] %>"
     data-current-status="<%= card[:status] %>"
-    data-action="dragstart->requests-board#dragStart dragend->requests-board#dragEnd"
-    class="group cursor-grab rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-border-interactive hover:shadow-md active:cursor-grabbing"
+    <% if draggable %>
+      data-action="dragstart->requests-board#dragStart dragend->requests-board#dragEnd"
+    <% end %>
+    class="group rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-border-interactive hover:shadow-md <%= "cursor-grab active:cursor-grabbing" if draggable %>"
   >
     <div class="mb-3 flex items-center justify-between">
       <div class="flex min-w-0 items-center gap-2">

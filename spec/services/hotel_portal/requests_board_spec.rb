@@ -30,8 +30,12 @@ RSpec.describe HotelPortal::RequestsBoard do
                requested_at: 200.days.ago, completed_at: 200.days.ago, archived_at: 200.days.ago)
         create(:complaint_request, booking: old_booking, status: 'resolved',
                requested_at: 200.days.ago, completed_at: 200.days.ago, archived_at: 200.days.ago)
+        # A checkout is filed by when it was last written, having no archived_at
+        # of its own, so history has to be old in that column too -- created now
+        # it would be this week's archive, however long ago it was requested.
         create(:check_out_request, booking: old_booking, status: 'completed',
                requested_at: 200.days.ago, metadata: { 'archived_at' => 200.days.ago.iso8601 })
+          .update_column(:updated_at, 200.days.ago)
       end
     end
 
@@ -234,25 +238,42 @@ RSpec.describe HotelPortal::RequestsBoard do
   end
 
   describe '#board_columns' do
-    it 'only returns active (unarchived) requests' do
+    # The board carries the archive as a column of its own now, so a spec about
+    # the working columns has to say which ones it means.
+    def open_cards(board)
+      board.board_columns.except(:archived).values.flatten
+    end
+
+    it 'keeps an archived request out of the working columns' do
       board = described_class.new(hotel)
-      columns = board.board_columns
-      total_cards = columns.values.flatten.size
-      expect(total_cards).to eq(3)
-      card_keys = columns.values.flatten.map { |c| [ c[:kind], c[:request_id] ] }
-      expect(card_keys).not_to include([ "housekeeping", archived_request.id ])
+
+      expect(open_cards(board).size).to eq(3)
+      expect(open_cards(board).map { |c| [ c[:kind], c[:request_id] ] })
+        .not_to include([ "housekeeping", archived_request.id ])
+    end
+
+    it 'shows it in the archive column instead' do
+      board = described_class.new(hotel)
+
+      expect(board.board_columns[:archived].map { |c| c[:request_id] }).to eq([ archived_request.id ])
+    end
+
+    it 'reads the archive column through the same filters as the rest' do
+      board = described_class.new(hotel, { q: 'nothing matches this' })
+
+      expect(board.board_columns[:archived]).to be_empty
     end
 
     context 'searching' do
       it 'searches by guest name' do
         board = described_class.new(hotel, { q: 'John' })
-        total_cards = board.board_columns.values.flatten.size
+        total_cards = open_cards(board).size
         expect(total_cards).to eq(3)
       end
 
       it 'searches by request details' do
         board = described_class.new(hotel, { q: 'Towels' })
-        total_cards = board.board_columns.values.flatten.size
+        total_cards = open_cards(board).size
         expect(total_cards).to eq(1)
         expect(board.board_columns[:housekeeping].first[:title]).to eq('2x Towels')
       end
@@ -280,18 +301,18 @@ RSpec.describe HotelPortal::RequestsBoard do
 
         board = described_class.new(hotel, { q: 'apologetic' })
 
-        expect(board.board_columns.values.flatten).to be_empty
+        expect(open_cards(board)).to be_empty
       end
 
       it 'searches by status group name "pending"' do
         board = described_class.new(hotel, { q: 'pending' })
-        total_cards = board.board_columns.values.flatten.size
+        total_cards = open_cards(board).size
         expect(total_cards).to eq(2) # housekeeping pending + complaint pending
       end
 
       it 'searches by status group name "completed"' do
         board = described_class.new(hotel, { q: 'completed' })
-        total_cards = board.board_columns.values.flatten.size
+        total_cards = open_cards(board).size
         expect(total_cards).to eq(1)
         expect(board.board_columns[:completed].first[:status]).to eq('completed')
       end
@@ -300,13 +321,13 @@ RSpec.describe HotelPortal::RequestsBoard do
     context 'filtering by status (hidden but logic exists)' do
       it 'filters by pending status group' do
         board = described_class.new(hotel, { status: 'pending' })
-        total_cards = board.board_columns.values.flatten.size
+        total_cards = open_cards(board).size
         expect(total_cards).to eq(2)
       end
 
       it 'filters by completed status group' do
         board = described_class.new(hotel, { status: 'completed' })
-        total_cards = board.board_columns.values.flatten.size
+        total_cards = open_cards(board).size
         expect(total_cards).to eq(1)
       end
 

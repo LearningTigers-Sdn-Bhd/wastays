@@ -34,6 +34,61 @@ RSpec.describe "Hotel portal request pages", type: :request do
     expect(response.body).not_to include("onclick=")
   end
 
+  # The archive is a column of the board, not only a page of its own.
+  describe "the archive column" do
+    let(:booking) { create(:booking, hotel: hotel, guest_name: "Suri") }
+
+    let!(:archived) do
+      create(:housekeeping_request, booking: booking, status: "completed",
+             request_details: "Filed towels", completed_at: Time.current, archived_at: Time.current)
+    end
+
+    it "shows what has been put away alongside the working columns" do
+      get hotel_requests_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Archived")
+      expect(response.body).to include("Filed towels")
+    end
+
+    it "offers the way back out of the archive and nothing else" do
+      get hotel_requests_path(hotel)
+      card = Nokogiri::HTML(response.body).css("article[data-request-id='#{archived.id}']").first
+
+      expect(card).to be_present
+      expect(card.text).to include("Restore")
+      expect(card.at_css("form")["action"]).to eq(hotel_unarchive_request_path(hotel, kind: "housekeeping", request_id: archived.id))
+    end
+
+    # Dragging is how a status is changed, and an archived card has none to change.
+    it "does not let an archived card be dragged" do
+      get hotel_requests_path(hotel)
+      card = Nokogiri::HTML(response.body).css("article[data-request-id='#{archived.id}']").first
+
+      expect(card["draggable"]).to eq("false")
+      expect(card["data-action"]).to be_nil
+    end
+
+    it "reads the rest of the column the way every other column is read" do
+      get hotel_requests_column_path(hotel, "archived")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Filed towels")
+    end
+
+    # Five columns are wider than the page, so the board scrolls sideways inside
+    # its own viewport instead of making the page do it.
+    it "scrolls the board sideways rather than the page" do
+      get hotel_requests_path(hotel)
+
+      scroller = Nokogiri::HTML(response.body).at_css(".panel-scroll-area")
+
+      expect(scroller).to be_present
+      expect(scroller["data-orientation"]).to eq("horizontal")
+      expect(scroller.css('[data-board-column]').size).to eq(HotelPortal::RequestsBoard::COLUMNS.size)
+    end
+  end
+
   it "renders the archive page with archived requests and no inline handlers" do
     booking = create(:booking, hotel: hotel, guest_name: "Daniel", confirmation_token: "WS-ARC123")
     create(

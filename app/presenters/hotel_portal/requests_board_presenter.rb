@@ -86,7 +86,10 @@ module HotelPortal
         { key: :housekeeping, label: "Housekeeping", accent_class: "border-t-blue-500", draggable: true },
         { key: :complaint, label: "Complaints", accent_class: "border-t-rose-500", draggable: true },
         { key: :completed, label: "Recently Completed", accent_class: "border-t-green-500", draggable: true },
-        { key: :checkout, label: "Checkout Requests", accent_class: "border-t-amber-500", draggable: false }
+        { key: :checkout, label: "Checkout Requests", accent_class: "border-t-amber-500", draggable: false },
+        # Nothing is dragged into the archive: a request is put away by being
+        # archived, which is a button on the card and not a place on the board.
+        { key: :archived, label: "Archived", accent_class: "border-t-slate-400", draggable: false }
       ]
     end
 
@@ -100,6 +103,7 @@ module HotelPortal
       case column[:key]
       when :checkout then "pending request"
       when :completed then "completed request"
+      when :archived then "archived request"
       else "active request"
       end
     end
@@ -118,6 +122,16 @@ module HotelPortal
 
     def card_actionable?(card)
       card[:update_url].present? || card[:complete_url].present? || card[:archive_url].present?
+    end
+
+    # Dragging a card is how its status is changed, so a card with no status to
+    # change is not one to drag. Without this an archived card -- and a completed
+    # checkout, which has never had an update_url -- is draggable at an empty
+    # URL, and the drop fails silently.
+    def card_draggable?(card, bucket_key)
+      return false if bucket_key == :archived
+
+      card[:update_url].present?
     end
 
     def card_shows_room_number?(card)
@@ -153,12 +167,12 @@ module HotelPortal
     # Returns the action button config for a card, or nil if no action is available.
     # Each config is a hash with :type, :url, :params, :css, :icon, :label, :title
     def card_action(card, bucket_key)
-      if bucket_key == :completed && card[:archive_url].present?
+      if bucket_key == :archived
+        restore_action(card)
+      elsif bucket_key == :completed && card[:archive_url].present?
         archive_action(card)
       elsif card[:complete_url].present? && !card[:update_url].present?
         complete_action(card)
-      elsif card[:kind] == "housekeeping" && card[:status] == "pending"
-        dispatch_action(card)
       elsif card[:status] == "pending"
         dispatch_action(card)
       elsif card[:update_url].present?
@@ -182,6 +196,22 @@ module HotelPortal
         icon_opts: { library: "phosphor", variant: "regular" },
         label: nil,
         title: "Archive Request"
+      }
+    end
+
+    # An archived card's archive_url is the way back out of the archive, which is
+    # the only thing left to do with it from here.
+    def restore_action(card)
+      {
+        url: card[:archive_url],
+        params: {},
+        css: "flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 " \
+             "text-[10px] font-black uppercase tracking-wider text-muted-foreground shadow-sm " \
+             "transition-all hover:border-border-interactive hover:text-foreground",
+        icon: "rotate-ccw",
+        icon_opts: { stroke_width: 3 },
+        label: "Restore",
+        title: "Restore Request"
       }
     end
 

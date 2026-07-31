@@ -37,10 +37,12 @@ module HotelPortal
       @total_count ||= sources.sum { |source| source.relation.count }
     end
 
-    private
-
     # A kind the filter bar ruled out is a query not worth making, so its source
     # is left out rather than narrowed down to nothing.
+    #
+    # Public because the archive is a column of the board as well as a page of
+    # its own: the board reads these the way it reads its own sources, so there
+    # is one description of what the archive is and two things reading it.
     def sources
       @sources ||= [
         (housekeeping_source if wanted_kind?("housekeeping")),
@@ -48,6 +50,8 @@ module HotelPortal
         (checkout_source if wanted_kind?("checkout"))
       ].compact
     end
+
+    private
 
     # The archive is only ever the archived, so only the archived is asked for.
     # A request reaches its booking rather than the other way around, which keeps

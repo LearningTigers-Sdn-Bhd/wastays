@@ -6,7 +6,7 @@ module HotelPortal
     include Requests::Narrowing
     include Requests::Paging
 
-    COLUMNS = %i[housekeeping complaint completed checkout].freeze
+    COLUMNS = %i[housekeeping complaint completed checkout archived].freeze
 
     # The statuses that still owe work, per kind. Subtracted from the full list
     # so that a status added to a model has to be excluded here deliberately
@@ -88,8 +88,16 @@ module HotelPortal
       when :complaint then [ complaint_source ]
       when :checkout then [ open_checkout_source, cleaning_source ]
       when :completed then [ completed_housekeeping_source, resolved_complaint_source, completed_checkout_source ]
+      when :archived then archive.sources
       else []
       end
+    end
+
+    # What has been put away, read as a column rather than as a page of its own.
+    # It answers to the same filters and the same window as everything else here
+    # -- against archived_at, which is the date a row in the archive has.
+    def archive
+      @archive ||= RequestsArchive.new(hotel, params)
     end
 
     def housekeeping_source

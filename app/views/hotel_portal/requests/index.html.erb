@@ -16,12 +16,15 @@
         <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
           Checkouts <%= @presenter.board_counts[:checkout] %>
         </span>
+        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-muted-foreground border border-border">
+          Archived <%= @presenter.board_counts[:archived] %>
+        </span>
       </div>
     <% end %>
     <% header.with_actions do %>
       <%= render PanelsUI::Button.new(as: :a, href: hotel_request_archive_path(current_hotel), variant: :secondary, size: :md, class: "w-full lg:w-auto") do %>
         <%= cached_icon "cube", library: "phosphor", variant: "regular", class: "size-4" %>
-        Archives
+        Full archive
       <% end %>
     <% end %>
   <% end %>
@@ -52,7 +55,11 @@
   </div>
 
   <%= turbo_frame_tag "requests_board_results" do %>
-  <div class="grid gap-4 xl:grid-cols-4 xl:h-[calc(100vh-12rem)] xl:items-stretch" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>" data-requests-board-target="board">
+  <%# The board is wider than the page now, so it scrolls sideways inside its own
+      viewport rather than making the page do it. Each column still scrolls down
+      inside that: the horizontal scroll moves between columns, never within one. %>
+  <%= render PanelsUI::ScrollArea.new(orientation: :horizontal, class: "h-[70dvh] xl:h-[calc(100vh-12rem)]") do %>
+  <div class="flex h-full items-stretch gap-4" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>" data-requests-board-target="board">
     <% @presenter.columns.each do |column| %>
       <% bucket_key = column[:key] %>
       <section
@@ -61,9 +68,10 @@
         <% if column[:draggable] %>
           data-action="dragover->requests-board#dragOver dragleave->requests-board#dragLeave drop->requests-board#drop"
         <% end %>
-        <%# min-w-0: a grid item sizes to its content unless told it may shrink,
-            and one long card title would widen the whole board past the page. %>
-        class="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-muted/40 border-t-4 <%= column[:accent_class] %>"
+        <%# A fixed width, and shrink-0 so the row does not squeeze the columns to
+            fit: the scroll is what makes room for them. min-w-0 stays on the
+            header text below, where a long title would otherwise widen the card. %>
+        class="flex h-full w-[19rem] shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-muted/40 border-t-4 sm:w-[21rem] <%= column[:accent_class] %>"
       >
         <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4 bg-card">
           <div class="min-w-0">
@@ -115,5 +123,6 @@
       </section>
     <% end %>
   </div>
+  <% end %>
   <% end %>
 </div>

@@ -165,12 +165,16 @@ export default class extends Controller {
 
     if (!Array.isArray(order)) return
 
-    order.forEach((key) => {
-      const column = this.boardTarget.querySelector(`[data-board-column="${key}"]`)
-      if (column) {
-        this.boardTarget.appendChild(column)
-      }
-    })
+    // Appending only the stored columns leaves any the order predates -- a column
+    // added since it was saved -- ahead of all of them. Every column is placed,
+    // the stored ones in their order and the rest after, in the order rendered.
+    const columns = Array.from(this.columnTargets)
+    const stored = order
+      .map((key) => columns.find((column) => column.dataset.boardColumn === key))
+      .filter(Boolean)
+
+    stored.concat(columns.filter((column) => !stored.includes(column)))
+      .forEach((column) => this.boardTarget.appendChild(column))
   }
 
   get storageKey() {
