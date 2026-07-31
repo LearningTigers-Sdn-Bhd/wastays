@@ -28,9 +28,11 @@ Five lanes over **three unrelated tables**, joined at runtime by a `kind` string
 Lanes, in the order the board opens with: **Housekeeping**, **Complaints**,
 **Checkout Requests**, **Recently Completed**, **Archived**. That order is
 declared once, by `Requests::Column`; `RequestsBoard::COLUMNS` and the toolbar
-toggles both read from it rather than repeating it. Each lane can be switched
-off. A lane switched off is not paged or rendered, but its count is still read
-so the toolbar can say what will reappear if it is switched back on.
+toggles both read from it rather than repeating it. The toolbar starts with an
+**All** toggle, mutually exclusive with the individual lane toggles; the latter
+remain multi-select. A lane switched off is not paged or rendered, but its count
+is still read so the toolbar can say what will reappear if it is switched back
+on. `lanes[]=all` is an explicit URL state for the full board.
 
 The archive is a lane, and only a lane. It had a page of its own
 (`/hotel/:id/requests/archive`) until that page was retired: both were bounded by
@@ -70,6 +72,7 @@ app/presenters/hotel_portal/requests_board_presenter.rb
 app/presenters/hotel_portal/requests/detail_presenter.rb
 app/helpers/hotel_portal/requests_helper.rb                   link building
 app/javascript/controllers/requests_board_controller.js       the board's gestures
+app/javascript/controllers/requests_lane_filter_controller.js All/specific lane state
 app/views/hotel_portal/requests/                              index, _card,
                                                               _column_page, _date_window,
                                                               column, move.turbo_stream,
@@ -209,10 +212,15 @@ Kept, and finished:
 
 - Cards move between lanes; the board **autoscrolls** when a drag nears its edge,
   because most lanes are off-screen once five of them scroll sideways.
+- While a card is held, every lane labels itself as a valid destination, current
+  lane, or unavailable. Valid targets get an **inset** border, so the highlight
+  cannot alter the lane's outer dimensions.
 - **Keyboard**: Enter or Space picks a card up, arrows walk it between lanes,
   Enter drops it, Escape gives up. Lanes reorder with arrows on the grip handle.
-- A refused move **says why** in `#requests_board_flash` instead of snapping the
-  card back without a word.
+- A refused move uses the shared **toast** viewport to say why instead of
+  snapping the card back without a word.
+- Drag cleanup happens before the asynchronous move request. This prevents a
+  moved card being left at the drag-opacity style after release.
 - **All five lanes reorder**, including the two that take no cards — where a lane
   sits is the operator's business. Order persists in `localStorage`, and an order
   saved before a lane existed places what it knows and appends the rest.
@@ -223,8 +231,23 @@ Kept, and finished:
 
 From `xl`, the board scrolls sideways inside a `PanelsUI::ScrollArea`
 (`orientation: :horizontal`) with fixed-width lanes, each scrolling down inside
-itself. Below `xl` the lanes stack full width and the page scrolls them; the
-scroll area is inert at that size.
+itself. The scroll area is `72dvh` high with `pb-4`; it keeps its own normal
+overscroll behavior while the page-level shell alone uses `overscroll-none`.
+Below `xl` the lanes stack full width inside that viewport.
+
+### Toolbar and URL state
+
+The toolbar is one outlined card with two divided rows: search/date controls,
+then the outlined lane toggles with badge counts. There is no third context row;
+the date-window explanation sits below the card.
+
+The filter form performs a normal Turbo **GET** rather than targeting only the
+results frame. Search, `date`, `days`, and `lanes[]` therefore become the page
+URL and the whole toolbar is rendered from the same params as the board. Earlier,
+Later, Today, and lazy-column links preserve the active filters and lane
+selection. Do not put `data-turbo-frame="requests_board_results"` back on this
+form: that was what let the board change while the URL and toolbar context stayed
+stale.
 
 ### The detail sheet
 
@@ -251,13 +274,6 @@ history asks no more than a quiet one.
 both in the archive lane and in its ordering. Any write to an archived checkout
 therefore pulls it back to the top of the archive. A real column would settle it;
 it is a migration, not a patch.
-
-**DESIGN.md**: the toolbar and the lane headers are on tokens now, but the cards
-are not. `_card.html.erb` and the class strings in `Column` still carry raw
-palette utilities (`bg-blue-50`, `text-amber-700`), `font-black` and decorative
-uppercase — §2 and §3. `Column` holds them in one place, so it is one fix rather
-than five, but they are still the wrong tokens. The action-button styles in
-`RequestsBoardPresenter` are the same problem in Ruby.
 
 **`RequestActionCompletion` is wired but unused.** `DetailsController` includes
 it; nothing calls `complete_request_action`. Card actions still live on the
@@ -311,7 +327,18 @@ The ones worth not breaking:
 - `date_window_spec.rb` — the non-UTC boundary, and a lagging business date
 - `requests_pages_spec.rb` — the lane order, that every lane itself can be
   reordered, that Checkout receives no cards, the lazy placeholder's layout
-  classes, lane visibility and count controls, and the move endpoint's streams
+  classes, All/specific lane visibility, URL-backed toolbar/date-window state,
+  lane count controls, and the move endpoint's streams
+
+The focused request-board regression run after the toolbar URL changes is **105
+examples, 0 failures**:
+
+```bash
+bin/test spec/requests/hotel_portal/requests_pages_spec.rb \
+         spec/services/hotel_portal/requests_board_spec.rb \
+         spec/services/hotel_portal/requests/move_spec.rb \
+         spec/services/hotel_portal/requests/card_reachability_spec.rb --serial
+```
 
 Note `bin/test all` flakes on a different one or two system specs each run;
 verify with targeted runs. The `front_desk_spec.rb:808` failure the previous

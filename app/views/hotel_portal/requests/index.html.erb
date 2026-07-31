@@ -1,12 +1,17 @@
 <% content_for :title, "Requests | WAStays" %>
+<% content_for :page_overscroll_class, "overscroll-none" %>
 
 <div class="w-full space-y-3">
-  <section class="space-y-2.5" aria-label="Filter requests">
+  <section
+    class="overflow-hidden rounded-lg border border-border bg-card shadow-sm"
+    aria-label="Filter requests"
+    data-slot="requests-toolbar"
+  >
     <%= form_with url: hotel_requests_path(current_hotel), method: :get,
-          data: { controller: "auto-submit", turbo_frame: "requests_board_results" },
-          class: "space-y-2.5" do |f| %>
-      <div class="flex flex-wrap items-end gap-2.5">
-        <%= render PanelsUI::FormField.new(form: f, attribute: :q, label: "Search", label_hidden: true, size: :sm, class: "min-w-64 flex-1") do |field| %>
+          data: { controller: "auto-submit" },
+          class: "divide-y divide-border" do |f| %>
+      <div class="flex flex-wrap items-end gap-2.5 px-4 py-3" data-slot="requests-toolbar-controls">
+        <%= render PanelsUI::FormField.new(form: f, attribute: :q, label: "Search", size: :sm, class: "min-w-64 flex-1") do |field| %>
           <% field.with_addon(align: :inline_start, variant: :bare) do %>
             <%= cached_icon "search", class: "size-4" %>
           <% end %>
@@ -33,57 +38,72 @@
           in the control that switches the lane, which is why the header's pills
           are gone: they said the same thing twice, and only one of them could be
           clicked. %>
-      <%= render PanelsUI::ToggleGroup.new(
-            type: :multiple,
-            name: "lanes[]",
-            value: @presenter.selected_lanes,
-            size: :sm,
-            spacing: 1,
-            aria_label: "Lanes to show",
-            data: { action: "change->auto-submit#submitNow" }) do |group| %>
-        <% @presenter.lane_options.each do |column| %>
-          <% group.with_item(value: column.key.to_s) do %>
-            <%= column.label %>
-            <span class="ms-1.5 text-muted-foreground" id="requests_lane_count_<%= column.key %>"><%= @presenter.lane_count_label(column) %></span>
+      <div class="px-4 py-2.5" data-slot="requests-toolbar-lanes">
+        <%= render PanelsUI::ToggleGroup.new(
+              type: :multiple,
+              name: "lanes[]",
+              value: @presenter.lane_toggle_values,
+              variant: :outline,
+              size: :sm,
+              spacing: 1,
+              aria_label: "Lanes to show",
+              data: {
+                controller: "requests-lane-filter",
+                action: "panels-ui--toggle-group:change->requests-lane-filter#change"
+              }) do |group| %>
+          <% group.with_item(value: "all") do %>
+            All
+            <%= render PanelsUI::Badge.new(
+                  label: @presenter.all_lanes_count_label,
+                  variant: :neutral,
+                  size: :sm,
+                  shape: :rounded,
+                  id: "requests_lane_count_all"
+                ) %>
+          <% end %>
+          <% @presenter.lane_options.each do |column| %>
+            <% group.with_item(value: column.key.to_s) do %>
+              <%= column.label %>
+              <%= render PanelsUI::Badge.new(
+                    label: @presenter.lane_count_label(column),
+                    variant: :neutral,
+                    size: :sm,
+                    shape: :rounded,
+                    id: "requests_lane_count_#{column.key}"
+                  ) %>
+            <% end %>
           <% end %>
         <% end %>
-      <% end %>
+      </div>
     <% end %>
-
-    <p class="text-xs text-muted-foreground">
-      Finished and archived work from <%= @presenter.window_label %>. Open lanes show everything outstanding.
-    </p>
   </section>
 
-  <%# Where a refused move says so. Outside the results frame, so replacing the
-      board does not take the message with it. %>
-  <div id="requests_board_flash" class="empty:hidden space-y-2" aria-live="polite"></div>
+  <p class="text-xs text-muted-foreground" data-slot="requests-toolbar-context">
+    Finished and archived work from <%= @presenter.window_label %>. Open lanes show everything outstanding.
+  </p>
 
   <%= turbo_frame_tag "requests_board_results" do %>
   <%# Five columns are wider than the page, so from xl up the board scrolls
       sideways inside its own viewport rather than making the page do it, and each
       column scrolls down inside that.
 
-      Below xl the columns stack full width and the page scrolls them, which is
-      what a phone wants -- and it is also what keeps the lazy placeholders
-      working there: given no height, a column never scrolls inside itself, so the
-      frame asking for the next page only ever comes into view on page scroll. The
-      scroll area is inert at that size: no height means an auto-height viewport
-      with nothing to overflow. %>
-  <%= render PanelsUI::ScrollArea.new(orientation: :horizontal, class: "xl:h-[calc(100vh-12rem)]") do %>
+      Below xl the columns stack full width and the board viewport scrolls them. %>
+  <%= render PanelsUI::ScrollArea.new(
+        orientation: :horizontal,
+        class: "h-[72dvh] pb-4"
+      ) do %>
   <div class="flex flex-col gap-4 xl:h-full xl:flex-row xl:items-stretch" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>" data-requests-board-target="board">
     <% @presenter.columns.each do |column| %>
       <% bucket_key = column.key %>
       <section
         data-requests-board-target="column"
         data-board-column="<%= bucket_key %>"
+        data-accepted-request-kinds="<%= column.accepted_kinds.join(" ") %>"
+        data-move-url="<%= @presenter.move_path(column) %>"
         <%# A lane takes a dropped card only where it accepts one, but it takes a
             dropped lane wherever it can be reordered -- so Checkout and Archived
             can be moved along the board without becoming somewhere a card can be
             put. %>
-        <% if column.droppable? %>
-          data-move-url="<%= @presenter.move_path(column) %>"
-        <% end %>
         <% if column.droppable? || column.reorderable? %>
           data-action="dragover->requests-board#dragOver dragleave->requests-board#dragLeave drop->requests-board#drop"
         <% end %>
@@ -91,32 +111,44 @@
             columns to fit: the sideways scroll is what makes room for them.
             min-w-0 stays on the header text below, where a long title would
             otherwise widen the card. %>
-        class="flex w-full flex-col overflow-hidden rounded-2xl border border-border bg-muted/40 border-t-4 xl:h-full xl:w-[21rem] xl:shrink-0 <%= column.accent_class %>"
+        class="flex w-full flex-col overflow-hidden rounded-lg border border-border bg-card xl:h-full xl:w-[21rem] xl:shrink-0"
       >
-        <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4 bg-card">
-          <div class="min-w-0">
-            <h2 class="text-base font-semibold text-foreground"><%= column.label %></h2>
-            <p class="text-xs text-muted-foreground" id="requests_count_label_<%= bucket_key %>"><%= pluralize(@presenter.board_counts[bucket_key], column.request_label) %></p>
+        <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-3 <%= @presenter.lane_header_class(column) %>">
+          <div class="flex min-w-0 items-center gap-3">
+            <span
+              class="h-8 w-1 shrink-0 rounded-full <%= @presenter.lane_marker_class(column) %>"
+              data-slot="requests-lane-marker"
+              aria-hidden="true"
+            ></span>
+            <div class="min-w-0">
+              <h2 class="text-base font-semibold text-foreground"><%= column.label %></h2>
+              <p class="text-xs text-muted-foreground" id="requests_count_label_<%= bucket_key %>"><%= pluralize(@presenter.board_counts[bucket_key], column.request_label) %></p>
+            </div>
           </div>
           <div class="flex shrink-0 items-center gap-2">
-            <span class="inline-flex size-7 items-center justify-center rounded-full <%= column.count_badge_class %> text-xs font-medium" id="requests_count_<%= bucket_key %>">
-              <%= @presenter.board_counts[bucket_key] %>
-            </span>
+            <%= render PanelsUI::Badge.new(
+                  label: "",
+                  variant: :neutral,
+                  size: :sm,
+                  shape: :rounded,
+                  hidden: true,
+                  data: { requests_board_drop_hint: true }
+                ) %>
+            <% if column.reorderable? %>
+              <button
+                type="button"
+                draggable="true"
+                aria-label="Reorder <%= column.label %>. Use left and right arrow keys to move."
+                data-action="dragstart->requests-board#columnDragStart dragend->requests-board#columnDragEnd keydown->requests-board#columnKeydown"
+                class="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-grab"
+              >
+                <%= cached_icon "grip-vertical", stroke_width: 3, class: "size-4" %>
+              </button>
+            <% end %>
           </div>
-          <% if column.reorderable? %>
-            <button
-              type="button"
-              draggable="true"
-              aria-label="Reorder <%= column.label %>. Use left and right arrow keys to move."
-              data-action="dragstart->requests-board#columnDragStart dragend->requests-board#columnDragEnd keydown->requests-board#columnKeydown"
-              class="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-grab"
-            >
-              <%= cached_icon "grip-vertical", stroke_width: 3, class: "size-4" %>
-            </button>
-          <% end %>
         </div>
 
-        <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 custom-scrollbar">
+        <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-muted/30 p-3 custom-scrollbar">
           <%# Rendered whether or not there is anything in it: a card moved here
               arrives as a prepend into this frame, which has to be on the page
               before it can be a target. The empty state sits alongside it. %>
@@ -126,7 +158,7 @@
                 presenter: @presenter,
                 frame_id: @presenter.column_frame_id(bucket_key, nil) %>
           <% unless @presenter.board_columns[bucket_key].any? %>
-            <div class="flex flex-col items-center justify-center h-40 rounded-2xl border-2 border-dashed border-border bg-card/50" id="requests_empty_<%= bucket_key %>">
+            <div class="flex h-36 flex-col items-center justify-center rounded-md border border-dashed border-border" id="requests_empty_<%= bucket_key %>">
               <p class="text-xs text-muted-foreground">No <%= column.request_label.pluralize %></p>
             </div>
           <% end %>

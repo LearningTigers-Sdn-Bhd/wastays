@@ -60,6 +60,16 @@ RSpec.describe HotelPortal::Requests::Move do
       expect(complaint.reload.status).to eq('pending')
     end
 
+    it 'refuses housekeeping in the complaints lane' do
+      housekeeping = create(:housekeeping_request, booking: booking, status: 'pending', archived_at: nil)
+
+      result = move(housekeeping, to: :complaint)
+
+      expect(result).not_to be_ok
+      expect(result.error).to eq("A housekeeping request cannot go there.")
+      expect(housekeeping.reload.status).to eq('pending')
+    end
+
     # A checkout request is raised by a guest checking out, so there is nothing a
     # drop there could mean that would not be inventing a record.
     it 'refuses anything dropped in the checkout lane' do
@@ -89,6 +99,26 @@ RSpec.describe HotelPortal::Requests::Move do
 
     expect(result).to be_ok
     expect(complaint.reload.status).to eq('resolved')
+  end
+
+  it 'completes housekeeping when it is dropped in recently completed' do
+    housekeeping = create(:housekeeping_request, booking: booking, status: 'pending', archived_at: nil)
+
+    result = move(housekeeping, to: :completed)
+
+    expect(result).to be_ok
+    expect(housekeeping.reload.status).to eq('completed')
+    expect(housekeeping.completed_at).to be_present
+  end
+
+  it 'completes checkout when it is dropped in recently completed' do
+    checkout = create(:check_out_request, booking: booking, status: 'pending')
+
+    result = move(checkout, to: :completed, kind: "checkout")
+
+    expect(result).to be_ok
+    expect(checkout.reload.status).to eq('completed')
+    expect(checkout.completed_at).to be_present
   end
 
   it 'refuses a request belonging to another hotel' do

@@ -54,8 +54,12 @@ module HotelPortal
     def visible_columns
       @visible_columns ||= begin
         wanted = Array(params[:lanes]).map(&:to_s)
-        chosen = COLUMNS.select { |column| wanted.include?(column.to_s) }
-        chosen.presence || COLUMNS
+        if wanted.empty? || wanted.include?("all")
+          COLUMNS
+        else
+          chosen = COLUMNS.select { |column| wanted.include?(column.to_s) }
+          chosen.presence || COLUMNS
+        end
       end
     end
 

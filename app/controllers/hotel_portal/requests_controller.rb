@@ -52,7 +52,17 @@ module HotelPortal
       @result = result
 
       respond_to do |format|
-        format.turbo_stream { render :move, status: (result.ok? ? :ok : :unprocessable_entity) }
+        format.turbo_stream do
+          if result.ok?
+            render :move, status: :ok
+          else
+            render turbo_stream: toast_stream(
+              "Request cannot be moved",
+              type: :error,
+              description: result.error
+            ), status: :unprocessable_entity
+          end
+        end
         format.html do
           redirect_to board_path_with_filters,
                       notice: (result.ok? ? "Request moved." : nil),

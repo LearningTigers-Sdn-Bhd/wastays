@@ -39,6 +39,124 @@ RSpec.describe "Hotel portal request pages", type: :request do
     expect(response.body).not_to include("onclick=")
   end
 
+  it "groups the toolbar controls in a two-row card with an edge-to-edge divider" do
+    get hotel_requests_path(hotel)
+
+    document = Nokogiri::HTML(response.body)
+    toolbar = document.at_css('[data-slot="requests-toolbar"]')
+    form = toolbar.at_css("form")
+    context = document.at_css('[data-slot="requests-toolbar-context"]')
+
+    expect(toolbar["class"].split).to include("overflow-hidden", "rounded-lg", "border", "border-border", "bg-card")
+    expect(form["class"].split).to include("divide-y", "divide-border")
+    expect(form["method"]).to eq("get")
+    expect(form["data-turbo-frame"]).to be_nil
+    expect(form.element_children.map { |row| row["data-slot"] }).to eq(
+      %w[requests-toolbar-controls requests-toolbar-lanes]
+    )
+    expect(toolbar.at_css('[data-slot="requests-toolbar-context"]')).to be_nil
+    expect(context).to be_present
+    expect(context["class"].split).not_to include("border-t")
+  end
+
+  it "labels search and renders outlined lane toggles with badge counts" do
+    get hotel_requests_path(hotel)
+
+    document = Nokogiri::HTML(response.body)
+    toolbar = document.at_css('[data-slot="requests-toolbar"]')
+    search_label = toolbar.at_css("label[for='q']")
+    toggle_group = toolbar.at_css('[data-slot="toggle-group"]')
+    toggle_items = toggle_group.css('[data-slot="toggle-group-item"]')
+
+    expect(search_label.text.squish).to eq("Search")
+    expect(search_label["class"].split).not_to include("sr-only")
+    expect(toggle_group["data-variant"]).to eq("outline")
+    expect(toggle_items).not_to be_empty
+    expect(toggle_items).to all(satisfy do |item|
+      item["data-variant"] == "outline" &&
+        item.at_css(".panel-badge-rounded[data-variant='neutral'][data-size='sm']").present?
+    end)
+  end
+
+  it "renders neutral lanes and restrained request cards with semantic badges" do
+    booking = create(:booking, hotel: hotel, guest_name: "Aisyah")
+    request = create(
+      :housekeeping_request,
+      booking: booking,
+      status: "pending",
+      request_details: "Fresh towels"
+    )
+
+    get hotel_requests_path(hotel)
+
+    document = Nokogiri::HTML(response.body)
+    lanes = document.css("[data-board-column]")
+    card = document.at_css("##{dom_id_for(request)}")
+
+    expect(lanes).not_to be_empty
+    lanes.each do |lane|
+      expect(lane["class"].split).to include("rounded-lg", "border", "border-border", "bg-card")
+      expect(lane["class"].split).not_to include("rounded-2xl", "border-t-4")
+      expect(lane.at_css("#requests_count_#{lane['data-board-column']}")).to be_nil
+    end
+
+    expect(card["class"].split).to include("rounded-lg", "border", "border-border", "bg-card")
+    expect(card["class"].split).not_to include("rounded-xl", "shadow-sm")
+    expect(card.css(".panel-badge-rounded").size).to eq(2)
+
+    lane_classes = lanes.css("[class]").map { |element| element["class"] }.join(" ")
+    expect(lane_classes).not_to match(/\b(?:blue|rose|amber|green|slate|emerald)-/)
+    expect(lane_classes).not_to include("font-black", "uppercase")
+  end
+
+  it "gives each lane a restrained semantic header tone" do
+    get hotel_requests_path(hotel)
+
+    lanes = Nokogiri::HTML(response.body).css("[data-board-column]").index_by { |lane| lane["data-board-column"] }
+    expected_tones = {
+      "housekeeping" => %w[bg-info/10 bg-info],
+      "complaint" => %w[bg-destructive/10 bg-destructive],
+      "checkout" => %w[bg-warning/10 bg-warning],
+      "completed" => %w[bg-success/10 bg-success],
+      "archived" => %w[bg-muted bg-muted-foreground]
+    }
+
+    expected_tones.each do |key, (header_class, marker_class)|
+      lane = lanes.fetch(key)
+      header = lane.element_children.first
+      marker = header.at_css('[data-slot="requests-lane-marker"]')
+
+      expect(header["class"].split).to include(header_class)
+      expect(marker["class"].split).to include(marker_class)
+      expect(marker["aria-hidden"]).to eq("true")
+    end
+  end
+
+  it "gives the board a fixed dynamic viewport height with bottom breathing room" do
+    get hotel_requests_path(hotel)
+
+    document = Nokogiri::HTML(response.body)
+    page = document.at_css(".panel-page")
+    results = document.at_css("turbo-frame#requests_board_results")
+    scroller = results.at_css(".panel-scroll-area")
+    page_scroller = page.parent
+
+    expect(page["class"].split).not_to include("panel-page--workspace")
+    expect(page_scroller["class"].split).to include("overscroll-none")
+    expect(page_scroller["class"].split).not_to include("overscroll-contain")
+    expect(results["class"]).to be_blank
+    expect(scroller["class"].split).to include("h-[72dvh]", "pb-4")
+    expect(scroller.at_css(".panel-scroll-area__viewport")["class"].split).not_to include("overscroll-none")
+
+    document.css("[data-board-column]").each do |lane|
+      lane_body = lane.at_css(".overflow-y-auto")
+
+      expect(lane["class"].split).to include("xl:h-full")
+      expect(lane_body["class"].split).to include("min-h-0", "flex-1", "overflow-y-auto")
+      expect(lane_body["class"].split).not_to include("overscroll-none")
+    end
+  end
+
   # The archive is a column of the board, not only a page of its own.
   describe "the archive column" do
     let(:booking) { create(:booking, hotel: hotel, guest_name: "Suri") }
@@ -108,13 +226,29 @@ RSpec.describe "Hotel portal request pages", type: :request do
       end
     end
 
-    # Reorderable is not the same as somewhere a card may be put: Checkout takes
-    # no cards, and moving it along the board must not change that.
-    it "still refuses a card dropped in the checkout lane" do
+    # Checkout still receives the drop event so the server can explain the
+    # refusal, but its empty acceptance list lets the board mark it unavailable
+    # before the card is released.
+    it "marks checkout unavailable while still giving invalid drops an alert path" do
       get hotel_requests_path(hotel)
       lane = Nokogiri::HTML(response.body).at_css('[data-board-column="checkout"]')
 
-      expect(lane["data-move-url"]).to be_nil
+      expect(lane["data-accepted-request-kinds"]).to be_blank
+      expect(lane["data-move-url"]).to eq(hotel_requests_move_path(hotel, to: "checkout"))
+      expect(lane.at_css("[data-requests-board-drop-hint]")).to be_present
+      expect(lane.at_css("[data-requests-board-drop-hint]")["hidden"]).to eq("hidden")
+    end
+
+    it "exposes the server transition map so dragging can show valid destinations" do
+      get hotel_requests_path(hotel)
+      lanes = Nokogiri::HTML(response.body).css("[data-board-column]").index_by { |lane| lane["data-board-column"] }
+
+      expect(lanes.fetch("housekeeping")["data-accepted-request-kinds"]).to eq("housekeeping")
+      expect(lanes.fetch("complaint")["data-accepted-request-kinds"]).to eq("complaint")
+      expect(lanes.fetch("completed")["data-accepted-request-kinds"].split).to contain_exactly(
+        "housekeeping", "complaint", "checkout"
+      )
+      expect(lanes.fetch("archived")["data-accepted-request-kinds"]).to eq("*")
     end
 
     # Five columns are wider than the page, so the board scrolls sideways inside
@@ -175,8 +309,29 @@ RSpec.describe "Hotel portal request pages", type: :request do
       document = Nokogiri::HTML(response.body)
       toggles = document.css('[data-slot="toggle-group-item"]')
 
-      expect(toggles.map { |item| item["data-value"] }).to eq(%w[housekeeping complaint checkout completed archived])
+      expect(toggles.map { |item| item["data-value"] }).to eq(%w[all housekeeping complaint checkout completed archived])
+      expect(document.at_css("#requests_lane_count_all").text.strip).to eq("2")
       expect(document.at_css("#requests_lane_count_complaint").text.strip).to eq("1")
+    end
+
+    it "marks All, rather than every individual lane, when the full board is showing" do
+      get hotel_requests_path(hotel)
+
+      toggles = Nokogiri::HTML(response.body).css('[data-slot="toggle-group-item"]')
+      on = toggles.select { |item| item["data-state"] == "on" }.map { |item| item["data-value"] }
+
+      expect(on).to eq(%w[all])
+    end
+
+    it "uses the All URL value to draw the full board" do
+      get hotel_requests_path(hotel, lanes: %w[all])
+
+      document = Nokogiri::HTML(response.body)
+      order = document.css("[data-board-column]").map { |lane| lane["data-board-column"] }
+      on = document.css('[data-slot="toggle-group-item"][data-state="on"]').map { |item| item["data-value"] }
+
+      expect(order).to eq(%w[housekeeping complaint checkout completed archived])
+      expect(on).to eq(%w[all])
     end
 
     it "marks the lanes that are on" do
@@ -283,8 +438,10 @@ RSpec.describe "Hotel portal request pages", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(%(action="remove" target="#{dom_id_for(request)}"))
       expect(response.body).to include(%(target="requests_column_archived_start"))
-      expect(response.body).to include(%(target="requests_count_archived"))
-      expect(response.body).to include(%(target="requests_count_completed"))
+      expect(response.body).to include(%(target="requests_count_label_archived"))
+      expect(response.body).to include(%(target="requests_count_label_completed"))
+      expect(response.body).to include(%(target="requests_lane_count_archived"))
+      expect(response.body).to include(%(target="requests_lane_count_completed"))
       expect(request.reload.archived_at).to be_present
     end
 
@@ -294,7 +451,9 @@ RSpec.describe "Hotel portal request pages", type: :request do
             headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.body).to include("requests_board_flash")
+      expect(response.body).to include(%(target="toast-viewport"))
+      expect(response.body).to include(%(data-controller="toast-trigger"))
+      expect(response.body).to include("Request cannot be moved")
       expect(response.body).to include("cannot go there")
       expect(request.reload.archived_at).to be_nil
     end
@@ -407,6 +566,37 @@ RSpec.describe "Hotel portal request pages", type: :request do
       get hotel_requests_path(hotel, kind: "housekeeping", days: 5)
 
       expect(response.body).to include(link_to_path(hotel_requests_path(hotel, kind: "housekeeping", date: (hotel_today - 5).iso8601, days: 5)))
+    end
+
+    it "renders the toolbar from URL params and carries them through a date step" do
+      get hotel_requests_path(
+        hotel,
+        q: "Aisyah",
+        date: 3.days.ago.to_date.iso8601,
+        days: 5,
+        lanes: %w[housekeeping complaint]
+      )
+
+      document = Nokogiri::HTML(response.body)
+      form = document.at_css('[data-slot="requests-toolbar"] form')
+      selected_lanes = document.css('[data-slot="toggle-group-item"][data-state="on"]').map { |item| item["data-value"] }
+      previous_date = 3.days.ago.to_date - 5
+
+      expect(form.at_css("input[name='q']")["value"]).to eq("Aisyah")
+      expect(form.at_css("input[name='date']")["value"]).to eq(3.days.ago.to_date.iso8601)
+      expect(form.at_css("select[name='days'] option[selected]")["value"]).to eq("5")
+      expect(selected_lanes).to eq(%w[housekeeping complaint])
+      expect(response.body).to include(
+        link_to_path(
+          hotel_requests_path(
+            hotel,
+            q: "Aisyah",
+            date: previous_date.iso8601,
+            days: 5,
+            lanes: %w[housekeeping complaint]
+          )
+        )
+      )
     end
 
     it "offers a way back to today only when it is looking elsewhere" do

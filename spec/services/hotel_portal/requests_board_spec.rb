@@ -235,6 +235,18 @@ RSpec.describe HotelPortal::RequestsBoard do
       board.board_columns.except(:archived).values.flatten
     end
 
+    it 'treats the All lane URL value as every column' do
+      board = described_class.new(hotel, { lanes: [ 'all' ] })
+
+      expect(board.visible_columns).to eq(described_class::COLUMNS)
+    end
+
+    it 'lets All win over any stale specific lane values in the URL' do
+      board = described_class.new(hotel, { lanes: %w[all housekeeping] })
+
+      expect(board.visible_columns).to eq(described_class::COLUMNS)
+    end
+
     it 'keeps an archived request out of the working columns' do
       board = described_class.new(hotel)
 

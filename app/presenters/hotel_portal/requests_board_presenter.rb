@@ -2,6 +2,14 @@
 
 module HotelPortal
   class RequestsBoardPresenter
+    LANE_TONES = {
+      housekeeping: { header: "bg-info/10", marker: "bg-info" },
+      complaint: { header: "bg-destructive/10", marker: "bg-destructive" },
+      checkout: { header: "bg-warning/10", marker: "bg-warning" },
+      completed: { header: "bg-success/10", marker: "bg-success" },
+      archived: { header: "bg-muted", marker: "bg-muted-foreground" }
+    }.freeze
+
     attr_reader :board_counts, :current_hotel, :date_window, :pages
 
     def initialize(pages:, board_counts:, current_hotel:, view_context:, date_window:, selected_lanes: [])
@@ -14,7 +22,12 @@ module HotelPortal
       # refuses a selected value it has no item for -- so a hand-edited `lanes`
       # in the query string would otherwise take the page down rather than being
       # ignored the way the board already ignores it.
-      @selected_lanes = Array(selected_lanes).map(&:to_s) & Requests::Column.keys.map(&:to_s)
+      lane_keys = Requests::Column.keys.map(&:to_s)
+      requested_lanes = Array(selected_lanes).map(&:to_s)
+      @selected_lanes = requested_lanes & lane_keys
+      @all_lanes_selected = requested_lanes.include?("all") ||
+                            @selected_lanes.empty? ||
+                            @selected_lanes.size == lane_keys.size
     end
 
     def page_for(bucket_key)
@@ -80,6 +93,10 @@ module HotelPortal
 
     def lane_selected?(column) = @selected_lanes.include?(column.key.to_s)
 
+    def lane_toggle_values = all_lanes_selected? ? [ "all" ] : selected_lanes
+
+    def all_lanes_selected? = @all_lanes_selected
+
     def lane_count(column)
       board_counts[column.key].to_i
     end
@@ -88,16 +105,37 @@ module HotelPortal
       @view_context.abbreviated_count(lane_count(column))
     end
 
+    def all_lanes_count_label
+      @view_context.abbreviated_count(board_counts.values.sum(&:to_i))
+    end
+
+    def lane_header_class(column)
+      LANE_TONES.fetch(column.key).fetch(:header)
+    end
+
+    def lane_marker_class(column)
+      LANE_TONES.fetch(column.key).fetch(:marker)
+    end
+
     # Where a card is dropped, and what the board calls that column.
     def move_path(column)
       @view_context.hotel_requests_move_path(current_hotel, to: column.to_param)
     end
 
-    def kind_badge_class(card)
+    def kind_badge_variant(card)
       case card.kind
-      when "housekeeping" then "border-blue-100 bg-blue-50 text-blue-700"
-      when "checkout" then "border-amber-100 bg-amber-50 text-amber-700"
-      else "border-rose-100 bg-rose-50 text-rose-700"
+      when "housekeeping" then :info
+      when "checkout" then :warning
+      else :destructive
+      end
+    end
+
+    def status_badge_variant(card)
+      case card.status
+      when "completed", "resolved" then :success
+      when "pending" then :warning
+      when "new", "in_progress" then :info
+      else :neutral
       end
     end
 
@@ -181,8 +219,7 @@ module HotelPortal
       {
         url: move_path(Requests::Column.find(:archived)),
         params: move_params(card),
-        css: "flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 " \
-             "shadow-sm transition-all hover:border-slate-900 hover:text-slate-900",
+        css: icon_action_css,
         icon: "cube",
         icon_opts: { library: "phosphor", variant: "regular" },
         label: nil,
@@ -196,9 +233,7 @@ module HotelPortal
       {
         url: move_path(restored_column_for(card)),
         params: move_params(card),
-        css: "flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 " \
-             "text-[10px] font-black uppercase tracking-wider text-muted-foreground shadow-sm " \
-             "transition-all hover:border-border-interactive hover:text-foreground",
+        css: secondary_action_css,
         icon: "rotate-ccw",
         icon_opts: { stroke_width: 3 },
         label: "Restore",
@@ -220,9 +255,7 @@ module HotelPortal
       {
         url: status_path(card),
         params: { status: "new" },
-        css: "flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 " \
-             "text-[10px] font-black uppercase tracking-wider text-blue-700 shadow-sm transition-all " \
-             "hover:border-blue-500 hover:bg-blue-500 hover:text-white",
+        css: primary_action_css,
         icon: "arrow-right",
         icon_opts: { stroke_width: 3 },
         label: "Dispatch",
@@ -234,9 +267,7 @@ module HotelPortal
       {
         url: status_path(card),
         params: { status: card.kind == "complaint" ? "resolved" : "completed" },
-        css: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 " \
-             "text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all " \
-             "hover:border-emerald-500 hover:bg-emerald-500 hover:text-white",
+        css: primary_action_css,
         icon: "check",
         icon_opts: { stroke_width: 3 },
         label: "Done",
@@ -248,14 +279,30 @@ module HotelPortal
       {
         url: complete_checkout_path(card),
         params: {},
-        css: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 " \
-             "text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all " \
-             "hover:border-emerald-500 hover:bg-emerald-500 hover:text-white",
+        css: primary_action_css,
         icon: "check",
         icon_opts: { stroke_width: 3 },
         label: "Complete",
         title: "Complete Request"
       }
+    end
+
+    def primary_action_css
+      "inline-flex h-7 items-center gap-1.5 rounded-md border border-primary bg-primary px-2.5 text-xs " \
+        "font-medium text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none " \
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    end
+
+    def secondary_action_css
+      "inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs " \
+        "font-medium text-foreground transition-colors hover:border-border-interactive hover:bg-muted " \
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    end
+
+    def icon_action_css
+      "inline-flex size-7 items-center justify-center rounded-md border border-border bg-card text-muted-foreground " \
+        "transition-colors hover:border-border-interactive hover:bg-muted hover:text-foreground " \
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     end
   end
 end

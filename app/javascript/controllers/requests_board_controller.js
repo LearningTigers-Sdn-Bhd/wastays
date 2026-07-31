@@ -7,6 +7,10 @@ import { Controller } from "@hotwired/stimulus"
 // dragged to a lane and the button on that card cannot come to disagree.
 const EDGE_ZONE = 96
 const EDGE_STEP = 24
+const REORDER_TARGET_CLASSES = ["ring-2", "ring-inset", "ring-border-interactive"]
+const AVAILABLE_TARGET_CLASSES = ["ring-2", "ring-inset", "ring-success"]
+const VALID_ACTIVE_CLASSES = ["bg-success/10"]
+const INVALID_ACTIVE_CLASSES = ["outline", "outline-2", "-outline-offset-2", "outline-destructive", "bg-destructive/10"]
 
 export default class extends Controller {
   static targets = ["board", "card", "column"]
@@ -32,6 +36,7 @@ export default class extends Controller {
     event.dataTransfer.effectAllowed = "move"
     event.dataTransfer.setData("text/plain", this.draggedCard.dataset.requestId)
     this.draggedCard.setAttribute("aria-grabbed", "true")
+    this.showCardDropTargets(this.draggedCard)
   }
 
   dragEnd() {
@@ -43,21 +48,35 @@ export default class extends Controller {
 
   dragOver(event) {
     event.preventDefault()
-    event.currentTarget.classList.add("ring-2", "ring-border-interactive")
+    const column = event.currentTarget
+
+    if (this.draggedColumn) {
+      column.classList.add(...REORDER_TARGET_CLASSES)
+    } else if (this.draggedCard) {
+      const classes = this.validDropTarget(this.draggedCard, column) ? VALID_ACTIVE_CLASSES : INVALID_ACTIVE_CLASSES
+      column.classList.add(...classes)
+    }
+
     // A lane the pointer cannot reach is a lane a card cannot be dropped in, and
     // most of them are off-screen once the board scrolls sideways.
     this.autoScrollToward(event.clientX)
   }
 
   dragLeave(event) {
-    event.currentTarget.classList.remove("ring-2", "ring-border-interactive")
+    const classes = this.draggedColumn ?
+      REORDER_TARGET_CLASSES :
+      [...VALID_ACTIVE_CLASSES, ...INVALID_ACTIVE_CLASSES]
+    event.currentTarget.classList.remove(...classes)
   }
 
   async drop(event) {
     event.preventDefault()
 
     const column = event.currentTarget
-    column.classList.remove("ring-2", "ring-border-interactive")
+    const classes = this.draggedColumn ?
+      REORDER_TARGET_CLASSES :
+      [...VALID_ACTIVE_CLASSES, ...INVALID_ACTIVE_CLASSES]
+    column.classList.remove(...classes)
     this.stopAutoScroll()
 
     if (this.draggedColumn) {
@@ -70,7 +89,7 @@ export default class extends Controller {
     if (!this.draggedCard) return
 
     const card = this.draggedCard
-    this.draggedCard = null
+    this.dragEnd()
     await this.move(card, column)
   }
 
@@ -99,12 +118,11 @@ export default class extends Controller {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return
 
     event.preventDefault()
-    const columns = this.droppableColumns()
-    const current = columns.indexOf(this.carriedTarget)
-    const next = event.key === "ArrowRight" ? current + 1 : current - 1
-    if (next < 0 || next >= columns.length) return
+    const direction = event.key === "ArrowRight" ? 1 : -1
+    const next = this.nextValidColumn(this.carriedTarget, card, direction)
+    if (!next) return
 
-    this.carriedTarget = columns[next]
+    this.carriedTarget = next
     this.highlightCarriedTarget()
   }
 
@@ -112,6 +130,7 @@ export default class extends Controller {
     this.carriedCard = card
     this.carriedTarget = card.closest('[data-requests-board-target="column"]')
     card.setAttribute("aria-grabbed", "true")
+    this.showCardDropTargets(card)
     this.highlightCarriedTarget()
   }
 
@@ -129,13 +148,23 @@ export default class extends Controller {
   }
 
   highlightCarriedTarget() {
-    this.clearHighlights()
-    this.carriedTarget?.classList.add("ring-2", "ring-border-interactive")
+    this.clearActiveHighlights()
+    if (this.validDropTarget(this.carriedCard, this.carriedTarget)) {
+      this.carriedTarget.classList.add(...VALID_ACTIVE_CLASSES)
+    }
     this.carriedTarget?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" })
   }
 
-  droppableColumns() {
-    return Array.from(this.columnTargets).filter((column) => column.dataset.moveUrl)
+  nextValidColumn(currentColumn, card, direction) {
+    const columns = Array.from(this.columnTargets)
+    let index = columns.indexOf(currentColumn) + direction
+
+    while (index >= 0 && index < columns.length) {
+      if (this.validDropTarget(card, columns[index])) return columns[index]
+      index += direction
+    }
+
+    return null
   }
 
   // -- Asking for the move -------------------------------------------------
@@ -193,6 +222,7 @@ export default class extends Controller {
   // -- Reordering the lanes ------------------------------------------------
 
   columnDragStart(event) {
+    this.clearHighlights()
     this.draggedCard = null
     this.draggedColumn = event.currentTarget.closest('[data-requests-board-target="column"]')
 
@@ -247,8 +277,62 @@ export default class extends Controller {
 
   clearHighlights() {
     this.columnTargets.forEach((column) => {
-      column.classList.remove("ring-2", "ring-border-interactive")
+      column.classList.remove(
+        ...REORDER_TARGET_CLASSES,
+        ...AVAILABLE_TARGET_CLASSES,
+        ...VALID_ACTIVE_CLASSES,
+        ...INVALID_ACTIVE_CLASSES
+      )
+
+      const hint = column.querySelector("[data-requests-board-drop-hint]")
+      if (hint) {
+        hint.hidden = true
+        hint.textContent = ""
+        hint.dataset.variant = "neutral"
+      }
     })
+  }
+
+  clearActiveHighlights() {
+    this.columnTargets.forEach((column) => {
+      column.classList.remove(...VALID_ACTIVE_CLASSES, ...INVALID_ACTIVE_CLASSES)
+    })
+  }
+
+  showCardDropTargets(card) {
+    this.clearHighlights()
+
+    this.columnTargets.forEach((column) => {
+      const valid = this.validDropTarget(card, column)
+      const current = column.dataset.boardColumn === card.dataset.cardColumn
+      const hint = column.querySelector("[data-requests-board-drop-hint]")
+
+      if (valid) column.classList.add(...AVAILABLE_TARGET_CLASSES)
+      if (!hint) return
+
+      hint.textContent = this.dropHintLabel(column, { valid, current })
+      hint.dataset.variant = valid ? "success" : (current ? "neutral" : "destructive")
+      hint.hidden = false
+    })
+  }
+
+  validDropTarget(card, column) {
+    if (!card || !column) return false
+    if (column.dataset.boardColumn === card.dataset.cardColumn) return false
+
+    const acceptedKinds = (column.dataset.acceptedRequestKinds || "").split(" ").filter(Boolean)
+    return acceptedKinds.includes("*") || acceptedKinds.includes(card.dataset.requestKind)
+  }
+
+  dropHintLabel(column, { valid, current }) {
+    if (current) return "Current lane"
+    if (!valid) return "Not allowed"
+
+    switch (column.dataset.boardColumn) {
+      case "completed": return "Drop to complete"
+      case "archived": return "Drop to archive"
+      default: return "Move here"
+    }
   }
 
   persistColumnOrder() {
