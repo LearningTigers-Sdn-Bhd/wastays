@@ -11,7 +11,6 @@ module HotelPortal
 
     before_action :authorize_manage_requests!
     before_action -> { require_feature!("task_assignment_minibar_log") }
-    before_action :set_breadcrumbs, only: [ :archive ]
     before_action :authorize_advance_request!, only: [ :update_status ]
 
     rescue_from ActiveRecord::RecordNotFound, with: :handle_record_not_found
@@ -61,19 +60,6 @@ module HotelPortal
         end
         format.json { render json: { ok: result.ok?, error: result.error }, status: (result.ok? ? :ok : :unprocessable_entity) }
       end
-    end
-
-    def archive
-      archive = ::HotelPortal::RequestsArchive.new(current_hotel, params)
-      cursor = ::HotelPortal::Requests::Cursor.parse(params[:cursor])
-
-      @presenter = ::HotelPortal::RequestsArchivePresenter.new(
-        page: archive.page(cursor: cursor),
-        total_count: archive.total_count,
-        date_window: archive.date_window,
-        view_context: view_context,
-        cursor: cursor
-      )
     end
 
     def cancel_request
@@ -149,7 +135,7 @@ module HotelPortal
         request_id: params[:request_id]
       )
 
-      redirect_target = safe_redirect_target(hotel_request_archive_path(current_hotel))
+      redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
       if (request = updater.unarchive)
         respond_to do |format|
           format.html { redirect_to redirect_target, notice: "Request restored successfully." }
@@ -188,9 +174,7 @@ module HotelPortal
     end
 
     def handle_record_not_found
-      redirect_target = safe_redirect_target(
-        action_name == "unarchive_request" ? hotel_request_archive_path(current_hotel) : hotel_requests_path(current_hotel)
-      )
+      redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
       respond_to do |format|
         format.html { redirect_to redirect_target, alert: "Request not found." }
         format.json { render json: { ok: false }, status: :not_found }
@@ -211,10 +195,6 @@ module HotelPortal
 
     def authorize_manage_requests!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_requests", hotel: current_hotel)
-    end
-
-    def set_breadcrumbs
-      append_breadcrumb "Archive", hotel_request_archive_path(current_hotel)
     end
   end
 end

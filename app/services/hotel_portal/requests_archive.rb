@@ -23,26 +23,12 @@ module HotelPortal
       )
     end
 
-    # The archive from the cursor onwards, read the way a board column is: three
-    # ordered queries merged, a page at a time. It used to build every archived
-    # row in the window in order to show twenty-five of them, which made the
-    # search box the most expensive control on the page.
-    def page(cursor: nil, limit: PAGE_SIZE)
-      paged(sources, cursor: cursor, limit: limit)
-    end
-
-    # The whole archive in the window, not the page of it on screen. Asked of the
-    # database, because the page no longer knows how long the archive is.
-    def total_count
-      @total_count ||= sources.sum { |source| source.relation.count }
-    end
-
     # A kind the filter bar ruled out is a query not worth making, so its source
     # is left out rather than narrowed down to nothing.
     #
-    # Public because the archive is a column of the board as well as a page of
-    # its own: the board reads these the way it reads its own sources, so there
-    # is one description of what the archive is and two things reading it.
+    # Public because this is the whole of what the archive is: the board's
+    # Archived lane reads these the way it reads its own sources. The archive
+    # had a page of its own once, and this outlived it.
     def sources
       @sources ||= [
         (housekeeping_source if wanted_kind?("housekeeping")),

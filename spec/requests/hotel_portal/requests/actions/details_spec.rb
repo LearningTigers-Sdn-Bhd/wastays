@@ -127,15 +127,15 @@ RSpec.describe "Request detail sheet", type: :request do
       expect(document.css("article dialog")).to be_empty
     end
 
-    it "gives every archive row a launcher and no dialog of its own" do
+    it "gives every archived card a launcher and no dialog of its own" do
       create(:complaint_request, booking: booking, complaint_details: "Noisy", status: "resolved",
              completed_at: Time.current, archived_at: Time.current)
 
-      get hotel_request_archive_path(hotel)
+      get hotel_requests_column_path(hotel, "archived")
       document = Nokogiri::HTML(response.body)
 
       expect(document.css('a[data-turbo-frame="requests_action_sheet"]').size).to eq(1)
-      expect(document.css("tbody dialog")).to be_empty
+      expect(document.css("article dialog")).to be_empty
     end
   end
 end

@@ -4,10 +4,15 @@ RSpec.describe HotelPortal::RequestsArchive do
   let(:hotel) { create(:hotel) }
   let(:booking) { create(:booking, hotel: hotel, guest_name: "John Doe", confirmation_token: "WS-1234") }
 
-  # The archive is read a page at a time, so a spec asks for the page rather than
-  # for everything the archive holds.
+  # The archive had a page of its own once and now has only a lane on the board,
+  # so what the archive is gets asked for the way the only reader left asks for
+  # it: the board, reading the sources this class describes.
+  def archive_page(params = {}, cursor: nil, limit: HotelPortal::Requests::Paging::PAGE_SIZE)
+    HotelPortal::RequestsBoard.new(hotel, params).page(:archived, cursor: cursor, limit: limit)
+  end
+
   def rows_for(params = {}, cursor: nil)
-    described_class.new(hotel, params).page(cursor: cursor).cards
+    archive_page(params, cursor: cursor).cards
   end
 
   let!(:housekeeping_pending) do
@@ -155,7 +160,7 @@ RSpec.describe HotelPortal::RequestsArchive do
       end
 
       it 'stops at the limit and says where it got to' do
-        page = described_class.new(hotel).page(limit: 4)
+        page = archive_page(limit: 4)
 
         expect(page.cards.size).to eq(4)
         expect(page).to be_more
@@ -163,12 +168,11 @@ RSpec.describe HotelPortal::RequestsArchive do
       end
 
       it 'shows each request once across the pages' do
-        archive = described_class.new(hotel)
         seen = []
         cursor = nil
 
         loop do
-          page = archive.page(cursor: cursor, limit: 4)
+          page = archive_page(cursor: cursor, limit: 4)
           seen.concat(page.cards.map { |row| [ row[:kind], row[:request_id] ] })
           cursor = page.next_cursor
           break if cursor.nil?
@@ -179,26 +183,11 @@ RSpec.describe HotelPortal::RequestsArchive do
       end
 
       it 'says there is nothing more once the archive runs out' do
-        page = described_class.new(hotel).page(limit: 50)
+        page = archive_page(limit: 50)
 
         expect(page).not_to be_more
         expect(page.next_cursor).to be_nil
       end
-    end
-  end
-
-  describe '#total_count' do
-    it 'counts the whole archive in the window, not the page of it' do
-      6.times { |index| create(:complaint_request, booking: booking, status: 'resolved', complaint_details: "Filed #{index}", archived_at: (index + 1).hours.ago) }
-
-      archive = described_class.new(hotel)
-      archive.page(limit: 4)
-
-      expect(archive.total_count).to eq(9)
-    end
-
-    it 'counts only what the filters left' do
-      expect(described_class.new(hotel, { kind: 'complaint' }).total_count).to eq(1)
     end
   end
 
@@ -211,7 +200,7 @@ RSpec.describe HotelPortal::RequestsArchive do
       subscriber = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, payload|
         count += 1 unless payload[:name].to_s.in?([ 'SCHEMA', 'TRANSACTION' ])
       end
-      described_class.new(hotel).page(limit: limit)
+      HotelPortal::RequestsBoard.new(hotel).page(:archived, limit: limit)
       count
     ensure
       ActiveSupport::Notifications.unsubscribe(subscriber)
@@ -232,7 +221,7 @@ RSpec.describe HotelPortal::RequestsArchive do
     it 'builds only the rows the page asked for' do
       40.times { |index| create(:complaint_request, booking: booking, status: 'resolved', archived_at: (index + 1).hours.ago) }
 
-      expect(described_class.new(hotel).page(limit: 5).cards.size).to eq(5)
+      expect(archive_page(limit: 5).cards.size).to eq(5)
     end
   end
 end

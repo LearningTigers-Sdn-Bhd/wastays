@@ -29,10 +29,16 @@ Lanes, in the order the board opens with: **Housekeeping**, **Complaints**,
 declared once, by `Requests::Column`; `RequestsBoard::COLUMNS` and the header
 count pills both read from it rather than repeating it.
 
-The archive is both a lane and a page. The lane is the recent slice, bounded by
-the board's date window. `/hotel/:id/requests/archive` is the full record, with
-kind and status filters of its own and no date bound worth speaking of — "show me
-every cancelled checkout" is a records question, not a board question.
+The archive is a lane, and only a lane. It had a page of its own
+(`/hotel/:id/requests/archive`) until that page was retired: both were bounded by
+the same date window and read the same sources, so the page's only remaining
+claim was its kind and status dropdowns and its table. What went with it is the
+ability to ask "show me every cancelled checkout" — the lane searches, but does
+not filter by status. If that question comes back, it belongs on the lane rather
+than in a second page.
+
+`RequestsArchive` survives the page. It is the description of what the archive
+is, and `#sources` is how the board's Archived lane reads it.
 
 Housekeeping and complaint requests are mostly raised by guests on the
 **concierge page** (`Concierge::SubmitGuestRequest`) — not the AI concierge.
@@ -58,11 +64,10 @@ app/services/hotel_portal/requests/room_status_sync.rb        what a status chan
 app/services/hotel_portal/requests/completion_webhook.rb      telling the outside world
 app/services/hotel_portal/requests/{status,archive,cancel}_updater.rb
 app/presenters/hotel_portal/requests_board_presenter.rb
-app/presenters/hotel_portal/requests_archive_presenter.rb
 app/presenters/hotel_portal/requests/detail_presenter.rb
 app/helpers/hotel_portal/requests_helper.rb                   link building
 app/javascript/controllers/requests_board_controller.js       the board's gestures
-app/views/hotel_portal/requests/                              index, archive, _card,
+app/views/hotel_portal/requests/                              index, _card,
                                                               _column_page, _date_window,
                                                               column, move.turbo_stream,
                                                               actions/details/
@@ -215,7 +220,7 @@ scroll area is inert at that size.
 One sheet in the same family as the booking action sheet — empty
 `requests_action_sheet` frame in the shell, `request-actions` route scope,
 `DetailsController#show`, read-only. `Requests::DetailPresenter` normalises the
-three kinds so one view serves the board and the archive page.
+three kinds so one view serves every lane.
 
 ---
 
@@ -255,14 +260,9 @@ it exists; the widest range cannot reach it and open work is never archived.
 Resolved by the re-scope above, if it happens.
 
 **A checkout has no `archived_at` column**, so `updated_at` stands in for it —
-in the archive lane, the archive page, and the ordering of both. Any write to an
-archived checkout therefore pulls it back to the top of the archive. A real
-column would settle it; it is a migration, not a patch.
-
-**The archive page still turns pages with Newest/Older buttons** while every lane
-lazy-loads. Two paging UXes in one feature. The page is a table, and a
-`<turbo-frame>` between `<tbody>` and `<tr>` is hoisted out by browsers, so this
-needs the table converted to a div list first.
+both in the archive lane and in its ordering. Any write to an archived checkout
+therefore pulls it back to the top of the archive. A real column would settle it;
+it is a migration, not a patch.
 
 **DESIGN.md**: the board still uses raw palette utilities throughout
 (`bg-blue-50`, `text-amber-700`), `font-black`, and decorative uppercase — §2 and
@@ -302,7 +302,7 @@ before deploying `20260731090100`.
 
 ## 6. Tests
 
-707 examples across the requests specs, from 34 at the start.
+700 examples across the requests specs, from 34 at the start.
 
 ```bash
 bin/test spec/services/hotel_portal \

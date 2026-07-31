@@ -11,12 +11,6 @@
         <% end %>
       </div>
     <% end %>
-    <% header.with_actions do %>
-      <%= render PanelsUI::Button.new(as: :a, href: hotel_request_archive_path(current_hotel), variant: :secondary, size: :md, class: "w-full lg:w-auto") do %>
-        <%= cached_icon "cube", library: "phosphor", variant: "regular", class: "size-4" %>
-        Full archive
-      <% end %>
-    <% end %>
   <% end %>
 
   <div class="rounded-2xl border border-border bg-card p-4 shadow-sm">

@@ -11,13 +11,6 @@ module HotelPortal
       hotel_requests_path(current_hotel, preserved_request_filters.merge(date_window.query_params))
     end
 
-    # The cursor is passed rather than preserved: moving the window or changing a
-    # filter has to start the archive again, because where the last page got to
-    # is not a place the new one has.
-    def request_archive_path_for(date_window, extra = {})
-      hotel_request_archive_path(current_hotel, preserved_request_filters.merge(date_window.query_params).merge(extra))
-    end
-
     def request_window_label(date_window)
       first = date_window.start_date
       last = date_window.anchor_date
