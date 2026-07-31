@@ -173,7 +173,7 @@ class GuestRegistrationCardPdfService
 
     if @card.signed? && @card.signature_data_url.present?
       signature_io = decode_signature(@card.signature_data_url)
-      pdf.image signature_io, at: [ box_left + 10, top - 26 ], height: 40 if signature_io
+      draw_signature_image(pdf, signature_io, at: [ box_left + 10, top - 26 ], height: 40) if signature_io
       pdf.fill_color TEXT_MUTED
       pdf.text_box "Signed by #{@card.signer_name} at #{l(@card.signed_at, format: :long)}",
         at: [ box_left + 10, top - 74 ], width: box_width - 20, size: 8
@@ -243,6 +243,12 @@ class GuestRegistrationCardPdfService
 
     StringIO.new(Base64.decode64(match[1]))
   rescue ArgumentError
+    nil
+  end
+
+  def draw_signature_image(pdf, signature_io, **options)
+    pdf.image signature_io, **options
+  rescue Prawn::Errors::UnsupportedImageType
     nil
   end
 

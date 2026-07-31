@@ -362,7 +362,7 @@ else
   # Non-browser suite: no Chrome per worker, so a plain per-core worker count
   # is safe. Matches bin/test fast and the GitHub Actions "test" job.
   spec_paths="spec/models spec/services spec/requests spec/jobs spec/helpers spec/mailers spec/presenters spec/views spec/tasks spec/seeds spec/migrations spec/integration"
-  spec_label="Parallel RSpec (fast, excl. spec/system)"
+  spec_label="Parallel RSpec"
 
   if [[ -z "${PARALLEL_TEST_PROCESSORS:-}" ]]; then
     export PARALLEL_TEST_PROCESSORS=$(ruby -retc -e 'print Etc.nprocessors' 2>/dev/null || echo 4)
