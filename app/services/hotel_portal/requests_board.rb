@@ -6,7 +6,9 @@ module HotelPortal
     include Requests::Narrowing
     include Requests::Paging
 
-    COLUMNS = %i[housekeeping complaint completed checkout archived].freeze
+    # The lanes, in the order they are shown. Declared by Column so the board and
+    # the board's header cannot come to disagree about either.
+    COLUMNS = Requests::Column.keys
 
     # The statuses that still owe work, per kind. Subtracted from the full list
     # so that a status added to a model has to be excluded here deliberately

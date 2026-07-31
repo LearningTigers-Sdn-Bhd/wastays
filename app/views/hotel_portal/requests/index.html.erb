@@ -4,21 +4,11 @@
   <%= render PanelsUI::PageHeader.new(title: "Requests Board") do |header| %>
     <% header.with_caption do %>
       <div class="flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-wider">
-        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-          Housekeeping <%= @presenter.board_counts[:housekeeping] %>
-        </span>
-        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 text-rose-700 border border-rose-100">
-          Complaints <%= @presenter.board_counts[:complaint] %>
-        </span>
-        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-100">
-          Completed <%= @presenter.board_counts[:completed] %>
-        </span>
-        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
-          Checkouts <%= @presenter.board_counts[:checkout] %>
-        </span>
-        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-muted-foreground border border-border">
-          Archived <%= @presenter.board_counts[:archived] %>
-        </span>
+        <% @presenter.columns.each do |column| %>
+          <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border <%= column.pill_class %>">
+            <%= column.label %> <%= @presenter.board_counts[column.key] %>
+          </span>
+        <% end %>
       </div>
     <% end %>
     <% header.with_actions do %>
@@ -76,8 +66,14 @@
       <section
         data-requests-board-target="column"
         data-board-column="<%= bucket_key %>"
+        <%# A lane takes a dropped card only where it accepts one, but it takes a
+            dropped lane wherever it can be reordered -- so Checkout and Archived
+            can be moved along the board without becoming somewhere a card can be
+            put. %>
         <% if column.droppable? %>
           data-move-url="<%= @presenter.move_path(column) %>"
+        <% end %>
+        <% if column.droppable? || column.reorderable? %>
           data-action="dragover->requests-board#dragOver dragleave->requests-board#dragLeave drop->requests-board#drop"
         <% end %>
         <%# From xl a fixed width, and shrink-0 so the row does not squeeze the

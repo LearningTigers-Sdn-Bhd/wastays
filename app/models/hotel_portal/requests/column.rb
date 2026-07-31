@@ -2,8 +2,14 @@
 
 module HotelPortal
   module Requests
-    # A lane on the board: what it is called, what it accepts, and what putting a
-    # request in it means.
+    # A lane on the board: what it is called, where it sits, what it accepts, and
+    # what putting a request in it means.
+    #
+    # The order they are declared in is the order the board shows them and the
+    # order the header counts them -- housekeeping and complaints first because
+    # they are what is outstanding, then the day's departures, then what has been
+    # finished and what has been put away. Somebody who drags a lane elsewhere
+    # keeps their own order; this is where everyone else starts.
     #
     # These three used to be written apart -- the key in RequestsBoard::COLUMNS,
     # the label and colour in the presenter, and what a drop meant in the Stimulus
@@ -22,30 +28,36 @@ module HotelPortal
         def archive? = action == :archive
       end
 
-      attr_reader :key, :label, :accent_class, :request_label, :count_badge_class
+      attr_reader :key, :label, :accent_class, :request_label, :count_badge_class, :pill_class
 
       def self.all
         @all ||= [
           new(key: :housekeeping, label: "Housekeeping", accent_class: "border-t-blue-500",
               request_label: "active request", count_badge_class: "bg-muted text-muted-foreground",
+              pill_class: "bg-blue-50 text-blue-700 border-blue-100",
               reorderable: true, accepts: { "housekeeping" => "pending" }),
           new(key: :complaint, label: "Complaints", accent_class: "border-t-rose-500",
               request_label: "active request", count_badge_class: "bg-muted text-muted-foreground",
+              pill_class: "bg-rose-50 text-rose-700 border-rose-100",
               reorderable: true, accepts: { "complaint" => "pending" }),
+          # A checkout request is raised by a guest checking out, not by staff
+          # moving a card, so there is nothing a drop here could mean that would
+          # not be inventing a record. Read-only for cards, though its lane moves
+          # along the board like any other.
+          new(key: :checkout, label: "Checkout Requests", accent_class: "border-t-amber-500",
+              request_label: "pending request", count_badge_class: "bg-amber-100 text-amber-700",
+              pill_class: "bg-amber-50 text-amber-700 border-amber-100",
+              reorderable: true, accepts: {}),
           new(key: :completed, label: "Recently Completed", accent_class: "border-t-green-500",
               request_label: "completed request", count_badge_class: "bg-muted text-muted-foreground",
+              pill_class: "bg-green-50 text-green-700 border-green-100",
               reorderable: true,
               # A complaint is resolved where housekeeping is completed.
               accepts: { "housekeeping" => "completed", "complaint" => "resolved", "checkout" => "completed" }),
-          # A checkout request is raised by a guest checking out, not by staff
-          # moving a card, so there is nothing a drop here could mean that would
-          # not be inventing a record. Read-only on purpose.
-          new(key: :checkout, label: "Checkout Requests", accent_class: "border-t-amber-500",
-              request_label: "pending request", count_badge_class: "bg-amber-100 text-amber-700",
-              reorderable: false, accepts: {}),
           new(key: :archived, label: "Archived", accent_class: "border-t-slate-400",
               request_label: "archived request", count_badge_class: "bg-muted text-muted-foreground",
-              reorderable: false, archives: true)
+              pill_class: "bg-muted text-muted-foreground border-border",
+              reorderable: true, archives: true)
         ].freeze
       end
 
@@ -69,12 +81,13 @@ module HotelPortal
       FINISHED_STATUSES = %w[completed resolved].freeze
 
       def initialize(key:, label:, accent_class:, request_label:, count_badge_class:,
-                     reorderable:, accepts: {}, archives: false)
+                     pill_class:, reorderable:, accepts: {}, archives: false)
         @key = key
         @label = label
         @accent_class = accent_class
         @request_label = request_label
         @count_badge_class = count_badge_class
+        @pill_class = pill_class
         @reorderable = reorderable
         @accepts = accepts.freeze
         @archives = archives

@@ -82,6 +82,41 @@ RSpec.describe "Hotel portal request pages", type: :request do
       expect(response.body).to include("Filed towels")
     end
 
+    # The order the board opens in. Somebody who drags a lane elsewhere keeps
+    # their own; this is where everyone else starts.
+    it "shows the lanes in their working order" do
+      get hotel_requests_path(hotel)
+
+      order = Nokogiri::HTML(response.body).css("[data-board-column]").map { |lane| lane["data-board-column"] }
+
+      expect(order).to eq(%w[housekeeping complaint checkout completed archived])
+    end
+
+    # Every lane can be dragged along the board, including the two that take no
+    # cards: where a lane sits is the operator's business, and a lane being
+    # read-only for cards says nothing about where they want to read it.
+    it "lets every lane be reordered" do
+      get hotel_requests_path(hotel)
+      document = Nokogiri::HTML(response.body)
+
+      handles = document.css('[data-action*="requests-board#columnDragStart"]')
+      expect(handles.size).to eq(HotelPortal::Requests::Column.all.size)
+
+      document.css("[data-board-column]").each do |lane|
+        expect(lane["data-action"]).to include("requests-board#drop"),
+          "the #{lane['data-board-column']} lane cannot receive a dragged lane"
+      end
+    end
+
+    # Reorderable is not the same as somewhere a card may be put: Checkout takes
+    # no cards, and moving it along the board must not change that.
+    it "still refuses a card dropped in the checkout lane" do
+      get hotel_requests_path(hotel)
+      lane = Nokogiri::HTML(response.body).at_css('[data-board-column="checkout"]')
+
+      expect(lane["data-move-url"]).to be_nil
+    end
+
     # Five columns are wider than the page, so the board scrolls sideways inside
     # its own viewport instead of making the page do it.
     it "scrolls the board sideways rather than the page" do
