@@ -1,5 +1,5 @@
 <%= render "hotel_portal/requests/column_page",
       page: @page,
-      bucket_key: @column_key,
+      column: @column,
       presenter: @presenter,
-      frame_id: @presenter.column_frame_id(@column_key, @cursor) %>
+      frame_id: @presenter.column_frame_id(@column.key, @cursor) %>

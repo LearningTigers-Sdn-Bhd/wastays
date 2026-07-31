@@ -64,8 +64,8 @@ module HotelPortal
     def detail_path(card)
       @view_context.hotel_request_action_show_request_path(
         current_hotel,
-        kind: card[:kind],
-        request_id: card[:request_id]
+        kind: card.kind,
+        request_id: card.request_id
       )
     end
 
@@ -81,83 +81,57 @@ module HotelPortal
       @view_context.requests_board_path_for(date_window.at_today)
     end
 
-    def columns
-      [
-        { key: :housekeeping, label: "Housekeeping", accent_class: "border-t-blue-500", draggable: true },
-        { key: :complaint, label: "Complaints", accent_class: "border-t-rose-500", draggable: true },
-        { key: :completed, label: "Recently Completed", accent_class: "border-t-green-500", draggable: true },
-        { key: :checkout, label: "Checkout Requests", accent_class: "border-t-amber-500", draggable: false },
-        # Nothing is dragged into the archive: a request is put away by being
-        # archived, which is a button on the card and not a place on the board.
-        { key: :archived, label: "Archived", accent_class: "border-t-slate-400", draggable: false }
-      ]
-    end
+    def columns = Requests::Column.all
 
-    def column_count_badge_class(column)
-      column[:key] == :checkout ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"
-    end
-
-    # What a column counts. The completed column counts work that is finished,
-    # so calling those "active" was telling the reader the opposite.
-    def column_request_label(column)
-      case column[:key]
-      when :checkout then "pending request"
-      when :completed then "completed request"
-      when :archived then "archived request"
-      else "active request"
-      end
+    # Where a card is dropped, and what the board calls that column.
+    def move_path(column)
+      @view_context.hotel_requests_move_path(current_hotel, to: column.to_param)
     end
 
     def kind_badge_class(card)
-      case card[:kind]
+      case card.kind
       when "housekeeping" then "border-blue-100 bg-blue-50 text-blue-700"
       when "checkout" then "border-amber-100 bg-amber-50 text-amber-700"
       else "border-rose-100 bg-rose-50 text-rose-700"
       end
     end
 
-    def target_status(card)
-      card[:kind] == "housekeeping" ? "completed" : "resolved"
-    end
-
     def card_actionable?(card)
-      card[:update_url].present? || card[:complete_url].present? || card[:archive_url].present?
+      card.update_url.present? || card.complete_url.present? || card.archive_url.present?
     end
 
     # Dragging a card is how its status is changed, so a card with no status to
     # change is not one to drag. Without this an archived card -- and a completed
     # checkout, which has never had an update_url -- is draggable at an empty
     # URL, and the drop fails silently.
-    def card_draggable?(card, bucket_key)
-      return false if bucket_key == :archived
-
-      card[:update_url].present?
+    def card_draggable?(card, column)
+      column.archives? || card.update_url.present?
     end
 
     def card_shows_room_number?(card)
-      card[:kind] == "checkout" && card[:room_number].present?
+      card.kind == "checkout" && card.room_number.present?
     end
 
     def card_token_label(card)
-      label = card[:booking_token].to_s
-      label += " · Room #{card[:room_number]}" if card_shows_room_number?(card)
+      label = card.booking_token.to_s
+      label += " · Room #{card.room_number}" if card_shows_room_number?(card)
       label
     end
 
     def formatted_requested_at(card)
-      helpers.display_housekeeping_datetime(card[:requested_at])
+      helpers.display_housekeeping_datetime(card.requested_at)
     end
 
     def formatted_completed_at(card)
-      helpers.display_housekeeping_datetime(card[:completed_at])
+      helpers.display_housekeeping_datetime(card.completed_at)
     end
 
     def completed_at?(card)
-      card[:completed_at].present?
+      card.completed_at.present?
     end
 
     def internal_notes_for(card)
-      Array(card[:internal_notes])
+      card.internal_notes_list
     end
 
     def internal_notes?(card)
@@ -166,16 +140,16 @@ module HotelPortal
 
     # Returns the action button config for a card, or nil if no action is available.
     # Each config is a hash with :type, :url, :params, :css, :icon, :label, :title
-    def card_action(card, bucket_key)
-      if bucket_key == :archived
+    def card_action(card, column)
+      if column.archives?
         restore_action(card)
-      elsif bucket_key == :completed && card[:archive_url].present?
+      elsif column.key == :completed && card.archive_url.present?
         archive_action(card)
-      elsif card[:complete_url].present? && !card[:update_url].present?
+      elsif card.complete_url.present? && card.update_url.blank?
         complete_action(card)
-      elsif card[:status] == "pending"
+      elsif card.status == "pending"
         dispatch_action(card)
-      elsif card[:update_url].present?
+      elsif card.update_url.present?
         done_action(card)
       end
     end
@@ -188,8 +162,8 @@ module HotelPortal
 
     def archive_action(card)
       {
-        url: card[:archive_url],
-        params: {},
+        url: move_path(Requests::Column.find(:archived)),
+        params: move_params(card),
         css: "flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 " \
              "shadow-sm transition-all hover:border-slate-900 hover:text-slate-900",
         icon: "cube",
@@ -203,8 +177,8 @@ module HotelPortal
     # the only thing left to do with it from here.
     def restore_action(card)
       {
-        url: card[:archive_url],
-        params: {},
+        url: move_path(restored_column_for(card)),
+        params: move_params(card),
         css: "flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 " \
              "text-[10px] font-black uppercase tracking-wider text-muted-foreground shadow-sm " \
              "transition-all hover:border-border-interactive hover:text-foreground",
@@ -215,9 +189,19 @@ module HotelPortal
       }
     end
 
+    def move_params(card)
+      { kind: card.kind, request_id: card.request_id }
+    end
+
+    # Where restoring puts a card back: the lane it would have been in had it
+    # never been archived.
+    def restored_column_for(card)
+      Requests::Column.for_record(kind: card.kind, status: card.status, archived: false)
+    end
+
     def dispatch_action(card)
       {
-        url: card[:update_url],
+        url: card.update_url,
         params: { status: "new" },
         css: "flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 " \
              "text-[10px] font-black uppercase tracking-wider text-blue-700 shadow-sm transition-all " \
@@ -231,8 +215,8 @@ module HotelPortal
 
     def done_action(card)
       {
-        url: card[:update_url],
-        params: { status: target_status(card) },
+        url: card.update_url,
+        params: { status: card.kind == "complaint" ? "resolved" : "completed" },
         css: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 " \
              "text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all " \
              "hover:border-emerald-500 hover:bg-emerald-500 hover:text-white",
@@ -245,7 +229,7 @@ module HotelPortal
 
     def complete_action(card)
       {
-        url: card[:complete_url],
+        url: card.complete_url,
         params: {},
         css: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 " \
              "text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all " \

@@ -125,7 +125,7 @@ module HotelPortal
     def row_for(kind:, request:, title:)
       booking = request.booking
 
-      {
+      Requests::Card.new(
         kind: kind,
         request_id: request.id,
         booking_id: booking.id,
@@ -138,16 +138,15 @@ module HotelPortal
         internal_notes: request.internal_notes_list,
         archived_at: request.archived_at,
         archive_url: hotel_unarchive_request_path(hotel, kind: kind, request_id: request.id),
-        archive_action: "Unarchive",
         booking_url: hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests"),
         sort_at: request.archived_at
-      }
+      )
     end
 
     def checkout_row(request)
       booking = request.booking
 
-      {
+      Requests::Card.new(
         kind: "checkout",
         request_id: request.id,
         booking_id: booking.id,
@@ -162,10 +161,9 @@ module HotelPortal
         # column the query could reach.
         archived_at: request.metadata.to_h["archived_at"].presence || request.updated_at,
         archive_url: hotel_unarchive_request_path(hotel, kind: "checkout", request_id: request.id),
-        archive_action: "Unarchive",
         booking_url: hotel_booking_path(hotel, booking, tab: "requests"),
         sort_at: request.updated_at
-      }
+      )
     end
 
     # The archive is where notes are read, so it is where they are searched.

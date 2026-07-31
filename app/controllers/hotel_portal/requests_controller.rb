@@ -24,16 +24,42 @@ module HotelPortal
     # The rest of one column, from where it got to. Rendered into the lazy frame
     # that asked for it rather than as a page of its own.
     def column
-      column_key = params[:column].to_s.to_sym
-      raise ActiveRecord::RecordNotFound unless ::HotelPortal::RequestsBoard::COLUMNS.include?(column_key)
+      @column = ::HotelPortal::Requests::Column.find(params[:column])
+      raise ActiveRecord::RecordNotFound if @column.nil?
 
       @board = ::HotelPortal::RequestsBoard.new(current_hotel, params)
-      @column_key = column_key
       @cursor = ::HotelPortal::Requests::Cursor.parse(params[:cursor])
-      @page = @board.page(column_key, cursor: @cursor)
-      @presenter = board_presenter(@board, pages: { column_key => @page })
+      @page = @board.page(@column.key, cursor: @cursor)
+      @presenter = board_presenter(@board, pages: { @column.key => @page })
 
       render :column, layout: false
+    end
+
+    # A card put in a lane, however it was asked for. The board answers with the
+    # two lanes that changed rather than a redirect: a redirect can only refill
+    # the one frame the request came from, and a move always leaves one lane and
+    # joins another.
+    def move
+      result = ::HotelPortal::Requests::Move.new(
+        hotel: current_hotel,
+        kind: params[:kind],
+        request_id: params[:request_id],
+        to: params[:to]
+      ).call
+
+      @board = ::HotelPortal::RequestsBoard.new(current_hotel, board_filters)
+      @presenter = board_presenter(@board, pages: @board.pages)
+      @result = result
+
+      respond_to do |format|
+        format.turbo_stream { render :move, status: (result.ok? ? :ok : :unprocessable_entity) }
+        format.html do
+          redirect_to board_path_with_filters,
+                      notice: (result.ok? ? "Request moved." : nil),
+                      alert: result.error
+        end
+        format.json { render json: { ok: result.ok?, error: result.error }, status: (result.ok? ? :ok : :unprocessable_entity) }
+      end
     end
 
     def archive
@@ -137,6 +163,17 @@ module HotelPortal
     end
 
     private
+
+    # What the board was being read under when the card was moved, so the lanes
+    # sent back are the ones the operator is actually looking at rather than an
+    # unfiltered board.
+    def board_filters
+      params.permit(*::HotelPortal::RequestsHelper::PRESERVED_FILTER_KEYS, :date, :days).to_h.symbolize_keys
+    end
+
+    def board_path_with_filters
+      hotel_requests_path(current_hotel, board_filters.compact_blank)
+    end
 
     def board_presenter(board, pages:)
       ::HotelPortal::RequestsBoardPresenter.new(

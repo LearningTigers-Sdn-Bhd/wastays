@@ -1,6 +1,11 @@
 require "rails_helper"
 
 RSpec.describe "Hotel portal request pages", type: :request do
+  def dom_id_for(record)
+    kind = record.is_a?(ComplaintRequest) ? "complaint" : "housekeeping"
+    "request_#{kind}_#{record.id}"
+  end
+
   let(:account) { create(:account) }
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
@@ -51,22 +56,23 @@ RSpec.describe "Hotel portal request pages", type: :request do
       expect(response.body).to include("Filed towels")
     end
 
-    it "offers the way back out of the archive and nothing else" do
+    it "offers the way back out of the archive, through the same endpoint a drag uses" do
       get hotel_requests_path(hotel)
-      card = Nokogiri::HTML(response.body).css("article[data-request-id='#{archived.id}']").first
+      card = Nokogiri::HTML(response.body).at_css("article##{dom_id_for(archived)}")
 
       expect(card).to be_present
       expect(card.text).to include("Restore")
-      expect(card.at_css("form")["action"]).to eq(hotel_unarchive_request_path(hotel, kind: "housekeeping", request_id: archived.id))
+      expect(card.at_css("form")["action"]).to eq(hotel_requests_move_path(hotel, to: "completed"))
     end
 
-    # Dragging is how a status is changed, and an archived card has none to change.
-    it "does not let an archived card be dragged" do
+    # Restoring is a move out of the archive, so the card can be dragged back to
+    # a lane as well as sent there by its button.
+    it "lets an archived card be carried back out" do
       get hotel_requests_path(hotel)
-      card = Nokogiri::HTML(response.body).css("article[data-request-id='#{archived.id}']").first
+      card = Nokogiri::HTML(response.body).at_css("article##{dom_id_for(archived)}")
 
-      expect(card["draggable"]).to eq("false")
-      expect(card["data-action"]).to be_nil
+      expect(card["draggable"]).to eq("true")
+      expect(card["tabindex"]).to eq("0")
     end
 
     it "reads the rest of the column the way every other column is read" do
@@ -119,7 +125,7 @@ RSpec.describe "Hotel portal request pages", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Clean up completed")
-    expect(response.body).to include(hotel_archive_request_path(hotel, kind: "checkout", request_id: checkout.id))
+    expect(response.body).to include(hotel_requests_move_path(hotel, to: "archived"))
   end
 
   it "can archive completed checkout requests" do
@@ -130,6 +136,50 @@ RSpec.describe "Hotel portal request pages", type: :request do
 
     expect(response).to redirect_to(hotel_requests_path(hotel))
     expect(checkout.reload.metadata["archived_at"]).to be_present
+  end
+
+  # Moving a card always leaves one lane and joins another, so the answer has to
+  # carry both -- a redirect could only ever refill the frame it was asked from.
+  describe "moving a card" do
+    let(:booking) { create(:booking, hotel: hotel, guest_name: "Sena") }
+    let!(:request) do
+      create(:housekeeping_request, booking: booking, status: "completed",
+             request_details: "Towels", completed_at: Time.current, archived_at: nil)
+    end
+
+    it "answers with both lanes and the card that moved" do
+      patch hotel_requests_move_path(hotel, to: "archived"),
+            params: { kind: "housekeeping", request_id: request.id },
+            headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(%(action="remove" target="#{dom_id_for(request)}"))
+      expect(response.body).to include(%(target="requests_column_archived_start"))
+      expect(response.body).to include(%(target="requests_count_archived"))
+      expect(response.body).to include(%(target="requests_count_completed"))
+      expect(request.reload.archived_at).to be_present
+    end
+
+    it "says why when the lane will not take the card" do
+      patch hotel_requests_move_path(hotel, to: "checkout"),
+            params: { kind: "housekeeping", request_id: request.id },
+            headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include("requests_board_flash")
+      expect(response.body).to include("cannot go there")
+      expect(request.reload.archived_at).to be_nil
+    end
+
+    # The lanes sent back have to be the ones on screen, not an unfiltered board.
+    it "reads the board back under the filters it was moved from" do
+      patch hotel_requests_move_path(hotel, to: "archived", q: "nothing matches"),
+            params: { kind: "housekeeping", request_id: request.id },
+            headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("Towels")
+    end
   end
 
   # A column reads itself as somebody scrolls it, so the placeholder that asks

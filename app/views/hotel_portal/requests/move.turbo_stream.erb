@@ -1,0 +1,42 @@
+<%#
+  What changed when a request was put in a lane.
+
+  Only the two lanes involved are touched, and only by the card that moved -- the
+  pages somebody has already scrolled into the other lanes stay where they are,
+  which a redirect refilling a whole column could not promise.
+%>
+<% if @result.ok? %>
+  <% from = @result.from_column %>
+  <% to = @result.to_column %>
+
+  <%# Gone from where it was. %>
+  <%= turbo_stream.remove ::HotelPortal::Requests::Card.new(kind: params[:kind], request_id: params[:request_id].to_i).dom_id %>
+
+  <%# Arrived at the top of where it went. Prepending is the right place and not
+      a convenience: a lane is ordered by the timestamp the move just set, so the
+      card genuinely is the newest thing in it. %>
+  <% if (card = @presenter.board_columns[to.key]&.find { |c| c.request_id == @result.request.id && c.kind == params[:kind] }) %>
+    <%= turbo_stream.prepend @presenter.column_frame_id(to.key, nil) do %>
+      <%= render "hotel_portal/requests/card", card: card, column: to, presenter: @presenter %>
+    <% end %>
+  <% end %>
+
+  <%# Both counts, and the empty state either lane may have just gained or lost. %>
+  <% [ from, to ].uniq.each do |column| %>
+    <%= turbo_stream.update "requests_count_#{column.key}", @presenter.board_counts[column.key] %>
+    <%= turbo_stream.update "requests_count_label_#{column.key}",
+          pluralize(@presenter.board_counts[column.key], column.request_label) %>
+    <% if @presenter.board_columns[column.key].any? %>
+      <%= turbo_stream.remove "requests_empty_#{column.key}" %>
+    <% end %>
+  <% end %>
+<% else %>
+  <%# The card stays where it is; the operator is told why rather than watching it
+      snap back without a word. %>
+  <%= turbo_stream.append "requests_board_flash" do %>
+    <div class="rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm"
+         role="status" aria-live="polite">
+      <%= @result.error %>
+    </div>
+  <% end %>
+<% end %>

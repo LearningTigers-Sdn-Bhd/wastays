@@ -293,25 +293,22 @@ module HotelPortal
     # -- Cards ----------------------------------------------------------------
 
     def housekeeping_card(request, bucket:, kind:)
-      base_card(request, bucket: bucket, kind: kind, title: request.request_details).merge(
-        room_number: request.room_number.presence || request.booking&.booking_rooms&.first&.room_number,
-        sort_at: bucket == :completed ? request.completed_at : request.display_requested_at
-      )
+      base_card(request, bucket: bucket, kind: kind, title: request.request_details).tap do |card|
+        card.room_number = request.room_number.presence || request.booking&.booking_rooms&.first&.room_number
+      end
     end
 
     def complaint_card(request, bucket:)
-      base_card(request, bucket: bucket, kind: "complaint", title: request.complaint_details).merge(
-        room_number: request.booking&.booking_rooms&.first&.room_number,
-        sort_at: bucket == :completed ? request.completed_at : request.display_requested_at
-      )
+      base_card(request, bucket: bucket, kind: "complaint", title: request.complaint_details).tap do |card|
+        card.room_number = request.booking&.booking_rooms&.first&.room_number
+      end
     end
 
     def base_card(request, bucket:, kind:, title:)
       booking = request.booking
 
-      {
+      Requests::Card.new(
         kind: kind,
-        bucket: bucket,
         request_id: request.id,
         booking_id: booking.id,
         booking_token: booking.confirmation_token,
@@ -324,16 +321,18 @@ module HotelPortal
         internal_notes: request.internal_notes_list,
         archive_url: hotel_archive_request_path(hotel, kind: kind, request_id: request.id),
         update_url: hotel_request_status_path(hotel, kind: kind, request_id: request.id),
-        booking_url: hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests")
-      }
+        booking_url: hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests"),
+        # Outstanding work is placed by when it was asked for and finished work by
+        # when it was finished, so the column's sort column is the one reported.
+        sort_at: bucket == :completed ? request.completed_at : request.display_requested_at
+      )
     end
 
     def open_checkout_card(request)
       booking = request.booking
 
-      {
+      Requests::Card.new(
         kind: "checkout",
-        bucket: :checkout,
         request_id: request.id,
         booking_id: booking.id,
         booking_token: booking.confirmation_token,
@@ -345,15 +344,14 @@ module HotelPortal
         complete_url: hotel_complete_checkout_request_path(hotel, request.id),
         booking_url: hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests"),
         sort_at: request.requested_at
-      }
+      )
     end
 
     def completed_checkout_card(request)
       booking = request.booking
 
-      {
+      Requests::Card.new(
         kind: "checkout",
-        bucket: :completed,
         request_id: request.id,
         booking_id: booking.id,
         booking_token: booking.confirmation_token,
@@ -367,7 +365,7 @@ module HotelPortal
         archive_url: hotel_archive_request_path(hotel, kind: "checkout", request_id: request.id),
         booking_url: hotel_booking_path(hotel, booking),
         sort_at: request.completed_at
-      }
+      )
     end
   end
 end

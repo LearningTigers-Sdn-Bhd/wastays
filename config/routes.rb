@@ -448,6 +448,9 @@ Rails.application.routes.draw do
     # The rest of one column, read from a cursor rather than a page number.
     get "requests/columns/:column", to: "requests#column", as: :requests_column
     get "requests/archive", to: "requests#archive", as: :request_archive
+    # Putting a request in a lane -- dragged there, or asked for by the button on
+    # the card. One endpoint, so the two gestures cannot mean different things.
+    patch "requests/move", to: "requests#move", as: :requests_move
     resources :housekeeping_tasks, only: [ :index ] do
       member do
         patch :assign

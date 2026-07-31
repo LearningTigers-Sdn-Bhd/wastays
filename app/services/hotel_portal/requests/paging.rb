@@ -47,7 +47,9 @@ module HotelPortal
           scope = scope.where(condition, binds)
         end
 
-        scope.map { |record| source.builder.call(record).merge(sort_source: source.name) }
+        # The source names itself on every row it built: the cursor orders by it,
+        # and only the source knows which one it is.
+        scope.map { |record| source.builder.call(record).tap { |card| card.sort_source = source.name } }
       end
 
       def cursor_after(cards)

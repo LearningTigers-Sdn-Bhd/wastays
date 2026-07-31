@@ -6,11 +6,11 @@
   IntersectionObserver of our own. The frame's id is keyed on the cursor it was
   asked for, so each page replaces the placeholder that requested it.
 
-  Locals: page, bucket_key, presenter, frame_id
+  Locals: page, column, presenter, frame_id
 %>
 <%= turbo_frame_tag frame_id, class: "flex flex-col gap-3" do %>
   <% page.cards.each do |card| %>
-    <%= render "hotel_portal/requests/card", card: card, bucket_key: bucket_key, presenter: presenter %>
+    <%= render "hotel_portal/requests/card", card: card, column: column, presenter: presenter %>
   <% end %>
 
   <% if page.more? %>
@@ -18,8 +18,8 @@
         answers it: Turbo replaces a frame's children and leaves its attributes
         alone, so cards arriving here inherit whatever this element already
         says -- and without them the next page's cards land unspaced. %>
-    <%= turbo_frame_tag presenter.column_frame_id(bucket_key, page.next_cursor),
-          src: presenter.column_page_path(bucket_key, page.next_cursor),
+    <%= turbo_frame_tag presenter.column_frame_id(column.key, page.next_cursor),
+          src: presenter.column_page_path(column.key, page.next_cursor),
           loading: :lazy,
           class: "flex flex-col gap-3" do %>
       <p class="py-3 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading more…</p>

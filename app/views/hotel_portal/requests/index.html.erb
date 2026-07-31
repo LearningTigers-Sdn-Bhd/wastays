@@ -54,29 +54,42 @@
     </p>
   </div>
 
+  <%# Where a refused move says so. Outside the results frame, so replacing the
+      board does not take the message with it. %>
+  <div id="requests_board_flash" class="empty:hidden space-y-2" aria-live="polite"></div>
+
   <%= turbo_frame_tag "requests_board_results" do %>
-  <%# The board is wider than the page now, so it scrolls sideways inside its own
-      viewport rather than making the page do it. Each column still scrolls down
-      inside that: the horizontal scroll moves between columns, never within one. %>
-  <%= render PanelsUI::ScrollArea.new(orientation: :horizontal, class: "h-[70dvh] xl:h-[calc(100vh-12rem)]") do %>
-  <div class="flex h-full items-stretch gap-4" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>" data-requests-board-target="board">
+  <%# Five columns are wider than the page, so from xl up the board scrolls
+      sideways inside its own viewport rather than making the page do it, and each
+      column scrolls down inside that.
+
+      Below xl the columns stack full width and the page scrolls them, which is
+      what a phone wants -- and it is also what keeps the lazy placeholders
+      working there: given no height, a column never scrolls inside itself, so the
+      frame asking for the next page only ever comes into view on page scroll. The
+      scroll area is inert at that size: no height means an auto-height viewport
+      with nothing to overflow. %>
+  <%= render PanelsUI::ScrollArea.new(orientation: :horizontal, class: "xl:h-[calc(100vh-12rem)]") do %>
+  <div class="flex flex-col gap-4 xl:h-full xl:flex-row xl:items-stretch" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>" data-requests-board-target="board">
     <% @presenter.columns.each do |column| %>
-      <% bucket_key = column[:key] %>
+      <% bucket_key = column.key %>
       <section
         data-requests-board-target="column"
         data-board-column="<%= bucket_key %>"
-        <% if column[:draggable] %>
+        <% if column.droppable? %>
+          data-move-url="<%= @presenter.move_path(column) %>"
           data-action="dragover->requests-board#dragOver dragleave->requests-board#dragLeave drop->requests-board#drop"
         <% end %>
-        <%# A fixed width, and shrink-0 so the row does not squeeze the columns to
-            fit: the scroll is what makes room for them. min-w-0 stays on the
-            header text below, where a long title would otherwise widen the card. %>
-        class="flex h-full w-[19rem] shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-muted/40 border-t-4 sm:w-[21rem] <%= column[:accent_class] %>"
+        <%# From xl a fixed width, and shrink-0 so the row does not squeeze the
+            columns to fit: the sideways scroll is what makes room for them.
+            min-w-0 stays on the header text below, where a long title would
+            otherwise widen the card. %>
+        class="flex w-full flex-col overflow-hidden rounded-2xl border border-border bg-muted/40 border-t-4 xl:h-full xl:w-[21rem] xl:shrink-0 <%= column.accent_class %>"
       >
         <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4 bg-card">
           <div class="min-w-0">
-            <h2 class="text-sm font-bold uppercase tracking-wider text-foreground"><%= column[:label] %></h2>
-            <p class="text-[11px] font-medium text-muted-foreground"><%= pluralize(@presenter.board_counts[bucket_key], @presenter.column_request_label(column)) %></p>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-foreground"><%= column.label %></h2>
+            <p class="text-[11px] font-medium text-muted-foreground" id="requests_count_label_<%= bucket_key %>"><%= pluralize(@presenter.board_counts[bucket_key], column.request_label) %></p>
             <%# Outstanding work the range leaves out, so narrowing it never hides work silently. %>
             <% if @presenter.older_open?(bucket_key) %>
               <% older_label = "#{pluralize(@presenter.older_open_count(bucket_key), 'older request')} outside this range" %>
@@ -91,15 +104,16 @@
             <% end %>
           </div>
           <div class="flex shrink-0 items-center gap-2">
-            <span class="inline-flex size-7 items-center justify-center rounded-full <%= @presenter.column_count_badge_class(column) %> text-xs font-black">
+            <span class="inline-flex size-7 items-center justify-center rounded-full <%= column.count_badge_class %> text-xs font-black" id="requests_count_<%= bucket_key %>">
               <%= @presenter.board_counts[bucket_key] %>
             </span>
           </div>
-          <% if column[:draggable] %>
+          <% if column.reorderable? %>
             <button
               type="button"
               draggable="true"
-              data-action="dragstart->requests-board#columnDragStart dragend->requests-board#columnDragEnd"
+              aria-label="Reorder <%= column.label %>. Use left and right arrow keys to move."
+              data-action="dragstart->requests-board#columnDragStart dragend->requests-board#columnDragEnd keydown->requests-board#columnKeydown"
               class="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-grab"
             >
               <%= cached_icon "grip-vertical", stroke_width: 3, class: "size-4" %>
@@ -108,15 +122,17 @@
         </div>
 
         <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 custom-scrollbar">
-          <% if @presenter.board_columns[bucket_key].any? %>
-            <%= render "hotel_portal/requests/column_page",
-                  page: @presenter.page_for(bucket_key),
-                  bucket_key: bucket_key,
-                  presenter: @presenter,
-                  frame_id: @presenter.column_frame_id(bucket_key, nil) %>
-          <% else %>
-            <div class="flex flex-col items-center justify-center h-40 rounded-2xl border-2 border-dashed border-border bg-card/50">
-              <p class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">No <%= @presenter.column_request_label(column).pluralize %></p>
+          <%# Rendered whether or not there is anything in it: a card moved here
+              arrives as a prepend into this frame, which has to be on the page
+              before it can be a target. The empty state sits alongside it. %>
+          <%= render "hotel_portal/requests/column_page",
+                page: @presenter.page_for(bucket_key),
+                column: column,
+                presenter: @presenter,
+                frame_id: @presenter.column_frame_id(bucket_key, nil) %>
+          <% unless @presenter.board_columns[bucket_key].any? %>
+            <div class="flex flex-col items-center justify-center h-40 rounded-2xl border-2 border-dashed border-border bg-card/50" id="requests_empty_<%= bucket_key %>">
+              <p class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">No <%= column.request_label.pluralize %></p>
             </div>
           <% end %>
         </div>
