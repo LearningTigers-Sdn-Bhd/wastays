@@ -197,7 +197,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       departing = create(
         :booking,
         hotel:,
-        status: "review_due_out",
+        status: "due_out_detected",
         check_in: Date.current - 1.day,
         check_out: Date.current,
         guest_name: "Departing Guest"
@@ -860,9 +860,9 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       create(:booking_room, booking:, room_type:, room_number: "101")
       expected = {
         "confirmed" => "Check-in",
-        "review_no_show" => "Mark No-show",
+        "no_show_detected" => "Mark No-show",
         "checked_in" => "Check-out",
-        "review_due_out" => "Review Late Checkout",
+        "due_out_detected" => "Resolve due-out",
         "checkout_required" => "Complete Checkout"
       }
       expected.each do |status, label|

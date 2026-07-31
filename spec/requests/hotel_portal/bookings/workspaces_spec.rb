@@ -700,10 +700,10 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       role.permissions << manage_bookings
       expected_actions = {
         "confirmed" => [ "Check-in", "Cancel" ],
-        "review_no_show" => [ "Backdated Check-in", "Mark No-show", "Cancel" ],
+        "no_show_detected" => [ "Backdated Check-in", "Mark No-show", "Cancel" ],
         "no_show" => [ "Reinstate" ],
         "checked_in" => [ "Check-out", "Edit Check-In", "Undo Check-in" ],
-        "review_due_out" => [ "Review Late Checkout" ],
+        "due_out_detected" => [ "Resolve due-out" ],
         "checkout_required" => [ "Complete Checkout" ]
       }
 

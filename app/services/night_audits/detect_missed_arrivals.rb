@@ -3,7 +3,7 @@
 require "ostruct"
 
 module NightAudits
-  class ReviewMissedArrivals
+  class DetectMissedArrivals
     def self.call(night_audit:, user:)
       new(night_audit: night_audit, user: user).call
     end
@@ -13,13 +13,13 @@ module NightAudits
       @hotel = night_audit.hotel
       @business_date = night_audit.business_date.to_date
       @user = user
-      @reviewed = []
+      @detected = []
       @hotel_zone = Time.find_zone(@hotel.time_zone.presence || User::DEFAULT_TIME_ZONE) || Time.zone
     end
 
     def call
-      candidates.find_each { |booking| review(booking) }
-      OpenStruct.new(success?: true, reviewed_count: @reviewed.count, bookings: @reviewed)
+      candidates.find_each { |booking| detect(booking) }
+      OpenStruct.new(success?: true, detected_count: @detected.count, bookings: @detected)
     end
 
     private
@@ -30,16 +30,16 @@ module NightAudits
         .checking_in_on(@business_date, @hotel.hotel_time_zone)
     end
 
-    def review(booking)
+    def detect(booking)
       Booking.transaction do
         booking.with_lock do
           booking.reload
           next unless eligible?(booking)
 
           booking.transition_status_to!(
-            "review_no_show",
-            event: "review_no_show",
-            attributes: { no_show_review_business_date: @business_date }
+            "no_show_detected",
+            event: "detect_no_show",
+            attributes: { no_show_detected_business_date: @business_date }
           )
           Bookings::RecordAuditLog.call!(
             auditable: booking,
@@ -47,16 +47,16 @@ module NightAudits
             action_type: "status_change",
             source: "night_audit",
             old_value: { "status" => "confirmed" },
-            new_value: { "status" => "review_no_show" },
+            new_value: { "status" => "no_show_detected" },
             metadata: {
               from: "confirmed",
-              to: "review_no_show",
-              event: "review_no_show",
+              to: "no_show_detected",
+              event: "detect_no_show",
               night_audit_id: @night_audit.id,
               business_date: @business_date.iso8601
             }
           )
-          @reviewed << booking
+          @detected << booking
         end
       end
     end

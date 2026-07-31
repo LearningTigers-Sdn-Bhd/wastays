@@ -29,10 +29,10 @@ module Bookings
         @booking.with_lock do
           @booking.reload
           return success if @booking.status == "no_show"
-          return failure("Only bookings pending no-show review can be marked as no-show.") unless @booking.status == "review_no_show"
+          return failure("Only bookings with a detected no-show can be marked as no-show.") unless @booking.status == "no_show_detected"
 
-          @business_date = @booking.no_show_review_business_date
-          return failure("No-show review business date is missing.") unless @business_date
+          @business_date = @booking.no_show_detected_business_date
+          return failure("No-show detection business date is missing.") unless @business_date
 
           folio = Folios::Lifecycle::InitializeForBooking.call(
             booking: @booking,
@@ -56,7 +56,7 @@ module Bookings
             user: @user,
             action_type: "no_show",
             source: @night_audit.present? ? "night_audit" : (@user.present? ? "staff" : "system"),
-            old_value: { "status" => "review_no_show" },
+            old_value: { "status" => "no_show_detected" },
             new_value: { "status" => "no_show" },
             reason: @reason,
             metadata: audit_metadata
@@ -109,8 +109,8 @@ module Bookings
         options.merge!(
           override_night_audit: true,
           system_posting: true,
-          correction_reason: "finalize_no_show_review",
-          correction_note: "Finalized no-show review for original arrival business date #{@business_date}."
+          correction_reason: "finalize_no_show_detection",
+          correction_note: "Finalized no-show detection for original arrival business date #{@business_date}."
         )
       end
 

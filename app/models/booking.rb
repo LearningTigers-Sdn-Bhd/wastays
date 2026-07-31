@@ -66,11 +66,11 @@ class Booking < ApplicationRecord
     @guest_government_id = value
   end
 
-  STATUSES = %w[pending confirmed review_no_show checked_in review_due_out checkout_required cancelled completed overbooked no_show voided].freeze
-  OCCUPIED_STATUSES = %w[checked_in review_due_out checkout_required].freeze
+  STATUSES = %w[pending confirmed no_show_detected checked_in due_out_detected checkout_required cancelled completed overbooked no_show voided].freeze
+  OCCUPIED_STATUSES = %w[checked_in due_out_detected checkout_required].freeze
   # Statuses that occupy a room on the timeline (arrival/occupied/departure). Shared by the
   # Stay View loader and its filter contract so both describe the same set of bookings.
-  OCCUPYING_STATUSES = %w[confirmed review_no_show checked_in review_due_out checkout_required completed].freeze
+  OCCUPYING_STATUSES = %w[confirmed no_show_detected checked_in due_out_detected checkout_required completed].freeze
   PAYMENT_STATUSES = %w[pending authorized partial captured failed refunded].freeze
   PAYOUT_STATUSES = %w[pending processing paid].freeze
 
@@ -85,7 +85,7 @@ class Booking < ApplicationRecord
   validates :status, presence: true, inclusion: { in: STATUSES }
   validate :status_transition_must_be_allowed, if: :status_changed_on_persisted_record?
   validate :check_cta_ctd_restrictions
-  validates :no_show_review_business_date, presence: true, if: -> { status == "review_no_show" }
+  validates :no_show_detected_business_date, presence: true, if: -> { status == "no_show_detected" }
   validates :payment_status, presence: true, inclusion: { in: PAYMENT_STATUSES }
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
   validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_blank: true }
@@ -133,8 +133,8 @@ class Booking < ApplicationRecord
   scope :checked_in, -> { where(status: "checked_in") }
   scope :completed, -> { where(status: "completed") }
   scope :no_show, -> { where(status: "no_show") }
-  scope :active, -> { where(status: [ "confirmed", "review_no_show", "checked_in", "review_due_out", "checkout_required" ]) }
-  scope :revenue_generating, -> { where(status: [ "confirmed", "review_no_show", "checked_in", "review_due_out", "checkout_required", "completed", "no_show" ]) }
+  scope :active, -> { where(status: [ "confirmed", "no_show_detected", "checked_in", "due_out_detected", "checkout_required" ]) }
+  scope :revenue_generating, -> { where(status: [ "confirmed", "no_show_detected", "checked_in", "due_out_detected", "checkout_required", "completed", "no_show" ]) }
   scope :payout_eligible, -> { completed.where(payout_status: "pending") }
 
   scope :search, ->(query) {
@@ -550,7 +550,7 @@ class Booking < ApplicationRecord
   end
 
   def check_cta_ctd_restrictions
-    return unless %w[pending confirmed review_no_show checked_in review_due_out checkout_required].include?(status)
+    return unless %w[pending confirmed no_show_detected checked_in due_out_detected checkout_required].include?(status)
     return unless new_record? || check_in_changed? || check_out_changed?
     return if new_record? && booking_rooms.target.empty?
 

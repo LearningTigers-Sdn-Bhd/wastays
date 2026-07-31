@@ -21,7 +21,7 @@ module NightAudits
     def build_summary
       {
         "arrivals_count" => hotel_bookings.checking_in_on(@business_date, @hotel.hotel_time_zone).count,
-        "review_no_show_count" => hotel_bookings.where(status: "review_no_show").count,
+        "no_show_detected_count" => hotel_bookings.where(status: "no_show_detected").count,
         "no_show_count" => hotel_bookings.no_show.checking_in_on(@business_date, @hotel.hotel_time_zone).count,
         "due_out_count" => hotel_bookings.checking_out_on(@business_date, @hotel.hotel_time_zone).count,
         "checked_out_count" => hotel_bookings.completed.where(checked_out_at: @hotel.business_day_window_for(@business_date)).count,
@@ -61,8 +61,8 @@ module NightAudits
 
     def build_exceptions
       exceptions = {
-        "review_due_out" => serialize_bookings(review_due_out_bookings, "Due-out review carried forward"),
-        "review_no_show" => serialize_bookings(review_no_show_bookings, "No-show review carried forward"),
+        "due_out_detected" => serialize_bookings(due_out_detected_bookings, "Due-out detection carried forward"),
+        "no_show_detected" => serialize_bookings(no_show_detected_bookings, "No-show detection carried forward"),
         "open_housekeeping_requests" => serialize_requests(open_housekeeping_requests, :request_details, "Housekeeping request still open"),
         "open_complaint_requests" => serialize_requests(open_complaint_requests, :complaint_details, "Complaint request still open")
       }
@@ -83,12 +83,12 @@ module NightAudits
       @due_out_not_checked_out ||= hotel_bookings.where(status: [ "checked_in", "checkout_required" ]).where("check_out < ?", cutoff)
     end
 
-    def review_due_out_bookings
-      @review_due_out_bookings ||= hotel_bookings.where(status: "review_due_out")
+    def due_out_detected_bookings
+      @due_out_detected_bookings ||= hotel_bookings.where(status: "due_out_detected")
     end
 
-    def review_no_show_bookings
-      @review_no_show_bookings ||= hotel_bookings.where(status: "review_no_show")
+    def no_show_detected_bookings
+      @no_show_detected_bookings ||= hotel_bookings.where(status: "no_show_detected")
     end
 
     def checked_in_missing_timestamp
@@ -102,7 +102,7 @@ module NightAudits
     def financially_relevant_bookings
       @financially_relevant_bookings ||= begin
         stay_scope = hotel_bookings
-          .where(status: %w[checked_in review_due_out checkout_required completed])
+          .where(status: %w[checked_in due_out_detected checkout_required completed])
           .intersecting_local_date(@business_date, @hotel.hotel_time_zone)
         no_show_scope = hotel_bookings.no_show.checking_in_on(@business_date, @hotel.hotel_time_zone)
 

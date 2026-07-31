@@ -413,7 +413,7 @@ RSpec.describe Bookings::TransitionStatus do
 
       it "checks out a checkout-required booking" do
         folio = create_settled_folio
-        booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+        booking.transition_status_to!("due_out_detected", event: "detect_due_out")
         booking.transition_status_to!("checkout_required", event: "reject_late_checkout")
 
         result = subject.call
@@ -424,15 +424,15 @@ RSpec.describe Bookings::TransitionStatus do
         expect(folio.reload.status).to eq("closed")
       end
 
-      it "does not check out directly from due-out review" do
+      it "does not check out directly from a detected due-out" do
         folio = create_settled_folio
-        booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+        booking.transition_status_to!("due_out_detected", event: "detect_due_out")
 
         result = subject.call
 
         expect(result.success?).to be false
-        expect(result.error).to eq("Cannot check out booking with status review_due_out")
-        expect(booking.reload.status).to eq("review_due_out")
+        expect(result.error).to eq("Cannot check out booking with status due_out_detected")
+        expect(booking.reload.status).to eq("due_out_detected")
         expect(folio.reload.status).to eq("open")
       end
 
@@ -582,14 +582,14 @@ RSpec.describe Bookings::TransitionStatus do
         expect(booking.reload.status).to eq("checked_in")
       end
 
-      it "cancels a no-show review without charges and releases its assigned room" do
+      it "cancels a detected no-show without charges and releases its assigned room" do
         room_type = create(:room_type, hotel: booking.hotel, room_numbers: [ "101" ])
         create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
         room_status = create(:room_status, hotel: booking.hotel, room_type: room_type, room_number: "101", status: "dirty")
         booking.transition_status_to!(
-          "review_no_show",
-          event: "review_no_show",
-          attributes: { no_show_review_business_date: booking.check_in.to_date }
+          "no_show_detected",
+          event: "detect_no_show",
+          attributes: { no_show_detected_business_date: booking.check_in.to_date }
         )
 
         result = described_class.new(booking: booking, status: "cancelled", user: user, options: { reason: "Guest cancelled" }).call
@@ -628,9 +628,9 @@ RSpec.describe Bookings::TransitionStatus do
       context "when booking was finalized as no_show" do
         it "requires the dedicated reinstatement workflow" do
           booking.transition_status_to!(
-            "review_no_show",
-            event: "review_no_show",
-            attributes: { no_show_review_business_date: business_date }
+            "no_show_detected",
+            event: "detect_no_show",
+            attributes: { no_show_detected_business_date: business_date }
           )
           booking.transition_status_to!("no_show", event: "mark_no_show")
 

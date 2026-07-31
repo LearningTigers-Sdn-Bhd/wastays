@@ -26,15 +26,15 @@ RSpec.describe "Operational Exceptions", type: :system do
       # Set business date to today
       travel_to Time.zone.local(2026, 5, 21, 10, 0, 0)
 
-      booking = create(:booking, hotel: hotel, status: "review_due_out", guest_name: "John Doe", check_in: 1.day.ago, check_out: Date.current, total_amount: 100.0)
+      booking = create(:booking, hotel: hotel, status: "due_out_detected", guest_name: "John Doe", check_in: 1.day.ago, check_out: Date.current, total_amount: 100.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, nightly_rate_snapshot: { 1.day.ago.to_date.iso8601 => { "price" => 100.0 } })
       folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
 
       visit hotel_booking_path(hotel, booking)
 
       find("button[aria-label='Booking actions']").click
-      expect(page).to have_content("Review Late Checkout")
-      click_link "Review Late Checkout"
+      expect(page).to have_content("Resolve due-out")
+      click_link "Resolve due-out"
 
       expect(page).to have_content("Current rate charge")
 

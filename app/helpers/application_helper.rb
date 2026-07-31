@@ -46,7 +46,7 @@ module ApplicationHelper
   def booking_status_class(status)
     case status
     when "confirmed" then "bg-green-100 text-green-800"
-    when "review_no_show" then "bg-amber-100 text-amber-800"
+    when "no_show_detected" then "bg-amber-100 text-amber-800"
     when "checked_in" then "bg-blue-100 text-blue-800"
     when "completed" then "bg-emerald-100 text-emerald-800"
     when "cancelled" then "bg-red-100 text-red-800"
@@ -58,7 +58,7 @@ module ApplicationHelper
   end
 
   def guest_booking_status(booking)
-    booking.status == "review_no_show" ? "confirmed" : booking.status
+    booking.status == "no_show_detected" ? "confirmed" : booking.status
   end
 
   def refund_status_class(status)

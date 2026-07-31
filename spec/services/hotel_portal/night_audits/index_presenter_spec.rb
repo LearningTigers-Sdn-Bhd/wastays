@@ -22,7 +22,7 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
       exceptions: exceptions,
       summary: {
         "arrivals_count" => 2,
-        "review_no_show_count" => 1,
+        "no_show_detected_count" => 1,
         "due_out_count" => 3
       }
     }
@@ -82,14 +82,14 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
     end
     let(:exceptions) do
       {
-        "review_due_out" => [
-          { "booking_id" => 456, "reason" => "Due-out review carried forward" }
+        "due_out_detected" => [
+          { "booking_id" => 456, "reason" => "Due-out detection carried forward" }
         ]
       }
     end
 
     it "builds compact readiness and blocker rows with booking actions" do
-      expect(presenter.review_queue_value).to eq("1 / 1")
+      expect(presenter.detected_queue_value).to eq("1 / 1")
 
       readiness_row = presenter.readiness_detail_rows.find { |row| row.type == "Due out not checked out" }
       expect(readiness_row.count).to eq(1)
@@ -105,11 +105,11 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
     end
   end
 
-  context "when due-out reviews are the only unresolved items" do
+  context "when due-out detections are the only unresolved items" do
     let(:exceptions) do
       {
-        "review_due_out" => [
-          { "booking_id" => 123, "reason" => "Late checkout requires staff review" }
+        "due_out_detected" => [
+          { "booking_id" => 123, "reason" => "Due-out detection requires staff action" }
         ]
       }
     end
@@ -119,7 +119,7 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
         expect(presenter.ui_state).to eq("READY_FOR_AUDIT")
         expect(presenter.readiness_counters.find { |counter| counter.label == "Blockers" }.value).to eq(0)
         expect(presenter.readiness_counters.find { |counter| counter.label == "Warnings" }.value).to eq(1)
-        expect(presenter.warning_groups.sole.label).to eq("Due-Out Review")
+        expect(presenter.warning_groups.sole.label).to eq("Due-out detected")
         expect(presenter.primary_action.enabled).to be(true)
       end
     end

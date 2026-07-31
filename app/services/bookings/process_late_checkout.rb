@@ -25,8 +25,8 @@ module Bookings
         @booking.with_lock do
           @booking.reload
 
-          unless @booking.status == "review_due_out"
-            result = failure("Booking is not pending late checkout review.")
+          unless @booking.status == "due_out_detected"
+            result = failure("Booking does not have a detected due-out.")
             raise ActiveRecord::Rollback
           end
 

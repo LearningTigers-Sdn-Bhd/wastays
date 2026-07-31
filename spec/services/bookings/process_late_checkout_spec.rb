@@ -11,7 +11,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
   let!(:folio) { Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user) }
 
   before do
-    booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+    booking.transition_status_to!("due_out_detected", event: "detect_due_out")
   end
 
   it "updates the checkout period, posts a charge, and resolves the booking" do
@@ -63,7 +63,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
     expect(booking.reload.status).to eq("checked_in")
   end
 
-  it "fails when the booking is not pending late checkout review" do
+  it "fails when the booking does not have a detected due-out" do
     booking.transition_status_to!("checked_in", event: "resolve_late_checkout")
 
     result = described_class.call(
@@ -73,7 +73,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
     )
 
     expect(result).not_to be_success
-    expect(result.error).to eq("Booking is not pending late checkout review.")
+    expect(result.error).to eq("Booking does not have a detected due-out.")
     expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
   end
 
@@ -86,7 +86,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
 
     expect(result).not_to be_success
     expect(result.error).to eq("Charge amount must be greater than zero.")
-    expect(booking.reload.status).to eq("review_due_out")
+    expect(booking.reload.status).to eq("due_out_detected")
     expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
   end
 end

@@ -689,13 +689,13 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
 
     it "keeps mobile lifecycle sheet paths and checkout fields" do
       grant_booking_permission
-      late = booking(status: "review_due_out", confirmation_token: "MOBILE-LATE", checked_in_at: Time.current)
+      late = booking(status: "due_out_detected", confirmation_token: "MOBILE-LATE", checked_in_at: Time.current)
       checkout = booking(status: "checkout_required", confirmation_token: "MOBILE-CHECKOUT", checked_in_at: Time.current)
       departed = booking(status: "completed", confirmation_token: "MOBILE-DEPARTED", checked_in_at: Time.current, checked_out_at: Time.current)
 
       get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list", in_house_query: "MOBILE" }
       mobile = Nokogiri::HTML(response.body).at_css("#front-desk-results section > .lg\\:hidden")
-      late_link = mobile.css("a").find { |link| link.text.strip == "Review late checkout" }
+      late_link = mobile.css("a").find { |link| link.text.strip == "Resolve due-out" }
       checkout_link = mobile.css("a").find { |link| link.text.strip == "Complete checkout" }
       expect(late_link["href"]).to include(late.id.to_s, "return_to=")
       expect(late_link["data-turbo-frame"]).to eq("booking_action_sheet")
@@ -913,7 +913,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
     end
 
     it "renders desktop and mobile in-house lifecycle status badges" do
-      booking(status: "review_due_out", confirmation_token: "STATUS-LATE", checked_in_at: Time.current)
+      booking(status: "due_out_detected", confirmation_token: "STATUS-LATE", checked_in_at: Time.current)
       booking(status: "checkout_required", confirmation_token: "STATUS-CHECKOUT", checked_in_at: Time.current)
 
       get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list", in_house_query: "STATUS" }
@@ -921,9 +921,9 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       document = Nokogiri::HTML(response.body)
       desktop = document.at_css("#front-desk-results .lg\\:block")
       mobile = document.at_css("#front-desk-results .lg\\:hidden")
-      expect(desktop.at_css(".bg-warning\\/10")&.text&.strip).to eq("Late")
+      expect(desktop.at_css(".bg-warning\\/10")&.text&.strip).to eq("Due-out detected")
       expect(desktop.at_css(".bg-destructive\\/10")&.text&.strip).to eq("Checkout required")
-      expect(mobile.at_css(".bg-warning\\/10")&.text&.strip).to eq("Late Checkout")
+      expect(mobile.at_css(".bg-warning\\/10")&.text&.strip).to eq("Due-out detected")
       expect(mobile.at_css(".bg-destructive\\/10")&.text&.strip).to eq("Checkout Required")
     end
 

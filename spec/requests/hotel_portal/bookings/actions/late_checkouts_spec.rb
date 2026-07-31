@@ -9,7 +9,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", :business_day, t
   let(:role) { create(:role, account: hotel.account) }
   let(:room_type) { create(:room_type, hotel: hotel, name: "Garden Suite", room_number_mode: "custom", room_numbers: %w[101 102 103]) }
   let(:booking) do
-    create(:booking, hotel: hotel, guest_name: "Ada Lovelace", status: "review_due_out", check_in: Date.yesterday, check_out: Date.current).tap do |record|
+    create(:booking, hotel: hotel, guest_name: "Ada Lovelace", status: "due_out_detected", check_in: Date.yesterday, check_out: Date.current).tap do |record|
       create(:booking_room, booking: record, room_type: room_type, room_number: "101")
       create(:booking_folio, booking: record, hotel: hotel, status: "open")
     end
@@ -21,7 +21,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", :business_day, t
   end
 
   def create_group_child(group, position:, room_number:, guest_name:)
-    create(:booking, hotel: hotel, group_booking: group, group_position: position, status: "review_due_out", guest_name: guest_name, check_in: Date.yesterday, check_out: Date.current).tap do |record|
+    create(:booking, hotel: hotel, group_booking: group, group_position: position, status: "due_out_detected", guest_name: guest_name, check_in: Date.yesterday, check_out: Date.current).tap do |record|
       create(:booking_room, booking: record, room_type: room_type, room_number: room_number)
       create(:booking_folio, booking: record, hotel: hotel, status: "open")
     end
@@ -154,11 +154,11 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", :business_day, t
         params: { charge_type: "none" }
 
       expect(response).to have_http_status(:redirect)
-      expect(booking.reload.status).to eq("review_due_out")
+      expect(booking.reload.status).to eq("due_out_detected")
     end
 
     it "does not find a booking from another hotel" do
-      other_booking = create(:booking, hotel: other_hotel, status: "review_due_out")
+      other_booking = create(:booking, hotel: other_hotel, status: "due_out_detected")
 
       post hotel_booking_action_late_checkout_path(hotel, other_booking),
         params: { charge_type: "none" }

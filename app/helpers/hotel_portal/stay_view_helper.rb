@@ -53,7 +53,7 @@ module HotelPortal::StayViewHelper
       { key: :undo_check_in, label: "Undo Check-in", icon: "rotate-ccw", variant: :warning }.freeze
     ].freeze,
     "resolve_late_checkout" => [
-      { key: :late_checkout, label: "Review Late Checkout", icon: "clock", variant: :warning }.freeze
+      { key: :late_checkout, label: "Resolve due-out", icon: "clock", variant: :warning }.freeze
     ].freeze
   }.freeze
 

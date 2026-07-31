@@ -6,7 +6,7 @@ module HotelPortal
       CONTEXTS = %i[arrival occupied departure].freeze
       SURFACES = %i[standalone joined].freeze
       COMPLETED_STATUSES = %i[completed].freeze
-      CHECKED_IN_STATUSES = %i[checked_in review_due_out checkout_required].freeze
+      CHECKED_IN_STATUSES = %i[checked_in due_out_detected checkout_required].freeze
       GUEST_STATUS_VARIANTS = {
         "Blacklisted" => :destructive,
         "VIP" => :warning,

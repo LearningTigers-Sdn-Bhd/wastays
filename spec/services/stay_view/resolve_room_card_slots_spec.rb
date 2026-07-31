@@ -110,7 +110,7 @@ RSpec.describe StayView::ResolveRoomCardSlots do
   it "keeps an overdue checked-in stay occupied only on the operational date" do
     overdue = booking_segment(
       id: 11,
-      status: :review_due_out,
+      status: :due_out_detected,
       check_in: date - 3.days,
       check_out: date - 1.day
     )

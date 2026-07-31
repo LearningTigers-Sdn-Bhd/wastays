@@ -4,7 +4,7 @@ module HousekeepingTasks
   class BoardBuilder
     # The statuses Rooms::StatusResolver reasons about. Anything else cannot
     # make a room look occupied, so it never needs loading.
-    OCCUPYING_BOOKING_STATUSES = %w[confirmed review_no_show checked_in review_due_out checkout_required completed].freeze
+    OCCUPYING_BOOKING_STATUSES = %w[confirmed no_show_detected checked_in due_out_detected checkout_required completed].freeze
 
     EMPTY = [].freeze
 

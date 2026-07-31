@@ -15,7 +15,7 @@ RSpec.describe NightAudits::BuildRunResults do
       source: "night_audit",
       action_type: "status_change",
       old_value: { "status" => "checked_in" },
-      new_value: { "status" => "review_due_out" },
+      new_value: { "status" => "due_out_detected" },
       metadata: { night_audit_id: night_audit.id })
     transaction = create(:folio_transaction,
       booking_folio: folio,
@@ -63,7 +63,7 @@ RSpec.describe NightAudits::BuildRunResults do
       source: "night_audit",
       action_type: "status_change",
       old_value: { "status" => "confirmed" },
-      new_value: { "status" => "review_no_show" },
+      new_value: { "status" => "no_show_detected" },
       metadata: { night_audit_id: night_audit.id }
     )
     log.update_columns(auditable_id: missing_booking_id)
@@ -76,6 +76,6 @@ RSpec.describe NightAudits::BuildRunResults do
     expect(item["confirmation_token"]).to be_nil
     expect(item["guest_name"]).to eq("Deleted booking")
     expect(item["from"]).to eq("confirmed")
-    expect(item["to"]).to eq("review_no_show")
+    expect(item["to"]).to eq("no_show_detected")
   end
 end

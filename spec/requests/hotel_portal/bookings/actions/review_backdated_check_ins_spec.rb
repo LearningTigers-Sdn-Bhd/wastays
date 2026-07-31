@@ -13,8 +13,8 @@ RSpec.describe "HotelPortal::Bookings::Actions review-backdated check-ins", :bus
       :booking,
       hotel: hotel,
       guest_name: "Ada Lovelace",
-      status: "review_no_show",
-      no_show_review_business_date: Date.current,
+      status: "no_show_detected",
+      no_show_detected_business_date: Date.current,
       check_in: Date.current,
       check_out: Date.current + 1.day
     ).tap do |record|
@@ -33,8 +33,8 @@ RSpec.describe "HotelPortal::Bookings::Actions review-backdated check-ins", :bus
       hotel: hotel,
       group_booking: group,
       group_position: position,
-      status: "review_no_show",
-      no_show_review_business_date: Date.current,
+      status: "no_show_detected",
+      no_show_detected_business_date: Date.current,
       check_in: Date.current,
       check_out: Date.current + 1.day,
       guest_name: guest_name
@@ -127,7 +127,7 @@ RSpec.describe "HotelPortal::Bookings::Actions review-backdated check-ins", :bus
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("dialog", "Please provide details for the backdated check-in reason.")
-      expect(booking.reload.status).to eq("review_no_show")
+      expect(booking.reload.status).to eq("no_show_detected")
     end
 
     it "keeps the sheet open when no reason is provided" do
@@ -137,7 +137,7 @@ RSpec.describe "HotelPortal::Bookings::Actions review-backdated check-ins", :bus
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("dialog", "Backdated check-in reason is required.")
-      expect(booking.reload.status).to eq("review_no_show")
+      expect(booking.reload.status).to eq("no_show_detected")
     end
 
     it "closes the sheet with a flash alert when the booking is not under no-show review" do
@@ -177,11 +177,11 @@ RSpec.describe "HotelPortal::Bookings::Actions review-backdated check-ins", :bus
         params: { booking: { checked_in_at: Time.current }, retroactive_reason: "Late arrival" }
 
       expect(response).to have_http_status(:redirect)
-      expect(booking.reload.status).to eq("review_no_show")
+      expect(booking.reload.status).to eq("no_show_detected")
     end
 
     it "does not find a booking from another hotel" do
-      other_booking = create(:booking, hotel: other_hotel, status: "review_no_show", no_show_review_business_date: Date.current)
+      other_booking = create(:booking, hotel: other_hotel, status: "no_show_detected", no_show_detected_business_date: Date.current)
 
       post hotel_booking_action_review_backdated_check_in_path(hotel, other_booking),
         params: { booking: { checked_in_at: Time.current }, retroactive_reason: "Late arrival" }

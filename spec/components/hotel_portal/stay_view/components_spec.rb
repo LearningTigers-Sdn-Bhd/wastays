@@ -147,7 +147,7 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_css("#stay-view-status-guide-panel", text: "Cleaning priority", visible: :all)
     expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Timeline events", visible: :all)
     expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Departure", visible: :all)
-    expect(page).to have_no_css("#stay-view-status-guide-panel", text: "No-show review", visible: :all)
+    expect(page).to have_no_css("#stay-view-status-guide-panel", text: "No-show detected", visible: :all)
     expect(page).to have_css("div[data-slot='stay-view-status-swatch']", count: 17)
     expect(page).to have_css("div[data-slot='stay-view-status-swatch'] svg.size-3", count: 17)
     expect(page).to have_no_css("#stay-view-status-guide-panel .panel-badge-rounded", visible: :all)
@@ -442,9 +442,9 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
   it "groups booking lifecycle statuses into distinct timeline stage tones" do
     {
       confirmed: "info",
-      review_no_show: "warning",
+      no_show_detected: "warning",
       checked_in: "success",
-      review_due_out: "warning",
+      due_out_detected: "warning",
       checkout_required: "destructive",
       completed: "completed"
     }.each do |status, tone|

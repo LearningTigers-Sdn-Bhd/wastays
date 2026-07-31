@@ -8,7 +8,7 @@ module Bookings
     # in the room: "have extra towels ready" is a real request, and the stay it
     # belongs to is the one they are about to start. Wider than OCCUPIED_STATUSES
     # by the two statuses a booking holds between being made and being checked in.
-    GUEST_REQUEST_STATUSES = (%w[confirmed review_no_show] + OCCUPIED_STATUSES).freeze
+    GUEST_REQUEST_STATUSES = (%w[confirmed no_show_detected] + OCCUPIED_STATUSES).freeze
 
     def self.occupied?(booking)
       booking.present? && booking.status.in?(OCCUPIED_STATUSES)

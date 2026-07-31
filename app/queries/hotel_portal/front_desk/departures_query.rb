@@ -3,7 +3,7 @@
 module HotelPortal
   module FrontDesk
     class DeparturesQuery
-      DEPARTURE_STATUSES = %w[confirmed review_no_show checked_in checkout_required].freeze
+      DEPARTURE_STATUSES = %w[confirmed no_show_detected checked_in checkout_required].freeze
 
       attr_reader :start_date, :end_date, :query
 

@@ -28,9 +28,9 @@ RSpec.describe HotelPortal::FrontDesk::DeparturesQuery do
       expect(query.call).to contain_exactly(matching_booking)
     end
 
-    %w[confirmed review_no_show checked_in checkout_required].each do |status|
+    %w[confirmed no_show_detected checked_in checkout_required].each do |status|
       it "includes #{status} bookings checking out today" do
-        extra_attrs = status == "review_no_show" ? { no_show_review_business_date: Date.new(2026, 7, 15) } : {}
+        extra_attrs = status == "no_show_detected" ? { no_show_detected_business_date: Date.new(2026, 7, 15) } : {}
         matching_booking = create(:booking, hotel:, status:, check_out: hotel_time("2026-07-15"), **extra_attrs)
 
         query = described_class.new(hotel:, params: {})

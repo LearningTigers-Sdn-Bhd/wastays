@@ -4,7 +4,7 @@ module Folios
   module Maintenance
     class BackfillMissingForOperationalBookings
       Result = Struct.new(:created, :skipped, :failed, keyword_init: true)
-      ELIGIBLE_STATUSES = %w[confirmed review_no_show checked_in review_due_out checkout_required no_show].freeze
+      ELIGIBLE_STATUSES = %w[confirmed no_show_detected checked_in due_out_detected checkout_required no_show].freeze
 
       def self.call(scope: Booking.all)
         new(scope: scope).call

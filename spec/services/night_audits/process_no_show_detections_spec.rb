@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe NightAudits::ProcessNoShowReviews do
+RSpec.describe NightAudits::ProcessNoShowDetections do
   let(:business_date) { Date.new(2026, 5, 18) }
   let(:hotel) { create(:hotel, time_zone: "Kuala Lumpur") }
   let(:user) { create(:user, account: hotel.account) }
@@ -33,20 +33,20 @@ RSpec.describe NightAudits::ProcessNoShowReviews do
     booking
   end
 
-  it "moves a missed arrival into review without charges or inventory release" do
+  it "detects a missed arrival without charges or inventory release" do
     booking = candidate
     create(:room_inventory, room_type: room_type, date: business_date + 1.day, quantity: 0)
 
     result = described_class.call(night_audit: audit(business_date), user: user)
 
-    expect(result.reviewed_count).to eq(1)
+    expect(result.no_show_detected_count).to eq(1)
     expect(result.finalized_count).to eq(0)
-    expect(booking.reload).to have_attributes(status: "review_no_show", no_show_review_business_date: business_date)
+    expect(booking.reload).to have_attributes(status: "no_show_detected", no_show_detected_business_date: business_date)
     expect(booking.booking_folio).to be_nil
     expect(room_type.room_inventories.find_by!(date: business_date + 1.day).quantity).to eq(0)
   end
 
-  it "does not finalize a review during a retry for the same business date" do
+  it "does not finalize a detection during a retry for the same business date" do
     booking = candidate
     described_class.call(night_audit: audit(business_date), user: user)
 
@@ -54,10 +54,10 @@ RSpec.describe NightAudits::ProcessNoShowReviews do
     result = described_class.call(night_audit: retry_audit, user: user)
 
     expect(result.finalized_count).to eq(0)
-    expect(booking.reload.status).to eq("review_no_show")
+    expect(booking.reload.status).to eq("no_show_detected")
   end
 
-  it "finalizes an unresolved review on the next business-date audit attempt" do
+  it "finalizes an unresolved detection on the next business-date audit attempt" do
     booking = candidate
     create(:room_inventory, room_type: room_type, date: business_date + 1.day, quantity: 0)
     described_class.call(night_audit: audit(business_date), user: user)

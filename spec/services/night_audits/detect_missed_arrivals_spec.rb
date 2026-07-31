@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe NightAudits::ReviewMissedArrivals do
-  it "moves an eligible confirmed arrival into no-show review" do
+RSpec.describe NightAudits::DetectMissedArrivals do
+  it "moves an eligible confirmed arrival into no-show detection" do
     hotel = create(:hotel)
     user = create(:user, account: hotel.account)
     business_date = Date.current
@@ -12,8 +12,8 @@ RSpec.describe NightAudits::ReviewMissedArrivals do
 
     result = described_class.call(night_audit: night_audit, user: user)
 
-    expect(result.reviewed_count).to eq(1)
-    expect(booking.reload).to have_attributes(status: "review_no_show", no_show_review_business_date: business_date)
+    expect(result.detected_count).to eq(1)
+    expect(booking.reload).to have_attributes(status: "no_show_detected", no_show_detected_business_date: business_date)
   end
 
   it "uses the hotel-local arrival date when UTC falls on the previous date" do
@@ -30,7 +30,7 @@ RSpec.describe NightAudits::ReviewMissedArrivals do
 
     result = described_class.call(night_audit: night_audit, user: user)
 
-    expect(result.reviewed_count).to eq(1)
-    expect(booking.reload).to have_attributes(status: "review_no_show", no_show_review_business_date: business_date)
+    expect(result.detected_count).to eq(1)
+    expect(booking.reload).to have_attributes(status: "no_show_detected", no_show_detected_business_date: business_date)
   end
 end
