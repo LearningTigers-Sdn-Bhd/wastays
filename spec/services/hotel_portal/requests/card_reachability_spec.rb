@@ -16,11 +16,25 @@ RSpec.describe "board cards are reachable", type: :model do
     board.board_columns[lane].first
   end
 
-  def draggable?(card, lane)
-    presenter = HotelPortal::RequestsBoardPresenter.new(
-      pages: board.pages, board_counts: board.board_counts, current_hotel: hotel,
-      view_context: ApplicationController.new.view_context, date_window: board.date_window
+  # A bare controller has no request, and a path helper asked for one without a
+  # host raises rather than returning a path.
+  def view_context
+    controller = ApplicationController.new
+    controller.request = ActionDispatch::TestRequest.create
+    controller.view_context
+  end
+
+  # The paths a card's actions post to are built here now, not by the board, so
+  # this is where a card's reachability by URL has to be asked.
+  def presenter
+    board_now = board
+    HotelPortal::RequestsBoardPresenter.new(
+      pages: board_now.pages, board_counts: board_now.board_counts, current_hotel: hotel,
+      view_context: view_context, date_window: board_now.date_window
     )
+  end
+
+  def draggable?(card, lane)
     presenter.card_draggable?(card, HotelPortal::Requests::Column.find(lane))
   end
 
@@ -68,7 +82,13 @@ RSpec.describe "board cards are reachable", type: :model do
     end
 
     it "builds its urls against the table it lives in" do
-      expect(card_in(:checkout).update_url).to include("/requests/housekeeping/#{cleaning.id}")
+      expect(presenter.status_path(card_in(:checkout))).to include("/requests/housekeeping/#{cleaning.id}")
+    end
+
+    # The badge would send it to check_out_requests, which is the bug this whole
+    # file exists for.
+    it "does not build its urls against the badge it wears" do
+      expect(presenter.status_path(card_in(:checkout))).not_to include("/requests/checkout/")
     end
   end
 
@@ -77,12 +97,13 @@ RSpec.describe "board cards are reachable", type: :model do
       create(:check_out_request, booking: booking, status: 'completed', completed_at: Time.current)
     end
 
-    # Completing a checkout has an endpoint of its own, so the card carries no
-    # update_url -- which is what used to make it undraggable.
-    it "is draggable even though it has no status url" do
+    # Completing a checkout has an endpoint of its own and no status route --
+    # which is what used to make it undraggable, back when draggability was
+    # gated on the card carrying a status URL.
+    it "is draggable even though its status cannot be written" do
       card = card_in(:completed)
 
-      expect(card.update_url).to be_blank
+      expect(card.status_updatable?).to be(false)
       expect(draggable?(card, :completed)).to be(true)
     end
 

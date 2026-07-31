@@ -96,8 +96,20 @@ module HotelPortal
       end
     end
 
-    def card_actionable?(card)
-      card.update_url.present? || card.complete_url.present? || card.archive_url.present?
+    # Where a card's status is written, and where a checkout is completed. These
+    # were built into the card by the board and the archive, which meant two
+    # services holding url_helpers to do a view's job. The card carries what it
+    # is; the path is made here, from that.
+    def status_path(card)
+      @view_context.hotel_request_status_path(
+        current_hotel,
+        kind: card.record_kind,
+        request_id: card.request_id
+      )
+    end
+
+    def complete_checkout_path(card)
+      @view_context.hotel_complete_checkout_request_path(current_hotel, card.request_id)
     end
 
     # A card can be dragged when some other lane would take it. Asked of the
@@ -143,13 +155,13 @@ module HotelPortal
     def card_action(card, column)
       if column.archives?
         restore_action(card)
-      elsif column.key == :completed && card.archive_url.present?
+      elsif column.key == :completed
         archive_action(card)
-      elsif card.complete_url.present? && card.update_url.blank?
+      elsif card.checkout_record?
         complete_action(card)
       elsif card.status == "pending"
         dispatch_action(card)
-      elsif card.update_url.present?
+      elsif card.status_updatable?
         done_action(card)
       end
     end
@@ -173,8 +185,8 @@ module HotelPortal
       }
     end
 
-    # An archived card's archive_url is the way back out of the archive, which is
-    # the only thing left to do with it from here.
+    # Carrying a card back out of the archive is the only thing left to do with
+    # it from here.
     def restore_action(card)
       {
         url: move_path(restored_column_for(card)),
@@ -201,7 +213,7 @@ module HotelPortal
 
     def dispatch_action(card)
       {
-        url: card.update_url,
+        url: status_path(card),
         params: { status: "new" },
         css: "flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 " \
              "text-[10px] font-black uppercase tracking-wider text-blue-700 shadow-sm transition-all " \
@@ -215,7 +227,7 @@ module HotelPortal
 
     def done_action(card)
       {
-        url: card.update_url,
+        url: status_path(card),
         params: { status: card.kind == "complaint" ? "resolved" : "completed" },
         css: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 " \
              "text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all " \
@@ -229,7 +241,7 @@ module HotelPortal
 
     def complete_action(card)
       {
-        url: card.complete_url,
+        url: complete_checkout_path(card),
         params: {},
         css: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 " \
              "text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all " \

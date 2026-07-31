@@ -2,7 +2,6 @@
 
 module HotelPortal
   class RequestsBoard
-    include Rails.application.routes.url_helpers
     include Requests::Narrowing
     include Requests::Paging
 
@@ -324,9 +323,6 @@ module HotelPortal
         completed_at: request.completed_at,
         source: request.metadata&.dig("source"),
         internal_notes: request.internal_notes_list,
-        archive_url: hotel_archive_request_path(hotel, kind: record_kind, request_id: request.id),
-        update_url: hotel_request_status_path(hotel, kind: record_kind, request_id: request.id),
-        booking_url: hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests"),
         # Outstanding work is placed by when it was asked for and finished work by
         # when it was finished, so the column's sort column is the one reported.
         sort_at: bucket == :completed ? request.completed_at : request.display_requested_at
@@ -347,8 +343,6 @@ module HotelPortal
         title: request.guest_notes.presence || "Checkout requested",
         requested_at: request.requested_at,
         status: request.metadata&.dig("workflow_status").presence || HousekeepingTasks.checkout_workflow_status_for(request.status),
-        complete_url: hotel_complete_checkout_request_path(hotel, request.id),
-        booking_url: hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests"),
         sort_at: request.requested_at
       )
     end
@@ -369,8 +363,6 @@ module HotelPortal
         status: request.status,
         completed_at: request.completed_at,
         internal_notes: [],
-        archive_url: hotel_archive_request_path(hotel, kind: "checkout", request_id: request.id),
-        booking_url: hotel_booking_path(hotel, booking),
         sort_at: request.completed_at
       )
     end

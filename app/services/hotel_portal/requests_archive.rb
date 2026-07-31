@@ -2,7 +2,6 @@
 
 module HotelPortal
   class RequestsArchive
-    include Rails.application.routes.url_helpers
     include Requests::Narrowing
     include Requests::Paging
 
@@ -124,8 +123,6 @@ module HotelPortal
         status: request.status,
         internal_notes: request.internal_notes_list,
         archived_at: request.archived_at,
-        archive_url: hotel_unarchive_request_path(hotel, kind: kind, request_id: request.id),
-        booking_url: hotel_booking_workspace_path(hotel, booking, tab: "housekeeping_requests"),
         sort_at: request.archived_at
       )
     end
@@ -148,8 +145,6 @@ module HotelPortal
         # What the note says it was, for a reader; the row is still ordered by the
         # column the query could reach.
         archived_at: request.metadata.to_h["archived_at"].presence || request.updated_at,
-        archive_url: hotel_unarchive_request_path(hotel, kind: "checkout", request_id: request.id),
-        booking_url: hotel_booking_path(hotel, booking, tab: "requests"),
         sort_at: request.updated_at
       )
     end
