@@ -1,6 +1,6 @@
 # Requests board — handover
 
-Branch: `refactor/frontdesk`. Nine commits, `a0de0b9a`..`16337115`.
+Branch: `refactor/frontdesk`. Ten commits, `a0de0b9a`..`HEAD`.
 Scope: the hotel portal Requests board (`/hotel/:id/requests`) and its archive.
 
 This is where the work got to, what is deliberately unfinished, and the traps
@@ -38,6 +38,8 @@ app/services/hotel_portal/requests_archive.rb                 the archive
 app/services/hotel_portal/requests/narrowing.rb               search + status, in SQL
 app/services/hotel_portal/requests/status_groups.rb           what a status group means
 app/services/hotel_portal/requests/finder.rb                  the one hotel-scoped lookup
+app/services/hotel_portal/requests/room_status_sync.rb        what a status change means for rooms
+app/services/hotel_portal/requests/completion_webhook.rb      telling the outside world
 app/services/hotel_portal/requests/{status,archive,cancel}_updater.rb
 app/presenters/hotel_portal/requests_board_presenter.rb
 app/presenters/hotel_portal/requests_archive_presenter.rb
@@ -155,6 +157,20 @@ that asked for it. Route: `GET /hotel/:id/requests/columns/:column?cursor=…`.
 Not offset pagination: staff finish things while somebody scrolls, and `OFFSET`
 counts rows that have since moved.
 
+### Writing
+
+`StatusUpdater` translates what was asked for into what the record answers to
+(a complaint is *resolved* where housekeeping is *completed*; a checkout has a
+workflow vocabulary of its own), writes it, and then hands off:
+
+- `Requests::RoomStatusSync` — what the change means for the rooms the request
+  covers. Dispatching or starting work makes a room dirty; finishing makes it
+  ready, but only once nothing else is outstanding on that room. A complaint
+  covers no rooms and it returns early. Per-kind differences live in a `RULES`
+  table, the way `HousekeepingTasks::TaskAssignment` holds its own.
+- `Requests::CompletionWebhook` — only the finishing transition is announced,
+  and each kind spells finished differently.
+
 ### The detail sheet
 
 One sheet in the same family as the booking action sheet — empty
@@ -182,10 +198,11 @@ it exists, but the widest range cannot reach it and open work is never archived.
 Options: an "all open" range that ignores the window, or letting the counter jump
 to a window that covers it.
 
-**`StatusUpdater` is ~300 lines doing five jobs**: find, translate status
-vocabularies, write, mutate `RoomStatus` for every room on the booking, fire the
-webhook. The four near-identical `find_or_create_by! → Rooms::SetStatus` blocks
-are ~110 lines that reduce to roughly 25. Largest remaining code-health item.
+**Releasing a checkout does not note it in the assignment history**, where
+releasing housekeeping does. `StatusUpdater#write_checkout` passes
+`record_history: false` to preserve that exactly; `HousekeepingTasks::TaskAssignment`
+*does* write history for both kinds, so the odd one out is probably this. Left
+as it was rather than levelled up inside a refactor — worth settling on purpose.
 
 **DESIGN.md**: the board still uses raw palette utilities throughout
 (`bg-blue-50`, `text-amber-700`, `bg-slate-100` — which does not dark-mode), and
@@ -232,7 +249,7 @@ counts before deploying `20260731090100`.
 
 ## 6. Tests
 
-360 examples across the requests specs, from 34 at the start.
+378 examples across the requests specs, from 34 at the start.
 
 ```bash
 bin/test spec/services/hotel_portal/requests_board_spec.rb \
