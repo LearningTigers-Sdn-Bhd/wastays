@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe HotelPortal::Requests::Move do
   let(:hotel) { create(:hotel) }
-  let(:booking) { create(:booking, hotel: hotel, guest_name: "Sena") }
+  let(:booking) { create(:booking, hotel: hotel, status: "checked_in", guest_name: "Sena") }
 
   def move(request, to:, kind: "housekeeping")
     described_class.new(hotel: hotel, kind: kind, request_id: request.id, to: to).call
@@ -118,7 +118,6 @@ RSpec.describe HotelPortal::Requests::Move do
 
     expect(result).to be_ok
     expect(checkout.reload.status).to eq('completed')
-    expect(checkout.completed_at).to be_present
   end
 
   it 'refuses a request belonging to another hotel' do

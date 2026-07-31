@@ -1,14 +1,12 @@
 require 'rails_helper'
 
-# Every card the board draws has to be reachable by the actions it offers. Two
-# ways of getting that wrong have already shipped: a completed checkout that
-# could not be dragged because dragging was gated on a URL it never has, and a
-# checkout's room cleaning whose every action looked its id up in the wrong
-# table. Both are pinned here, per lane, so a new lane cannot reopen either
-# quietly.
+# Every card the board draws has to be reachable by the actions it offers. The
+# guest-facing checkout parent and its linked turnover child are deliberately
+# separate: only the parent is a Request Board card, while the child is the
+# Housekeeping Tasks card.
 RSpec.describe "board cards are reachable", type: :model do
   let(:hotel) { create(:hotel) }
-  let(:booking) { create(:booking, hotel: hotel, guest_name: "Sena") }
+  let(:booking) { create(:booking, hotel: hotel, status: "checked_in", guest_name: "Sena") }
 
   def board = HotelPortal::RequestsBoard.new(hotel, {})
 
@@ -46,19 +44,27 @@ RSpec.describe "board cards are reachable", type: :model do
   end
 
   describe "the checkout lane" do
-    # A housekeeping row wearing a checkout badge. Its every action used to be
-    # built from the badge, which sent a housekeeping id to check_out_requests.
-    let!(:cleaning) do
-      create(:housekeeping_request, booking: booking, status: 'pending',
-             request_details: 'Checkout Room Cleaning', archived_at: nil)
+    let!(:checkout) do
+      create(:check_out_request, booking: booking, status: "pending")
     end
 
-    it "shows the cleaning as a checkout but names it as housekeeping" do
+    # Raised by the same room's departure, and answered on the other board. The
+    # two records do not reference each other.
+    let!(:turnover) do
+      create(:housekeeping_request, booking: booking, work_context: "checkout_turnover",
+             status: "new", request_details: "Checkout turnover", archived_at: nil)
+    end
+
+    it "shows the message the guest sent" do
       card = card_in(:checkout)
 
       expect(card.kind).to eq("checkout")
-      expect(card.record_kind).to eq("housekeeping")
-      expect(card.request_id).to eq(cleaning.id)
+      expect(card.record_kind).to eq("checkout")
+      expect(card.request_id).to eq(checkout.id)
+    end
+
+    it "keeps the room's turnover off the Request Board" do
+      expect(board.board_columns.values.flatten.map { |card| card[:request_id] }).not_to include(turnover.id)
     end
 
     it "can be found from its own card" do
@@ -74,21 +80,16 @@ RSpec.describe "board cards are reachable", type: :model do
       ).call
 
       expect(result).to be_ok
-      expect(cleaning.reload.archived_at).to be_present
+      expect(checkout.reload.metadata["archived_at"]).to be_present
     end
 
     it "is draggable" do
       expect(draggable?(card_in(:checkout), :checkout)).to be(true)
     end
 
-    it "builds its urls against the table it lives in" do
-      expect(presenter.status_path(card_in(:checkout))).to include("/requests/housekeeping/#{cleaning.id}")
-    end
-
-    # The badge would send it to check_out_requests, which is the bug this whole
-    # file exists for.
-    it "does not build its urls against the badge it wears" do
-      expect(presenter.status_path(card_in(:checkout))).not_to include("/requests/checkout/")
+    it "builds its completion url" do
+      expect(presenter.complete_checkout_path(card_in(:checkout)))
+        .to include("/checkout-requests/#{checkout.id}/complete")
     end
   end
 

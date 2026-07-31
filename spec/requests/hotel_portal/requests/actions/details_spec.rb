@@ -8,7 +8,7 @@ RSpec.describe "Request detail sheet", type: :request do
   let(:user) { create(:user, account: account, role: "admin") }
   let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
   let(:permission) { Permission.find_or_create_by!(slug: "manage_requests") { |record| record.name = "Manage Requests" } }
-  let(:booking) { create(:booking, hotel: hotel, guest_name: "Aisyah", confirmation_token: "WS-REQ123") }
+  let(:booking) { create(:booking, hotel: hotel, status: "checked_in", guest_name: "Aisyah", confirmation_token: "WS-REQ123") }
 
   before do
     RolePermission.find_or_create_by!(role: role, permission: permission)

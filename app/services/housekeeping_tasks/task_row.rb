@@ -13,10 +13,6 @@ module HousekeepingTasks
     :source_kind,
     keyword_init: true
   ) do
-    def checkout_request?
-      source_kind == "checkout"
-    end
-
     # A room with nothing to do still occupies a line on the board, and that line
     # is this row. It stands for the absence of a task rather than a task.
     def placeholder?
@@ -32,10 +28,7 @@ module HousekeepingTasks
     end
 
     def display_status
-      return status unless checkout_request?
-
-      metadata.to_h["workflow_status"].presence ||
-        HousekeepingTasks.checkout_workflow_status_for(status)
+      status
     end
   end
 end

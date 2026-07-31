@@ -110,14 +110,12 @@ RSpec.describe HousekeepingTasks::CreateTask do
     expect(add).not_to be_success
   end
 
-  # A guest still in the room does not make the room clean: a stayover marked
-  # dirty is exactly the daily cleaning a dispatcher hands out.
-  it "allows a room marked dirty with a guest still in it" do
+  it "refuses a dirty room with a guest still in it" do
     dirty_room
     booking = create(:booking, hotel:, status: "checked_in", check_in: Date.current, check_out: Date.tomorrow)
     create(:booking_room, booking:, room_type:, room_number: "101")
 
-    expect(add).to be_success
+    expect(add).not_to be_success
   end
 
   it "adds nothing at all when the assignment is refused" do

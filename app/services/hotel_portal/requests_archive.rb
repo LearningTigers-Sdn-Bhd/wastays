@@ -47,7 +47,7 @@ module HotelPortal
     def housekeeping_source
       Source.new(
         name: "housekeeping",
-        relation: narrow(HousekeepingRequest.in_hotel(hotel).archived, kind: "housekeeping")
+        relation: narrow(HousekeepingRequest.in_hotel(hotel).archived.guest_requests, kind: "housekeeping")
           .where.not(booking_id: nil)
           .where(archived_at: window_range)
           .includes(:booking),

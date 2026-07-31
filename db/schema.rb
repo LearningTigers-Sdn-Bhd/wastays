@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_31_090100) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_31_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1373,6 +1373,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_090100) do
     t.bigint "room_type_id"
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
+    t.string "work_context", default: "guest_request", null: false
     t.index ["booking_id", "archived_at"], name: "index_housekeeping_requests_on_booking_id_and_archived_at"
     t.index ["booking_id", "completed_at"], name: "index_housekeeping_requests_on_booking_id_and_completed_at"
     t.index ["booking_id", "requested_at"], name: "index_housekeeping_requests_on_booking_id_and_requested_at"
@@ -1385,6 +1386,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_090100) do
     t.index ["hotel_id", "status"], name: "index_housekeeping_requests_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_housekeeping_requests_on_hotel_id"
     t.index ["room_type_id"], name: "index_housekeeping_requests_on_room_type_id"
+    t.index ["work_context", "status", "requested_at"], name: "idx_housekeeping_requests_context_status_requested"
+    t.index ["work_context"], name: "index_housekeeping_requests_on_work_context"
   end
 
   create_table "inventory_audit_logs", force: :cascade do |t|

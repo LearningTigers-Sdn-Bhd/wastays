@@ -7,6 +7,15 @@ class HousekeepingRequest < ApplicationRecord
 
   STATUSES = %w[new assigned in_progress completed failed cancelled no_task pending].freeze
 
+  # The three jobs this table does, which used to be told apart by reading the
+  # details somebody typed.
+  #
+  # "guest_request" is asked for by a guest, against a stay, and is answered on
+  # the Requests board. The other two are work on a room nobody is in, dispatched
+  # from the housekeeping board -- which is what OPERATIONAL_CONTEXTS names.
+  WORK_CONTEXTS = %w[guest_request vacant_room_task checkout_turnover].freeze
+  OPERATIONAL_CONTEXTS = %w[vacant_room_task checkout_turnover].freeze
+
   # Statuses that take a request off the housekeeping board for good. Note
   # that "pending" is not among them: it is where a request lands before
   # anyone triages it, which is precisely when it needs to be visible.
@@ -15,6 +24,7 @@ class HousekeepingRequest < ApplicationRecord
   enum :status, STATUSES.index_by(&:itself), scopes: false
 
   validates :status, presence: true
+  validates :work_context, inclusion: { in: WORK_CONTEXTS }
   validates :request_details, presence: true
 
   scope :recent_first, -> { order(created_at: :desc) }
@@ -22,6 +32,10 @@ class HousekeepingRequest < ApplicationRecord
   scope :active, -> { where(archived_at: nil) }
   scope :archived, -> { where.not(archived_at: nil) }
   scope :open_tasks, -> { active.where.not(status: CLOSED_STATUSES) }
+  scope :guest_requests, -> { where(work_context: "guest_request") }
+  scope :vacant_room_tasks, -> { where(work_context: "vacant_room_task") }
+  scope :checkout_turnovers, -> { where(work_context: "checkout_turnover") }
+  scope :operational_tasks, -> { where(work_context: OPERATIONAL_CONTEXTS) }
 
   # A request belongs to a hotel by its own column when it has one, and
   # otherwise by the booking it hangs off. Written as a subquery rather than a
@@ -32,17 +46,10 @@ class HousekeepingRequest < ApplicationRecord
     !archived? && !status.in?(CLOSED_STATUSES)
   end
 
-  # The cleaning a checkout asks for, which a CheckOutRequest already stands
-  # for. Records the housekeeping tasks backfill made say so through
-  # checkout_request_id; older ones only say so by their details.
-  def checkout_cleaning?
-    checkout_request_id.present? || request_details.to_s.strip == "Checkout Room Cleaning"
-  end
-
-  # The checkout this cleaning belongs to, when it names one.
-  def checkout_request_id
-    metadata.to_h["checkout_request_id"].presence
-  end
+  def guest_request? = work_context == "guest_request"
+  def vacant_room_task? = work_context == "vacant_room_task"
+  def checkout_turnover? = work_context == "checkout_turnover"
+  def operational_task? = work_context.in?(OPERATIONAL_CONTEXTS)
 
   def display_requested_at
     requested_at || created_at

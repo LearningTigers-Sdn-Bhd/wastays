@@ -90,7 +90,7 @@ module HotelPortal
       case column.to_sym
       when :housekeeping then [ housekeeping_source ]
       when :complaint then [ complaint_source ]
-      when :checkout then [ open_checkout_source, cleaning_source ]
+      when :checkout then [ open_checkout_source ]
       when :completed then [ completed_housekeeping_source, resolved_complaint_source, completed_checkout_source ]
       when :archived then archive.sources
       else []
@@ -107,11 +107,8 @@ module HotelPortal
     def housekeeping_source
       Source.new(
         name: "housekeeping",
-        # A checkout's room cleaning belongs in the checkout column, whether or
-        # not the checkout it stands for is there to hold it.
-        relation: narrow(open_housekeeping_scope, kind: "housekeeping")
+        relation: narrow(housekeeping_scope, kind: "housekeeping")
           .where(status: HOUSEKEEPING_OPEN_STATUSES)
-          .where.not(id: cleaning_ids)
           .includes(booking: :booking_rooms),
         sort_column: :requested_at,
         builder: ->(request) { housekeeping_card(request, bucket: :housekeeping, kind: "housekeeping") }
@@ -139,33 +136,15 @@ module HotelPortal
       )
     end
 
-    # The cleanings no checkout on the board already stands for. One that names a
-    # checkout that is here would be the same job said twice; one whose checkout
-    # is not here keeps its place, because losing the work is worse.
-    def cleaning_source
-      Source.new(
-        name: "cleaning",
-        relation: narrow(open_housekeeping_scope, kind: "housekeeping")
-          .where(status: HOUSEKEEPING_OPEN_STATUSES)
-          .where(id: uncovered_cleaning_ids)
-          .includes(booking: :booking_rooms),
-        sort_column: :requested_at,
-        builder: ->(request) { housekeeping_card(request, bucket: :checkout, kind: "checkout") }
-      )
-    end
-
     def completed_housekeeping_source
       Source.new(
         name: "housekeeping",
-        relation: narrow(open_housekeeping_scope, kind: "housekeeping")
+        relation: narrow(housekeeping_scope, kind: "housekeeping")
           .where(status: "completed")
           .where(completed_at: window_range)
-          .where.not(id: covered_cleaning_ids)
           .includes(booking: :booking_rooms),
         sort_column: :completed_at,
-        builder: ->(request) {
-          housekeeping_card(request, bucket: :completed, kind: request.checkout_cleaning? ? "checkout" : "housekeeping")
-        }
+        builder: ->(request) { housekeeping_card(request, bucket: :completed, kind: "housekeeping") }
       )
     end
 
@@ -196,12 +175,11 @@ module HotelPortal
 
     # -- The work each column is drawn from ------------------------------------
 
-    def open_housekeeping_scope
+    def housekeeping_scope
       HousekeepingRequest
         .in_hotel(hotel)
         .active
-        # Every card names a guest, so a task raised against a room and no
-        # booking has never belonged on this board.
+        .guest_requests
         .where.not(booking_id: nil)
     end
 
@@ -210,7 +188,9 @@ module HotelPortal
     end
 
     def open_checkout_scope
-      CheckOutRequest.where(booking_id: hotel_booking_ids).open_tasks
+      CheckOutRequest.joins(:booking).where(booking_id: hotel_booking_ids)
+                     .where(bookings: { status: ::Bookings::Occupancy::OCCUPIED_STATUSES })
+                     .open_tasks
     end
 
     def hotel_booking_ids
@@ -219,78 +199,6 @@ module HotelPortal
 
     def window_range
       @window_range ||= date_window.range
-    end
-
-    # -- Telling one job from two ---------------------------------------------
-    #
-    # Read once for the whole board rather than per page: whether a checkout is
-    # on the board is not a fact about a page, and a cleaning must not appear or
-    # disappear depending on how far somebody has scrolled. Read unnarrowed for
-    # the same reason -- a search that hides a checkout must not surface the
-    # cleaning standing for it.
-    #
-    # "On the board" is what each lane's own scope is: open work is unbounded and
-    # finished work is inside the window. Asking the window of both halves, as
-    # this did when the window bounded every lane, would leave an old open
-    # checkout off this list while its lane still showed it -- and the cleaning
-    # standing for it would then be drawn twice.
-
-    def checkout_rows_on_board
-      @checkout_rows_on_board ||= begin
-        base = CheckOutRequest.where(booking_id: hotel_booking_ids)
-        open_rows = base.open_tasks.pluck(:id, :booking_id)
-        finished_rows = base.where(status: "completed")
-                            .where(completed_at: window_range)
-                            .where("COALESCE(check_out_requests.metadata->>'archived_at', '') = ''")
-                            .pluck(:id, :booking_id)
-        open_rows + finished_rows
-      end
-    end
-
-    def checkout_ids_on_board
-      @checkout_ids_on_board ||= checkout_rows_on_board.map(&:first).to_set
-    end
-
-    def checkout_booking_ids_on_board
-      @checkout_booking_ids_on_board ||= checkout_rows_on_board.map(&:last).to_set
-    end
-
-    # Records the housekeeping tasks backfill made say they are a cleaning
-    # through checkout_request_id; older ones only say so by their details.
-    CLEANING_CONDITION = <<~SQL.squish
-      COALESCE(housekeeping_requests.metadata->>'checkout_request_id', '') <> ''
-        OR TRIM(housekeeping_requests.request_details) = 'Checkout Room Cleaning'
-    SQL
-
-    def cleaning_rows
-      @cleaning_rows ||= open_housekeeping_scope
-        .where(CLEANING_CONDITION)
-        .where(
-          "housekeeping_requests.status IN (:open) OR " \
-          "(housekeeping_requests.completed_at >= :from AND housekeeping_requests.completed_at < :to)",
-          open: HOUSEKEEPING_OPEN_STATUSES, from: window_range.begin, to: window_range.end
-        )
-        .pluck(:id, :booking_id, Arel.sql("housekeeping_requests.metadata->>'checkout_request_id'"))
-    end
-
-    def cleaning_ids
-      @cleaning_ids ||= cleaning_rows.map(&:first)
-    end
-
-    def covered_cleaning_ids
-      @covered_cleaning_ids ||= cleaning_rows.filter_map do |id, booking_id, linked_checkout_id|
-        covered = if linked_checkout_id.present?
-          checkout_ids_on_board.include?(linked_checkout_id.to_i)
-        else
-          checkout_booking_ids_on_board.include?(booking_id)
-        end
-
-        id if covered
-      end
-    end
-
-    def uncovered_cleaning_ids
-      @uncovered_cleaning_ids ||= cleaning_ids - covered_cleaning_ids
     end
 
     # -- Cards ----------------------------------------------------------------
@@ -344,7 +252,7 @@ module HotelPortal
         room_number: request.metadata&.dig("room_number").presence || booking.booking_rooms.first&.room_number,
         title: request.guest_notes.presence || "Checkout requested",
         requested_at: request.requested_at,
-        status: request.metadata&.dig("workflow_status").presence || HousekeepingTasks.checkout_workflow_status_for(request.status),
+        status: checkout_display_status(request),
         sort_at: request.requested_at
       )
     end
@@ -367,6 +275,16 @@ module HotelPortal
         internal_notes: [],
         sort_at: request.completed_at
       )
+    end
+
+    # A checkout carries legacy statuses of its own; read one in the words the
+    # board works in.
+    def checkout_display_status(request)
+      case request.status
+      when "pending" then "new"
+      when "acknowledged" then "assigned"
+      else request.status
+      end
     end
   end
 end

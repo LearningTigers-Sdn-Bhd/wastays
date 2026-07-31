@@ -30,7 +30,8 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
         booking: booking,
         request_details: "Clean the sheets",
         status: "in_progress",
-        room_number: "101"
+        room_number: "101",
+        work_context: "vacant_room_task"
       )
 
       get hotel_housekeeping_tasks_path(hotel)
@@ -44,10 +45,10 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     it "shows open requests, including the pending ones nobody has triaged" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      create(:housekeeping_request, booking: booking, request_details: "Need water", status: "in_progress", room_number: "101")
-      create(:housekeeping_request, booking: booking, request_details: "Need broom", status: "pending", room_number: "101")
-      create(:housekeeping_request, booking: booking, request_details: "Need soap", status: "completed", room_number: "101")
-      create(:housekeeping_request, booking: booking, request_details: "Need mop", status: "in_progress", room_number: "101", archived_at: Time.current)
+      create(:housekeeping_request, booking: booking, request_details: "Need water", status: "in_progress", room_number: "101", work_context: "vacant_room_task")
+      create(:housekeeping_request, booking: booking, request_details: "Need broom", status: "pending", room_number: "101", work_context: "vacant_room_task")
+      create(:housekeeping_request, booking: booking, request_details: "Need soap", status: "completed", room_number: "101", work_context: "vacant_room_task")
+      create(:housekeeping_request, booking: booking, request_details: "Need mop", status: "in_progress", room_number: "101", work_context: "vacant_room_task", archived_at: Time.current)
 
       get hotel_housekeeping_tasks_path(hotel)
 
@@ -60,8 +61,8 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     it "filters requests by room number via query parameter" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "202")
-      create(:housekeeping_request, booking: booking, request_details: "Towels", room_number: "202", status: "in_progress")
-      create(:housekeeping_request, booking: booking, request_details: "Soap", room_number: "303", status: "in_progress")
+      create(:housekeeping_request, booking: booking, request_details: "Towels", room_number: "202", status: "in_progress", work_context: "vacant_room_task")
+      create(:housekeeping_request, booking: booking, request_details: "Soap", room_number: "303", status: "in_progress", work_context: "vacant_room_task")
 
       get hotel_housekeeping_tasks_path(hotel, q: "202")
 
@@ -78,8 +79,8 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       UserHotelAccess.create!(user: staff1, hotel: hotel, role: hk_role)
       UserHotelAccess.create!(user: staff2, hotel: hotel, role: hk_role)
 
-      req1 = create(:housekeeping_request, booking: booking, room_number: "101", status: "in_progress", metadata: { "assigned_to" => staff1.id, "assigned_to_name" => staff1.name }, request_details: "Sheets")
-      req2 = create(:housekeeping_request, booking: booking, room_number: "202", status: "in_progress", metadata: { "assigned_to" => staff2.id, "assigned_to_name" => staff2.name }, request_details: "Trash")
+      req1 = create(:housekeeping_request, booking: booking, room_number: "101", status: "in_progress", work_context: "vacant_room_task", metadata: { "assigned_to" => staff1.id, "assigned_to_name" => staff1.name }, request_details: "Sheets")
+      req2 = create(:housekeeping_request, booking: booking, room_number: "202", status: "in_progress", work_context: "vacant_room_task", metadata: { "assigned_to" => staff2.id, "assigned_to_name" => staff2.name }, request_details: "Trash")
 
       get hotel_housekeeping_tasks_path(hotel, assigned_to: staff1.id)
 
@@ -97,8 +98,8 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "202", status: "ready")
 
-      create(:housekeeping_request, booking: dirty_room_booking, room_number: "101", status: "in_progress", request_details: "Sheets")
-      create(:housekeeping_request, booking: ready_room_booking, room_number: "202", status: "in_progress", request_details: "Trash")
+      create(:housekeeping_request, booking: dirty_room_booking, room_number: "101", status: "in_progress", work_context: "vacant_room_task", request_details: "Sheets")
+      create(:housekeeping_request, booking: ready_room_booking, room_number: "202", status: "in_progress", work_context: "vacant_room_task", request_details: "Trash")
 
       get hotel_housekeeping_tasks_path(hotel, room_status: "dirty")
 
@@ -113,8 +114,8 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       booking2 = create(:booking, hotel: hotel, check_in: Date.current.beginning_of_day, check_out: Date.tomorrow.end_of_day, guest_name: "Bob Jones")
       create(:booking_room, booking: booking2, room_type: room_type, room_number: "202")
 
-      create(:housekeeping_request, booking: booking1, room_number: "101", status: "in_progress", request_details: "Sheets", requested_at: Date.tomorrow)
-      create(:housekeeping_request, booking: booking2, room_number: "202", status: "in_progress", request_details: "Trash", requested_at: 2.days.ago)
+      create(:housekeeping_request, booking: booking1, room_number: "101", status: "in_progress", work_context: "vacant_room_task", request_details: "Sheets", requested_at: Date.tomorrow)
+      create(:housekeeping_request, booking: booking2, room_number: "202", status: "in_progress", work_context: "vacant_room_task", request_details: "Trash", requested_at: 2.days.ago)
 
       get hotel_housekeeping_tasks_path(hotel, date: Date.tomorrow.to_s)
 
@@ -128,8 +129,8 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       selected_date = Date.new(2026, 7, 21)
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      create(:housekeeping_request, booking: booking, room_number: "101", status: "in_progress", request_details: "Need water", requested_at: selected_date)
-      create(:housekeeping_request, booking: booking, room_number: "202", status: "in_progress", request_details: "Fresh towels", requested_at: selected_date)
+      create(:housekeeping_request, booking: booking, room_number: "101", status: "in_progress", work_context: "vacant_room_task", request_details: "Need water", requested_at: selected_date)
+      create(:housekeeping_request, booking: booking, room_number: "202", status: "in_progress", work_context: "vacant_room_task", request_details: "Fresh towels", requested_at: selected_date)
 
       get hotel_housekeeping_tasks_path(hotel, format: :csv), params: { date: selected_date, q: "101" }
       expect(response).to have_http_status(:ok)
@@ -162,17 +163,17 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     end
 
     # The export is a list of tasks, headed by a count of them, so a room with
-    # nothing to do is not a line in it -- and a checkout task is named there the
-    # way the board names it rather than by its own raw status.
+    # nothing to do is not a line in it.
     it "exports the tasks only, under the same status the board shows" do
       booking = create(:booking, hotel: hotel, status: "checkout_required")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      create(:check_out_request, booking: booking, status: "pending", guest_notes: "Checkout Room Cleaning",
-             requested_at: Time.current, metadata: { "room_number" => "101" })
+      create(:housekeeping_request, booking: booking, hotel: hotel, room_type: room_type,
+             room_number: "101", work_context: "checkout_turnover",
+             status: "new", request_details: "Checkout turnover")
 
       get hotel_housekeeping_tasks_path(hotel, format: :csv)
 
-      expect(response.body).to include("Checkout Room Cleaning,New")
+      expect(response.body).to include("Checkout turnover,New")
       expect(response.body).not_to include("Pending")
       expect(response.body).not_to include("No Task")
       expect(response.body.lines.size).to eq(2) # the header, and the one real task
@@ -240,6 +241,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
         request_details: details,
         status: status,
         room_number: "101",
+        work_context: "vacant_room_task",
         metadata: metadata
       )
     end
@@ -277,8 +279,8 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     it "spans a room's columns across its tasks so the task columns line up" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      create(:housekeeping_request, booking: booking, request_details: "Sheets", status: "in_progress", room_number: "101")
-      create(:housekeeping_request, booking: booking, request_details: "Towels", status: "in_progress", room_number: "101")
+      create(:housekeeping_request, booking: booking, request_details: "Sheets", status: "in_progress", room_number: "101", work_context: "vacant_room_task")
+      create(:housekeeping_request, booking: booking, request_details: "Towels", status: "in_progress", room_number: "101", work_context: "vacant_room_task")
 
       get hotel_housekeeping_tasks_path(hotel)
 
@@ -472,7 +474,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     it "assigns a staff member to the request metadata" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
+      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101", work_context: "vacant_room_task")
       staff = create(:user, account: account)
       hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
       UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
@@ -489,7 +491,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     it "returns to the board the user was actually looking at" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
+      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101", work_context: "vacant_room_task")
       staff = create(:user, account: account)
       hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
       UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
@@ -507,7 +509,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     it "ignores anything outside the board's own filters" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
+      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101", work_context: "vacant_room_task")
       staff = create(:user, account: account)
       hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
       UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
@@ -523,7 +525,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     it "leaves the assignment history intact" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
+      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101", work_context: "vacant_room_task")
       staff = create(:user, account: account)
       hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
       UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
@@ -540,90 +542,38 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     end
   end
 
-  describe "checkout room cleaning rows" do
-    it "shows checkout requests with their own assign and status routes" do
-      booking = create(:booking, hotel: hotel)
+  describe "checkout turnover rows" do
+    it "shows the turnover task with housekeeping routes only" do
+      booking = create(:booking, hotel: hotel, status: "completed")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      create(:check_out_request, booking: booking, status: "assigned", guest_notes: "Checkout Room Cleaning",
-             metadata: { "room_number" => "101", "assigned_to" => user.id, "assigned_to_name" => user.name })
+      task = create(:housekeeping_request, booking: booking, hotel: hotel, room_type: room_type,
+                   room_number: "101", work_context: "checkout_turnover",
+                   status: "assigned", request_details: "Checkout turnover",
+                   metadata: { "assigned_to" => user.id, "assigned_to_name" => user.name })
 
       get hotel_housekeeping_tasks_path(hotel)
 
-      expect(response.body).to include("Checkout Room Cleaning")
-      expect(response.body).to include(hotel_assign_checkout_request_path(hotel, booking.check_out_requests.first))
-      expect(response.body).to include(hotel_checkout_request_status_path(hotel, booking.check_out_requests.first))
-      expect(response.body).to include("Start cleaning #{room_type.name} 101")
+      expect(response.body).to include("Checkout turnover")
+      expect(response.body).to include(status_hotel_housekeeping_task_path(hotel, task))
+      expect(response.body).not_to include("checkout-requests/")
     end
 
-    it "assigns checkout requests and advances the workflow status" do
-      booking = create(:booking, hotel: hotel)
+    it "assigns the turnover to a housekeeper" do
+      booking = create(:booking, hotel: hotel, status: "completed")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      request = create(:check_out_request, booking: booking, status: "pending", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" })
+      task = create(:housekeeping_request, booking: booking, hotel: hotel, room_type: room_type,
+                   room_number: "101", work_context: "checkout_turnover",
+                   status: "new", request_details: "Checkout turnover")
       staff = create(:user, account: account)
       hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
       UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
       UserRole.create!(user: staff, role: hk_role)
 
-      patch hotel_assign_checkout_request_path(hotel, request), params: { assigned_to: staff.id }
+      patch assign_hotel_housekeeping_task_path(hotel, task), params: { assigned_to: staff.id }
 
       expect(response).to redirect_to(hotel_housekeeping_tasks_path(hotel))
-      expect(request.reload.status).to eq("assigned")
-      expect(request.metadata["assigned_to"]).to eq(staff.id)
-      expect(request.metadata["assigned_to_name"]).to eq(staff.name)
-      expect(request.metadata["workflow_status"]).to eq("assigned")
-    end
-
-    it "assigns every active room task together and records the collective audit event" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      checkout_request = create(:check_out_request, booking: booking, status: "pending", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" })
-      housekeeping_request = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
-      staff = create(:user, account: account)
-      hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
-      UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
-      UserRole.create!(user: staff, role: hk_role)
-
-      patch hotel_assign_checkout_request_path(hotel, checkout_request), params: { assigned_to: staff.id }
-
-      expect(checkout_request.reload.metadata).to include("assigned_to" => staff.id, "assigned_to_name" => staff.name)
-      expect(housekeeping_request.reload.metadata).to include("assigned_to" => staff.id, "assigned_to_name" => staff.name)
-      audit = RoomOperationalAuditLog.find_by!(hotel: hotel, event_type: "housekeeping_assignment_changed")
-      expect(audit).to have_attributes(room_number: "101", user: user)
-      expect(audit.metadata["tasks"]).to contain_exactly(
-        { "type" => "CheckOutRequest", "id" => checkout_request.id },
-        { "type" => "HousekeepingRequest", "id" => housekeeping_request.id }
-      )
-    end
-
-    it "returns to the board the user was looking at, exactly as a housekeeping assignment does" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      request = create(:check_out_request, booking: booking, status: "pending", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" })
-      staff = create(:user, account: account)
-      hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
-      UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
-      UserRole.create!(user: staff, role: hk_role)
-
-      patch hotel_assign_checkout_request_path(hotel, request), params: {
-        assigned_to: staff.id,
-        filters: { q: "101", date: "2026-07-30", room_status: "dirty", host: "evil.example.com" }
-      }
-
-      expect(response).to redirect_to(
-        hotel_housekeeping_tasks_path(hotel, q: "101", date: "2026-07-30", room_status: "dirty")
-      )
-    end
-
-    it "updates checkout requests through the checkout status route" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      request = create(:check_out_request, booking: booking, status: "pending", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" })
-
-      patch hotel_checkout_request_status_path(hotel, request), params: { status: "in_progress" }
-
-      expect(response).to redirect_to(hotel_housekeeping_tasks_path(hotel))
-      expect(request.reload.status).to eq("in_progress")
-      expect(request.metadata["workflow_status"]).to eq("in_progress")
+      expect(task.reload.status).to eq("assigned")
+      expect(task.metadata).to include("assigned_to" => staff.id)
     end
   end
 
@@ -631,7 +581,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     it "completes the housekeeping request, causing it to disappear and fallback to No Task" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101", request_details: "Clean the window")
+      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101", work_context: "vacant_room_task", request_details: "Clean the window")
 
       # Verify it's displayed initially
       get hotel_housekeeping_tasks_path(hotel)
@@ -652,7 +602,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     it "returns to the board the caller came from" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
+      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101", work_context: "vacant_room_task")
       board = hotel_housekeeping_tasks_path(hotel, q: "101")
 
       patch status_hotel_housekeeping_task_path(hotel, req),
@@ -664,7 +614,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
     it "falls back rather than failing when redirect_to points off this app" do
       booking = create(:booking, hotel: hotel)
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
+      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101", work_context: "vacant_room_task")
 
       [ "https://evil.example.com/steal", "//evil.example.com", "javascript:alert(1)" ].each do |crafted|
         patch status_hotel_housekeeping_task_path(hotel, req),
@@ -684,7 +634,8 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       booking = create(:booking, hotel: hotel, status: "checked_in")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
       req = create(:housekeeping_request, booking: booking, status: "assigned", room_number: "101",
-                                          metadata: { "assigned_to" => user.id, "assigned_to_name" => user.name })
+                                    work_context: "vacant_room_task",
+                                    metadata: { "assigned_to" => user.id, "assigned_to_name" => user.name })
 
       get hotel_housekeeping_tasks_path(hotel)
       expect(response.body).to include(status_hotel_housekeeping_task_path(hotel, req))
@@ -710,6 +661,7 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       booking = create(:booking, hotel: hotel, status: "checked_in")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
       create(:housekeeping_request, booking: booking, hotel: hotel, room_number: "101", status: "assigned",
+                                    work_context: "vacant_room_task",
                                     request_details: "Clean it",
                                     metadata: { "assigned_to" => holder.id, "assigned_to_name" => holder.name })
     end
@@ -740,15 +692,16 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       expect(req.reload.status).to eq("in_progress")
     end
 
-    it "holds a housekeeper to the same line on a checkout cleaning" do
+    it "holds a housekeeper to the same line on a checkout turnover task" do
       perform_only!
-      booking = create(:booking, hotel: hotel, status: "checkout_required")
+      booking = create(:booking, hotel: hotel, status: "completed")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      request = create(:check_out_request, booking: booking, status: "assigned", requested_at: Time.current,
-                                           metadata: { "room_number" => "101", "assigned_to" => colleague.id,
-                                                       "assigned_to_name" => colleague.name })
+      request = create(:housekeeping_request, booking: booking, hotel: hotel, room_type: room_type,
+                       room_number: "101", work_context: "checkout_turnover",
+                       status: "assigned", request_details: "Checkout turnover",
+                       metadata: { "assigned_to" => colleague.id, "assigned_to_name" => colleague.name })
 
-      patch hotel_checkout_request_status_path(hotel, request), params: { status: "in_progress" }
+      patch status_hotel_housekeeping_task_path(hotel, request), params: { status: "in_progress" }
 
       expect(response).to redirect_to(root_path)
       expect(request.reload.status).to eq("assigned")
@@ -758,7 +711,8 @@ RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
       perform_only!
       booking = create(:booking, hotel: hotel, status: "checked_in")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      req = create(:housekeeping_request, booking: booking, hotel: hotel, room_number: "101", status: "new")
+      req = create(:housekeeping_request, booking: booking, hotel: hotel, room_number: "101", status: "new",
+                                    work_context: "vacant_room_task")
 
       patch status_hotel_housekeeping_task_path(hotel, req), params: { status: "in_progress" }
 

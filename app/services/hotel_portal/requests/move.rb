@@ -63,6 +63,9 @@ module HotelPortal
           return failure("Could not restore the request.")
         end
 
+        # Dropping a card in a lane says where the work got to. Checking a guest
+        # out is a different act with a settled folio behind it, and it has its
+        # own button -- a drag must not do it by implication.
         updated = StatusUpdater.new(
           hotel: hotel, kind: kind, request_id: request_id, status: transition.status
         ).call

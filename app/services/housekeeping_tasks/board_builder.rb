@@ -129,7 +129,6 @@ module HousekeepingTasks
       @task_rows_by_room ||= begin
         rows = Hash.new { |hash, key| hash[key] = [] }
         add_housekeeping_task_rows(rows)
-        add_checkout_task_rows(rows)
 
         rows.each_value do |list|
           list.uniq! { |row| [ row.source_kind, row.id ] }
@@ -142,22 +141,8 @@ module HousekeepingTasks
 
     def add_housekeeping_task_rows(rows)
       housekeeping_requests.each do |request|
-        next if request.checkout_cleaning?
-
         housekeeping_room_keys(request).each do |key|
           rows[key] << task_row_from_housekeeping_request(request)
-        end
-      end
-    end
-
-    def add_checkout_task_rows(rows)
-      checkout_requests.each do |request|
-        booking = request.booking
-        room_number = request.metadata&.dig("room_number").presence || booking.booking_rooms.first&.room_number
-        next if room_number.blank?
-
-        room_keys_for(request, room_number).each do |key|
-          rows[key] << task_row_from_checkout_request(request, booking, room_number)
         end
       end
     end
@@ -165,6 +150,7 @@ module HousekeepingTasks
     def housekeeping_requests
       @housekeeping_requests ||= begin
         ids = HousekeepingRequest.open_tasks
+                                 .operational_tasks
                                  .left_joins(:booking)
                                  .where(
                                    "housekeeping_requests.hotel_id = :hotel_id OR bookings.hotel_id = :hotel_id",
@@ -174,18 +160,6 @@ module HousekeepingTasks
                                  .ids
 
         HousekeepingRequest.where(id: ids).includes(booking: :booking_rooms).to_a
-      end
-    end
-
-    def checkout_requests
-      @checkout_requests ||= begin
-        ids = CheckOutRequest.open_tasks
-                             .joins(:booking)
-                             .where(bookings: { hotel_id: @hotel.id })
-                             .where(requested_at: ..as_of)
-                             .ids
-
-        CheckOutRequest.where(id: ids).includes(booking: :booking_rooms).to_a
       end
     end
 
@@ -277,23 +251,6 @@ module HousekeepingTasks
         created_at: request.created_at,
         requested_at: request.requested_at || request.created_at,
         source_kind: "housekeeping"
-      )
-    end
-
-    def task_row_from_checkout_request(request, booking, room_number)
-      TaskRow.new(
-        id: request.id,
-        booking: booking,
-        room_number: room_number,
-        request_details: request.guest_notes.presence || "Checkout Room Cleaning",
-        status: request.status,
-        # The row is handed the metadata as it stands; reading a checkout
-        # request's status as a workflow status is TaskRow#display_status's job,
-        # and it does it whether or not the metadata carries one.
-        metadata: request.metadata.to_h,
-        created_at: request.created_at,
-        requested_at: request.requested_at,
-        source_kind: "checkout"
       )
     end
   end

@@ -29,8 +29,8 @@ module HotelPortal
           cleaning_event: "checkout_room_cleaning_started",
           ready_event: "checkout_room_cleaning_completed",
           cleaning_statuses: %w[in_progress].freeze,
-          # Legacy room states must not stop checkout cleaning from updating the
-          # operational status the housekeeping board shows.
+          # Legacy room states must not stop a checkout from updating the
+          # operational status the board shows.
           force_when_refused: true
         }
       }.freeze
@@ -94,7 +94,7 @@ module HotelPortal
 
       def reason
         @reason ||= if kind == "checkout"
-          request.guest_notes.presence || "Checkout Room Cleaning"
+          request.guest_notes.presence || "Checkout requested"
         else
           request.request_details.presence || "Housekeeping completed"
         end

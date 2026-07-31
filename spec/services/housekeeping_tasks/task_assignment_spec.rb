@@ -13,20 +13,14 @@ RSpec.describe HousekeepingTasks::TaskAssignment do
   let(:sam) { create(:user, account:, name: "Sam Lee") }
 
   def housekeeping_task(status: "new", metadata: {})
-    create(:housekeeping_request, booking:, hotel:, room_number: "101", status:, metadata:)
-  end
-
-  def checkout_task(status: "pending", metadata: {})
-    create(:check_out_request, booking:, status:, requested_at: Time.current,
-                              metadata: metadata.merge("room_number" => "101"))
+    create(:housekeeping_request, booking:, hotel:, room_number: "101", status:, metadata:,
+           work_context: "vacant_room_task")
   end
 
   describe "standing in for no work" do
     it "is a placeholder only where a status can say so" do
       expect(described_class.new(housekeeping_task(status: "no_task"))).to be_placeholder
       expect(described_class.new(housekeeping_task(status: "new"))).not_to be_placeholder
-      # A checkout request has no such status: it is always real work.
-      expect(described_class.new(checkout_task)).not_to be_placeholder
     end
   end
 
@@ -72,24 +66,6 @@ RSpec.describe HousekeepingTasks::TaskAssignment do
     end
   end
 
-  describe "handing a checkout cleaning over" do
-    it "mirrors the change in a workflow status of its own" do
-      task = checkout_task
-      described_class.new(task).hand_over(sam, by: dispatcher)
-
-      expect(task.reload.status).to eq("assigned")
-      expect(task.metadata).to include("workflow_status" => "assigned", "assigned_to" => sam.id)
-    end
-
-    it "puts a released request back to new from statuses housekeeping would not" do
-      task = checkout_task(status: "in_progress", metadata: { "assigned_to" => sam.id })
-      described_class.new(task).hand_over(nil, by: dispatcher)
-
-      expect(task.reload.status).to eq("new")
-      expect(task.metadata).to include("workflow_status" => "new")
-    end
-  end
-
   describe "the trail it writes" do
     it "notes who was given the task, and by whom" do
       task = housekeeping_task
@@ -119,7 +95,18 @@ RSpec.describe HousekeepingTasks::TaskAssignment do
     end
   end
 
-  it "refuses a record it has no rules for" do
-    expect { described_class.new(booking) }.to raise_error(KeyError)
+  # Who holds a record is written in its metadata whatever kind it is, and the
+  # Requests board asks that of a checkout. Handing one out is what this board
+  # has no rules for, and that is what refuses.
+  it "answers who holds a record it cannot hand out" do
+    checkout = create(:check_out_request, metadata: { "assigned_to" => 42 })
+
+    expect(described_class.new(checkout).assigned_to).to eq(42)
+  end
+
+  it "refuses to hand out a record it has no rules for" do
+    checkout = create(:check_out_request)
+
+    expect { described_class.new(checkout).hand_over(nil, by: dispatcher) }.to raise_error(KeyError)
   end
 end

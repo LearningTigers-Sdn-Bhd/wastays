@@ -21,16 +21,25 @@ module HotelPortal
       # only the two kinds that keep internal notes, and asking for a third is
       # a lookup that cannot succeed rather than a record that is missing --
       # but both leave the caller with nothing, so both raise.
-      def initialize(hotel:, kind:, request_id:, kinds: MODELS.keys)
+      #
+      # `work_contexts` narrows the same way for housekeeping, and defaults to
+      # not narrowing at all. A board that only hands out one kind of work says
+      # so itself: defaulting to the board's own contexts here silently hid
+      # every room task from Stay View, which reaches this by another door.
+      def initialize(hotel:, kind:, request_id:, kinds: MODELS.keys, work_contexts: nil)
         @hotel = hotel
         @kind = kind.to_s
         @request_id = request_id
         @kinds = kinds.map(&:to_s)
+        @work_contexts = work_contexts&.map(&:to_s)
       end
 
       def call
         record = model.includes(:booking).find(@request_id)
         raise ActiveRecord::RecordNotFound unless hotel_id_for(record) == @hotel.id
+        if @kind == "housekeeping" && @work_contexts.present? && !record.work_context.in?(@work_contexts)
+          raise ActiveRecord::RecordNotFound
+        end
 
         record
       end

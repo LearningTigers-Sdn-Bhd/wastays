@@ -2,17 +2,16 @@
 
 module HousekeepingTasks
   class AssignStaff
-    def initialize(hotel:, request_id: nil, checkout_request: nil, assigned_to_id:, current_user:)
+    def initialize(hotel:, request_id:, assigned_to_id:, current_user:)
       @hotel = hotel
       @request_id = request_id
-      @request = checkout_request
       @assigned_to_id = assigned_to_id.presence
       @current_user = current_user
     end
 
     def call
       @request ||= housekeeping_request_in_this_hotel
-      raise ActiveRecord::RecordNotFound unless belongs_to_hotel?(@request)
+      raise ActiveRecord::RecordNotFound unless belongs_to_hotel?(@request) && @request.operational_task?
 
       room_number = request_room_number(@request)
       room_type_id = room_type_id_for(@request, room_number)
@@ -51,7 +50,7 @@ module HousekeepingTasks
     # different room entirely. Placeholder records come along only when the room
     # has nothing else, since they stand for the absence of the work.
     def room_assignments(room_number, room_type_id)
-      tasks = active_housekeeping_requests(room_number) + active_checkout_requests(room_number)
+      tasks = active_housekeeping_requests(room_number)
       tasks.select! { |task| room_type_id_for(task, room_number) == room_type_id }
       return TaskAssignment.wrap([ @request.lock! ]) if tasks.empty?
 
@@ -103,8 +102,7 @@ module HousekeepingTasks
     def request_room_number(request)
       return request.room_number.presence if request.respond_to?(:room_number) && request.room_number.present?
 
-      request.metadata.to_h["room_number"].presence ||
-        request.booking&.booking_rooms&.where.not(room_number: [ nil, "" ])&.first&.room_number.presence
+      request.booking&.booking_rooms&.where.not(room_number: [ nil, "" ])&.first&.room_number.presence
     end
 
     def active_housekeeping_requests(room_number)
@@ -116,31 +114,12 @@ module HousekeepingTasks
                                          "housekeeping_requests.room_number = :room_number OR (housekeeping_requests.room_number IS NULL AND booking_rooms.room_number = :room_number)",
                                          room_number: room_number
                                        )
+                                       .operational_tasks
                                        .open_tasks
                                        .distinct
                                        .ids
 
       HousekeepingRequest.where(id: request_ids).includes(booking: :booking_rooms).lock.to_a
-    end
-
-    def active_checkout_requests(room_number)
-      return [] if room_number.blank?
-
-      request_ids = CheckOutRequest.joins(booking: :booking_rooms)
-                                   .where(bookings: { hotel_id: @hotel.id })
-                                   .open_tasks
-                                   .where(
-                                     "check_out_requests.metadata ->> 'room_number' = :room_number OR " \
-                                     "(COALESCE(check_out_requests.metadata ->> 'room_number', '') = '' " \
-                                     "AND booking_rooms.id = (SELECT MIN(first_room.id) FROM booking_rooms first_room " \
-                                     "WHERE first_room.booking_id = bookings.id AND COALESCE(first_room.room_number, '') <> '') " \
-                                     "AND booking_rooms.room_number = :room_number)",
-                                     room_number: room_number
-                                   )
-                                   .distinct
-                                   .ids
-
-      CheckOutRequest.where(id: request_ids).includes(booking: :booking_rooms).lock.to_a
     end
 
     def record_audit_log(room_number, assignments, staff)

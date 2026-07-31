@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
 module CheckoutRequests
+  # Finishing the checkout a guest asked for, which is the front desk checking
+  # them out: the request is a message, and completing the message means doing
+  # the thing it asked for.
+  #
+  # The room's cleaning is not arranged here. Departing raises it -- see
+  # Bookings::TransitionStatus -- because a room needs turning over whether or
+  # not anybody sent a message about it.
   class CompleteRequest
     def initialize(hotel:, checkout_request:)
       @hotel = hotel
@@ -10,28 +17,20 @@ module CheckoutRequests
     def call
       return false unless @checkout_request.open_task?
 
-      ActiveRecord::Base.transaction do
-        request = ::HotelPortal::Requests::StatusUpdater.new(
-          hotel: @hotel,
-          kind: :checkout,
-          request_id: @checkout_request.id,
-          status: "completed"
-        ).call
-        raise ActiveRecord::Rollback unless request
+      booking = @checkout_request.booking
+      return false unless booking
 
-        booking = @checkout_request.booking
-        ::Bookings::TransitionStatus.new(booking: booking, status: "completed").call if booking&.checked_in?
-
-        # Booking checkout marks assigned rooms dirty; restore the cleaning result.
-        final_request = ::HotelPortal::Requests::StatusUpdater.new(
-          hotel: @hotel,
-          kind: :checkout,
-          request_id: @checkout_request.id,
-          status: "completed"
-        ).call
-
-        final_request
+      if ::Bookings::Occupancy.occupied?(booking)
+        result = ::Bookings::TransitionStatus.new(booking: booking, status: "completed").call
+        return false unless result.success?
       end
+
+      ::HotelPortal::Requests::StatusUpdater.new(
+        hotel: @hotel,
+        kind: :checkout,
+        request_id: @checkout_request.id,
+        status: "completed"
+      ).call
     end
   end
 end

@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe HotelPortal::RequestsBoard do
   let(:hotel) { create(:hotel) }
-  let(:booking) { create(:booking, hotel: hotel, guest_name: "John Doe", confirmation_token: "WS-1234") }
+  let(:booking) { create(:booking, hotel: hotel, status: "checked_in", guest_name: "John Doe", confirmation_token: "WS-1234") }
 
   let!(:housekeeping_pending) do
     create(:housekeeping_request, booking: booking, status: 'pending', request_details: '2x Towels', archived_at: nil)
@@ -52,7 +52,7 @@ RSpec.describe HotelPortal::RequestsBoard do
 
     def hotel_with_live_work
       live_hotel = create(:hotel)
-      live_booking = create(:booking, hotel: live_hotel)
+      live_booking = create(:booking, hotel: live_hotel, status: "checked_in")
       create(:housekeeping_request, booking: live_booking, status: 'pending')
       create(:complaint_request, booking: live_booking, status: 'pending')
       create(:check_out_request, booking: live_booking, status: 'pending')
@@ -85,6 +85,14 @@ RSpec.describe HotelPortal::RequestsBoard do
       card_ids = described_class.new(hotel).board_columns[:completed].map { |card| card[:request_id] }
 
       expect(card_ids).to include(recent.id)
+    end
+
+    it 'keeps vacant-room tasks off Request Board' do
+      vacant = create(:housekeeping_request, booking: nil, hotel: hotel, work_context: 'vacant_room_task',
+                      status: 'new', request_details: 'Deep clean', archived_at: nil)
+
+      expect(described_class.new(hotel).board_columns.values.flatten.map { |card| card[:request_id] })
+        .not_to include(vacant.id)
     end
   end
 
@@ -353,52 +361,27 @@ RSpec.describe HotelPortal::RequestsBoard do
       end
     end
 
-    context 'checkout room cleaning tasks' do
-      let!(:checkout_cleaning) do
-        create(:housekeeping_request, booking: booking, status: 'new', request_details: 'Checkout Room Cleaning', archived_at: nil)
+    # Room work and guest requests are answered on different boards, and a
+    # turnover is room work. The two records have nothing to do with each other:
+    # a guest who walks to the desk sends no message, and the room still needs
+    # turning over.
+    context 'checkout turnover tasks' do
+      let!(:turnover) do
+        create(:housekeeping_request, booking: booking, status: 'new', request_details: 'Checkout turnover',
+               work_context: 'checkout_turnover', archived_at: nil)
       end
 
-      it 'groups checkout room cleaning under checkout column' do
-        board = described_class.new(hotel)
-        columns = board.board_columns
-        expect(columns[:checkout].map { |c| c[:request_id] }).to include(checkout_cleaning.id)
-        expect(columns[:housekeeping].map { |c| c[:request_id] }).not_to include(checkout_cleaning.id)
-      end
-
-      it 'shows one card when the cleaning names the checkout already on the board' do
-        checkout_request = create(:check_out_request, booking: booking, status: 'pending')
-        checkout_cleaning.update!(metadata: { 'checkout_request_id' => checkout_request.id })
-
+      it 'keeps the turnover task off every lane of the Request Board' do
         columns = described_class.new(hotel).board_columns
 
-        expect(columns[:checkout].map { |c| c[:request_id] }).to contain_exactly(checkout_request.id)
-        expect(columns.values.flatten.map { |c| c[:request_id] }).not_to include(checkout_cleaning.id)
+        expect(columns.values.flatten.map { |card| card[:request_id] }).not_to include(turnover.id)
       end
 
-      it 'shows one card when a legacy cleaning shares its booking with a checkout on the board' do
+      it 'shows a guest checkout request without one' do
         checkout_request = create(:check_out_request, booking: booking, status: 'pending')
 
-        columns = described_class.new(hotel).board_columns
-
-        expect(columns[:checkout].map { |c| c[:request_id] }).to contain_exactly(checkout_request.id)
-      end
-
-      it 'keeps a legacy cleaning when the checkout on the board belongs to another booking' do
-        other_booking = create(:booking, hotel: hotel)
-        checkout_request = create(:check_out_request, booking: other_booking, status: 'pending')
-
-        columns = described_class.new(hotel).board_columns
-
-        expect(columns[:checkout].map { |c| c[:request_id] }).to contain_exactly(checkout_request.id, checkout_cleaning.id)
-      end
-
-      it 'keeps a cleaning whose named checkout is not on the board' do
-        checkout_request = create(:check_out_request, booking: booking, status: 'completed', metadata: { 'archived_at' => Time.current.iso8601 })
-        checkout_cleaning.update!(metadata: { 'checkout_request_id' => checkout_request.id })
-
-        columns = described_class.new(hotel).board_columns
-
-        expect(columns[:checkout].map { |c| c[:request_id] }).to contain_exactly(checkout_cleaning.id)
+        expect(described_class.new(hotel).board_columns[:checkout].map { |c| c[:request_id] })
+          .to include(checkout_request.id)
       end
     end
 

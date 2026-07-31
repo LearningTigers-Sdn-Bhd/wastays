@@ -41,6 +41,7 @@ module HousekeepingTasks
         hotel: @hotel,
         room_type: @room_type,
         room_number: @room_number,
+        work_context: "vacant_room_task",
         request_details: @details,
         status: "new",
         # The board only shows work already asked for as of the date being
@@ -74,7 +75,7 @@ module HousekeepingTasks
         date: Date.current
       ).call
 
-      resolved.status.in?(ELIGIBLE_STATUSES)
+      resolved.status.in?(ELIGIBLE_STATUSES) && resolved.booking_state != :occupied
     end
   end
 end

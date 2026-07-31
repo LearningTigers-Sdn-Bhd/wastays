@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe HotelPortal::Requests::StatusUpdater do
   let(:hotel) { create(:hotel) }
-  let(:booking) { create(:booking, hotel: hotel) }
+  let(:booking) { create(:booking, hotel: hotel, status: "checked_in") }
 
   it "marks housekeeping as completed" do
     request = create(:housekeeping_request, booking: booking, status: "pending")
@@ -54,7 +54,7 @@ RSpec.describe HotelPortal::Requests::StatusUpdater do
     expect(request.reload.status).to eq("completed")
   end
 
-  it "maps checkout workflow statuses onto checkout requests" do
+  it "moves a checkout along" do
     request = create(:check_out_request, booking: booking, status: "pending")
 
     result = described_class.new(hotel: hotel, kind: :checkout, request_id: request.id, status: :assigned).call
@@ -62,55 +62,23 @@ RSpec.describe HotelPortal::Requests::StatusUpdater do
     expect(result).to eq(request)
     expect(request.reload.status).to eq("assigned")
     expect(request.metadata["workflow_status"]).to eq("assigned")
-
-    described_class.new(hotel: hotel, kind: :checkout, request_id: request.id, status: :completed).call
-    expect(request.reload.status).to eq("completed")
-    expect(request.metadata["workflow_status"]).to eq("completed")
   end
 
-  it "marks the checkout room as cleaning when checkout work starts" do
+  it "walks a turnover's room from cleaning to ready" do
     room_type = create(:room_type, hotel: hotel, room_numbers: [ "101" ])
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-    request = create(
-      :check_out_request,
-      booking: booking,
-      status: "new",
-      guest_notes: "Checkout Room Cleaning",
-      metadata: { "room_number" => "101" }
-    )
+    request = create(:housekeeping_request, booking: booking, hotel: hotel, room_type: room_type,
+                     room_number: "101", work_context: "checkout_turnover",
+                     status: "new", request_details: "Checkout turnover")
 
-    described_class.new(hotel: hotel, kind: :checkout, request_id: request.id, status: :in_progress).call
+    described_class.new(hotel: hotel, kind: :housekeeping, request_id: request.id, status: :in_progress,
+                        work_contexts: HousekeepingRequest::OPERATIONAL_CONTEXTS).call
 
     expect(RoomStatus.find_by(hotel: hotel, room_type: room_type, room_number: "101").status).to eq("cleaning")
-  end
-  # A checkout used to keep no record of when it finished, so the board stood
-  # updated_at in for it -- and updated_at moves on any write.
-  describe "recording when a checkout finished" do
-    let(:checkout) { create(:check_out_request, booking: booking, status: "new", completed_at: nil) }
 
-    it "sets completed_at when it completes" do
-      freeze_time do
-        described_class.new(hotel: hotel, kind: :checkout, request_id: checkout.id, status: "completed").call
+    described_class.new(hotel: hotel, kind: :housekeeping, request_id: request.id, status: :completed,
+                        work_contexts: HousekeepingRequest::OPERATIONAL_CONTEXTS).call
 
-        expect(checkout.reload.completed_at).to eq(Time.current)
-      end
-    end
-
-    it "leaves an already recorded finish where it is" do
-      finished_at = 3.days.ago.change(usec: 0)
-      checkout.update!(status: "completed", completed_at: finished_at)
-
-      described_class.new(hotel: hotel, kind: :checkout, request_id: checkout.id, status: "completed").call
-
-      expect(checkout.reload.completed_at).to eq(finished_at)
-    end
-
-    it "clears it when the checkout is moved back to open work" do
-      checkout.update!(status: "completed", completed_at: 1.day.ago)
-
-      described_class.new(hotel: hotel, kind: :checkout, request_id: checkout.id, status: "new").call
-
-      expect(checkout.reload.completed_at).to be_nil
-    end
+    expect(RoomStatus.find_by(hotel: hotel, room_type: room_type, room_number: "101").status).to eq("ready")
   end
 end

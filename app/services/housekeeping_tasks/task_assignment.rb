@@ -1,14 +1,7 @@
 # frozen_string_literal: true
 
 module HousekeepingTasks
-  # What assigning means to one task the board can hand out.
-  #
-  # The board mixes two records -- a HousekeepingRequest and the CheckOutRequest
-  # standing for a room's checkout cleaning -- and they answer to the same three
-  # questions differently: which statuses assigning moves on, which statuses
-  # releasing moves back, and whether the record mirrors its progress in
-  # metadata as well as in its status column. Answer those three here, once per
-  # kind, and everything else about handing work over is the same for both.
+  # What assigning means to one operational housekeeping task the board can hand out.
   class TaskAssignment
     RULES = {
       HousekeepingRequest: {
@@ -18,12 +11,6 @@ module HousekeepingTasks
         release_to_new_from: %w[assigned],
         mirrors_workflow_status: false,
         placeholder_statuses: %w[no_task]
-      },
-      CheckOutRequest: {
-        assign_from: %w[new pending acknowledged],
-        release_to_new_from: %w[assigned in_progress acknowledged],
-        mirrors_workflow_status: true,
-        placeholder_statuses: []
       }
     }.freeze
 
@@ -35,14 +22,13 @@ module HousekeepingTasks
 
     def initialize(record)
       @record = record
-      @rules = RULES.fetch(record.class.name.to_sym)
     end
 
     # A record standing in for the absence of work. It is still assignable -- it
     # is how a room with nothing asked of it gets picked up -- but a room that
     # has real work does not need it moved as well.
     def placeholder?
-      record.status.in?(@rules[:placeholder_statuses])
+      record.status.in?(rules[:placeholder_statuses])
     end
 
     def assigned_to
@@ -64,17 +50,17 @@ module HousekeepingTasks
         note_history(metadata, by: by, to_id: staff.id, to_name: staff.name) if held_before != staff.id
         metadata["assigned_to"] = staff.id
         metadata["assigned_to_name"] = staff.name
-        status = "assigned" if status.in?(@rules[:assign_from])
+        status = "assigned" if status.in?(rules[:assign_from])
         workflow_status = "assigned"
       else
         note_history(metadata, by: by, to_name: "Unassigned") if held_before.present?
         metadata.delete("assigned_to")
         metadata.delete("assigned_to_name")
-        status = "new" if status.in?(@rules[:release_to_new_from])
+        status = "new" if status.in?(rules[:release_to_new_from])
         workflow_status = "new"
       end
 
-      metadata["workflow_status"] = workflow_status if @rules[:mirrors_workflow_status]
+      metadata["workflow_status"] = workflow_status if rules[:mirrors_workflow_status]
       record.update!(metadata: metadata, status: status)
 
       held_before != metadata["assigned_to"]
@@ -85,6 +71,13 @@ module HousekeepingTasks
     end
 
     private
+
+    # Only the handing-out questions need these. Who holds a record is written
+    # in its metadata whatever kind it is, and the Requests board asks that of a
+    # checkout -- which this board never hands out and so has no rules for.
+    def rules
+      @rules ||= RULES.fetch(record.class.name.to_sym)
+    end
 
     def note_history(metadata, by:, to_name:, to_id: nil)
       history = Array(metadata["assignment_history"])

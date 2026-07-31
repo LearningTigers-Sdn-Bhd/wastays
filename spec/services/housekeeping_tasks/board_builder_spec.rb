@@ -31,7 +31,8 @@ RSpec.describe HousekeepingTasks::BoardBuilder do
       status:,
       archived_at:,
       requested_at:,
-      request_details: details
+      request_details: details,
+      work_context: "vacant_room_task"
     )
   end
 
@@ -44,12 +45,14 @@ RSpec.describe HousekeepingTasks::BoardBuilder do
       expect(tasks_for("Garden Prestige Suite")).to contain_exactly("Garden towels")
     end
 
-    it "keeps a checkout cleaning on the room that is actually checking out" do
+    it "shows a checkout turnover task on the room that is actually checking out" do
       booking = create(:booking, hotel:)
       create(:booking_room, booking:, room_type: penthouse, room_number: "101")
-      create(:check_out_request, booking:, status: "new", requested_at: Time.current)
+      create(:housekeeping_request, booking:, hotel:, room_type: penthouse, room_number: "101",
+             work_context: "checkout_turnover", status: "new",
+             request_details: "Checkout turnover")
 
-      expect(tasks_for("Executive Penthouse")).to contain_exactly("Checkout Room Cleaning")
+      expect(tasks_for("Executive Penthouse")).to contain_exactly("Checkout turnover")
       expect(tasks_for("Garden Prestige Suite")).to be_empty
     end
 
@@ -65,6 +68,15 @@ RSpec.describe HousekeepingTasks::BoardBuilder do
       task_on(penthouse, details: "Untriaged request", status: "pending")
 
       expect(tasks_for("Executive Penthouse")).to contain_exactly("Untriaged request")
+    end
+
+    it "does not show an occupied-room request on the operational task board" do
+      booking = create(:booking, hotel:, status: "checked_in")
+      create(:booking_room, booking:, room_type: penthouse, room_number: "101")
+      create(:housekeeping_request, booking:, hotel:, room_type: penthouse, room_number: "101",
+             work_context: "guest_request", status: "new", request_details: "Guest towels")
+
+      expect(tasks_for("Executive Penthouse")).to be_empty
     end
 
     it "hides an archived task" do
@@ -131,7 +143,8 @@ RSpec.describe HousekeepingTasks::BoardBuilder do
     it "searches the room type, the task note and the guest, case-insensitively" do
       booking = create(:booking, hotel:, guest_name: "Ada Lovelace", confirmation_token: "WS-ADA1", status: "checked_in")
       create(:booking_room, booking:, room_type: penthouse, room_number: "101")
-      create(:housekeeping_request, booking:, hotel:, room_number: "101", status: "new", request_details: "Extra pillows", requested_at: Time.current)
+      create(:housekeeping_request, booking:, hotel:, room_number: "101", status: "new",
+             work_context: "vacant_room_task", request_details: "Extra pillows", requested_at: Time.current)
 
       expect(room_types_on(query: "penthouse")).to contain_exactly("Executive Penthouse")
       expect(room_types_on(query: "PILLOWS")).to contain_exactly("Executive Penthouse")

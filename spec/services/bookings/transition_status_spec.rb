@@ -494,20 +494,18 @@ RSpec.describe Bookings::TransitionStatus do
         expect(room_status.dnd).to be false
         expect(room_status.dnd_date).to be_nil
 
-        # Verify checkout request is created (not a housekeeping request)
-        checkout_req = CheckOutRequest.find_by(booking: booking)
-        expect(checkout_req).to be_present
-        expect(checkout_req.status).to eq("new")
-        expect(checkout_req.guest_notes).to eq("Checkout Room Cleaning")
-        expect(checkout_req.metadata["room_number"]).to eq("101")
+        # Departing raises the room's turnover, and invents no guest message to
+        # hang it off -- this guest walked to the desk and said nothing.
+        expect(CheckOutRequest.find_by(booking: booking)).to be_nil
 
-        # Verify no HousekeepingRequest is created at checkout time
-        # (it will be backfilled on-demand by the housekeeping tasks controller)
-        hk_req = HousekeepingRequest.find_by(booking: booking, room_number: "101")
-        expect(hk_req).to be_nil
+        expect(HousekeepingRequest.find_by(booking: booking, room_number: "101")).to have_attributes(
+          work_context: "checkout_turnover",
+          request_details: "Checkout turnover",
+          status: "new"
+        )
       end
 
-      it "creates one checkout request per child in a group booking" do
+      it "creates one turnover per room across a group booking" do
         group_booking = create(:group_booking, hotel: booking.hotel)
         booking.update!(group_booking: group_booking, group_position: 1)
         sibling = create(
@@ -532,12 +530,10 @@ RSpec.describe Bookings::TransitionStatus do
         expect(first_result.success?).to be(true)
         expect(second_result.success?).to be(true)
         expect(group_booking.bookings.reload).to all(satisfy { |child| child.booking_rooms.one? })
-        expect(booking.reload.check_out_requests.count).to eq(1)
-        expect(booking.check_out_requests.first.guest_notes).to eq("Checkout Room Cleaning")
-        expect(booking.check_out_requests.first.metadata["room_number"]).to eq("101")
-        expect(sibling.reload.check_out_requests.count).to eq(1)
-        expect(sibling.check_out_requests.first.metadata["room_number"]).to eq("102")
-        expect(HousekeepingRequest.where(booking: [ booking, sibling ], request_details: "Checkout Room Cleaning")).to be_empty
+
+        turnovers = HousekeepingRequest.checkout_turnovers.where(booking: [ booking, sibling ])
+        expect(turnovers.pluck(:room_number)).to contain_exactly("101", "102")
+        expect(CheckOutRequest.where(booking: [ booking, sibling ])).to be_empty
       end
     end
 

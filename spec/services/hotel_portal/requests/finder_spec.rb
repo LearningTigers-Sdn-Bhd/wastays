@@ -2,9 +2,27 @@ require "rails_helper"
 
 RSpec.describe HotelPortal::Requests::Finder do
   let(:hotel) { create(:hotel) }
-  let(:booking) { create(:booking, hotel: hotel) }
+  let(:booking) { create(:booking, hotel: hotel, status: "checked_in") }
   let(:other_hotel) { create(:hotel) }
-  let(:other_booking) { create(:booking, hotel: other_hotel) }
+  let(:other_booking) { create(:booking, hotel: other_hotel, status: "checked_in") }
+
+  # Narrowing is the caller's to ask for. Defaulting it to the Requests board's
+  # own contexts hid every room task from Stay View, which reaches this by
+  # another door and passes nothing.
+  it "reaches every work context unless asked to narrow" do
+    HousekeepingRequest::WORK_CONTEXTS.each do |context|
+      request = create(:housekeeping_request, booking: booking, hotel: hotel, work_context: context)
+
+      expect(find(kind: "housekeeping", request_id: request.id)).to eq(request)
+    end
+  end
+
+  it "refuses a context the caller ruled out" do
+    request = create(:housekeeping_request, booking: booking, hotel: hotel, work_context: "checkout_turnover")
+
+    expect { find(kind: "housekeeping", request_id: request.id, work_contexts: %w[guest_request]) }
+      .to raise_error(ActiveRecord::RecordNotFound)
+  end
 
   def find(kind:, request_id:, hotel: self.hotel, **options)
     described_class.new(hotel: hotel, kind: kind, request_id: request_id, **options).call

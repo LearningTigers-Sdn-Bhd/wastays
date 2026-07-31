@@ -12,12 +12,13 @@ module HotelPortal
     class StatusUpdater
       attr_reader :hotel, :kind, :request_id, :status, :request
 
-      def initialize(hotel:, kind:, request_id:, status:, trigger_webhook: true)
+      def initialize(hotel:, kind:, request_id:, status:, trigger_webhook: true, work_contexts: nil)
         @hotel = hotel
         @kind = kind.to_s
         @request_id = request_id
         @status = status.to_s
         @trigger_webhook = trigger_webhook
+        @work_contexts = work_contexts
       end
 
       def call
@@ -38,7 +39,7 @@ module HotelPortal
       private
 
       def find_request
-        Finder.new(hotel: hotel, kind: kind, request_id: request_id).call
+        Finder.new(hotel: hotel, kind: kind, request_id: request_id, work_contexts: @work_contexts).call
       end
 
       # What the caller asked for, in the words the record answers to.

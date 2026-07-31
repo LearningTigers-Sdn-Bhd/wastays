@@ -95,12 +95,15 @@ module HotelPortal
       end
     end
 
+    # This board hands out guest requests; room work belongs to the housekeeping
+    # board and is reached through its own routes.
     def update_status
       updater = ::HotelPortal::Requests::StatusUpdater.new(
         hotel: current_hotel,
         kind: params[:kind],
         request_id: params[:request_id],
-        status: params[:status]
+        status: params[:status],
+        work_contexts: %w[guest_request]
       )
 
       redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
