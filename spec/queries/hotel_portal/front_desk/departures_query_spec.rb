@@ -2,13 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe HotelPortal::FrontDesk::DeparturesQuery do
+RSpec.describe HotelPortal::FrontDesk::DeparturesQuery, frozen_time: Time.zone.local(2026, 7, 15, 12) do
   let(:hotel) { create(:hotel, status: "approved") }
-
-  around do |example|
-    time = example.metadata[:hotel_midnight] ? Time.utc(2026, 7, 15, 18, 30) : Time.zone.local(2026, 7, 15, 12)
-    travel_to(time) { example.run }
-  end
 
   def hotel_time(date)
     Bookings::ScheduledStay.at_hotel_time(hotel:, value: Date.iso8601(date), kind: :check_out)
@@ -87,7 +82,7 @@ RSpec.describe HotelPortal::FrontDesk::DeparturesQuery do
     expect(query.call).not_to include(legacy_booking)
   end
 
-  it "uses the hotel-local day for invalid and missing dates", :hotel_midnight do
+  it "uses the hotel-local day for invalid and missing dates", frozen_time: Time.utc(2026, 7, 15, 18, 30) do
     hotel.update!(time_zone: "Kuala Lumpur")
     invalid = described_class.new(hotel:, params: { departure_start_date: "not-a-date" })
     missing = described_class.new(hotel:, params: {})

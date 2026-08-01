@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe HousekeepingTasks::CreateTask do
+RSpec.describe HousekeepingTasks::CreateTask, frozen_time: Time.zone.local(2026, 8, 15, 12) do
   let(:account) { create(:account) }
   let(:hotel) { create(:hotel, account:) }
   let(:room_type) { create(:room_type, hotel:, name: "Ocean Suite", room_number_mode: "custom", room_numbers: %w[101]) }

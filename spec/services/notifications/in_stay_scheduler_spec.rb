@@ -1,9 +1,7 @@
 require "rails_helper"
 
-RSpec.describe Notifications::InStayScheduler do
+RSpec.describe Notifications::InStayScheduler, frozen_time: Time.zone.local(2026, 8, 15, 15) do
   include ActiveJob::TestHelper
-  include ActiveSupport::Testing::TimeHelpers
-
   let(:hotel) { create(:hotel) }
   let(:booking) { create(:booking, hotel: hotel, check_in: Date.current + 5.days, check_out: Date.current + 7.days) }
 
@@ -50,9 +48,7 @@ RSpec.describe Notifications::InStayScheduler do
   it "rolls past in-stay times to the next valid day before check-out" do
     booking.update!(check_in: Date.current, check_out: Date.current + 2.days)
 
-    travel_to(Time.zone.local(Date.current.year, Date.current.month, Date.current.day, 15, 0, 0)) do
-      described_class.new(booking: booking).schedule!(trigger_event: "booking_confirmed")
-    end
+    described_class.new(booking: booking).schedule!(trigger_event: "booking_confirmed")
 
     activity_delivery = NotificationDelivery.find_by!(
       booking: booking,
@@ -68,9 +64,7 @@ RSpec.describe Notifications::InStayScheduler do
   it "marks delivery skipped when no future in-stay slot remains before check-out" do
     booking.update!(check_in: Date.current, check_out: Date.current + 1.day)
 
-    travel_to(Time.zone.local(Date.current.year, Date.current.month, Date.current.day, 15, 0, 0)) do
-      described_class.new(booking: booking).schedule!(trigger_event: "booking_confirmed")
-    end
+    described_class.new(booking: booking).schedule!(trigger_event: "booking_confirmed")
 
     activity_delivery = NotificationDelivery.find_by!(
       booking: booking,

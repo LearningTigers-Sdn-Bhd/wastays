@@ -154,7 +154,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
   end
 
   it "derives duration from a complete date range answer" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return(
         interpretation(intent: "booking_search", topic: "booking_search", slots: {})
       )
@@ -187,7 +187,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
   end
 
   it "resolves a pending monthless date range with a follow-up month" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return(
         interpretation(intent: "booking_search", topic: "booking_search", slots: {})
       )
@@ -206,7 +206,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
   end
 
   it "uses this-month timing instead of stale no-options month context" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       prospect = create(:prospect, hotel: hotel)
       branch = {
         "target_month" => 7,
@@ -236,7 +236,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
   end
 
   it "asks for a timing segment when this-month request omits early mid or late" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       prospect = create(:prospect, hotel: hotel)
       branch = {
         "target_month" => 7,

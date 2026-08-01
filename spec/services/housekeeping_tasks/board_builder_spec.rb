@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe HousekeepingTasks::BoardBuilder do
+RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(2026, 8, 15, 12) do
   let(:account) { create(:account) }
   let(:hotel) { create(:hotel, account:) }
 

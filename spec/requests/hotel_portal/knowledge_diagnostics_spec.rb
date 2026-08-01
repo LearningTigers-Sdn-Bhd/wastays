@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "HotelPortal::KnowledgeDiagnostics", type: :request do
-  around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
-
+RSpec.describe "HotelPortal::KnowledgeDiagnostics", type: :request, frozen_time: Time.zone.local(2026, 6, 10, 3) do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin") }
   let(:plan) { create(:plan) }

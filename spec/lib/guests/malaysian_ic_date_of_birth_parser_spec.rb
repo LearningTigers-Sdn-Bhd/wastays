@@ -7,7 +7,7 @@ RSpec.describe Guests::MalaysianIcDateOfBirthParser do
     end
 
     it 'uses the previous century when the parsed date would be in the future' do
-      travel_to(Date.new(2026, 7, 2)) do
+      with_frozen_time(Date.new(2026, 7, 2)) do
         expect(described_class.parse('300101-10-1234')).to eq(Date.new(1930, 1, 1))
       end
     end

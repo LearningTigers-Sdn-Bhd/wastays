@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "HotelPortal::Bookings::Actions voids", :business_day, type: :request do
+RSpec.describe "HotelPortal::Bookings::Actions voids", frozen_time: :business_day, type: :request do
   let(:hotel) { create(:hotel, status: "approved") }
   let(:other_hotel) { create(:hotel, status: "approved") }
   let(:user) { create(:user, account: hotel.account) }

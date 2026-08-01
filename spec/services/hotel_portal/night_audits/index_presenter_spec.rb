@@ -1,8 +1,6 @@
 require "rails_helper"
 
 RSpec.describe HotelPortal::NightAudits::IndexPresenter do
-  include ActiveSupport::Testing::TimeHelpers
-
   let(:account) { create(:account) }
   let(:hotel) do
     create(:hotel,
@@ -46,7 +44,7 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
   end
 
   it "shows an open current business date as the audit authority" do
-    travel_to Time.find_zone("Kuala Lumpur").local(2026, 6, 13, 1, 0) do
+    with_frozen_time Time.find_zone("Kuala Lumpur").local(2026, 6, 13, 1, 0) do
       expect(presenter.ui_state).to eq("OPEN")
       expect(presenter.business_date_status_label).to eq("Open")
       expect(presenter.business_date_status_badge_class).to include("bg-blue-50")
@@ -59,7 +57,7 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
   end
 
   it "derives ready for audit when the open date is closable and clear" do
-    travel_to Time.find_zone("Kuala Lumpur").local(2026, 6, 13, 10, 0) do
+    with_frozen_time Time.find_zone("Kuala Lumpur").local(2026, 6, 13, 10, 0) do
       expect(presenter.ui_state).to eq("READY_FOR_AUDIT")
       expect(presenter.status_label).to eq("Ready for Audit")
       expect(presenter.primary_action.label).to eq("Run Audit")
@@ -115,7 +113,7 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
     end
 
     it "presents them as non-blocking warnings" do
-      travel_to Time.find_zone("Kuala Lumpur").local(2026, 6, 13, 10, 0) do
+      with_frozen_time Time.find_zone("Kuala Lumpur").local(2026, 6, 13, 10, 0) do
         expect(presenter.ui_state).to eq("READY_FOR_AUDIT")
         expect(presenter.readiness_counters.find { |counter| counter.label == "Blockers" }.value).to eq(0)
         expect(presenter.readiness_counters.find { |counter| counter.label == "Warnings" }.value).to eq(1)

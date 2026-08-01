@@ -24,7 +24,7 @@ RSpec.describe "Operational Exceptions", type: :system do
   describe "Late Checkout" do
     it "allows front desk to resolve and apply a late checkout charge" do
       # Set business date to today
-      travel_to Time.zone.local(2026, 5, 21, 10, 0, 0)
+      with_frozen_time Time.zone.local(2026, 5, 21, 10, 0, 0)
 
       booking = create(:booking, hotel: hotel, status: "due_out_detected", guest_name: "John Doe", check_in: 1.day.ago, check_out: Date.current, total_amount: 100.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, nightly_rate_snapshot: { 1.day.ago.to_date.iso8601 => { "price" => 100.0 } })
@@ -64,7 +64,7 @@ RSpec.describe "Operational Exceptions", type: :system do
 
   describe "Early Departure" do
     xit "shows early departure review in checkout modal and applies charge" do
-      travel_to Time.zone.local(2026, 5, 21, 10, 0, 0)
+      with_frozen_time Time.zone.local(2026, 5, 21, 10, 0, 0)
       business_date = hotel.business_date_for
 
       # Future checkout

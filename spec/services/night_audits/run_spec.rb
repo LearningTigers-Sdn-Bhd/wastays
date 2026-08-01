@@ -507,7 +507,7 @@ RSpec.describe NightAudits::Run do
     kl_zone = Time.find_zone("Kuala Lumpur")
     existing = create(:night_audit, hotel: hotel, business_date: unclosable_date, status: "pending", trigger_mode: "manual")
 
-    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+    with_frozen_time(kl_zone.local(2026, 5, 21, 10, 0)) do
       result = described_class.new(
         hotel: hotel,
         business_date: unclosable_date,
@@ -531,7 +531,7 @@ RSpec.describe NightAudits::Run do
     kl_zone = Time.find_zone("Kuala Lumpur")
     audit_hotel = create(:hotel, :without_current_business_date, account: account, time_zone: "Kuala Lumpur", business_starts_at: "08:00", business_ends_at: "02:00")
 
-    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+    with_frozen_time(kl_zone.local(2026, 5, 21, 10, 0)) do
       result = described_class.new(
         hotel: audit_hotel,
         business_date: unclosable_date,
@@ -550,7 +550,7 @@ RSpec.describe NightAudits::Run do
     unclosable_date = Date.new(2026, 5, 21)
     kl_zone = Time.find_zone("Kuala Lumpur")
 
-    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+    with_frozen_time(kl_zone.local(2026, 5, 21, 10, 0)) do
       result = described_class.new(
         hotel: hotel,
         business_date: unclosable_date,

@@ -267,7 +267,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       grant_arrival_permission
 
       hotel.update!(time_zone: "Kuala Lumpur")
-      travel_to(Time.utc(2026, 7, 15, 18, 30)) do
+      with_frozen_time(Time.utc(2026, 7, 15, 18, 30)) do
         today = booking(status: "confirmed", confirmation_token: "LOCAL-TODAY", check_in: hotel.hotel_time_zone.local(2026, 7, 16, 15))
         get hotel_front_desk_path(hotel), params: {
           tab: "arrivals", view: "rooms", arrival_q: "LOCAL",
@@ -308,7 +308,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
     it "resets departure dates to hotel-local today" do
       hotel.update!(time_zone: "Kuala Lumpur")
 
-      travel_to(Time.utc(2026, 7, 15, 18, 30)) do
+      with_frozen_time(Time.utc(2026, 7, 15, 18, 30)) do
         get hotel_front_desk_path(hotel), params: {
           tab: "departures", view: "list", departure_query: "Aisha",
           departure_start_date: "2026-07-14", departure_end_date: "2026-07-15", departure_page: 2
@@ -422,7 +422,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(table_tokens.grep(/INHOUSE-PAGE-/).size).to eq(1)
     end
 
-    it "uses checkout search, ordering, and pagination", :business_day do
+    it "uses checkout search, ordering, and pagination", frozen_time: :business_day do
       older = booking(status: "completed", confirmation_token: "CHECKOUT-OLDER", checked_out_at: Time.current - 2.hours)
       newer = booking(status: "completed", confirmation_token: "CHECKOUT-NEWER", checked_out_at: Time.current - 1.hour)
 
@@ -431,7 +431,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body.index(newer.confirmation_token)).to be < response.body.index(older.confirmation_token)
     end
 
-    it "paginates checkout records at 25 per page", :business_day do
+    it "paginates checkout records at 25 per page", frozen_time: :business_day do
       26.times { |index| booking(status: "completed", confirmation_token: "CHECKOUT-PAGE-#{index}", checked_out_at: index.minutes.ago) }
 
       get hotel_front_desk_path(hotel), params: { tab: "checkout", view: "list", checkout_page: 2 }
@@ -669,7 +669,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body).to include(confirmed.confirmation_token)
     end
 
-    it "opens checkout actions in the booking action sheet", :business_day do
+    it "opens checkout actions in the booking action sheet", frozen_time: :business_day do
       grant_booking_permission
       active = booking(status: "checked_in", confirmation_token: "SHEET-ACTIVE", checked_in_at: Time.current, check_out: Date.current)
 
@@ -805,7 +805,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       end
     end
 
-    it "offers the same actions in the table row and the stay card", :room_cards do
+    it "offers the same actions in the table row and the stay card", :room_cards, frozen_time: :business_day do
       grant_arrival_permission
       grant_booking_permission
       booking(status: "confirmed", confirmation_token: "ACT-ARRIVAL", check_in: hotel_today)

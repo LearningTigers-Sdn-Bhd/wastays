@@ -1,7 +1,6 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::NightAudits Force Roll", type: :request do
-  include ActiveSupport::Testing::TimeHelpers
   include ActiveJob::TestHelper
 
   let(:account) { create(:account) }

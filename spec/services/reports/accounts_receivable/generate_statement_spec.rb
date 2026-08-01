@@ -62,7 +62,7 @@ RSpec.describe Reports::AccountsReceivable::GenerateStatement do
       currency: "MYR"
     )
 
-    travel_to Time.zone.local(2026, 6, 30, 14, 35, 0) do
+    with_frozen_time Time.zone.local(2026, 6, 30, 14, 35, 0) do
       text = pdf_text(described_class.new(report: report, printed_by: "F. Suhaila").generate)
 
       expect(text).to include("ACCOUNT STATEMENT")

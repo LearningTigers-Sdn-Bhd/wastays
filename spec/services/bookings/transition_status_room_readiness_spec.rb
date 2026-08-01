@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Bookings::TransitionStatus do
-  around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
-
+RSpec.describe Bookings::TransitionStatus, frozen_time: Time.zone.local(2026, 6, 10, 3) do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user) }
   let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101" ]) }

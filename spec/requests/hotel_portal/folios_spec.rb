@@ -1,8 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "HotelPortal::Folios", type: :request do
-  around { |example| travel_to(Time.zone.local(2026, 6, 18, 10, 0, 0)) { example.run } }
-
+RSpec.describe "HotelPortal::Folios", type: :request, frozen_time: Time.zone.local(2026, 6, 18, 10) do
   let(:hotel) { create(:hotel, status: "approved") }
   let(:other_hotel) { create(:hotel, status: "approved") }
   let(:user) { create(:user, account: hotel.account) }

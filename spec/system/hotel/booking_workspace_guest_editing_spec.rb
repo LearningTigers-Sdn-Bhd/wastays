@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Booking workspace guest editing", :business_day, type: :system do
+RSpec.describe "Booking workspace guest editing", frozen_time: :business_day, type: :system do
   include_context "booking workspace system setup"
 
   it "protects unsaved snapshot changes with the workspace alert", js: true do

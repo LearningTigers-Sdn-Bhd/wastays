@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe HotelPortal::StayViewHelper, type: :helper do
-  around { |example| travel_to(Time.zone.local(2026, 7, 16, 10, 0, 0)) { example.run } }
-
+RSpec.describe HotelPortal::StayViewHelper, type: :helper, frozen_time: Time.zone.local(2026, 7, 16, 10) do
   let(:hotel) { create(:hotel, accounting_business_date: Date.current) }
   let(:state) { StayView::BoardState.new(hotel:, params: { view: :rooms, date: Date.current }) }
   let(:capabilities) do

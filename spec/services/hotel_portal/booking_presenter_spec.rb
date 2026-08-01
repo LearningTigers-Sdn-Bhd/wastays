@@ -38,11 +38,9 @@ RSpec.describe HotelPortal::BookingPresenter do
     end
   end
 
-  describe "#requires_backdated_checkin_reason?" do
+  describe "#requires_backdated_checkin_reason?", frozen_time: Time.zone.local(2026, 5, 18, 14) do
     let(:check_in_date) { Date.new(2026, 5, 18) }
     let(:booking) { create(:booking, hotel: hotel, check_in: check_in_date) }
-
-    around { |example| travel_to(Time.zone.local(2026, 5, 18, 14, 0, 0)) { example.run } }
 
     it "returns true if the check-in accounting date is closed" do
       create(:night_audit, hotel: hotel, business_date: check_in_date, status: "completed")
@@ -134,7 +132,7 @@ RSpec.describe HotelPortal::BookingPresenter do
     it "uses hotel local time for transaction form defaults" do
       hotel.update!(time_zone: "Kuala Lumpur")
 
-      travel_to(Time.utc(2026, 7, 15, 18, 30)) do
+      with_frozen_time(Time.utc(2026, 7, 15, 18, 30)) do
         expect(subject.checked_in_at_form_value).to eq("2026-07-16T02:30")
         expect(subject.checked_out_at_form_value).to eq("2026-07-16T02:30")
       end
@@ -146,7 +144,7 @@ RSpec.describe HotelPortal::BookingPresenter do
       create(:booking_room, booking:, room_type:, subtotal: 100)
       create(:room_rate, room_type:, date: Date.new(2026, 7, 16), price: 250)
 
-      travel_to(Time.utc(2026, 7, 15, 18, 30)) do
+      with_frozen_time(Time.utc(2026, 7, 15, 18, 30)) do
         expect(subject.suggested_late_checkout_amount).to eq(250.to_d)
       end
     end

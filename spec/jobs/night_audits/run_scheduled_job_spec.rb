@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe NightAudits::RunScheduledJob, type: :job do
-  include ActiveSupport::Testing::TimeHelpers
-
   let(:business_date) { Date.new(2026, 4, 23) }
 
   it "runs only for approved and live hotels using yesterday's business date" do
@@ -55,7 +53,7 @@ RSpec.describe NightAudits::RunScheduledJob, type: :job do
     create(:hotel_business_date, hotel: hotel, business_date: Date.new(2026, 5, 18), status: "open")
     allow(NightAudits::RunJob).to receive(:perform_later)
 
-    travel_to(Time.find_zone("Kuala Lumpur").local(2026, 5, 19, 2, 35)) do
+    with_frozen_time(Time.find_zone("Kuala Lumpur").local(2026, 5, 19, 2, 35)) do
       described_class.perform_now
     end
 
@@ -69,7 +67,7 @@ RSpec.describe NightAudits::RunScheduledJob, type: :job do
     create(:hotel_business_date, hotel: hotel, business_date: Date.new(2026, 5, 18), status: "open")
     allow(NightAudits::RunJob).to receive(:perform_later)
 
-    travel_to(Time.find_zone("Kuala Lumpur").local(2026, 5, 19, 2, 25)) do
+    with_frozen_time(Time.find_zone("Kuala Lumpur").local(2026, 5, 19, 2, 25)) do
       described_class.perform_now
     end
 

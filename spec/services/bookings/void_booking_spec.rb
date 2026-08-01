@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Bookings::VoidBooking, :business_day do
+RSpec.describe Bookings::VoidBooking, frozen_time: :business_day do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user, account: hotel.account) }
 

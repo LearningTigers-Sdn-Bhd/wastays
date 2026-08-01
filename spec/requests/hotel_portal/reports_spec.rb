@@ -69,7 +69,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
   end
 
   it "presents this year as monthly periods across report pages" do
-    travel_to(Time.zone.local(2026, 7, 23, 10, 0, 0)) do
+    with_frozen_time(Time.zone.local(2026, 7, 23, 10, 0, 0)) do
       booking = create(
         :booking,
         hotel: hotel,
@@ -682,7 +682,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "keeps today selected when switching guest report tabs" do
-      travel_to(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
+      with_frozen_time(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
         create(:booking, hotel: hotel, status: "checked_in", check_in: Date.new(2026, 6, 14), check_out: Date.new(2026, 6, 16), guest_name: "In House Guest")
 
         get guest_reports_hotel_reports_path(hotel), params: { tab: "in_house" }
@@ -705,7 +705,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "defaults guest reports first load to today" do
-      travel_to(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
+      with_frozen_time(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
         create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 6, 15), check_out: Date.new(2026, 6, 16), guest_name: "Today Arrival")
         create(:booking, hotel: hotel, status: "confirmed", check_in: Date.new(2026, 6, 1), check_out: Date.new(2026, 6, 2), guest_name: "Earlier Month Arrival")
 
@@ -719,7 +719,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       end
     end
 
-    it "falls back to today when both start and end dates are invalid" do
+    it "falls back to today when both start and end dates are invalid", frozen_time: :business_day do
       create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current, check_out: Date.current + 1.day, guest_name: "Today Guest")
 
       get guest_reports_hotel_reports_path(hotel), params: { start_date: "bad-start", end_date: "bad-end" }
@@ -1039,7 +1039,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "defaults to today on first load" do
-      travel_to(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
+      with_frozen_time(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
         booking = create(:booking, hotel: hotel, guest_name: "Today FB Guest")
         folio = create(:booking_folio, booking: booking, hotel: hotel)
         create(:folio_transaction, booking_folio: folio, category: "fb", description: "Today Charge", amount: 20, posting_date: Date.new(2026, 6, 15))
@@ -1075,7 +1075,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "shows a monthly breakdown when this year is selected" do
-      travel_to(Time.zone.local(2026, 7, 22, 10, 0, 0)) do
+      with_frozen_time(Time.zone.local(2026, 7, 22, 10, 0, 0)) do
         booking = create(:booking, hotel: hotel)
         folio = create(:booking_folio, booking: booking, hotel: hotel)
         create(:folio_transaction, booking_folio: folio, category: "fb", amount: 40, posting_date: Date.new(2026, 5, 7))
@@ -1207,7 +1207,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "rejects non-ISO date_range endpoints" do
-      travel_to(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
+      with_frozen_time(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
         get daily_occupancy_hotel_reports_path(hotel), params: { date_range: "2026-05-06junk/2026-05-08" }
 
         page = Capybara.string(response.body)
@@ -1233,7 +1233,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "defaults blank first load to today" do
-      travel_to(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
+      with_frozen_time(Time.zone.local(2026, 6, 15, 10, 0, 0)) do
         room_type = create(:room_type, hotel: hotel, quantity: 10)
         create(:room_inventory, room_type: room_type, date: Date.new(2026, 6, 1), quantity: 8, status: "open")
         create(:room_inventory, room_type: room_type, date: Date.new(2026, 6, 15), quantity: 9, status: "open")
@@ -1323,7 +1323,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "uses one table with month divider rows for this year" do
-      travel_to(Time.zone.local(2026, 7, 23, 10, 0, 0)) do
+      with_frozen_time(Time.zone.local(2026, 7, 23, 10, 0, 0)) do
         [ Date.new(2026, 4, 14), Date.new(2026, 5, 14) ].each do |check_in|
           booking = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", check_in: check_in, check_out: check_in + 1.day)
           folio = create(:booking_folio, booking: booking, hotel: hotel)
