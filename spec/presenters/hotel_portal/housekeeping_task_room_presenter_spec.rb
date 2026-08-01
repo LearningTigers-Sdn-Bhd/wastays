@@ -3,129 +3,139 @@
 require "rails_helper"
 
 RSpec.describe HotelPortal::HousekeepingTaskRoomPresenter do
-  # Everything this presenter needs from the outside arrives through the view
-  # context, so the whole thing can be exercised without a request.
+  let(:selected_date) { Date.new(2026, 8, 15) }
+  let(:hotel) { build_stubbed(:hotel) }
+  let(:room_type) { build_stubbed(:room_type, name: "Ocean Suite", smoking_allowed: false, pets_allowed: true) }
   let(:view_context) do
     context = double("view context")
     allow(context).to receive(:display_housekeeping_datetime) { |value| "at #{value.strftime('%H:%M')}" }
     allow(context).to receive(:display_housekeeping_date) { |value| "on #{value.to_date}" }
-    allow(context).to receive(:assign_hotel_housekeeping_task_path) { |_hotel, id| "/assign/housekeeping/#{id}" }
-    allow(context).to receive(:status_hotel_housekeeping_task_path) { |_hotel, id| "/status/housekeeping/#{id}" }
+    allow(context).to receive(:hotel_housekeeping_room_status_path) { "/rooms/status" }
+    allow(context).to receive(:hotel_housekeeping_room_assignment_path) { "/rooms/assignment" }
+    allow(context).to receive(:hotel_housekeeping_room_remarks_path) { "/rooms/remarks" }
+    allow(context).to receive(:hotel_edit_housekeeping_room_remarks_path) { "/rooms/remarks/edit" }
     context
   end
 
-  let(:hotel) { build_stubbed(:hotel) }
-  let(:room_type) { build_stubbed(:room_type, name: "Ocean Suite", smoking_allowed: false, pets_allowed: true) }
-
-  def task(id: 1, status: "assigned", source_kind: "housekeeping", metadata: {}, details: "Fresh towels")
-    HousekeepingTasks::TaskRow.new(
-      id: id, booking: nil, room_number: "101", request_details: details, status: status,
-      metadata: metadata, created_at: Time.current, requested_at: Time.current, source_kind: source_kind
-    )
+  before do
+    allow(hotel).to receive(:current_business_date).and_return(selected_date)
   end
 
-  def present(resolved_status: "dirty", booking: nil, tasks: [ task ])
+  def present(
+    resolved_status: "dirty",
+    booking: nil,
+    booking_status: "vacant",
+    booking_status_label: "Vacant",
+    notes: nil,
+    assigned_to: nil,
+    assigned_to_id: nil,
+    late_checkout_eligible: false,
+    date: selected_date
+  )
     described_class.new(
-      { room_number: "101", room_type: room_type, resolved_status: resolved_status,
-        active_booking: booking, hk_requests: tasks },
-      hotel: hotel,
-      view_context: view_context
+      {
+        room_number: "101",
+        room_type:,
+        resolved_status:,
+        booking:,
+        booking_status:,
+        booking_status_label:,
+        notes:,
+        assigned_to:,
+        assigned_to_id:,
+        late_checkout_eligible:,
+        pax: booking ? "#{booking.adults}/#{booking.children}" : "—"
+      },
+      hotel:,
+      view_context:,
+      selected_date: date
     )
   end
 
-  describe "the room's own columns" do
-    it "names the status the way every other page names it" do
-      expect(present(resolved_status: "out_of_service").display_status).to eq("Out of Service")
-      expect(present(resolved_status: "out_of_service").status_badge_variant).to eq(:destructive)
-    end
-
-    it "reads the real timestamps once the guest has arrived and left" do
-      booking = build_stubbed(:booking, checked_in_at: Time.zone.local(2026, 7, 21, 14, 30),
-                                        checked_out_at: Time.zone.local(2026, 7, 23, 11, 0))
-
-      expect(present(booking: booking).arrival).to eq("at 14:30")
-      expect(present(booking: booking).departure).to eq("at 11:00")
-    end
-
-    it "falls back to the booked dates while the stay has not happened yet" do
-      booking = build_stubbed(:booking, checked_in_at: nil, checked_out_at: nil,
-                                        check_in: Date.new(2026, 7, 21), check_out: Date.new(2026, 7, 23))
-
-      expect(present(booking: booking).arrival).to eq("on 2026-07-21")
-      expect(present(booking: booking).departure).to eq("on 2026-07-23")
-    end
-
-    it "says so plainly when no booking holds the room" do
-      expect(present.arrival).to eq("-")
-      expect(present.departure).to eq("-")
-      expect(present.nights).to eq("-")
-    end
-
-    it "spans the room's columns across however many tasks it has" do
-      expect(present(tasks: [ task(id: 1), task(id: 2) ]).row_span).to eq(2)
-      expect(present(tasks: [ task ]).row_span).to eq(1)
-    end
+  it "uses housekeeping-specific room labels without changing shared Ready terminology" do
+    expect(present(resolved_status: "ready").display_status).to eq("Cleaned")
+    expect(present(resolved_status: "out_of_service").display_status).to eq("Out of service")
+    expect(present(resolved_status: "out_of_service").status_badge_variant).to eq(:destructive)
   end
 
-  describe "a task on the row" do
-    it "routes a housekeeping task to the board's own endpoints" do
-      presented = present.first_task_request
+  it "hides inspection actions before cleaning and disables an ineligible late checkout" do
+    choices = present(resolved_status: "dirty").status_choices.index_by { |choice| choice[:value] }
 
-      expect(presented.assign_url).to eq("/assign/housekeeping/1")
-      expect(presented.status_url).to eq("/status/housekeeping/1")
-    end
+    expect(choices.keys).to eq(RoomStatus::STATUSES - described_class::INSPECTION_STATUSES)
+    expect(choices.fetch("cleaning")[:disabled]).to be(false)
+    expect(choices.fetch("dirty")[:disabled]).to be(false)
+    expect(choices.fetch("late_checkout_detected")[:disabled]).to be(true)
+  end
 
-    it "routes a checkout turnover task to the housekeeping endpoints" do
-      presented = present(tasks: [ task(id: 7, source_kind: "checkout") ]).first_task_request
+  it "reveals inspection actions during cleaning and enables an eligible late checkout" do
+    cleaning_choices = present(resolved_status: "cleaning").status_choices.index_by { |choice| choice[:value] }
+    eligible_choices = present(resolved_status: "dirty", late_checkout_eligible: true)
+      .status_choices.index_by { |choice| choice[:value] }
 
-      expect(presented.assign_url).to eq("/assign/housekeeping/7")
-      expect(presented.status_url).to eq("/status/housekeeping/7")
-    end
+    expect(cleaning_choices.keys).to eq(RoomStatus::STATUSES)
+    expect(cleaning_choices.fetch("awaiting_inspection")[:disabled]).to be(false)
+    expect(cleaning_choices.fetch("inspection_failed")[:disabled]).to be(false)
+    expect(eligible_choices.fetch("late_checkout_detected")[:disabled]).to be(false)
+  end
 
-    it "offers no route at all for the stand-in row of a room with nothing to do" do
-      presented = present(tasks: [ task(id: nil, status: "no_task", details: "-") ]).first_task_request
+  it "explains that remarks are required before selecting Cleaned" do
+    without_remarks = present(resolved_status: "cleaning").status_choices.index_by { |choice| choice[:value] }
+    with_remarks = present(resolved_status: "cleaning", notes: "Inspection complete")
+      .status_choices.index_by { |choice| choice[:value] }
 
-      expect(presented).not_to be_assignable
-      expect(presented.assign_url).to be_nil
-      expect(presented.status_url).to be_nil
-      expect(presented.fallback_status_label).to eq("No Task")
-    end
+    expect(without_remarks.fetch("ready")).to include(label: "Cleaned — add remarks first", disabled: true)
+    expect(with_remarks.fetch("ready")).to include(label: "Cleaned", disabled: false)
+  end
 
-    it "offers the one step that is actually next" do
-      expect(present(tasks: [ task(status: "assigned") ]).first_task_request.next_status_action).to eq(:start)
-      expect(present(tasks: [ task(status: "in_progress") ]).first_task_request.next_status_action).to eq(:complete)
-      expect(present(tasks: [ task(status: "completed") ]).first_task_request.next_status_action).to be_nil
-    end
+  it "is writable only on the current hotel business date" do
+    expect(present).to be_writable
+    expect(present(date: selected_date - 1.day)).not_to be_writable
+  end
 
-    it "lets a performer take unclaimed work and release only their own" do
-      user = build_stubbed(:user, id: 42)
-      colleague = build_stubbed(:user, id: 43)
+  it "builds room-keyed status, assignment, and remark routes" do
+    presented = present
 
-      unclaimed = present(tasks: [ task(metadata: {}) ]).first_task_request
-      theirs = present(tasks: [ task(metadata: { "assigned_to" => 42 }) ]).first_task_request
-      colleagues = present(tasks: [ task(metadata: { "assigned_to" => 43 }) ]).first_task_request
+    expect(presented.status_url).to eq("/rooms/status")
+    expect(presented.assignment_url).to eq("/rooms/assignment")
+    expect(presented.remarks_url).to eq("/rooms/remarks")
+    expect(presented.edit_remarks_url(return_to: "/board")).to eq("/rooms/remarks/edit")
+    expect(view_context).to have_received(:hotel_housekeeping_room_status_path).with(
+      hotel,
+      room_type_id: room_type.id,
+      room_number: "101"
+    )
+  end
 
-      expect(unclaimed.take_release_action(user)).to eq(:take)
-      expect(theirs.take_release_action(user)).to eq(:release)
-      expect(colleagues.take_release_action(user)).to be_nil
-      expect(theirs.take_release_action(colleague)).to be_nil
-    end
+  it "shows actual stay timestamps and falls back to scheduled dates" do
+    actual = build_stubbed(
+      :booking,
+      checked_in_at: Time.zone.local(2026, 8, 15, 14, 30),
+      checked_out_at: Time.zone.local(2026, 8, 17, 11),
+      check_in: selected_date,
+      check_out: selected_date + 2.days
+    )
+    scheduled = build_stubbed(
+      :booking,
+      checked_in_at: nil,
+      checked_out_at: nil,
+      check_in: selected_date,
+      check_out: selected_date + 2.days
+    )
 
-    it "puts only a note too long for the column behind a tooltip" do
-      short = present(tasks: [ task(details: "Fresh towels") ]).first_task_request
-      long = present(tasks: [ task(details: "T" * 81) ]).first_task_request
+    expect(present(booking: actual).arrival).to eq("at 14:30")
+    expect(present(booking: actual).departure).to eq("at 11:00")
+    expect(present(booking: scheduled).arrival).to eq("on 2026-08-15")
+    expect(present(booking: scheduled).departure).to eq("at #{scheduled.check_out.strftime('%H:%M')}")
+    expect(present.arrival).to eq("—")
+  end
 
-      expect(short).to have_details
-      expect(short).not_to be_long_details
-      expect(long).to be_long_details
-    end
+  it "presents room-level remarks and assignment" do
+    housekeeper = build_stubbed(:user, name: "Ari Housekeeper")
+    presented = present(notes: "Inspect the balcony", assigned_to: housekeeper, assigned_to_id: housekeeper.id)
 
-    # Every row on this board is a housekeeping request now -- turnover work is a
-    # housekeeping task linked to its checkout, not a checkout row of its own --
-    # so the id alone is what has to stay unique.
-    it "keys its dom id off the task it stands for" do
-      expect(present(tasks: [ task(id: 5) ]).first_task_request.dom_key).to eq("housekeeping-5")
-      expect(present(tasks: [ task(id: 6) ]).first_task_request.dom_key).to eq("housekeeping-6")
-    end
+    expect(presented).to have_remarks
+    expect(presented.remarks).to eq("Inspect the balcony")
+    expect(presented.assigned_to_name).to eq("Ari Housekeeper")
+    expect(presented.assigned_to_value).to eq(housekeeper.id.to_s)
   end
 end

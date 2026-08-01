@@ -21,57 +21,99 @@ module HotelPortal
       end
     end
 
-    def assign
-      HousekeepingTasks::AssignStaff.new(
+    def update_room_assignment
+      result = HousekeepingTasks::AssignRoom.new(
         hotel: current_hotel,
-        request_id: params[:id],
-        assigned_to_id: params[:assigned_to],
+        room_type_id: params[:room_type_id],
+        room_number: params[:room_number],
+        date: mutation_date,
+        assigned_to_id: params[:assigned_to_id],
         current_user: current_user
       ).call
 
-      respond_to do |format|
-        format.html { redirect_to board_return_path, notice: "Task assigned successfully." }
-        format.json { render json: { ok: true } }
-      end
+      respond_with_room_result(result, success_notice: "Housekeeping assignment updated.")
     end
 
-    # Starting and completing a task is the housekeeper's own job, so it is gated
-    # on the board's permissions and answered here. The Requests page has its own
-    # route onto the same updater, gated on managing requests, which is a
-    # different job done by different people.
-    def update_status
-      task = HousekeepingRequest.in_hotel(current_hotel).operational_tasks.find(params[:id])
-      authorize_advance!(task)
-
-      updater = ::HotelPortal::Requests::StatusUpdater.new(
+    def update_room_status
+      result = HousekeepingTasks::UpdateRoomStatus.new(
         hotel: current_hotel,
-        kind: :housekeeping,
-        request_id: params[:id],
+        room_type_id: params[:room_type_id],
+        room_number: params[:room_number],
+        date: mutation_date,
         status: params[:status],
-        work_contexts: HousekeepingRequest::OPERATIONAL_CONTEXTS
-      )
+        notes: params[:notes],
+        current_user: current_user
+      ).call
 
-      redirect_target = safe_redirect_target(board_return_path)
-      if (request = updater.call)
-        respond_to do |format|
-          format.html { redirect_to redirect_target, notice: "Task updated successfully." }
-          format.json { render json: { ok: true, status: request.status } }
-        end
-      else
-        respond_to do |format|
-          format.html { redirect_to redirect_target, alert: "Failed to update task." }
-          format.json { render json: { ok: false }, status: :unprocessable_entity }
-        end
+      respond_with_room_result(result, success_notice: "Room status updated.")
+    end
+
+    def edit_remarks
+      unless current_housekeeping_date?
+        return redirect_to board_return_path, alert: "Housekeeping can only be updated for the current business date."
       end
+
+      @room_type = current_hotel.room_types.find(params[:room_type_id])
+      @room_number = params[:room_number].to_s.strip
+      raise ActiveRecord::RecordNotFound unless @room_type.room_numbers.include?(@room_number)
+
+      @room_status = current_hotel.room_statuses.find_or_initialize_by(room_type: @room_type, room_number: @room_number)
+      @selected_date = Date.parse(mutation_date.to_s)
+      @return_to = housekeeping_return_to
+      render "hotel_portal/housekeeping_tasks/remarks/edit", layout: false
+    end
+
+    def update_remarks
+      result = HousekeepingTasks::UpdateRoomRemarks.new(
+        hotel: current_hotel,
+        room_type_id: params[:room_type_id],
+        room_number: params[:room_number],
+        date: mutation_date,
+        notes: params[:notes],
+        current_user: current_user
+      ).call
+
+      respond_with_room_result(result, success_notice: "Housekeeping remarks updated.")
     end
 
     private
+
+    def mutation_date
+      params[:date].presence || current_hotel.current_business_date || current_hotel.business_date_for(Time.current)
+    end
+
+    def current_housekeeping_date?
+      Date.parse(mutation_date.to_s) == (current_hotel.current_business_date || current_hotel.business_date_for(Time.current)).to_date
+    rescue Date::Error, TypeError
+      false
+    end
+
+    def housekeeping_return_to
+      candidate = params[:return_to].to_s
+      return board_return_path unless candidate.start_with?("/")
+      return board_return_path if candidate.start_with?("//")
+
+      candidate
+    end
+
+    def respond_with_room_result(result, success_notice:)
+      redirect_target = housekeeping_return_to
+      respond_to do |format|
+        if result.success?
+          format.html { redirect_to redirect_target, notice: success_notice }
+          format.json { render json: { ok: true, room_status: result.try(:room_status)&.status } }
+        else
+          format.html { redirect_to redirect_target, alert: result.error }
+          format.json { render json: { ok: false, error: result.error }, status: :unprocessable_content }
+        end
+      end
+    end
 
     # A board is always for some date, and a date nobody can read is today.
     def selected_date
       Date.parse(params[:date].to_s)
     rescue ArgumentError, TypeError
-      Date.current
+      current_hotel.current_business_date || current_hotel.business_date_for(Time.current)
     end
 
     def board
@@ -80,7 +122,7 @@ module HotelPortal
         date: @selected_date,
         query: params[:q],
         assigned_to: params[:assigned_to],
-        room_status: params[:room_status]
+        booking_status: params[:booking_status]
       ).call
     end
 
@@ -93,7 +135,14 @@ module HotelPortal
       room_groups.map do |group|
         {
           room_type: group[:room_type],
-          rooms: group[:rooms].map { |room| HousekeepingTaskRoomPresenter.new(room, hotel: current_hotel, view_context: context) }
+          rooms: group[:rooms].map do |room|
+            HousekeepingTaskRoomPresenter.new(
+              room,
+              hotel: current_hotel,
+              view_context: context,
+              selected_date: @selected_date
+            )
+          end
         }
       end
     end

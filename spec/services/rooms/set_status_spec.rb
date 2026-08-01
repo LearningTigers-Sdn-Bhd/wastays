@@ -62,7 +62,8 @@ RSpec.describe Rooms::SetStatus do
       room_status: room_status,
       status: "late_checkout_detected",
       user: user,
-      reason: "Guest still in room"
+      reason: "Guest still in room",
+      booking: booking
     ).call
 
     expect(result).to be_success
@@ -86,7 +87,7 @@ RSpec.describe Rooms::SetStatus do
     ).call
 
     expect(result).not_to be_success
-    expect(result.error).to eq("Notes are mandatory when marking a room as ready.")
+    expect(result.error).to eq("Add remarks before marking this room Cleaned")
     expect(room_status.reload.status).to eq("cleaning")
   end
 

@@ -79,7 +79,17 @@ module Bookings
           ).call
 
           if transition_result.success?
-            result = success
+            restore_result = HousekeepingTasks::RestoreLateCheckoutRoomStatuses.new(
+              booking: @booking,
+              user: @user
+            ).call
+
+            if restore_result.success?
+              result = success
+            else
+              result = failure(restore_result.error)
+              raise ActiveRecord::Rollback
+            end
           else
             result = transition_result
             raise ActiveRecord::Rollback

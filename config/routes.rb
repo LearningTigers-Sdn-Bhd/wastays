@@ -410,12 +410,6 @@ Rails.application.routes.draw do
       match "internal-notes/:booking_id/:note_id/delete", to: "internal_notes#delete", via: [ :get, :delete ], as: :delete_internal_note
     end
 
-    scope "housekeeping-actions", as: :housekeeping_action, module: "housekeeping_actions" do
-      # A room is a room type plus a number rather than a record, so it travels
-      # as both. GET renders the sheet, POST adds the task.
-      match "new-task", to: "task_creations#show", via: [ :get, :post ], as: :new_task
-    end
-
     scope "request-actions", as: :request_action, module: "requests/actions" do
       # A request is one of three tables, so it travels as its kind and its id
       # the way it does everywhere else on the board.
@@ -450,12 +444,15 @@ Rails.application.routes.draw do
     # Putting a request in a lane -- dragged there, or asked for by the button on
     # the card. One endpoint, so the two gestures cannot mean different things.
     patch "requests/move", to: "requests#move", as: :requests_move
-    resources :housekeeping_tasks, only: [ :index ] do
-      member do
-        patch :assign
-        patch "status", to: "housekeeping_tasks#update_status", as: :status
-      end
-    end
+    resources :housekeeping_tasks, only: [ :index ]
+    patch "housekeeping-tasks/rooms/:room_type_id/:room_number/status",
+          to: "housekeeping_tasks#update_room_status", as: :housekeeping_room_status
+    patch "housekeeping-tasks/rooms/:room_type_id/:room_number/assignment",
+          to: "housekeeping_tasks#update_room_assignment", as: :housekeeping_room_assignment
+    get "housekeeping-tasks/rooms/:room_type_id/:room_number/remarks/edit",
+        to: "housekeeping_tasks#edit_remarks", as: :edit_housekeeping_room_remarks
+    patch "housekeeping-tasks/rooms/:room_type_id/:room_number/remarks",
+          to: "housekeeping_tasks#update_remarks", as: :housekeeping_room_remarks
     patch "requests/:kind/:request_id", to: "requests#update_status", as: :request_status
     post "requests/:kind/:request_id/cancel", to: "requests#cancel_request", as: :cancel_request
     patch "requests/:kind/:request_id/archive", to: "requests#archive_request", as: :archive_request

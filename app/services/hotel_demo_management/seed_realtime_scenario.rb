@@ -509,28 +509,35 @@ module HotelDemoManagement
 
       booking.update!(payment_status: "captured") if company_folio_ids.empty?
       release_security_deposit(booking, check_out_time, acting_user)
-      complete_historical_checkout_cleaning(booking) if date < current_hotel_date
+      complete_historical_checkout_cleaning(booking, acting_user) if date < current_hotel_date
     end
 
-    # Checking the booking out raised the turnover; a departure old enough to be
-    # history has been cleaned up after by now.
-    def complete_historical_checkout_cleaning(booking)
-      tasks = HousekeepingRequest.checkout_turnovers.open_tasks.where(booking_id: booking.id).order(:id).to_a
-
+    # Historical departures have already gone through their room-level cleaning
+    # cycle. Walk the real status transitions so the demo retains useful audit
+    # history without manufacturing retired housekeeping tasks.
+    def complete_historical_checkout_cleaning(booking, acting_user)
       ActiveRecord::Base.transaction do
-        tasks.each do |task|
-          # Walked rather than jumped, so the room's own history reads the way a
-          # real turnover would: dirty, then cleaning, then ready.
-          %w[in_progress completed].each do |status|
-            result = HotelPortal::Requests::StatusUpdater.new(
-              hotel: @hotel,
-              kind: :housekeeping,
-              request_id: task.id,
+        booking.booking_rooms.includes(:room_type).where.not(room_number: [ nil, "" ]).find_each do |booking_room|
+          room_status = RoomStatus.find_or_create_by!(
+            hotel: @hotel,
+            room_type: booking_room.room_type,
+            room_number: booking_room.room_number
+          )
+
+          [
+            [ "cleaning", "checkout_room_cleaning_started", "Historical checkout cleaning started" ],
+            [ "ready", "checkout_room_cleaning_completed", "Historical checkout cleaning completed" ]
+          ].each do |status, event_type, reason|
+            result = Rooms::SetStatus.new(
+              room_status: room_status,
               status: status,
-              work_contexts: HousekeepingRequest::OPERATIONAL_CONTEXTS,
-              trigger_webhook: false
+              user: acting_user,
+              booking: booking,
+              event_type: event_type,
+              reason: reason,
+              clear_assignment: status == "ready"
             ).call
-            raise "Failed to mark checkout cleaning #{status} for booking #{booking.id}" unless result
+            raise "Failed to mark room #{booking_room.room_number} #{status}: #{result.error}" unless result.success?
           end
         end
       end

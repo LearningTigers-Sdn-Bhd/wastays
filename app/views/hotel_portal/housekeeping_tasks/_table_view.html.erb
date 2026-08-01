@@ -1,10 +1,11 @@
 <% form_url = hotel_housekeeping_tasks_path(current_hotel) %>
-<% board_return_url = hotel_housekeeping_tasks_path(current_hotel, board_filters) %>
+<% board_return_url = hotel_housekeeping_tasks_path(current_hotel, board_filters.merge(date: @selected_date.iso8601)) %>
 <% staff_choices = @staff_members.map { |staff| [ staff.name, staff.id ] } %>
+<% writable_date = @selected_date == (current_hotel.current_business_date || current_hotel.business_date_for(Time.current)) %>
 
 <div class="space-y-6">
   <section class="space-y-3" aria-labelledby="hk-filters-heading">
-    <h2 id="hk-filters-heading" class="sr-only">Filter housekeeping tasks</h2>
+    <h2 id="hk-filters-heading" class="sr-only">Filter housekeeping rooms</h2>
 
     <%= form_with url: form_url, method: :get, id: "hk-filters-form",
           data: {
@@ -14,24 +15,24 @@
           },
           class: "grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-5" do |form| %>
 
-      <%= render PanelsUI::FormField.new(form: form, attribute: :q, label: "Search", class: "lg:col-span-2") do |field| %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :q, label: "Search", class: "lg:col-span-2") do |field| %>
         <% field.with_addon(align: :inline_start, variant: :bare) do %>
-          <%= app_icon "search", class: "size-4 text-muted-foreground" %>
+          <%= app_icon "search", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
         <% end %>
         <% field.with_input(type: :search, value: params[:q], autocomplete: "off",
-                            placeholder: "Guest, booking or request") %>
+                            placeholder: "Room, guest, booking or remarks") %>
       <% end %>
 
-      <%= render PanelsUI::FormField.new(form: form, attribute: :assigned_to, label: "Assigned to") do |field| %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :assigned_to, label: "Assigned to") do |field| %>
         <% field.with_select_menu([ [ "All staff", "" ] ] + staff_choices, selected: params[:assigned_to].to_s) %>
       <% end %>
 
-      <%= render PanelsUI::FormField.new(form: form, attribute: :room_status, label: "Room status") do |field| %>
-        <% field.with_select_menu(room_status_filter_options, selected: params[:room_status].to_s) %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :booking_status, label: "Booking status") do |field| %>
+        <% field.with_select_menu(booking_status_filter_options, selected: params[:booking_status].to_s) %>
       <% end %>
 
       <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
-        <%= render PanelsUI::FormField.new(form: form, attribute: :date, label: "As of date", class: "flex-1") do |field| %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :date, label: "As of date", class: "flex-1") do |field| %>
           <% field.with_date_picker(value: @selected_date.iso8601, placeholder: "As of date") %>
         <% end %>
         <%= render PanelsUI::Button.new(label: "Apply", variant: :secondary, type: "submit") %>
@@ -40,11 +41,17 @@
   </section>
 
   <section class="space-y-3" aria-labelledby="hk-board-heading" data-controller="results-announcer">
-    <h2 id="hk-board-heading" class="sr-only">Housekeeping task board</h2>
+    <h2 id="hk-board-heading" class="sr-only">Housekeeping room board</h2>
     <p class="sr-only" role="status" aria-live="polite" aria-atomic="true"
        data-results-announcer-target="status"></p>
 
     <%= turbo_frame_tag "housekeeping_tasks_results" do %>
+      <% unless writable_date %>
+        <div class="mb-3 rounded-lg border border-border bg-muted px-4 py-3 text-sm text-muted-foreground" role="note">
+          Room status, assignment, and remarks are read-only outside the current business date.
+        </div>
+      <% end %>
+
       <p hidden data-board-summary>
         <%= pluralize(@room_groups.sum { |group| group[:rooms].size }, "room") %>
         matching the current filters.
@@ -52,35 +59,32 @@
 
       <% if @room_groups.any? %>
         <%= render PanelsUI::Table.new(
-              caption: "Housekeeping tasks by room type",
+              caption: "Housekeeping rooms by room type",
               density: :compact,
               header_style: :sentence,
               hoverable: true,
               sticky_header: true,
-              # The board is long: it scrolls in its own box, so the filter bar and the
-              # column headers stay put rather than the whole page moving. overscroll-none
-              # stops the trackpad's rubber-band bounce at either end, and stops the
-              # leftover momentum from chaining out into the page behind it.
-              wrapper_class: "max-h-[75dvh] overflow-y-auto overscroll-none rounded-lg border border-border bg-card",
+              wrapper_class: "max-h-[75dvh] overflow-auto overscroll-none rounded-lg border border-border bg-card",
               data: { controller: "table-group" }
             ) do |table| %>
           <% table.with_header do %>
             <tr>
-              <th scope="col">Room</th>
+              <th scope="col">Room type</th>
+              <th scope="col" class="text-center">Pax</th>
+              <th scope="col">Room status</th>
+              <th scope="col">Assigned to</th>
+              <th scope="col" class="text-center">Booking status</th>
               <th scope="col" class="text-end">Arrival</th>
               <th scope="col" class="text-end">Departure</th>
               <th scope="col" class="text-center">Nights</th>
-              <th scope="col">Task</th>
-              <th scope="col">Assign to</th>
-              <th scope="col" class="text-center">Room status</th>
-              <th scope="col" class="text-end">Task status</th>
+              <th scope="col">Remarks</th>
             </tr>
           <% end %>
 
           <% table.with_body do %>
             <% @room_groups.each_with_index do |group, group_index| %>
               <% group_key = "hk-group-#{group[:room_type]&.id || group_index}" %>
-              <% row_ids = group[:rooms].flat_map { |room| Array.new(room.row_span) { |i| "#{group_key}-#{room.dom_key}-#{i}" } } %>
+              <% row_ids = group[:rooms].map { |room| "#{group_key}-#{room.dom_key}" } %>
 
               <tr class="bg-muted/55" data-slot="room-type-group">
                 <th scope="rowgroup" colspan="9">
@@ -103,199 +107,137 @@
               </tr>
 
               <% group[:rooms].each do |room| %>
-                <% tasks = room.task_requests %>
-                <% tasks.each_with_index do |task, task_index| %>
-                  <tr id="<%= "#{group_key}-#{room.dom_key}-#{task_index}" %>"
-                      class="align-top"
-                      data-group="<%= group_key %>">
+                <tr id="<%= "#{group_key}-#{room.dom_key}" %>" class="align-middle" data-group="<%= group_key %>">
+                  <th scope="row" class="whitespace-nowrap">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-medium text-foreground"><%= room.room_number %></span>
+                      <span class="flex shrink-0 items-center gap-1.5">
+                        <%= render "shared/room_attribute_icon",
+                              allowed: room.smoking_allowed?,
+                              icon_name: "cigarette",
+                              allowed_label: "Smoking Allowed",
+                              disallowed_label: "No Smoking" %>
+                        <%= render "shared/room_attribute_icon",
+                              allowed: room.pets_allowed?,
+                              icon_name: "paw-print",
+                              allowed_label: "Pets Allowed",
+                              disallowed_label: "No Pets",
+                              disallowed_icon_size: "size-3" %>
+                      </span>
+                    </div>
+                  </th>
 
-                    <% if task_index.zero? %>
-                      <th scope="row" rowspan="<%= room.row_span %>" class="whitespace-nowrap">
-                        <div class="flex items-center justify-between gap-2">
-                          <span class="font-medium text-foreground"><%= room.room_number %></span>
-                          <% if room.room_type %>
-                            <span class="flex shrink-0 items-center gap-1.5">
-                              <%= render "shared/room_attribute_icon",
-                                    allowed: room.smoking_allowed?,
-                                    icon_name: "cigarette",
-                                    allowed_label: "Smoking Allowed",
-                                    disallowed_label: "No Smoking" %>
-                              <%= render "shared/room_attribute_icon",
-                                    allowed: room.pets_allowed?,
-                                    icon_name: "paw-print",
-                                    allowed_label: "Pets Allowed",
-                                    disallowed_label: "No Pets",
-                                    disallowed_icon_size: "size-3" %>
-                            </span>
+                  <td class="whitespace-nowrap text-center tabular-nums"><%= room.pax %></td>
+
+                  <td class="w-52 whitespace-nowrap">
+                    <% if room.writable? %>
+                      <% status_id = "hk-room-status-#{room.dom_key}" %>
+                      <%= form_with url: room.status_url, method: :patch, class: "contents",
+                            data: {
+                              controller: "auto-submit",
+                              action: "change->auto-submit#submitNow",
+                              turbo_frame: "_top"
+                            } do |form| %>
+                        <%= hidden_field_tag :date, @selected_date.iso8601, id: nil %>
+                        <% board_filters.each do |key, value| %>
+                          <%= hidden_field_tag "filters[#{key}]", value, id: nil %>
+                        <% end %>
+                        <%= label_tag status_id, "Room status for #{room.label}", class: "sr-only" %>
+                        <%= render PanelsUI::SelectMenu.new(
+                              form:,
+                              attribute: :status,
+                              id: status_id,
+                              size: :sm,
+                              class: "w-48",
+                              choices: room.status_choices,
+                              selected: room.resolved_status) %>
+                      <% end %>
+                    <% else %>
+                      <%= render PanelsUI::Badge.new(
+                            label: room.display_status,
+                            variant: room.status_badge_variant,
+                            size: :sm,
+                            class: "w-full justify-center") %>
+                    <% end %>
+                  </td>
+
+                  <td class="whitespace-nowrap">
+                    <% if dispatch_housekeeping? && room.writable? %>
+                      <% assignment_id = "hk-assignment-#{room.dom_key}" %>
+                      <%= form_with url: room.assignment_url, method: :patch, class: "contents",
+                            data: { controller: "auto-submit", action: "change->auto-submit#submitNow" } do |form| %>
+                        <%= hidden_field_tag :date, @selected_date.iso8601, id: nil %>
+                        <% board_filters.each do |key, value| %>
+                          <%= hidden_field_tag "filters[#{key}]", value, id: nil %>
+                        <% end %>
+                        <%= label_tag assignment_id, "Assign housekeeper for #{room.label}", class: "sr-only" %>
+                        <%= render PanelsUI::Combobox.new(
+                              form:,
+                              attribute: :assigned_to_id,
+                              id: assignment_id,
+                              size: :sm,
+                              class: "w-44",
+                              choices: [ [ "Unassigned", "" ] ] + staff_choices,
+                              selected: room.assigned_to_value,
+                              allow_empty_option: true,
+                              placeholder: "Unassigned",
+                              empty_text: "No staff found") %>
+                      <% end %>
+                    <% else %>
+                      <span class="text-sm <%= room.assigned_to ? "text-foreground" : "text-muted-foreground" %>">
+                        <%= room.assigned_to_name %>
+                      </span>
+                    <% end %>
+                  </td>
+
+                  <td class="w-36 text-center">
+                    <%= render PanelsUI::Badge.new(
+                          label: room.booking_status_label,
+                          variant: room.booking_status_badge_variant,
+                          size: :sm,
+                          class: "w-full justify-center") %>
+                  </td>
+
+                  <td class="whitespace-nowrap text-end"><%= room.arrival %></td>
+                  <td class="whitespace-nowrap text-end"><%= room.departure %></td>
+                  <td class="text-center tabular-nums"><%= room.nights %></td>
+
+                  <td class="max-w-xs">
+                    <div class="flex items-center justify-between gap-2">
+                      <p class="line-clamp-2 min-w-0 text-sm <%= room.has_remarks? ? "text-foreground" : "text-muted-foreground" %>"
+                         title="<%= room.notes if room.has_remarks? %>"><%= room.remarks %></p>
+                      <% if room.writable? %>
+                        <div class="flex shrink-0 items-center gap-1">
+                          <% if room.has_remarks? %>
+                            <%= form_with url: room.remarks_url, method: :patch, class: "contents",
+                                  data: { turbo_confirm: "Clear remarks for #{room.label}?" } do %>
+                              <%= hidden_field_tag :date, @selected_date.iso8601, id: nil %>
+                              <%= hidden_field_tag :return_to, board_return_url, id: nil %>
+                              <%= hidden_field_tag :notes, "", id: nil %>
+                              <%= render PanelsUI::Button.new(
+                                    as: :button,
+                                    type: :submit,
+                                    variant: :ghost,
+                                    size: :icon_sm,
+                                    aria_label: "Clear remarks for #{room.label}") do %>
+                                <%= app_icon "x", class: "size-4", aria: { hidden: true } %>
+                              <% end %>
+                            <% end %>
+                          <% end %>
+
+                          <%= render PanelsUI::Button.new(
+                                href: room.edit_remarks_url(return_to: board_return_url),
+                                variant: :ghost,
+                                size: :icon_sm,
+                                data: { turbo_frame: "housekeeping_action_sheet" },
+                                aria_label: "Edit remarks for #{room.label}") do %>
+                            <%= app_icon "pencil", class: "size-4", aria: { hidden: true } %>
                           <% end %>
                         </div>
-                      </th>
-
-                      <td rowspan="<%= room.row_span %>" class="whitespace-nowrap text-end"><%= room.arrival %></td>
-                      <td rowspan="<%= room.row_span %>" class="whitespace-nowrap text-end"><%= room.departure %></td>
-                      <td rowspan="<%= room.row_span %>" class="text-center tabular-nums"><%= room.nights %></td>
-                    <% end %>
-
-                    <td class="max-w-xs">
-                      <% if task.long_details? %>
-                        <%# The clamped note is the trigger, so the full text is one hover %>
-                        <%# or one Tab away rather than mouse-only. %>
-                        <%= render PanelsUI::Popover.new(
-                              id: "hk-note-#{task.dom_key}",
-                              placement: :top_start,
-                              trigger_on: :hover,
-                              class: "max-w-xs whitespace-normal text-left") do |popover| %>
-                          <% popover.with_trigger(unstyled: true, class: "block w-full text-left", aria_label: "Full task note") do %>
-                            <span class="line-clamp-2 text-sm text-foreground"><%= task.request_details %></span>
-                          <% end %>
-                          <p class="text-sm text-card-foreground"><%= task.request_details %></p>
-                        <% end %>
-                      <% elsif task.has_details? %>
-                        <p class="text-sm text-foreground"><%= task.request_details %></p>
-                      <% elsif dispatch_housekeeping? && room.awaiting_task? %>
-                        <%# The room needs work and nobody has said what. Naming it %>
-                        <%# is the dispatcher's job, so the empty cell offers it %>
-                        <%# rather than only reporting the emptiness. %>
-                        <%= render PanelsUI::Button.new(
-                              href: hotel_housekeeping_action_new_task_path(
-                                current_hotel,
-                                room_type_id: room.room_type&.id,
-                                room_number: room.room_number,
-                                return_to: board_return_url),
-                              variant: :ghost,
-                              size: :sm,
-                              data: { turbo_frame: "housekeeping_action_sheet" },
-                              aria_label: "Add a task for #{room.label}") do %>
-                          <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
-                          Add task
-                        <% end %>
-                      <% else %>
-                        <span class="text-sm text-muted-foreground">No task</span>
                       <% end %>
-                    </td>
-
-                    <td class="whitespace-nowrap">
-                      <% if !task.assignable? %>
-                        <span class="text-sm text-muted-foreground">-</span>
-                      <% elsif dispatch_housekeeping? %>
-                        <%# The combobox is rendered directly rather than through a %>
-                        <%# FormField because the field repeats down the column: only an %>
-                        <%# explicit per-task id keeps the ids unique, and the column %>
-                        <%# header carries the label, so the row's own label is sr-only. %>
-                        <% assign_id = "hk-assign-#{task.dom_key}" %>
-                        <%= form_with url: task.assign_url, method: :patch, class: "contents",
-                              data: { controller: "auto-submit", action: "change->auto-submit#submitNow" } do |form| %>
-                          <% board_filters.each do |key, value| %>
-                            <%= hidden_field_tag "filters[#{key}]", value, id: nil %>
-                          <% end %>
-                          <%= label_tag assign_id, "Assign task for #{room.label}", class: "sr-only" %>
-                          <%= render PanelsUI::Combobox.new(
-                                form: form,
-                                attribute: :assigned_to,
-                                id: assign_id,
-                                size: :sm,
-                                class: "w-44",
-                                choices: [ [ "Unassigned", "" ] ] + staff_choices,
-                                selected: task.assigned_to_value.to_s,
-                                allow_empty_option: true,
-                                placeholder: "Unassigned",
-                                empty_text: "No staff found") %>
-                        <% end %>
-                      <% else %>
-                        <% case task.take_release_action(current_user) %>
-                        <% when :take %>
-                          <%= button_to task.assign_url, method: :patch,
-                                params: { assigned_to: current_user.id, filters: board_filters },
-                                class: "panel-button", form: { class: "contents" },
-                                data: { variant: :secondary, size: :sm },
-                                aria: { label: "Take task for #{room.label}" } do %>
-                            Take
-                          <% end %>
-                        <% when :release %>
-                          <%= button_to task.assign_url, method: :patch,
-                                params: { assigned_to: "", filters: board_filters },
-                                class: "panel-button", form: { class: "contents" },
-                                data: { variant: :ghost, size: :sm },
-                                aria: { label: "Release task for #{room.label}" } do %>
-                            Release
-                          <% end %>
-                        <% else %>
-                          <span class="text-sm text-muted-foreground"><%= task.assigned_to_name %></span>
-                        <% end %>
-                      <% end %>
-                    </td>
-
-                    <% if task_index.zero? %>
-                      <td rowspan="<%= room.row_span %>" class="w-28 text-center">
-                        <%= render PanelsUI::Badge.new(
-                              label: room.display_status,
-                              variant: room.status_badge_variant,
-                              size: :sm,
-                              class: "w-full justify-center") %>
-                      </td>
-                    <% end %>
-
-                    <% status_action = task.next_status_action %>
-                    <td class="whitespace-nowrap text-end">
-                      <% if status_action %>
-                        <%# One button, carrying the one step that is actually next for %>
-                        <%# this task: start it, then complete it. %>
-                        <% complete = status_action == :complete %>
-                        <% status_label = complete ? "Complete" : "In progress" %>
-                        <% status_aria_label = complete ? "Complete #{room.label}" : "Start cleaning #{room.label}" %>
-
-                        <% if task.unassigned? %>
-                          <%# Nobody can work a task nobody holds. The dead button is itself %>
-                          <%# the popover trigger, so the reason is one hover or one Tab away %>
-                          <%# without a separate help icon beside it -- which needs %>
-                          <%# aria-disabled rather than disabled, since a disabled button %>
-                          <%# takes neither hover nor focus. %>
-                          <%# whitespace-normal on the panel because the cell is nowrap %>
-                          <%# and white-space inherits into it. %>
-                          <%= render PanelsUI::Popover.new(
-                                id: "hk-status-help-#{task.dom_key}",
-                                placement: :top_end,
-                                trigger_on: :hover,
-                                class: "max-w-xs whitespace-normal text-left") do |popover| %>
-                            <% popover.with_trigger(
-                                 variant: :neutral,
-                                 size: :sm,
-                                 aria_label: status_aria_label,
-                                 aria: { disabled: true }) do %>
-                              <%= status_label %>
-                            <% end %>
-                            <p class="text-sm text-card-foreground">
-                              Assign a housekeeper in the Assign to column first. A task can only be
-                              started or completed once someone holds it.
-                            </p>
-                          <% end %>
-                        <% elsif !dispatch_housekeeping? && !task.held_by?(current_user) %>
-                          <%# A performer works their own tasks. A colleague's reads as its %>
-                          <%# status rather than offering a button the server would refuse. %>
-                          <span class="text-sm text-muted-foreground"><%= task.fallback_status_label %></span>
-                        <% else %>
-                          <%# A room is only completed once it has actually been cleaned, so %>
-                          <%# the button stays visible and goes disabled rather than %>
-                          <%# vanishing under the pointer. %>
-                          <%= form_with url: task.status_url, method: :patch, class: "inline-flex" do %>
-                            <%= hidden_field_tag :redirect_to, board_return_url, id: nil %>
-                            <%= render PanelsUI::Button.new(
-                                  label: status_label,
-                                  variant: :neutral,
-                                  size: :sm,
-                                  type: "submit",
-                                  name: "status",
-                                  value: complete ? "completed" : "in_progress",
-                                  disabled: complete && !room.cleaning?,
-                                  aria_label: status_aria_label) %>
-                          <% end %>
-                        <% end %>
-                      <% else %>
-                        <span class="text-sm text-muted-foreground"><%= task.fallback_status_label %></span>
-                      <% end %>
-                    </td>
-                  </tr>
-                <% end %>
+                    </div>
+                  </td>
+                </tr>
               <% end %>
             <% end %>
           <% end %>

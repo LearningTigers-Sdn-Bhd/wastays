@@ -2,21 +2,43 @@
 
 module HousekeepingTasks
   class BoardBuilder
-    # The statuses Rooms::StatusResolver reasons about. Anything else cannot
-    # make a room look occupied, so it never needs loading.
-    OCCUPYING_BOOKING_STATUSES = %w[confirmed no_show_detected checked_in due_out_detected checkout_required completed].freeze
+    BOOKING_STATUSES = {
+      "out_of_order" => "Out of order",
+      "checked_out" => "Checked out",
+      "checkout_required" => "Checkout required",
+      "pending_checkout" => "Pending checkout",
+      "day_use" => "Day use",
+      "checked_in_today" => "Checked in today",
+      "in_house" => "In house",
+      "day_use_reservation" => "Day-use reservation",
+      "arriving_today" => "Arriving today",
+      "vacant" => "Vacant"
+    }.freeze
 
+    BOOKING_STATUS_PRIORITY = BOOKING_STATUSES.keys.each_with_index.to_h.freeze
+    ROOM_STATUS_LABELS = {
+      "ready" => "Cleaned",
+      "dirty" => "Dirty",
+      "cleaning" => "Cleaning",
+      "awaiting_inspection" => "Awaiting inspection",
+      "inspection_failed" => "Inspection failed",
+      "out_of_service" => "Out of service",
+      "late_checkout_detected" => "Late checkout detected"
+    }.freeze
+    RELEVANT_BOOKING_STATUSES = %w[
+      confirmed no_show_detected checked_in due_out_detected checkout_required completed
+    ].freeze
     EMPTY = [].freeze
 
-    # The board is a hotel's rooms on one date, narrowed by what the filter bar
-    # asked for. Those are values, not a request: the caller reads them off the
-    # params, this builds a board out of them.
-    def initialize(hotel:, date:, query: nil, assigned_to: nil, room_status: nil)
+    def initialize(hotel:, date:, query: nil, assigned_to: nil, booking_status: nil, room_status: nil, now: Time.current)
       @hotel = hotel
-      @date = date
+      @date = date.to_date
+      @now = now
       @query = query.presence&.to_s&.downcase
       @assigned_to_id = assigned_to.presence&.to_i
-      @room_status = room_status.presence&.to_s
+      # room_status is accepted temporarily so old callers fail closed while the
+      # controller and exports move to the booking-centric filter contract.
+      @booking_status = (booking_status.presence || room_status.presence)&.to_s
     end
 
     def call
@@ -25,90 +47,61 @@ module HousekeepingTasks
 
     private
 
-    # A room is a room type plus a number, and numbers repeat across types, so
-    # every lookup in here is keyed on the pair.
     def room_key(room_type_id, room_number)
       [ room_type_id, room_number.to_s ]
     end
 
     def build_room_groups
-      room_types.map do |room_type|
-        {
-          room_type: room_type,
-          rooms: room_type.room_numbers.map { |room_number| build_room(room_type, room_number) }
-        }
+      room_types.filter_map do |room_type|
+        rooms = room_type.room_numbers.map { |room_number| build_room(room_type, room_number) }
+        { room_type:, rooms: } if rooms.any?
       end
     end
 
     def build_room(room_type, room_number)
       key = room_key(room_type.id, room_number)
-
-      resolved = Rooms::StatusResolver.new(
-        hotel: @hotel,
-        room_type: room_type,
-        room_number: room_number,
-        date: @date,
-        bookings_scope: bookings_by_room.fetch(key, EMPTY),
-        blocks_scope: blocks_by_room.fetch(key, EMPTY),
-        statuses_scope: room_statuses_by_room.fetch(key, EMPTY)
-      ).call
-
-      active_booking = resolved.active_booking
+      persisted_status = room_statuses_by_room[key]&.first
+      blocks = blocks_by_room.fetch(key, EMPTY)
+      blocked = blocks.any?
+      physical_status = blocked ? "out_of_service" : persisted_status&.status || "ready"
+      booking_status, booking = booking_projection(
+        bookings_by_room.fetch(key, EMPTY),
+        out_of_order: blocked || physical_status == "out_of_service"
+      )
 
       {
-        room_number: room_number,
-        room_type: room_type,
-        resolved_status: resolved.status,
-        active_booking: active_booking,
-        hk_requests: task_rows_for(key, active_booking, room_number)
+        room_number: room_number.to_s,
+        room_type:,
+        room_status: persisted_status,
+        resolved_status: physical_status,
+        room_status_label: ROOM_STATUS_LABELS.fetch(physical_status),
+        booking:,
+        active_booking: booking,
+        booking_status:,
+        booking_status_label: BOOKING_STATUSES.fetch(booking_status),
+        late_checkout_eligible: late_checkout_eligible?(booking),
+        pax: booking ? "#{booking.adults}/#{booking.children || 0}" : "—",
+        assigned_to: persisted_status&.assigned_to,
+        assigned_to_id: persisted_status&.assigned_to_id,
+        notes: persisted_status&.notes,
+        blocked:
       }
     end
 
-    def task_rows_for(key, active_booking, room_number)
-      rows = task_rows_by_room.fetch(key, EMPTY)
-      real_rows = rows.reject(&:placeholder?)
-
-      return real_rows if real_rows.any?
-      return rows if rows.any?
-
-      [ no_task_row(active_booking, room_number) ]
-    end
-
-    def no_task_row(active_booking, room_number)
-      TaskRow.new(
-        id: nil,
-        booking: active_booking,
-        room_number: room_number,
-        request_details: "-",
-        status: "no_task",
-        metadata: {},
-        created_at: @date.beginning_of_day,
-        requested_at: @date.beginning_of_day,
-        source_kind: "housekeeping"
-      )
-    end
-
-    # -- Preloaded data, one query each for the whole board ------------------
+    # -- Preloaded data -----------------------------------------------------
 
     def room_types
       @room_types ||= @hotel.room_types.order(:name).to_a
     end
 
-    # Which room types use a given number. Only needed for tasks we cannot
-    # place, so that they surface somewhere rather than nowhere.
-    def room_type_ids_by_number
-      @room_type_ids_by_number ||= room_types.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |room_type, memo|
-        room_type.room_numbers.each { |room_number| memo[room_number.to_s] << room_type.id }
-      end
-    end
-
-    # A superset of the bookings covering the selected date -- check_in and
-    # check_out are timestamps, and the resolver compares them as dates, so
-    # the boundaries are left deliberately loose and narrowed there.
     def bookings_by_room
       @bookings_by_room ||= @hotel.bookings
-        .where(status: OCCUPYING_BOOKING_STATUSES)
-        .where("bookings.check_in < :next_day AND bookings.check_out >= :date", date: @date, next_day: @date + 1.day)
+        .where(status: RELEVANT_BOOKING_STATUSES)
+        .where(
+          "bookings.check_in < :next_day AND (bookings.check_out >= :day_start OR bookings.checked_out_at >= :day_start)",
+          day_start: local_day.begin,
+          next_day: local_day.end + 1.second
+        )
         .joins(:booking_rooms)
         .select("bookings.*, booking_rooms.room_type_id AS scoped_room_type_id, booking_rooms.room_number AS scoped_room_number")
         .group_by { |booking| room_key(booking.scoped_room_type_id, booking.scoped_room_number) }
@@ -122,136 +115,106 @@ module HousekeepingTasks
     end
 
     def room_statuses_by_room
-      @room_statuses_by_room ||= @hotel.room_statuses.group_by { |status| room_key(status.room_type_id, status.room_number) }
+      @room_statuses_by_room ||= @hotel.room_statuses.includes(:assigned_to)
+        .group_by { |status| room_key(status.room_type_id, status.room_number) }
     end
 
-    def task_rows_by_room
-      @task_rows_by_room ||= begin
-        rows = Hash.new { |hash, key| hash[key] = [] }
-        add_housekeeping_task_rows(rows)
+    # -- Booking projection ------------------------------------------------
 
-        rows.each_value do |list|
-          list.uniq! { |row| [ row.source_kind, row.id ] }
-          list.sort_by! { |row| [ row.placeholder? ? 1 : 0, -row.created_at.to_i ] }
-        end
-
-        rows
+    def booking_projection(bookings, out_of_order:)
+      projections = bookings.filter_map do |booking|
+        status = projected_booking_status(booking)
+        [ status, booking ] if status
       end
+      selected = projections.min_by { |status, booking| [ BOOKING_STATUS_PRIORITY.fetch(status), -booking.id.to_i ] }
+
+      return [ "out_of_order", selected&.last ] if out_of_order
+      selected || [ "vacant", nil ]
     end
 
-    def add_housekeeping_task_rows(rows)
-      housekeeping_requests.each do |request|
-        housekeeping_room_keys(request).each do |key|
-          rows[key] << task_row_from_housekeeping_request(request)
-        end
-      end
+    def projected_booking_status(booking)
+      return "checked_out" if checked_out_on_selected_date?(booking)
+      return "checkout_required" if booking.status == "checkout_required"
+      return "pending_checkout" if booking.status == "due_out_detected"
+      return "pending_checkout" if booking.status == "checked_in" && local_date(booking.check_out) == @date &&
+        booking.checked_out_at.nil? && !same_day_stay?(booking)
+      return "day_use" if booking.status == "checked_in" && same_day_stay?(booking)
+      return "checked_in_today" if booking.status == "checked_in" && local_date(booking.checked_in_at || booking.check_in) == @date
+      return "in_house" if booking.status == "checked_in"
+      return "day_use_reservation" if booking.status.in?(%w[confirmed no_show_detected]) && same_day_stay?(booking)
+      return "arriving_today" if booking.status.in?(%w[confirmed no_show_detected]) && local_date(booking.check_in) == @date
+
+      nil
     end
 
-    def housekeeping_requests
-      @housekeeping_requests ||= begin
-        ids = HousekeepingRequest.open_tasks
-                                 .operational_tasks
-                                 .left_joins(:booking)
-                                 .where(
-                                   "housekeeping_requests.hotel_id = :hotel_id OR bookings.hotel_id = :hotel_id",
-                                   hotel_id: @hotel.id
-                                 )
-                                 .where(requested_at: ..as_of)
-                                 .ids
+    def checked_out_on_selected_date?(booking)
+      return false unless booking.status == "completed" || booking.checked_out_at.present?
 
-        HousekeepingRequest.where(id: ids).includes(booking: :booking_rooms).to_a
-      end
+      local_date(booking.checked_out_at || booking.check_out) == @date
     end
 
-    # A request with no room number of its own belongs to whichever rooms its
-    # booking holds.
-    def housekeeping_room_keys(request)
-      return room_keys_for(request, request.room_number) if request.room_number.present?
-
-      Array(request.booking&.booking_rooms).filter_map do |booking_room|
-        room_key(booking_room.room_type_id, booking_room.room_number) if booking_room.room_number.present?
-      end
+    def same_day_stay?(booking)
+      local_date(booking.check_in) == @date && local_date(booking.check_out) == @date
     end
 
-    # Resolve the room type from the request's own column when it is set, and
-    # otherwise from the booking room carrying that number. A request that
-    # resolves to neither lands on every room type using the number: it cannot
-    # be placed, and hiding the work outright is worse than showing it twice.
-    def room_keys_for(request, room_number)
-      room_number = room_number.to_s
-      declared_room_type_id = request.room_type_id if request.respond_to?(:room_type_id)
-      return [ room_key(declared_room_type_id, room_number) ] if declared_room_type_id.present?
-
-      matching = Array(request.booking&.booking_rooms).select { |booking_room| booking_room.room_number.to_s == room_number }
-      return matching.map { |booking_room| room_key(booking_room.room_type_id, room_number) } if matching.any?
-
-      room_type_ids_by_number[room_number].map { |room_type_id| room_key(room_type_id, room_number) }
+    def local_date(value)
+      value&.in_time_zone(@hotel.hotel_time_zone)&.to_date
     end
 
-    def as_of
-      @as_of ||= @date.end_of_day
+    def local_day
+      @local_day ||= @date.in_time_zone(@hotel.hotel_time_zone).all_day
     end
 
-    # -- Filtering -----------------------------------------------------------
+    def late_checkout_eligible?(booking)
+      @date == current_business_date &&
+        booking&.status == "checked_in" &&
+        booking.checked_out_at.nil? &&
+        @now >= booking.check_out
+    end
 
-    # Rooms are entries in RoomType#room_numbers, not rows in a table, so there
-    # is nothing to filter in SQL here. Every filter answers the same question of
-    # one room -- keep it or not -- so they are asked together, once, and a room
-    # type drops out when nothing of it is left. A new filter is a new predicate.
+    def current_business_date
+      @current_business_date ||= @hotel.current_business_date || @hotel.business_date_for(@now)
+    end
+
+    # -- Filtering ---------------------------------------------------------
+
     def filter_room_groups(room_groups)
-      predicates = [ assigned_to_predicate, room_status_predicate, query_predicate ].compact
+      predicates = [ assigned_to_predicate, booking_status_predicate, query_predicate ].compact
       return room_groups if predicates.empty?
 
       room_groups.filter_map do |group|
         rooms = group[:rooms].select { |room| predicates.all? { |predicate| predicate.call(group, room) } }
-        { room_type: group[:room_type], rooms: rooms } if rooms.any?
+        { room_type: group[:room_type], rooms: } if rooms.any?
       end
     end
 
     def assigned_to_predicate
       return if @assigned_to_id.nil?
 
-      ->(_group, room) { room[:hk_requests].any? { |task| task.assigned_to_id == @assigned_to_id } }
+      ->(_group, room) { room[:assigned_to_id] == @assigned_to_id }
     end
 
-    def room_status_predicate
-      return if @room_status.nil?
+    def booking_status_predicate
+      return if @booking_status.nil?
 
-      ->(_group, room) { room[:resolved_status] == @room_status }
+      ->(_group, room) { room[:booking_status] == @booking_status }
     end
 
-    # Anything on the row a person might recognise the room by.
     def query_predicate
       return if @query.nil?
 
       lambda do |group, room|
-        booking = room[:active_booking]
+        booking = room[:booking]
 
         matches?(room[:room_number]) ||
           matches?(group[:room_type]&.name) ||
-          (booking && (matches?(booking.guest_name) || matches?(booking.confirmation_token))) ||
-          room[:hk_requests].any? { |task| matches?(task.request_details) }
+          matches?(room[:notes]) ||
+          (booking && (matches?(booking.guest_name) || matches?(booking.confirmation_token)))
       end
     end
 
     def matches?(value)
       value.to_s.downcase.include?(@query)
-    end
-
-    # -- Row construction ----------------------------------------------------
-
-    def task_row_from_housekeeping_request(request)
-      TaskRow.new(
-        id: request.id,
-        booking: request.booking,
-        room_number: request.room_number,
-        request_details: request.request_details,
-        status: request.status,
-        metadata: request.metadata.to_h,
-        created_at: request.created_at,
-        requested_at: request.requested_at || request.created_at,
-        source_kind: "housekeeping"
-      )
     end
   end
 end

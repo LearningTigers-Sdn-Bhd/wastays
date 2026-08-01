@@ -3,12 +3,13 @@
 module Reports
   class HousekeepingTasksExportTable
     HEADERS = [
-      "Room Number", "Room Type", "Assign To", "Room Status", "Arrival Time",
-      "Arrival Date", "Departure", "Nights", "Task Details", "Task Status", "Remark"
+      "Room Number", "Room Type", "Pax", "Room Status", "Assigned To",
+      "Booking Status", "Arrival", "Departure", "Nights", "Remarks"
     ].freeze
-    COLUMN_TYPES = %i[text text text text text date date integer text text text].freeze
-    PDF_HEADERS = [ "Room", "Room Type", "Assigned To", "Room Status", "Stay", "Task Details", "Task Status", "Remark" ].freeze
-    PDF_COLUMN_WIDTHS = [ 55, 90, 85, 70, 120, 190, 85, 82 ].freeze
+    COLUMN_TYPES = %i[text text text text text text text text integer text].freeze
+    PDF_HEADERS = [ "Room", "Room Type", "Pax", "Room Status", "Assigned To",
+                    "Booking Status", "Arrival", "Departure", "Nights", "Remarks" ].freeze
+    PDF_COLUMN_WIDTHS = [ 48, 80, 38, 75, 80, 85, 75, 75, 42, 140 ].freeze
 
     attr_reader :rows
 
@@ -16,51 +17,53 @@ module Reports
       @rows = build_rows(room_groups)
     end
 
-    def task_count = rows.size
-    def assigned_count = rows.count { |row| row[2] != "Unassigned" }
+    def room_count = rows.size
+    def assigned_count = rows.count { |row| row[4] != "Unassigned" }
 
-    def pdf_rows
-      rows.map do |row|
-        [ row[0], row[1], row[2], row[3], stay_label(row), row[8], row[9], row[10].presence || "-" ]
-      end
-    end
+    def pdf_rows = rows
 
     private
 
-    # This is a report of tasks, down to its counts and its "no tasks found"
-    # message, so the board's placeholder rows for rooms with nothing to do are
-    # left out rather than printed as work and counted as work.
     def build_rows(room_groups)
       room_groups.flat_map do |group|
-        group[:rooms].flat_map do |room|
-          room[:hk_requests].reject(&:placeholder?).map { |request| row_for(group, room, request) }
-        end
+        group[:rooms].map { |room| row_for(group, room) }
       end
     end
 
-    def row_for(group, room, request)
-      booking = room[:active_booking]
+    def row_for(group, room)
+      booking = room[:booking]
       [
         room[:room_number].to_s,
         group[:room_type].name.to_s,
-        request.assigned_to_name,
-        ::Rooms::StatusPresentation.label(room[:resolved_status]),
-        booking&.checked_in_at&.strftime("%I:%M %p") || "-",
-        booking&.check_in&.to_date,
-        booking&.check_out&.to_date,
+        room[:pax].presence || "—",
+        room[:room_status_label].to_s,
+        room[:assigned_to]&.name.presence || "Unassigned",
+        room[:booking_status_label].to_s,
+        arrival_for(booking),
+        departure_for(booking),
         booking&.duration_in_nights,
-        request.request_details.to_s,
-        # The same status the board shows: a checkout request carries its own
-        # lifecycle, and the report must not name it something else.
-        request.display_status.to_s.humanize.titleize,
-        ""
+        room[:notes].to_s
       ]
     end
 
-    def stay_label(row)
-      return "-" unless row[5] && row[6]
+    def arrival_for(booking)
+      return "—" unless booking
 
-      "#{row[5].strftime('%d %b')} - #{row[6].strftime('%d %b')} (#{row[7]} nights)"
+      display_datetime(booking.checked_in_at) || display_date(booking.check_in)
+    end
+
+    def departure_for(booking)
+      return "—" unless booking
+
+      display_datetime(booking.checked_out_at || booking.check_out)
+    end
+
+    def display_datetime(value)
+      value&.strftime("%d %b %Y, %I:%M %p")
+    end
+
+    def display_date(value)
+      value&.to_date&.strftime("%d %b %Y") || "—"
     end
   end
 end

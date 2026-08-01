@@ -36,7 +36,8 @@ module Rooms
           room_status: @room_status,
           status: @params[:status],
           user: @user,
-          reason: @params[:notes]
+          reason: @params[:notes],
+          clear_assignment: @params[:status] == "ready"
         ).call
       else
         if @room_status.save
