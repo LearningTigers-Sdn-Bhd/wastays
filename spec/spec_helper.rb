@@ -1,7 +1,8 @@
 # Disable SimpleCov in parallel test runs to prevent lock contention,
 # race conditions, and heavy HTML generation overhead.
-# SimpleCov will still run during serial test executions (e.g. in GitHub Actions CI).
-if ENV['TEST_ENV_NUMBER'].nil? || ENV['TEST_ENV_NUMBER'].empty?
+# SimpleCov will still run during serial test executions unless the caller
+# explicitly opts out for isolated infrastructure specs such as migrations.
+if ENV["SKIP_SIMPLECOV"] != "true" && (ENV["TEST_ENV_NUMBER"].nil? || ENV["TEST_ENV_NUMBER"].empty?)
   require "simplecov"
   SimpleCov.start "rails" do
     skip "/bin/"

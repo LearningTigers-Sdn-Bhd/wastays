@@ -117,7 +117,16 @@ jobs:
           # REDIS_URL: redis://localhost:6379/0
         run: >
           bundle exec parallel_rspec
+          --exclude-pattern 'spec/migrations'
           spec/models spec/services spec/requests spec/jobs spec/helpers
           spec/mailers spec/presenters spec/views spec/tasks spec/seeds
-          spec/migrations spec/integration
+          spec/integration
           -n "${PARALLEL_TEST_PROCESSORS}"
+
+      - name: Run migration tests in isolated processes
+        env:
+          RAILS_ENV: test
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: bin/test-migrations
