@@ -7,7 +7,7 @@ module HotelPortal
   module HousekeepingBoardFilters
     extend ActiveSupport::Concern
 
-    FILTER_KEYS = %i[q date assigned_to room_status].freeze
+    FILTER_KEYS = %i[q date assigned_to booking_status].freeze
 
     included do
       helper_method :board_filters

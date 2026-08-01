@@ -1,7 +1,7 @@
 <% content_for :title, "Housekeeping Tasks | WAStays" %>
 
 <div class="w-full space-y-4">
-  <%= render PanelsUI::PageHeader.new(title: "Housekeeping Tasks", description: "Dispatch and complete work for non-occupied rooms, including checkout turnover.") do |header| %>
+  <%= render PanelsUI::PageHeader.new(title: "Housekeeping Tasks", description: "Review room readiness, booking status, assignments, and housekeeping remarks.") do |header| %>
     <% header.with_actions do %>
       <%= render PanelsUI::DropdownMenu.new(id: "housekeeping-tasks-export-menu", placement: :bottom_end, class: "w-48") do |menu| %>
         <% menu.with_trigger(variant: :neutral, size: :md, class: "w-full sm:w-auto") do %>

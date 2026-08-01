@@ -494,15 +494,8 @@ RSpec.describe Bookings::TransitionStatus do
         expect(room_status.dnd).to be false
         expect(room_status.dnd_date).to be_nil
 
-        # Departing raises the room's turnover, and invents no guest message to
-        # hang it off -- this guest walked to the desk and said nothing.
         expect(CheckOutRequest.find_by(booking: booking)).to be_nil
-
-        expect(HousekeepingRequest.find_by(booking: booking, room_number: "101")).to have_attributes(
-          work_context: "checkout_turnover",
-          request_details: "Checkout turnover",
-          status: "new"
-        )
+        expect(HousekeepingRequest.operational_tasks.where(booking: booking, room_number: "101")).to be_empty
       end
 
       it "creates one turnover per room across a group booking" do
@@ -531,8 +524,7 @@ RSpec.describe Bookings::TransitionStatus do
         expect(second_result.success?).to be(true)
         expect(group_booking.bookings.reload).to all(satisfy { |child| child.booking_rooms.one? })
 
-        turnovers = HousekeepingRequest.checkout_turnovers.where(booking: [ booking, sibling ])
-        expect(turnovers.pluck(:room_number)).to contain_exactly("101", "102")
+        expect(HousekeepingRequest.operational_tasks.where(booking: [ booking, sibling ])).to be_empty
         expect(CheckOutRequest.where(booking: [ booking, sibling ])).to be_empty
       end
     end

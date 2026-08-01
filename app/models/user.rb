@@ -13,6 +13,8 @@ class User < ApplicationRecord
   has_many :performed_night_audits, class_name: "NightAudit", foreign_key: :performed_by_user_id, dependent: :nullify
   has_many :sent_staff_invitations, class_name: "StaffInvitation", foreign_key: :invited_by_user_id, dependent: :restrict_with_error
   has_many :sent_corporate_invitations, class_name: "CorporateInvitation", foreign_key: :invited_by_user_id, dependent: :restrict_with_error
+  has_many :assigned_room_statuses, class_name: "RoomStatus", foreign_key: :assigned_to_id, dependent: :nullify,
+                                    inverse_of: :assigned_to
 
   has_many :assigned_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
 

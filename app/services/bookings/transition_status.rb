@@ -466,20 +466,20 @@ module Bookings
           room_number: booking_room.room_number
         )
 
-        room_status.update!(dnd: false, dnd_date: nil)
+        room_status.update!(dnd: false, dnd_date: nil, notes: nil)
 
-        Rooms::SetStatus.new(
+        result = Rooms::SetStatus.new(
           room_status: room_status,
           status: "dirty",
           user: @user,
           booking: @booking,
           event_type: "checkout_marked_dirty",
           reason: nil,
-          metadata: { "booking_id" => @booking.id }
+          metadata: { "booking_id" => @booking.id },
+          enforce_transition: false
         ).call
+        raise result.error unless result.success?
       end
-
-      HousekeepingTasks::CreateTurnover.new(booking: @booking, timestamp: @timestamp).call
     end
 
     def release_detected_no_show_rooms_to_ready

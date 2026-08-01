@@ -1,0 +1,58 @@
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "housekeeping-room-remarks-sheet",
+        side: :right,
+        size: :md,
+        title: "Edit housekeeping remarks",
+        description: "#{@room_type.name} #{@room_number}",
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with url: hotel_housekeeping_room_remarks_path(
+            current_hotel,
+            room_type_id: @room_type.id,
+            room_number: @room_number),
+            method: :patch,
+            data: { turbo_frame: "_top" },
+            class: "flex h-full min-h-0 flex-col" do |form| %>
+        <%= hidden_field_tag :date, @selected_date.iso8601, id: nil %>
+        <%= hidden_field_tag :return_to, @return_to, id: nil %>
+
+        <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
+          <% if @error.present? %>
+            <div class="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert">
+              <%= @error %>
+            </div>
+          <% end %>
+
+          <p class="text-sm text-muted-foreground">
+            Record information the next housekeeper or front desk agent should see for this room.
+          </p>
+
+          <%= render PanelsUI::FormField.new(
+                form:,
+                attribute: :notes,
+                label: "Remarks",
+                hint: "Remarks are required before marking a room Cleaned.") do |field| %>
+            <% field.with_text_area(
+                 value: params.key?(:notes) ? params[:notes] : @room_status.notes,
+                 rows: 8,
+                 autofocus: true,
+                 placeholder: "Add housekeeping remarks…") %>
+          <% end %>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :button,
+                variant: :ghost,
+                data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :submit,
+                data: { turbo_submits_with: "Saving…" }) do %>Save remarks<% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

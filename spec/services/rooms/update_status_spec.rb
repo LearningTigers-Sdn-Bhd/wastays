@@ -88,7 +88,8 @@ RSpec.describe Rooms::UpdateStatus do
         room_status: room_status,
         status: "cleaning",
         user: user,
-        reason: "Starting to clean"
+        reason: "Starting to clean",
+        clear_assignment: false
       ).and_call_original
 
       result = described_class.new(

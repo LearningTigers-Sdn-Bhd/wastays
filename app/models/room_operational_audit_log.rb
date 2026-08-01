@@ -13,6 +13,8 @@ class RoomOperationalAuditLog < ApplicationRecord
     no_show_detection_cancelled
     housekeeping_request_dispatched
     housekeeping_assignment_changed
+    housekeeping_room_assignment_changed
+    housekeeping_room_remarks_changed
     checkout_room_cleaning_started
     checkout_room_cleaning_completed
   ].freeze
