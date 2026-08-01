@@ -22,9 +22,9 @@ module HotelPortal
     def status_label_class
       case status
       when "confirmed" then "border-green-800 text-green-800"
-      when "review_no_show" then "border-amber-800 text-amber-800"
+      when "no_show_detected" then "border-amber-800 text-amber-800"
       when "checked_in" then "border-blue-800 text-blue-800"
-      when "review_due_out" then "border-orange-800 text-orange-800"
+      when "due_out_detected" then "border-orange-800 text-orange-800"
       when "checkout_required" then "border-rose-800 text-rose-800"
       when "completed" then "border-emerald-800 text-emerald-800"
       when "cancelled" then "border-red-800 text-red-800"
@@ -481,9 +481,9 @@ module HotelPortal
       booking_pill_styles = {
         "pending" => "peer-checked:border-amber-400 peer-checked:bg-amber-50 peer-checked:text-amber-700 peer-checked:hover:bg-amber-100",
         "confirmed" => "peer-checked:border-blue-400 peer-checked:bg-blue-50 peer-checked:text-blue-700 peer-checked:hover:bg-blue-100",
-        "review_no_show" => "peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-800 peer-checked:hover:bg-amber-100",
+        "no_show_detected" => "peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-800 peer-checked:hover:bg-amber-100",
         "checked_in" => "peer-checked:border-violet-400 peer-checked:bg-violet-50 peer-checked:text-violet-700 peer-checked:hover:bg-violet-100",
-        "review_due_out" => "peer-checked:border-orange-400 peer-checked:bg-orange-50 peer-checked:text-orange-700 peer-checked:hover:bg-orange-100",
+        "due_out_detected" => "peer-checked:border-orange-400 peer-checked:bg-orange-50 peer-checked:text-orange-700 peer-checked:hover:bg-orange-100",
         "checkout_required" => "peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700 peer-checked:hover:bg-rose-100",
         "completed" => "peer-checked:border-emerald-400 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 peer-checked:hover:bg-emerald-100",
         "cancelled" => "peer-checked:border-border-interactive peer-checked:bg-muted peer-checked:text-foreground peer-checked:hover:bg-muted",
@@ -503,9 +503,9 @@ module HotelPortal
       booking_styles = {
         "pending" => "border-warning/30 bg-warning/10 text-warning",
         "confirmed" => "border-info/30 bg-info/10 text-info",
-        "review_no_show" => "border-warning/30 bg-warning/10 text-warning",
+        "no_show_detected" => "border-warning/30 bg-warning/10 text-warning",
         "checked_in" => "border-success/30 bg-success/10 text-success",
-        "review_due_out" => "border-warning/30 bg-warning/10 text-warning",
+        "due_out_detected" => "border-warning/30 bg-warning/10 text-warning",
         "checkout_required" => "border-destructive/30 bg-destructive/10 text-destructive",
         "completed" => "border-success/30 bg-success/10 text-success",
         "cancelled" => "border-border-interactive bg-muted text-muted-foreground",

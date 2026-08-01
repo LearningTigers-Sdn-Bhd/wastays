@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-RSpec.describe HotelOps::BulkUpdateInventory do
+RSpec.describe HotelOps::BulkUpdateInventory, frozen_time: Time.zone.local(2026, 8, 15, 12) do
   let(:hotel) { create(:hotel) }
   let(:room_type) { create(:room_type, hotel: hotel) }
   let(:user) { create(:user, account: hotel.account) }

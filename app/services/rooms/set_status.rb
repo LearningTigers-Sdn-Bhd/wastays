@@ -58,9 +58,9 @@ module Rooms
         if @status == "late_checkout_detected" && (booking_to_transition = find_active_booking).present?
           Bookings::TransitionStatus.new(
             booking: booking_to_transition,
-            status: "review_due_out",
+            status: "due_out_detected",
             user: @user,
-            options: { event: "detect_late_checkout", reason: @reason }
+            options: { event: "detect_due_out", reason: @reason }
           ).call
         end
       end

@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Folios::Checkout::CloseForCheckout do
-  around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
-
+RSpec.describe Folios::Checkout::CloseForCheckout, frozen_time: Time.zone.local(2026, 6, 10, 3) do
   let(:booking) { create(:booking, status: "checked_in", currency: "MYR") }
   let(:user) { create(:user) }
 

@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe HotelPortal::Requests::DateWindow do
+RSpec.describe HotelPortal::Requests::DateWindow, frozen_time: Time.zone.local(2026, 8, 15, 12) do
   let(:hotel) { create(:hotel) }
 
   def window(**options)

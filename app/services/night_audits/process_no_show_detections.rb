@@ -3,7 +3,7 @@
 require "ostruct"
 
 module NightAudits
-  class ProcessNoShowReviews
+  class ProcessNoShowDetections
     def self.call(night_audit:, user:)
       new(night_audit: night_audit, user: user).call
     end
@@ -17,24 +17,24 @@ module NightAudits
     end
 
     def call
-      finalize_expired_reviews
-      review_result = NightAudits::ReviewMissedArrivals.call(night_audit: @night_audit, user: @user)
+      finalize_expired_detections
+      detection_result = NightAudits::DetectMissedArrivals.call(night_audit: @night_audit, user: @user)
 
       OpenStruct.new(
         success?: true,
-        reviewed_count: review_result.reviewed_count,
+        no_show_detected_count: detection_result.detected_count,
         finalized_count: @finalized.count,
-        reviewed_bookings: review_result.bookings,
+        detected_bookings: detection_result.bookings,
         finalized_bookings: @finalized
       )
     end
 
     private
 
-    def finalize_expired_reviews
+    def finalize_expired_detections
       @hotel.bookings
-        .where(status: "review_no_show")
-        .where("no_show_review_business_date < ?", @business_date)
+        .where(status: "no_show_detected")
+        .where("no_show_detected_business_date < ?", @business_date)
         .find_each do |booking|
           result = Bookings::FinalizeNoShow.call(
             booking: booking,

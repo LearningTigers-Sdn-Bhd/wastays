@@ -42,7 +42,7 @@ module NightAudits
 
     def candidates
       @hotel.bookings
-        .where(status: %w[checked_in review_due_out checkout_required completed])
+        .where(status: %w[checked_in due_out_detected checkout_required completed])
         .occupying_night_on(@business_date, @hotel.hotel_time_zone)
         .includes(:booking_rooms, booking_folios: [ :folio_transactions, :folio_forecasted_charges ])
         .order(:id)

@@ -30,7 +30,7 @@ RSpec.describe "Hotel night audits", type: :system do
     it "renders the page and lets front desk run a completed audit" do
       # Freeze time to 10 AM to ensure we are well past the business day end (2 AM)
       # and into a clearly closable business date.
-      travel_to Time.zone.local(2026, 5, 19, 10, 0, 0)
+      with_frozen_time Time.zone.local(2026, 5, 19, 10, 0, 0)
       business_date = hotel.latest_closable_business_date
       BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
 
@@ -100,7 +100,7 @@ RSpec.describe "Hotel night audits", type: :system do
     end
 
     it "shows blocker rows with links to affected bookings" do
-      travel_to Time.zone.local(2026, 5, 23, 10, 0, 0)
+      with_frozen_time Time.zone.local(2026, 5, 23, 10, 0, 0)
       business_date = Date.new(2026, 5, 22)
       BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
 
@@ -124,7 +124,7 @@ RSpec.describe "Hotel night audits", type: :system do
     end
 
     it "shows critical blockers on the result page" do
-      travel_to Time.zone.local(2026, 5, 23, 10, 0, 0)
+      with_frozen_time Time.zone.local(2026, 5, 23, 10, 0, 0)
       business_date = Date.new(2026, 5, 22)
       BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
 
@@ -168,7 +168,7 @@ RSpec.describe "Hotel night audits", type: :system do
     end
 
     it "navigates to the resolve page and displays blockers interactive wizard" do
-      travel_to Time.zone.local(2026, 5, 23, 10, 0, 0)
+      with_frozen_time Time.zone.local(2026, 5, 23, 10, 0, 0)
       business_date = Date.new(2026, 5, 22)
       BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
 
@@ -214,7 +214,7 @@ RSpec.describe "Hotel night audits", type: :system do
     end
 
     it "switches index and show tabs while preserving the active tab in the URL" do
-      travel_to Time.zone.local(2026, 5, 23, 10, 0, 0)
+      with_frozen_time Time.zone.local(2026, 5, 23, 10, 0, 0)
       business_date = Date.new(2026, 5, 22)
       BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
       audit = create(:night_audit, hotel: hotel, business_date: business_date, status: "completed")

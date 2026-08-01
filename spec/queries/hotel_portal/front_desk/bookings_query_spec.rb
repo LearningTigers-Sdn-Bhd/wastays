@@ -48,7 +48,7 @@ RSpec.describe HotelPortal::FrontDesk::BookingsQuery do
     it "uses the hotel-local day for an invalid supplied date" do
       hotel.update!(time_zone: "Kuala Lumpur")
 
-      travel_to(Time.utc(2026, 7, 15, 18, 30)) do
+      with_frozen_time(Time.utc(2026, 7, 15, 18, 30)) do
         query = described_class.new(hotel:, params: { booking_start_date: "not-a-date" })
 
         expect([ query.start_date, query.end_date ]).to eq([ Date.new(2026, 7, 16) ] * 2)

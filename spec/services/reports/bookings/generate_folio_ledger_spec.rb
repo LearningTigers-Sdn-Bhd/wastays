@@ -99,7 +99,7 @@ RSpec.describe Reports::Bookings::GenerateFolioLedger do
     pdf = nil
     reader = nil
     text = nil
-    travel_to Time.zone.local(2026, 6, 22, 14, 35, 0) do
+    with_frozen_time Time.zone.local(2026, 6, 22, 14, 35, 0) do
       pdf = described_class.new(folio: folio, printed_by: "Platform Admin").generate_pdf
       reader = PDF::Reader.new(StringIO.new(pdf))
       text = reader.pages.map(&:text).join("\n")

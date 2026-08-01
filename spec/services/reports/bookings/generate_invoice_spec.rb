@@ -96,7 +96,7 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
 
   describe "#generate" do
     it "renders the redesigned guest folio invoice text" do
-      travel_to Time.zone.local(2026, 6, 22, 14, 35, 0) do
+      with_frozen_time Time.zone.local(2026, 6, 22, 14, 35, 0) do
         text = pdf_text(described_class.new(folio: folio, printed_by: "F. Suhaila").generate)
 
         expect(text).to include("FOLIO INVOICE")

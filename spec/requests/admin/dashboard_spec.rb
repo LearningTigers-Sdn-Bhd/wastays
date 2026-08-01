@@ -1,7 +1,7 @@
 require 'rails_helper'
 require 'securerandom'
 
-RSpec.describe 'Admin::Dashboard', type: :request do
+RSpec.describe 'Admin::Dashboard', type: :request, frozen_time: Time.zone.local(2026, 8, 15, 12) do
   let(:token) { SecureRandom.hex(6) }
   let(:admin_account) { create(:account, name: "Admin Dashboard #{token}") }
   let(:superadmin) { create(:user, :superadmin, account: admin_account, email: "admin-dashboard-#{token}@example.com") }

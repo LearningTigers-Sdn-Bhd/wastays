@@ -11,11 +11,11 @@ module Bookings
       "confirmed" => {
         "check_in" => "checked_in",
         "cancel" => "cancelled",
-        "review_no_show" => "review_no_show",
+        "detect_no_show" => "no_show_detected",
         "mark_overbooked" => "overbooked",
         "void" => "voided"
       },
-      "review_no_show" => {
+      "no_show_detected" => {
         "backdated_check_in" => "checked_in",
         "mark_no_show" => "no_show",
         "auto_mark_no_show" => "no_show",
@@ -29,11 +29,11 @@ module Bookings
       },
       "checked_in" => {
         "check_out" => "completed",
-        "detect_late_checkout" => "review_due_out",
+        "detect_due_out" => "due_out_detected",
         "undo_check_in" => "confirmed",
         "void" => "voided"
       },
-      "review_due_out" => {
+      "due_out_detected" => {
         "resolve_late_checkout" => "checked_in",
         "reject_late_checkout" => "checkout_required",
         "void" => "voided"

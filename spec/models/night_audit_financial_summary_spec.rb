@@ -1,8 +1,6 @@
 require "rails_helper"
 
 RSpec.describe NightAuditFinancialSummary, type: :model do
-  include ActiveSupport::Testing::TimeHelpers
-
   describe "associations" do
     it { should belong_to(:night_audit) }
   end
@@ -28,7 +26,7 @@ RSpec.describe NightAuditFinancialSummary, type: :model do
       summary = build(:night_audit_financial_summary, changelog: [])
       timestamp = Time.zone.local(2026, 5, 18, 3, 0, 0)
 
-      travel_to(timestamp) do
+      with_frozen_time(timestamp) do
         summary.log_change(
           user: user,
           previous_values: { "room_revenue" => "100.00" },

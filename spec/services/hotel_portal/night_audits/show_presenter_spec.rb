@@ -29,7 +29,7 @@ RSpec.describe HotelPortal::NightAudits::ShowPresenter do
       "run_results" => {
         "status_changes" => {
           "count" => 1,
-          "items" => [ { "confirmation_token" => "ABC123", "from" => "checked_in", "to" => "review_due_out" } ]
+          "items" => [ { "confirmation_token" => "ABC123", "from" => "checked_in", "to" => "due_out_detected" } ]
         },
         "charges_posted" => { "count" => 0, "total" => "0", "items" => [] }
       }
@@ -68,7 +68,7 @@ RSpec.describe HotelPortal::NightAudits::ShowPresenter do
     expect(presenter.payment_status_counts.map(&:label)).to eq([ "Partial", "Pending", "Captured", "Failed", "Refunded", "Voided", "Authorized" ])
     expect(presenter.payment_status_counts.last.value).to eq(1)
     expect(presenter.net_revenue).to eq("$113.00")
-    expect(presenter.run_result_rows.sole.details).to eq("checked_in → review_due_out")
+    expect(presenter.run_result_rows.sole.details).to eq("checked_in → due_out_detected")
     expect(presenter.audit_packet_visible?).to be(true)
   end
 

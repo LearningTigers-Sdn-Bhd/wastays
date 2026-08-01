@@ -1,10 +1,9 @@
 require 'rails_helper'
 
-RSpec.describe "HotelPortal::AuditLogs", type: :request do
+RSpec.describe "HotelPortal::AuditLogs", type: :request, frozen_time: Time.zone.local(2026, 6, 10, 3) do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
   let(:hotel) { create(:hotel, status: 'approved', plan: plan) }
-  around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
   let(:user) { create(:user) }
 
   before do

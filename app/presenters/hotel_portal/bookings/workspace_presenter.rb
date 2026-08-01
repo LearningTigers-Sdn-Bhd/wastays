@@ -63,9 +63,9 @@ module HotelPortal
     STATUS_LABELS = {
       "pending" => "Pending",
       "confirmed" => "Confirmed",
-      "review_no_show" => "Pending no-show review",
+      "no_show_detected" => "No-show detected",
       "checked_in" => "Checked in",
-      "review_due_out" => "Pending late-checkout review",
+      "due_out_detected" => "Due-out detected",
       "checkout_required" => "Checkout required",
       "cancelled" => "Cancelled",
       "completed" => "Checked out",
@@ -75,16 +75,16 @@ module HotelPortal
     }.freeze
     STATUS_BADGE_LABELS = STATUS_LABELS.merge(
       "checked_in" => "In house",
-      "review_due_out" => "Due out",
+      "due_out_detected" => "Due-out detected",
       "checkout_required" => "Checkout due",
-      "review_no_show" => "No-show review"
+      "no_show_detected" => "No-show detected"
     ).freeze
     STATUS_BADGE_TONES = {
       "pending" => "slate",
       "confirmed" => "blue",
-      "review_no_show" => "amber",
+      "no_show_detected" => "amber",
       "checked_in" => "emerald",
-      "review_due_out" => "amber",
+      "due_out_detected" => "amber",
       "checkout_required" => "orange",
       "cancelled" => "rose",
       "completed" => "slate",
@@ -314,10 +314,10 @@ module HotelPortal
       [
         group_summary_action(:check_in, "Check-in", :primary, "right", "log-in", %w[confirmed]),
         group_summary_action(:check_out, "Check-out", :primary, "fullscreen-bottom", "log-out", %w[checked_in checkout_required]),
-        group_summary_action(:late_checkout, "Review Late Checkout", :warning, "right", "clock", %w[review_due_out]),
-        group_summary_action(:backdated_check_in, "Backdated Check-in", :primary, "right", "calendar-clock", %w[review_no_show]),
-        group_summary_action(:mark_no_show, "Mark No-show", :danger, "right", "user-x", %w[review_no_show]),
-        group_summary_action(:cancel, "Cancel", :danger, "right", "ban", %w[pending confirmed review_no_show overbooked]),
+        group_summary_action(:late_checkout, "Resolve due-out", :warning, "right", "clock", %w[due_out_detected]),
+        group_summary_action(:backdated_check_in, "Backdated Check-in", :primary, "right", "calendar-clock", %w[no_show_detected]),
+        group_summary_action(:mark_no_show, "Mark No-show", :danger, "right", "user-x", %w[no_show_detected]),
+        group_summary_action(:cancel, "Cancel", :danger, "right", "ban", %w[pending confirmed no_show_detected overbooked]),
         group_summary_action(:reinstate, "Reinstate", :primary, "right", "rotate-ccw", %w[no_show]),
         group_summary_action(:edit_check_in, "Edit Check-In", :neutral, "right", "pencil", %w[checked_in]),
         group_summary_action(:undo_check_in, "Undo Check-in", :warning, "right", "rotate-ccw", %w[checked_in])
@@ -333,7 +333,7 @@ module HotelPortal
           standalone_summary_action(:check_in, "Check-in", :primary, "right", "log-in"),
           standalone_summary_action(:cancel, "Cancel", :danger, "right", "ban")
         ]
-      when "review_no_show"
+      when "no_show_detected"
         [
           standalone_summary_action(:backdated_check_in, "Backdated Check-in", :primary, "right", "calendar-clock"),
           standalone_summary_action(:mark_no_show, "Mark No-show", :danger, "right", "user-x"),
@@ -345,8 +345,8 @@ module HotelPortal
           standalone_summary_action(:edit_check_in, "Edit Check-In", :neutral, "right", "pencil"),
           standalone_summary_action(:undo_check_in, "Undo Check-in", :warning, "right", "rotate-ccw")
         ]
-      when "review_due_out"
-        [ standalone_summary_action(:late_checkout, "Review Late Checkout", :warning, "right", "clock") ]
+      when "due_out_detected"
+        [ standalone_summary_action(:late_checkout, "Resolve due-out", :warning, "right", "clock") ]
       when "checkout_required"
         [ standalone_summary_action(:check_out, "Complete Checkout", :primary, "fullscreen-bottom", "log-out") ]
       when "no_show"
@@ -1953,11 +1953,11 @@ module HotelPortal
       return { label: "Cancelled", tone: "rose" } if statuses.all? { |status| status == "cancelled" }
       return { label: "Checked out", tone: "slate" } if statuses.all? { |status| status.in?(%w[completed cancelled]) }
 
-      in_house_statuses = %w[checked_in review_due_out checkout_required]
+      in_house_statuses = %w[checked_in due_out_detected checkout_required]
       in_house_count = statuses.count { |status| status.in?(in_house_statuses) }
       return { label: "Partially in house", tone: "amber" } if in_house_count.positive? && in_house_count < statuses.size
       return { label: "Checkout due", tone: "orange" } if statuses.include?("checkout_required") && in_house_count == statuses.size
-      return { label: "Due out", tone: "amber" } if statuses.include?("review_due_out") && in_house_count == statuses.size
+      return { label: "Due-out detected", tone: "amber" } if statuses.include?("due_out_detected") && in_house_count == statuses.size
       return { label: "In house", tone: "emerald" } if in_house_count == statuses.size
 
       { label: "Mixed statuses", tone: "amber" }

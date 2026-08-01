@@ -26,7 +26,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "extracts this-month timing even when the LLM returns no timing slots" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       result = described_class.new(
         message: "late this month have?",
         slots: {},
@@ -43,7 +43,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "clears a stale month segment when this-month timing has no segment" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       result = described_class.new(
         message: "nice, can i book for this month?",
         slots: {},
@@ -88,7 +88,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "extracts a same-month dashed date range" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       result = described_class.new(
         message: "16-18 June",
         slots: {},
@@ -108,7 +108,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "extracts a same-month spaced date range" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       result = described_class.new(
         message: "16 18 June",
         slots: {},
@@ -167,7 +167,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "resolves a pending date range with this month" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       result = described_class.new(
         message: "this month",
         slots: {},
@@ -186,7 +186,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "resolves a pending date range with next month" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       result = described_class.new(
         message: "next month",
         slots: {},
@@ -200,7 +200,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "resolves a pending date range with a month quantity" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       result = described_class.new(
         message: "3 months from now",
         slots: {},
@@ -214,7 +214,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "resolves a pending date range with a month name" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       result = described_class.new(
         message: "August",
         slots: {},
@@ -228,7 +228,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "lets a complete range replace pending date range days" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       result = described_class.new(
         message: "July 20-22",
         slots: {},
@@ -242,7 +242,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "extracts a cross-month day-month date range" do
-    travel_to Date.new(2026, 5, 1) do
+    with_frozen_time Date.new(2026, 5, 1) do
       result = described_class.new(
         message: "31 May - 2 June",
         slots: {},
@@ -260,7 +260,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "extracts a cross-month month-day date range" do
-    travel_to Date.new(2026, 5, 1) do
+    with_frozen_time Date.new(2026, 5, 1) do
       result = described_class.new(
         message: "May 31 - June 2",
         slots: {},
@@ -273,7 +273,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "extracts a same-month day-month-to-day date range" do
-    travel_to Date.new(2026, 6, 3) do
+    with_frozen_time Date.new(2026, 6, 3) do
       result = described_class.new(
         message: "16 June - 18",
         slots: {},
@@ -286,7 +286,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "advances checkout year for a cross-year date range" do
-    travel_to Date.new(2026, 12, 1) do
+    with_frozen_time Date.new(2026, 12, 1) do
       result = described_class.new(
         message: "31 Dec - 2 Jan",
         slots: {},
@@ -299,7 +299,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "treats a trailing year on a cross-year range as the checkout year" do
-    travel_to Date.new(2026, 12, 1) do
+    with_frozen_time Date.new(2026, 12, 1) do
       result = described_class.new(
         message: "31 Dec - 2 Jan 2027",
         slots: {},
@@ -312,7 +312,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
   end
 
   it "resolves a pending date range month name to the next occurrence" do
-    travel_to Date.new(2026, 12, 3) do
+    with_frozen_time Date.new(2026, 12, 3) do
       result = described_class.new(
         message: "January",
         slots: {},

@@ -53,7 +53,7 @@ RSpec.describe Rooms::SetStatus do
     expect(room_status.reload.status).to eq("dirty")
   end
 
-  it "transitions associated booking to review_due_out when status is late_checkout_detected" do
+  it "transitions associated booking to due_out_detected when status is late_checkout_detected" do
     room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
     booking = create(:booking, hotel: hotel, status: "checked_in")
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
@@ -66,13 +66,13 @@ RSpec.describe Rooms::SetStatus do
     ).call
 
     expect(result).to be_success
-    expect(booking.reload.status).to eq("review_due_out")
+    expect(booking.reload.status).to eq("due_out_detected")
 
     log = BookingAuditLog.last
     expect(log.auditable).to eq(booking)
     expect(log.action_type).to eq("status_change")
-    expect(log.metadata["to"]).to eq("review_due_out")
-    expect(log.metadata["event"]).to eq("detect_late_checkout")
+    expect(log.metadata["to"]).to eq("due_out_detected")
+    expect(log.metadata["event"]).to eq("detect_due_out")
   end
 
   it "requires a note when marking a room as ready" do

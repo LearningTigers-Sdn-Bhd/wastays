@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "HotelPortal::Bookings::Actions no-shows", :business_day, type: :request do
+RSpec.describe "HotelPortal::Bookings::Actions no-shows", frozen_time: :business_day, type: :request do
   let(:hotel) { create(:hotel, status: "approved") }
   let(:other_hotel) { create(:hotel, status: "approved") }
   let(:user) { create(:user, account: hotel.account) }
@@ -13,8 +13,8 @@ RSpec.describe "HotelPortal::Bookings::Actions no-shows", :business_day, type: :
       :booking,
       hotel: hotel,
       guest_name: "Ada Lovelace",
-      status: "review_no_show",
-      no_show_review_business_date: Date.current
+      status: "no_show_detected",
+      no_show_detected_business_date: Date.current
     ).tap do |record|
       create(:booking_room, booking: record, room_type: room_type, room_number: "101", subtotal: 200.0)
     end
@@ -31,8 +31,8 @@ RSpec.describe "HotelPortal::Bookings::Actions no-shows", :business_day, type: :
       hotel: hotel,
       group_booking: group,
       group_position: position,
-      status: "review_no_show",
-      no_show_review_business_date: Date.current,
+      status: "no_show_detected",
+      no_show_detected_business_date: Date.current,
       guest_name: guest_name
     ).tap do |record|
       create(:booking_room, booking: record, room_type: room_type, room_number: room_number, subtotal: 200.0)
@@ -118,7 +118,7 @@ RSpec.describe "HotelPortal::Bookings::Actions no-shows", :business_day, type: :
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("dialog", "No-show reason is required.")
-      expect(booking.reload.status).to eq("review_no_show")
+      expect(booking.reload.status).to eq("no_show_detected")
     end
 
     it "completes into the secondary frame when submitted stacked" do
@@ -168,11 +168,11 @@ RSpec.describe "HotelPortal::Bookings::Actions no-shows", :business_day, type: :
         params: { no_show_reason: "Guest did not arrive" }
 
       expect(response).to have_http_status(:redirect)
-      expect(booking.reload.status).to eq("review_no_show")
+      expect(booking.reload.status).to eq("no_show_detected")
     end
 
     it "does not find a booking from another hotel" do
-      other_booking = create(:booking, hotel: other_hotel, status: "review_no_show", no_show_review_business_date: Date.current)
+      other_booking = create(:booking, hotel: other_hotel, status: "no_show_detected", no_show_detected_business_date: Date.current)
 
       post hotel_booking_action_mark_no_show_path(hotel, other_booking),
         params: { no_show_reason: "Guest did not arrive" }

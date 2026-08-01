@@ -159,12 +159,12 @@ module HotelPortal
         Counter.new(label: "Warnings", value: warning_count, tone: warning_count.positive? ? "warning" : "neutral", detail: "Non-blocking exceptions"),
         Counter.new(label: "Arrivals", value: summary_value("arrivals_count"), tone: "neutral", detail: "Current snapshot"),
         Counter.new(label: "Due Outs", value: summary_value("due_out_count"), tone: "neutral", detail: "Current snapshot"),
-        Counter.new(label: "Review Queue", value: review_queue_value, tone: "neutral", detail: "Arrival / due-out")
+        Counter.new(label: "Detected Queue", value: detected_queue_value, tone: "neutral", detail: "No-show / due-out")
       ]
     end
 
-    def review_queue_value
-      "#{arrival_review_summary[:value]} / #{due_out_review_summary[:value]}"
+    def detected_queue_value
+      "#{no_show_detected_summary[:value]} / #{due_out_detected_summary[:value]}"
     end
 
     def blocker_groups
@@ -175,19 +175,19 @@ module HotelPortal
       grouped_rows(exceptions, "warning")
     end
 
-    def arrival_review_summary
+    def no_show_detected_summary
       {
-        label: "Arrival Review",
-        value: summary_value("review_no_show_count"),
-        detail: "Current review-no-show snapshot. TODO: expose run-specific moved count when available."
+        label: "No-show detected",
+        value: summary_value("no_show_detected_count"),
+        detail: "Current detected no-show snapshot. TODO: expose run-specific moved count when available."
       }
     end
 
-    def due_out_review_summary
+    def due_out_detected_summary
       {
-        label: "Due-Out Review",
-        value: exceptions.fetch("review_due_out", []).count,
-        detail: "Bookings waiting in due-out review."
+        label: "Due-out detected",
+        value: exceptions.fetch("due_out_detected", []).count,
+        detail: "Bookings with a detected due-out awaiting resolution."
       }
     end
 
@@ -197,15 +197,15 @@ module HotelPortal
 
       blocker_rows + warning_rows + [
         ReadinessRow.new(
-          type: arrival_review_summary[:label],
-          count: arrival_review_summary[:value],
-          summary: arrival_review_summary[:detail],
+          type: no_show_detected_summary[:label],
+          count: no_show_detected_summary[:value],
+          summary: no_show_detected_summary[:detail],
           tone: "neutral"
         ),
         ReadinessRow.new(
-          type: due_out_review_summary[:label],
-          count: due_out_review_summary[:value],
-          summary: due_out_review_summary[:detail],
+          type: due_out_detected_summary[:label],
+          count: due_out_detected_summary[:value],
+          summary: due_out_detected_summary[:detail],
           tone: "neutral"
         )
       ]
@@ -427,7 +427,7 @@ module HotelPortal
     end
 
     def group_label(key)
-      return "Due-Out Review" if key.to_s == "review_due_out"
+      return "Due-out detected" if key.to_s == "due_out_detected"
 
       key.to_s.humanize
     end

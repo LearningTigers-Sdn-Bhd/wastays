@@ -2,11 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ObservationDeck::PruneEntries do
-  include ActiveSupport::Testing::TimeHelpers
-
-  around { |example| travel_to(Time.zone.local(2026, 7, 24, 12)) { example.run } }
-
+RSpec.describe ObservationDeck::PruneEntries, frozen_time: Time.zone.local(2026, 7, 24, 12) do
   it "deletes entries older than seven days and preserves the rolling window" do
     expired = create(:observation_entry, created_at: 7.days.ago - 1.second)
     boundary = create(:observation_entry, created_at: 7.days.ago)

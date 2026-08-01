@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module NightAudits
-  class ReviewDueOuts
-    Result = Struct.new(:changed, :skipped, :failed, keyword_init: true)
+  class DetectDueOuts
+    Result = Struct.new(:detected, :skipped, :failed, keyword_init: true)
 
     def self.call(night_audit:, user:)
       new(night_audit: night_audit, user: user).call
@@ -13,14 +13,14 @@ module NightAudits
       @hotel = night_audit.hotel
       @business_date = night_audit.business_date.to_date
       @user = user
-      @changed = []
+      @detected = []
       @skipped = []
       @failed = []
     end
 
     def call
-      candidates.find_each { |booking| review(booking) }
-      Result.new(changed: @changed, skipped: @skipped, failed: @failed)
+      candidates.find_each { |booking| detect(booking) }
+      Result.new(detected: @detected, skipped: @skipped, failed: @failed)
     end
 
     private
@@ -30,21 +30,21 @@ module NightAudits
       @hotel.bookings.checked_in.where("check_out < ?", cutoff)
     end
 
-    def review(booking)
+    def detect(booking)
       booking.with_lock do
         booking.reload
 
         unless eligible?(booking)
-          @skipped << item_for(booking, reason: "Booking no longer qualifies for due-out review")
+          @skipped << item_for(booking, reason: "Booking no longer qualifies for due-out detection")
           next
         end
 
         result = Bookings::TransitionStatus.new(
           booking: booking,
-          status: "review_due_out",
+          status: "due_out_detected",
           user: @user,
           options: {
-            event: "detect_late_checkout",
+            event: "detect_due_out",
             source: "night_audit",
             reason: "Checkout date passed without checkout",
             night_audit: @night_audit,
@@ -56,7 +56,7 @@ module NightAudits
         ).call
 
         if result.success?
-          @changed << item_for(booking.reload, from: "checked_in", to: "review_due_out")
+          @detected << item_for(booking.reload, from: "checked_in", to: "due_out_detected")
         else
           @failed << item_for(booking, reason: result.error)
         end
@@ -72,8 +72,8 @@ module NightAudits
 
     def item_for(booking, attributes = {})
       {
-        "item_key" => "due_out_review:#{booking.id}:#{@business_date.iso8601}",
-        "item_type" => "due_out_review",
+        "item_key" => "due_out_detection:#{booking.id}:#{@business_date.iso8601}",
+        "item_type" => "due_out_detection",
         "booking_id" => booking.id,
         "confirmation_token" => booking.confirmation_token,
         "guest_name" => booking.guest_name,

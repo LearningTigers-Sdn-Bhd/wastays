@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe HotelDemoManagement::SeedRealtimeScenario, :business_day do
+RSpec.describe HotelDemoManagement::SeedRealtimeScenario, frozen_time: :business_day do
   include ActiveJob::TestHelper
 
   let(:logger) { HotelDemoManagement::ResetState::NoopLogger.new }

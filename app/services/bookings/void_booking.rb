@@ -4,8 +4,8 @@ require "ostruct"
 
 module Bookings
   class VoidBooking
-    PRE_ARRIVAL_STATUSES = %w[pending confirmed review_no_show].freeze
-    IN_HOUSE_STATUSES = %w[checked_in review_due_out checkout_required].freeze
+    PRE_ARRIVAL_STATUSES = %w[pending confirmed no_show_detected].freeze
+    IN_HOUSE_STATUSES = %w[checked_in due_out_detected checkout_required].freeze
 
     def self.call(booking:, user:, reason:, timestamp: Time.current)
       new(booking:, user:, reason:, timestamp:).call

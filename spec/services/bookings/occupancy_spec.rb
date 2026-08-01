@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Bookings::Occupancy do
   it "treats the occupied booking states as occupied" do
-    %w[checked_in review_due_out checkout_required].each do |status|
+    %w[checked_in due_out_detected checkout_required].each do |status|
       booking = build(:booking, status:)
 
       expect(described_class.occupied?(booking)).to be(true), "expected #{status} to be occupied"
@@ -12,7 +12,7 @@ RSpec.describe Bookings::Occupancy do
   end
 
   it "treats pre-arrival and completed states as non-occupied" do
-    %w[pending confirmed review_no_show completed cancelled].each do |status|
+    %w[pending confirmed no_show_detected completed cancelled].each do |status|
       booking = build(:booking, status:)
 
       expect(described_class.occupied?(booking)).to be(false), "expected #{status} to be non-occupied"
@@ -24,7 +24,7 @@ RSpec.describe Bookings::Occupancy do
   end
 
   it "accepts guest requests from arrival onwards and before it" do
-    %w[confirmed review_no_show checked_in review_due_out checkout_required].each do |status|
+    %w[confirmed no_show_detected checked_in due_out_detected checkout_required].each do |status|
       booking = build(:booking, status:)
 
       expect(described_class.accepts_guest_requests?(booking)).to be(true), "expected #{status} to accept requests"

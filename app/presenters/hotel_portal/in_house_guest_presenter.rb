@@ -7,9 +7,9 @@ module HotelPortal
     delegate :id, :guest_name, :guest_email, :guest_phone, :confirmation_token, :vip?, :blacklisted?, :repeat?, :status, :booking_rooms, to: :booking
 
     STATUS_CONFIG = {
-      "review_due_out" => {
-        desktop_label: "Late",
-        mobile_label: "Late Checkout",
+      "due_out_detected" => {
+        desktop_label: "Due-out detected",
+        mobile_label: "Due-out detected",
         desktop_badge: "inline-flex items-center rounded-full bg-warning/10 px-1.5 py-0.5 text-xs font-medium text-warning",
         mobile_badge: "inline-flex items-center rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning"
       },

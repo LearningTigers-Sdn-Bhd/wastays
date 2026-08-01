@@ -41,7 +41,7 @@ RSpec.describe Concierge::SubmitGuestRequest do
   it "accepts housekeeping requests before arrival" do
     pre_arrival = [
       create(:booking, hotel: hotel, status: "confirmed"),
-      create(:booking, hotel: hotel, status: "review_no_show", no_show_review_business_date: Date.current)
+      create(:booking, hotel: hotel, status: "no_show_detected", no_show_detected_business_date: Date.current)
     ]
 
     pre_arrival.each do |booking|

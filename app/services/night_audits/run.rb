@@ -41,15 +41,15 @@ module NightAudits
       record_night_audit_event!(night_audit, business_date, "night_audit_started", "Night audit started")
       record_night_audit_event!(night_audit, business_date, "business_date_audit_started", "Business date moved to audit_running")
 
-      no_show_result = NightAudits::ProcessNoShowReviews.call(night_audit: night_audit, user: @performed_by_user)
-      due_out_result = NightAudits::ReviewDueOuts.call(night_audit: night_audit, user: @performed_by_user)
+      no_show_result = NightAudits::ProcessNoShowDetections.call(night_audit: night_audit, user: @performed_by_user)
+      due_out_result = NightAudits::DetectDueOuts.call(night_audit: night_audit, user: @performed_by_user)
       record_result_items(night_audit, "item_skipped", due_out_result.skipped)
       record_result_items(night_audit, "item_failed", due_out_result.failed)
       night_audit.night_audit_logs.where(action_type: "process_started").order(:id).last&.update!(
         metadata: {
-          reviewed_no_show_count: no_show_result.reviewed_count,
+          no_show_detected_count: no_show_result.no_show_detected_count,
           finalized_no_show_count: no_show_result.finalized_count,
-          reviewed_due_out_count: due_out_result.changed.count
+          due_out_detected_count: due_out_result.detected.count
         }
       )
 

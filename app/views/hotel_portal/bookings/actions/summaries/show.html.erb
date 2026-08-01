@@ -7,7 +7,7 @@
 <% paid_amount = [ total_amount - outstanding_balance, 0 ].max %>
 <% status_variant = case booking.status
    when "confirmed", "checked_in" then :success
-   when "review_no_show", "review_due_out", "checkout_required" then :warning
+   when "no_show_detected", "due_out_detected", "checkout_required" then :warning
    when "cancelled", "overbooked", "no_show" then :destructive
    else :neutral
    end %>

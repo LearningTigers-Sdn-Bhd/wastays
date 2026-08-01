@@ -87,33 +87,33 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(Notifications::Dispatcher).not_to have_received(:new).with(event: :booking_confirmed, booking: existing)
   end
 
-  it "preserves internal no-show review when the channel still reports confirmed" do
+  it "preserves an internally detected no-show when the channel still reports confirmed" do
     existing = create(
       :booking,
       hotel: hotel,
       channel_manager_reference: "CM456",
       check_in: booking_data[:check_in],
       check_out: booking_data[:check_out],
-      status: "review_no_show",
-      no_show_review_business_date: booking_data[:check_in]
+      status: "no_show_detected",
+      no_show_detected_business_date: booking_data[:check_in]
     )
     create(:booking_room, booking: existing, room_type: room_type)
 
     result = described_class.new(booking_data: booking_data.merge(revision_number: 2)).call
 
     expect(result.success?).to be(true)
-    expect(existing.reload.status).to eq("review_no_show")
+    expect(existing.reload.status).to eq("no_show_detected")
   end
 
-  it "allows the channel to cancel a booking pending no-show review" do
+  it "allows the channel to cancel a booking with a detected no-show" do
     existing = create(
       :booking,
       hotel: hotel,
       channel_manager_reference: "CM456",
       check_in: booking_data[:check_in],
       check_out: booking_data[:check_out],
-      status: "review_no_show",
-      no_show_review_business_date: booking_data[:check_in]
+      status: "no_show_detected",
+      no_show_detected_business_date: booking_data[:check_in]
     )
     create(:booking_room, booking: existing, room_type: room_type)
 

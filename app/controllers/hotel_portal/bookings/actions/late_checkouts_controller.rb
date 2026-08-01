@@ -3,8 +3,8 @@
 module HotelPortal
   module Bookings
     module Actions
-      # Sheet-based "review late checkout". Renders the charge form (GET) and
-      # processes the review outcome (POST) — approve with a charge, approve
+      # Sheet-based late-checkout resolution. Renders the charge form (GET) and
+      # processes the resolution outcome (POST) — approve with a charge, approve
       # without a charge, or reject (which moves the booking to checkout_required).
       # Supports single and group batch targeting.
       #
@@ -64,7 +64,7 @@ module HotelPortal
         end
 
         def late_checkout_params
-          params.permit(:charge_type, :amount, :check_out, :charge_calculation, :custom_type, :custom_value)
+          params.permit(:resolution, :amount, :check_out, :charge_calculation, :custom_type, :custom_value)
         end
       end
     end

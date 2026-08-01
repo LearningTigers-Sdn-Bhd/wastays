@@ -2,15 +2,11 @@
 
 require "rails_helper"
 
-RSpec.describe "Financial report period filters", type: :system, js: true do
+RSpec.describe "Financial report period filters", type: :system, js: true, frozen_time: Time.zone.local(2026, 7, 22, 10) do
   let(:plan) { create(:plan) }
   let(:hotel) { create(:hotel, plan: plan) }
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account, slug: "hotel_owner", name: "Hotel owner") }
-
-  around do |example|
-    travel_to(Time.zone.local(2026, 7, 22, 10)) { example.run }
-  end
 
   before do
     driven_by(:cuprite)

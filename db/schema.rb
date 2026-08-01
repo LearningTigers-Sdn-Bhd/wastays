@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_31_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_01_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -528,7 +528,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_120000) do
     t.decimal "margin_amount", precision: 15, scale: 2
     t.decimal "margin_rate", precision: 10, scale: 4
     t.decimal "net_amount", precision: 15, scale: 2
-    t.date "no_show_review_business_date"
+    t.date "no_show_detected_business_date"
     t.string "payment_status", default: "pending", null: false
     t.datetime "payout_at"
     t.bigint "payout_batch_id"
@@ -569,7 +569,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_31_120000) do
     t.index ["hotel_id", "receipt_number"], name: "idx_bookings_on_hotel_receipt_number", unique: true, where: "(receipt_number IS NOT NULL)"
     t.index ["hotel_id", "reservation_reference"], name: "index_bookings_on_hotel_id_and_reservation_reference", unique: true, where: "(reservation_reference IS NOT NULL)"
     t.index ["hotel_id", "reservation_year", "reservation_number"], name: "idx_bookings_reservation_year_number", unique: true, where: "(reservation_number IS NOT NULL)"
-    t.index ["hotel_id", "status", "no_show_review_business_date"], name: "index_bookings_on_hotel_status_no_show_review_date"
+    t.index ["hotel_id", "status", "no_show_detected_business_date"], name: "index_bookings_on_hotel_status_no_show_detected_date"
     t.index ["hotel_id", "tourism_tax_voucher_reference"], name: "index_bookings_on_hotel_id_and_tourism_tax_voucher_reference", unique: true, where: "(tourism_tax_voucher_reference IS NOT NULL)"
     t.index ["hotel_id", "tourism_tax_voucher_year", "tourism_tax_voucher_number"], name: "idx_bookings_tourism_voucher_year_number", unique: true, where: "(tourism_tax_voucher_number IS NOT NULL)"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"

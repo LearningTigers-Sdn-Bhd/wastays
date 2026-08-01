@@ -1,7 +1,6 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::NightAudits", type: :request do
-  include ActiveSupport::Testing::TimeHelpers
   include ActiveJob::TestHelper
 
   let(:account) { create(:account) }
@@ -61,7 +60,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     sign_in(user)
 
     kl_zone = Time.find_zone("Kuala Lumpur")
-    travel_to(kl_zone.local(2026, 5, 19, 10, 10)) do
+    with_frozen_time(kl_zone.local(2026, 5, 19, 10, 10)) do
       # The clock still calculates May 18 as latest closable, but accounting authority remains May 19.
       expect(hotel.latest_closable_business_date).to eq(Date.new(2026, 5, 18))
       perform_enqueued_jobs do
@@ -130,7 +129,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     sign_in(user)
     kl_zone = Time.find_zone("Kuala Lumpur")
 
-    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+    with_frozen_time(kl_zone.local(2026, 5, 21, 10, 0)) do
       expect do
         post hotel_night_audits_path(hotel), params: { night_audit: { business_date: Date.new(2026, 5, 21).to_s } }
       end.not_to have_enqueued_job(NightAudits::RunJob)
@@ -147,7 +146,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     sign_in(user)
     kl_zone = Time.find_zone("Kuala Lumpur")
 
-    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+    with_frozen_time(kl_zone.local(2026, 5, 21, 10, 0)) do
       perform_enqueued_jobs do
         post hotel_night_audits_path(hotel), params: {
           night_audit: {
@@ -167,7 +166,7 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
     sign_in(user)
     kl_zone = Time.find_zone("Kuala Lumpur")
 
-    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+    with_frozen_time(kl_zone.local(2026, 5, 21, 10, 0)) do
       expect do
         post hotel_night_audits_path(hotel), params: {
           night_audit: {
@@ -447,14 +446,14 @@ RSpec.describe "HotelPortal::NightAudits", type: :request do
         "missing_folio" => [ { "guest_name" => "Aisha Tan", "confirmation_token" => "BLOCK-1", "reason" => "Booking requires a folio before night audit can close" } ]
       },
       exceptions: {
-        "review_due_out" => [ { "guest_name" => "Ben Lee", "confirmation_token" => "WARN-1", "reason" => "Due-out review carried forward" } ]
+        "due_out_detected" => [ { "guest_name" => "Ben Lee", "confirmation_token" => "WARN-1", "reason" => "Due-out detected and carried forward" } ]
       })
     sign_in(user)
 
     get hotel_night_audit_path(hotel, night_audit)
 
     expect(response.body).to include("Cannot close this date", "Hard Blockers", "Warnings / Review Items")
-    expect(response.body).to include("Accounting blocker", "Due-out review carried forward")
+    expect(response.body).to include("Accounting blocker", "Due-out detected and carried forward")
   end
 
   it "renders the compact historical audit packet sections and preserved actions" do

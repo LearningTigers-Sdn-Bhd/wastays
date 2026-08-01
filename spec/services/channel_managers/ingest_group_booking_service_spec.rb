@@ -143,10 +143,10 @@ RSpec.describe ChannelManagers::IngestGroupBookingService do
     expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 1, 1 ])
   end
 
-  it "releases an assigned room when a no-show-review child is removed" do
+  it "releases an assigned room when a no-show-detected child is removed" do
     first = described_class.new(booking_data: booking_data).call
     removed = first.bookings.last
-    removed.update_columns(status: "review_no_show", no_show_review_business_date: check_in)
+    removed.update_columns(status: "no_show_detected", no_show_detected_business_date: check_in)
     removed.booking_rooms.sole.update!(room_number: "102")
 
     result = described_class.new(
@@ -160,6 +160,6 @@ RSpec.describe ChannelManagers::IngestGroupBookingService do
     expect(removed.reload.status).to eq("cancelled")
     expect(removed.booking_rooms.sole.reload.room_number).to eq("102")
     expect(RoomStatus.find_by!(hotel: hotel, room_type: room_type, room_number: "102").status).to eq("ready")
-    expect(RoomOperationalAuditLog.where(booking: removed, event_type: "review_no_show_cancelled")).to exist
+    expect(RoomOperationalAuditLog.where(booking: removed, event_type: "no_show_detection_cancelled")).to exist
   end
 end

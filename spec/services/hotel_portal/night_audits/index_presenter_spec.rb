@@ -1,8 +1,6 @@
 require "rails_helper"
 
 RSpec.describe HotelPortal::NightAudits::IndexPresenter do
-  include ActiveSupport::Testing::TimeHelpers
-
   let(:account) { create(:account) }
   let(:hotel) do
     create(:hotel,
@@ -22,7 +20,7 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
       exceptions: exceptions,
       summary: {
         "arrivals_count" => 2,
-        "review_no_show_count" => 1,
+        "no_show_detected_count" => 1,
         "due_out_count" => 3
       }
     }
@@ -46,7 +44,7 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
   end
 
   it "shows an open current business date as the audit authority" do
-    travel_to Time.find_zone("Kuala Lumpur").local(2026, 6, 13, 1, 0) do
+    with_frozen_time Time.find_zone("Kuala Lumpur").local(2026, 6, 13, 1, 0) do
       expect(presenter.ui_state).to eq("OPEN")
       expect(presenter.business_date_status_label).to eq("Open")
       expect(presenter.business_date_status_badge_class).to include("bg-blue-50")
@@ -59,7 +57,7 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
   end
 
   it "derives ready for audit when the open date is closable and clear" do
-    travel_to Time.find_zone("Kuala Lumpur").local(2026, 6, 13, 10, 0) do
+    with_frozen_time Time.find_zone("Kuala Lumpur").local(2026, 6, 13, 10, 0) do
       expect(presenter.ui_state).to eq("READY_FOR_AUDIT")
       expect(presenter.status_label).to eq("Ready for Audit")
       expect(presenter.primary_action.label).to eq("Run Audit")
@@ -82,14 +80,14 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
     end
     let(:exceptions) do
       {
-        "review_due_out" => [
-          { "booking_id" => 456, "reason" => "Due-out review carried forward" }
+        "due_out_detected" => [
+          { "booking_id" => 456, "reason" => "Due-out detection carried forward" }
         ]
       }
     end
 
     it "builds compact readiness and blocker rows with booking actions" do
-      expect(presenter.review_queue_value).to eq("1 / 1")
+      expect(presenter.detected_queue_value).to eq("1 / 1")
 
       readiness_row = presenter.readiness_detail_rows.find { |row| row.type == "Due out not checked out" }
       expect(readiness_row.count).to eq(1)
@@ -105,21 +103,21 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
     end
   end
 
-  context "when due-out reviews are the only unresolved items" do
+  context "when due-out detections are the only unresolved items" do
     let(:exceptions) do
       {
-        "review_due_out" => [
-          { "booking_id" => 123, "reason" => "Late checkout requires staff review" }
+        "due_out_detected" => [
+          { "booking_id" => 123, "reason" => "Due-out detection requires staff action" }
         ]
       }
     end
 
     it "presents them as non-blocking warnings" do
-      travel_to Time.find_zone("Kuala Lumpur").local(2026, 6, 13, 10, 0) do
+      with_frozen_time Time.find_zone("Kuala Lumpur").local(2026, 6, 13, 10, 0) do
         expect(presenter.ui_state).to eq("READY_FOR_AUDIT")
         expect(presenter.readiness_counters.find { |counter| counter.label == "Blockers" }.value).to eq(0)
         expect(presenter.readiness_counters.find { |counter| counter.label == "Warnings" }.value).to eq(1)
-        expect(presenter.warning_groups.sole.label).to eq("Due-Out Review")
+        expect(presenter.warning_groups.sole.label).to eq("Due-out detected")
         expect(presenter.primary_action.enabled).to be(true)
       end
     end
