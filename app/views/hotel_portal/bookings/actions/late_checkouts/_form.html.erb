@@ -6,7 +6,7 @@
         id: "booking-late-checkout-sheet",
         side: :right,
         size: group ? :xl : :lg,
-        title: "Resolve late checkout",
+        title: "Handle late checkout",
         description: booking.guest_name,
         body_class: "p-0") do |sheet| %>
     <% sheet.with_body do %>
@@ -35,7 +35,7 @@
                 data: {
                   turbo_submits_with: "Approving…",
                   "booking-actions--late-checkout-target": "submitButton"
-                }) do %>Approve and apply charges<% end %>
+                }) do %>Save decision<% end %>
         </div>
       <% end %>
     <% end %>

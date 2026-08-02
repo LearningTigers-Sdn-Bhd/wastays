@@ -450,7 +450,7 @@ RSpec.describe "Hotel portal request pages", type: :request do
             params: { kind: "housekeeping", request_id: request.id },
             headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include(%(target="toast-viewport"))
       expect(response.body).to include(%(data-controller="toast-trigger"))
       expect(response.body).to include("Request cannot be moved")

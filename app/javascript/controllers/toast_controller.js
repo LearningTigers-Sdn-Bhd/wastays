@@ -141,13 +141,17 @@ export default class extends Controller {
   }
 
   appendAction(item, action, kind, id) {
-    if (!action?.label || typeof action.onClick !== "function") return
+    if (!action?.label || (typeof action.onClick !== "function" && !action.url)) return
     const button = document.createElement("button")
     button.type = "button"
     button.className = `toast__action-button toast__action-button--${kind}`
     button.textContent = action.label
     button.addEventListener("click", () => {
-      action.onClick()
+      if (typeof action.onClick === "function") {
+        action.onClick()
+      } else {
+        Turbo.visit(String(action.url))
+      }
       this.removeToast(id)
     })
     item.append(button)

@@ -1,0 +1,36 @@
+<% kind = @timestamp_kind.to_s == "check_out" ? "checkout" : "check-in" %>
+<% frame_id = turbo_frame_request_id.presence || "booking_action_sheet_secondary" %>
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "add-booking-time-sheet",
+          side: :right,
+          size: :md,
+          title: "Add #{kind} time",
+          description: @booking.guest_name,
+          body_class: "p-0") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with url: resolve_booking_timestamp_hotel_night_audit_run_path(current_hotel), method: :patch, scope: :night_audit_run, class: "flex min-h-full flex-col" do |form| %>
+          <%= hidden_field_tag :return_to, @return_to %>
+          <%= hidden_field_tag :parent_frame, @parent_frame %>
+          <%= form.hidden_field :booking_id, value: @booking.id %>
+          <%= form.hidden_field :timestamp_kind, value: @timestamp_kind %>
+          <div class="flex-1 space-y-4 p-4 sm:p-6">
+            <%= render "shared/feedback/flash_toast_triggers", flash: flash %>
+            <p class="text-sm text-muted-foreground">Enter the actual <%= kind %> time. The reason is saved with the booking history.</p>
+            <%= render PanelsUI::FormField.new(form:, attribute: :timestamp, label: "#{kind.capitalize} date and time", required: true) do |field| %>
+              <% field.with_date_time_picker(value: params.dig(:night_audit_run, :timestamp).presence || Time.current.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M"), minute_step: 5) %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Correction reason", required: true, hint: "This is recorded in the booking history.") do |field| %>
+              <% field.with_input(value: params.dig(:night_audit_run, :reason), placeholder: "Explain why the time is being added") %>
+            <% end %>
+          </div>
+          <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3 sm:px-6">
+            <%= render PanelsUI::Button.new(type: :button, variant: :secondary, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+            <%= render PanelsUI::Button.new(type: :submit, data: { turbo_submits_with: "Saving…" }) do %>Save time<% end %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

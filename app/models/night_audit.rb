@@ -6,7 +6,7 @@ class NightAudit < ApplicationRecord
   has_many :financial_audit_events, dependent: :restrict_with_error
   has_one :financial_summary, class_name: "NightAuditFinancialSummary", dependent: :destroy
 
-  STATUSES = %w[pending running completed blocked failed].freeze
+  STATUSES = %w[preparing pending running completed blocked failed].freeze
   TRIGGER_MODES = %w[manual scheduled].freeze
 
   validates :business_date, presence: true
@@ -39,5 +39,9 @@ class NightAudit < ApplicationRecord
 
   def pending?
     status == "pending"
+  end
+
+  def preparing?
+    status == "preparing"
   end
 end

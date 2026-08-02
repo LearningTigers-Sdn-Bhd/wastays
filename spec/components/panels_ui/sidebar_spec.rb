@@ -46,6 +46,19 @@ RSpec.describe PanelsUI::Sidebar, type: :component do
     end
   end
 
+  it "renders Turbo-frame action links and closes the mobile navigation sheet first" do
+    action_sections = [
+      PanelsUI::Navigation::Section.new(label: "Ops", items: [
+        PanelsUI::Navigation::Item.new(label: "Run Night Audit", path: "/night-audit-run", turbo_frame: "booking_action_sheet")
+      ])
+    ]
+    render_inline(described_class.new(key: "hotel", home_path: "/", sections: action_sections))
+
+    expect(page).to have_css("aside#hotel-sidebar a[href='/night-audit-run'][data-turbo-frame='booking_action_sheet']")
+    expect(page).to have_no_css("aside#hotel-sidebar a[data-action='click->panels-ui--sheet#close']")
+    expect(page).to have_css("dialog#hotel-sidebar-mobile a[href='/night-audit-run'][data-turbo-frame='booking_action_sheet'][data-action='click->panels-ui--sheet#close']", visible: :all)
+  end
+
   it "renders an active parent as an open collapsible group with its child link" do
     render_sidebar
 

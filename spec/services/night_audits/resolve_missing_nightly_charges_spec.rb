@@ -82,7 +82,9 @@ RSpec.describe NightAudits::ResolveMissingNightlyCharges do
     expect(repaired_tax.metadata["posting_source"]).to eq("audit_blocker_resolution")
     expect(night_audit.reload.blocked_details["missing_nightly_charges"]).to be_empty
     expect(FolioOperationLog.where(operation_type: "correction", booking: booking)).to exist
-    expect(NightAuditLog.where(night_audit: night_audit, action_type: "blocker_resolved")).to exist
+    resolution_metadata = NightAuditLog.find_by!(night_audit: night_audit, action_type: "blocker_resolved").metadata
+    expect(resolution_metadata.dig("before", "issues")).to be_present
+    expect(resolution_metadata.dig("after", "issues")).to be_empty
     expect(FinancialAuditEvent.where(night_audit_id: night_audit.id, event_type: "audit_blocker_resolution_posted").count).to eq(2)
   end
 
@@ -107,6 +109,37 @@ RSpec.describe NightAudits::ResolveMissingNightlyCharges do
 
     expect(@result).to be_success
     expect(@result).to be_already_repaired
+    expect(night_audit.reload.blocked_details["missing_nightly_charges"]).to be_empty
+    expect(hotel.current_business_date_record.blockers_snapshot["missing_nightly_charges"]).to be_empty
+    expect(NightAuditLog.where(night_audit: night_audit, action_type: "blocker_resolved")).not_to exist
+  end
+
+  it "rolls back the repair when resolution logging fails" do
+    wrong_tax = create_nightly_charge(
+      folio: guest_folio,
+      category: "tax",
+      amount: 78.40,
+      transaction_code: sst_code,
+      identity: "sst:0",
+      tax_line: booking.tax_posting_snapshot[business_date.iso8601].sole
+    )
+    allow(NightAudits::RecordLog).to receive(:call!).and_raise("Could not record resolution log")
+
+    expect {
+      @result = described_class.call(
+        night_audit: night_audit,
+        booking: booking,
+        actor: actor,
+        reason: "Company covers room and attached SST"
+      )
+    }.not_to change(FolioTransaction, :count)
+
+    expect(@result).not_to be_success
+    expect(@result.error).to eq("Could not record resolution log")
+    expect(wrong_tax.reload.voided_by_transaction).to be_nil
+    expect(night_audit.reload.blocked_details["missing_nightly_charges"]).to contain_exactly(include("booking_id" => booking.id))
+    expect(FolioOperationLog.where(operation_type: "correction", booking: booking)).not_to exist
+    expect(FinancialAuditEvent.where(night_audit_id: night_audit.id, event_type: "audit_blocker_resolution_posted")).not_to exist
   end
 
   it "repairs an amount mismatch on the resolved folio without reusing the occupied unique key" do

@@ -1,0 +1,32 @@
+<section class="space-y-3" aria-labelledby="<%= heading_id %>">
+  <h2 id="<%= heading_id %>" class="text-base font-semibold text-foreground"><%= heading %></h2>
+  <%= render PanelsUI::Table.new(
+        caption: caption,
+        density: :compact,
+        header_style: :sentence,
+        wrapper_class: "rounded-lg border border-border bg-card"
+      ) do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <th scope="col">Severity</th>
+        <th scope="col">Type</th>
+        <th scope="col">Reference</th>
+        <th scope="col">Details</th>
+      </tr>
+    <% end %>
+    <% table.with_body do %>
+      <% if rows.any? %>
+        <% rows.each do |row| %>
+          <tr>
+            <td><%= render PanelsUI::Badge.new(label: row.severity, variant: row.variant, size: :sm) %></td>
+            <td class="font-medium text-foreground"><%= row.type %></td>
+            <th scope="row" class="font-semibold text-foreground"><%= row.reference %></th>
+            <td class="text-muted-foreground"><%= row.details %></td>
+          </tr>
+        <% end %>
+      <% else %>
+        <%= render "hotel_portal/reports/table_empty_state", colspan: 4, message: empty_message %>
+      <% end %>
+    <% end %>
+  <% end %>
+</section>

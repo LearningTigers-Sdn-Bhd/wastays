@@ -35,8 +35,14 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
       biz_date_record = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      NightAudits::DetectMissedArrivals.call(night_audit: audit_day_1, user: user)
-      Bookings::FinalizeNoShow.call(booking: booking, user: user, night_audit: audit_day_1)
+      with_frozen_time(hotel.business_day_window_for(business_date).end + 5.minutes) do
+        detection = NightAudits::DetectMissedArrivals.call(night_audit: audit_day_1, user: user)
+        finalization = Bookings::FinalizeNoShow.call(booking: booking, user: user, night_audit: audit_day_1)
+
+        expect(detection).to be_success
+        expect(detection.detected_count).to eq(1)
+        expect(finalization).to be_success
+      end
       audit_day_1.update!(status: "completed")
       close_and_open_next_business_date(hotel)
 
@@ -165,8 +171,14 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
       biz_date_record = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      NightAudits::DetectMissedArrivals.call(night_audit: audit_day_1, user: user)
-      Bookings::FinalizeNoShow.call(booking: booking, user: user, night_audit: audit_day_1)
+      with_frozen_time(hotel.business_day_window_for(business_date).end + 5.minutes) do
+        detection = NightAudits::DetectMissedArrivals.call(night_audit: audit_day_1, user: user)
+        finalization = Bookings::FinalizeNoShow.call(booking: booking, user: user, night_audit: audit_day_1)
+
+        expect(detection).to be_success
+        expect(detection.detected_count).to eq(1)
+        expect(finalization).to be_success
+      end
       audit_day_1.update!(status: "completed")
       close_and_open_next_business_date(hotel)
 

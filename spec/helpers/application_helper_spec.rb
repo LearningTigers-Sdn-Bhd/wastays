@@ -58,6 +58,19 @@ RSpec.describe ApplicationHelper, type: :helper do
 
       expect(messages).to eq([ { message: "Booking saved", options: { type: "success", description: "Guest checked in" } } ])
     end
+
+    it "preserves a same-origin action and rejects an external action URL" do
+      allow(helper).to receive(:request).and_return(instance_double(ActionDispatch::Request, base_url: "http://test.host"))
+      safe_flash = ActionDispatch::Flash::FlashHash.new.tap do |flash|
+        flash[:toast] = { message: "Done", action: { label: "View details", url: "/hotel/1/reports/night-audits/2" } }
+      end
+      unsafe_flash = ActionDispatch::Flash::FlashHash.new.tap do |flash|
+        flash[:toast] = { message: "Done", action: { label: "View details", url: "https://evil.example/steal" } }
+      end
+
+      expect(helper.toast_flash_messages(safe_flash).sole.dig(:options, :action)).to eq(label: "View details", url: "/hotel/1/reports/night-audits/2")
+      expect(helper.toast_flash_messages(unsafe_flash).sole.dig(:options, :action)).to be_nil
+    end
   end
 
   describe "#pax_pricing_breakdown_items" do

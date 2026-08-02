@@ -27,7 +27,7 @@ class HotelPortal::GlobalSearchService < BaseGlobalSearchService
     { title: "Roles & Permissions", subtitle: "Configure role-based access", route: :hotel_roles_path, keywords: "roles permissions team access", plan_feature: "role_based_access_control" },
     { title: "My Profile", subtitle: "Signed-in user account profile", route: :edit_hotel_user_profile_path, keywords: "my profile user profile account" },
     { title: "Reports", subtitle: "Financial performance", route: :hotel_reports_path, keywords: "reports financial performance" },
-    { title: "Night Audit", subtitle: "Close day and review blockers", route: :hotel_night_audits_path, keywords: "night audit business date day close blockers warnings" },
+    { title: "Run Night Audit", subtitle: "Verify readiness and close the business date", route: :hotel_night_audit_run_path, keywords: "run night audit business date day close blockers warnings" },
     { title: "Payouts", subtitle: "Payout reports", route: :payouts_hotel_reports_path, keywords: "payouts settlements weekly" },
     { title: "Daily Performance Breakdown", subtitle: "Detailed financial breakdown", route: :breakdown_hotel_reports_path, keywords: "daily performance breakdown financial reports" },
     { title: "Operation Logs", subtitle: "Operational changes history", route: :hotel_audit_logs_path, keywords: "audit logs operation logs operations", plan_feature: "full_audit_trail" },

@@ -24,31 +24,25 @@ module NightAudits
       validation_error = validate_context
       return failure(validation_error) if validation_error.present?
 
-      reconciliation = current_reconciliation
-      return success(reconciliation, already_repaired: true) if reconciliation.valid?
+      ActiveRecord::Base.transaction do
+        reconciliation = current_reconciliation
+        if reconciliation.valid?
+          evaluation = evaluate_and_persist!
+          next success(reconciliation, evaluation: evaluation, already_repaired: true)
+        end
 
-      repair = Folios::Charges::RepairNightlyChargeReconciliation.call(
-        booking: @booking,
-        reconciliation: reconciliation,
-        actor: @actor,
-        reason: @reason,
-        night_audit: @night_audit,
-        posting_options: {
-          posting_source: POSTING_SOURCE,
-          system_posting: true,
-          blocker_resolution: blocker_resolution_metadata
-        }
-      )
-      return failure(repair.error) unless repair.success?
+        repair = repair(reconciliation)
+        raise repair.error unless repair.success?
 
-      evaluation = evaluate_and_persist!
-      record_resolution_log!(repair)
-      success(
-        repair.reconciliation,
-        evaluation: evaluation,
-        reversed_transactions: repair.reversed_transactions,
-        posted_transactions: repair.posted_transactions
-      )
+        evaluation = evaluate_and_persist!
+        record_resolution_log!(repair)
+        success(
+          repair.reconciliation,
+          evaluation: evaluation,
+          reversed_transactions: repair.reversed_transactions,
+          posted_transactions: repair.posted_transactions
+        )
+      end
     rescue StandardError => e
       failure(e.message)
     end
@@ -56,23 +50,16 @@ module NightAudits
     private
 
     def validate_context
-      return "You do not have permission to resolve Night Audit blockers." unless allowed_actor?
-      return "Booking does not belong to this hotel." unless @booking.hotel_id == @hotel.id
-      return "Night audit is not blocked." unless @night_audit.blocked?
-      return "Hotel has no current accounting business date." unless current_business_date
-      return "Night audit is not for the current accounting business date." unless current_business_date.business_date == @business_date
-      return "Business date must be audit blocked before resolving blockers." unless current_business_date.audit_blocked?
-      return nil if blocker_booking_ids.include?(@booking.id)
-      return nil if current_reconciliation.valid?
-
-      "Booking is not in the missing nightly charges blocker list."
-    end
-
-    def allowed_actor?
-      return true if @actor&.respond_to?(:superadmin?) && @actor.superadmin?
-      return false unless @actor&.respond_to?(:has_permission?)
-
-      @actor.has_permission?(PERMISSION, hotel: @hotel)
+      NightAudits::Resolutions::ValidateContext.call(
+        night_audit: @night_audit,
+        booking: @booking,
+        actor: @actor,
+        business_date_record: current_business_date,
+        blocker_booking_ids: -> { blocker_booking_ids },
+        blocker_name: "missing nightly charges",
+        permission: PERMISSION,
+        allow_unlisted: -> { current_reconciliation.valid? }
+      )
     end
 
     def current_business_date
@@ -80,16 +67,12 @@ module NightAudits
     end
 
     def blocker_booking_ids
-      @blocker_booking_ids ||= begin
-        stored_ids = blocker_ids(@night_audit.blocked_details)
-        snapshot_ids = blocker_ids(current_business_date.blockers_snapshot)
-        fresh_ids = blocker_ids(fresh_evaluation[:blocked_details])
-        (stored_ids + snapshot_ids + fresh_ids).uniq
-      end
-    end
-
-    def blocker_ids(details)
-      Array(details.to_h[BLOCKER_TYPE]).filter_map { |item| item["booking_id"] || item[:booking_id] }.map(&:to_i)
+      @blocker_booking_ids ||= NightAudits::Resolutions::BlockerBookingIds.call(
+        night_audit: @night_audit,
+        business_date_record: current_business_date,
+        blocker_type: BLOCKER_TYPE,
+        fresh_blocked_details: fresh_evaluation[:blocked_details]
+      )
     end
 
     def fresh_evaluation
@@ -104,6 +87,21 @@ module NightAudits
       @current_reconciliation ||= Folios::Charges::NightlyChargeReconciliation.call(
         booking: @booking,
         business_date: @business_date
+      )
+    end
+
+    def repair(reconciliation)
+      Folios::Charges::RepairNightlyChargeReconciliation.call(
+        booking: @booking,
+        reconciliation: reconciliation,
+        actor: @actor,
+        reason: @reason,
+        night_audit: @night_audit,
+        posting_options: {
+          posting_source: POSTING_SOURCE,
+          system_posting: true,
+          blocker_resolution: blocker_resolution_metadata
+        }
       )
     end
 
@@ -122,12 +120,11 @@ module NightAudits
         phase: :post_close
       ).call
 
-      @night_audit.update!(
-        blocked_details: evaluation[:blocked_details],
-        exceptions: evaluation[:exceptions],
-        summary: @night_audit.summary.to_h.merge(evaluation[:summary])
+      NightAudits::Resolutions::RefreshSnapshot.call!(
+        night_audit: @night_audit,
+        business_date_record: current_business_date,
+        evaluation: evaluation
       )
-      current_business_date.update!(blockers_snapshot: evaluation[:blocked_details])
       evaluation
     end
 
@@ -144,7 +141,9 @@ module NightAudits
           operation_key: repair.operation_key,
           reversed_transaction_ids: repair.reversed_transactions.map(&:id),
           posted_transaction_ids: repair.posted_transactions.map(&:id),
-          reason: @reason
+          reason: @reason,
+          before: { issues: current_reconciliation.issues },
+          after: { issues: repair.reconciliation.issues }
         }
       )
     end

@@ -1,318 +1,54 @@
 module NightAudits
   class Evaluate
-    include Folios::Charges::NightlyChargeCalculation
+    PRE_CLOSE_CHECKS = [
+      Evaluation::Checks::DueOuts,
+      Evaluation::Checks::MissedArrivals,
+      Evaluation::Checks::BookingTimestamps,
+      Evaluation::Checks::MissingFolios,
+      Evaluation::Checks::OutstandingFolioBalances,
+      Evaluation::Checks::UnsyncedPayments,
+      Evaluation::Checks::UnsyncedRefunds
+    ].freeze
+    POST_CLOSE_CHECKS = [
+      Evaluation::Checks::DueOuts,
+      Evaluation::Checks::MissedArrivals,
+      Evaluation::Checks::BookingTimestamps,
+      Evaluation::Checks::MissingFolios,
+      Evaluation::Checks::MissingNightlyCharges,
+      Evaluation::Checks::OutstandingFolioBalances,
+      Evaluation::Checks::UnsyncedPayments,
+      Evaluation::Checks::UnsyncedRefunds
+    ].freeze
+    WARNINGS = [
+      Evaluation::Warnings::OpenOperationalRequests,
+      Evaluation::Warnings::UnusualFolioBalances
+    ].freeze
 
     def initialize(hotel:, business_date:, phase: :post_close)
       @hotel = hotel
-      @business_date = business_date.to_date
-      @phase = phase.to_sym
+      @business_date = business_date
+      @phase = phase
     end
 
     def call
-      {
-        blocked_details: build_blocked_details,
-        exceptions: build_exceptions,
-        summary: build_summary
-      }
+      context = Evaluation::Context.new(hotel: @hotel, business_date: @business_date, phase: @phase)
+
+      Evaluation::Result.new(
+        blocked_details: build_results(checks_for(context), context),
+        exceptions: build_results(WARNINGS, context),
+        summary: Evaluation::BuildSummary.new(context: context).call
+      ).to_h
     end
 
     private
 
-    def build_summary
-      {
-        "arrivals_count" => hotel_bookings.checking_in_on(@business_date, @hotel.hotel_time_zone).count,
-        "no_show_detected_count" => hotel_bookings.where(status: "no_show_detected").count,
-        "no_show_count" => hotel_bookings.no_show.checking_in_on(@business_date, @hotel.hotel_time_zone).count,
-        "due_out_count" => hotel_bookings.checking_out_on(@business_date, @hotel.hotel_time_zone).count,
-        "checked_out_count" => hotel_bookings.completed.where(checked_out_at: @hotel.business_day_window_for(@business_date)).count,
-        "in_house_count" => hotel_bookings.checked_in.intersecting_local_date(@business_date, @hotel.hotel_time_zone).count,
-        "payment_status_counts" => payment_status_counts
-      }
+    def checks_for(context)
+      context.post_close? ? POST_CLOSE_CHECKS : PRE_CLOSE_CHECKS
     end
 
-    def build_blocked_details
-      details = {
-        "due_out_not_checked_out" => serialize_bookings(due_out_not_checked_out, "Due out today but still not checked out"),
-        "checked_in_missing_timestamp" => serialize_bookings(checked_in_missing_timestamp, "Checked-in booking is missing check-in timestamp"),
-        "completed_missing_timestamp" => serialize_bookings(completed_missing_timestamp, "Completed booking is missing check-out timestamp"),
-        "missing_folio" => serialize_bookings(missing_folio_bookings, "Booking requires a folio before night audit can close"),
-        "missing_nightly_charges" => missing_nightly_charge_details,
-        "outstanding_folio_balance" => serialize_bookings(outstanding_balance_bookings, "Booking has outstanding folio balance at checkout"),
-        "captured_payment_not_synced" => serialize_payment_transactions(unsynced_captured_payment_transactions, "Captured payment is not synced to the booking folio"),
-        "refund_not_synced" => serialize_refund_requests(unsynced_completed_refund_requests, "Completed refund is not synced to the booking folio")
-      }
-
-      return details unless pre_close?
-
-      details.slice(
-        "due_out_not_checked_out",
-        "checked_in_missing_timestamp",
-        "completed_missing_timestamp",
-        "missing_folio",
-        "captured_payment_not_synced",
-        "refund_not_synced",
-        "outstanding_folio_balance"
-      )
-    end
-
-    def pre_close?
-      @phase == :pre_close
-    end
-
-    def build_exceptions
-      exceptions = {
-        "due_out_detected" => serialize_bookings(due_out_detected_bookings, "Due-out detection carried forward"),
-        "no_show_detected" => serialize_bookings(no_show_detected_bookings, "No-show detection carried forward"),
-        "open_housekeeping_requests" => serialize_requests(open_housekeeping_requests, :request_details, "Housekeeping request still open"),
-        "open_complaint_requests" => serialize_requests(open_complaint_requests, :complaint_details, "Complaint request still open")
-      }
-
-      # Add Folio Balance Exceptions (Milestone 5 Requirement)
-      folio_exceptions = build_folio_balance_exceptions
-      exceptions["folio_balance_exceptions"] = folio_exceptions if folio_exceptions.any?
-
-      exceptions
-    end
-
-    def hotel_bookings
-      @hotel_bookings ||= @hotel.bookings
-    end
-
-    def due_out_not_checked_out
-      cutoff = (@business_date + 1.day).in_time_zone(@hotel.hotel_time_zone).beginning_of_day
-      @due_out_not_checked_out ||= hotel_bookings.where(status: [ "checked_in", "checkout_required" ]).where("check_out < ?", cutoff)
-    end
-
-    def due_out_detected_bookings
-      @due_out_detected_bookings ||= hotel_bookings.where(status: "due_out_detected")
-    end
-
-    def no_show_detected_bookings
-      @no_show_detected_bookings ||= hotel_bookings.where(status: "no_show_detected")
-    end
-
-    def checked_in_missing_timestamp
-      @checked_in_missing_timestamp ||= hotel_bookings.checked_in.where(checked_in_at: nil)
-    end
-
-    def completed_missing_timestamp
-      @completed_missing_timestamp ||= hotel_bookings.completed.where(checked_out_at: nil)
-    end
-
-    def financially_relevant_bookings
-      @financially_relevant_bookings ||= begin
-        stay_scope = hotel_bookings
-          .where(status: %w[checked_in due_out_detected checkout_required completed])
-          .intersecting_local_date(@business_date, @hotel.hotel_time_zone)
-        no_show_scope = hotel_bookings.no_show.checking_in_on(@business_date, @hotel.hotel_time_zone)
-
-        stay_scope.or(no_show_scope)
-          .includes(:payment_transactions, :refund_request, :booking_rooms, booking_folio: :folio_transactions)
-          .to_a
-      end
-    end
-
-    def missing_folio_bookings
-      @missing_folio_bookings ||= financially_relevant_bookings.select do |booking|
-        booking.booking_folio.blank? && requires_accounting_folio?(booking)
-      end
-    end
-
-    def requires_accounting_folio?(booking)
-      return false if booking.status.in?(%w[cancelled no_show])
-
-      true
-    end
-
-    def nightly_charge_bookings
-      @nightly_charge_bookings ||= hotel_bookings
-        .includes(:booking_rooms, booking_folios: [ :folio_transactions ])
-        .checked_in
-        .occupying_night_on(@business_date, @hotel.hotel_time_zone)
-        .to_a
-    end
-
-    def missing_nightly_charge_details
-      @missing_nightly_charge_details ||= nightly_charge_bookings.filter_map do |booking|
-        next if booking.booking_folio.blank?
-
-        reconciliation = Folios::Charges::NightlyChargeReconciliation.call(
-          booking: booking,
-          business_date: @business_date
-        )
-        next if reconciliation.valid?
-
-        serialize_booking(booking, "Booking folios have missing or incorrect nightly charges").merge(
-          "line_issues" => reconciliation.issues
-        )
-      end
-    end
-
-    def outstanding_balance_bookings
-      @outstanding_balance_bookings ||= financially_relevant_bookings.select do |booking|
-        next false unless booking.booking_folio
-        next false if booking.status == "no_show"
-        departure_date = Bookings::ScheduledStay.local_date(hotel: @hotel, value: booking.check_out)
-        next false unless departure_date == @business_date || booking.status == "completed"
-
-        folio_outstanding_balance(booking.booking_folio) != 0.to_d
-      end
-    end
-
-    def unsynced_captured_payment_transactions
-      @unsynced_captured_payment_transactions ||= financially_relevant_bookings.flat_map do |booking|
-        next [] unless booking.booking_folio
-
-        booking.payment_transactions.select do |payment_transaction|
-          payment_transaction.status == "captured" && !folio_payment_synced?(booking.booking_folio, payment_transaction)
-        end
-      end
-    end
-
-    def unsynced_completed_refund_requests
-      @unsynced_completed_refund_requests ||= financially_relevant_bookings.filter_map do |booking|
-        refund_request = booking.refund_request
-        next unless booking.booking_folio && refund_request&.completed?
-
-        refund_request unless folio_refund_synced?(booking.booking_folio, refund_request)
-      end
-    end
-
-    def open_housekeeping_requests
-      @open_housekeeping_requests ||= HousekeepingRequest.active
-        .joins(:booking)
-        .where(bookings: { hotel_id: @hotel.id })
-        .where.not(status: %w[completed cancelled])
-    end
-
-    def open_complaint_requests
-      @open_complaint_requests ||= ComplaintRequest.active
-        .joins(:booking)
-        .where(bookings: { hotel_id: @hotel.id })
-        .where.not(status: %w[resolved cancelled])
-    end
-
-    def build_folio_balance_exceptions
-      # Find in-house guests with unusual balances
-      in_house_bookings = hotel_bookings.checked_in.includes(booking_folio: :folio_transactions)
-
-      in_house_bookings.filter_map do |booking|
-        next unless booking.booking_folio
-        balance = folio_outstanding_balance(booking.booking_folio)
-
-        # We flag large outstanding balances (e.g. > 1000) or large credits (e.g. < -100)
-        # These thresholds could eventually be hotel-configurable.
-        if balance > 1000.to_d || balance < -100.to_d
-          {
-            "booking_id" => booking.id,
-            "confirmation_token" => booking.confirmation_token,
-            "guest_name" => booking.guest_name,
-            "status" => booking.status,
-            "balance" => balance.to_f,
-            "reason" => balance > 0 ? "Large outstanding balance" : "Large credit balance"
-          }
-        end
-      end
-    end
-
-    def payment_status_counts
-      hotel_bookings.group(:payment_status).count.transform_keys(&:to_s)
-    end
-
-    def folio_outstanding_balance(folio)
-      folio.folio_transactions.to_a.sum do |transaction|
-        case transaction.transaction_type
-        when "charge" then transaction.amount.to_d
-        when "payment" then -transaction.amount.to_d
-        when "adjustment" then transaction.amount.to_d
-        else 0.to_d
-        end
-      end
-    end
-
-    def folio_payment_synced?(folio, payment_transaction)
-      expected_amount = payment_transaction.amount_subunits.to_d / 100.0
-
-      folio.folio_transactions.any? do |transaction|
-        transaction.transaction_type == "payment" &&
-          transaction.metadata["payment_transaction_id"].to_s == payment_transaction.id.to_s &&
-          transaction.amount.to_d == expected_amount
-      end
-    end
-
-    def folio_refund_synced?(folio, refund_request)
-      expected_amount = -refund_request.refund_amount.to_d
-
-      folio.folio_transactions.any? do |transaction|
-        transaction.transaction_type == "payment" &&
-          transaction.metadata["refund_request_id"].to_s == refund_request.id.to_s &&
-          transaction.amount.to_d == expected_amount
-      end
-    end
-
-    def serialize_bookings(scope, reason)
-      bookings = scope.respond_to?(:order) ? scope.order(:check_out, :id) : scope.sort_by { |booking| [ booking.check_out, booking.id ] }
-
-      bookings.map { |booking| serialize_booking(booking, reason) }
-    end
-
-    def serialize_booking(booking, reason)
-      {
-        "booking_id" => booking.id,
-        "confirmation_token" => booking.confirmation_token,
-        "guest_name" => booking.guest_name,
-        "status" => booking.status,
-        "check_in" => booking.check_in,
-        "check_out" => booking.check_out,
-        "room_numbers" => booking.room_numbers.presence,
-        "reason" => reason
-      }
-    end
-
-    def serialize_payment_transactions(payment_transactions, reason)
-      payment_transactions.sort_by(&:id).map do |payment_transaction|
-        booking = payment_transaction.booking
-
-        {
-          "payment_transaction_id" => payment_transaction.id,
-          "booking_id" => booking.id,
-          "confirmation_token" => booking.confirmation_token,
-          "guest_name" => booking.guest_name,
-          "amount" => payment_transaction.amount_subunits.to_d / 100.0,
-          "gateway" => payment_transaction.gateway,
-          "external_reference" => payment_transaction.external_reference,
-          "reason" => reason
-        }
-      end
-    end
-
-    def serialize_refund_requests(refund_requests, reason)
-      refund_requests.sort_by(&:id).map do |refund_request|
-        booking = refund_request.booking
-
-        {
-          "refund_request_id" => refund_request.id,
-          "booking_id" => booking.id,
-          "confirmation_token" => booking.confirmation_token,
-          "guest_name" => booking.guest_name,
-          "amount" => refund_request.refund_amount,
-          "reason" => reason
-        }
-      end
-    end
-
-    def serialize_requests(scope, details_method, reason)
-      scope.order(:requested_at, :id).map do |request|
-        booking = request.booking
-        {
-          "request_id" => request.id,
-          "booking_id" => booking.id,
-          "confirmation_token" => booking.confirmation_token,
-          "guest_name" => booking.guest_name,
-          "status" => request.status,
-          "details" => request.public_send(details_method),
-          "reason" => reason
-        }
+    def build_results(services, context)
+      services.each_with_object({}) do |service, results|
+        results.merge!(service.new(context: context).call)
       end
     end
   end

@@ -33,7 +33,7 @@
       <%= render PanelsUI::FormField.new(
             form: folio_form,
             attribute: :action,
-            label: "Resolution",
+            label: "What should happen?",
             disabled: single_action || !booking_visible,
             size: :sm) do |field| %>
         <% field.with_select_menu(
@@ -63,7 +63,7 @@
 
         <div class="<%= 'hidden' unless exception_actions.include?(values[:action]) %>" data-<%= ns %>-target="reasonFields">
           <div data-conditional-required="true">
-            <%= render PanelsUI::FormField.new(form: folio_form, attribute: :reason, label: "Reason", hint: "Why this folio cannot be closed at checkout.", size: :sm, disabled: !booking_visible) do |field| %>
+            <%= render PanelsUI::FormField.new(form: folio_form, attribute: :reason, label: "Reason", hint: "Why this guest bill cannot be closed at checkout.", size: :sm, disabled: !booking_visible) do |field| %>
               <% field.with_input(value: values[:reason], placeholder: "e.g. awaiting manager approval") %>
             <% end %>
           </div>
@@ -83,7 +83,7 @@
                     form: folio_form,
                     attribute: :credit_override,
                     label: "Override corporate credit control",
-                    description: "Confirms that an authorized exception has been approved.",
+                    description: "Confirms that a manager approved this change.",
                     checked: ActiveModel::Type::Boolean.new.cast(values[:credit_override]),
                     size: :sm,
                     disabled: !booking_visible) %>
@@ -106,7 +106,7 @@
       <%= link_to row.ledger_path, target: "_blank", rel: "noopener",
             class: "inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline",
             data: { turbo: false } do %>
-        View folio ledger
+        View guest bill
         <%= app_icon "external-link", class: "size-3.5", aria: { hidden: true } %>
       <% end %>
     </div>

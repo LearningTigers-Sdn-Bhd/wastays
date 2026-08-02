@@ -1,22 +1,22 @@
 <%= render PanelsUI::RadioGroup.new(
       form: form, attribute: :resolution,
-      label: "Choose how to resolve this late checkout.",
+      label: "Choose what should happen.",
       variant: :card,
       size: :sm,
       selected: params[:resolution] || "charge",
       options: [
         {
-          label: "Approve and apply charges",
+          label: "Allow later checkout and add a charge",
           value: "charge",
           description: "Extend the scheduled checkout and post the calculated late-checkout charge."
         },
         {
-          label: "Approve without charge",
+          label: "Allow later checkout without a charge",
           value: "waive",
           description: "Extend the scheduled checkout without adding a late-checkout charge."
         },
         {
-          label: "Reject late checkout",
+          label: "Require checkout now",
           value: "reject",
           description: "Keep the scheduled checkout unchanged and require the guest to check out."
         }

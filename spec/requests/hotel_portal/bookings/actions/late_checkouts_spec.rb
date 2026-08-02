@@ -47,16 +47,17 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :bu
       expect(dialog).to be_present
       expect(dialog["data-panels-ui-sheet-side"]).to eq("right")
       expect(dialog.text).to include(
-        "Resolve late checkout",
+        "Handle late checkout",
         "Ada Lovelace",
-        "Choose how to resolve this late checkout.",
-        "Approve and apply charges",
-        "Approve without charge",
-        "Reject late checkout",
+        "Choose what should happen.",
+        "Allow later checkout and add a charge",
+        "Allow later checkout without a charge",
+        "Require checkout now",
         "Extend the scheduled checkout and post the calculated late-checkout charge.",
         "Extend the scheduled checkout without adding a late-checkout charge.",
         "Keep the scheduled checkout unchanged and require the guest to check out.",
-        "Charge calculation"
+        "Charge calculation",
+        "Save decision"
       )
       expect(dialog.at_css("[data-controller~='booking-actions--late-checkout']")).to be_present
       expect(dialog.at_css("fieldset[data-variant='card'] input[type='radio'][name='resolution']")).to be_present
