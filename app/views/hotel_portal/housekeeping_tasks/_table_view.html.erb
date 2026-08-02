@@ -1,88 +1,146 @@
-<% form_url = hotel_housekeeping_tasks_path(current_hotel) %>
-<% board_return_url = hotel_housekeeping_tasks_path(current_hotel, board_filters.merge(date: @selected_date.iso8601)) %>
+<% board_return_url = hotel_housekeeping_tasks_path(current_hotel, board_filters) %>
 <% staff_choices = @staff_members.map { |staff| [ staff.name, staff.id ] } %>
-<% writable_date = @selected_date == (current_hotel.current_business_date || current_hotel.business_date_for(Time.current)) %>
+<% selected_room_type_ids = Array(params[:room_type_ids]).map(&:to_s) %>
+<% selected_room_statuses = Array(params[:room_statuses]).map(&:to_s) %>
+<% selected_assigned_to_ids = Array(params[:assigned_to_ids]).map(&:to_s) %>
+<% selected_booking_statuses = Array(params[:booking_statuses]).map(&:to_s) %>
+<% all_room_types = selected_room_type_ids.empty? %>
+<% all_room_statuses = selected_room_statuses.empty? %>
+<% all_assigned_to = selected_assigned_to_ids.empty? %>
+<% all_booking_statuses = selected_booking_statuses.empty? %>
 
 <div class="space-y-6">
-  <section class="space-y-3" aria-labelledby="hk-filters-heading">
-    <h2 id="hk-filters-heading" class="sr-only">Filter housekeeping rooms</h2>
-
-    <%= form_with url: form_url, method: :get, id: "hk-filters-form",
-          data: {
-            controller: "export-sync",
-            action: "change->export-sync#sync input->export-sync#sync",
-            turbo_frame: "housekeeping_tasks_results"
-          },
-          class: "grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-5" do |form| %>
-
-      <%= render PanelsUI::FormField.new(form:, attribute: :q, label: "Search", class: "lg:col-span-2") do |field| %>
-        <% field.with_addon(align: :inline_start, variant: :bare) do %>
-          <%= app_icon "search", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
-        <% end %>
-        <% field.with_input(type: :search, value: params[:q], autocomplete: "off",
-                            placeholder: "Room, guest, booking or remarks") %>
-      <% end %>
-
-      <%= render PanelsUI::FormField.new(form:, attribute: :assigned_to, label: "Assigned to") do |field| %>
-        <% field.with_select_menu([ [ "All staff", "" ] ] + staff_choices, selected: params[:assigned_to].to_s) %>
-      <% end %>
-
-      <%= render PanelsUI::FormField.new(form:, attribute: :booking_status, label: "Booking status") do |field| %>
-        <% field.with_select_menu(booking_status_filter_options, selected: params[:booking_status].to_s) %>
-      <% end %>
-
-      <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
-        <%= render PanelsUI::FormField.new(form:, attribute: :date, label: "As of date", class: "flex-1") do |field| %>
-          <% field.with_date_picker(value: @selected_date.iso8601, placeholder: "As of date") %>
-        <% end %>
-        <%= render PanelsUI::Button.new(label: "Apply", variant: :secondary, type: "submit") %>
-      </div>
-    <% end %>
-  </section>
-
-  <section class="space-y-3" aria-labelledby="hk-board-heading" data-controller="results-announcer">
+  <section class="space-y-3" aria-labelledby="hk-board-heading"
+           data-controller="results-announcer housekeeping-table"
+           data-action="change->housekeeping-table#filterChanged">
     <h2 id="hk-board-heading" class="sr-only">Housekeeping room board</h2>
     <p class="sr-only" role="status" aria-live="polite" aria-atomic="true"
        data-results-announcer-target="status"></p>
 
     <%= turbo_frame_tag "housekeeping_tasks_results" do %>
-      <% unless writable_date %>
-        <div class="mb-3 rounded-lg border border-border bg-muted px-4 py-3 text-sm text-muted-foreground" role="note">
-          Room status, assignment, and remarks are read-only outside the current business date.
-        </div>
-      <% end %>
-
       <p hidden data-board-summary>
         <%= pluralize(@room_groups.sum { |group| group[:rooms].size }, "room") %>
         matching the current filters.
       </p>
 
-      <% if @room_groups.any? %>
-        <%= render PanelsUI::Table.new(
+      <%= render PanelsUI::Table.new(
               caption: "Housekeeping rooms by room type",
               density: :compact,
               header_style: :sentence,
               hoverable: true,
               sticky_header: true,
-              wrapper_class: "max-h-[75dvh] overflow-auto overscroll-none rounded-lg border border-border bg-card",
-              data: { controller: "table-group" }
+              wrapper_class: "max-h-[82dvh] overflow-auto overscroll-none rounded-lg border border-border bg-card",
+              data: {
+                controller: "table-group"
+              }
             ) do |table| %>
           <% table.with_header do %>
             <tr>
-              <th scope="col">Room type</th>
+              <th scope="col" id="hk-room-type-filter-cell" data-turbo-permanent>
+                <%= render PanelsUI::DropdownMenu.new(id: "hk-room-type-filter", placement: :bottom_start, class: "w-64") do |menu| %>
+                  <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium") do %>
+                    Room type
+                    <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
+                  <% end %>
+                  <% menu.with_checkbox(name: "room_type_ids[]", value: "__all__", checked: all_room_types) { "All room types" } %>
+                  <% @room_types.each do |room_type| %>
+                    <% menu.with_checkbox(
+                          name: "room_type_ids[]",
+                          value: room_type.id,
+                          checked: all_room_types || selected_room_type_ids.include?(room_type.id.to_s)
+                        ) { room_type.name } %>
+                  <% end %>
+                <% end %>
+              </th>
               <th scope="col" class="text-center">Pax</th>
-              <th scope="col">Room status</th>
-              <th scope="col">Assigned to</th>
-              <th scope="col" class="text-center">Booking status</th>
-              <th scope="col" class="text-end">Arrival</th>
-              <th scope="col" class="text-end">Departure</th>
+              <th scope="col" id="hk-room-status-filter-cell" data-turbo-permanent>
+                <%= render PanelsUI::DropdownMenu.new(id: "hk-room-status-filter", placement: :bottom_start, class: "w-64") do |menu| %>
+                  <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium") do %>
+                    Room status
+                    <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
+                  <% end %>
+                  <% menu.with_checkbox(name: "room_statuses[]", value: "__all__", checked: all_room_statuses) { "All room statuses" } %>
+                  <% ::HousekeepingTasks::BoardBuilder::ROOM_STATUS_LABELS.each do |value, label| %>
+                    <% menu.with_checkbox(
+                          name: "room_statuses[]",
+                          value: value,
+                          checked: all_room_statuses || selected_room_statuses.include?(value)
+                        ) { label } %>
+                  <% end %>
+                <% end %>
+              </th>
+              <th scope="col" id="hk-assigned-to-filter-cell" data-turbo-permanent>
+                <%= render PanelsUI::DropdownMenu.new(id: "hk-assigned-to-filter", placement: :bottom_start, class: "w-64") do |menu| %>
+                  <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium") do %>
+                    Assigned to
+                    <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
+                  <% end %>
+                  <% menu.with_checkbox(name: "assigned_to_ids[]", value: "__all__", checked: all_assigned_to) { "All staff" } %>
+                  <% @staff_members.each do |staff| %>
+                    <% menu.with_checkbox(
+                          name: "assigned_to_ids[]",
+                          value: staff.id,
+                          checked: all_assigned_to || selected_assigned_to_ids.include?(staff.id.to_s)
+                        ) { staff.name } %>
+                  <% end %>
+                <% end %>
+              </th>
+              <th scope="col" class="text-center" id="hk-booking-status-filter-cell" data-turbo-permanent>
+                <%= render PanelsUI::DropdownMenu.new(id: "hk-booking-status-filter", placement: :bottom_start, class: "w-64") do |menu| %>
+                  <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium") do %>
+                    Booking status
+                    <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
+                  <% end %>
+                  <% menu.with_checkbox(name: "booking_statuses[]", value: "__all__", checked: all_booking_statuses) { "All booking statuses" } %>
+                  <% ::HousekeepingTasks::BoardBuilder::BOOKING_STATUSES.each do |value, label| %>
+                    <% menu.with_checkbox(
+                          name: "booking_statuses[]",
+                          value: value,
+                          checked: all_booking_statuses || selected_booking_statuses.include?(value)
+                        ) { label } %>
+                  <% end %>
+                <% end %>
+              </th>
+              <th scope="col" class="text-end" aria-sort="<%= housekeeping_sort_aria("arrival") %>">
+                <%= link_to housekeeping_sort_path("arrival"),
+                      class: "inline-flex items-center gap-1 font-medium text-foreground hover:text-foreground",
+                      data: { action: "click->housekeeping-table#navigate", turbo_frame: "housekeeping_tasks_results" },
+                      aria: { label: "Sort by arrival" } do %>
+                  Arrival
+                  <%= app_icon(housekeeping_sort_direction("arrival") == "desc" ? "chevron-down" : "chevron-up", class: "size-3.5 text-muted-foreground", aria: { hidden: true }) %>
+                <% end %>
+              </th>
+              <th scope="col" class="text-end" aria-sort="<%= housekeeping_sort_aria("departure") %>">
+                <%= link_to housekeeping_sort_path("departure"),
+                      class: "inline-flex items-center gap-1 font-medium text-foreground hover:text-foreground",
+                      data: { action: "click->housekeeping-table#navigate", turbo_frame: "housekeeping_tasks_results" },
+                      aria: { label: "Sort by departure" } do %>
+                  Departure
+                  <%= app_icon(housekeeping_sort_direction("departure") == "desc" ? "chevron-down" : "chevron-up", class: "size-3.5 text-muted-foreground", aria: { hidden: true }) %>
+                <% end %>
+              </th>
               <th scope="col" class="text-center">Nights</th>
               <th scope="col">Remarks</th>
             </tr>
           <% end %>
 
           <% table.with_body do %>
-            <% @room_groups.each_with_index do |group, group_index| %>
+            <% if @room_groups.empty? %>
+              <tr>
+                <td colspan="9" class="h-[72dvh] text-center">
+                  <div class="space-y-3">
+                    <span class="inline-flex size-12 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground">
+                      <%= app_icon "clipboard-check", class: "size-6", aria: { hidden: true } %>
+                    </span>
+                    <div>
+                      <h3 class="text-base font-semibold text-foreground">No rooms found</h3>
+                      <p class="mt-1 text-sm text-muted-foreground">Try adjusting your filters.</p>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            <% else %>
+              <% @room_groups.each_with_index do |group, group_index| %>
               <% group_key = "hk-group-#{group[:room_type]&.id || group_index}" %>
               <% row_ids = group[:rooms].map { |room| "#{group_key}-#{room.dom_key}" } %>
 
@@ -139,9 +197,7 @@
                               turbo_frame: "_top"
                             } do |form| %>
                         <%= hidden_field_tag :date, @selected_date.iso8601, id: nil %>
-                        <% board_filters.each do |key, value| %>
-                          <%= hidden_field_tag "filters[#{key}]", value, id: nil %>
-                        <% end %>
+                        <%= housekeeping_hidden_board_filters(board_filters) %>
                         <%= label_tag status_id, "Room status for #{room.label}", class: "sr-only" %>
                         <%= render PanelsUI::SelectMenu.new(
                               form:,
@@ -167,9 +223,7 @@
                       <%= form_with url: room.assignment_url, method: :patch, class: "contents",
                             data: { controller: "auto-submit", action: "change->auto-submit#submitNow" } do |form| %>
                         <%= hidden_field_tag :date, @selected_date.iso8601, id: nil %>
-                        <% board_filters.each do |key, value| %>
-                          <%= hidden_field_tag "filters[#{key}]", value, id: nil %>
-                        <% end %>
+                        <%= housekeeping_hidden_board_filters(board_filters) %>
                         <%= label_tag assignment_id, "Assign housekeeper for #{room.label}", class: "sr-only" %>
                         <%= render PanelsUI::Combobox.new(
                               form:,
@@ -238,20 +292,10 @@
                     </div>
                   </td>
                 </tr>
+                <% end %>
               <% end %>
             <% end %>
           <% end %>
-        <% end %>
-      <% else %>
-        <div class="space-y-3 rounded-lg border border-border bg-card px-6 py-16 text-center sm:px-8">
-          <span class="inline-flex size-12 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground">
-            <%= app_icon "clipboard-check", class: "size-6", aria: { hidden: true } %>
-          </span>
-          <div>
-            <h3 class="text-base font-semibold text-foreground">No rooms found</h3>
-            <p class="mt-1 text-sm text-muted-foreground">Try adjusting your filters or searching for a different room.</p>
-          </div>
-        </div>
       <% end %>
     <% end %>
   </section>

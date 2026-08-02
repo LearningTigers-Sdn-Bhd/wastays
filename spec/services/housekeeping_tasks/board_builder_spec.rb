@@ -128,7 +128,7 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
     end
   end
 
-  describe "filters and search" do
+  describe "filters and sorting" do
     let(:housekeeper) { create(:user, account:, name: "Ari Housekeeper") }
 
     before do
@@ -141,6 +141,7 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
         assigned_to: housekeeper,
         notes: "Bring hypoallergenic pillows"
       )
+      create(:room_status, hotel:, room_type: penthouse, room_number: "102", status: "ready")
       stay(
         status: "checked_in",
         check_in: selected_date - 1.day,
@@ -148,22 +149,31 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
         guest_name: "Ada Lovelace",
         confirmation_token: "WS-ADA1"
       )
+      stay(
+        room_number: "102",
+        status: "checked_in",
+        check_in: selected_date - 2.days,
+        check_out: selected_date + 2.days
+      )
     end
 
-    it "filters by room assignment and derived booking status" do
-      results = build_board(assigned_to: housekeeper.id, booking_status: "pending_checkout")
+    it "filters by room type and physical room status" do
+      results = build_board(
+        room_type_ids: [ penthouse.id ],
+        room_statuses: [ "dirty" ],
+        assigned_to_ids: [ housekeeper.id ],
+        booking_statuses: [ "pending_checkout" ]
+      )
 
       expect(results.one?).to be(true)
       expect(results.first[:rooms].map { |entry| entry[:room_number] }).to eq([ "101" ])
     end
 
-    it "searches room, type, guest, booking reference, and remarks case-insensitively" do
-      expect(build_board(query: "penthouse")).not_to be_empty
-      expect(build_board(query: "ADA LOVELACE")).not_to be_empty
-      expect(build_board(query: "ws-ada1")).not_to be_empty
-      expect(build_board(query: "HYPOALLERGENIC")).not_to be_empty
-      expect(build_board(query: "102")).not_to be_empty
-      expect(build_board(query: "nothing here")).to be_empty
+    it "sorts rooms by arrival or departure without moving room type groups" do
+      results = build_board(sort: "departure", direction: "desc")
+
+      expect(results.first[:room_type]).to eq(penthouse)
+      expect(results.first[:rooms].map { |entry| entry[:room_number] }).to eq([ "102", "101" ])
     end
   end
 end

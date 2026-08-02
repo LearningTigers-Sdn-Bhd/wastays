@@ -43,6 +43,14 @@ RSpec.describe ApplicationHelper, type: :helper do
     end
   end
 
+  describe "#display_housekeeping_datetime" do
+    it "uses day/month/year and 24-hour time" do
+      value = Time.zone.local(2026, 7, 31, 16)
+
+      expect(helper.display_housekeeping_datetime(value)).to eq("31/07/2026, 16:00")
+    end
+  end
+
   describe "#toast_flash_messages" do
     it "maps notice and alert flashes to RailsBlocks toast variants" do
       messages = helper.toast_flash_messages(ActionDispatch::Flash::FlashHash.new.tap { |flash| flash[:notice] = "Saved"; flash[:alert] = "Failed" })
