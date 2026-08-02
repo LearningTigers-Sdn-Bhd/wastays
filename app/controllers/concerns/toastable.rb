@@ -35,8 +35,8 @@ module Toastable
   # optional description/type the plain notice/alert flash can't express) across
   # the redirect via flash[:toast]. Extra options (e.g. status:) pass through to
   # redirect_to, and any flash already set on this request is preserved.
-  def redirect_with_toast(url, message, type: :default, description: nil, **options)
-    toast = { message: message, type: type, description: description }.compact
+  def redirect_with_toast(url, message, type: :default, description: nil, action: nil, secondary_action: nil, **options)
+    toast = { message: message, type: type, description: description, action: action, secondary_action: secondary_action }.compact
     redirect_to(url, **options, flash: { toast: toast })
   end
 end

@@ -11,6 +11,8 @@
     <a class="panel-sidebar__link<%= " panel-sidebar__child" if child %>"
        href="<%= entry.path %>"
        data-sidebar-route
+       <%= %(data-turbo-frame="#{ERB::Util.html_escape(entry.turbo_frame)}").html_safe if entry.turbo_frame.present? %>
+       <%= 'data-action="click->panels-ui--sheet#close"'.html_safe if surface == :mobile && entry.turbo_frame.present? %>
        <%= %(data-sidebar-active-paths="#{ERB::Util.html_escape(entry.active_paths.join(" "))}").html_safe if entry.active_paths.any? %>
        <%= 'target="_blank" rel="noopener noreferrer"'.html_safe if entry.external? %>
        <%= 'aria-current="page"'.html_safe if entry.active? %>>

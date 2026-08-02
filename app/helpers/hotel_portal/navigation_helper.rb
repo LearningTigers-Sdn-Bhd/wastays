@@ -39,7 +39,16 @@ module HotelPortal
         NavItem.new(label: "Stay View", path: hotel_stay_view_path(current_hotel), search_text: "Stay View Timeline Board Room Status Housekeeping Planning Operations Calendar Tape Chart Front Desk", active: controller_path == "hotel_portal/stay_view/board", icon: "table-2", permission: [ "view_bookings", "manage_bookings", "view_room_readiness", "manage_room_status" ]),
         NavItem.new(label: "Housekeeping Tasks", path: hotel_housekeeping_tasks_path(current_hotel), search_text: "Housekeeping Tasks Cleaning Room Status Front Desk", active: controller_name == "housekeeping_tasks", icon: "clipboard-check", permission: [ "perform_housekeeping_tasks", "dispatch_housekeeping_tasks" ], plan_feature: "task_assignment_minibar_log"),
         NavItem.new(label: "Requests", path: hotel_requests_path(current_hotel), search_text: "Requests Housekeeping Complaint Reservations", active: controller_name == "requests", icon: "clipboard-list", permission: "manage_requests", plan_feature: "task_assignment_minibar_log"),
-        NavItem.new(label: "Night Audit", path: hotel_night_audits_path(current_hotel), search_text: "Night Audit Business Date Close Reports", active: controller_name == "night_audits", icon: "moon", permission: "manage_night_audit", plan_feature: "no_show_auto_handling")
+        NavItem.new(
+          label: "Run Night Audit",
+          path: hotel_night_audit_run_path(current_hotel),
+          search_text: "Run Night Audit Business Date Close",
+          active: false,
+          icon: "moon",
+          permission: "manage_night_audit",
+          plan_feature: "no_show_auto_handling",
+          turbo_frame: "booking_action_sheet"
+        )
       ]
       front_desk_active = front_desk_children.any?(&:active)
 
@@ -67,6 +76,7 @@ module HotelPortal
           NavItem.new(label: "Financial", path: hotel_reports_path(current_hotel), search_text: "Reports Financial Summary Manager Flash Daily Report Revenue Cashier Sales Refund Extra Charge Daily Occupancy Outstanding Balance Deposit Liability", active: financial_nav_active, icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),
           NavItem.new(label: "Tax & Compliance", path: tax_compliance_hotel_reports_path(current_hotel), search_text: "Reports Tax Compliance Tourism Tax SST Non National", active: controller_name == "reports" && action_name == "tax_compliance", icon: "calculator", permission: "view_reports"),
           NavItem.new(label: "Guest Reports", path: guest_reports_hotel_reports_path(current_hotel), search_text: "Reports Guest Reports Arrivals Departures Checkout Registration Cards", active: controller_name == "reports" && action_name == "guest_reports", icon: "users", permission: "view_reports", plan_feature: "arrivals_departures_list"),
+          NavItem.new(label: "Night Audit History", path: hotel_reports_night_audits_path(current_hotel), search_text: "Reports Night Audit History Business Date Close", active: controller_path == "hotel_portal/reports/night_audits", icon: "moon", permission: [ "view_reports", "manage_night_audit" ], plan_feature: "no_show_auto_handling"),
           NavItem.new(label: "Accounting", path: journal_batches_hotel_reports_path(current_hotel), search_text: "Reports Accounting Journal Batches", active: journal_batches_active, icon: "book-open", children: journal_batch_items, permission: "view_reports"),
           NavItem.new(label: "Operation Logs", path: hotel_audit_logs_path(current_hotel), search_text: "Operation Logs Audit Tracking History Security", icon: "file-text", active: controller_name == "audit_logs", permission: "view_audit_logs", plan_feature: "full_audit_trail"),
           NavItem.new(label: "Notification Logs", path: hotel_notification_logs_path(current_hotel), search_text: "Notification Logs History Sent Alerts Logs", icon: "bell", active: controller_name == "notification_logs", permission: "view_audit_logs")

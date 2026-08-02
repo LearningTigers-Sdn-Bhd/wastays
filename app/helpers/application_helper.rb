@@ -8,7 +8,12 @@ module ApplicationHelper
       if toast_data.is_a?(Hash) && toast_data[:message].present?
         messages << {
           message: toast_data[:message].to_s,
-          options: { type: toast_data[:type].presence || "default", description: toast_data[:description].presence }.compact
+          options: {
+            type: toast_data[:type].presence || "default",
+            description: toast_data[:description].presence,
+            action: toast_action_options(toast_data[:action]),
+            secondaryAction: toast_action_options(toast_data[:secondary_action])
+          }.compact
         }
       end
     end
@@ -20,6 +25,26 @@ module ApplicationHelper
     end
 
     messages
+  end
+
+  def toast_action_options(action)
+    return if action.blank?
+
+    action = action.with_indifferent_access if action.respond_to?(:with_indifferent_access)
+    return unless action.is_a?(Hash) && action[:label].present? && action[:url].present?
+
+    url = action[:url].to_s
+    uri = URI.parse(url)
+    safe = if uri.host.present?
+      "#{uri.scheme}://#{uri.host}#{":#{uri.port}" unless uri.default_port == uri.port}" == request.base_url
+    else
+      url.start_with?("/") && !url.start_with?("//")
+    end
+    return unless safe
+
+    { label: action[:label].to_s, url: uri.host.present? ? uri.request_uri : url }
+  rescue URI::InvalidURIError
+    nil
   end
 
   def cached_icon(name, library: RailsIcons.configuration.default_library, from: library, variant: nil, **arguments)

@@ -518,15 +518,23 @@ Rails.application.routes.draw do
         }
       end
     end
-    resources :night_audits, only: [ :index, :show, :create ] do
-      member do
-        get :resolve
-        get :blockers
-        post :resolve_missing_folio
-        post :resolve_missing_nightly_charges
-        post :repair_completed_nightly_charges
-      end
+    namespace :reports do
+      resources :night_audits, only: [ :index, :show ]
     end
+    resource :night_audit_run, only: [ :show, :create ] do
+      get :status
+      get :booking_timestamp
+      get :force_close_confirmation
+      post :start_review
+      post :resolve_missing_folio
+      post :resolve_missing_nightly_charges
+      post :resolve_unsynced_payment
+      post :resolve_unsynced_refund
+      patch :resolve_booking_timestamp
+      post :resolve_missed_arrival
+      post :force_close
+    end
+    resources :night_audits, only: [ :index, :show ]
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
       collection do
         get :occupancy_details

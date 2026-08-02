@@ -141,7 +141,7 @@ RSpec.describe "HotelPortal::Bookings::Actions no-shows", frozen_time: :business
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="complete_sheet"')
-      expect(flash[:alert]).to eq("Booking is not pending no-show review.")
+      expect(flash[:alert]).to eq("Booking is not waiting for a no-show decision.")
       expect(confirmed.reload.status).to eq("confirmed")
     end
 

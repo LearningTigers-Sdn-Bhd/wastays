@@ -75,7 +75,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking dates", frozen_time: :bus
     }, headers: { "Turbo-Frame" => "booking_action_sheet" }
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Review the proposed stay dates", "Nothing changes until you save")
+    expect(response.body).to include("Check the proposed stay dates", "Nothing changes until you save")
     expect([ booking.reload.check_in, booking.check_out ]).to eq(original)
   end
 

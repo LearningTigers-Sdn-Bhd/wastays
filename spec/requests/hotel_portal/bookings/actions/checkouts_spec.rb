@@ -51,7 +51,7 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", frozen_time: :busines
 
       expect(dialog).to be_present
       expect(dialog["data-panels-ui-sheet-side"]).to eq("bottom")
-      expect(dialog.text).to include("Checkout", "Resolve folios")
+      expect(dialog.text).to include("Checkout", "Finish guest bills")
       expect(dialog.text).not_to include("Folio List", "Settlement Details")
       expect(dialog.at_css("[data-controller~='booking-actions--checkout-settlement']")).to be_present
       expect(dialog.at_css("input[name='booking[checked_out_at]']")).to be_present

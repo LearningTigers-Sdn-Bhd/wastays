@@ -61,7 +61,7 @@ RSpec.describe "HotelPortal::Bookings::Actions review-backdated check-ins", froz
 
       expect(dialog).to be_present
       expect(dialog["data-panels-ui-sheet-side"]).to eq("right")
-      expect(dialog.text).to include("Backdated check-in", "Ada Lovelace", "Backdate reason")
+      expect(dialog.text).to include("Record an earlier check-in", "Ada Lovelace", "Backdate reason")
       expect(dialog.at_css("select[name='backdate_reason']")).to be_present
       expect(dialog.at_css("input[name='booking[checked_in_at]']")).to be_present
       expect(response.body).not_to include("<!DOCTYPE html>")
@@ -150,7 +150,7 @@ RSpec.describe "HotelPortal::Bookings::Actions review-backdated check-ins", froz
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="complete_sheet"')
-      expect(flash[:alert]).to eq("Backdated check-in is only available while reviewing a missed arrival.")
+      expect(flash[:alert]).to eq("An earlier check-in is only available for a missed arrival.")
       expect(confirmed.reload.status).to eq("confirmed")
     end
 

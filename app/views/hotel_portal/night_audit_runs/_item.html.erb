@@ -1,0 +1,40 @@
+<% details = item.details %>
+<% actions = item.actions.reject do |action|
+  (action.key.in?(%i[record_payment add_payment]) && !current_user.has_permission?("post_folio_payments", hotel: current_hotel)) ||
+    (action.key == :add_refund && !current_user.has_permission?("execute_folio_refunds", hotel: current_hotel)) ||
+    (action.key.in?(%i[open_booking open_folio]) && !can_manage_bookings) ||
+    (booking_permission_required && action.key != :refresh && !can_manage_bookings)
+end %>
+<article class="space-y-3 px-4 py-3">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div class="min-w-0 space-y-1">
+      <div class="flex flex-wrap items-center gap-2">
+        <p class="text-sm font-medium text-foreground"><%= details["guest_name"].presence || item.label %></p>
+        <%= render PanelsUI::Badge.new(label: item.label, variant: :warning, size: :sm) %>
+      </div>
+      <% if details["confirmation_token"].present? %>
+        <p class="text-xs text-muted-foreground"><%= details["confirmation_token"] %></p>
+      <% end %>
+      <p class="text-sm text-muted-foreground"><%= item.description %></p>
+    </div>
+
+    <div class="flex shrink-0 flex-wrap gap-2">
+      <% if actions.size > 1 %>
+        <%= render PanelsUI::DropdownMenu.new(id: "night-audit-item-#{item.type}-#{item.booking_id || details.hash.abs}", placement: :bottom_end, class: "w-64") do |menu| %>
+          <% menu.with_trigger(variant: :secondary, size: :sm, aria_label: "Choose an action for #{details['guest_name'].presence || item.label}") do %>
+            <span>Choose an action</span>
+            <%= app_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
+          <% end %>
+          <% actions.each do |action| %>
+            <%= render "hotel_portal/night_audit_runs/item_action", menu:, action:, item:, return_to: %>
+          <% end %>
+        <% end %>
+      <% elsif actions.one? %>
+        <% action = actions.first %>
+        <%= render "hotel_portal/night_audit_runs/item_action", action:, item:, return_to: %>
+      <% else %>
+        <span class="text-xs text-muted-foreground"><%= booking_permission_required ? "Ask a team member with booking access for help." : "Ask a manager for help with this guest bill." %></span>
+      <% end %>
+    </div>
+  </div>
+</article>
