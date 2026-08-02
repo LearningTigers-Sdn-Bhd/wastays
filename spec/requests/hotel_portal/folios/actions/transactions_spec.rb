@@ -82,6 +82,20 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
         expect(response.body).to include("Refund source")
       end
 
+      it "renders a locked checkout payment for the selected folio" do
+        token = Checkouts::SettlementToken.issue(booking: booking, folio: folio, kind: "payment", amount: 125)
+        open_form(
+          transaction_type: "payment",
+          settlement_token: token
+        )
+
+        document = Nokogiri::HTML(response.body)
+        expect(document.at_css("dialog#folio-post-transaction-sheet").text).to include("Settle checkout payment", "MYR 125.00")
+        expect(document.at_css("input[name='settlement_token'][value='#{token}']")).to be_present
+        expect(document.css("input[name='folio_transaction[amount]'][type='number']")).to be_empty
+        expect(document.at_css("input[name='folio_transaction[description]'][readonly]")["value"]).to eq("Checkout payment for #{folio.display_name}")
+      end
+
       it "offers the allowed adjustment categories" do
         open_form(transaction_type: "adjustment", active_folio_id: folio.id)
 
@@ -257,6 +271,82 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
 
         expect(response.body).to include(%(target="folio_action_sheet_secondary"))
       end
+
+      it "posts a locked checkout payment and closes only its sheet" do
+        create(:folio_transaction, booking_folio: folio, transaction_type: "charge", amount: 125)
+        token = Checkouts::SettlementToken.issue(booking: booking, folio: folio, kind: "payment", amount: 125)
+        expect {
+          post_transaction_with(
+            {
+              transaction_type: "payment",
+              payment_source: "cash",
+              amount: "1.00",
+              description: "Changed in request",
+              posting_date: Date.current,
+              reference: "RCP-125",
+              note: "Paid at checkout",
+              booking_folio_id: folio.id
+            },
+            extra: {
+              settlement_token: token
+            },
+            headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "folio_action_sheet" }
+          )
+        }.to change { folio.folio_transactions.payment.count }.by(1)
+
+        transaction = folio.folio_transactions.payment.last
+        expect(transaction.amount).to eq(125.to_d)
+        expect(transaction.description).to eq("Checkout payment for #{folio.display_name}")
+        expect(transaction.metadata).to include("reference" => "RCP-125", "note" => "Paid at checkout")
+        expect(response.body).to include(%(action="complete_sheet"), %(target="folio_action_sheet"))
+        expect(response.body).not_to include("url=")
+      end
+
+      it "rejects a stale checkout settlement amount" do
+        create(:folio_transaction, booking_folio: folio, transaction_type: "charge", amount: 100)
+        token = Checkouts::SettlementToken.issue(booking: booking, folio: folio, kind: "payment", amount: 100)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "charge", amount: 25)
+
+        expect {
+          post_transaction_with(
+            {
+              transaction_type: "payment",
+              payment_source: "cash",
+              description: "Checkout payment",
+              posting_date: Date.current,
+              booking_folio_id: folio.id
+            },
+            extra: { settlement_token: token },
+            headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "folio_action_sheet" }
+          )
+        }.not_to change { folio.folio_transactions.payment.count }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Folio balance changed")
+      end
+
+      it "rejects a forged checkout payment category" do
+        create(:folio_transaction, booking_folio: folio, transaction_type: "charge", amount: 100)
+        token = Checkouts::SettlementToken.issue(booking: booking, folio: folio, kind: "payment", amount: 100)
+
+        expect {
+          post_transaction_with(
+            {
+              transaction_type: "payment",
+              category: "booking_payment",
+              payment_source: "cash",
+              description: "Checkout payment",
+              posting_date: Date.current,
+              booking_folio_id: folio.id
+            },
+            extra: { settlement_token: token },
+            headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "folio_action_sheet" }
+          )
+        }.not_to change { folio.folio_transactions.payment.count }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("does not match the requested transaction")
+      end
     end
 
     describe "posting charges" do
@@ -337,6 +427,30 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
     end
 
     describe "issuing refunds" do
+      it "posts an exact checkout refund with a generated description" do
+        create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 50)
+        token = Checkouts::SettlementToken.issue(booking: booking, folio: folio, kind: "refund", amount: 50)
+
+        expect {
+          post_transaction_with(
+            {
+              transaction_type: "payment",
+              category: "refund",
+              refund_source: "cash",
+              description: "Changed in request",
+              posting_date: Date.current,
+              booking_folio_id: folio.id
+            },
+            extra: { settlement_token: token },
+            headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "folio_action_sheet" }
+          )
+        }.to change { folio.folio_transactions.payment.count }.by(1)
+
+        transaction = folio.folio_transactions.payment.order(:id).last
+        expect(transaction).to have_attributes(amount: -50.to_d, description: "Checkout refund for #{folio.display_name}")
+        expect(response.body).to include(%(action="complete_sheet"), %(target="folio_action_sheet"))
+      end
+
       it "records a refund as a negative payment" do
         post_transaction(transaction_type: "payment", category: "refund", refund_source: "bank_transfer", amount: "50.00", description: "Refund", posting_date: Date.current)
 

@@ -788,6 +788,13 @@ module HotelPortal
       eligible_deposit_folios(deposit).map { |folio| { label: "#{folio.booking.formatted_reservation_number} · #{folio.display_with_payer}", value: folio.id } }
     end
 
+    def deposit_deduction_codes
+      @deposit_deduction_codes ||= begin
+        Financials::EnsureDefaultTransactionCodes.call(hotel)
+        hotel.transaction_codes.active.charge.where(system_key: Deposits::Deduct::ALLOWED_REASON_KEYS).order(:name, :code).to_a
+      end
+    end
+
     def deposit_owner_options
       options = child_bookings.map { |child| { label: "Booking #{child.formatted_reservation_number}", value: "booking:#{child.id}" } }
       group_context_enabled? ? [ { label: "Group #{group_booking.formatted_reservation_number}", value: "group:#{group_booking.id}" }, *options ] : options

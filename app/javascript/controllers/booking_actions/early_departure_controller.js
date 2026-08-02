@@ -27,7 +27,7 @@ export default class extends Controller {
     } else {
       this.customFieldsTarget.classList.add("hidden")
       this.amountInputTarget.value = 0
-      this.notifySettlement(0)
+      this.notifySettlement(0, { applyCharge: false, type: "amount", value: 0 })
     }
   }
 
@@ -38,13 +38,13 @@ export default class extends Controller {
 
     this.amountInputTarget.value = finalAmount.toFixed(2)
     this.displayAmountTarget.textContent = `${this.currencyValue} ${finalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    this.notifySettlement(finalAmount)
+    this.notifySettlement(finalAmount, { applyCharge: true, type, value })
   }
 
-  notifySettlement(amount) {
+  notifySettlement(amount, details) {
     this.element.dispatchEvent(new CustomEvent(`${this.eventPrefixValue}:charge-changed`, {
       bubbles: true,
-      detail: { amount, bookingId: this.bookingIdValue, targetFolioId: this.targetFolioIdValue }
+      detail: { amount, bookingId: this.bookingIdValue, targetFolioId: this.targetFolioIdValue, ...details }
     }))
   }
 }

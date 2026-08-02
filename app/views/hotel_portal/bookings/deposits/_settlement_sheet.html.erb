@@ -1,0 +1,78 @@
+<% apply_operation = operation.to_s == "apply" %>
+<% deduction = local_assigns.fetch(:deduction, false) %>
+<% form_scope = local_assigns[:form_scope] %>
+<% folio_options = local_assigns[:folio_options] || eligible_folios.map { |folio| { label: "#{folio.display_name} · #{folio.booking.guest_name}", value: folio.id } } %>
+<% miscellaneous_code = reason_codes.find { |code| code.system_key == "misc_revenue" } %>
+<% return_label = deposit.kind_security? ? "Release" : "Refund" %>
+<% title = apply_operation ? "Apply deposit" : "#{return_label} deposit" %>
+
+<%= render PanelsUI::Sheet.new(
+      id: "deposit-settlement-#{operation}-#{deposit.id}",
+      side: :right,
+      size: :md,
+      title: title,
+      description: "#{deposit.owner.respond_to?(:formatted_reservation_number) ? deposit.owner.formatted_reservation_number : deposit.owner.name} · #{deposit.currency} #{format('%.2f', deposit.available_amount)} available",
+      body_class: "p-0") do |sheet| %>
+  <% sheet.with_body do %>
+    <%= form_with scope: form_scope, url: action_url, method: :post, class: "flex h-full min-h-0 flex-col",
+          data: (deduction ? { controller: "deposit-settlement", deposit_settlement_miscellaneous_code_id_value: miscellaneous_code&.id } : {}) do |form| %>
+      <%= form.hidden_field :operation_key, value: SecureRandom.uuid %>
+      <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
+        <% if error.present? %>
+          <%= render PanelsUI::Alert.new(tone: :destructive, title: "Deposit settlement could not be recorded", role: :alert) do |alert| %>
+            <% alert.with_description { error } %>
+          <% end %>
+        <% end %>
+
+        <% if apply_operation %>
+          <%= render PanelsUI::FormField.new(form: form, attribute: :booking_folio_id, label: "Folio", required: true) do |field| %>
+            <% field.with_select_menu(
+                 folio_options,
+                 prompt: "Select a folio") %>
+          <% end %>
+          <% if deduction %>
+            <%= render PanelsUI::FormField.new(form: form, attribute: :transaction_code_id, label: "Reason", required: true) do |field| %>
+              <% field.with_select_menu(
+                   reason_codes.map { |code| { label: code.name, value: code.id } },
+                   prompt: "Select Cleaning, Damage, or Miscellaneous",
+                   data: { deposit_settlement_target: "reason", action: "change->deposit-settlement#updateReason" }) %>
+            <% end %>
+          <% end %>
+          <%= render PanelsUI::FormField.new(form: form, attribute: :amount, label: deduction ? "Charge amount before tax" : "Amount", hint: deduction ? "The charge and any configured tax must not exceed #{deposit.currency} #{format('%.2f', deposit.available_amount)}." : "Maximum #{deposit.currency} #{format('%.2f', deposit.available_amount)}.", required: true) do |field| %>
+            <% field.with_input(type: :number, min: 0.01, max: deposit.available_amount, step: 0.01, inputmode: "decimal") %>
+          <% end %>
+          <% if deduction %>
+            <div class="hidden" data-deposit-settlement-target="details">
+              <%= render PanelsUI::FormField.new(form: form, attribute: :details, label: "Miscellaneous details", hint: "Required when Miscellaneous is selected.") do |field| %>
+                <% field.with_input(autocomplete: "off", placeholder: "Describe the deduction") %>
+              <% end %>
+            </div>
+          <% else %>
+            <%= render PanelsUI::FormField.new(form: form, attribute: :reason, label: "Reason") do |field| %>
+              <% field.with_input(autocomplete: "off") %>
+            <% end %>
+          <% end %>
+        <% else %>
+          <%= render PanelsUI::FormField.new(form: form, attribute: :amount, label: "Amount", required: true) do |field| %>
+            <% field.with_input(type: :number, value: deposit.available_amount, min: 0.01, max: deposit.available_amount, step: 0.01, inputmode: "decimal") %>
+          <% end %>
+          <%= render PanelsUI::FormField.new(form: form, attribute: :payment_method, label: "#{return_label} method", required: true) do |field| %>
+            <% field.with_select_menu(::Checkouts::PaymentMethods.release_options.map { |label, value| { label: label, value: value } }, selected: deposit.payment_method) %>
+          <% end %>
+          <%= render PanelsUI::FormField.new(form: form, attribute: :external_reference, label: "Reference") do |field| %>
+            <% field.with_input(autocomplete: "off") %>
+          <% end %>
+          <%= render PanelsUI::FormField.new(form: form, attribute: :reason, label: "Reason", required: deposit.kind_prepayment?) do |field| %>
+            <% field.with_text_area(rows: 3) %>
+          <% end %>
+        <% end %>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-border p-4">
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: apply_operation ? :primary : (deposit.kind_security? ? :secondary : :destructive), data: { turbo_submits_with: "Recording…" }) do %>
+          <%= apply_operation ? "Apply deposit" : return_label %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

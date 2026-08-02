@@ -50,10 +50,10 @@
                   <td>
                     <div class="flex justify-end gap-2">
                       <% if actionable && presenter.deposit_folio_options(deposit).any? %>
-                        <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :secondary, command: "show-modal", commandfor: "apply-deposit-#{deposit.id}", aria: { haspopup: "dialog" }) do %>Apply<% end %>
+                        <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :secondary, command: "show-modal", commandfor: "deposit-settlement-apply-#{deposit.id}", aria: { haspopup: "dialog" }) do %>Apply<% end %>
                       <% end %>
                       <% if actionable %>
-                        <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :ghost, command: "show-modal", commandfor: "return-deposit-#{deposit.id}", aria: { haspopup: "dialog" }) do %><%= deposit.kind_security? ? "Release" : "Refund" %><% end %>
+                        <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :ghost, command: "show-modal", commandfor: "deposit-settlement-#{deposit.kind_security? ? 'release' : 'refund'}-#{deposit.id}", aria: { haspopup: "dialog" }) do %><%= deposit.kind_security? ? "Release" : "Refund" %><% end %>
                       <% end %>
                     </div>
                   </td>
@@ -112,14 +112,24 @@
   <% deposit = row[:deposit] %>
   <% actionable = deposit.status.in?(%w[held available]) && deposit.available_amount.positive? %>
   <% if actionable && presenter.deposit_folio_options(deposit).any? %>
-    <%= render PanelsUI::Sheet.new(id: "apply-deposit-#{deposit.id}", side: :right, size: :md, title: "Apply deposit", description: "#{row[:owner]} · #{row[:currency]} #{row[:available]} available", body_class: "p-0") do |sheet| %>
-      <% sheet.with_body do %><%= form_with url: allocate_deposit_hotel_booking_workspace_path(current_hotel, presenter.selected_child_booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %><%= form.hidden_field :deposit_id, value: deposit.id %><%= form.hidden_field :operation_key, value: SecureRandom.uuid %><div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5"><%= render PanelsUI::FormField.new(form:, attribute: :booking_folio_id, label: "Folio", required: true) do |field| %><% field.with_select_menu(presenter.deposit_folio_options(deposit), prompt: "Select a folio") %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :amount, label: "Amount", hint: "Maximum #{row[:currency]} #{row[:available]}", required: true) do |field| %><% field.with_input(type: :number, min: 0.01, max: deposit.available_amount, step: 0.01, inputmode: "decimal") %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason") do |field| %><% field.with_input(autocomplete: "off") %><% end %></div><div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Apply deposit<% end %></div><% end %><% end %>
-    <% end %>
+    <%= render "hotel_portal/bookings/deposits/settlement_sheet",
+          deposit: deposit,
+          operation: "apply",
+          eligible_folios: [],
+          folio_options: presenter.deposit_folio_options(deposit),
+          reason_codes: deposit.kind_security? ? presenter.deposit_deduction_codes : [],
+          deduction: deposit.kind_security?,
+          action_url: allocate_deposit_hotel_booking_workspace_path(current_hotel, presenter.selected_child_booking, deposit_id: deposit.id),
+          error: nil %>
   <% end %>
   <% if actionable %>
-    <%= render PanelsUI::Sheet.new(id: "return-deposit-#{deposit.id}", side: :right, size: :md, title: deposit.kind_security? ? "Release deposit" : "Refund deposit", description: "#{row[:owner]} · #{row[:currency]} #{row[:available]} available", body_class: "p-0") do |sheet| %>
-      <% sheet.with_body do %><%= form_with url: return_deposit_hotel_booking_workspace_path(current_hotel, presenter.selected_child_booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %><%= form.hidden_field :deposit_id, value: deposit.id %><%= form.hidden_field :operation_key, value: SecureRandom.uuid %><div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5"><%= render PanelsUI::FormField.new(form:, attribute: :amount, label: "Amount", required: true) do |field| %><% field.with_input(type: :number, value: deposit.available_amount, min: 0.01, max: deposit.available_amount, step: 0.01, inputmode: "decimal") %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :payment_method, label: "Return method", required: true) do |field| %><% field.with_select_menu(::Checkouts::PaymentMethods.release_options.map { |label, value| { label: label, value: value } }, selected: deposit.payment_method) %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :external_reference, label: "Reference") do |field| %><% field.with_input(autocomplete: "off") %><% end %><%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason", required: deposit.kind_prepayment?) do |field| %><% field.with_text_area(rows: 3) %><% end %></div><div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit, variant: deposit.kind_security? ? :secondary : :destructive) do %><%= deposit.kind_security? ? "Release" : "Refund" %><% end %></div><% end %><% end %>
-    <% end %>
+    <%= render "hotel_portal/bookings/deposits/settlement_sheet",
+          deposit: deposit,
+          operation: deposit.kind_security? ? "release" : "refund",
+          eligible_folios: [],
+          reason_codes: [],
+          action_url: return_deposit_hotel_booking_workspace_path(current_hotel, presenter.selected_child_booking, deposit_id: deposit.id),
+          error: nil %>
   <% end %>
 <% end %>
 

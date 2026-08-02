@@ -25,7 +25,7 @@ module Financials
         "cash" => { code: "1020", desc: "Bank - Cash" },
         "refund" => { code: "1030", desc: "Bank - Refunds" },
         "booking_payment" => { code: "2020", desc: "Booking Payment Liability" },
-        "security_deposits" => { code: "2030", desc: "Security Deposit Liability" },
+        "security_deposit" => { code: "2030", desc: "Security Deposit Liability" },
         "adjustment" => { code: "5010", desc: "Adjustments" },
         "correction" => { code: "5020", desc: "Corrections" },
         "discount" => { code: "5030", desc: "Discounts" },

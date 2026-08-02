@@ -13,6 +13,8 @@ module Financials
       { system_key: "tourism_tax", code: "TAX_TTX", name: "Tourism Tax", kind: "tax", category: "tax", gl_account_code: "2010" },
       { system_key: "fnb_revenue", code: "FNB", name: "Food & Beverage", kind: "charge", category: "fb", gl_account_code: "4020" },
       { system_key: "parking_revenue", code: "PARK", name: "Parking", kind: "charge", category: "parking", gl_account_code: "4090" },
+      { system_key: "damage_revenue", code: "DAMAGE", name: "Damage Charge", kind: "charge", category: "other", gl_account_code: "4090" },
+      { system_key: "cleaning_revenue", code: "CLEANING", name: "Cleaning Fee", kind: "charge", category: "other", gl_account_code: "4090" },
       { system_key: "misc_revenue", code: "MISC", name: "Miscellaneous Revenue", kind: "charge", category: "other", gl_account_code: "4090" },
       { system_key: "cash_payment", code: "CASH", name: "Cash Payment", kind: "payment", category: "cash", gl_account_code: "1020" },
       { system_key: "card_payment", code: "CARD", name: "Card Payment", kind: "payment", category: "gateway_payment", gl_account_code: "1010" },

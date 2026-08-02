@@ -272,6 +272,29 @@ RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
     expect(deposit.deposit_movements.movement_type_apply.sole.booking_folio).to eq(folio)
   end
 
+  it "uses reason-coded charge application for security deposits in the workspace" do
+    permission = Permission.find_or_create_by!(slug: "post_folio_charges") { |record| record.name = "Post folio charges" }
+    role.permissions << permission
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
+    folio = create(:booking_folio, booking: booking, hotel: hotel, is_primary: true, currency: booking.currency)
+    deposit = create(:deposit, booking: booking, hotel: hotel, amount: 100, currency: booking.currency)
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    code = hotel.transaction_codes.find_by!(system_key: "damage_revenue")
+
+    expect {
+      post allocate_deposit_hotel_booking_workspace_path(hotel, booking), params: {
+        deposit_id: deposit.id,
+        booking_folio_id: folio.id,
+        transaction_code_id: code.id,
+        amount: "30.00",
+        operation_key: "workspace-damage-1"
+      }
+    }.to change { deposit.deposit_movements.movement_type_apply.count }.by(1)
+
+    expect(folio.folio_transactions.charge.last).to have_attributes(transaction_code: code, amount: 30.to_d)
+    expect(deposit.reload.available_amount).to eq(70.to_d)
+  end
+
   it "reverses an application from the unified deposit workflow" do
     correction = Permission.find_or_create_by!(slug: "post_folio_corrections") do |permission|
       permission.name = "Post Folio Corrections"

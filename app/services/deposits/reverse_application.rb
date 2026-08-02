@@ -53,6 +53,7 @@ module Deposits
         )
         @deposit.refresh_status!
         Deposits::SyncBookingPaymentStatus.call(@movement.booking_folio.booking)
+        Deposits::SyncBookingDepositStatus.call(@deposit.booking) if @deposit.kind_security?
       end
       success(reversal)
     rescue ActiveRecord::RecordInvalid => e

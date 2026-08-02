@@ -36,11 +36,12 @@ module HotelPortal
 
           attr_reader :booking, :hotel, :user, :early_checkout_lines
 
-          def initialize(booking:, hotel:, user:, early_checkout_lines: [])
+          def initialize(booking:, hotel:, user:, early_checkout_lines: [], early_checkout: false)
             @booking = booking
             @hotel = hotel
             @user = user
             @early_checkout_lines = Array(early_checkout_lines)
+            @early_checkout = early_checkout
           end
 
           def currency
@@ -66,10 +67,6 @@ module HotelPortal
             ::Checkouts::PaymentMethods.settlement_options
           end
 
-          def security_deposit_release_method_options
-            ::Checkouts::PaymentMethods.release_options
-          end
-
           def booking_balance
             folio_rows.sum { |row| row.balance.to_d }
           end
@@ -90,20 +87,21 @@ module HotelPortal
             (booking.deposit_status.presence || "not_required").titleize
           end
 
-          def held_deposits
-            @held_deposits ||= booking.deposits.kind_security.where(status: "held").includes(:deposit_movements)
-          end
-
-          def held_deposit_total
-            held_deposits.sum(&:available_amount)
-          end
-
           def can_submit?
             folios.any?
           end
 
           def money(amount)
             "#{currency} #{format('%.2f', amount.to_d)}"
+          end
+
+          def settlement_token(row, kind)
+            ::Checkouts::SettlementToken.issue(
+              booking: booking,
+              folio: row.folio,
+              kind: kind,
+              amount: row.balance
+            )
           end
 
           private
@@ -134,7 +132,7 @@ module HotelPortal
           # every folio's preview balance is its posted balance plus the early
           # lines that route to it (never its soon-to-be-truncated forecasts).
           def balance_for(folio)
-            if early_checkout_lines.any?
+            if @early_checkout
               folio.outstanding_balance.to_d + early_total_for(folio)
             else
               folio.projected_outstanding_balance.to_d

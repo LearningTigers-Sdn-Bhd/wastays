@@ -26,6 +26,9 @@
               method: :post,
               class: "flex h-full min-h-0 flex-col" do |form| %>
           <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+          <% if @checkout_settlement.present? %>
+            <%= hidden_field_tag :settlement_token, params[:settlement_token] %>
+          <% end %>
           <%= form.hidden_field :transaction_type, value: @transaction_type %>
 
           <div class="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
@@ -34,7 +37,19 @@
               Transactions post to the selected folio window and remain scoped to this booking.
             </p>
 
-            <% if @open_folios.many? %>
+            <% if @transaction_error.present? %>
+              <%= render PanelsUI::Alert.new(tone: :destructive, title: "Settlement could not be posted", role: :alert) do |alert| %>
+                <% alert.with_description { @transaction_error } %>
+              <% end %>
+            <% end %>
+
+            <% if @checkout_settlement.present? %>
+              <%= form.hidden_field :booking_folio_id, value: @active_folio.id %>
+              <div>
+                <p class="mb-1 text-sm font-medium text-foreground">Target folio</p>
+                <p class="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground"><%= @active_folio.display_option_label %></p>
+              </div>
+            <% elsif @open_folios.many? %>
               <%= render PanelsUI::FormField.new(form: form, attribute: :booking_folio_id, label: "Target folio", required: true) do |field| %>
                 <% field.with_select_menu(
                      @open_folios.map { |folio| { label: folio.display_option_label, value: folio.id } },
@@ -77,17 +92,34 @@
               <% end %>
             <% end %>
 
-            <%= render PanelsUI::FormField.new(form: form, attribute: :amount, label: "Amount", required: true,
-                  hint: (@signed_amount ? "Use a negative amount for discounts, write-offs, or rebates." : nil)) do |field| %>
-              <% field.with_input(type: :number, step: "0.01", min: (@signed_amount ? nil : "0.01"), value: @amount, required: true) %>
+            <% if @checkout_settlement.present? %>
+              <%= form.hidden_field :amount, value: @amount %>
+              <div>
+                <p class="mb-1 text-sm font-medium text-foreground">Settlement amount</p>
+                <p class="rounded-md border border-border bg-muted px-3 py-2 text-sm font-semibold tabular-nums"><%= @active_folio.currency %> <%= format("%.2f", @amount.to_d.abs) %></p>
+              </div>
+            <% else %>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :amount, label: "Amount", required: true,
+                    hint: (@signed_amount ? "Use a negative amount for discounts, write-offs, or rebates." : nil)) do |field| %>
+                <% field.with_input(type: :number, step: "0.01", min: (@signed_amount ? nil : "0.01"), value: @amount, required: true) %>
+              <% end %>
             <% end %>
 
             <%= render PanelsUI::FormField.new(form: form, attribute: :posting_date, label: "Posting date", required: true) do |field| %>
               <% field.with_input(type: :date, value: current_hotel.current_business_date, required: true) %>
             <% end %>
 
-            <%= render PanelsUI::FormField.new(form: form, attribute: :description, label: "Description", required: true) do |field| %>
-              <% field.with_input(placeholder: "e.g., Mini-bar, Late Checkout Fee", required: true) %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :description,
+                  label: "Description",
+                  required: true,
+                  readonly: @checkout_settlement.present?) do |field| %>
+              <% if @checkout_settlement.present? %>
+                <% field.with_input(value: @description, required: true) %>
+              <% else %>
+                <% field.with_input(placeholder: "e.g., Mini-bar, Late Checkout Fee", required: true) %>
+              <% end %>
             <% end %>
 
             <%= render PanelsUI::FormField.new(form: form, attribute: :reference, label: "Reference") do |field| %>

@@ -34,83 +34,26 @@ RSpec.describe Folios::Checkout::ProcessCheckoutActions do
     expect(result.error).to eq("#{company_folio.display_name}: checkout action is required.")
   end
 
-  it "requires the payment amount to match the projected balance" do
+  it "requires positive guest balances to be settled before checkout" do
     create(:folio_transaction, booking_folio: guest_folio, amount: 100)
+    allow(Folios::Transactions::PostStaffTransaction).to receive(:call)
 
     result = call_service({
-      guest_folio.id.to_s => { action: "pay_now", amount: "90.00", payment_method: "cash" },
+      guest_folio.id.to_s => { action: "pay_now", amount: "100.00", payment_method: "cash" },
       company_folio.id.to_s => { action: "close" }
     })
 
-    expect(result.error).to eq("#{guest_folio.display_name}: payment amount must equal MYR 100.00.")
+    expect(result.error).to eq("#{guest_folio.display_name}: settle the folio balance before checkout.")
+    expect(Folios::Transactions::PostStaffTransaction).not_to have_received(:call)
   end
 
-  it "rejects unsupported payment methods" do
-    create(:folio_transaction, booking_folio: guest_folio, amount: 100)
-
+  it "normalizes a stale payment action to close after the folio is settled" do
     result = call_service({
-      guest_folio.id.to_s => { action: "pay_now", amount: "100.00", payment_method: "crypto" },
-      company_folio.id.to_s => { action: "close" }
-    })
-
-    expect(result.error).to eq("#{guest_folio.display_name}: payment method is not supported.")
-  end
-
-  it "requires payment posting permission" do
-    create(:folio_transaction, booking_folio: guest_folio, amount: 100)
-
-    result = call_service(
-      {
-        guest_folio.id.to_s => { action: "pay_now", amount: "100.00", payment_method: "cash" },
-        company_folio.id.to_s => { action: "close" }
-      },
-      actor: create(:user)
-    )
-
-    expect(result.error).to eq("You do not have permission to post checkout payments.")
-  end
-
-  it "posts an approved checkout payment" do
-    create(:folio_transaction, booking_folio: guest_folio, amount: 100)
-    posted = Folios::Transactions::TransactionResult.success(transaction: nil)
-    allow(Folios::Transactions::PostStaffTransaction).to receive(:call).and_return(posted)
-
-    result = call_service({
-      guest_folio.id.to_s => { action: "pay_now", amount: "100.00", payment_method: "cash", payment_reference: "RCPT-1" },
+      guest_folio.id.to_s => { action: "pay_now", amount: "100.00", payment_method: "cash" },
       company_folio.id.to_s => { action: "close" }
     })
 
     expect(result).to be_success
-    expect(Folios::Transactions::PostStaffTransaction).to have_received(:call).with(
-      hash_including(
-        folio: guest_folio,
-        transaction_type: "payment",
-        amount: 100.to_d,
-        posting_date: posting_date
-      )
-    )
-  end
-
-  {
-    "cash" => "cash",
-    "card" => "card",
-    "bank_transfer" => "bank",
-    "manual" => "gateway"
-  }.each do |method, payment_source|
-    it "posts #{method} checkout payments through the #{payment_source} payment source" do
-      create(:folio_transaction, booking_folio: guest_folio, amount: 100)
-      allow(Folios::Transactions::PostStaffTransaction).to receive(:call).and_return(Folios::Transactions::TransactionResult.success(transaction: nil))
-
-      result = call_service({
-        guest_folio.id.to_s => { action: "pay_now", amount: "100.00", payment_method: method, payment_reference: "REF-1" },
-        company_folio.id.to_s => { action: "close" }
-      })
-
-      expect(result).to be_success
-      expect(Folios::Transactions::PostStaffTransaction).to have_received(:call).with(
-        hash_including(options: hash_including(payment_source: payment_source))
-      )
-    end
   end
 
   it "requires a reason for checkout exceptions" do

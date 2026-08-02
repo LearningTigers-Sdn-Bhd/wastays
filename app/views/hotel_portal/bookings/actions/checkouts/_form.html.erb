@@ -9,7 +9,7 @@
 <% checkout_sheets = checkout_bookings.index_with { |checkout_booking| checkout_sheet_presenter(checkout_booking) } %>
 <% form_state = checkout_form_state(bookings: checkout_bookings, sheets: checkout_sheets) %>
 <% selected_booking_ids = form_state.selected_booking_ids %>
-<% all_held_deposits = checkout_sheets.values.flat_map(&:held_deposits) %>
+<% deposits = checkout_deposits(checkout_bookings) %>
 <% ns = "booking-actions--checkout-settlement" %>
 
 <div data-controller="panels-ui--sheet-frame">
@@ -25,6 +25,7 @@
            data-controller="group-lifecycle-targets <%= ns %>"
            data-action="<%= ns %>:charge-changed-><%= ns %>#updateEarlyDepartureCharge group-lifecycle-targets:changed-><%= ns %>#syncBookingSections"
            data-<%= ns %>-currency-value="<%= currency %>"
+           data-<%= ns %>-status-url-value="<%= hotel_booking_action_checkout_folio_status_path(current_hotel, booking) %>"
            data-<%= ns %>-group-checkout-value="<%= group_checkout %>">
         <%= form_with url: hotel_booking_action_checkout_path(current_hotel, booking), method: :post,
               id: "booking-checkout-form", class: "flex min-h-0 flex-1 flex-col overflow-hidden" do %>
@@ -93,6 +94,7 @@
                     </div>
                   </dl>
                 </div>
+                <p class="sr-only" aria-live="polite" data-<%= ns %>-target="pollStatus"></p>
 
                 <% if checkout_error.present? %>
                   <%= render PanelsUI::Alert.new(tone: :destructive, title: "Checkout could not be completed", role: :alert, aria: { live: "assertive" }) do |alert| %>
@@ -119,12 +121,12 @@
                           checkout_business_date: checkout_business_date,
                           ns: ns %>
 
-                    <% if all_held_deposits.any? %>
-                      <%= render "hotel_portal/bookings/actions/checkouts/security_deposit",
-                            checkout_sheets: checkout_sheets,
-                            deposits: all_held_deposits,
-                            form_state: form_state,
-                            currency: currency %>
+                    <% if deposits.any? %>
+                      <%= render "hotel_portal/bookings/actions/checkouts/deposit_settlements",
+                            deposits: deposits,
+                            bookings: checkout_bookings,
+                            selected_booking_ids: selected_booking_ids,
+                            ns: ns %>
                     <% end %>
                   </div>
                 </div>

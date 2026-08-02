@@ -47,9 +47,6 @@ module Folios
         folios.each do |folio|
           action = action_for(folio)
           case action
-          when PAYMENT_ACTION
-            result = post_payment(folio)
-            return failure(result.error) unless result.success?
           when DIRECT_BILL_ACTION
             @direct_bill_folio_ids << folio.id
           when *EXCEPTION_ACTIONS
@@ -87,9 +84,7 @@ module Folios
           return "#{folio.display_name}: cannot check out while folio is voided." if action == "voided"
 
           if action == PAYMENT_ACTION
-            return "#{folio.display_name}: payment amount must equal #{money(balance)}." unless payment_amount_for(folio) == balance
-            return "#{folio.display_name}: payment method is not supported." unless Checkouts::PaymentMethods.valid?(payment_method_for(folio))
-            return "You do not have permission to post checkout payments." unless can_post_payments?
+            return "#{folio.display_name}: settle the folio balance before checkout."
           end
 
           if action == DIRECT_BILL_ACTION
@@ -119,42 +114,6 @@ module Folios
         return if pending_blocker.blank?
 
         "Upcoming charges must be posted before checkout. #{pending_blocker}"
-      end
-
-      def post_payment(folio)
-        source = Folios::Payments::PaymentSource.fetch(Checkouts::PaymentMethods.payment_source_for(payment_method_for(folio)))
-        return failure("Checkout payment method is not supported.") if source.blank?
-
-        Folios::Transactions::PostStaffTransaction.call(
-          folio: folio,
-          user: @user,
-          transaction_type: "payment",
-          category: "cash",
-          amount: payment_amount_for(folio),
-          description: payment_description(folio, source),
-          posting_date: @posting_date,
-          options: payment_options(folio, source)
-        )
-      end
-
-      def payment_options(folio, source)
-        metadata = @options.fetch(:metadata, {}).merge(payment_reference_metadata(folio, source))
-        @options.merge(payment_source: source.key, metadata: metadata)
-      end
-
-      def payment_description(folio, source)
-        reference = payment_reference_for(folio)
-        [ "Checkout payment for #{folio.display_name} via #{source.label}", reference && "#{source.reference_prefix} #{reference}" ].compact.join(" - ")
-      end
-
-      def payment_reference_metadata(folio, source)
-        reference = payment_reference_for(folio)
-        return {} if reference.blank?
-
-        {
-          reference: reference,
-          source.reference_key => reference
-        }
       end
 
       def log_exception(folio)
@@ -208,30 +167,19 @@ module Folios
         return CLOSED_ACTION if folio.closed?
         return VOIDED_ACTION if folio.voided?
 
+        balance = folio.projected_outstanding_balance.to_d
+        submitted_action = params_for(folio)[:action].to_s
+        return CLOSE_ACTION if balance.zero? && (guest_folio?(folio) || submitted_action.present?)
+
         if guest_folio?(folio)
-          balance = folio.projected_outstanding_balance.to_d
           if balance.positive?
             PAYMENT_ACTION
-          elsif balance.zero?
-            CLOSE_ACTION
           else
             "refund_credit_handling"
           end
         else
-          params_for(folio)[:action].to_s
+          submitted_action
         end
-      end
-
-      def payment_amount_for(folio)
-        params_for(folio)[:amount].to_d
-      end
-
-      def payment_method_for(folio)
-        params_for(folio)[:payment_method].to_s.presence || "cash"
-      end
-
-      def payment_reference_for(folio)
-        params_for(folio)[:payment_reference].to_s.strip.presence
       end
 
       def reason_for(folio)
@@ -267,14 +215,6 @@ module Folios
           override: params_for(folio)[:credit_override],
           override_reason: params_for(folio)[:credit_override_reason]
         )
-      end
-
-      def can_post_payments?
-        actor_permits?(@user, "post_folio_payments", hotel: @hotel)
-      end
-
-      def money(amount)
-        "#{@booking.currency.presence || @hotel.default_currency.presence || 'MYR'} #{format('%.2f', amount.to_d)}"
       end
 
       def success(exception_folio_ids:, direct_bill_folio_ids:)

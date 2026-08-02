@@ -12,7 +12,7 @@ module HotelPortal
       {
         title: "Hotel Operations",
         description: "Core hotel revenue codes used for room, food and beverage, parking, and miscellaneous postings.",
-        system_keys: %w[room_revenue fnb_revenue parking_revenue misc_revenue],
+        system_keys: %w[room_revenue fnb_revenue parking_revenue damage_revenue cleaning_revenue misc_revenue],
         test_id: "transaction-codes-hotel-operations-list",
         empty_message: "No hotel operations transaction codes found."
       },

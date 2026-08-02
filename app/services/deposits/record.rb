@@ -108,7 +108,7 @@ module Deposits
     def sync_booking_deposit_status!(deposit)
       return unless deposit.kind_security? && deposit.booking.present?
 
-      deposit.booking.update!(deposit_status: deposit.status == "pending" ? "pending_at_hotel" : "held")
+      Deposits::SyncBookingDepositStatus.call(deposit.booking)
     end
 
     def matching_retry?(deposit)

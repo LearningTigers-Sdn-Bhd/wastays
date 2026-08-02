@@ -34,7 +34,9 @@ module HotelPortal
           @open_folios = @booking.booking_folios.open.order(is_primary: :desc, folio_sequence: :asc, folio_number: :asc, id: :asc).to_a
           @transaction_type = requested_transaction_type
           @category = params[:category].presence
-          @amount = params[:amount]
+          @amount = checkout_settlement? ? checkout_settlement_payload[:amount] : params[:amount]
+          @checkout_settlement = checkout_settlement_kind
+          @description = checkout_settlement_description if checkout_settlement?
           assign_form_config
           render :show, layout: false
         end
@@ -85,31 +87,31 @@ module HotelPortal
         end
 
         def create
+          if checkout_settlement? && !valid_checkout_settlement_request?
+            return render_checkout_settlement_error("Checkout settlement type does not match the requested transaction.")
+          end
+
           target_folio = posting_folio
 
           unless target_folio
             message = folio_transaction_params[:booking_folio_id].present? ? "Selected folio is not available for this booking." : "Booking has no folio."
-            return complete_action(alert: message)
+            return checkout_settlement? ? render_checkout_settlement_error(message) : complete_action(alert: message)
           end
 
-          result = ::Folios::Transactions::PostStaffTransaction.call(
-            folio: target_folio,
-            user: current_user,
-            transaction_type: folio_transaction_params[:transaction_type],
-            category: folio_transaction_params[:category],
-            amount: folio_transaction_params[:amount],
-            description: folio_transaction_params[:description],
-            posting_date: folio_transaction_params[:posting_date],
-            transaction_code_id: folio_transaction_params[:transaction_code_id],
-            options: posting_options
-          )
+          result = checkout_settlement? ? post_locked_checkout_settlement(target_folio) : post_staff_transaction(target_folio)
 
-          return complete_action(alert: result.error) unless result.success?
+          return checkout_settlement? ? render_checkout_settlement_error(result.error) : complete_action(alert: result.error) unless result.success?
+
+          return complete_checkout_settlement if checkout_settlement?
 
           complete_action(notice: "Folio transaction posted.")
         end
 
         def default_folio
+          if checkout_settlement?
+            return scoped_booking_folios.open.find_by(id: checkout_settlement_payload[:folio_id])
+          end
+
           selected = scoped_booking_folios.open.find_by(id: params[:active_folio_id]) if params[:active_folio_id].present?
           selected ||
             @booking.booking_folio&.then { |folio| folio.open? ? folio : nil } ||
@@ -117,6 +119,10 @@ module HotelPortal
         end
 
         def posting_folio
+          if checkout_settlement?
+            return scoped_booking_folios.open.find_by(id: checkout_settlement_payload[:folio_id])
+          end
+
           if folio_transaction_params[:booking_folio_id].present?
             scoped_booking_folios.open.find_by(id: folio_transaction_params[:booking_folio_id])
           else
@@ -161,6 +167,130 @@ module HotelPortal
             @signed_amount = false
             @submit_label = "Post transaction"
           end
+
+          return unless checkout_settlement?
+
+          @form_title = @checkout_settlement == "refund" ? "Settle checkout refund" : "Settle checkout payment"
+          @form_description = "Post the exact folio balance, then return to checkout."
+          @submit_label = @checkout_settlement == "refund" ? "Issue checkout refund" : "Post checkout payment"
+        end
+
+        def checkout_settlement_kind
+          value = checkout_settlement_payload&.dig(:kind).to_s
+          value if value.in?(%w[payment refund])
+        end
+
+        def checkout_settlement?
+          params[:settlement_token].present?
+        end
+
+        def posting_amount
+          return folio_transaction_params[:amount] unless checkout_settlement?
+
+          checkout_settlement_payload[:amount]
+        end
+
+        def valid_checkout_settlement_request?
+          return requested_transaction_type == "payment" && requested_category == "refund" if checkout_settlement_kind == "refund"
+
+          requested_transaction_type == "payment" && requested_category.blank?
+        end
+
+        def checkout_settlement_payload
+          return @checkout_settlement_payload if defined?(@checkout_settlement_payload)
+          return @checkout_settlement_payload = nil if params[:settlement_token].blank?
+
+          payload = ::Checkouts::SettlementToken.verify(params[:settlement_token])
+          raise ActiveRecord::RecordNotFound if @booking.present? && payload[:booking_id].to_i != @booking.id
+
+          @checkout_settlement_payload = payload
+        rescue ActiveSupport::MessageVerifier::InvalidSignature
+          raise ActiveRecord::RecordNotFound
+        end
+
+        def post_locked_checkout_settlement(folio)
+          result = nil
+          error = nil
+
+          folio.with_lock do
+            folio.reload
+            expected_balance = checkout_settlement_balance(folio) + checkout_settlement_payload[:adjustment].to_d
+            token_amount = checkout_settlement_payload[:amount].to_d
+            valid_direction = checkout_settlement_kind == "payment" ? expected_balance.positive? : expected_balance.negative?
+            unless valid_direction && token_amount == expected_balance.abs
+              error = "Folio balance changed. Return to checkout and reopen the settlement."
+              next
+            end
+
+            result = post_staff_transaction(folio)
+          end
+
+          return ::Folios::Transactions::TransactionResult.failure(error) if error.present?
+
+          result
+        end
+
+        def post_staff_transaction(folio)
+          ::Folios::Transactions::PostStaffTransaction.call(
+            folio: folio,
+            user: current_user,
+            transaction_type: folio_transaction_params[:transaction_type],
+            category: folio_transaction_params[:category],
+            amount: posting_amount,
+            description: checkout_settlement? ? checkout_settlement_description : folio_transaction_params[:description],
+            posting_date: folio_transaction_params[:posting_date],
+            transaction_code_id: folio_transaction_params[:transaction_code_id],
+            options: posting_options
+          )
+        end
+
+        def checkout_settlement_balance(folio)
+          business_date = current_hotel.current_business_date
+          early_lines = if business_date < @booking.check_out.to_date
+            ::Folios::Charges::PostEarlyCheckoutCharges.pending_preview(
+              booking: @booking,
+              folio: @booking.booking_folio,
+              departure_date: business_date,
+              original_check_out: @booking.check_out
+            )
+          else
+            []
+          end
+          sheet = HotelPortal::Bookings::Actions::Checkouts::SheetPresenter.new(
+            booking: @booking,
+            hotel: current_hotel,
+            user: current_user,
+            early_checkout_lines: early_lines,
+            early_checkout: business_date < @booking.check_out.to_date
+          )
+          sheet.folio_rows.find { |row| row.folio.id == folio.id }&.balance.to_d
+        end
+
+        def checkout_settlement_description
+          action = checkout_settlement_kind == "refund" ? "refund" : "payment"
+          "Checkout #{action} for #{posting_folio&.display_name || 'folio'}"
+        end
+
+        def complete_checkout_settlement
+          respond_to do |format|
+            format.turbo_stream do
+              render body: helpers.turbo_stream_action_tag(:complete_sheet, target: requesting_sheet_frame), content_type: Mime[:turbo_stream]
+            end
+            format.html { redirect_to @return_to, notice: "Folio settlement posted.", status: :see_other }
+          end
+        end
+
+        def render_checkout_settlement_error(error)
+          @active_folio = posting_folio
+          @open_folios = scoped_booking_folios.open.order(is_primary: :desc, folio_sequence: :asc, folio_number: :asc, id: :asc).to_a
+          @transaction_type = requested_transaction_type
+          @category = requested_category.presence
+          @amount = posting_amount
+          @checkout_settlement = checkout_settlement_kind
+          @description = checkout_settlement_description
+          @transaction_error = error
+          assign_form_config
+          render :show, formats: :html, layout: false, status: :unprocessable_content
         end
 
         def adjustment_category_options

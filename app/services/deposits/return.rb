@@ -3,11 +3,11 @@
 module Deposits
   class Return
     def self.call(deposit:, amount:, actor: nil, payment_method: nil, external_reference: nil, reason: nil,
-      operation_key: nil, occurred_at: nil)
-      new(deposit:, amount:, actor:, payment_method:, external_reference:, reason:, operation_key:, occurred_at:).call
+      operation_key: nil, occurred_at: nil, metadata: {})
+      new(deposit:, amount:, actor:, payment_method:, external_reference:, reason:, operation_key:, occurred_at:, metadata:).call
     end
 
-    def initialize(deposit:, amount:, actor:, payment_method:, external_reference:, reason:, operation_key:, occurred_at:)
+    def initialize(deposit:, amount:, actor:, payment_method:, external_reference:, reason:, operation_key:, occurred_at:, metadata:)
       @deposit = deposit
       @amount = amount.to_d
       @actor = actor
@@ -16,6 +16,7 @@ module Deposits
       @reason = reason.to_s.strip.presence
       @operation_key = operation_key.to_s.presence
       @occurred_at = occurred_at
+      @metadata = metadata.to_h
     end
 
     def call
@@ -37,8 +38,9 @@ module Deposits
           payment_method: @payment_method,
           external_reference: @external_reference,
           reason: @reason,
-          occurred_at: @occurred_at || Time.current,
-          operation_key: @operation_key
+           occurred_at: @occurred_at || Time.current,
+           operation_key: @operation_key,
+           metadata: @metadata
         )
         @deposit.refresh_status!
         sync_booking_deposit_status!
@@ -61,8 +63,7 @@ module Deposits
     def sync_booking_deposit_status!
       return unless @deposit.kind_security? && @deposit.booking.present?
 
-      status = @deposit.booking.deposits.kind_security.where(status: "held").exists? ? "held" : "released"
-      @deposit.booking.update!(deposit_status: status)
+      Deposits::SyncBookingDepositStatus.call(@deposit.booking)
     end
 
     def success(movement)

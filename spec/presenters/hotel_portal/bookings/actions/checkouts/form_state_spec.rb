@@ -38,7 +38,6 @@ RSpec.describe HotelPortal::Bookings::Actions::Checkouts::FormState do
       reason: nil
     )
     expect(state.early_departure_values(anchor)).to include(apply_charge: "false", type: "amount", charge_amount: "0.00")
-    expect(state.release_security_deposit?).to be(true)
   end
 
   it "selects only the anchor booking on a non-group GET" do
@@ -66,10 +65,7 @@ RSpec.describe HotelPortal::Bookings::Actions::Checkouts::FormState do
         },
         early_departures: {
           sibling.id => { apply_charge: "true", type: "percentage", value: "25", charge_amount: "18.75" }
-        },
-        release_security_deposit: "0",
-        security_deposit_release_method: "card",
-        security_deposit_release_reference: ""
+        }
       }
     )
 
@@ -87,9 +83,6 @@ RSpec.describe HotelPortal::Bookings::Actions::Checkouts::FormState do
       value: "25",
       charge_amount: "18.75"
     )
-    expect(state.release_security_deposit?).to be(false)
-    expect(state.security_deposit_release_method).to eq("card")
-    expect(state.security_deposit_release_reference).to eq("")
   end
 
   it "calculates summaries from the selected bookings and submitted actions" do
