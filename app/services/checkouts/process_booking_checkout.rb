@@ -31,11 +31,27 @@ module Checkouts
     end
 
     def call
+      result = nil
+      ActiveRecord::Base.transaction do
+        result = prepare
+        raise ActiveRecord::Rollback unless result.success?
+
+        result = finalize
+        raise ActiveRecord::Rollback unless result.success?
+      end
+      result
+    end
+
+    def prepare
       return failure("Check-out date and time can't be blank.") if @booking.checkout_required? && @timestamp.blank?
 
       early_result = process_early_departure_if_needed
       return early_result unless early_result.success?
 
+      success
+    end
+
+    def finalize
       settlement_result = process_folio_actions
       return settlement_result unless settlement_result.success?
 

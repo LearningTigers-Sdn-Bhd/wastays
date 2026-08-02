@@ -9,7 +9,6 @@ module HotelPortal
         # including intentional blanks, so the resolver can reopen unchanged.
         class FormState
           DEFAULT_PAYMENT_METHOD = "cash"
-          DEFAULT_RELEASE_METHOD = "cash"
 
           attr_reader :selected_booking_ids
 
@@ -59,18 +58,6 @@ module HotelPortal
               value: submitted_value(*prefix, "value", default: nil),
               charge_amount: submitted_value(*prefix, "charge_amount", default: "0.00")
             }
-          end
-
-          def release_security_deposit?
-            submitted_value("release_security_deposit", default: "1") == "1"
-          end
-
-          def security_deposit_release_method
-            submitted_value("security_deposit_release_method", default: DEFAULT_RELEASE_METHOD)
-          end
-
-          def security_deposit_release_reference
-            submitted_value("security_deposit_release_reference", default: nil)
           end
 
           def collect_now_total

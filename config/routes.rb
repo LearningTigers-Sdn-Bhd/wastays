@@ -401,6 +401,8 @@ Rails.application.routes.draw do
       match "repair-no-show-folio/:booking_id", to: "no_show_folio_repairs#show", via: [ :get, :post ], as: :repair_no_show_folio
       match "reinstate-no-show/:booking_id", to: "reinstatements#show", via: [ :get, :post ], as: :reinstate_no_show
       match "late-checkout/:booking_id", to: "late_checkouts#show", via: [ :get, :post ], as: :late_checkout
+      get "checkout/:booking_id/folio-status", to: "checkouts#folio_status", as: :checkout_folio_status
+      match "checkout/:booking_id/deposits/:deposit_id", to: "deposit_settlements#show", via: [ :get, :post ], as: :checkout_deposit_settlement
       match "checkout/:booking_id", to: "checkouts#show", via: [ :get, :post ], as: :checkout
       match "manage-guest/:booking_id", to: "guests#show", via: [ :get, :post, :patch ], as: :manage_guest
       match "manage-billing-party/:booking_id", to: "billing_parties#show", via: [ :get, :post, :patch, :delete ], as: :manage_billing_party

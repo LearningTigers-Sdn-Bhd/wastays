@@ -21,7 +21,7 @@
       <div class="min-w-0">
         <h4 class="text-sm font-medium">
           <%= room&.room_number.presence || "Unassigned room" %> · <%= booking.guest_name %>
-          <span class="ml-2 align-middle"><%= render PanelsUI::Badge.new(label: "Early departure", variant: :info, size: :sm) %></span>
+          <span class="ml-2 text-xs font-normal text-muted-foreground">Early departure</span>
         </h4>
         <p class="mt-0.5 text-xs text-muted-foreground">Scheduled checkout: <%= booking.check_out.strftime("%d %b %Y") %></p>
       </div>
