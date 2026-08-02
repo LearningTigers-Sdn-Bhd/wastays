@@ -26,6 +26,7 @@ RSpec.describe Deposits::Apply do
     result = described_class.call(deposit: deposit, booking_folio: folio, amount: 100)
 
     expect(result).to be_success
+    expect(result.transaction).to have_attributes(category: "security_deposit", transaction_code: deposit.transaction_code, gl_code: "2030")
     expect(deposit.reload.status).to eq("settled")
   end
 
