@@ -62,6 +62,26 @@ RSpec.describe NightAudits::ResolveMissingFolio do
     expect(night_audit.reload.blocked_details["missing_nightly_charges"].sole["booking_id"]).to eq(booking.id)
   end
 
+  it "rolls back the recovery when the business-date snapshot cannot be refreshed" do
+    allow(NightAudits::Resolutions::RefreshSnapshot).to receive(:call!).and_raise("Could not refresh blocker snapshot")
+
+    expect {
+      @result = described_class.call(
+        night_audit: night_audit,
+        booking: booking,
+        actor: actor,
+        reason: "Resolve blocker"
+      )
+    }.not_to change(BookingFolio, :count)
+
+    expect(@result).not_to be_success
+    expect(@result.error).to eq("Could not refresh blocker snapshot")
+    expect(booking.reload.booking_folio).to be_nil
+    expect(night_audit.reload.blocked_details["missing_folio"]).to contain_exactly(include("booking_id" => booking.id))
+    expect(FinancialAuditEvent.where(event_type: "missing_folio_recovered", booking_id: booking.id)).not_to exist
+    expect(NightAuditLog.where(night_audit: night_audit, action_type: "blocker_resolved")).not_to exist
+  end
+
   it "rejects open business dates" do
     hotel.current_business_date_record.update!(status: "open")
 

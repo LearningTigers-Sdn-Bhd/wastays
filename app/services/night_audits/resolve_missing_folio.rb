@@ -23,25 +23,26 @@ module NightAudits
       validation_error = validate_context
       return failure(validation_error) if validation_error.present?
 
-      recovery = Folios::Maintenance::RecoverMissingFolio.call(
-        booking: @booking,
-        hotel: @hotel,
-        actor: @actor,
-        night_audit: @night_audit,
-        reason: @reason
-      )
-      return failure(recovery.error) unless recovery.success?
+      ActiveRecord::Base.transaction do
+        recovery = Folios::Maintenance::RecoverMissingFolio.call(
+          booking: @booking,
+          hotel: @hotel,
+          actor: @actor,
+          night_audit: @night_audit,
+          reason: @reason
+        )
+        raise recovery.error unless recovery.success?
 
-      evaluation = NightAudits::Evaluate.new(
-        hotel: @hotel,
-        business_date: @night_audit.business_date,
-        phase: :post_close
-      ).call
+        evaluation = evaluate(:post_close)
+        NightAudits::Resolutions::RefreshSnapshot.call!(
+          night_audit: @night_audit,
+          business_date_record: current_business_date,
+          evaluation: evaluation
+        )
+        record_resolution_log!(recovery.folio)
 
-      update_blockers!(evaluation)
-      record_resolution_log!(recovery.folio)
-
-      success(folio: recovery.folio, evaluation: evaluation)
+        success(folio: recovery.folio, evaluation: evaluation)
+      end
     rescue StandardError => e
       failure(e.message)
     end
@@ -49,22 +50,15 @@ module NightAudits
     private
 
     def validate_context
-      return "You do not have permission to resolve Night Audit blockers." unless allowed_actor?
-      return "Booking does not belong to this hotel." unless @booking.hotel_id == @hotel.id
-      return "Night audit is not blocked." unless @night_audit.blocked?
-      return "Hotel has no current accounting business date." unless current_business_date
-      return "Night audit is not for the current accounting business date." unless current_business_date&.business_date == @night_audit.business_date
-      return "Business date must be audit blocked before resolving blockers." unless current_business_date.audit_blocked?
-      return "Booking is not in the missing folio blocker list." unless missing_folio_booking_ids.include?(@booking.id)
-
-      nil
-    end
-
-    def allowed_actor?
-      return true if @actor&.respond_to?(:superadmin?) && @actor.superadmin?
-      return false unless @actor&.respond_to?(:has_permission?)
-
-      @actor.has_permission?(PERMISSION, hotel: @hotel)
+      NightAudits::Resolutions::ValidateContext.call(
+        night_audit: @night_audit,
+        booking: @booking,
+        actor: @actor,
+        business_date_record: current_business_date,
+        blocker_booking_ids: -> { missing_folio_booking_ids },
+        blocker_name: "missing folio",
+        permission: PERMISSION
+      )
     end
 
     def current_business_date
@@ -72,31 +66,24 @@ module NightAudits
     end
 
     def missing_folio_booking_ids
-      @missing_folio_booking_ids ||= begin
-        stored_ids = Array(@night_audit.blocked_details.to_h[BLOCKER_TYPE]).filter_map { |item| item["booking_id"] || item[:booking_id] }
-        snapshot_ids = Array(current_business_date&.blockers_snapshot.to_h[BLOCKER_TYPE]).filter_map { |item| item["booking_id"] || item[:booking_id] }
-        fresh_ids = Array(fresh_evaluation[:blocked_details][BLOCKER_TYPE]).filter_map { |item| item["booking_id"] }
-
-        (stored_ids + snapshot_ids + fresh_ids).map(&:to_i).uniq
-      end
+      @missing_folio_booking_ids ||= NightAudits::Resolutions::BlockerBookingIds.call(
+        night_audit: @night_audit,
+        business_date_record: current_business_date,
+        blocker_type: BLOCKER_TYPE,
+        fresh_blocked_details: fresh_evaluation[:blocked_details]
+      )
     end
 
     def fresh_evaluation
-      @fresh_evaluation ||= NightAudits::Evaluate.new(
-        hotel: @hotel,
-        business_date: @night_audit.business_date,
-        phase: :pre_close
-      ).call
+      @fresh_evaluation ||= evaluate(:pre_close)
     end
 
-    def update_blockers!(evaluation)
-      @night_audit.update!(
-        blocked_details: evaluation[:blocked_details],
-        exceptions: evaluation[:exceptions],
-        summary: @night_audit.summary.to_h.merge(evaluation[:summary])
-      )
-
-      current_business_date.update!(blockers_snapshot: evaluation[:blocked_details])
+    def evaluate(phase)
+      NightAudits::Evaluate.new(
+        hotel: @hotel,
+        business_date: @night_audit.business_date,
+        phase: phase
+      ).call
     end
 
     def record_resolution_log!(folio)
