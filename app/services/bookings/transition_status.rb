@@ -474,7 +474,7 @@ module Bookings
           user: @user,
           booking: @booking,
           event_type: "checkout_marked_dirty",
-          reason: nil,
+          reason: "Checkout turnover",
           metadata: { "booking_id" => @booking.id },
           enforce_transition: false
         ).call

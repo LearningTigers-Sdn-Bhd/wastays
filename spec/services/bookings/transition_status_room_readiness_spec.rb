@@ -18,12 +18,14 @@ RSpec.describe Bookings::TransitionStatus, frozen_time: Time.zone.local(2026, 6,
     result = described_class.new(booking: booking, status: "completed", timestamp: Time.current, user: user).call
 
     expect(result).to be_success
-    expect(RoomStatus.find_by!(hotel: hotel, room_number: "101").status).to eq("dirty")
+    room_status = RoomStatus.find_by!(hotel: hotel, room_number: "101")
+    expect(room_status).to have_attributes(status: "dirty", notes: "Checkout turnover")
 
     log = RoomOperationalAuditLog.find_by!(event_type: "checkout_marked_dirty")
     expect(log.booking).to eq(booking)
     expect(log.user).to eq(user)
     expect(log.old_status).to eq("ready")
     expect(log.new_status).to eq("dirty")
+    expect(log.reason).to eq("Checkout turnover")
   end
 end

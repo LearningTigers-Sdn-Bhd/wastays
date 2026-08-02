@@ -72,14 +72,26 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
 
       expect(response).to have_http_status(:ok)
       header = response.body[/<thead>.*?<\/thead>/m]
-      expect(Nokogiri::HTML.fragment(header).css("th").map { |column| column.text.squish }).to eq([
-        "Room type", "Pax", "Room status", "Assigned to", "Booking status",
-        "Arrival", "Departure", "Nights", "Remarks"
-      ])
+      headers = Nokogiri::HTML.fragment(header).css("th").map { |column| column.text.squish }
+      expect(headers).to include("Pax", "Nights", "Remarks")
+      expect(headers.first).to include("Room type", "All room types")
+      expect(headers[2]).to include("Room status", "All room statuses")
+      expect(headers[3]).to include("Assigned to", "All staff")
+      expect(headers[4]).to include("Booking status", "All booking statuses")
+      expect(headers[5]).to include("Arrival")
+      expect(headers[6]).to include("Departure")
       expect(response.body).to include("2/1", "Guest requested extra towels", "Pending checkout")
       expect(response.body).to include("Clear remarks for #{room_type.name} 101")
       expect(response.body).not_to include("Task status", "Add task", "No task")
       expect(response.body.scan(/id="hk-group-#{room_type.id}-#{room_type.id}-101"/).size).to eq(1)
+
+      document = Nokogiri::HTML(response.body)
+      board_section = document.at_css('section[data-controller~="housekeeping-table"]')
+      expect(board_section["data-action"]).to include("change->housekeeping-table#filterChanged")
+      expect(document.at_css("table")["data-controller"]).to eq("table-group")
+      expect(document.css('a[data-action="click->housekeeping-table#navigate"]')).to all(
+        satisfy { |link| link["data-turbo-frame"] == "housekeeping_tasks_results" }
+      )
     end
 
     it "uses styled selection controls and exact room-keyed mutation routes" do
@@ -111,53 +123,88 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       expect(status_form["data-turbo-frame"]).to eq("_top")
     end
 
-    it "filters by derived booking status and keeps the filter on export links" do
+    it "filters by room type and status and keeps sorting on export links" do
+      other_room_type = create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[401])
+      staff = active_housekeeper
+      room_status("101", status: "dirty", assigned_to: staff)
+      room_status("202", status: "ready")
+      create(:room_status, hotel:, room_type: other_room_type, room_number: "401", status: "dirty")
       stay(number: "101", status: "checked_in", check_in: business_date - 1.day, check_out: business_date)
-      stay(number: "202", status: "confirmed", check_in: business_date, check_out: business_date + 2.days)
 
-      get hotel_housekeeping_tasks_path(hotel, booking_status: "pending_checkout", date: business_date)
+      get hotel_housekeeping_tasks_path(
+        hotel,
+        room_type_ids: [ room_type.id ],
+        room_statuses: [ "dirty" ],
+        assigned_to_ids: [ staff.id ],
+        booking_statuses: [ "pending_checkout" ],
+        sort: "arrival",
+        direction: "desc",
+        date: business_date - 1.day
+      )
 
       table_body = response.body[/<tbody.*?<\/tbody>/m]
-      expect(table_body).to include("101", "Pending checkout")
-      expect(table_body).not_to include("Arriving today")
+      table_document = Nokogiri::HTML.fragment(table_body)
+      room_numbers = table_document.css('tr[data-group] th[scope="row"] > div > span:first-child').map(&:text)
+      expect(room_numbers).to eq([ "101" ])
+      expect(table_body).to include("Pending checkout")
+      expect(response.body).to include('aria-sort="descending"')
       %w[export-pdf-link export-excel-link export-csv-link].each do |link_id|
         href = CGI.unescapeHTML(response.body[/id="#{link_id}" href="([^"]*)"/, 1])
-        expect(href).to include("booking_status=pending_checkout", "date=#{business_date}")
+        expect(href).to include(
+          "room_type_ids%5B%5D=#{room_type.id}",
+          "room_statuses%5B%5D=dirty",
+          "assigned_to_ids%5B%5D=#{staff.id}",
+          "booking_statuses%5B%5D=pending_checkout",
+          "sort=arrival",
+          "direction=desc",
+          "date=#{business_date}"
+        )
       end
     end
 
-    it "searches current room remarks without requiring a task" do
+    it "renders today's board without search or date controls" do
       room_status("202", notes: "Bring hypoallergenic pillows")
 
-      get hotel_housekeeping_tasks_path(hotel, q: "HYPOALLERGENIC", date: business_date)
+      get hotel_housekeeping_tasks_path(hotel, q: "HYPOALLERGENIC", date: business_date - 1.day)
 
-      expect(response.body).to include("202", "Bring hypoallergenic pillows")
-      expect(response.body).not_to include(">101<", ">303<")
+      table_body = response.body[/<tbody.*?<\/tbody>/m]
+      expect(table_body).to include("101", "202", "303", "Bring hypoallergenic pillows")
+      expect(response.body).not_to include(
+        'id="hk-filters-form"', 'name="q"', "Room, guest, booking or remarks", "As of date",
+        "read-only outside the current business date"
+      )
     end
 
-    it "renders historical dates read-only" do
-      get hotel_housekeeping_tasks_path(hotel, date: business_date - 1.day)
+    it "keeps header filters available when no rooms match" do
+      get hotel_housekeeping_tasks_path(hotel, room_statuses: [ "__none__" ])
 
-      expect(response.body).to include("read-only outside the current business date")
-      expect(response.body).not_to include(hotel_housekeeping_room_assignment_path(hotel, room_type_id: room_type.id, room_number: "101"))
-      expect(response.body).not_to include(hotel_edit_housekeeping_room_remarks_path(hotel, room_type_id: room_type.id, room_number: "101"))
+      expect(response.body).to include('id="hk-room-type-filter"', 'id="hk-room-status-filter"', "No rooms found")
+      empty_state = Nokogiri::HTML(response.body).at_css("tbody td[colspan='9']")
+      expect(empty_state.text.squish).to eq("No rooms found Try adjusting your filters.")
     end
 
     it "exports every filtered room as CSV, XLSX, and PDF" do
       room_status("101", notes: "Inspect balcony")
+      stay(number: "101", status: "checked_in", check_in: business_date - 1.day, check_out: business_date)
 
-      get hotel_housekeeping_tasks_path(hotel, format: :csv), params: { date: business_date, q: "101" }
+      export_params = {
+        date: business_date - 1.day,
+        room_type_ids: [ room_type.id ],
+        room_statuses: [ "dirty" ]
+      }
+
+      get hotel_housekeeping_tasks_path(hotel, format: :csv), params: export_params
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("text/csv")
       expect(response.body).to include("Room Number,Room Type,Pax", "Inspect balcony", "101")
       expect(response.body.lines.size).to eq(2)
 
-      get hotel_housekeeping_tasks_path(hotel, format: :xlsx), params: { date: business_date, q: "101" }
+      get hotel_housekeeping_tasks_path(hotel, format: :xlsx), params: export_params
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
       expect(response.body).to start_with("PK")
 
-      get hotel_housekeeping_tasks_path(hotel, format: :pdf), params: { date: business_date, q: "101" }
+      get hotel_housekeeping_tasks_path(hotel, format: :pdf), params: export_params
       text = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("application/pdf")
@@ -204,11 +251,27 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       patch hotel_housekeeping_room_assignment_path(hotel, room_type_id: room_type.id, room_number: "101"), params: {
         date: business_date,
         assigned_to_id: staff.id,
-        filters: { q: "101", booking_status: "vacant", date: business_date, host: "evil.example" }
+        filters: {
+          room_type_ids: [ room_type.id ],
+          room_statuses: [ "dirty" ],
+          assigned_to_ids: [ staff.id ],
+          booking_statuses: [ "pending_checkout" ],
+          sort: "arrival",
+          direction: "desc",
+          host: "evil.example"
+        }
       }
 
       expect(response).to redirect_to(
-        hotel_housekeeping_tasks_path(hotel, q: "101", booking_status: "vacant", date: business_date.to_s)
+        hotel_housekeeping_tasks_path(
+          hotel,
+          room_type_ids: [ room_type.id ],
+          room_statuses: [ "dirty" ],
+          assigned_to_ids: [ staff.id ],
+          booking_statuses: [ "pending_checkout" ],
+          sort: "arrival",
+          direction: "desc"
+        )
       )
       expect(RoomStatus.find_by!(hotel:, room_type:, room_number: "101").assigned_to).to eq(staff)
     end
@@ -225,7 +288,7 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
     end
 
     it "opens and updates focused room remarks" do
-      return_to = hotel_housekeeping_tasks_path(hotel, q: "101", date: business_date)
+      return_to = hotel_housekeeping_tasks_path(hotel)
 
       get hotel_edit_housekeeping_room_remarks_path(hotel, room_type_id: room_type.id, room_number: "101"),
           params: { date: business_date, return_to: }

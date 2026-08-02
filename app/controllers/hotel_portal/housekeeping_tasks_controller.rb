@@ -10,6 +10,7 @@ module HotelPortal
 
     def index
       @staff_members = HotelPortal::ActiveHousekeepersQuery.new(hotel: current_hotel).call
+      @room_types = current_hotel.room_types.order(:name).to_a
       @selected_date = selected_date
       @room_groups = board
 
@@ -109,20 +110,23 @@ module HotelPortal
       end
     end
 
-    # A board is always for some date, and a date nobody can read is today.
+    # The board is intentionally limited to the hotel's current business date.
     def selected_date
-      Date.parse(params[:date].to_s)
-    rescue ArgumentError, TypeError
       current_hotel.current_business_date || current_hotel.business_date_for(Time.current)
     end
 
     def board
+      filters = board_filters
+
       HousekeepingTasks::BoardBuilder.new(
         hotel: current_hotel,
         date: @selected_date,
-        query: params[:q],
-        assigned_to: params[:assigned_to],
-        booking_status: params[:booking_status]
+        room_type_ids: filters[:room_type_ids],
+        room_statuses: filters[:room_statuses],
+        assigned_to_ids: filters[:assigned_to_ids],
+        booking_statuses: filters[:booking_statuses],
+        sort: filters[:sort],
+        direction: filters[:direction]
       ).call
     end
 
