@@ -8,9 +8,49 @@ RSpec.describe NightAudits::Evaluate do
   describe '#call' do
     it 'returns a hash with blocked_details, exceptions, and summary' do
       result = service.call
-      expect(result).to have_key(:blocked_details)
-      expect(result).to have_key(:exceptions)
-      expect(result).to have_key(:summary)
+      expect(result.keys).to eq(%i[blocked_details exceptions summary])
+      expect(result[:blocked_details].keys).to all(be_a(String))
+      expect(result[:exceptions].keys).to all(be_a(String))
+      expect(result[:summary].keys).to all(be_a(String))
+    end
+
+    it 'rejects unsupported phases before evaluating any rules' do
+      expect do
+        described_class.new(hotel: hotel, business_date: business_date, phase: :during_close).call
+      end.to raise_error(ArgumentError, /during_close/)
+    end
+
+    it 'rejects a nil phase with ArgumentError' do
+      expect do
+        described_class.new(hotel: hotel, business_date: business_date, phase: nil).call
+      end.to raise_error(ArgumentError, /nil/)
+    end
+
+    it 'counts payment statuses only for bookings financially relevant to the business date' do
+      create(:booking,
+        hotel: hotel,
+        status: 'checked_in',
+        payment_status: 'captured',
+        check_in: business_date,
+        check_out: business_date + 1.day,
+        checked_in_at: business_date.beginning_of_day)
+      create(:booking,
+        hotel: hotel,
+        status: 'completed',
+        payment_status: 'failed',
+        check_in: business_date - 10.days,
+        check_out: business_date - 9.days,
+        checked_out_at: business_date - 9.days)
+      create(:booking,
+        hotel: hotel,
+        status: 'confirmed',
+        payment_status: 'authorized',
+        check_in: business_date + 5.days,
+        check_out: business_date + 6.days)
+
+      counts = service.call.dig(:summary, "payment_status_counts")
+
+      expect(counts).to eq("captured" => 1)
     end
 
     it 'identifies stale checked-in due outs as blockers' do
