@@ -33,7 +33,7 @@ module NightAudits
         )
         raise recovery.error unless recovery.success?
 
-        evaluation = evaluate(:post_close)
+        evaluation = evaluate(evaluation_phase)
         NightAudits::Resolutions::RefreshSnapshot.call!(
           night_audit: @night_audit,
           business_date_record: current_business_date,
@@ -57,8 +57,17 @@ module NightAudits
         business_date_record: current_business_date,
         blocker_booking_ids: -> { missing_folio_booking_ids },
         blocker_name: "missing folio",
-        permission: PERMISSION
+        permission: PERMISSION,
+        mode: resolution_mode
       )
+    end
+
+    def resolution_mode
+      @night_audit.preparing? ? :preparation : :blocked_run
+    end
+
+    def evaluation_phase
+      @night_audit.preparing? ? :pre_close : :post_close
     end
 
     def current_business_date
@@ -97,18 +106,29 @@ module NightAudits
           booking_id: @booking.id,
           confirmation_token: @booking.confirmation_token,
           booking_folio_id: folio.id,
-          reason: @reason
+          reason: @reason,
+          before: { booking_folio_id: nil },
+          after: { booking_folio_id: folio.id }
         }
       )
     end
 
     def success(folio:, evaluation:)
+      nightly_charges_remaining = Array(evaluation[:blocked_details]["missing_nightly_charges"]).any?
+      message = if nightly_charges_remaining
+        "Folio recovered. Missing nightly charges are still detected."
+      elsif @night_audit.preparing?
+        "Folio recovered. Night Audit readiness refreshed."
+      else
+        "Folio recovered. Retry Night Audit."
+      end
+
       OpenStruct.new(
         success?: true,
         folio: folio,
         remaining_blockers: evaluation[:blocked_details],
-        missing_nightly_charges_remaining?: Array(evaluation[:blocked_details]["missing_nightly_charges"]).any?,
-        message: Array(evaluation[:blocked_details]["missing_nightly_charges"]).any? ? "Folio recovered. Missing nightly charges are still detected." : "Folio recovered. Retry Night Audit."
+        missing_nightly_charges_remaining?: nightly_charges_remaining,
+        message: message
       )
     end
 

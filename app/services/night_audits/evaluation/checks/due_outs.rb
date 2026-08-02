@@ -10,11 +10,7 @@ module NightAudits
         end
 
         def call
-          cutoff = (@context.business_date + 1.day).in_time_zone(@context.hotel.hotel_time_zone).beginning_of_day
-          bookings = @context.hotel_bookings
-            .where(status: %w[checked_in checkout_required])
-            .where("check_out < ?", cutoff)
-            .includes(:booking_rooms)
+          bookings = OverdueGuestStays.new(context: @context).due_outs
 
           { "due_out_not_checked_out" => @serializer.bookings(bookings, REASON) }
         end

@@ -10,6 +10,8 @@ class NightAuditLog < ApplicationRecord
   # Define common action types as constants or an enum if preferred
   ACTION_TYPES = %w[
     process_started
+    review_started
+    item_detected
     check_due_outs
     check_missing_timestamps
     check_open_requests

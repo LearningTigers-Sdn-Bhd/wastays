@@ -2,6 +2,7 @@ module NightAudits
   class Evaluate
     PRE_CLOSE_CHECKS = [
       Evaluation::Checks::DueOuts,
+      Evaluation::Checks::MissedArrivals,
       Evaluation::Checks::BookingTimestamps,
       Evaluation::Checks::MissingFolios,
       Evaluation::Checks::OutstandingFolioBalances,
@@ -10,6 +11,7 @@ module NightAudits
     ].freeze
     POST_CLOSE_CHECKS = [
       Evaluation::Checks::DueOuts,
+      Evaluation::Checks::MissedArrivals,
       Evaluation::Checks::BookingTimestamps,
       Evaluation::Checks::MissingFolios,
       Evaluation::Checks::MissingNightlyCharges,
@@ -18,7 +20,6 @@ module NightAudits
       Evaluation::Checks::UnsyncedRefunds
     ].freeze
     WARNINGS = [
-      Evaluation::Warnings::DetectedBookingStatuses,
       Evaluation::Warnings::OpenOperationalRequests,
       Evaluation::Warnings::UnusualFolioBalances
     ].freeze

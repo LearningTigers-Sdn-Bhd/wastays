@@ -82,7 +82,9 @@ RSpec.describe NightAudits::ResolveMissingNightlyCharges do
     expect(repaired_tax.metadata["posting_source"]).to eq("audit_blocker_resolution")
     expect(night_audit.reload.blocked_details["missing_nightly_charges"]).to be_empty
     expect(FolioOperationLog.where(operation_type: "correction", booking: booking)).to exist
-    expect(NightAuditLog.where(night_audit: night_audit, action_type: "blocker_resolved")).to exist
+    resolution_metadata = NightAuditLog.find_by!(night_audit: night_audit, action_type: "blocker_resolved").metadata
+    expect(resolution_metadata.dig("before", "issues")).to be_present
+    expect(resolution_metadata.dig("after", "issues")).to be_empty
     expect(FinancialAuditEvent.where(night_audit_id: night_audit.id, event_type: "audit_blocker_resolution_posted").count).to eq(2)
   end
 

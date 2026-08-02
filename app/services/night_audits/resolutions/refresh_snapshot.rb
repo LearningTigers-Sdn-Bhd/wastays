@@ -10,7 +10,7 @@ module NightAudits
           summary: night_audit.summary.to_h.merge(evaluation[:summary])
         )
 
-        business_date_record.update!(blockers_snapshot: evaluation[:blocked_details])
+        business_date_record.update!(blockers_snapshot: evaluation[:blocked_details]) unless night_audit.preparing?
       end
     end
   end

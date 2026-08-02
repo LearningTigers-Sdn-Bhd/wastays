@@ -45,8 +45,28 @@ RSpec.describe NightAudits::ResolveMissingFolio do
     expect(hotel.current_business_date_record).to be_audit_blocked
     expect(NightAuditLog.find_by!(action_type: "blocker_resolved").metadata).to include(
       "blocker_type" => "missing_folio",
-      "booking_id" => booking.id
+      "booking_id" => booking.id,
+      "before" => { "booking_folio_id" => nil },
+      "after" => { "booking_folio_id" => result.folio.id }
     )
+  end
+
+  it "recovers a folio while preparation keeps the business date open" do
+    night_audit.update!(status: "preparing")
+    hotel.current_business_date_record.update!(status: "open", blockers_snapshot: {})
+
+    result = described_class.call(
+      night_audit: night_audit,
+      booking: booking,
+      actor: actor,
+      reason: "Prepare folio"
+    )
+
+    expect(result).to be_success
+    expect(hotel.current_business_date_record.reload).to be_open
+    expect(hotel.current_business_date_record.blockers_snapshot).to eq({})
+    expect(night_audit.reload.blocked_details["missing_folio"]).to be_empty
+    expect(night_audit.blocked_details).not_to have_key("missing_nightly_charges")
   end
 
   it "leaves missing nightly charges visible after recovery" do

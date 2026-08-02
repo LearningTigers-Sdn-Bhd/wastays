@@ -141,7 +141,9 @@ module NightAudits
           operation_key: repair.operation_key,
           reversed_transaction_ids: repair.reversed_transactions.map(&:id),
           posted_transaction_ids: repair.posted_transactions.map(&:id),
-          reason: @reason
+          reason: @reason,
+          before: { issues: current_reconciliation.issues },
+          after: { issues: repair.reconciliation.issues }
         }
       )
     end

@@ -37,12 +37,12 @@ RSpec.describe NightAudits::Run do
       ).call
     end
 
-    it "blocks the audit and does not open the next date" do
+    it "returns the audit to preparation and keeps the business date open" do
       result = run_audit
 
       expect(result.success?).to be(false)
-      expect(result.night_audit).to be_blocked
-      expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
+      expect(result.night_audit).to be_preparing
+      expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_open
       expect(hotel.hotel_business_dates.find_by(business_date: business_date + 1.day)).to be_nil
     end
   end

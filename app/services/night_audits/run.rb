@@ -29,6 +29,20 @@ module NightAudits
         return Result.new(success?: false, error: error, night_audit: night_audit)
       end
 
+
+      current_business_date = @hotel.current_business_date_record ||
+        HotelBusinessDate.initialize_for_hotel!(hotel: @hotel, date: @business_date)
+      if current_business_date.business_date != @business_date
+        error = "Business date #{@business_date} is not the current accounting business date #{current_business_date.business_date}."
+        return Result.new(success?: false, error: error, night_audit: night_audit)
+      end
+
+      pre_evaluation = evaluate(:pre_close)
+      if blocked?(pre_evaluation) && !@force_roll
+        persist_preparation!(night_audit, pre_evaluation)
+        return Result.new(success?: false, error: "Night audit requires staff resolution.", night_audit: night_audit)
+      end
+
       claim = NightAudits::Execution::ClaimBusinessDate.call(
         hotel: @hotel,
         business_date: @business_date,
@@ -48,42 +62,19 @@ module NightAudits
       )
       night_audit.save!
 
+      # Close the small race between the open-date preview and the accounting
+      # claim. Once claimed, operational changes are guarded; if something
+      # landed just before the claim, release the date without posting.
+      claimed_evaluation = evaluate(:pre_close)
+      if blocked?(claimed_evaluation) && !@force_roll
+        NightAudits::Execution::ReleaseBusinessDate.call!(hotel: @hotel, business_date: @business_date)
+        persist_preparation!(night_audit, claimed_evaluation)
+        return Result.new(success?: false, error: "Night audit readiness changed before processing.", night_audit: night_audit)
+      end
+
       log_event(night_audit, "process_started", "Night audit process started for business date #{@business_date}")
       record_night_audit_event!(night_audit, business_date, "night_audit_started", "Night audit started")
       record_night_audit_event!(night_audit, business_date, "business_date_audit_started", "Business date moved to audit_running")
-
-      processing = @processor.call(night_audit: night_audit, user: @performed_by_user)
-      no_show_result = processing.no_shows
-      due_out_result = processing.due_outs
-      record_result_items(night_audit, "item_skipped", due_out_result.skipped)
-      record_result_items(night_audit, "item_failed", due_out_result.failed)
-      night_audit.night_audit_logs.where(action_type: "process_started").order(:id).last&.update!(
-        metadata: {
-          no_show_detected_count: no_show_result.no_show_detected_count,
-          finalized_no_show_count: no_show_result.finalized_count,
-          due_out_detected_count: due_out_result.detected.count
-        }
-      )
-
-      pre_evaluation = evaluate(:pre_close)
-
-      if blocked?(pre_evaluation) && !@force_roll
-        log_blockers(night_audit, pre_evaluation[:blocked_details])
-        log_exceptions(night_audit, pre_evaluation[:exceptions])
-
-        @finalizer.call(
-          **finalizer_attributes(
-            night_audit: night_audit,
-            business_date: business_date,
-            evaluation: pre_evaluation,
-            financial_totals: calculate_financial_totals,
-            phase: :pre_close
-          )
-        )
-
-        log_event(night_audit, "blocker_found", "Night audit process stopped before posting due to blockers")
-        return Result.new(success?: night_audit.completed?, night_audit: night_audit)
-      end
 
       Folios::Charges::PostNightlyCharges.call(night_audit: night_audit, user: @performed_by_user)
 
@@ -174,6 +165,22 @@ module NightAudits
         notes: @notes,
         error_message: error_message
       )
+    end
+
+    def persist_preparation!(night_audit, evaluation)
+      night_audit.assign_attributes(
+        status: "preparing",
+        trigger_mode: @trigger_mode,
+        started_at: nil,
+        completed_at: nil,
+        performed_by_user: nil,
+        notes: @notes,
+        blocked_details: evaluation[:blocked_details],
+        exceptions: evaluation[:exceptions],
+        summary: night_audit.summary.to_h.merge(evaluation[:summary]),
+        force_closed: false
+      )
+      night_audit.save!
     end
 
     def blocked?(evaluation)

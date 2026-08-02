@@ -59,24 +59,70 @@ RSpec.describe NightAudits::Evaluate do
       expect(result[:blocked_details]["due_out_not_checked_out"]).not_to be_empty
     end
 
-    it 'treats due_out_detected bookings as warnings rather than blockers' do
+    it 'keeps due-out detections as staff-action blockers' do
       booking = create(:booking, status: 'due_out_detected', hotel: hotel, check_in: business_date - 1.day, check_out: business_date)
       create(:booking_folio, booking: booking)
 
       result = service.call
 
-      expect(result[:blocked_details]["due_out_not_checked_out"]).to be_empty
-      expect(result[:exceptions]["due_out_detected"].sole["booking_id"]).to eq(booking.id)
-      expect(result[:exceptions]["due_out_detected"].sole["reason"]).to eq("Due-out detection carried forward")
+      expect(result[:blocked_details]["due_out_not_checked_out"].sole["booking_id"]).to eq(booking.id)
+      expect(result[:exceptions]).not_to have_key("due_out_detected")
     end
 
-    it 'treats no_show_detected bookings as warnings rather than blockers' do
+    it 'keeps no-show detections as staff-action blockers' do
       booking = create(:booking, status: 'no_show_detected', hotel: hotel, check_in: business_date, check_out: business_date + 1.day, no_show_detected_business_date: business_date)
 
       result = service.call
 
-      expect(result[:exceptions]["no_show_detected"].sole["booking_id"]).to eq(booking.id)
-      expect(result[:blocked_details].values.flatten.pluck("booking_id")).not_to include(booking.id)
+      expect(result[:blocked_details]["missed_arrival_not_resolved"].sole["booking_id"]).to eq(booking.id)
+      expect(result[:exceptions]).not_to have_key("no_show_detected")
+    end
+
+    it 'does not call a same-day confirmed arrival missed before the business date is closable' do
+      hotel.update!(time_zone: "Kuala Lumpur", business_starts_at: "08:00", business_ends_at: "02:00")
+      zone = hotel.hotel_time_zone
+      local_date = Date.new(2026, 8, 2)
+      booking = create(:booking,
+        hotel: hotel,
+        status: "confirmed",
+        check_in: zone.local(2026, 8, 2, 15, 0),
+        check_out: zone.local(2026, 8, 3, 11, 0))
+
+      with_frozen_time(zone.local(2026, 8, 2, 20, 0)) do
+        result = described_class.new(hotel: hotel, business_date: local_date, phase: :pre_close).call
+        expect(result[:blocked_details]["missed_arrival_not_resolved"].pluck("booking_id")).not_to include(booking.id)
+      end
+    end
+
+    it 'honors a completed pre-check-in declared-arrival grace period' do
+      hotel.update!(
+        time_zone: "Kuala Lumpur",
+        business_starts_at: "08:00",
+        business_ends_at: "02:00",
+        arrival_grace_period: 2.hours.to_i
+      )
+      zone = hotel.hotel_time_zone
+      local_date = Date.new(2026, 8, 1)
+      booking = create(:booking,
+        hotel: hotel,
+        status: "confirmed",
+        check_in: zone.local(2026, 8, 1, 15, 0),
+        check_out: zone.local(2026, 8, 2, 11, 0))
+      create(:pre_checkin,
+        booking: booking,
+        status: "completed",
+        completed_at: zone.local(2026, 8, 1, 12, 0),
+        metadata: { "estimated_arrival_time" => "01:30" })
+
+      with_frozen_time(zone.local(2026, 8, 2, 2, 30)) do
+        within_grace = described_class.new(hotel: hotel, business_date: local_date, phase: :pre_close).call
+        expect(within_grace[:blocked_details]["missed_arrival_not_resolved"]).to be_empty
+      end
+
+      with_frozen_time(zone.local(2026, 8, 2, 3, 31)) do
+        expired = described_class.new(hotel: hotel, business_date: local_date, phase: :pre_close).call
+        expect(expired[:blocked_details]["missed_arrival_not_resolved"].sole["booking_id"]).to eq(booking.id)
+      end
     end
 
     it 'treats checkout_required bookings as due-out blockers' do
@@ -140,7 +186,7 @@ RSpec.describe NightAudits::Evaluate do
       result = service.call
 
       expect(result[:blocked_details]["missing_folio"].sole["booking_id"]).to eq(booking.id)
-      expect(result[:exceptions]["due_out_detected"].sole["booking_id"]).to eq(booking.id)
+      expect(result[:blocked_details]["due_out_not_checked_out"].sole["booking_id"]).to eq(booking.id)
     end
 
     it 'does not require a folio for proven non-chargeable bookings' do

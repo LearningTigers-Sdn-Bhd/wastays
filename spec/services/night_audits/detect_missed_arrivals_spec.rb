@@ -6,7 +6,7 @@ RSpec.describe NightAudits::DetectMissedArrivals do
   it "moves an eligible confirmed arrival into no-show detection" do
     hotel = create(:hotel)
     user = create(:user, account: hotel.account)
-    business_date = Date.current
+    business_date = Date.current - 1.day
     night_audit = create(:night_audit, hotel: hotel, business_date: business_date, status: "running", started_at: Time.current)
     booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 1.day)
 
