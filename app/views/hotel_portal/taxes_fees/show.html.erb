@@ -1,9 +1,25 @@
-<div class="w-full space-y-3.5">
+<div class="w-full space-y-4">
   <%= render PanelsUI::PageHeader.new(title: "Taxes & Fees", description: "Configure booking taxes, service fees, and property tax settings.") %>
 
   <%= render "hotel_portal/settings/group_tabs" %>
 
-  <div class="space-y-6" data-testid="taxes-fees-content">
-    <%= render "hotel_portal/taxes_fees/tax_listing_section", presenter: @presenter %>
+  <div data-testid="taxes-fees-content">
+    <%= render PanelsUI::Tabs.new(
+          id: "taxes-fees-tabs",
+          active: @presenter.active_tab,
+          variant: :line,
+          url: { param: "tab" },
+          aria_label: "Taxes and fees sections") do |tabs| %>
+      <% tabs.with_tab(name: "registry", label: "Registry", panel_id: "registry-panel") %>
+      <% tabs.with_tab(name: "malaysia_reference", label: "Malaysia Hotel Tax Reference", panel_id: "malaysia-reference-panel") %>
+
+      <% tabs.with_panel(name: "registry", id: "registry-panel", class: "pt-5", data: { testid: "taxes-fees-registry-panel" }) do %>
+        <%= render "hotel_portal/taxes_fees/registry", presenter: @presenter %>
+      <% end %>
+
+      <% tabs.with_panel(name: "malaysia_reference", id: "malaysia-reference-panel", class: "pt-5", data: { testid: "malaysia-tax-reference-panel" }) do %>
+        <%= render "hotel_portal/taxes_fees/malaysia_reference" %>
+      <% end %>
+    <% end %>
   </div>
 </div>

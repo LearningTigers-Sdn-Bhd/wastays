@@ -32,8 +32,9 @@ RSpec.describe "Hotel sidebar active aliases", type: :system do
 
     within("#hotel-settings-sidebar") do
       expect(page).to have_no_link("Back to previous page")
-      expect(page).to have_link("Finance", href: hotel_taxes_fees_path(hotel))
-      expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: "Finance")
+      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-label='Commercial']", visible: :all)
+      expect(page).to have_link("Taxes & Fees", href: hotel_taxes_fees_path(hotel), visible: :all)
+      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Taxes & Fees", visible: :all)
     end
   end
 end

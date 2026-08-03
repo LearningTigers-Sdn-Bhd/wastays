@@ -7,6 +7,7 @@ module HotelPortal
     SETTINGS_GROUPS = {
       general: { label: "General", icon: "settings", permission: "manage_hotel_profile" },
       property: { label: "Property", icon: "building-2", permission: "manage_hotel_profile" },
+      commercial: { label: "Commercial", icon: "badge-dollar-sign", permission: "manage_hotel_profile", sidebar_menu: true },
       finance: { label: "Finance", icon: "landmark", permission: [ "manage_account", "manage_hotel_profile" ] },
       guest_content: { label: "Guest Content", icon: "message-square", permission: "manage_hotel_profile" },
       team: { label: "Team", icon: "users", permission: "manage_users" }
@@ -17,12 +18,26 @@ module HotelPortal
 
       @_hotel_settings_sidebar_sections = [
         NavSection.new(label: "Settings", items: settings_navigation_groups.map do |key, group|
+          children = if group[:sidebar_menu]
+            group[:tabs].map do |tab|
+              NavItem.new(
+                label: tab[:label],
+                path: tab[:path],
+                icon: tab[:icon],
+                active: tab[:active]
+              )
+            end
+          else
+            []
+          end
+
           NavItem.new(
             label: group[:label],
             path: group[:tabs].first&.fetch(:path),
             icon: group[:icon],
             active: settings_group_active?(key),
             permission: group[:permission],
+            children: children,
             active_paths: group[:tabs].map { |tab| tab[:path] }
           )
         end)
@@ -43,6 +58,10 @@ module HotelPortal
 
     def settings_group_active?(group)
       settings_tabs_for_group(group).any? { |tab| tab[:active] }
+    end
+
+    def settings_group_sidebar_menu?(group)
+      SETTINGS_GROUPS.dig(group, :sidebar_menu) == true
     end
 
     def hotel_settings_breadcrumb_parts
@@ -113,10 +132,13 @@ module HotelPortal
           { key: "room-categories", label: "Room Categories", path: hotel_room_types_path(current_hotel), icon: "layers", active: controller_name == "room_types" },
           { key: "nearby-attractions", label: "Nearby Attractions", path: hotel_nearby_attractions_path(current_hotel), icon: "map-pin", active: controller_name == "nearby_attractions" }
         ]
+      when :commercial
+        [
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "taxes-fees", label: "Taxes & Fees", path: hotel_taxes_fees_path(current_hotel), icon: "receipt", active: controller_name.in?(%w[taxes_fees hotel_taxes]) } : nil
+        ].compact
       when :finance
         [
           hotel_permission_granted?("manage_account") ? { key: "banking", label: "Banking Details", path: hotel_banking_details_settings_path(current_hotel), icon: "landmark", active: controller_name == "settings" && settings_active_page == "banking" } : nil,
-          hotel_permission_granted?("manage_hotel_profile") ? { key: "taxes-fees", label: "Taxes & Fees", path: hotel_taxes_fees_path(current_hotel), icon: "receipt", active: controller_name.in?(%w[taxes_fees hotel_taxes]) } : nil,
           hotel_permission_granted?("manage_hotel_profile") ? { key: "transaction-codes", label: "Transaction Codes", path: hotel_transaction_codes_path(current_hotel), icon: "badge-percent", active: controller_name == "transaction_codes" } : nil,
           hotel_permission_granted?("manage_general_ledger_maps") ? { key: "general-ledger-mappings", label: "General Ledger Mappings", path: hotel_general_ledger_maps_path(current_hotel), icon: "git-merge", active: controller_name == "general_ledger_maps" } : nil
         ].compact

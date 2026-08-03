@@ -1,0 +1,88 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% form_id = hotel_tax.persisted? ? "manage-hotel-tax-#{hotel_tax.id}-form" : "add-hotel-tax-form" %>
+<% fee_value = hotel_tax.persisted? && hotel_tax.charge_type == "others" ? "others" : "charge" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: hotel_tax.persisted? ? "manage-hotel-tax-sheet" : "add-hotel-tax-sheet",
+          side: :right,
+          size: :lg,
+          title: title,
+          description: "Configure how this charge appears and is calculated for applicable stays.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: [ current_hotel, hotel_tax ], id: form_id, class: "space-y-5 py-2", data: { controller: "tax-code-field" } do |form| %>
+          <% if hotel_tax.errors[:base].any? %>
+            <div class="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+              <%= hotel_tax.errors[:base].to_sentence %>
+            </div>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form: form, attribute: :name, label: "Name", required: true) do |field| %>
+            <% field.with_input(placeholder: "Example: Heritage Fee", autocomplete: "off") %>
+          <% end %>
+
+          <div class="grid items-start gap-4 sm:grid-cols-2">
+            <%= render PanelsUI::FormField.new(form: form, attribute: :charge_type, label: "Type", required: true) do |field| %>
+              <% field.with_select_menu(
+                   [ { label: "Tax", value: "tax" }, { label: "Fee", value: fee_value } ],
+                   selected: hotel_tax.charge_type.presence || "tax",
+                   data: {
+                     tax_code_field_target: "chargeType",
+                     action: "change->tax-code-field#updatePrefix"
+                   }) %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :code,
+                  label: "Code",
+                  hint: tag.span(
+                    "Saved as TAX_DBKK. Spaces become underscores.",
+                    data: { tax_code_field_target: "help" }
+                  ),
+                  required: true) do |field| %>
+              <% field.with_input(placeholder: "DBKK", autocomplete: "off", spellcheck: false, class: "font-mono uppercase", data: { action: "input->tax-code-field#format", tax_code_field_target: "input" }) %>
+              <% field.with_addon(
+                   align: :inline_start,
+                   data: { tax_code_field_target: "prefix" }) { "TAX_" } %>
+            <% end %>
+          </div>
+
+          <div class="grid items-start gap-4 sm:grid-cols-2">
+            <%= render PanelsUI::FormField.new(form: form, attribute: :foreign_guests_only, label: "Applies To", required: true) do |field| %>
+              <% field.with_select_menu(
+                   [ { label: "All guests", value: false }, { label: "Foreign guests only", value: true } ],
+                   selected: hotel_tax.foreign_guests_only?.to_s) %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :rate_type, label: "Charge Rule", required: true) do |field| %>
+              <% field.with_select_menu(
+                   [ { label: "Percentage", value: "percentage" }, { label: "Fixed", value: "flat" } ],
+                   selected: hotel_tax.rate_type.presence || "flat") %>
+            <% end %>
+          </div>
+
+          <%= render PanelsUI::FormField.new(form: form, attribute: :amount, label: "Charge Amount", required: true) do |field| %>
+            <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal", placeholder: "10.00") %>
+          <% end %>
+
+          <%= render PanelsUI::Switch.new(
+                form: form,
+                attribute: :enabled,
+                label: "Active",
+                description: "Generate this tax or fee for future applicable charges.") %>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm, data: { turbo_submits_with: "Saving…" }) do %>
+          <%= submit_label %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

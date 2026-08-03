@@ -191,7 +191,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(sidebar["data-sidebar-mode"]).to be_nil
       items = sidebar.css(".panel-sidebar__section-items > .panel-sidebar__item")
       expect(items.map { |item| item.at_css("[data-sidebar-presentation='expanded'] .panel-sidebar__label").text.squish }).to eq(
-        [ "General", "Property", "Finance", "Guest Content", "Team" ]
+        [ "General", "Property", "Commercial", "Finance", "Guest Content", "Team" ]
       )
       expect(sidebar.text).not_to include("Back to previous page")
 
@@ -216,8 +216,24 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(breadcrumb_items[2].at_css("a, button")).to be_nil
       expect(breadcrumb_items[3].at_css("button[aria-label='Open Banking Details navigation']")).to be_present
       expect(breadcrumb_items[3].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
-        [ "Banking Details", "Taxes & Fees", "Transaction Codes" ]
+        [ "Banking Details", "Transaction Codes" ]
       )
+    end
+
+    it "renders Commercial as a sidebar menu with Taxes & Fees as its active child" do
+      hotel.update!(status: "approved")
+      get hotel_taxes_fees_path(hotel)
+
+      document = response.parsed_body
+      commercial = document.css("#hotel-settings-sidebar [data-sidebar-group-item]").find do |item|
+        item.at_css("a.panel-sidebar__child[href='#{hotel_taxes_fees_path(hotel)}']").present?
+      end
+
+      expect(commercial).to be_present
+      expect(commercial.at_css(".panel-sidebar__group-trigger")&.text&.squish).to eq("Commercial")
+      expect(commercial.at_css("a.panel-sidebar__child[href='#{hotel_taxes_fees_path(hotel)}']")&.text&.squish).to eq("Taxes & Fees")
+      expect(commercial.at_css("a.panel-sidebar__child[aria-current='page']")&.text&.squish).to eq("Taxes & Fees")
+      expect(document.at_css("[data-testid='settings-tabs']")).to be_nil
     end
 
     it "places the admin portal destination in the footer for superadmins" do

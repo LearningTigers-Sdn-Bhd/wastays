@@ -603,6 +603,8 @@ Rails.application.routes.draw do
         get "banking-details", to: "settings#index", as: :banking_details_settings, defaults: { settings_page: "banking" }
         patch "banking-details", to: "settings#update", defaults: { settings_page: "banking" }
         resource :taxes_fees, path: "taxes-and-fees", only: [ :show, :update ]
+        get "taxes-and-fees/system/:tax_key/edit", to: "taxes_fees#edit_system", as: :edit_system_tax
+        patch "taxes-and-fees/system/:tax_key", to: "taxes_fees#update_system", as: :system_tax
         resources :hotel_taxes, path: "taxes-and-fees/fees", only: %i[index new create edit update destroy]
         get "transaction-codes", to: "transaction_codes#show", as: :transaction_codes
         get "transaction-codes/new", to: "transaction_codes#new", as: :new_transaction_code
